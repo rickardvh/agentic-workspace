@@ -37,7 +37,7 @@ from agentic_workspace import workspace_runtime_core as _workspace_runtime_core
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
 from agentic_workspace.actionability import derive_actionability
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
-from agentic_workspace.authority_envelope import admit_live_mutation_boundary
+from agentic_workspace.authority_envelope import admit_live_mutation_boundary, revalidate_mutation_baseline
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_ASSURANCE_LEVEL,
@@ -126,6 +126,8 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
+from agentic_workspace.current_work_context import resolve_current_work_context
+from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
@@ -191,6 +193,7 @@ from agentic_workspace.workspace_runtime_proof import (
     _closeout_report_payload,  # noqa: F401 - compatibility re-export for runtime inventory
     _proof_obligations_payload,  # noqa: F401 - compatibility re-export for runtime inventory
     _proof_payload,
+    _proof_receipt_reconciliation_payload,
     _proof_selection_for_changed_paths,
     _tiny_proof_obligations_payload,  # noqa: F401 - compatibility re-export for proof owner boundary
     _tiny_proof_payload,  # noqa: F401 - compatibility re-export for proof owner boundary
@@ -30908,6 +30911,1008 @@ def _run_final_response_continuation_operation(
     }
 
 
+def _executor_binding_terms(binding: dict[str, Any]) -> list[str]:
+    terms: list[str] = []
+    for value in [
+        binding.get("owner_id"),
+        binding.get("owner_ref"),
+        *_list_payload(binding.get("owner_refs")),
+        *_list_payload(binding.get("issue_refs")),
+    ]:
+        text = str(value or "").strip()
+        if text:
+            terms.append(text)
+    for section_name in ("owner_identity", "target_identity", "assignment", "evaluation", "proof_obligation", "mutation_baseline"):
+        section = _as_dict(binding.get(section_name))
+        for value in section.values():
+            if isinstance(value, (str, int, float)):
+                text = str(value or "").strip()
+                if text:
+                    terms.append(text)
+    external_intent = _as_dict(binding.get("external_intent"))
+    for value in [
+        external_intent.get("item_id"),
+        external_intent.get("provider"),
+        external_intent.get("external_revision"),
+        external_intent.get("evidence_revision_hash"),
+        *_list_payload(external_intent.get("issue_refs")),
+    ]:
+        text = str(value or "").strip()
+        if text:
+            terms.append(text)
+    for value in _as_dict(external_intent.get("bounded_task")).values():
+        if isinstance(value, (str, int, float)):
+            text = str(value or "").strip()
+            if text:
+                terms.append(text)
+    return _dedupe(terms)
+
+
+def _executor_binding_fingerprint_payload(binding: dict[str, Any]) -> dict[str, Any]:
+    legacy_owner_identity = {
+        "owner_id": binding.get("owner_id"),
+        "owner_ref": binding.get("owner_ref"),
+        "current_work_id": binding.get("current_work_id"),
+    }
+    legacy_mutation_baseline = {
+        "head": _as_dict(binding.get("input_revision")).get("head"),
+        "resolved_at": _as_dict(binding.get("input_revision")).get("resolved_at"),
+    }
+    return {
+        "owner_identity": _as_dict(binding.get("owner_identity")) or legacy_owner_identity,
+        "target_identity": _as_dict(binding.get("target_identity")),
+        "assignment": _as_dict(binding.get("assignment")),
+        "evaluation": _as_dict(binding.get("evaluation")),
+        "proof_obligation": _as_dict(binding.get("proof_obligation")),
+        "mutation_baseline": _as_dict(binding.get("mutation_baseline")) or legacy_mutation_baseline,
+        "external_intent": _as_dict(binding.get("external_intent")),
+    }
+
+
+def _executor_binding_invocation_scope_payload(binding: dict[str, Any]) -> dict[str, Any]:
+    owner_identity = _as_dict(binding.get("owner_identity"))
+    target_identity = _as_dict(binding.get("target_identity"))
+    assignment = _as_dict(binding.get("assignment"))
+    evaluation = _as_dict(binding.get("evaluation"))
+    proof_obligation = _as_dict(binding.get("proof_obligation"))
+    external_intent = _as_dict(binding.get("external_intent"))
+    return {
+        "owner_identity": {
+            "owner_id": owner_identity.get("owner_id"),
+            "owner_ref": owner_identity.get("owner_ref"),
+            "owner_relation": owner_identity.get("owner_relation"),
+            "current_work_id": owner_identity.get("current_work_id"),
+        },
+        "target_identity": {
+            "target_identity_ref": target_identity.get("target_identity_ref"),
+            "selected_target": target_identity.get("selected_target"),
+            "execution_methods": target_identity.get("execution_methods") or [],
+            "capability_classes": target_identity.get("capability_classes") or [],
+            "location": target_identity.get("location"),
+            "strength": target_identity.get("strength"),
+        },
+        "assignment": {
+            "status": assignment.get("status"),
+            "policy": assignment.get("policy"),
+            "selected_target": assignment.get("selected_target"),
+            "target_identity_ref": assignment.get("target_identity_ref"),
+            "context_key": assignment.get("context_key"),
+            "implementation_allowed": assignment.get("implementation_allowed"),
+            "assignment_decision_revision": assignment.get("assignment_decision_revision"),
+            "allowed_effects": assignment.get("allowed_effects") or [],
+            "allowed_paths": assignment.get("allowed_paths") or [],
+            "stop_conditions": assignment.get("stop_conditions") or [],
+            "proof_obligation_id": assignment.get("proof_obligation_id"),
+        },
+        "evaluation": {
+            "status": evaluation.get("status"),
+            "freshness_status": evaluation.get("freshness_status"),
+            "evaluation_id": evaluation.get("evaluation_id"),
+            "revision": evaluation.get("revision"),
+            "current_result_identity": evaluation.get("current_result_identity"),
+        },
+        "proof_obligation": {
+            "status": proof_obligation.get("status"),
+            "receipt_status": proof_obligation.get("receipt_status"),
+            "selected_proof_identity": proof_obligation.get("selected_proof_identity"),
+            "proof_subject_fingerprint": proof_obligation.get("proof_subject_fingerprint"),
+            "required_commands": proof_obligation.get("required_commands") or [],
+        },
+        "external_intent": {
+            "status": external_intent.get("status"),
+            "provider": external_intent.get("provider"),
+            "item_id": external_intent.get("item_id"),
+            "external_revision": external_intent.get("external_revision"),
+            "evidence_revision_hash": external_intent.get("evidence_revision_hash"),
+            "bounded_task": external_intent.get("bounded_task"),
+        },
+    }
+
+
+def _executor_binding_fingerprint(payload: dict[str, Any]) -> str:
+    normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(normalized.encode()).hexdigest()[:24]
+
+
+def _executor_binding_invalidity(binding: dict[str, Any]) -> dict[str, Any]:
+    if str(binding.get("status") or "") != "bound":
+        return {
+            "status": "rejected",
+            "reason": "no-live-owner-binding",
+            "repair": "Resolve a live Planning/current-work owner before running Autopilot.",
+        }
+    availability = _as_dict(binding.get("availability"))
+    if availability and str(availability.get("status") or "") not in {"", "available"}:
+        return {
+            "status": "rejected",
+            "reason": str(availability.get("reason") or availability.get("status") or "executor-unavailable"),
+            "repair": str(availability.get("repair") or "Select an available executor target before running Autopilot."),
+        }
+    validity = _as_dict(binding.get("validity"))
+    if str(validity.get("status") or "accepted") in {"rejected", "stale", "superseded", "blocked"}:
+        return {
+            "status": "rejected",
+            "reason": str(validity.get("reason") or "invalid-executor-binding"),
+            "repair": str(validity.get("repair") or "Re-resolve the Autopilot executor binding before continuing."),
+        }
+    required_sections = {
+        "assignment": "missing-assignment-authority",
+        "proof_obligation": "missing-proof-obligation-authority",
+        "mutation_baseline": "missing-mutation-baseline-authority",
+        "external_intent": "missing-external-intent-authority",
+    }
+    for section_name, reason in required_sections.items():
+        if not _as_dict(binding.get(section_name)):
+            return {
+                "status": "rejected",
+                "reason": reason,
+                "repair": f"Resolve authoritative {section_name} before running Autopilot.",
+            }
+    evaluation = _as_dict(binding.get("evaluation"))
+    if not evaluation:
+        return {
+            "status": "rejected",
+            "reason": "missing-evaluation-authority",
+            "repair": "Resolve evaluation authority or an authoritative not-required evaluation state before running Autopilot.",
+        }
+    invalid_sections = {
+        "assignment": {"", "blocked", "blocked-target-mismatch", "handoff-required", "no-safe-route", "missing"},
+        "evaluation": {"", "missing", "rejected", "stale", "stale-bound", "legacy-unbound", "superseded", "failed"},
+        "proof_obligation": {
+            "",
+            "missing",
+            "rejected",
+            "stale",
+            "superseded",
+            "failed",
+            "attention",
+            "not-recorded",
+            "untrusted-record",
+            "record-stale-untrusted",
+        },
+        "mutation_baseline": {"", "missing", "stale", "mismatch", "rejected", "failed"},
+        "external_intent": {"", "missing", "rejected", "stale", "ambiguous", "changed", "failed"},
+    }
+    for section_name, invalid_statuses in invalid_sections.items():
+        section = _as_dict(binding.get(section_name))
+        if section_name == "evaluation":
+            section_status = str(section.get("freshness_status") or section.get("status") or section.get("state") or "")
+        elif section_name == "proof_obligation":
+            section_status = str(section.get("receipt_status") or section.get("freshness_status") or section.get("status") or "")
+        elif section_name == "mutation_baseline":
+            section_status = str(section.get("revalidation_status") or section.get("status") or section.get("state") or "")
+        else:
+            section_status = str(section.get("status") or section.get("state") or "")
+        if section_status in invalid_statuses:
+            return {
+                "status": "rejected",
+                "reason": str(section.get("reason") or section.get("reason_code") or f"{section_name}-invalid"),
+                "repair": str(section.get("repair") or section.get("repair_route") or f"Refresh {section_name} before running Autopilot."),
+            }
+    return {"status": "accepted", "reason": "fresh-live-executor-binding"}
+
+
+def _external_intent_evidence_hash(*, evidence_payload: dict[str, Any], item: dict[str, Any]) -> str:
+    revision_basis = {
+        "refreshed_at": evidence_payload.get("refreshed_at") or _as_dict(evidence_payload.get("refresh_metadata")).get("refreshed_at"),
+        "refresh_revision": _as_dict(evidence_payload.get("refresh_metadata")).get("revision")
+        or _as_dict(evidence_payload.get("provenance")).get("refresh_id"),
+        "item": item,
+    }
+    return _executor_binding_fingerprint(revision_basis)
+
+
+def _executor_external_intent_authority(
+    *,
+    target_root: Path,
+    context: dict[str, Any],
+    owner_identity: dict[str, Any],
+    assignment: dict[str, Any],
+    task_text: str,
+) -> dict[str, Any]:
+    issue_refs = _normalize_external_intent_issue_refs([str(ref) for ref in _list_payload(context.get("issue_refs")) if str(ref).strip()])
+    supplied = _as_dict(context.get("external_intent") or context.get("external_intent_authority"))
+    if not issue_refs:
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "not-applicable",
+            "reason": "no-external-issue-ref-in-current-work",
+            "issue_refs": [],
+            "source": "resolve_current_work_context",
+        }
+    if len(issue_refs) != 1:
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "ambiguous",
+            "reason": "ambiguous-external-intent-refs",
+            "issue_refs": issue_refs,
+            "expected_authority": supplied,
+            "repair": "Select exactly one external issue-backed child before rendering an Autopilot executor invocation.",
+        }
+    issue_ref = issue_refs[0]
+    evidence_path, evidence_relative_path, storage = _external_intent_evidence_read_location(target_root)
+    if not evidence_path.exists():
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "missing",
+            "reason": "missing-external-intent-evidence",
+            "issue_refs": issue_refs,
+            "source_path": evidence_relative_path,
+            "storage": storage,
+            "expected_authority": supplied,
+            "repair": f"Refresh external intent evidence for {issue_ref} before running Autopilot.",
+        }
+    try:
+        evidence_payload = json.loads(evidence_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "rejected",
+            "reason": "unreadable-external-intent-evidence",
+            "diagnostic": str(exc),
+            "issue_refs": issue_refs,
+            "source_path": evidence_relative_path,
+            "storage": storage,
+            "expected_authority": supplied,
+            "repair": f"Refresh external intent evidence for {issue_ref} before running Autopilot.",
+        }
+    items = [item for item in _list_payload(_as_dict(evidence_payload).get("items")) if isinstance(item, dict)]
+
+    def item_ref(item: dict[str, Any]) -> str:
+        raw = str(item.get("id") or item.get("number") or "").strip()
+        if raw.isdigit():
+            return f"#{raw}"
+        return raw
+
+    matches = [item for item in items if item_ref(item) == issue_ref]
+    if len(matches) != 1:
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "missing" if not matches else "ambiguous",
+            "reason": "missing-external-intent-item" if not matches else "ambiguous-external-intent-item",
+            "issue_refs": issue_refs,
+            "matched_item_count": len(matches),
+            "source_path": evidence_relative_path,
+            "storage": storage,
+            "expected_authority": supplied,
+            "repair": f"Refresh external intent evidence for {issue_ref} before running Autopilot.",
+        }
+    item = matches[0]
+    freshness = _as_dict(item.get("freshness"))
+    observed_at = str(item.get("observed_at") or item.get("updated_at") or freshness.get("observed_at") or "").strip()
+    expires_at = str(freshness.get("expires_at") or "").strip()
+    expires_at_dt = _parse_external_intent_timestamp(expires_at)
+    if not observed_at or (expires_at_dt is not None and expires_at_dt < datetime.now(timezone.utc)):
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "stale",
+            "reason": "stale-external-intent-evidence",
+            "issue_refs": issue_refs,
+            "item_id": issue_ref,
+            "observed_at": observed_at,
+            "expires_at": expires_at,
+            "source_path": evidence_relative_path,
+            "storage": storage,
+            "expected_authority": supplied,
+            "repair": f"Refresh external intent evidence for {issue_ref} before running Autopilot.",
+        }
+    evidence_hash = _external_intent_evidence_hash(evidence_payload=_as_dict(evidence_payload), item=item)
+    external_revision = str(item.get("external_revision") or item.get("updated_at") or "").strip()
+    expected_item_id = str(supplied.get("item_id") or supplied.get("id") or "").strip()
+    expected_revision = str(supplied.get("external_revision") or "").strip()
+    expected_hash = str(supplied.get("evidence_revision_hash") or supplied.get("revision") or "").strip()
+    if (
+        (expected_item_id and expected_item_id != issue_ref)
+        or (expected_revision and expected_revision != external_revision)
+        or (expected_hash and expected_hash != evidence_hash)
+    ):
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "changed",
+            "reason": "external-intent-authority-changed",
+            "issue_refs": issue_refs,
+            "item_id": issue_ref,
+            "external_revision": external_revision,
+            "evidence_revision_hash": evidence_hash,
+            "expected_authority": supplied,
+            "source_path": evidence_relative_path,
+            "storage": storage,
+            "repair": "Re-resolve the executor binding against the current external issue revision.",
+        }
+    bounded_task = {
+        "issue_ref": issue_ref,
+        "task": str(item.get("title") or task_text or "").strip(),
+        "outcome": str(item.get("outcome") or item.get("title") or task_text or "").strip(),
+        "constraints": _list_payload(item.get("negative_invariants")),
+        "allowed_paths": _list_payload(assignment.get("allowed_paths")),
+        "owner_relation": str(owner_identity.get("owner_relation") or "").strip(),
+    }
+    return {
+        "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+        "status": "accepted",
+        "provider": str(item.get("system") or _as_dict(item.get("provenance")).get("provider_class") or "").strip(),
+        "provider_detail": _as_dict(item.get("provider_detail")),
+        "item_id": issue_ref,
+        "item_identity": {
+            "system": str(item.get("system") or "").strip(),
+            "id": issue_ref,
+            "url": str(item.get("url") or "").strip(),
+            "source_repository": str(item.get("source_repository") or "").strip(),
+        },
+        "external_revision": external_revision,
+        "evidence_revision_hash": evidence_hash,
+        "observed_at": observed_at,
+        "expires_at": expires_at,
+        "source_path": evidence_relative_path,
+        "storage": storage,
+        "owner_relation": {
+            "owner_id": owner_identity.get("owner_id"),
+            "owner_ref": owner_identity.get("owner_ref"),
+            "relation": owner_identity.get("owner_relation"),
+            "issue_owner": _as_dict(item.get("owner")),
+            "parent_id": str(item.get("parent_id") or "").strip(),
+        },
+        "bounded_task": bounded_task,
+        "expected_authority": supplied,
+        "rule": "Autopilot executor scope is rendered from this refreshed external-intent item, not from generic caller task context.",
+    }
+
+
+def _executor_context_changed_paths(context: dict[str, Any]) -> list[str]:
+    for key in ("changed_paths", "allowed_paths"):
+        values = [str(path) for path in _list_payload(context.get(key)) if str(path).strip()]
+        if values:
+            return values
+    return []
+
+
+def _executor_context_task_text(context: dict[str, Any]) -> str:
+    for key in ("task", "task_text", "objective", "current_slice"):
+        value = str(context.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _executor_evaluation_matches(
+    *,
+    summary_item: dict[str, Any],
+    expected: dict[str, Any],
+    assignment: dict[str, Any],
+    owner_identity: dict[str, Any],
+    required: bool,
+) -> bool:
+    admission = _as_dict(summary_item.get("fresh_result_admission"))
+    identity = _as_dict(admission.get("current_result_identity"))
+    expected_evaluation_id = str(expected.get("evaluation_id") or "").strip()
+    if expected_evaluation_id and str(summary_item.get("evaluation_id") or "").strip() != expected_evaluation_id:
+        return False
+    expected_target = str(assignment.get("target_identity_ref") or expected.get("target_identity_ref") or "").strip()
+    observed_target = str(identity.get("target_identity_ref") or "").strip()
+    if expected_target and (observed_target != expected_target if required else observed_target and observed_target != expected_target):
+        return False
+    expected_assignment = str(assignment.get("assignment_revision") or expected.get("assignment_revision") or "").strip()
+    observed_assignment = str(identity.get("assignment_revision") or "").strip()
+    if expected_assignment and (
+        observed_assignment != expected_assignment if required else observed_assignment and observed_assignment != expected_assignment
+    ):
+        return False
+    expected_owner = str(owner_identity.get("owner_id") or expected.get("owner_id") or "").strip()
+    owner = _as_dict(summary_item.get("owner"))
+    observed_owner = str(owner.get("id") or owner.get("owner_id") or "").strip()
+    if expected_owner and (observed_owner != expected_owner if required else observed_owner and observed_owner != expected_owner):
+        return False
+    return True
+
+
+def _executor_evaluation_expected_required(expected: dict[str, Any]) -> bool:
+    if not expected:
+        return False
+    expected_status = str(expected.get("freshness_status") or expected.get("status") or expected.get("state") or "").strip()
+    if expected_status in {"not-required", "not_required", "not-applicable", "not_applicable"}:
+        return False
+    if expected.get("required") is True:
+        return True
+    if expected_status in {"required", "accepted", "fresh-bound", "fresh", "stale", "missing", "rejected"}:
+        return True
+    return bool(str(expected.get("evaluation_id") or expected.get("current_result_identity") or "").strip())
+
+
+def _executor_evaluation_authority(
+    *,
+    target_root: Path,
+    context: dict[str, Any],
+    assignment: dict[str, Any],
+    owner_identity: dict[str, Any],
+) -> dict[str, Any]:
+    expected = _as_dict(context.get("evaluation") or context.get("evaluation_authority"))
+    expected_required = _executor_evaluation_expected_required(expected)
+    summary = evaluation_summary(target_root=target_root)
+    summaries = [item for item in _list_payload(summary.get("summaries")) if isinstance(item, dict)]
+    if not summaries:
+        if expected_required:
+            return {
+                "status": "missing",
+                "freshness_status": "missing",
+                "reason": "missing-required-evaluation-summary",
+                "source": "evaluation_summary",
+                "required": True,
+                "expected_authority": expected,
+                "rule": "A required evaluation cannot silently downgrade to not-required when no live summary is present.",
+            }
+        return {
+            "status": "not-required",
+            "freshness_status": "not-required",
+            "reason": "no-registered-evaluations",
+            "source": "evaluation_summary",
+            "expected_authority": expected,
+        }
+    relevant = [
+        item
+        for item in summaries
+        if _executor_evaluation_matches(
+            summary_item=item,
+            expected=expected,
+            assignment=assignment,
+            owner_identity=owner_identity,
+            required=expected_required,
+        )
+    ]
+    if not relevant:
+        return {
+            "status": "missing" if expected_required else "not-required",
+            "freshness_status": "missing" if expected_required else "not-required",
+            "reason": "missing-relevant-evaluation" if expected_required else "no-relevant-evaluation-required",
+            "source": "evaluation_summary",
+            "expected_authority": expected,
+            "ignored_evaluation_count": len(summaries),
+            "rule": "Autopilot ignores unrelated evaluation summaries; only current owner/target/assignment matches can bind the executor.",
+        }
+    current = next(
+        (
+            item
+            for item in relevant
+            if _as_dict(item.get("fresh_result_admission")).get("status") != "fresh-bound"
+            or _as_dict(item.get("conclusion_readiness")).get("ready") is not True
+        ),
+        relevant[-1],
+    )
+    admission = _as_dict(current.get("fresh_result_admission"))
+    readiness = _as_dict(current.get("conclusion_readiness"))
+    status = (
+        "accepted"
+        if admission.get("status") == "fresh-bound" and readiness.get("ready") is True
+        else str(admission.get("status") or "missing")
+    )
+    return {
+        "status": status,
+        "freshness_status": str(admission.get("status") or "missing"),
+        "evaluation_id": current.get("evaluation_id"),
+        "revision": current.get("revision"),
+        "current_result_identity": admission.get("current_result_identity"),
+        "conclusion_readiness": readiness,
+        "reason": readiness.get("reason_code") or admission.get("status") or "evaluation-not-ready",
+        "source": "evaluation_summary",
+        "expected_authority": expected,
+        "matched_evaluation_count": len(relevant),
+        "ignored_evaluation_count": len(summaries) - len(relevant),
+    }
+
+
+def _executor_invocation_plan(
+    *,
+    binding_fingerprint: str,
+    owner_identity: dict[str, Any],
+    target_binding: dict[str, Any],
+    assignment: dict[str, Any],
+    proof_obligation: dict[str, Any],
+    external_intent: dict[str, Any],
+    task_text: str,
+) -> dict[str, Any]:
+    bounded_task = _as_dict(external_intent.get("bounded_task"))
+    task_scope = str(bounded_task.get("task") or bounded_task.get("outcome") or "").strip()
+    if not task_scope:
+        task_scope = task_text or str(assignment.get("context_key") or owner_identity.get("current_work_id") or "")
+    plan = {
+        "kind": "agentic-workspace/autopilot-executor-invocation/v1",
+        "role": "ordinary-executor",
+        "task_scope": task_scope,
+        "external_intent": external_intent,
+        "owner_identity": owner_identity,
+        "target": {
+            "target_identity_ref": target_binding.get("target_identity_ref"),
+            "selected_target": target_binding.get("selected_target"),
+            "execution_methods": target_binding.get("execution_methods") or [],
+        },
+        "allowed_effects": assignment.get("allowed_effects") or [],
+        "allowed_paths": assignment.get("allowed_paths") or [],
+        "stop_conditions": assignment.get("stop_conditions") or [],
+        "proof_obligation": proof_obligation,
+        "return_schema": "agentic-workspace/terminal-outcome-contract/v1",
+        "binding_fingerprint": binding_fingerprint,
+    }
+    plan["invocation_revision"] = binding_fingerprint
+    plan["rule"] = "Executor commands must be rendered from this typed invocation after each binding change."
+    return plan
+
+
+def _executor_required_proof_commands_from_authority(proof_authority: dict[str, Any]) -> list[str]:
+    required_proof = _as_dict(proof_authority.get("required_proof"))
+    for value in (
+        proof_authority.get("required_commands"),
+        proof_authority.get("commands"),
+        required_proof.get("commands"),
+        required_proof.get("required_commands"),
+    ):
+        commands = [str(command).strip() for command in _list_payload(value) if str(command).strip()]
+        if commands:
+            return _dedupe(commands)
+    return []
+
+
+def _executor_required_proof_commands_from_reconciliation(reconciliation: dict[str, Any]) -> list[str]:
+    commands: list[str] = []
+    for item in _list_payload(reconciliation.get("commands")):
+        if isinstance(item, dict):
+            command = str(item.get("command") or "").strip()
+        else:
+            command = str(item or "").strip()
+        if command:
+            commands.append(command)
+    return _dedupe(commands)
+
+
+def _executor_selected_proof_commands_from_selection(proof_selection: dict[str, Any], required_commands: list[str]) -> list[dict[str, Any]]:
+    selected_commands = [item for item in _list_payload(proof_selection.get("selected_commands")) if isinstance(item, dict)]
+    if selected_commands:
+        return selected_commands
+    return [{"command": command, "required": True, "proof_requirement_tier": "selected_required"} for command in required_commands]
+
+
+def _executor_proof_authority(*, target_root: Path, context: dict[str, Any], changed_paths: list[str], task_text: str) -> dict[str, Any]:
+    supplied = _as_dict(
+        context.get("proof_obligation")
+        or context.get("selected_proof_obligation")
+        or context.get("proof_authority")
+        or context.get("proof")
+    )
+    expected_reconciliation = _as_dict(context.get("proof_receipt_reconciliation"))
+    required_commands = _executor_required_proof_commands_from_authority(supplied)
+    if not required_commands:
+        required_commands = _executor_required_proof_commands_from_reconciliation(expected_reconciliation)
+    selected_commands: list[dict[str, Any]] = []
+    if not required_commands and changed_paths:
+        proof_selection = _proof_selection_for_changed_paths(
+            changed_paths=changed_paths,
+            target_root=target_root,
+            task_text=task_text,
+            include_durable_intent=False,
+        )
+        proof_obligations = _as_dict(proof_selection.get("proof_obligations"))
+        required_commands = _executor_required_proof_commands_from_authority(proof_obligations)
+        selected_commands = _executor_selected_proof_commands_from_selection(proof_selection, required_commands)
+    else:
+        selected_commands = [
+            {"command": command, "required": True, "proof_requirement_tier": "selected_required"} for command in required_commands
+        ]
+    if not required_commands:
+        supplied_status = str(supplied.get("receipt_status") or supplied.get("status") or "").strip()
+        if not supplied and not expected_reconciliation:
+            return {
+                "status": "missing",
+                "receipt_status": "missing",
+                "reason": "missing-selected-proof-obligation",
+                "repair": "Run proof selection and record an accepted live proof obligation before running Autopilot.",
+            }
+        if supplied_status not in {"not-required", "not_required", "not-applicable", "not_applicable"}:
+            return {
+                "status": "missing",
+                "receipt_status": "missing",
+                "reason": "missing-live-proof-reconciliation",
+                "expected_authority": supplied,
+                "expected_reconciliation": expected_reconciliation,
+                "source": "caller-expected-proof",
+                "repair": "Resolve proof receipt reconciliation from the current selected proof obligation before running Autopilot.",
+            }
+        return {
+            "status": "accepted",
+            "receipt_status": "not-required",
+            "reason": "no-required-proof-command-selected",
+            "source": "live-proof-selection",
+            "expected_authority": supplied,
+            "expected_reconciliation": expected_reconciliation,
+        }
+    live_reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=target_root,
+        required_commands=required_commands,
+        changed_paths=changed_paths,
+        selected_commands=selected_commands,
+    )
+    expected_identity = _as_dict(expected_reconciliation.get("selected_proof_identity") or supplied.get("selected_proof_identity"))
+    live_identity = _as_dict(live_reconciliation.get("selected_proof_identity"))
+    expected_fingerprint = str(
+        expected_identity.get("proof_subject_fingerprint") or supplied.get("proof_subject_fingerprint") or ""
+    ).strip()
+    live_fingerprint = str(live_identity.get("proof_subject_fingerprint") or "").strip()
+    if expected_fingerprint and live_fingerprint and expected_fingerprint != live_fingerprint:
+        return {
+            "status": "rejected",
+            "receipt_status": "rejected",
+            "reason": "selected-proof-authority-changed",
+            "selected_proof_identity": live_identity,
+            "proof_subject_fingerprint": live_fingerprint,
+            "expected_authority": supplied,
+            "expected_reconciliation": expected_reconciliation,
+            "live_reconciliation": live_reconciliation,
+            "source": "live_proof_receipt_reconciliation",
+            "repair": "Re-resolve proof selection and record receipts for the current selected proof obligation.",
+        }
+    accepted = live_reconciliation.get("status") == "accepted"
+    return {
+        "status": "accepted" if accepted else "missing",
+        "receipt_status": "fresh" if accepted else str(live_reconciliation.get("status") or "missing"),
+        "selected_proof_identity": live_identity,
+        "proof_subject_fingerprint": live_fingerprint or supplied.get("proof_subject_fingerprint"),
+        "required_commands": required_commands,
+        "reason": "live-proof-receipt-reconciliation" if accepted else "missing-live-proof-reconciliation",
+        "source": "live_proof_receipt_reconciliation",
+        "expected_authority": supplied,
+        "expected_reconciliation": expected_reconciliation,
+        "live_reconciliation": live_reconciliation,
+        "rule": "Context proof fields are expectations only; Autopilot binds only live proof receipt reconciliation resolved at executor-bind time.",
+    }
+
+
+def _executor_mutation_baseline_authority(
+    *, target_root: Path, context: dict[str, Any], assignment_identity: dict[str, Any]
+) -> dict[str, Any]:
+    expected = _as_dict(
+        context.get("expected_mutation_baseline") or context.get("mutation_baseline") or assignment_identity.get("mutation_baseline")
+    )
+    if not expected:
+        return {
+            "status": "missing",
+            "revalidation_status": "missing",
+            "reason": "missing-mutation-baseline",
+            "repair": "Resolve and revalidate the current mutation baseline before running Autopilot.",
+        }
+    allowed_paths = [str(path) for path in _list_payload(assignment_identity.get("allowed_paths")) if str(path).strip()]
+    revalidation = revalidate_mutation_baseline(
+        target_root=target_root,
+        expected=expected,
+        assignment_target_identity_ref=str(assignment_identity.get("target_identity_ref") or "") or None,
+        allowed_paths=allowed_paths or None,
+    )
+    return {
+        **expected,
+        "status": "fresh" if revalidation.get("admitted") else "rejected",
+        "revalidation_status": "fresh" if revalidation.get("admitted") else "rejected",
+        "revalidation": revalidation,
+        "reason": revalidation.get("repair") if not revalidation.get("admitted") else "mutation-baseline-revalidated",
+        "source": "revalidate_mutation_baseline",
+    }
+
+
+def _executor_availability(
+    *,
+    owner_id: str,
+    assignment: dict[str, Any],
+    target_binding: dict[str, Any],
+    selected_target: dict[str, Any],
+    assignment_policy: dict[str, Any],
+    delegation_decision: dict[str, Any],
+) -> dict[str, Any]:
+    if not owner_id:
+        return {
+            "status": "unavailable",
+            "reason": "no-live-owner-binding",
+            "repair": "Resolve a live Planning/current-work owner before running Autopilot.",
+        }
+    if not selected_target:
+        return {
+            "status": "unavailable",
+            "reason": "missing-selected-executor-target",
+            "repair": "Resolve an authoritative executor target before running Autopilot.",
+        }
+    execution_methods = [str(method) for method in _list_payload(selected_target.get("execution_methods")) if str(method).strip()]
+    automatic_methods = [method for method in execution_methods if method in {"internal", "cli", "api"}]
+    if not execution_methods:
+        return {
+            "status": "unavailable",
+            "reason": "missing-execution-method",
+            "repair": "Select a target with an executable method before running Autopilot.",
+        }
+    manual_transport = _manual_transport_admission_payload(
+        assignment_policy=assignment_policy,
+        target_execution_methods=execution_methods,
+        handoff_required=bool(delegation_decision.get("handoff_command")),
+    )
+    if not automatic_methods and not manual_transport.get("export_allowed"):
+        return {
+            "status": "unavailable",
+            "reason": "transport-policy-blocked",
+            "repair": str(manual_transport.get("repair") or "Enable transport or choose an automatic executor target."),
+            "manual_transport": manual_transport,
+        }
+    if assignment.get("implementation_allowed") is False:
+        return {
+            "status": "unavailable",
+            "reason": str(assignment.get("reason") or assignment.get("gate_status") or "assignment-gate-blocked"),
+            "repair": str(assignment.get("required_next_action") or "Resolve assignment gate before running Autopilot."),
+            "manual_transport": manual_transport,
+        }
+    if str(target_binding.get("target_identity_status") or "") in {"missing", "stale", "rejected", "unknown"}:
+        return {
+            "status": "unavailable",
+            "reason": "target-identity-not-current",
+            "repair": "Refresh target identity before running Autopilot.",
+            "manual_transport": manual_transport,
+        }
+    return {
+        "status": "available",
+        "execution_methods": execution_methods,
+        "automatic_methods": automatic_methods,
+        "manual_transport": manual_transport,
+    }
+
+
+def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
+    context = resolve_current_work_context(root=target_root, task="", relation_hint="plan-continuation")
+    owner_binding = _as_dict(context.get("owner_binding"))
+    owner_id = str(context.get("selected_plan_id") or context.get("plan_id") or owner_binding.get("owner_id") or "").strip()
+    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_module_operations()))
+    changed_paths = _executor_context_changed_paths(context)
+    task_text = _executor_context_task_text(context)
+    execution_posture = _as_dict(context.get("execution_posture"))
+    if not execution_posture:
+        execution_posture = _execution_posture_payload(
+            config=config,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            target_root=target_root,
+        )
+    target_identity = target_identity_posture(local_override=config.local_override, target_root=target_root)
+    current_target_identity = _as_dict(target_identity.get("current_target_identity"))
+    target_subject = _as_dict(current_target_identity.get("subject"))
+    assignment_policy = _as_dict(execution_posture.get("assignment_policy"))
+    assignment_gate = _as_dict(execution_posture.get("assignment_gate"))
+    delegation_decision = _as_dict(execution_posture.get("delegation_decision"))
+    selected_target = _as_dict(execution_posture.get("selected_target"))
+    assignment_identity = (
+        _assignment_identity_payload(
+            assignment_gate=assignment_gate,
+            assignment_policy=assignment_policy,
+            delegation_decision=delegation_decision,
+        )
+        if assignment_gate
+        else {}
+    )
+    revision = _as_dict(context.get("revision"))
+    target_identity_ref = str(
+        assignment_identity.get("target_identity_ref") or target_subject.get("stable_target_id") or target_root.as_posix()
+    ).strip()
+    current_work_id = str(context.get("id") or "")
+    owner_identity = {
+        "owner_id": owner_id,
+        "owner_ref": str(_as_dict(context.get("provenance")).get("plan_id") or "").strip(),
+        "owner_relation": str(owner_binding.get("relation") or ""),
+        "current_work_id": current_work_id,
+        "owner_revision": str(context.get("owner_revision") or revision.get("owner_revision") or revision.get("head") or "").strip(),
+        "external_intent_revision": _executor_binding_fingerprint(
+            {
+                "task_text": task_text,
+                "current_slice": context.get("current_slice"),
+                "issue_refs": _list_payload(context.get("issue_refs")),
+                "plan_refs": _list_payload(context.get("plan_refs")),
+            }
+        ),
+    }
+    target_binding = {
+        "target_root": target_root.as_posix(),
+        "worktree": str(context.get("worktree") or "."),
+        "branch": str(context.get("branch") or ""),
+        "head": str(revision.get("head") or context.get("head") or ""),
+        "current_target": target_identity.get("current_target"),
+        "target_identity_ref": target_identity_ref,
+        "target_identity_status": current_target_identity.get("status"),
+        "selected_target": selected_target.get("name"),
+        "target_revision": assignment_identity.get("target_revision"),
+        "execution_methods": selected_target.get("execution_methods") or [],
+        "capability_classes": selected_target.get("capability_classes") or [],
+        "location": selected_target.get("location"),
+        "strength": selected_target.get("strength"),
+    }
+    assignment = {
+        "status": str(assignment_gate.get("status") or "missing"),
+        "policy": str(assignment_gate.get("assignment_policy") or assignment_identity.get("assignment_policy") or ""),
+        "selected_target": assignment_gate.get("selected_target") or assignment_identity.get("target"),
+        "current_target": target_identity.get("current_target"),
+        "target_identity_ref": target_identity_ref,
+        "context_key": assignment_identity.get("slice_id") or current_work_id,
+        "claim_boundary": assignment_gate.get("claim_boundary"),
+        "required_next_action": assignment_gate.get("required_next_action"),
+        "implementation_allowed": assignment_gate.get("implementation_allowed"),
+        "assignment_revision": assignment_identity.get("revision"),
+        "assignment_decision_revision": assignment_identity.get("assignment_decision_revision"),
+        "allowed_effects": assignment_identity.get("allowed_effects") or [],
+        "allowed_paths": assignment_identity.get("allowed_paths") or [],
+        "stop_conditions": assignment_identity.get("stop_conditions") or [],
+        "proof_obligation_id": assignment_identity.get("proof_obligation_id"),
+    }
+    evaluation = _executor_evaluation_authority(
+        target_root=target_root,
+        context=context,
+        assignment=assignment,
+        owner_identity=owner_identity,
+    )
+    external_intent = _executor_external_intent_authority(
+        target_root=target_root,
+        context=context,
+        owner_identity=owner_identity,
+        assignment=assignment,
+        task_text=task_text,
+    )
+    if str(external_intent.get("status") or "") == "accepted":
+        owner_identity["external_intent_revision"] = str(external_intent.get("evidence_revision_hash") or "").strip()
+    proof_obligation = _executor_proof_authority(
+        target_root=target_root,
+        context=context,
+        changed_paths=changed_paths,
+        task_text=task_text,
+    )
+    mutation_baseline = _executor_mutation_baseline_authority(
+        target_root=target_root,
+        context=context,
+        assignment_identity=assignment_identity,
+    )
+    availability = _executor_availability(
+        owner_id=owner_id,
+        assignment=assignment,
+        target_binding=target_binding,
+        selected_target=selected_target,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+    fingerprint_payload = {
+        "owner_identity": owner_identity,
+        "target_identity": target_binding,
+        "assignment": assignment,
+        "evaluation": evaluation,
+        "proof_obligation": proof_obligation,
+        "mutation_baseline": mutation_baseline,
+        "external_intent": external_intent,
+    }
+    binding_fingerprint = _executor_binding_fingerprint(fingerprint_payload)
+    executor_invocation = _executor_invocation_plan(
+        binding_fingerprint=binding_fingerprint,
+        owner_identity=owner_identity,
+        target_binding=target_binding,
+        assignment=assignment,
+        proof_obligation=proof_obligation,
+        external_intent=external_intent,
+        task_text=task_text,
+    )
+    binding = {
+        "kind": "agentic-workspace/autopilot-executor-binding/v1",
+        "status": "bound" if owner_id else "unbound",
+        "slice": slice_number,
+        "owner_id": owner_id,
+        "owner_ref": str(_as_dict(context.get("provenance")).get("plan_id") or "").strip(),
+        "owner_refs": _list_payload(context.get("plan_refs")),
+        "issue_refs": _list_payload(context.get("issue_refs")),
+        "current_work_id": str(context.get("id") or ""),
+        "input_revision": {
+            "head": str(_as_dict(context.get("revision")).get("head") or ""),
+            "resolved_at": str(_as_dict(context.get("freshness")).get("resolved_at") or ""),
+        },
+        "owner_identity": owner_identity,
+        "target_identity": target_binding,
+        "assignment": assignment,
+        "evaluation": evaluation,
+        "proof_obligation": proof_obligation,
+        "mutation_baseline": mutation_baseline,
+        "external_intent": external_intent,
+        "availability": availability,
+        "executor_invocation": executor_invocation,
+        "binding_fingerprint": binding_fingerprint,
+        "source": "resolve_current_work_context",
+        "rule": "Autopilot resolves this binding before every executor slice from authoritative owner, target, assignment, evaluation, proof, and mutation-baseline state.",
+    }
+    binding["validity"] = _executor_binding_invalidity(binding)
+    return binding
+
+
+def _executor_binding_change_guard(
+    *, executor_command: str, previous_binding: dict[str, Any], current_binding: dict[str, Any]
+) -> dict[str, Any]:
+    invalidity = _executor_binding_invalidity(current_binding)
+    if invalidity.get("status") == "rejected":
+        return {
+            "status": "no-valid-executor",
+            "reason": invalidity.get("reason"),
+            "repair": invalidity.get("repair"),
+            "current_binding_fingerprint": current_binding.get("binding_fingerprint"),
+            "binding_status": current_binding.get("status"),
+            "rule": "Autopilot must stop before invoking an executor when the live owner, target, assignment, evaluation, proof, or mutation-baseline binding is invalid.",
+        }
+    previous_owner = str(previous_binding.get("owner_id") or "").strip()
+    current_owner = str(current_binding.get("owner_id") or "").strip()
+    previous_fingerprint = str(previous_binding.get("binding_fingerprint") or "").strip()
+    current_fingerprint = str(current_binding.get("binding_fingerprint") or "").strip()
+    if previous_binding and not previous_fingerprint:
+        previous_fingerprint = _executor_binding_fingerprint(_executor_binding_fingerprint_payload(previous_binding))
+    if current_binding and not current_fingerprint:
+        current_fingerprint = _executor_binding_fingerprint(_executor_binding_fingerprint_payload(current_binding))
+    if not previous_owner or not current_owner or previous_fingerprint == current_fingerprint:
+        return {
+            "status": "valid",
+            "reason": "binding unchanged or first slice",
+            "current_binding_fingerprint": current_fingerprint,
+        }
+    previous_scope_fingerprint = _executor_binding_fingerprint(_executor_binding_invocation_scope_payload(previous_binding))
+    current_scope_fingerprint = _executor_binding_fingerprint(_executor_binding_invocation_scope_payload(current_binding))
+    if previous_scope_fingerprint == current_scope_fingerprint:
+        return {
+            "status": "valid",
+            "reason": "executor invocation scope unchanged; mutation baseline revalidated",
+            "previous_binding_fingerprint": previous_fingerprint,
+            "current_binding_fingerprint": current_fingerprint,
+            "current_invocation_scope_fingerprint": current_scope_fingerprint,
+        }
+    previous_terms = _executor_binding_terms(previous_binding)
+    current_terms = _executor_binding_terms(current_binding)
+    command_text_value = str(executor_command or "")
+    current_invocation = _as_dict(current_binding.get("executor_invocation"))
+    current_invocation_revision = str(current_invocation.get("invocation_revision") or current_fingerprint).strip()
+    names_current_invocation = bool(current_invocation_revision and current_invocation_revision in command_text_value)
+    if not names_current_invocation:
+        return {
+            "status": "stale-binding",
+            "reason": "executor invocation lacks current typed binding revision after active binding changed",
+            "previous_owner_id": previous_owner,
+            "current_owner_id": current_owner,
+            "previous_terms": previous_terms,
+            "current_terms": current_terms,
+            "previous_binding_fingerprint": previous_fingerprint,
+            "current_binding_fingerprint": current_fingerprint,
+            "current_invocation_revision": current_invocation_revision,
+            "current_executor_invocation": current_invocation,
+            "binding_payload_fields": list(_executor_binding_fingerprint_payload(current_binding)),
+            "repair": "Render a fresh executor command from the newly admitted owner and external intent before running Autopilot again.",
+        }
+    return {
+        "status": "rebound",
+        "reason": "active binding changed; executor invocation carries the current binding fingerprint",
+        "previous_owner_id": previous_owner,
+        "current_owner_id": current_owner,
+        "previous_binding_fingerprint": previous_fingerprint,
+        "current_binding_fingerprint": current_fingerprint,
+        "current_invocation_revision": current_invocation_revision,
+        "current_executor_invocation": current_invocation,
+        "binding_payload_fields": list(_executor_binding_fingerprint_payload(current_binding)),
+    }
+
+
 def _final_response_closeout_trust_for_admission(*, target_root: Path) -> tuple[dict[str, Any], WorkspaceConfig]:
     descriptors = _module_operations()
     _validate_descriptor_contract(descriptors)
@@ -30979,13 +31984,64 @@ def _run_final_response_executor_loop(
     slices: list[dict[str, Any]] = []
     previous_admission: dict[str, Any] = {}
     previous_continuation: dict[str, Any] = {}
+    previous_executor_binding: dict[str, Any] = {}
     final_payload: dict[str, Any] = {}
     slice_number = 0
     while True:
         slice_number += 1
+        executor_binding = _active_executor_binding(target_root=target_root, slice_number=slice_number)
+        binding_guard = _executor_binding_change_guard(
+            executor_command=executor_command,
+            previous_binding=previous_executor_binding,
+            current_binding=executor_binding,
+        )
+        if (
+            str(getattr(args, "command", "") or "") != "autopilot"
+            and binding_guard.get("status") == "no-valid-executor"
+            and binding_guard.get("reason") == "no-live-owner-binding"
+        ):
+            binding_guard = {
+                "status": "valid",
+                "reason": "final-response executor boundary does not require an Autopilot Planning owner",
+                "current_binding_fingerprint": executor_binding.get("binding_fingerprint"),
+            }
+        if binding_guard.get("status") in {"stale-binding", "no-valid-executor"}:
+            stop_status = str(binding_guard.get("status") or "executor-binding-invalid").replace("-", "_")
+            failed_executor = {
+                "kind": "agentic-workspace/final-response-executor-result/v1",
+                "slice": slice_number,
+                "command": executor_command,
+                "exit_code": None,
+                "stdout_present": False,
+                "stderr_excerpt": "",
+                "binding_guard": binding_guard,
+                "binding": executor_binding,
+            }
+            final_payload = {
+                "kind": "agentic-workspace/final-response-admission-result/v1",
+                "status": stop_status,
+                "ordinary_execution_loop": {
+                    "status": stop_status,
+                    "vendor_neutral": True,
+                    "depends_on_codex_goal_mode": False,
+                    "depends_on_model_cli_harness": False,
+                    "slice_count": slice_number,
+                    "slices": slices,
+                    "failed_executor": failed_executor,
+                    "custody": "agent",
+                    "binding": executor_binding,
+                    "binding_guard": binding_guard,
+                    "rule": "Autopilot must re-resolve executor task binding after admitted owner, target, assignment, proof, evaluation, or mutation-baseline changes; invalid bindings fail closed before execution.",
+                },
+            }
+            raise WorkspaceUsageError(
+                f"--executor-command has invalid executor binding ({binding_guard['reason']}): {binding_guard['repair']}"
+            )
         env = os.environ.copy()
         env["AGENTIC_WORKSPACE_FINAL_RESPONSE_SLICE"] = str(slice_number)
         env["AGENTIC_WORKSPACE_FINAL_RESPONSE_CUSTODY"] = "agent"
+        env["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING"] = json.dumps(executor_binding, sort_keys=True)
+        env["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING_GUARD"] = json.dumps(binding_guard, sort_keys=True)
         if previous_admission:
             env["AGENTIC_WORKSPACE_FINAL_RESPONSE_PREVIOUS_ADMISSION"] = json.dumps(previous_admission, sort_keys=True)
             previous_after_state = _as_dict(_as_dict(previous_admission.get("resume_transition")).get("after_state"))
@@ -31021,6 +32077,8 @@ def _run_final_response_executor_loop(
             "completed_at": completed_at,
             "stdout_present": bool(result.stdout.strip()),
             "stderr_excerpt": (result.stderr or "")[:500],
+            "binding": executor_binding,
+            "binding_guard": binding_guard,
         }
         if result.returncode != 0:
             final_payload = {
@@ -31086,6 +32144,8 @@ def _run_final_response_executor_loop(
             "continuation_exit_code": executor_result.get("exit_code"),
             "after_compaction": bool(getattr(args, "after_compaction", False)) or slice_number > 1,
             "ordinary_execution_slice": slice_number,
+            "executor_binding": executor_binding,
+            "executor_binding_guard": binding_guard,
         }
         checkpoint_write = _write_local_chat_checkpoint(
             target_root=target_root,
@@ -31112,10 +32172,13 @@ def _run_final_response_executor_loop(
             "checkpoint_write": checkpoint_write,
             "checkpoint_before": before_state,
             "checkpoint_after": after_state,
+            "executor_binding": executor_binding,
+            "executor_binding_guard": binding_guard,
         }
         slices.append(slice_payload)
         previous_admission = admission
         previous_continuation = executor_result
+        previous_executor_binding = executor_binding
 
         final_payload = {
             "kind": "agentic-workspace/final-response-admission-result/v1",
@@ -31137,10 +32200,13 @@ def _run_final_response_executor_loop(
                     "AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION",
                     "AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION_STATE",
                     "AGENTIC_WORKSPACE_FINAL_RESPONSE_ACTIVE_OBJECTIVE",
+                    "AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING",
                 ],
                 "custody": "agent" if admission.get("status") == "rejected_auto_resumed" else "completed-outcome",
                 "slice_count": slice_number,
                 "slices": slices,
+                "latest_executor_binding": executor_binding,
+                "latest_executor_binding_guard": binding_guard,
                 "rule": "The package-owned ordinary loop admits every model-authored executor response and re-enters execution while CONTINUE remains.",
             },
             "rule": "This command is the vendor-neutral ordinary execution boundary for model-authored final responses.",

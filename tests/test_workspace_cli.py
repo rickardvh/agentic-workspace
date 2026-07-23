@@ -2154,6 +2154,28 @@ def test_autopilot_ordinary_route_admits_executor_and_real_repo_state_transition
 
     monkeypatch.setattr(cli, "_run_final_response_continuation_operation", fake_continuation)
 
+    def dynamic_autopilot_context(**_: Any) -> dict[str, Any]:
+        return _autopilot_authoritative_context_fixture(
+            target_root=tmp_path,
+            proof={
+                "status": "accepted",
+                "receipt_status": "fresh",
+                "proof_subject_fingerprint": "proof-owner-a",
+                "commands": ["make proof-owner-a"],
+            },
+        )
+
+    monkeypatch.setattr(cli, "resolve_current_work_context", dynamic_autopilot_context)
+    monkeypatch.setattr(cli, "_proof_receipt_reconciliation_payload", lambda **_: _accepted_autopilot_proof_reconciliation())
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
     attempt_log = tmp_path / "attempts.log"
     monkeypatch.setenv("ATTEMPT_LOG", str(attempt_log))
     executor_script = tmp_path / "autopilot_executor.py"
@@ -2183,11 +2205,10 @@ else:
     }
     record["active_milestone"]["status"] = "completed"
     plan_path.write_text(json.dumps(record, indent=2) + "\\n", encoding="utf-8")
-    print("Actually delivered.")
+print("Actually delivered.")
 """.strip(),
         encoding="utf-8",
     )
-
     registry = json.loads((tmp_path / ".agentic-workspace/planning/skills/REGISTRY.json").read_text(encoding="utf-8"))
     autopilot_skill = next(entry for entry in registry["skills"] if entry["id"] == "planning-autopilot")
     host_entrypoint = autopilot_skill["host_entrypoint"]
@@ -2220,6 +2241,864 @@ else:
     assert attempt_log.read_text(encoding="utf-8").splitlines() == ["1", "2"]
     record = json.loads((tmp_path / ".agentic-workspace/planning/execplans/issue-1981.plan.json").read_text())
     assert record["proof_report"]["validation proof"] == "autopilot executor wrote real repo proof"
+
+
+def _autopilot_executor_binding_fixture(*, owner: str, slice_number: int, target_root: Path) -> dict[str, Any]:
+    binding = {
+        "kind": "agentic-workspace/autopilot-executor-binding/v1",
+        "status": "bound",
+        "slice": slice_number,
+        "owner_id": owner,
+        "owner_ref": f".agentic-workspace/planning/execplans/{owner}.plan.json",
+        "owner_refs": [f"#{owner[-1]}"],
+        "issue_refs": [f"#{owner[-1]}"],
+        "current_work_id": f"work-{owner}",
+        "owner_identity": {
+            "owner_id": owner,
+            "owner_ref": f".agentic-workspace/planning/execplans/{owner}.plan.json",
+            "owner_relation": "plan-continuation",
+            "current_work_id": f"work-{owner}",
+        },
+        "target_identity": {
+            "target_root": str(target_root),
+            "target_identity_ref": "target-local",
+            "target_identity_status": "current",
+            "head": "fixture-head",
+            "selected_target": "local-codex",
+            "execution_methods": ["cli"],
+            "capability_classes": ["mechanical-follow-through"],
+        },
+        "assignment": {
+            "status": "keep-local",
+            "selected_target": "local-codex",
+            "target_identity_ref": "target-local",
+            "context_key": f"work-{owner}",
+            "implementation_allowed": True,
+            "assignment_revision": f"assignment-{owner}",
+            "allowed_effects": ["edit", "test"],
+            "allowed_paths": ["."],
+            "stop_conditions": ["blocked-authority"],
+        },
+        "evaluation": {"status": "not-required", "freshness_status": "not-required", "reason": "no-registered-evaluations"},
+        "proof_obligation": {"status": "accepted", "receipt_status": "fresh", "proof_subject_fingerprint": f"proof-{owner}"},
+        "mutation_baseline": {
+            "baseline_id": f"autopilot:work-{owner}",
+            "head": "fixture-head",
+            "revalidation_status": "fresh",
+        },
+        "external_intent": {"status": "not-applicable", "reason": "fixture-no-external-issue-ref"},
+        "availability": {"status": "available", "execution_methods": ["cli"]},
+        "input_revision": {"head": "fixture-head", "resolved_at": "2026-07-20T00:00:00+00:00"},
+        "validity": {"status": "accepted"},
+    }
+    binding["binding_fingerprint"] = cli._executor_binding_fingerprint(cli._executor_binding_fingerprint_payload(binding))
+    return binding
+
+
+def _accepted_autopilot_proof_reconciliation(*, fingerprint: str = "proof-owner-a") -> dict[str, Any]:
+    return {
+        "status": "accepted",
+        "selected_proof_identity": {"owner_id": "owner-a", "proof_subject_fingerprint": fingerprint},
+        "commands": [{"command": "make proof-owner-a", "evidence_state": "accepted"}],
+        "receipt": {"result": "passed", "verified_by": "aw"},
+    }
+
+
+def _write_external_intent_evidence(
+    target_root: Path,
+    *,
+    issue_ref: str = "#84",
+    title: str = "Implement child issue B only",
+    revision: str = "2026-07-22T00:00:00Z",
+) -> None:
+    path = target_root / cli.EXTERNAL_INTENT_CACHE_RELATIVE_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/external-intent-evidence/v1",
+                "refreshed_at": revision,
+                "items": [
+                    {
+                        "system": "github",
+                        "id": issue_ref,
+                        "title": title,
+                        "status": "open",
+                        "kind": "slice",
+                        "parent_id": "#80",
+                        "url": f"https://github.example.test/repo/issues/{issue_ref.lstrip('#')}",
+                        "source_repository": "owner/repo",
+                        "external_revision": revision,
+                        "observed_at": revision,
+                        "freshness": {
+                            "status": "current",
+                            "observed_at": revision,
+                            "expires_at": "2099-01-01T00:00:00+00:00",
+                        },
+                        "negative_invariants": ["Do not implement sibling issue C."],
+                        "owner": {"id": issue_ref, "kind": "issue"},
+                        "provider_detail": {"repository": "owner/repo"},
+                    }
+                ],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _ensure_autopilot_fixture_git_head(target_root: Path) -> None:
+    subprocess.run(["git", "init"], cwd=target_root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=target_root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=target_root, check=True, capture_output=True, text=True)
+    head = subprocess.run(["git", "rev-parse", "--verify", "HEAD"], cwd=target_root, capture_output=True, text=True)
+    if head.returncode == 0:
+        return
+    subprocess.run(["git", "add", "-A"], cwd=target_root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "fixture baseline"], cwd=target_root, check=True, capture_output=True, text=True)
+
+
+def _autopilot_authoritative_context_fixture(*, target_root: Path, proof: dict[str, Any] | None = None) -> dict[str, Any]:
+    from agentic_workspace.authority_envelope import mutation_baseline_payload
+
+    _ensure_autopilot_fixture_git_head(target_root)
+    baseline = mutation_baseline_payload(
+        target_root=target_root,
+        changed_paths=[],
+        assignment_target_identity_ref="target-local",
+    )
+    context = {
+        "selected_plan_id": "owner-a",
+        "id": "work-owner-a",
+        "owner_binding": {"owner_id": "owner-a", "relation": "plan-continuation"},
+        "provenance": {"plan_id": ".agentic-workspace/planning/execplans/owner-a.plan.json"},
+        "revision": {"head": baseline["head"]},
+        "freshness": {"resolved_at": "2026-07-20T00:00:00+00:00"},
+        "execution_posture": {
+            "assignment_policy": {"manual_transport_policy": {"value": "allowed"}},
+            "assignment_gate": {
+                "status": "keep-local",
+                "implementation_allowed": True,
+                "selected_target": "local-codex",
+                "target_identity_ref": "target-local",
+                "target_revision": "target-rev-1",
+                "task_class": "implementation",
+                "scope_class": "bounded",
+                "slice_id": "work-owner-a",
+                "slice_revision": "slice-rev-1",
+                "assignment_policy": "local-preferred",
+                "assignment_decision_revision": "assignment-decision-rev-1",
+                "allowed_effects": ["edit", "test"],
+                "allowed_paths": [],
+                "stop_conditions": ["blocked-authority"],
+                "mutation_baseline": baseline,
+            },
+            "delegation_decision": {"decision": "stay-local", "delegation_next_step": {"execution_methods": ["cli"]}},
+            "selected_target": {
+                "name": "local-codex",
+                "execution_methods": ["cli"],
+                "capability_classes": ["mechanical-follow-through"],
+                "location": "local",
+                "strength": "standard",
+            },
+        },
+        "evaluation": {"status": "not-required", "freshness_status": "not-required", "reason": "no-registered-evaluations"},
+        "expected_mutation_baseline": baseline,
+    }
+    if proof is not None:
+        context["proof_obligation"] = proof
+        context["proof_receipt_reconciliation"] = {
+            "status": "accepted",
+            "selected_proof_identity": {
+                "owner_id": "owner-a",
+                "proof_subject_fingerprint": proof.get("proof_subject_fingerprint"),
+            },
+            "commands": [{"command": command} for command in proof.get("commands", ["make proof-owner-a"])],
+            "reason": "accepted-current-proof-receipt",
+        }
+    return context
+
+
+def test_active_executor_binding_consumes_authoritative_context_and_revalidates_baseline(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    context = _autopilot_authoritative_context_fixture(
+        target_root=tmp_path,
+        proof={
+            "status": "accepted",
+            "receipt_status": "fresh",
+            "proof_subject_fingerprint": "proof-owner-a",
+            "commands": ["make proof-owner-a"],
+        },
+    )
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(cli, "_proof_receipt_reconciliation_payload", lambda **_: _accepted_autopilot_proof_reconciliation())
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "accepted"
+    assert binding["availability"]["status"] == "available"
+    assert binding["assignment"]["assignment_revision"].startswith("sha256:")
+    assert binding["mutation_baseline"]["revalidation_status"] == "fresh"
+    assert binding["proof_obligation"]["proof_subject_fingerprint"] == "proof-owner-a"
+    invocation = binding["executor_invocation"]
+    assert invocation["kind"] == "agentic-workspace/autopilot-executor-invocation/v1"
+    assert invocation["role"] == "ordinary-executor"
+    assert invocation["binding_fingerprint"] == binding["binding_fingerprint"]
+    assert invocation["return_schema"] == "agentic-workspace/terminal-outcome-contract/v1"
+    assert invocation["allowed_effects"] == ["edit", "test"]
+
+
+def test_active_executor_binding_renders_invocation_from_external_intent_child(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    _write_external_intent_evidence(
+        tmp_path,
+        issue_ref="#84",
+        title="Implement child B without touching child C",
+        revision="2026-07-22T00:00:00Z",
+    )
+    context = _autopilot_authoritative_context_fixture(
+        target_root=tmp_path,
+        proof={
+            "status": "accepted",
+            "receipt_status": "fresh",
+            "proof_subject_fingerprint": "proof-owner-a",
+            "commands": ["make proof-owner-a"],
+        },
+    )
+    context["issue_refs"] = ["#84"]
+    context["task"] = "Generic stack continuation text that must not scope the executor."
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(cli, "_proof_receipt_reconciliation_payload", lambda **_: _accepted_autopilot_proof_reconciliation())
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "accepted"
+    assert binding["external_intent"]["status"] == "accepted"
+    assert binding["external_intent"]["item_id"] == "#84"
+    assert binding["executor_invocation"]["task_scope"] == "Implement child B without touching child C"
+    assert binding["executor_invocation"]["external_intent"]["bounded_task"]["constraints"] == ["Do not implement sibling issue C."]
+
+
+def test_active_executor_binding_rejects_stale_external_intent_revision(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    _write_external_intent_evidence(
+        tmp_path,
+        issue_ref="#84",
+        title="Implement child B",
+        revision="2026-07-22T00:00:00Z",
+    )
+    context = _autopilot_authoritative_context_fixture(
+        target_root=tmp_path,
+        proof={
+            "status": "accepted",
+            "receipt_status": "fresh",
+            "proof_subject_fingerprint": "proof-owner-a",
+            "commands": ["make proof-owner-a"],
+        },
+    )
+    context["issue_refs"] = ["#84"]
+    context["external_intent"] = {"item_id": "#84", "external_revision": "2026-07-21T00:00:00Z"}
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(cli, "_proof_receipt_reconciliation_payload", lambda **_: _accepted_autopilot_proof_reconciliation())
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "rejected"
+    assert binding["validity"]["reason"] == "external-intent-authority-changed"
+
+
+def test_active_executor_binding_rejects_missing_authoritative_proof(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    context = _autopilot_authoritative_context_fixture(target_root=tmp_path, proof=None)
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "rejected"
+    assert binding["validity"]["reason"] == "missing-selected-proof-obligation"
+    assert binding["proof_obligation"]["receipt_status"] == "missing"
+
+
+def test_active_executor_binding_rejects_injected_proof_without_live_reconciliation(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    context = _autopilot_authoritative_context_fixture(
+        target_root=tmp_path,
+        proof={
+            "status": "accepted",
+            "receipt_status": "fresh",
+            "proof_subject_fingerprint": "proof-owner-a",
+            "commands": ["make proof-owner-a"],
+        },
+    )
+    context.pop("proof_receipt_reconciliation")
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "rejected"
+    assert binding["validity"]["reason"] == "missing-live-proof-reconciliation"
+    assert binding["proof_obligation"]["source"] == "live_proof_receipt_reconciliation"
+
+
+def test_active_executor_binding_rejects_context_projected_accepted_proof_without_live_receipt(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    context = _autopilot_authoritative_context_fixture(
+        target_root=tmp_path,
+        proof={
+            "status": "accepted",
+            "receipt_status": "fresh",
+            "proof_subject_fingerprint": "proof-owner-a",
+            "commands": ["make proof-owner-a"],
+        },
+    )
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(
+        cli,
+        "_proof_receipt_reconciliation_payload",
+        lambda **_: {
+            "status": "not-recorded",
+            "selected_proof_identity": {"owner_id": "owner-a", "proof_subject_fingerprint": "proof-owner-a"},
+            "commands": [{"command": "make proof-owner-a", "evidence_state": "not-run-or-not-recorded"}],
+        },
+    )
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "rejected"
+    assert binding["validity"]["reason"] == "missing-live-proof-reconciliation"
+    assert binding["proof_obligation"]["expected_reconciliation"]["status"] == "accepted"
+    assert binding["proof_obligation"]["live_reconciliation"]["status"] == "not-recorded"
+
+
+def test_active_executor_binding_rejects_stale_authoritative_evaluation(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    context = _autopilot_authoritative_context_fixture(
+        target_root=tmp_path,
+        proof={
+            "status": "accepted",
+            "receipt_status": "fresh",
+            "proof_subject_fingerprint": "proof-owner-a",
+            "commands": ["make proof-owner-a"],
+        },
+    )
+    context["evaluation"] = {"evaluation_id": "eval-owner-a"}
+    execution_posture = context["execution_posture"]
+    expected_assignment_revision = cli._assignment_identity_payload(
+        assignment_gate=execution_posture["assignment_gate"],
+        assignment_policy=execution_posture["assignment_policy"],
+        delegation_decision=execution_posture["delegation_decision"],
+    )["revision"]
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(cli, "_proof_receipt_reconciliation_payload", lambda **_: _accepted_autopilot_proof_reconciliation())
+    monkeypatch.setattr(
+        cli,
+        "evaluation_summary",
+        lambda **_: {
+            "summaries": [
+                {
+                    "evaluation_id": "eval-owner-a",
+                    "revision": 1,
+                    "owner": {"id": "owner-a"},
+                    "fresh_result_admission": {
+                        "status": "stale-bound",
+                        "current_result_identity": {
+                            "status": "stale-bound",
+                            "target_identity_ref": "target-local",
+                            "assignment_revision": expected_assignment_revision,
+                        },
+                    },
+                    "conclusion_readiness": {"ready": False, "reason_code": "stale-evaluation-result"},
+                }
+            ]
+        },
+    )
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "rejected"
+    assert binding["validity"]["reason"] == "stale-evaluation-result"
+
+
+def test_active_executor_binding_rejects_missing_required_evaluation_summary(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    context = _autopilot_authoritative_context_fixture(
+        target_root=tmp_path,
+        proof={
+            "status": "accepted",
+            "receipt_status": "fresh",
+            "proof_subject_fingerprint": "proof-owner-a",
+            "commands": ["make proof-owner-a"],
+        },
+    )
+    context["evaluation"] = {"status": "required", "evaluation_id": "eval-owner-a"}
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(cli, "_proof_receipt_reconciliation_payload", lambda **_: _accepted_autopilot_proof_reconciliation())
+    monkeypatch.setattr(cli, "evaluation_summary", lambda **_: {"summaries": []})
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "rejected"
+    assert binding["validity"]["reason"] == "missing-required-evaluation-summary"
+    assert binding["evaluation"]["required"] is True
+
+
+def test_active_executor_binding_rejects_required_evaluation_missing_join_identity(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    context = _autopilot_authoritative_context_fixture(
+        target_root=tmp_path,
+        proof={
+            "status": "accepted",
+            "receipt_status": "fresh",
+            "proof_subject_fingerprint": "proof-owner-a",
+            "commands": ["make proof-owner-a"],
+        },
+    )
+    context["evaluation"] = {"status": "required", "evaluation_id": "eval-owner-a"}
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(cli, "_proof_receipt_reconciliation_payload", lambda **_: _accepted_autopilot_proof_reconciliation())
+    monkeypatch.setattr(
+        cli,
+        "evaluation_summary",
+        lambda **_: {
+            "summaries": [
+                {
+                    "evaluation_id": "eval-owner-a",
+                    "revision": 1,
+                    "owner": {"id": "owner-a"},
+                    "fresh_result_admission": {
+                        "status": "fresh-bound",
+                        "current_result_identity": {"status": "fresh-bound"},
+                    },
+                    "conclusion_readiness": {"ready": True},
+                }
+            ]
+        },
+    )
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "rejected"
+    assert binding["validity"]["reason"] == "missing-relevant-evaluation"
+
+
+def test_active_executor_binding_ignores_unrelated_stale_evaluation(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    context = _autopilot_authoritative_context_fixture(
+        target_root=tmp_path,
+        proof={
+            "status": "accepted",
+            "receipt_status": "fresh",
+            "proof_subject_fingerprint": "proof-owner-a",
+            "commands": ["make proof-owner-a"],
+        },
+    )
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(cli, "_proof_receipt_reconciliation_payload", lambda **_: _accepted_autopilot_proof_reconciliation())
+    monkeypatch.setattr(
+        cli,
+        "evaluation_summary",
+        lambda **_: {
+            "summaries": [
+                {
+                    "evaluation_id": "eval-other-owner",
+                    "revision": 1,
+                    "owner": {"id": "other-owner"},
+                    "fresh_result_admission": {
+                        "status": "stale-bound",
+                        "current_result_identity": {"status": "missing"},
+                    },
+                    "conclusion_readiness": {"ready": False, "reason_code": "stale-evaluation-result"},
+                }
+            ]
+        },
+    )
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "accepted"
+    assert binding["evaluation"]["freshness_status"] == "not-required"
+    assert binding["evaluation"]["ignored_evaluation_count"] == 1
+
+
+def test_autopilot_rebinds_executor_with_current_binding_fingerprint_after_active_owner_changes(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    contracts = [
+        {
+            "kind": "agentic-workspace/terminal-outcome-contract/v1",
+            "state": "CONTINUE",
+            "final_response_authorized": False,
+            "required_next_action": "continue-current-work",
+            "safe_continuation_option_ids": ["run-proof"],
+            "blocker_qualification": {"status": "not_required"},
+            "final_response_enforcement": {
+                "status": "rejected_auto_resume",
+                "terminal_final_rejected": True,
+                "auto_resume_action": "continue-current-work",
+                "progress_without_yield": True,
+                "multi_slice_continuation": {"status": "preserved"},
+            },
+        },
+        {
+            "kind": "agentic-workspace/terminal-outcome-contract/v1",
+            "state": "DELIVERED",
+            "final_response_authorized": True,
+            "required_next_action": "",
+            "safe_continuation_option_ids": [],
+            "blocker_qualification": {"status": "not_required"},
+            "final_response_enforcement": {"status": "authorized", "terminal_final_rejected": False},
+        },
+    ]
+
+    def fake_closeout_trust(*, target_root: Path) -> tuple[dict[str, Any], object]:
+        assert target_root == tmp_path.resolve()
+        return {"terminal_outcome_contract": contracts.pop(0)}, object()
+
+    def fake_continuation(*, target_root: Path, terminal_outcome_contract: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "kind": "agentic-workspace/final-response-resume-result/v1",
+            "status": "executed",
+            "invoked_action": request["auto_resume_action"],
+            "invoked_operation": "planning.admit-child",
+            "command": "agentic-planning lane-activate parent --current-slice owner-b --format json",
+            "exit_code": 0,
+            "custody": "agent",
+            "after_state_patch": {"required_next_action": request["auto_resume_action"], "custody_owner": "agent"},
+        }
+
+    def fake_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
+        owner = "owner-a" if slice_number == 1 else "owner-b"
+        return _autopilot_executor_binding_fixture(owner=owner, slice_number=slice_number, target_root=target_root)
+
+    monkeypatch.setattr(cli, "_final_response_closeout_trust_for_admission", fake_closeout_trust)
+    monkeypatch.setattr(cli, "_run_final_response_continuation_operation", fake_continuation)
+    monkeypatch.setattr(cli, "_active_executor_binding", fake_binding)
+    binding_log = tmp_path / "binding.log"
+    monkeypatch.setenv("BINDING_LOG", str(binding_log))
+    executor_script = tmp_path / "generic_autopilot_executor.py"
+    executor_script.write_text(
+        """
+import json
+import os
+from pathlib import Path
+
+binding = json.loads(os.environ["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING"])
+guard = json.loads(os.environ["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING_GUARD"])
+Path(os.environ["BINDING_LOG"]).write_text(
+    (Path(os.environ["BINDING_LOG"]).read_text() if Path(os.environ["BINDING_LOG"]).exists() else "")
+    + binding["owner_id"] + ":" + guard["status"] + "\\n"
+)
+print("Done too early." if binding["owner_id"] == "owner-a" else "Actually delivered for owner-b.")
+""".strip(),
+        encoding="utf-8",
+    )
+
+    owner_b_fingerprint = fake_binding(target_root=tmp_path.resolve(), slice_number=2)["binding_fingerprint"]
+    assert (
+        cli.main(
+            [
+                "autopilot",
+                "--target",
+                str(tmp_path),
+                "--executor-command",
+                subprocess.list2cmdline([sys.executable, str(executor_script), "--binding-fingerprint", owner_b_fingerprint]),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["status"] == "accepted_terminal_final"
+    assert binding_log.read_text(encoding="utf-8").splitlines() == ["owner-a:valid", "owner-b:rebound"]
+    loop = payload["ordinary_execution_loop"]
+    assert loop["latest_executor_binding"]["owner_id"] == "owner-b"
+    assert loop["latest_executor_binding_guard"]["status"] == "rebound"
+    assert [item["executor_binding"]["owner_id"] for item in loop["slices"]] == ["owner-a", "owner-b"]
+
+
+def test_autopilot_rejects_stale_slice_specific_executor_after_owner_changes(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    def fake_closeout_trust(*, target_root: Path) -> tuple[dict[str, Any], object]:
+        return {
+            "terminal_outcome_contract": {
+                "kind": "agentic-workspace/terminal-outcome-contract/v1",
+                "state": "CONTINUE",
+                "final_response_authorized": False,
+                "required_next_action": "continue-current-work",
+                "safe_continuation_option_ids": ["run-proof"],
+                "blocker_qualification": {"status": "not_required"},
+                "final_response_enforcement": {
+                    "status": "rejected_auto_resume",
+                    "terminal_final_rejected": True,
+                    "auto_resume_action": "continue-current-work",
+                    "progress_without_yield": True,
+                    "multi_slice_continuation": {"status": "preserved"},
+                },
+            }
+        }, object()
+
+    def fake_continuation(*, target_root: Path, terminal_outcome_contract: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "kind": "agentic-workspace/final-response-resume-result/v1",
+            "status": "executed",
+            "invoked_action": request["auto_resume_action"],
+            "invoked_operation": "planning.admit-child",
+            "command": "agentic-planning lane-activate parent --current-slice owner-b --format json",
+            "exit_code": 0,
+            "custody": "agent",
+            "after_state_patch": {"required_next_action": request["auto_resume_action"], "custody_owner": "agent"},
+        }
+
+    def fake_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
+        owner = "owner-a" if slice_number == 1 else "owner-b"
+        return _autopilot_executor_binding_fixture(owner=owner, slice_number=slice_number, target_root=target_root)
+
+    monkeypatch.setattr(cli, "_final_response_closeout_trust_for_admission", fake_closeout_trust)
+    monkeypatch.setattr(cli, "_run_final_response_continuation_operation", fake_continuation)
+    monkeypatch.setattr(cli, "_active_executor_binding", fake_binding)
+    attempt_log = tmp_path / "attempts.log"
+    monkeypatch.setenv("ATTEMPT_LOG", str(attempt_log))
+    executor_script = tmp_path / "owner_a_executor.py"
+    executor_script.write_text(
+        """
+import os
+from pathlib import Path
+
+Path(os.environ["ATTEMPT_LOG"]).write_text(
+    (Path(os.environ["ATTEMPT_LOG"]).read_text() if Path(os.environ["ATTEMPT_LOG"]).exists() else "") + "ran\\n"
+)
+print("Done too early.")
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(
+            [
+                "autopilot",
+                "--target",
+                str(tmp_path),
+                "--executor-command",
+                subprocess.list2cmdline([sys.executable, str(executor_script), "--owner", "owner-a"]),
+                "--format",
+                "json",
+            ]
+        )
+
+    assert error.value.code == 2
+    assert "invalid executor binding" in capsys.readouterr().err
+    assert attempt_log.read_text(encoding="utf-8").splitlines() == ["ran"]
+
+
+@pytest.mark.parametrize(
+    ("invalid_patch", "expected_reason"),
+    [
+        ({"status": "unbound", "availability": {"status": "unavailable", "reason": "no-live-owner-binding"}}, "no-live-owner-binding"),
+        ({"availability": {"status": "unavailable", "reason": "executor-unavailable"}}, "executor-unavailable"),
+        ({"assignment": {"status": "handoff-required", "reason": "required-best-fit-handoff"}}, "required-best-fit-handoff"),
+        ({"evaluation": {"freshness_status": "stale", "reason": "stale-evaluation-result"}}, "stale-evaluation-result"),
+        ({"proof_obligation": {"receipt_status": "stale", "reason": "stale-proof-receipt"}}, "stale-proof-receipt"),
+        ({"mutation_baseline": {"revalidation_status": "stale", "reason": "baseline-head-changed"}}, "baseline-head-changed"),
+        ({"validity": {"status": "rejected", "reason": "lane-superseded"}}, "lane-superseded"),
+    ],
+)
+def test_autopilot_stops_before_executor_when_live_binding_invalid(
+    tmp_path: Path, capsys, monkeypatch, invalid_patch: dict[str, Any], expected_reason: str
+) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    def fake_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
+        binding = {
+            "kind": "agentic-workspace/autopilot-executor-binding/v1",
+            "status": "bound",
+            "slice": slice_number,
+            "owner_id": "owner-a",
+            "owner_ref": ".agentic-workspace/planning/execplans/owner-a.plan.json",
+            "owner_refs": ["#1"],
+            "issue_refs": ["#1"],
+            "current_work_id": "work-owner-a",
+            "owner_identity": {
+                "owner_id": "owner-a",
+                "owner_ref": ".agentic-workspace/planning/execplans/owner-a.plan.json",
+                "owner_relation": "plan-continuation",
+                "current_work_id": "work-owner-a",
+            },
+            "target_identity": {
+                "target_root": str(tmp_path),
+                "worktree": ".",
+                "branch": "agent/p1-autopilot-executor-binding",
+                "head": "fixture-head",
+                "current_target": "local",
+                "target_identity_ref": "target-local",
+                "target_identity_status": "known",
+            },
+            "assignment": {
+                "status": "keep-local",
+                "policy": "local-preferred",
+                "selected_target": "local",
+                "target_identity_ref": "target-local",
+                "context_key": "work-owner-a",
+            },
+            "evaluation": {
+                "status": "accepted",
+                "freshness_status": "fresh",
+                "owner_id": "owner-a",
+                "target_identity_ref": "target-local",
+            },
+            "proof_obligation": {
+                "status": "accepted",
+                "receipt_status": "fresh",
+                "proof_subject_fingerprint": "proof-fresh",
+            },
+            "mutation_baseline": {
+                "baseline_id": "autopilot:work-owner-a",
+                "head": "fixture-head",
+                "revalidation_status": "fresh",
+            },
+            "external_intent": {"status": "not-applicable", "reason": "fixture-no-external-issue-ref"},
+            "availability": {"status": "available"},
+            "validity": {"status": "accepted"},
+            "input_revision": {"head": "fixture-head", "resolved_at": "2026-07-20T00:00:00+00:00"},
+        }
+        for key, value in invalid_patch.items():
+            if isinstance(value, dict) and isinstance(binding.get(key), dict):
+                binding[key] = {**binding[key], **value}
+            else:
+                binding[key] = value
+        return binding
+
+    monkeypatch.setattr(cli, "_active_executor_binding", fake_binding)
+    attempt_log = tmp_path / "attempts.log"
+    monkeypatch.setenv("ATTEMPT_LOG", str(attempt_log))
+    executor_script = tmp_path / "should_not_run.py"
+    executor_script.write_text(
+        """
+import os
+from pathlib import Path
+
+Path(os.environ["ATTEMPT_LOG"]).write_text("ran\\n")
+print("Should not run.")
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(
+            [
+                "autopilot",
+                "--target",
+                str(tmp_path),
+                "--executor-command",
+                subprocess.list2cmdline([sys.executable, str(executor_script)]),
+                "--format",
+                "json",
+            ]
+        )
+
+    assert error.value.code == 2
+    assert expected_reason in capsys.readouterr().err
+    assert not attempt_log.exists()
 
 
 def test_autopilot_rejects_repeated_weak_finals_across_compaction_review_reconciliation_until_delivered(
@@ -2324,6 +3203,36 @@ def test_autopilot_rejects_repeated_weak_finals_across_compaction_review_reconci
     monkeypatch.setattr(cli, "_final_response_closeout_trust_for_admission", fake_closeout_trust)
     monkeypatch.setattr(cli, "_run_final_response_continuation_operation", fake_continuation)
     monkeypatch.setenv("FIXTURE_PATH", str(fixture_path))
+
+    def fake_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
+        return {
+            "kind": "agentic-workspace/autopilot-executor-binding/v1",
+            "status": "bound",
+            "slice": slice_number,
+            "owner_id": "review-stack-owner",
+            "owner_ref": ".agentic-workspace/planning/execplans/review-stack-owner.plan.json",
+            "current_work_id": "review-stack-work",
+            "owner_identity": {
+                "owner_id": "review-stack-owner",
+                "owner_ref": ".agentic-workspace/planning/execplans/review-stack-owner.plan.json",
+                "owner_relation": "plan-continuation",
+                "current_work_id": "review-stack-work",
+            },
+            "target_identity": {
+                "target_root": str(tmp_path),
+                "target_identity_ref": "target-local",
+                "head": "fixture-head",
+            },
+            "assignment": {"status": "keep-local", "target_identity_ref": "target-local", "context_key": "review-stack-work"},
+            "evaluation": {"freshness_status": "fresh"},
+            "proof_obligation": {"receipt_status": "fresh", "proof_subject_fingerprint": "review-stack-proof"},
+            "mutation_baseline": {"baseline_id": "autopilot:review-stack-work", "head": "fixture-head", "revalidation_status": "fresh"},
+            "external_intent": {"status": "not-applicable", "reason": "fixture-no-external-issue-ref"},
+            "availability": {"status": "available"},
+            "validity": {"status": "accepted"},
+        }
+
+    monkeypatch.setattr(cli, "_active_executor_binding", fake_binding)
 
     executor_script = tmp_path / "weak_review_executor.py"
     executor_script.write_text(
