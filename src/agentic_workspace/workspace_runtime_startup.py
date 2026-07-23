@@ -10,6 +10,7 @@ import argparse
 import copy
 import hashlib
 import json
+import os
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -151,6 +152,18 @@ from agentic_workspace.workspace_runtime_proof import (
 from agentic_workspace.workspace_selector_validation import _selector_inventory_selected_payload
 
 
+def _startup_command_target_arg(target_root: Path | None) -> str:
+    if target_root is None:
+        return "."
+    try:
+        relative = os.path.relpath(target_root.resolve(), Path.cwd().resolve())
+    except OSError:
+        relative = target_root.as_posix()
+    if relative == ".":
+        return "."
+    return Path(relative).as_posix()
+
+
 def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
     """Describe whether startup's read-only route forecast can be relied on yet."""
     transition = str(route_decision.get("required_transition") or "none")
@@ -239,6 +252,13 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
 
 def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Project startup context to the smallest schema-compatible first-contact answer."""
+    cli_invocation = payload.get("cli_invocation", {})
+    cli_invoke = str(cli_invocation.get("primary") or DEFAULT_CLI_INVOKE) if isinstance(cli_invocation, dict) else DEFAULT_CLI_INVOKE
+    target_arg = _startup_command_target_arg(Path(str(payload.get("target") or ".")))
+
+    def command_with_target(command: str) -> str:
+        return str(_command_with_cli_invoke(command=command, cli_invoke=cli_invoke, target_arg=target_arg))
+
     immediate = copy.deepcopy(payload["immediate_next_allowed_action"])
     if (
         immediate.get("action") not in {"ask-intent-discovery-question", "present-lane-shaping-prompt"}
@@ -307,9 +327,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "communication_contract": compact_communication_contract_payload(surface="startup"),
         "feature_tier": {
             "active": compact_active_tier,
-            "detail_command": feature_tier.get("detail_command", "agentic-workspace modules --target ./repo --format json")
+            "detail_command": feature_tier.get(
+                "detail_command", command_with_target("agentic-workspace modules --target ./repo --format json")
+            )
             if isinstance(feature_tier, dict)
-            else "agentic-workspace modules --target ./repo --format json",
+            else command_with_target("agentic-workspace modules --target ./repo --format json"),
         },
         "active_state_summary": payload["active_state_summary"],
         "planning_revision": payload.get("planning_revision", {}),
@@ -333,7 +355,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "closeout obligations apply after implementation or lane closeout, not ordinary first-contact orientation",
             ),
             "detail_command": payload.get("closeout_obligations", {}).get(
-                "detail_command", "agentic-workspace report --target ./repo --section closeout_trust --format json"
+                "detail_command", command_with_target("agentic-workspace report --target ./repo --section closeout_trust --format json")
             ),
             "ordinary_closeout_route": payload.get("closeout_obligations", {}).get("ordinary_closeout_route", {}),
         },
@@ -788,7 +810,9 @@ def _start_payload(
         "workflow_participation": _workflow_participation_payload(surface="start", compact=True),
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
         "startup_sequence": startup_sequence,
-        "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
+        "context_router": _context_router_family_payload(
+            cli_invoke=config.cli_invoke, compact=True, target_arg=_startup_command_target_arg(target_root)
+        ),
         "adaptive_routing": {
             "current_need": current_need,
             "read_budget": f"{profile}; raw files only by detail command",
@@ -889,6 +913,7 @@ def _start_payload(
     local_footprint = _compact_start_local_footprint_advisory(
         _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         cli_invoke=config.cli_invoke,
+        target_root=target_root,
     )
     if local_footprint.get("status") == "attention":
         payload["local_footprint"] = local_footprint
@@ -1552,6 +1577,7 @@ def _hydrate_selected_start_advisory_payloads(
         payload["local_footprint"] = _compact_start_local_footprint_advisory(
             _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke),
             cli_invoke=config.cli_invoke,
+            target_root=target_root,
         )
 
     if _selector_requests(select, "intent_elicitation_protocol"):

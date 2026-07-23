@@ -3890,7 +3890,7 @@
       "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped core modules.",
       "available_advanced_route_command": "agentic-workspace modules --target ./repo --format json",
       "fallback_when_skills_unavailable": [
-        "follow AGENTS.md, and use .agentic-workspace/WORKFLOW.md only as conservative no-CLI recovery",
+        "follow AGENTS.md, and use .agentic-workspace/skills/workspace-startup/SKILL.md only as conservative no-CLI recovery",
         "use agentic-workspace start --task \"<task>\" --format json for ordinary first contact",
         "use agentic-workspace summary --format json before raw planning reads"
       ],
@@ -4030,7 +4030,7 @@
     },
     "workflow_recovery": [
       "When takeover or recovery is unclear, prefer `agentic-workspace start --task \"<task>\" --format json` and follow its routed drill-down before broader prose or repo-local workaround guidance.",
-      "Use `.agentic-workspace/WORKFLOW.md` only after the effective CLI is unavailable or compact JSON cannot be read; resume compact packets as soon as they work."
+      "Use `.agentic-workspace/skills/workspace-startup/SKILL.md` only after the effective CLI is unavailable or compact JSON cannot be read; resume compact packets as soon as they work."
     ]
   },
   "surface_value_guardrail": {

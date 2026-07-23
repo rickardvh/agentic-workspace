@@ -1289,6 +1289,8 @@ def test_setup_surfaces_host_orientation_candidates_for_jumpstarted_repo(tmp_pat
     assert {"README.md", "docs/architecture.md", "docs", "pyproject.toml", "src", "tests"} <= surfaces
     assert payload["analysis_input"]["status"] == "not-found"
     assert "must not seed Memory, Planning, assurance, or verification state" in host_orientation["rule"]
+    assert not any("--target ./repo" in command for command in payload["next_action"]["commands"])
+    assert any("report --target " in command for command in payload["next_action"]["commands"])
 
 
 def test_start_context_adapter_routes_through_startup_owner_facade() -> None:
@@ -4486,7 +4488,9 @@ def test_start_flags_over_budget_local_footprint_as_advisory_selector(tmp_path: 
     selected = json.loads(capsys.readouterr().out)["values"]["local_footprint"]
     assert selected["status"] == "attention"
     assert selected["scratch_retention"]["legacy_entry_count"] == 1
-    assert selected["detail_command"].endswith("report --target ./repo --section local_footprint --format json")
+    assert "--target ./repo" not in selected["detail_command"]
+    assert "report --target " in selected["detail_command"]
+    assert "--section local_footprint --format json" in selected["detail_command"]
 
 
 def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, capsys) -> None:
@@ -10670,7 +10674,9 @@ def test_report_dogfooding_signal_status_covers_closeout_states(tmp_path: Path, 
     assert not_checked["outcome"] == "not_checked"
     assert not_checked["closeout_blocked"] is False
     assert "session_improvement_intake" in not_checked["detail_command"]
+    assert "--target ./repo" not in not_checked["detail_command"]
     assert not_checked["capture_routes"]["status"] == "available"
+    assert "--target ./repo" not in json.dumps(not_checked["capture_routes"])
     assert any(route["outcome"] == "routed_to_memory" for route in not_checked["capture_routes"]["ordinary_routes"])
     assert not_checked["disposition"]["diagnostic_command_alone_satisfies"] is False
 
@@ -10757,7 +10763,9 @@ def test_session_improvement_intake_separates_session_and_repo_wide_scopes(tmp_p
     assert unavailable["repo_wide_existing"]["included_by_default"] is False
     assert unavailable["repo_wide_existing"]["status"] == "bounded_index_available"
     assert "defaults --section improvement_intake --format json" in unavailable["repo_wide_existing"]["command"]
-    assert "report --target ./repo --section improvement_intake --format json" in unavailable["repo_wide_existing"]["full_scan_command"]
+    assert "--target ./repo" not in unavailable["repo_wide_existing"]["full_scan_command"]
+    assert "report --target " in unavailable["repo_wide_existing"]["full_scan_command"]
+    assert "--section improvement_intake --format json" in unavailable["repo_wide_existing"]["full_scan_command"]
     assert "large_file" not in json.dumps(unavailable)
 
     cache_path.write_text(

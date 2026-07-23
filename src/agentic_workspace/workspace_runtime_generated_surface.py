@@ -153,24 +153,26 @@ def _generated_surface_source_status(*, target_root: Path, canonical_source: str
 
 
 @overload
-def _command_with_cli_invoke(*, command: str, cli_invoke: str) -> str: ...
+def _command_with_cli_invoke(*, command: str, cli_invoke: str, target_arg: str | None = None) -> str: ...
 
 
 @overload
-def _command_with_cli_invoke(*, command: None, cli_invoke: str) -> None: ...
+def _command_with_cli_invoke(*, command: None, cli_invoke: str, target_arg: str | None = None) -> None: ...
 
 
-def _command_with_cli_invoke(*, command: str | None, cli_invoke: str) -> str | None:
+def _command_with_cli_invoke(*, command: str | None, cli_invoke: str, target_arg: str | None = None) -> str | None:
     if command is None:
         return None
+    if target_arg is not None:
+        command = command.replace("--target ./repo", f"--target {target_arg}")
     if command == "agentic-workspace" or command.startswith("agentic-workspace "):
         return f"{cli_invoke}{command.removeprefix('agentic-workspace')}"
     if command == "agentic-planning" or command.startswith("agentic-planning "):
         mapped = command.replace("agentic-planning ", "agentic-workspace planning ", 1)
-        return _command_with_cli_invoke(command=mapped, cli_invoke=cli_invoke)
+        return _command_with_cli_invoke(command=mapped, cli_invoke=cli_invoke, target_arg=target_arg)
     if command == "agentic-memory" or command.startswith("agentic-memory "):
         mapped = command.replace("agentic-memory ", "agentic-workspace memory ", 1)
-        return _command_with_cli_invoke(command=mapped, cli_invoke=cli_invoke)
+        return _command_with_cli_invoke(command=mapped, cli_invoke=cli_invoke, target_arg=target_arg)
     return command
 
 
