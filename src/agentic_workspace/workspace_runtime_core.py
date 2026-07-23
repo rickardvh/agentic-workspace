@@ -30937,6 +30937,18 @@ def _fast_installed_modules(*, target_root: Path) -> list[str]:
 
 _PLANNING_OWNER_TERMINAL_PHASES = {"complete", "completed", "closeout", "closed", "archived"}
 _PLANNING_OWNER_LIVE_LIFECYCLES = {"live", "planned"}
+_PLANNING_OWNER_ADMISSION_CONSUMERS = [
+    "start",
+    "next",
+    "implement",
+    "autopilot",
+    "proof",
+    "closeout",
+    "archive",
+    "status",
+    "doctor",
+    "report",
+]
 
 
 def _planning_owner_repair_route(*, target_root: Path) -> dict[str, Any]:
@@ -30946,6 +30958,55 @@ def _planning_owner_repair_route(*, target_root: Path) -> dict[str, Any]:
         "command": f'agentic-workspace summary --target "{target_root.as_posix()}" --format json',
         "selector_command": f'agentic-workspace start --target "{target_root.as_posix()}" --select planning_safety_gate --format json',
         "rule": "Startup remains read-only; repair must happen through a Planning/current-work operation.",
+    }
+
+
+def _planning_owner_admission_contract() -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/planning-owner-admission-contract/v1",
+        "status": "authoritative",
+        "consumers": _PLANNING_OWNER_ADMISSION_CONSUMERS,
+        "reject_when": [
+            "owner-record-missing",
+            "owner-lifecycle-not-live",
+            "owner-phase-terminal",
+            "owner-revision-mismatch",
+            "owner-record-missing-live-revision",
+            "owner-record-planning-revision-mismatch",
+            "local-selection-missing-planning-revision",
+            "local-selection-planning-revision-mismatch",
+            "local-selection-target-mismatch",
+            "local-selection-current-work-mismatch",
+            "owner-not-in-live-graph",
+            "authority-identity-mismatch",
+        ],
+        "repair_owner": "planning-owner-reconciliation",
+        "repair_route": (
+            "planning owner-select --dry-run against an existing owner, or explicit owner supersession "
+            "confirmation before creating a new owner"
+        ),
+        "rule": "Every lifecycle consumer must use the same admitted live owner/reference tuple before acting.",
+    }
+
+
+def _planning_owner_action_effect(*, accepted: bool, rejected: bool) -> dict[str, Any]:
+    if accepted and not rejected:
+        return {
+            "force": "none",
+            "consumers": _PLANNING_OWNER_ADMISSION_CONSUMERS,
+            "rule": "Accepted owner identity may be reused by lifecycle consumers until a bound revision changes.",
+        }
+    if accepted:
+        return {
+            "force": "warn-before-action",
+            "consumers": _PLANNING_OWNER_ADMISSION_CONSUMERS,
+            "rule": "Use the accepted owner, but surface rejected stale projections as repair diagnostics.",
+        }
+    return {
+        "force": "required_before_action",
+        "blocked_until_reconciled": _PLANNING_OWNER_ADMISSION_CONSUMERS,
+        "repair_owner": "planning-owner-reconciliation",
+        "rule": "Do not continue lifecycle actions from rejected or missing owner references.",
     }
 
 
@@ -31174,6 +31235,153 @@ def _planning_owner_selection_target_mismatch(*, target_root: Path, selection_pa
     return {}
 
 
+def _planning_owner_nested_text(payload: dict[str, Any], paths: list[tuple[str, ...]]) -> str:
+    for path in paths:
+        current: Any = payload
+        for part in path:
+            if not isinstance(current, dict):
+                current = None
+                break
+            current = current.get(part)
+        text = str(current or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _planning_owner_authority_identity(
+    *,
+    owner_id: str,
+    owner_ref: str,
+    record: dict[str, Any],
+    planning_revision: dict[str, Any],
+    expected_planning_revision: str,
+) -> tuple[dict[str, Any], dict[str, str]]:
+    current_revision = str(planning_revision.get("revision_id") or "").strip()
+    current_target_authority = str(planning_revision.get("target_authority_revision") or "").strip()
+    target_authority = _planning_owner_nested_text(
+        record,
+        [
+            ("target_authority_revision",),
+            ("authority", "target_authority_revision"),
+            ("authority_envelope", "target_authority_revision"),
+        ],
+    )
+    identity = {
+        "kind": "agentic-workspace/planning-live-reference-identity/v1",
+        "owner_id": owner_id,
+        "owner_ref": owner_ref,
+        "record_revision": str(record.get("revision") or "").strip(),
+        "record_planning_revision": str(record.get("planning_revision") or record.get("planning_revision_id") or "").strip(),
+        "current_planning_revision": current_revision,
+        "expected_planning_revision": expected_planning_revision,
+        "target_authority_revision": target_authority,
+        "current_target_authority_revision": current_target_authority,
+        "assignment_target_identity_ref": _planning_owner_nested_text(
+            record,
+            [
+                ("assignment_target_identity_ref",),
+                ("assignment", "target_identity_ref"),
+                ("authority_envelope", "assignment_target_identity_ref"),
+            ],
+        ),
+        "assignment_revision": _planning_owner_nested_text(
+            record,
+            [
+                ("assignment_revision",),
+                ("assignment", "assignment_revision"),
+                ("authority_envelope", "assignment_revision"),
+            ],
+        ),
+        "evaluation_result_identity": _planning_owner_nested_text(
+            record,
+            [
+                ("evaluation_result_identity",),
+                ("evaluation", "result_identity"),
+                ("authority_envelope", "evaluation_result_identity"),
+            ],
+        ),
+        "proof_obligation_revision": _planning_owner_nested_text(
+            record,
+            [
+                ("proof_obligation_revision",),
+                ("proof_obligation", "revision"),
+                ("proof", "obligation_revision"),
+                ("authority_envelope", "proof_obligation_revision"),
+            ],
+        ),
+        "mutation_baseline_id": _planning_owner_nested_text(
+            record,
+            [
+                ("mutation_baseline_id",),
+                ("mutation_baseline", "baseline_id"),
+                ("authority_envelope", "mutation_baseline", "baseline_id"),
+                ("authority_envelope", "mutation_baseline_id"),
+            ],
+        ),
+        "integration_revision": _planning_owner_nested_text(
+            record,
+            [
+                ("integration_revision",),
+                ("integration_receipt_revision",),
+                ("integration", "revision"),
+                ("authority_envelope", "integration_revision"),
+            ],
+        ),
+        "comparison_fields": [
+            "owner_id",
+            "owner_ref",
+            "record_revision",
+            "record_planning_revision",
+            "current_planning_revision",
+            "target_authority_revision",
+            "assignment_target_identity_ref",
+            "assignment_revision",
+            "evaluation_result_identity",
+            "proof_obligation_revision",
+            "mutation_baseline_id",
+            "integration_revision",
+        ],
+        "stale_when": [
+            "owner_ref changes",
+            "record_revision changes",
+            "record_planning_revision differs from expected_planning_revision",
+            "target_authority_revision differs from current_target_authority_revision when recorded",
+            "assignment, evaluation, proof, mutation baseline, or integration revision changes",
+        ],
+    }
+    required_fields = [
+        "assignment_target_identity_ref",
+        "assignment_revision",
+        "evaluation_result_identity",
+        "proof_obligation_revision",
+        "mutation_baseline_id",
+        "integration_revision",
+    ]
+    optional_fields = [
+        "target_authority_revision",
+    ]
+    present_required = [field for field in required_fields if str(identity.get(field) or "")]
+    missing_required = [field for field in required_fields if not str(identity.get(field) or "")]
+    missing_optional = [field for field in optional_fields if not str(identity.get(field) or "")]
+    identity["required_fields"] = required_fields
+    identity["missing_required_fields"] = missing_required if present_required else []
+    identity["missing_optional_fields"] = missing_optional
+    identity["identity_completeness"] = "complete" if not missing_required else "incomplete" if present_required else "legacy-unscoped"
+    if present_required and missing_required:
+        return identity, {
+            "reason": "required-authority-identity-missing",
+            "missing_required_fields": ",".join(missing_required),
+        }
+    if target_authority and current_target_authority and target_authority != current_target_authority:
+        return identity, {
+            "reason": "authority-identity-mismatch",
+            "expected_target_authority_revision": current_target_authority,
+            "record_target_authority_revision": target_authority,
+        }
+    return identity, {}
+
+
 def _planning_owner_admission_candidate(
     *,
     target_root: Path,
@@ -31259,6 +31467,15 @@ def _planning_owner_admission_candidate(
             }
     if require_live_graph_or_residual and not in_live_graph and not explicit_residual:
         return {**candidate, "status": "rejected", "reason": "owner-not-in-live-graph"}
+    reference_identity, authority_mismatch = _planning_owner_authority_identity(
+        owner_id=record_id,
+        owner_ref=relative or owner_ref,
+        record=record,
+        planning_revision=_as_dict(planning_revision),
+        expected_planning_revision=expected_planning_revision,
+    )
+    if authority_mismatch:
+        return {**candidate, "status": "rejected", **authority_mismatch, "reference_identity": reference_identity}
     return {
         **candidate,
         "status": "accepted",
@@ -31268,6 +31485,7 @@ def _planning_owner_admission_candidate(
         "record_planning_revision": record_planning_revision,
         "lifecycle": lifecycle,
         "phase": phase,
+        "reference_identity": reference_identity,
     }
 
 
@@ -31293,6 +31511,7 @@ def _selected_planning_owner_payload(target_root: Path) -> dict[str, Any]:
 
 def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str, Any]) -> dict[str, Any]:
     planning_revision = _planning_revision_payload(target_root=target_root)
+    admission_contract = _planning_owner_admission_contract()
     selection_basis_revision = _planning_owner_selection_basis_revision(target_root=target_root, state_data=state_data)
     live_entries = _planning_owner_live_graph_entries(data=state_data)
     live_refs = {entry["ref"] for entry in live_entries if entry.get("ref")}
@@ -31317,6 +31536,8 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
                 "selected_owner": admitted,
                 "rejected_candidates": [],
                 "repair_route": {},
+                "admission_contract": admission_contract,
+                "action_effect": _planning_owner_action_effect(accepted=True, rejected=False),
                 "rule": "Startup routing may rely only on a currently admitted Planning/current-work owner.",
             }
         rejected.append(admitted)
@@ -31338,6 +31559,8 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
                 "selected_owner": admitted,
                 "rejected_candidates": rejected,
                 "repair_route": _planning_owner_repair_route(target_root=target_root) if rejected else {},
+                "admission_contract": admission_contract,
+                "action_effect": _planning_owner_action_effect(accepted=True, rejected=bool(rejected)),
                 "rule": "Startup routing may rely only on a currently admitted Planning/current-work owner.",
             }
         rejected.append(admitted)
@@ -31347,6 +31570,8 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
         "selected_owner": {},
         "rejected_candidates": rejected,
         "repair_route": _planning_owner_repair_route(target_root=target_root) if rejected else {},
+        "admission_contract": admission_contract,
+        "action_effect": _planning_owner_action_effect(accepted=False, rejected=bool(rejected)),
         "rule": "Rejected Planning owners are diagnostics only and must not affect task relation, claims, proof, or next action.",
     }
 

@@ -20,7 +20,8 @@
       "lane-promote",
       "new-plan",
       "owner-select",
-      "promote-to-plan"
+      "promote-to-plan",
+      "reconcile"
     ]
   },
   "summary": "Show Planning help or dispatch Planning subcommands through the workspace front door.",

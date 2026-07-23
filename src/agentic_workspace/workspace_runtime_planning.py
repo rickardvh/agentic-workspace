@@ -67,6 +67,29 @@ def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
         target=target_root,
         apply_safe_prune=bool(getattr(args, "apply_safe_prune", False)),
         dry_run=bool(getattr(args, "dry_run", False)),
+        lane=str(getattr(args, "lane", "") or ""),
+        apply_lane_reconcile=bool(getattr(args, "apply_lane_reconcile", False)),
+        apply_lane_current_slice_reconcile=bool(getattr(args, "apply_lane_current_slice_reconcile", False)),
+        owner_surface=str(getattr(args, "owner_surface", "") or ""),
+        relation_identity=str(getattr(args, "relation_identity", "") or ""),
+        subject=str(getattr(args, "subject", "") or ""),
+        expected_lane_revision=str(getattr(args, "expected_lane_revision", "") or ""),
+        transition=str(getattr(args, "transition", "") or ""),
+        expected_execplan=str(getattr(args, "expected_execplan", "") or ""),
+        issue=str(getattr(args, "issue", "") or ""),
+        external_ref=str(getattr(args, "external_ref", "") or ""),
+        priority=str(getattr(args, "priority", "") or ""),
+        depends_on=str(getattr(args, "depends_on", "") or ""),
+        rationale=str(getattr(args, "rationale", "") or ""),
+        maturity=str(getattr(args, "maturity", "") or ""),
+        expected_relation_revision=str(getattr(args, "expected_relation_revision", "") or ""),
+        apply_issue_relation_reconcile=bool(getattr(args, "apply_issue_relation_reconcile", False)),
+        apply_issue_relation_migration=bool(getattr(args, "apply_issue_relation_migration", False)),
+        apply_pending_integrations=bool(getattr(args, "apply_pending_integrations", False)),
+        preview=bool(getattr(args, "preview", False)),
+        apply=bool(getattr(args, "apply", False)),
+        proposal=str(getattr(args, "proposal", "") or ""),
+        expected_planning_revision=str(getattr(args, "expected_planning_revision", "") or ""),
     )
     payload = _rewrite_module_cli_commands(payload)
     if args.format == "json":
@@ -820,8 +843,8 @@ def _retrofit_active_owner_commands(*, config: WorkspaceConfig, planning_revisio
     claim_command = _command_with_expected_planning_revision(
         _command_with_cli_invoke(
             command=(
-                'agentic-workspace planning new-plan --id <slice-id> --title "<bounded current slice>" '
-                '--source "current diff retrofit" --target . --activate --format json'
+                "agentic-workspace planning owner-select --owner <existing-owner-id> --owner-ref <existing-owner-ref> "
+                '--mode local --reason "reconcile current diff retrofit" --target . --dry-run --format json'
             ),
             cli_invoke=config.cli_invoke,
         ),
@@ -2163,7 +2186,7 @@ def _planning_safety_gate_payload(
             "fit_criteria": [
                 "mixed Planning and implementation paths already exist",
                 "the slice is bounded and can be honestly described from the current diff",
-                "active Planning ownership is missing but required before completion claims",
+                "an existing intended Planning owner can be selected or explicitly superseded without creating a new owner",
             ]
             if decision == "implementation-owner-missing"
             else [
@@ -2176,14 +2199,14 @@ def _planning_safety_gate_payload(
             "archive_cleanup_command": retrofit_commands["archive"] if decision == "implementation-owner-missing" else "",
             "workflow": [
                 {
-                    "stage": "claim-current-slice",
+                    "stage": "preview-owner-reconciliation",
                     "command": retrofit_commands["claim"],
-                    "purpose": "Create an active owner for bounded WIP without treating it as prep-only planning.",
+                    "purpose": "Identify and compare the existing intended owner without creating a new execution owner.",
                 },
                 {
-                    "stage": "tighten-owner",
+                    "stage": "confirm-owner-selection",
                     "command": retrofit_commands["summary"],
-                    "purpose": "Use the active plan as the current owner and replace generic scaffold text with current-diff scope.",
+                    "purpose": "Re-read Planning after explicit owner selection or supersession confirmation.",
                 },
                 {
                     "stage": "record-closeout-evidence",
@@ -2201,8 +2224,8 @@ def _planning_safety_gate_payload(
             "cleanup_rule": "After proof and closeout evidence are recorded, run archive_cleanup_command before publishing a slice-closing PR."
             if decision == "implementation-owner-missing"
             else "",
-            "safety_rule": "Mixed planning plus implementation changes still need an owner before broad completion claims.",
-            "rule": "Use the compact retrofit path for already-started bounded work; otherwise work-shape guidance reports blockers, factors, proof, and stop conditions.",
+            "safety_rule": "Mixed planning plus implementation changes still need an existing or explicitly superseded owner before broad completion claims.",
+            "rule": "Use the reconciliation preview for already-started bounded work; do not create a new owner from inferred lane or slice text.",
         },
         "work_shape_guidance": _work_shape_guidance_payload(
             path_classification=path_classification,

@@ -4813,19 +4813,24 @@ def test_implement_keeps_planning_gate_for_unfinished_archived_plan_residue(tmp_
     assert gate["repair_route"]["status"] == "available"
     assert gate["repair_route"]["route"] == "retrofit-active-owner-then-closeout"
     assert gate["repair_route"]["work_context"] == "already-started-continuation-or-review-repair"
-    assert "planning new-plan" in gate["repair_route"]["claim_current_slice_command"]
+    assert "planning owner-select" in gate["repair_route"]["claim_current_slice_command"]
+    assert "planning new-plan" not in gate["repair_route"]["claim_current_slice_command"]
+    assert "--dry-run" in gate["repair_route"]["claim_current_slice_command"]
+    assert "<existing-owner-id>" in gate["repair_route"]["claim_current_slice_command"]
+    assert "<existing-owner-ref>" in gate["repair_route"]["claim_current_slice_command"]
     assert "planning closeout" in gate["repair_route"]["closeout_command"]
     assert "planning archive-plan" in gate["repair_route"]["archive_cleanup_command"]
     assert "--prepare-closeout" in gate["repair_route"]["archive_cleanup_command"]
     assert "--retain-archive" in gate["repair_route"]["archive_cleanup_command"]
     assert "--apply-cleanup" in gate["repair_route"]["archive_cleanup_command"]
     assert [step["stage"] for step in gate["repair_route"]["workflow"]] == [
-        "claim-current-slice",
-        "tighten-owner",
+        "preview-owner-reconciliation",
+        "confirm-owner-selection",
         "record-closeout-evidence",
         "remove-active-residue",
     ]
-    assert "Mixed planning plus implementation changes still need an owner" in gate["repair_route"]["safety_rule"]
+    assert "existing or explicitly superseded owner" in gate["repair_route"]["safety_rule"]
+    assert "do not create a new owner" in gate["repair_route"]["rule"]
     facts = gate["changed_path_facts"]
     assert facts["dirty_shape"] == "planning-plus-implementation"
     assert facts["archived_planning_residue"]["status"] == "incomplete-or-stale"
@@ -4875,7 +4880,9 @@ def test_start_uses_retrofit_repair_command_for_missing_implementation_owner(tmp
     action = payload["next_safe_action"]
     repair_route = payload["context"]["planning"]["planning_safety_gate"]["repair_route"]
     assert action["next_safe_action"] == "checkpoint-planning-before-implementation"
-    assert "planning new-plan" in action["preferred_cli"]
+    assert "planning owner-select" in action["preferred_cli"]
+    assert "planning new-plan" not in action["preferred_cli"]
+    assert "--dry-run" in action["preferred_cli"]
     assert repair_route["after_claim_command"] == "agentic-workspace summary --target . --format json"
     assert repair_route["work_context"] == "already-started-continuation-or-review-repair"
 

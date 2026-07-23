@@ -1339,6 +1339,105 @@
           "audience": "ordinary_host_repo",
           "classification_note": "Planning report front door",
           "mutates_state": false
+        },
+        {
+          "name": "reconcile",
+          "help": "Preview or apply bounded Planning reconciliation transactions.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Preview --apply-safe-prune without writing files."
+            },
+            {
+              "name": "lane",
+              "flags": [
+                "--lane"
+              ],
+              "help": "Lane id whose machine-readable child outcomes should be reconciled."
+            },
+            {
+              "name": "apply_lane_current_slice_reconcile",
+              "flags": [
+                "--apply-lane-current-slice-reconcile"
+              ],
+              "action": "store_true",
+              "help": "Apply one owner-specific current-slice lane reconciliation transaction."
+            },
+            {
+              "name": "owner_surface",
+              "flags": [
+                "--owner-surface"
+              ],
+              "help": "Repo-relative owner surface guarded by current-slice reconciliation."
+            },
+            {
+              "name": "relation_identity",
+              "flags": [
+                "--relation-identity"
+              ],
+              "help": "Expected lane current-slice relation identity."
+            },
+            {
+              "name": "subject",
+              "flags": [
+                "--subject"
+              ],
+              "help": "Expected current-slice subject id."
+            },
+            {
+              "name": "expected_lane_revision",
+              "flags": [
+                "--expect-lane-revision"
+              ],
+              "help": "Current lane-record revision required before applying current-slice reconciliation."
+            },
+            {
+              "name": "transition",
+              "flags": [
+                "--transition"
+              ],
+              "choices": [
+                "restore",
+                "relink",
+                "supersede",
+                "cancel",
+                "human"
+              ],
+              "help": "Requested current-slice reconciliation transition."
+            },
+            {
+              "name": "expected_execplan",
+              "flags": [
+                "--expected-execplan"
+              ],
+              "help": "Repo-relative execplan source required for restore/relink reconciliation."
+            },
+            {
+              "name": "expected_planning_revision",
+              "flags": [
+                "--expect-planning-revision"
+              ],
+              "help": "Planning revision returned by preview and required before applying current-slice reconciliation."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "Planning owner-specific reconciliation front door",
+          "mutates_state": true
         }
       ],
       "role": "core_context_router",
