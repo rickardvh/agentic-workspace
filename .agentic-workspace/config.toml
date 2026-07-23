@@ -99,7 +99,7 @@ notes = "This lane is the first focused replacement for generic workspace_behavi
 
 [assurance.domain_proof_lanes.workspace_root_guidance]
 purpose = "Focused root Workspace startup, report, defaults, and generated-guidance behavior."
-applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/reporting_support.py", "src/agentic_workspace/workspace_runtime_core.py", "src/agentic_workspace/workspace_runtime_generated_surface.py", "src/agentic_workspace/workspace_runtime_primitives.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/contracts/skill_specs.json", "tests/test_maintainer_surfaces.py", "tests/test_workspace_defaults_cli.py"]
+applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/reporting_support.py", "src/agentic_workspace/workspace_runtime_generated_surface.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/contracts/skill_specs.json", "tests/test_maintainer_surfaces.py", "tests/test_workspace_defaults_cli.py"]
 commands = ["uv run pytest tests/test_workspace_proof_cli.py -k root_workspace_guidance -q", "uv run pytest tests/test_workspace_defaults_cli.py -q", "uv run pytest tests/test_maintainer_surfaces.py -q", "make typecheck", "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json"]
 review_aids = ["Confirm host-target command localization, startup fallback authority, generated-contract freshness, maintainer surface checks, type posture, inventory, and runtime mirror parity remain covered without the broad workspace CLI suite."]
 evidence_concepts = ["root-workspace-guidance", "startup-routing", "report-contract", "generated-contract-freshness", "focused-serial-proof"]

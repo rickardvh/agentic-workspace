@@ -43041,15 +43041,27 @@ def _record_proof_receipt_payload(
         disposition = str(receipt_repair_disposition or "fixed").strip()
         if disposition not in {"fixed", "superseded", "dismissed", "non-applicable"}:
             raise WorkspaceUsageError("--receipt-repair-disposition must be one of fixed, superseded, dismissed, or non-applicable.")
+        from agentic_workspace.workspace_runtime_proof import _proof_route_apply_receipt_for_retirement
+
+        apply_receipt = _proof_route_apply_receipt_for_retirement(
+            target_root=target_root,
+            finding_id=str(receipt_repair_finding_id).strip(),
+            idempotency_key=str(receipt_repair_idempotency_key or "").strip(),
+            authority_revision=str(receipt_repair_authority_revision or "").strip(),
+            validation_command=command,
+            validation_result=result,
+            claim_sufficiency=str(receipt_claim_sufficiency or "not-reviewed").strip(),
+        )
         receipt["proof_route_repair"] = {
             "kind": "agentic-workspace/proof-route-repair-receipt/v1",
             "finding_id": str(receipt_repair_finding_id).strip(),
             "authority_revision": str(receipt_repair_authority_revision or "").strip(),
             "disposition": disposition,
             "idempotency_key": str(receipt_repair_idempotency_key or "").strip(),
+            "apply_receipt_id": str(apply_receipt.get("id") or ""),
             "validation_command": command,
             "validation_result": result,
-            "rule": "Route-health retirement requires this receipt to name the same stable finding id after focused validation.",
+            "rule": "Route-health retirement requires a matching guarded apply receipt, current authority revision, passed validation, and sufficient claim review.",
         }
     receipt["proof_subject"] = build_proof_subject(
         target_root=target_root,
@@ -43965,6 +43977,63 @@ def _run_planning_decision_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_planning_handoff_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(getattr(args, "target", None))
+    _validate_target_root(command_name="planning", target_root=target_root)
+    config = _load_workspace_config(target_root=target_root)
+    if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="planning handoff", config=config):
+        _emit_payload(payload=disabled_payload, format_name=getattr(args, "format", "text"))
+        return 0
+    from agentic_workspace.workspace_runtime_proof import _proof_route_transition_gate_payload
+
+    proof_route_gate = _proof_route_transition_gate_payload(target_root=target_root, transition="planning-handoff")
+    if proof_route_gate["status"] == "blocked":
+        _emit_payload(
+            payload={
+                "kind": "agentic-workspace/planning-handoff-proof-route-gate/v1",
+                "status": "blocked",
+                "proof_route_transition_gate": proof_route_gate,
+                "rule": "Planning handoff output is not admitted while persisted proof-route lifecycle findings remain open.",
+            },
+            format_name=getattr(args, "format", "text"),
+        )
+        return 0
+
+    argv = ["handoff"]
+    option_specs = [
+        ("--target", "target", "value"),
+        ("--audit-page-size", "audit_page_size", "value"),
+        ("--verbose", "verbose", "flag"),
+        ("--format", "format", "value"),
+    ]
+    for option, attr, kind in option_specs:
+        value = getattr(args, attr, None)
+        if kind == "flag":
+            if bool(value):
+                argv.append(option)
+        elif value not in (None, "", []):
+            argv.extend([option, str(value)])
+    try:
+        module = __import__("repo_planning_bootstrap.cli", fromlist=["main"])
+        module_main = getattr(module, "main")
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            result = module_main(argv)
+        output = buffer.getvalue()
+        for old, new in (
+            ("agentic-planning reconcile ", "agentic-workspace reconcile "),
+            ("agentic-planning summary ", "agentic-workspace summary "),
+            ("agentic-planning doctor ", "agentic-workspace doctor "),
+            ("agentic-planning ", "agentic-workspace planning "),
+            ("agentic-memory ", "agentic-workspace memory "),
+        ):
+            output = output.replace(old, new)
+        print(output, end="")
+        return int(result or 0)
+    except ImportError as exc:
+        raise WorkspaceUsageError("The planning module must be installed to use planning handoff.") from exc
+
+
 def _changed_surface_paths(value: Any) -> list[str]:
     if value in (None, "", []):
         return []
@@ -43989,6 +44058,20 @@ def _run_planning_closeout_adapter(args: argparse.Namespace) -> int:
     config = _load_workspace_config(target_root=target_root)
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="planning closeout", config=config):
         _emit_payload(payload=disabled_payload, format_name=getattr(args, "format", "text"))
+        return 0
+    from agentic_workspace.workspace_runtime_proof import _proof_route_transition_gate_payload
+
+    proof_route_gate = _proof_route_transition_gate_payload(target_root=target_root, transition="planning-closeout")
+    if proof_route_gate["status"] == "blocked":
+        _emit_payload(
+            payload={
+                "kind": "agentic-workspace/planning-closeout-proof-route-gate/v1",
+                "status": "blocked",
+                "proof_route_transition_gate": proof_route_gate,
+                "rule": "Planning closeout is not admitted while persisted proof-route lifecycle findings remain open.",
+            },
+            format_name=getattr(args, "format", "text"),
+        )
         return 0
 
     argv = ["closeout"]

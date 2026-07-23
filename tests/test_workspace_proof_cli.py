@@ -425,7 +425,7 @@ def _append_root_workspace_guidance_lane(target: Path) -> None:
 
 [assurance.domain_proof_lanes.root_workspace_guidance]
 purpose = "Focused root Workspace startup/report/defaults guidance behavior."
-applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/reporting_support.py", "src/agentic_workspace/workspace_runtime_core.py", "src/agentic_workspace/workspace_runtime_generated_surface.py", "src/agentic_workspace/workspace_runtime_primitives.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/contracts/skill_specs.json", "tests/test_maintainer_surfaces.py", "tests/test_workspace_defaults_cli.py"]
+applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/reporting_support.py", "src/agentic_workspace/workspace_runtime_generated_surface.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/contracts/skill_specs.json", "tests/test_maintainer_surfaces.py", "tests/test_workspace_defaults_cli.py"]
 commands = ["uv run pytest tests/test_workspace_proof_cli.py -k root_workspace_guidance -q", "uv run pytest tests/test_workspace_defaults_cli.py -q", "uv run pytest tests/test_maintainer_surfaces.py -q", "make typecheck"]
 review_aids = ["Confirm root guidance proof stays focused."]
 evidence_concepts = ["root-workspace-guidance"]
@@ -472,9 +472,7 @@ def test_proof_root_workspace_guidance_2383_replay_uses_focused_lane_without_bro
     changed_paths = [
         "src/agentic_workspace/config.py",
         "src/agentic_workspace/reporting_support.py",
-        "src/agentic_workspace/workspace_runtime_core.py",
         "src/agentic_workspace/workspace_runtime_generated_surface.py",
-        "src/agentic_workspace/workspace_runtime_primitives.py",
         "src/agentic_workspace/workspace_runtime_startup.py",
         "src/agentic_workspace/contracts/skill_specs.json",
         "tests/test_maintainer_surfaces.py",
@@ -629,20 +627,20 @@ def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_rout
     assert before_values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "blocked"
 
     delta = {
-        "append_text": """
-[assurance.domain_proof_lanes.root_workspace_guidance]
-purpose = "Focused root Workspace guidance behavior."
-applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/workspace_runtime*.py"]
-commands = ["uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q"]
-review_aids = ["Confirm the selected proof route and route-health packet match the changed root workspace behavior."]
-evidence_concepts = ["root-workspace-guidance", "focused-serial-proof"]
-proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml"]
-escalation = ["the change crosses package, generated-command, lifecycle, or closeout behavior boundaries"]
-claim_boundary = "focused-root-workspace-guidance-required-before-runtime-routing-claim"
-owner = "workspace-cli-runtime"
-""",
-        "required_absent": "[assurance.domain_proof_lanes.root_workspace_guidance]",
+        "action": "upsert_domain_lane",
+        "lane_id": "root_workspace_guidance",
+        "lane": {
+            "purpose": "Focused root Workspace guidance behavior.",
+            "applies_to_paths": ["src/agentic_workspace/config.py"],
+            "commands": ["uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q"],
+            "review_aids": ["Confirm the selected proof route and route-health packet match the changed root workspace behavior."],
+            "evidence_concepts": ["root-workspace-guidance", "focused-serial-proof"],
+            "proof_profiles": ["workspace_behavior"],
+            "authority_refs": [".agentic-workspace/config.toml"],
+            "escalation": ["the change crosses package, generated-command, lifecycle, or closeout behavior boundaries"],
+            "claim_boundary": "focused-root-workspace-guidance-required-before-runtime-routing-claim",
+            "owner": "workspace-cli-runtime",
+        },
     }
 
     assert (
@@ -677,6 +675,8 @@ owner = "workspace-cli-runtime"
     )
     apply_payload = json.loads(capsys.readouterr().out)
     assert apply_payload["status"] == "applied"
+    assert apply_payload["semantic_delta"]["action"] == "upsert_domain_lane"
+    assert apply_payload["apply_receipt"]["id"]
     post_authority_revision = apply_payload["post_authority_revision"]
 
     _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "# fixture\n")
@@ -746,6 +746,18 @@ owner = "workspace-cli-runtime"
     )
     handoff_before = json.loads(capsys.readouterr().out)["handoff_proof_route_consumer_gate"]
     assert handoff_before["status"] == "blocked"
+
+    assert cli.main(["planning", "handoff", "--target", str(tmp_path), "--format", "json"]) == 0
+    handoff_transition_before = json.loads(capsys.readouterr().out)
+    assert handoff_transition_before["kind"] == "agentic-workspace/planning-handoff-proof-route-gate/v1"
+    assert handoff_transition_before["status"] == "blocked"
+    assert handoff_transition_before["proof_route_transition_gate"]["blocked_finding_ids"]
+
+    assert cli.main(["planning", "closeout", "--target", str(tmp_path), "--format", "json"]) == 0
+    closeout_transition_before = json.loads(capsys.readouterr().out)
+    assert closeout_transition_before["kind"] == "agentic-workspace/planning-closeout-proof-route-gate/v1"
+    assert closeout_transition_before["status"] == "blocked"
+    assert closeout_transition_before["proof_route_transition_gate"]["blocked_finding_ids"]
 
     focused_command = values["proof_route_strategy_preservation"]["required_commands"][0]
     assert (
@@ -841,6 +853,14 @@ owner = "workspace-cli-runtime"
     )
     handoff_after = json.loads(capsys.readouterr().out)["handoff_proof_route_consumer_gate"]
     assert handoff_after["status"] == "current"
+
+    assert cli.main(["planning", "handoff", "--target", str(tmp_path), "--format", "json"]) == 0
+    handoff_transition_after = json.loads(capsys.readouterr().out)
+    assert handoff_transition_after.get("kind") != "agentic-workspace/planning-handoff-proof-route-gate/v1"
+
+    assert cli.main(["planning", "closeout", "--target", str(tmp_path), "--format", "json"]) == 0
+    closeout_transition_after = json.loads(capsys.readouterr().out)
+    assert closeout_transition_after.get("kind") != "agentic-workspace/planning-closeout-proof-route-gate/v1"
     assert values["proof_route_strategy_preservation"]["proof_route_health"] == {
         "status": "quiet",
         "finding_count": 0,
@@ -851,6 +871,58 @@ owner = "workspace-cli-runtime"
         "execution_observation_status": "quiet",
         "surface": "proof_route_maintenance.route_health",
     }
+
+
+def test_proof_route_repair_rejects_raw_append_delta(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import _proof_route_authority_revision, _proof_route_repair_operation_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=[],
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="append_text is not admitted"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-alpha",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps({"append_text": "[assurance.domain_proof_lanes.bad]\n"}),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-alpha:test",
+        )
+
+    config_text = (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+    assert "[assurance.domain_proof_lanes.bad]" not in config_text
+
+
+def test_proof_route_repair_receipt_rejects_forged_retirement_without_apply(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
+
+    _write_repo_local_proof_target(tmp_path)
+
+    with pytest.raises(WorkspaceUsageError, match="matching guarded apply receipt"):
+        _record_proof_receipt_payload(
+            target_root=tmp_path,
+            command="uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q",
+            result="passed",
+            changed_paths=["src/agentic_workspace/config.py"],
+            receipt_repair_finding_id="forged-finding",
+            receipt_repair_authority_revision="forged-revision",
+            receipt_repair_disposition="fixed",
+            receipt_repair_idempotency_key="proof-route-health:forged:test",
+            receipt_claim_sufficiency="sufficient",
+        )
+
+    assert not (tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json").exists()
 
 
 def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys) -> None:
@@ -890,6 +962,7 @@ def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys
 def test_proof_changed_selector_does_not_cover_unrelated_workspace_runtime(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
     _append_focused_proof_runtime_lane(tmp_path)
+    _append_root_workspace_guidance_lane(tmp_path)
     _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
 
     assert (
@@ -913,6 +986,7 @@ def test_proof_changed_selector_does_not_cover_unrelated_workspace_runtime(tmp_p
     assert "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q" not in answer["required_commands"]
     assert "make typecheck" in answer["required_commands"]
     assert "domain:proof_runtime" not in [lane["id"] for lane in answer["selected_lanes"]]
+    assert "domain:root_workspace_guidance" not in [lane["id"] for lane in answer["selected_lanes"]]
 
 
 def test_proof_changed_selector_domain_route_covers_multi_path_scope(tmp_path: Path, capsys) -> None:

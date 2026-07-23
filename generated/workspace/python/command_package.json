@@ -11448,6 +11448,11 @@
             "import_module": "agentic_workspace.workspace_runtime_primitives"
           },
           {
+            "command": "handoff",
+            "function": "_run_planning_handoff_adapter",
+            "import_module": "agentic_workspace.workspace_runtime_primitives"
+          },
+          {
             "command": "reconcile",
             "function": "_run_reconcile_report_adapter",
             "import_module": "agentic_workspace.workspace_runtime_planning"

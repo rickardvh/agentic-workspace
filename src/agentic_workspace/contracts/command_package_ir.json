@@ -1142,6 +1142,11 @@
                 "function": "_run_planning_closeout_adapter"
               },
               {
+                "command": "handoff",
+                "import_module": "agentic_workspace.workspace_runtime_primitives",
+                "function": "_run_planning_handoff_adapter"
+              },
+              {
                 "command": "reconcile",
                 "import_module": "agentic_workspace.workspace_runtime_planning",
                 "function": "_run_reconcile_report_adapter"

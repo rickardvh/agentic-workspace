@@ -45911,15 +45911,27 @@ def _record_proof_receipt_payload(
         disposition = str(receipt_repair_disposition or "fixed").strip()
         if disposition not in {"fixed", "superseded", "dismissed", "non-applicable"}:
             raise WorkspaceUsageError("--receipt-repair-disposition must be one of fixed, superseded, dismissed, or non-applicable.")
+        from agentic_workspace.workspace_runtime_proof import _proof_route_apply_receipt_for_retirement
+
+        apply_receipt = _proof_route_apply_receipt_for_retirement(
+            target_root=target_root,
+            finding_id=str(receipt_repair_finding_id).strip(),
+            idempotency_key=str(receipt_repair_idempotency_key or "").strip(),
+            authority_revision=str(receipt_repair_authority_revision or "").strip(),
+            validation_command=command,
+            validation_result=result,
+            claim_sufficiency=str(receipt_claim_sufficiency or "not-reviewed").strip(),
+        )
         receipt["proof_route_repair"] = {
             "kind": "agentic-workspace/proof-route-repair-receipt/v1",
             "finding_id": str(receipt_repair_finding_id).strip(),
             "authority_revision": str(receipt_repair_authority_revision or "").strip(),
             "disposition": disposition,
             "idempotency_key": str(receipt_repair_idempotency_key or "").strip(),
+            "apply_receipt_id": str(apply_receipt.get("id") or ""),
             "validation_command": command,
             "validation_result": result,
-            "rule": "Route-health retirement requires this receipt to name the same stable finding id after focused validation.",
+            "rule": "Route-health retirement requires a matching guarded apply receipt, current authority revision, passed validation, and sufficient claim review.",
         }
     receipt["proof_subject"] = build_proof_subject(
         target_root=target_root,
