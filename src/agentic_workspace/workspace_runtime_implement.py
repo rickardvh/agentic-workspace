@@ -179,6 +179,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             changed_paths=changed_paths,
             task_text=task_text,
             config=config,
+            startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
         )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
@@ -298,6 +299,7 @@ def _implement_next_selected_payload(
     changed_paths: list[str],
     task_text: str | None,
     config: Any,
+    startup_route_fingerprint: str = "",
 ) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -329,25 +331,29 @@ def _implement_next_selected_payload(
         task_text=task_text,
         execution_posture=execution_posture,
     )
-    next_action = (
-        "Provide --changed paths or use start/preflight before broad implementation."
-        if not normalized_paths
-        else implementer_template["next_allowed_action"]["attention"]
-        if attention_paths
-        else implementer_template["next_allowed_action"]["default"]
+    durable_intent = _intent_decision_projection(target_root=target_root, config=config, changed_paths=normalized_paths, compact=True)
+    architecture_principles = _architecture_principles_payload(
+        target_root=target_root,
+        changed_paths=normalized_paths,
+        cli_invoke=config.cli_invoke,
+        compact=False,
     )
-    strategy_preservation = _as_dict(_as_dict(proof).get("proof_route_strategy_preservation"))
-    if str(strategy_preservation.get("claim_effect", "")) == "claim-blocked":
-        next_action = "Resolve proof-route refinement or structured escalation before closeout."
-    if isinstance(planning_safety_gate, dict) and planning_safety_gate.get("workflow_sufficient") is False:
-        next_action = "Create or promote an active execplan before continuing implementation."
-    elif not normalized_paths:
-        next_action = "Provide --changed paths or use start/preflight before broad implementation."
-    proof_commands = (
-        _tiny_required_proof_commands(proof)
-        if isinstance(proof, dict)
-        else _compact_tiny_required_proof_commands(_as_dict(proof).get("required_commands", []))
+    forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
+    subsystem_intents = _list_payload(_as_dict(durable_intent.get("subsystem_intent")).get("matches"))
+    principles = _list_payload(_as_dict(architecture_principles).get("matched_principles"))
+    next_resolution = _implement_next_action_resolution(
+        target_root=target_root,
+        task_text=task_text,
+        normalized_paths=normalized_paths,
+        attention_paths=attention_paths,
+        proof=proof,
+        planning_safety_gate=planning_safety_gate,
+        startup_route_fingerprint=startup_route_fingerprint,
+        startup_route_rebind_required=bool(subsystem_intents or principles or forecast_carry),
+        authoritative_route=planning_safety_gate.get("route_decision", {}) if isinstance(planning_safety_gate, dict) else {},
     )
+    next_action = str(next_resolution.get("next_allowed_action", ""))
+    proof_commands = _list_payload(next_resolution.get("proof_commands"))
     primary_command = proof_commands[0] if isinstance(proof_commands, list) and proof_commands else None
     return _selected_payload_for_values(
         values={
@@ -363,6 +369,67 @@ def _implement_next_selected_payload(
         },
         source_command="implement",
     )
+
+
+def _implement_next_action_resolution(
+    *,
+    target_root: Path,
+    task_text: str | None,
+    normalized_paths: list[str],
+    attention_paths: list[str],
+    proof: dict[str, Any],
+    planning_safety_gate: dict[str, Any],
+    startup_route_fingerprint: str,
+    startup_route_rebind_required: bool,
+    authoritative_route: dict[str, Any],
+) -> dict[str, Any]:
+    implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
+    next_action = (
+        "Provide --changed paths or use start/preflight before broad implementation."
+        if not normalized_paths
+        else implementer_template["next_allowed_action"]["attention"]
+        if attention_paths
+        else implementer_template["next_allowed_action"]["default"]
+    )
+    strategy_preservation = _as_dict(_as_dict(proof).get("proof_route_strategy_preservation"))
+    if str(strategy_preservation.get("claim_effect", "")) == "claim-blocked":
+        next_action = "Resolve proof-route refinement or structured escalation before closeout."
+
+    startup_route_rebind: dict[str, Any] = {}
+    stale_startup_route = False
+    if startup_route_rebind_required and startup_route_fingerprint and target_root is not None:
+        route_identity = startup_route_identity(root=target_root, task=str(task_text or ""))
+        fingerprint_check = startup_route_fingerprint_check(
+            expected_fingerprint=startup_route_fingerprint, root=target_root, task=str(task_text or "")
+        )
+        if fingerprint_check["status"] != "match":
+            stale_startup_route = True
+            startup_route_rebind = {
+                "status": "stale-projection-rejected",
+                "expected_fingerprint": startup_route_fingerprint,
+                "actual_fingerprint": route_identity["fingerprint"],
+                "route_identity_check": fingerprint_check,
+                "authoritative_route": authoritative_route,
+                "safe_recovery": "Rerun start, adopt its newly projected route packet, then retry implement.",
+                "rule": "Implement does not write carry or decision confirmation state from a stale startup projection.",
+            }
+            next_action = "Rerun start, adopt its newly projected route packet, then retry implement."
+
+    if isinstance(planning_safety_gate, dict) and planning_safety_gate.get("workflow_sufficient") is False:
+        next_action = "Create or promote an active execplan before continuing implementation."
+
+    proof_commands = (
+        _tiny_required_proof_commands(proof)
+        if isinstance(proof, dict)
+        else _compact_tiny_required_proof_commands(_as_dict(proof).get("required_commands", []))
+    )
+    return {
+        "next_allowed_action": next_action,
+        "proof_route_strategy_preservation": strategy_preservation,
+        "proof_commands": proof_commands,
+        "startup_route_rebind": startup_route_rebind,
+        "stale_startup_route": stale_startup_route,
+    }
 
 
 def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None) -> dict[str, Any]:
@@ -1010,44 +1077,35 @@ def _implement_payload(
         "delegation_decision": execution_posture["delegation_decision"],
         "durable_intent": _intent_decision_projection(target_root=target_root, config=config, changed_paths=normalized_paths, compact=True),
         "handoff_requirements": copy.deepcopy(implementer_template["handoff_requirements"]),
-        "next_allowed_action": "Provide --changed paths or use start/preflight before broad implementation."
-        if not normalized_paths
-        else implementer_template["next_allowed_action"]["attention"]
-        if attention_paths
-        else implementer_template["next_allowed_action"]["default"],
     }
-    strategy_preservation = _as_dict(_as_dict(proof).get("proof_route_strategy_preservation"))
+    subsystem_intents = _list_payload(_as_dict(payload["durable_intent"].get("subsystem_intent")).get("matches"))
+    principles = _list_payload(_as_dict(payload.get("architecture_principles")).get("matched_principles"))
+    forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
+    next_resolution = _implement_next_action_resolution(
+        target_root=target_root,
+        task_text=task_text,
+        normalized_paths=normalized_paths,
+        attention_paths=attention_paths,
+        proof=proof,
+        planning_safety_gate=planning_safety_gate,
+        startup_route_fingerprint=startup_route_fingerprint,
+        startup_route_rebind_required=bool(subsystem_intents or principles or forecast_carry),
+        authoritative_route=planning_safety_gate.get("route_decision", {}),
+    )
+    payload["next_allowed_action"] = next_resolution["next_allowed_action"]
+    strategy_preservation = _as_dict(next_resolution.get("proof_route_strategy_preservation"))
     if strategy_preservation:
         payload["proof_route_strategy_preservation"] = strategy_preservation
     if str(strategy_preservation.get("claim_effect", "")) == "claim-blocked":
-        payload["next_allowed_action"] = "Resolve proof-route refinement or structured escalation before closeout."
         payload["handoff_requirements"]["must_preserve"] = [
             *list(_list_payload(payload["handoff_requirements"].get("must_preserve"))),
             "proof_route_strategy_preservation.decision_id",
             "proof_route_strategy_preservation.claim_effect",
             "proof_route_strategy_preservation.selected_requirement",
         ]
-    subsystem_intents = _list_payload(_as_dict(payload["durable_intent"].get("subsystem_intent")).get("matches"))
-    principles = _list_payload(_as_dict(payload.get("architecture_principles")).get("matched_principles"))
-    forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
-    stale_startup_route = False
-    if (subsystem_intents or principles or forecast_carry) and startup_route_fingerprint and target_root is not None:
-        route_identity = startup_route_identity(root=target_root, task=str(task_text or ""))
-        fingerprint_check = startup_route_fingerprint_check(
-            expected_fingerprint=startup_route_fingerprint, root=target_root, task=str(task_text or "")
-        )
-        if fingerprint_check["status"] != "match":
-            stale_startup_route = True
-            payload["startup_route_rebind"] = {
-                "status": "stale-projection-rejected",
-                "expected_fingerprint": startup_route_fingerprint,
-                "actual_fingerprint": route_identity["fingerprint"],
-                "route_identity_check": fingerprint_check,
-                "authoritative_route": planning_safety_gate.get("route_decision", {}),
-                "safe_recovery": "Rerun start, adopt its newly projected route packet, then retry implement.",
-                "rule": "Implement does not write carry or decision confirmation state from a stale startup projection.",
-            }
-            payload["next_allowed_action"] = "Rerun start, adopt its newly projected route packet, then retry implement."
+    stale_startup_route = bool(next_resolution.get("stale_startup_route"))
+    if stale_startup_route:
+        payload["startup_route_rebind"] = next_resolution.get("startup_route_rebind", {})
     if not stale_startup_route and not forecast_carry and (subsystem_intents or principles) and target_root is not None:
         route_identity = startup_route_identity(root=target_root, task=str(task_text or ""))
         committed_forecast = _architecture_principles_forecast_payload(
