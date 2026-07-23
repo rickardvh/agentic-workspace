@@ -1613,8 +1613,14 @@ def test_planning_closeout_dry_run_does_not_infer_upgrade_from_plan_name(tmp_pat
     lifecycle_plan = payload["lifecycle_plan"]
 
     assert lifecycle_plan["operation"] == "closeout"
-    assert "planning upgrade" not in lifecycle_plan["next_safe_command"]
-    assert "agentic-planning upgrade" not in lifecycle_plan["next_safe_command"]
+    assert "next_safe_command" not in lifecycle_plan
+    assert lifecycle_plan["next_safe_guidance"] == ("Rerun the same closeout command without --dry-run only if the plan matches intent.")
+
+
+def test_lifecycle_operation_name_keeps_upgrade_and_adopt_classification() -> None:
+    assert installer_mod._lifecycle_operation_name("Preview planning adoption lifecycle") == "adopt"
+    assert installer_mod._lifecycle_operation_name("Preview payload upgrade lifecycle") == "upgrade"
+    assert installer_mod._lifecycle_operation_name("Close out execplan payload-upgrade-jumpstart") == "closeout"
 
 
 def test_planning_closeout_compacts_repeated_long_proof_before_archive_size_guardrail(tmp_path: Path, capsys) -> None:
