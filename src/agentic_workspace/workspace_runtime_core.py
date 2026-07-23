@@ -45907,32 +45907,6 @@ def _record_proof_receipt_payload(
         except (TypeError, ValueError) as exc:
             raise WorkspaceUsageError("--receipt-route-budget-seconds must be numeric.") from exc
     receipt["execution"] = execution
-    if receipt_repair_finding_id:
-        disposition = str(receipt_repair_disposition or "fixed").strip()
-        if disposition not in {"fixed", "superseded", "dismissed", "non-applicable"}:
-            raise WorkspaceUsageError("--receipt-repair-disposition must be one of fixed, superseded, dismissed, or non-applicable.")
-        from agentic_workspace.workspace_runtime_proof import _proof_route_apply_receipt_for_retirement
-
-        apply_receipt = _proof_route_apply_receipt_for_retirement(
-            target_root=target_root,
-            finding_id=str(receipt_repair_finding_id).strip(),
-            idempotency_key=str(receipt_repair_idempotency_key or "").strip(),
-            authority_revision=str(receipt_repair_authority_revision or "").strip(),
-            validation_command=command,
-            validation_result=result,
-            claim_sufficiency=str(receipt_claim_sufficiency or "not-reviewed").strip(),
-        )
-        receipt["proof_route_repair"] = {
-            "kind": "agentic-workspace/proof-route-repair-receipt/v1",
-            "finding_id": str(receipt_repair_finding_id).strip(),
-            "authority_revision": str(receipt_repair_authority_revision or "").strip(),
-            "disposition": disposition,
-            "idempotency_key": str(receipt_repair_idempotency_key or "").strip(),
-            "apply_receipt_id": str(apply_receipt.get("id") or ""),
-            "validation_command": command,
-            "validation_result": result,
-            "rule": "Route-health retirement requires a matching guarded apply receipt, current authority revision, passed validation, and sufficient claim review.",
-        }
     receipt["proof_subject"] = build_proof_subject(
         target_root=target_root,
         changed_paths=receipt["changed_paths"],
@@ -45952,6 +45926,36 @@ def _record_proof_receipt_payload(
     if not admission["admitted"]:
         raise WorkspaceUsageError(f"Proof receipt rejected ({admission['reason']}): {admission['safe_recovery']}")
     receipt["admission"] = admission
+    if receipt_repair_finding_id:
+        disposition = str(receipt_repair_disposition or "fixed").strip()
+        if disposition not in {"fixed", "superseded", "dismissed", "non-applicable"}:
+            raise WorkspaceUsageError("--receipt-repair-disposition must be one of fixed, superseded, dismissed, or non-applicable.")
+        from agentic_workspace.workspace_runtime_proof import _proof_route_apply_receipt_for_retirement
+
+        aw_claim_sufficiency = "sufficient" if admission.get("proof_sufficient") is True else "insufficient"
+        execution["caller_claim_sufficiency"] = execution.get("claim_sufficiency", "not-reviewed")
+        execution["claim_sufficiency"] = aw_claim_sufficiency
+        apply_receipt = _proof_route_apply_receipt_for_retirement(
+            target_root=target_root,
+            finding_id=str(receipt_repair_finding_id).strip(),
+            idempotency_key=str(receipt_repair_idempotency_key or "").strip(),
+            authority_revision=str(receipt_repair_authority_revision or "").strip(),
+            validation_command=command,
+            validation_result=result,
+            claim_sufficiency=aw_claim_sufficiency,
+        )
+        receipt["proof_route_repair"] = {
+            "kind": "agentic-workspace/proof-route-repair-receipt/v1",
+            "finding_id": str(receipt_repair_finding_id).strip(),
+            "authority_revision": str(receipt_repair_authority_revision or "").strip(),
+            "disposition": disposition,
+            "idempotency_key": str(receipt_repair_idempotency_key or "").strip(),
+            "apply_receipt_id": str(apply_receipt.get("id") or ""),
+            "validation_command": command,
+            "validation_result": result,
+            "claim_sufficiency_source": "proof_receipt_admission.proof_sufficient",
+            "rule": "Route-health retirement requires a matching guarded apply receipt, current authority revision, complete passed guarded validation, and AW-owned sufficient proof admission.",
+        }
     repair_retry_ladder = _proof_receipt_retry_ladder(command=command, result=result, changed_paths=changed_paths)
     if repair_retry_ladder is not None:
         receipt["repair_retry_ladder"] = repair_retry_ladder

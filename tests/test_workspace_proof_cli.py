@@ -565,6 +565,25 @@ def test_proof_route_maintenance_selector_reports_route_health_repair_packet(tmp
 def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_route_repair(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
     _write(tmp_path / "src" / "agentic_workspace" / "config.py", "# fixture\n")
+    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.root_workspace_guidance]
+purpose = "Focused root Workspace guidance behavior."
+applies_to_paths = ["src/agentic_workspace/config.py"]
+commands = ['python -c "import sys; sys.exit(1)"']
+review_aids = ["Confirm the selected proof route and route-health packet match the changed root workspace behavior."]
+evidence_concepts = ["root-workspace-guidance", "focused-serial-proof"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/config.toml"]
+escalation = ["the change crosses package, generated-command, lifecycle, or closeout behavior boundaries"]
+claim_boundary = "focused-root-workspace-guidance-required-before-runtime-routing-claim"
+owner = "workspace-cli-runtime"
+""",
+        encoding="utf-8",
+    )
 
     assert (
         cli.main(
@@ -576,7 +595,7 @@ def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_rout
                 "src/agentic_workspace/config.py",
                 "--record-receipt",
                 "--receipt-command",
-                "make test-workspace",
+                'python -c "import sys; sys.exit(1)"',
                 "--receipt-result",
                 "failed",
                 "--receipt-log",
@@ -585,7 +604,7 @@ def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_rout
                 "--receipt-duration-seconds",
                 "240",
                 "--receipt-route-id",
-                "workspace-broad-suite",
+                "root_workspace_guidance",
                 "--receipt-claim-sufficiency",
                 "insufficient",
                 "--receipt-route-budget-seconds",
@@ -632,7 +651,7 @@ def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_rout
         "lane": {
             "purpose": "Focused root Workspace guidance behavior.",
             "applies_to_paths": ["src/agentic_workspace/config.py"],
-            "commands": ["uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q"],
+            "commands": ["python -c \"print('route validation ok')\""],
             "review_aids": ["Confirm the selected proof route and route-health packet match the changed root workspace behavior."],
             "evidence_concepts": ["root-workspace-guidance", "focused-serial-proof"],
             "proof_profiles": ["workspace_behavior"],
@@ -919,6 +938,151 @@ def test_proof_route_repair_receipt_rejects_forged_retirement_without_apply(tmp_
             receipt_repair_authority_revision="forged-revision",
             receipt_repair_disposition="fixed",
             receipt_repair_idempotency_key="proof-route-health:forged:test",
+            receipt_claim_sufficiency="sufficient",
+        )
+
+    assert not (tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json").exists()
+
+
+def test_proof_route_consequence_owner_does_not_bulk_retire_unrelated_findings(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_proof import _improvement_consequence_record_event, _improvement_consequence_summary
+
+    _write_repo_local_proof_target(tmp_path)
+
+    _improvement_consequence_record_event(
+        target_root=tmp_path,
+        event={
+            "event": "observed",
+            "finding_id": "finding-alpha",
+            "record_id": "pressure-proof-route-finding-alpha",
+            "finding_class": "route_execution_failure",
+            "authority_revision": "rev-a",
+        },
+    )
+    _improvement_consequence_record_event(
+        target_root=tmp_path,
+        event={
+            "event": "observed",
+            "finding_id": "finding-beta",
+            "record_id": "pressure-proof-route-finding-beta",
+            "finding_class": "route_execution_failure",
+            "authority_revision": "rev-b",
+        },
+    )
+    _improvement_consequence_record_event(
+        target_root=tmp_path,
+        event={
+            "event": "retired",
+            "finding_id": "finding-alpha",
+            "record_id": "pressure-proof-route-finding-alpha",
+            "disposition": "fixed",
+            "authority_revision": "rev-a2",
+            "apply_receipt_id": "apply-alpha",
+        },
+    )
+
+    summary = _improvement_consequence_summary(target_root=tmp_path, active_finding_ids=set())
+    assert summary["open_finding_ids"] == ["finding-beta"]
+
+
+def test_proof_route_repair_validation_failure_rolls_back_without_receipt(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import (
+        PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH,
+        _proof_route_authority_revision,
+        _proof_route_repair_operation_payload,
+    )
+
+    _write_repo_local_proof_target(tmp_path)
+    authority_path = tmp_path / ".agentic-workspace" / "config.toml"
+    before = authority_path.read_text(encoding="utf-8")
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    delta = {
+        "action": "upsert_domain_lane",
+        "lane_id": "broken_validation_route",
+        "lane": {
+            "purpose": "Broken validation route.",
+            "applies_to_paths": ["src/agentic_workspace/config.py"],
+            "commands": ['python -c "import sys; sys.exit(7)"'],
+        },
+    }
+
+    with pytest.raises(WorkspaceUsageError, match="validation command failed"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-validation-fails",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps(delta),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-validation-fails:test",
+        )
+
+    assert authority_path.read_text(encoding="utf-8") == before
+    assert not (tmp_path / PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH).exists()
+
+
+def test_proof_route_repair_receipt_uses_aw_admission_not_caller_sufficiency(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
+    from agentic_workspace.workspace_runtime_proof import (
+        PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH,
+        _proof_route_append_jsonl,
+        _proof_route_apply_receipt_id,
+        _proof_route_authority_revision,
+    )
+
+    _write_repo_local_proof_target(tmp_path)
+    command = "python -c \"print('route validation ok')\""
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    receipt_id = _proof_route_apply_receipt_id(
+        finding_id="finding-aw-sufficiency",
+        idempotency_key="proof-route-health:finding-aw-sufficiency:test",
+        post_revision=revision,
+        delta_digest="digest",
+    )
+    _proof_route_append_jsonl(
+        tmp_path / PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH,
+        {
+            "kind": "agentic-workspace/proof-route-apply-receipt/v1",
+            "id": receipt_id,
+            "status": "applied",
+            "finding_id": "finding-aw-sufficiency",
+            "idempotency_key": "proof-route-health:finding-aw-sufficiency:test",
+            "authority_path": ".agentic-workspace/config.toml",
+            "field_selector": "assurance.domain_proof_lanes",
+            "post_authority_revision": revision,
+            "delta_digest": "digest",
+            "validation_commands": [command],
+            "validation_results": [{"command": command, "status": "passed", "returncode": 0}],
+            "validation_status": "passed",
+            "validation_commands_complete": True,
+        },
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="passed validation receipt"):
+        _record_proof_receipt_payload(
+            target_root=tmp_path,
+            command=command,
+            result="failed",
+            changed_paths=["src/agentic_workspace/config.py"],
+            receipt_repair_finding_id="finding-aw-sufficiency",
+            receipt_repair_authority_revision=revision,
+            receipt_repair_disposition="fixed",
+            receipt_repair_idempotency_key="proof-route-health:finding-aw-sufficiency:test",
             receipt_claim_sufficiency="sufficient",
         )
 
