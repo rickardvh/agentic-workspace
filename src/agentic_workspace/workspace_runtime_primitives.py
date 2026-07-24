@@ -11426,6 +11426,8 @@ def _release_recovery_payload(
         "unresolved-version-publication-debt",
         "verified-release-tag-missing",
         "github-release-missing",
+        "publication-observation-failed",
+        "github-release-unpublished",
     }
     recovery_next_action = (
         str(publisher_retry.get("command", ""))

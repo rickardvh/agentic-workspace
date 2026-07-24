@@ -99,6 +99,13 @@ def _publisher_retry_command(tag: str, source_commit: str) -> str:
     return f'gh workflow run release.yml --ref master -f tag="{tag}" -f source_commit="{source_commit}"'
 
 
+def _publication_inspect_command(*, repo: str | None = None, tag: str = "") -> str:
+    command = "uv run python scripts/release/coordinated_release.py tag-plan"
+    if repo and tag:
+        command += f" && gh release view {tag} --repo {repo} --json tagName,url,isDraft,isPrerelease,publishedAt"
+    return command
+
+
 def _local_tag_plan(*, repo_root: Path) -> dict[str, Any]:
     script = repo_root / "scripts" / "release" / "coordinated_release.py"
     if not script.exists():
@@ -165,10 +172,11 @@ def release_publication_status(*, repo_root: Path, repo: str | None = None) -> d
     except RuntimeError as exc:
         return {
             "kind": "agentic-workspace/release-publication-state/v1",
-            "status": "unavailable",
-            "recovery_required": False,
+            "status": "publication-observation-failed",
+            "recovery_required": True,
             "reason": str(exc),
             "evidence": {"source": "local-tag-plan"},
+            "next_action": _publication_inspect_command(repo=repo),
         }
     tag = _text(plan.get("tag"))
     release_commit = _text(plan.get("release_commit"))
@@ -207,7 +215,19 @@ def release_publication_status(*, repo_root: Path, repo: str | None = None) -> d
             "release_commit": release_commit,
             "evidence": {"source": "local-tag-plan", "tag_plan": plan},
         }
-    if not plan.get("publish_candidate") or not tag or not release_commit:
+    if plan.get("publish_candidate") and (not tag or not release_commit):
+        return {
+            "kind": "agentic-workspace/release-publication-state/v1",
+            "status": "publication-observation-failed",
+            "recovery_required": True,
+            "reason": "Local tag plan is missing the expected tag or release commit evidence.",
+            "version": _text(plan.get("version")),
+            "tag": tag,
+            "release_commit": release_commit,
+            "evidence": {"source": "local-tag-plan", "tag_plan": plan},
+            "next_action": _publication_inspect_command(repo=repo, tag=tag),
+        }
+    if not plan.get("publish_candidate"):
         return {
             "kind": "agentic-workspace/release-publication-state/v1",
             "status": "no-existing-publishable-tag",
@@ -247,6 +267,35 @@ def release_publication_status(*, repo_root: Path, repo: str | None = None) -> d
                     "tag_plan": plan,
                     "release_view": {},
                 },
+                "next_action": _publication_inspect_command(repo=repo, tag=tag),
+            }
+        invalid_release_fields = []
+        if _text(release_view.get("tagName")) != tag:
+            invalid_release_fields.append("tagName")
+        if release_view.get("isDraft") is not False:
+            invalid_release_fields.append("isDraft")
+        if not _text(release_view.get("publishedAt")):
+            invalid_release_fields.append("publishedAt")
+        # Coordinated releases are stable semver releases; prereleases do not
+        # satisfy their publication contract.
+        if release_view.get("isPrerelease") is not False:
+            invalid_release_fields.append("isPrerelease")
+        if invalid_release_fields:
+            return {
+                "kind": "agentic-workspace/release-publication-state/v1",
+                "status": "github-release-unpublished",
+                "recovery_required": True,
+                "reason": f"GitHub Release {tag} is not a published stable release: invalid {', '.join(invalid_release_fields)}.",
+                "version": _text(plan.get("version")),
+                "tag": tag,
+                "release_commit": release_commit,
+                "release_url": _text(release_view.get("url")),
+                "evidence": {
+                    "source": "local-tag-plan + gh-release-view",
+                    "tag_plan": plan,
+                    "release_view": release_view,
+                },
+                "next_action": _publication_inspect_command(repo=repo, tag=tag),
             }
     return {
         "kind": "agentic-workspace/release-publication-state/v1",

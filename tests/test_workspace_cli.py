@@ -9826,6 +9826,28 @@ def test_report_release_recovery_requires_unresolved_publication_state(monkeypat
     assert "successful no-op workflow runs do not clear" in recovery["coordinated_recovery"]["next_action"]
 
 
+@pytest.mark.parametrize("status", ["publication-observation-failed", "github-release-unpublished"])
+def test_report_release_recovery_requires_fail_closed_publication_state(monkeypatch: pytest.MonkeyPatch, capsys, status: str) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    monkeypatch.setattr(
+        cli,
+        "_release_recovery_live_state",
+        lambda **kwargs: {
+            "release_ci_failure": {"status": "no-failed-release-run", "workflow": "Release"},
+            "release_publication_state": {
+                "status": status,
+                "publication": {"status": status, "recovery_required": True},
+            },
+        },
+    )
+
+    assert cli.main(["report", "--target", str(repo_root), "--section", "release_recovery", "--format", "json"]) == 0
+    recovery = json.loads(capsys.readouterr().out)["answer"]
+
+    assert recovery["release_publication_state"]["status"] == status
+    assert recovery["coordinated_recovery"]["status"] == "required"
+
+
 def test_start_surfaces_pr_comment_attention_only_for_pr_context(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
