@@ -42,7 +42,9 @@ def _fingerprint_files(*, repo_root: Path) -> list[Path]:
     for pattern in FINGERPRINT_PATTERNS:
         for path in repo_root.glob(pattern):
             if path.is_file() and "__pycache__" not in path.parts:
-                files[_repo_relative(path, repo_root=repo_root)] = path
+                relative = _repo_relative(path, repo_root=repo_root)
+                if relative != "generated/.agentic-workspace-cli-fingerprint.json":
+                    files[relative] = path
     return [files[relative] for relative in sorted(files)]
 
 
@@ -107,12 +109,83 @@ def _git_worktree_is_clean(*, repo_root: Path) -> bool:
     return result.returncode == 0 and not result.stdout.strip()
 
 
+def _git_index_identity(*, repo_root: Path, paths: list[str]) -> str | None:
+    """Return the Git index identity for exactly the fingerprint inputs."""
+
+    if not paths:
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "-s", "-z"],
+            cwd=repo_root,
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    entries_by_path: dict[str, str] = {}
+    for raw_entry in result.stdout.split(b"\0"):
+        if not raw_entry:
+            continue
+        entry = raw_entry.decode("utf-8")
+        try:
+            _, indexed_path = entry.split("\t", 1)
+        except ValueError:
+            return None
+        entries_by_path[indexed_path] = entry
+    digest = hashlib.sha256()
+    for expected_path in paths:
+        entry = entries_by_path.get(expected_path)
+        if entry is None:
+            return None
+        try:
+            metadata, indexed_path = entry.split("\t", 1)
+        except ValueError:
+            return None
+        fields = metadata.split()
+        if indexed_path != expected_path or len(fields) != 3 or fields[2] != "0":
+            return None
+        digest.update(entry.encode("utf-8"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def source_cli_fingerprint_manifest(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
+    """Build the checked-in freshness witness from exact inputs and Git index."""
+
+    paths = [_repo_relative(path, repo_root=repo_root) for path in _fingerprint_files(repo_root=repo_root)]
+    return {
+        "schema": CACHE_SCHEMA,
+        "kind": "generated-cli-source-manifest/v1",
+        "file_count": len(paths),
+        "file_paths": paths,
+        "git_index_identity": _git_index_identity(repo_root=repo_root, paths=paths),
+        "generation_command": "uv run python scripts/generate/generate_command_packages.py",
+    }
+
+
 def _source_manifest_is_trustworthy(*, repo_root: Path) -> bool:
-    """Use the generated source manifest only when Git proves the tree is clean."""
+    """Use a clean source manifest only when it binds this exact Git index."""
 
     source_manifest = repo_root / "generated" / ".agentic-workspace-cli-fingerprint.json"
     payload = _read_cached_fingerprint_payload(cache_path=source_manifest)
-    return payload is not None and _git_worktree_is_clean(repo_root=repo_root)
+    if payload is None or not _git_worktree_is_clean(repo_root=repo_root):
+        return False
+    paths = payload.get("file_paths")
+    expected_identity = payload.get("git_index_identity")
+    if (
+        not isinstance(paths, list)
+        or not all(isinstance(path, str) for path in paths)
+        or not isinstance(expected_identity, str)
+        or not expected_identity
+    ):
+        return False
+    current_paths = [_repo_relative(path, repo_root=repo_root) for path in _fingerprint_files(repo_root=repo_root)]
+    if current_paths != paths:
+        return False
+    return _git_index_identity(repo_root=repo_root, paths=paths) == expected_identity
 
 
 def _cached_fingerprint_manifest_is_fresh(*, repo_root: Path, cache_path: Path) -> bool:

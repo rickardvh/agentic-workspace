@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "run_agentic_workspace.py"
@@ -78,9 +79,16 @@ def test_launcher_uses_source_owned_manifest_on_cold_clean_worktree(tmp_path: Pa
     module = _load_module()
     _minimal_repo(tmp_path)
     source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
-    module._write_cached_fingerprint(module.compute_generated_cli_fingerprint(repo_root=tmp_path), cache_path=source_manifest)
+    manifest = {
+        "schema": module.CACHE_SCHEMA,
+        "kind": "generated-cli-source-manifest/v1",
+        "file_paths": [module._repo_relative(path, repo_root=tmp_path) for path in module._fingerprint_files(repo_root=tmp_path)],
+        "git_index_identity": "current-index",
+    }
+    source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
 
     monkeypatch.setattr(module, "_git_worktree_is_clean", lambda **_: True)
+    monkeypatch.setattr(module, "_git_index_identity", lambda **_: "current-index")
 
     def fail_content_hash(repo_root: Path) -> dict[str, object]:
         raise AssertionError(f"unexpected content hash for clean source manifest in {repo_root}")
@@ -100,7 +108,13 @@ def test_launcher_hashes_when_source_manifest_worktree_is_dirty(tmp_path: Path, 
     module = _load_module()
     _minimal_repo(tmp_path)
     source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
-    module._write_cached_fingerprint(module.compute_generated_cli_fingerprint(repo_root=tmp_path), cache_path=source_manifest)
+    manifest = {
+        "schema": module.CACHE_SCHEMA,
+        "kind": "generated-cli-source-manifest/v1",
+        "file_paths": ["pyproject.toml"],
+        "git_index_identity": "old-index",
+    }
+    source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
     monkeypatch.setattr(module, "_git_worktree_is_clean", lambda **_: False)
     calls: list[Path] = []
     original = module.compute_generated_cli_fingerprint
@@ -118,6 +132,66 @@ def test_launcher_hashes_when_source_manifest_worktree_is_dirty(tmp_path: Path, 
     )
 
     assert refreshed is True
+    assert calls == [tmp_path, tmp_path]
+
+
+def test_launcher_rejects_clean_but_stale_source_manifest(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    manifest = {
+        "schema": module.CACHE_SCHEMA,
+        "kind": "generated-cli-source-manifest/v1",
+        "file_paths": ["pyproject.toml"],
+        "git_index_identity": "stale-index",
+    }
+    source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(module, "_git_worktree_is_clean", lambda **_: True)
+    monkeypatch.setattr(module, "_git_index_identity", lambda **_: "current-index")
+    original = module.compute_generated_cli_fingerprint
+    calls: list[Path] = []
+
+    def count_content_hash(*, repo_root: Path) -> dict[str, object]:
+        calls.append(repo_root)
+        return original(repo_root=repo_root)
+
+    module.compute_generated_cli_fingerprint = count_content_hash
+    assert module.ensure_generated_cli_current(
+        repo_root=tmp_path,
+        cache_path=tmp_path / ".agentic-workspace" / "local" / "cache" / "missing.json",
+        generator_script=tmp_path / "scripts" / "generate" / "generate_command_packages.py",
+        run_generator=lambda *_: None,
+    )
+    assert calls == [tmp_path, tmp_path]
+
+
+def test_launcher_rejects_clean_source_manifest_missing_new_input(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    manifest = {
+        "schema": module.CACHE_SCHEMA,
+        "kind": "generated-cli-source-manifest/v1",
+        "file_paths": ["pyproject.toml"],
+        "git_index_identity": "current-index",
+    }
+    source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(module, "_git_worktree_is_clean", lambda **_: True)
+    monkeypatch.setattr(module, "_git_index_identity", lambda **_: "current-index")
+    original = module.compute_generated_cli_fingerprint
+    calls: list[Path] = []
+
+    def count_content_hash(*, repo_root: Path) -> dict[str, object]:
+        calls.append(repo_root)
+        return original(repo_root=repo_root)
+
+    module.compute_generated_cli_fingerprint = count_content_hash
+    assert module.ensure_generated_cli_current(
+        repo_root=tmp_path,
+        cache_path=tmp_path / ".agentic-workspace" / "local" / "cache" / "missing.json",
+        generator_script=tmp_path / "scripts" / "generate" / "generate_command_packages.py",
+        run_generator=lambda *_: None,
+    )
     assert calls == [tmp_path, tmp_path]
 
 
