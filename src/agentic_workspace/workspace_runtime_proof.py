@@ -32,6 +32,12 @@ from agentic_workspace._schema import ModuleDescriptor
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, admit_mutation_boundary, mutation_baseline_payload
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig, WorkspaceUsageError
 from agentic_workspace.current_work_context import resolve_current_work_context
+from agentic_workspace.improvement_consequence import (
+    IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH,
+    consequence_summary,
+    read_consequence_history,
+    record_consequence_event,
+)
 from agentic_workspace.proof_receipt_admission import (
     PROOF_RECEIPT_RESULT_OPTIONS,
     proof_command_admission,
@@ -3132,7 +3138,6 @@ def _proof_route_command_is_broad(command: str, *, proof_kind: str = "") -> bool
 
 
 PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-route-repairs" / "history.jsonl"
-IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "improvement-pressure" / "consequence-history.jsonl"
 _PROOF_ROUTE_AUTHORITY_PATHS = {
     ".agentic-workspace/config.toml",
     ".agentic-workspace/OWNERSHIP.toml",
@@ -3473,7 +3478,7 @@ def _proof_route_apply_lock(target_root: Path):
             pass
 
 
-def _proof_route_run_validation_commands(*, target_root: Path, commands: list[str]) -> list[dict[str, Any]]:
+def _proof_route_run_validation_commands(*, target_root: Path, commands: list[str], timeout_seconds: float = 240.0) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for command in commands:
         normalized = str(command or "").strip()
@@ -3486,7 +3491,7 @@ def _proof_route_run_validation_commands(*, target_root: Path, commands: list[st
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            timeout=60,
+            timeout=timeout_seconds,
             check=False,
         )
         result = {
@@ -3495,6 +3500,7 @@ def _proof_route_run_validation_commands(*, target_root: Path, commands: list[st
             "status": "passed" if completed.returncode == 0 else "failed",
             "stdout_tail": completed.stdout[-2000:],
             "stderr_tail": completed.stderr[-2000:],
+            "timeout_seconds": timeout_seconds,
         }
         results.append(result)
         if completed.returncode != 0:
@@ -3508,6 +3514,27 @@ def _proof_route_materialize_validation_command(*, command: str, changed_paths: 
         return ""
     changed_part = " ".join(_shell_quote(path) for path in changed_paths)
     return normalized.replace("<paths>", changed_part)
+
+
+def _proof_receipt_command_equivalent(left: str, right: str) -> bool:
+    def _variants(value: str) -> list[str]:
+        normalized = str(value or "").strip()
+        variants = [normalized]
+        cli_equivalent = normalized.replace("uv run --active python ", "uv run python ")
+        if cli_equivalent not in variants:
+            variants.append(cli_equivalent)
+        return variants
+
+    for left_variant in _variants(left):
+        for right_variant in _variants(right):
+            if left_variant == right_variant:
+                return True
+            try:
+                if shlex.split(left_variant, posix=True) == shlex.split(right_variant, posix=True):
+                    return True
+            except ValueError:
+                continue
+    return False
 
 
 def _proof_route_independent_validation_commands(
@@ -3534,6 +3561,53 @@ def _proof_route_independent_validation_commands(
         if isinstance(command, dict) and str(command.get("command") or "").strip()
     ]
     return commands, "pre_existing_selected_route" if commands else ""
+
+
+def _proof_route_validation_timeout_seconds(*, selection: dict[str, Any], commands: list[str]) -> float:
+    selected_by_command = {
+        str(item.get("command") or "").strip(): item
+        for item in _list_payload(selection.get("selected_commands"))
+        if isinstance(item, dict) and str(item.get("command") or "").strip()
+    }
+    budgets: list[float] = []
+    for command in commands:
+        selected = selected_by_command.get(str(command).strip())
+        if not isinstance(selected, dict):
+            continue
+        raw_budget = (
+            selected.get("route_budget_seconds")
+            or selected.get("timeout_seconds")
+            or selected.get("budget_seconds")
+            or selected.get("duration_budget_seconds")
+            or ""
+        )
+        try:
+            if str(raw_budget).strip():
+                budgets.append(float(raw_budget))
+        except (TypeError, ValueError):
+            continue
+    return max([240.0, *budgets])
+
+
+def _selected_proof_command_for_receipt(*, selection: dict[str, Any], command: str) -> dict[str, Any]:
+    normalized = str(command or "").strip()
+    selected_commands = [item for item in _list_payload(selection.get("selected_commands")) if isinstance(item, dict)]
+    if not selected_commands:
+        return {}
+    command_identity = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16] if normalized else ""
+    changed_paths = [str(path) for path in _list_payload(selection.get("changed_paths")) if str(path).strip()]
+    for selected in selected_commands:
+        selected_command = str(selected.get("command") or "").strip()
+        materialized_command = _proof_route_materialize_validation_command(command=selected_command, changed_paths=changed_paths)
+        if _proof_receipt_command_equivalent(selected_command, normalized) or _proof_receipt_command_equivalent(
+            materialized_command, normalized
+        ):
+            return selected
+        if command_identity and str(selected.get("command_identity") or "").strip() == command_identity:
+            return selected
+    raise WorkspaceUsageError(
+        "Proof receipt command does not resolve to a current selected proof command; rerun proof selection and record the typed selected command."
+    )
 
 
 def _proof_route_current_authority_revision_for_receipt(*, target_root: Path, receipt: dict[str, Any]) -> str:
@@ -3609,58 +3683,16 @@ def _proof_route_apply_receipt_for_retirement(
 
 
 def _improvement_consequence_record_event(*, target_root: Path | None, event: dict[str, Any]) -> None:
-    if target_root is None:
-        return
-    history_path = target_root / IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH
-    event = {
-        "owner_kind": "workspace-improvement-pressure/v1",
-        "source": "proof_route_maintenance.route_health",
-        **event,
-    }
-    fingerprint = hashlib.sha256(json.dumps(event, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:16]
-    existing = {str(item.get("fingerprint") or "") for item in _proof_route_read_jsonl(history_path) if isinstance(item, dict)}
-    if fingerprint in existing:
-        return
-    _proof_route_append_jsonl(
-        history_path,
-        {
-            "kind": "workspace-improvement-pressure-consequence-event/v1",
-            "fingerprint": fingerprint,
-            "recorded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-            **event,
-        },
-    )
+    record_consequence_event(target_root=target_root, event={"source": "proof_route_maintenance.route_health", **event})
 
 
 def _improvement_consequence_summary(*, target_root: Path | None, active_finding_ids: set[str]) -> dict[str, Any]:
-    records = _proof_route_read_jsonl(target_root / IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH) if target_root is not None else []
-    open_ids: set[str] = set()
-    disposed_ids: set[str] = set()
-    for record in records:
-        finding_id = str(record.get("finding_id") or "")
-        if not finding_id:
-            continue
-        if str(record.get("event") or "") in {"disposed", "retired"}:
-            disposed_ids.add(finding_id)
-            open_ids.discard(finding_id)
-        elif str(record.get("event") or "") == "observed":
-            disposed_ids.discard(finding_id)
-            open_ids.add(finding_id)
-    open_ids.update(active_finding_ids - disposed_ids)
-    return {
-        "kind": "workspace-improvement-pressure-consequence-store/v1",
-        "status": "attention" if open_ids else "quiet",
-        "path": IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH.as_posix(),
-        "record_count": len(records),
-        "open_finding_ids": sorted(open_ids),
-        "open_finding_count": len(open_ids),
-        "rule": "Route-health observations and dispositions are persisted through the workspace-improvement-pressure consequence owner and rehydrated before handoff/closeout gates.",
-    }
+    return consequence_summary(target_root=target_root, active_finding_ids=active_finding_ids)
 
 
 def _proof_route_transition_gate_payload(*, target_root: Path, transition: str) -> dict[str, Any]:
     lifecycle_store = _improvement_consequence_summary(target_root=target_root, active_finding_ids=set())
-    records = _proof_route_read_jsonl(target_root / IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH)
+    records = read_consequence_history(target_root=target_root)
     class_by_id = {
         str(record.get("finding_id") or ""): str(record.get("finding_class") or "")
         for record in records
@@ -3805,9 +3837,10 @@ def _proof_route_repair_operation_payload(
         changed_paths=changed_paths,
         fallback_selected_commands=selected_commands,
     )
-    if normalized_mode == "apply" and submitted_route_commands and set(validation_commands) == set(submitted_route_commands):
+    overlapping_validation_commands = sorted(set(validation_commands).intersection(set(submitted_route_commands)))
+    if normalized_mode == "apply" and overlapping_validation_commands:
         raise WorkspaceUsageError(
-            "proof-route repair validation rejected because the proposed route cannot be the sole validation authority."
+            "proof-route repair validation rejected because proposed route commands cannot overlap validation authority."
         )
     if normalized_mode == "apply" and not validation_commands:
         raise WorkspaceUsageError("proof-route repair apply requires an independent validation command set.")
@@ -3862,7 +3895,11 @@ def _proof_route_repair_operation_payload(
                     "required_command_count": len(_list_payload(audit_selection.get("required_commands"))),
                     "route_refinement_required": _as_dict(audit_selection.get("route_refinement_required")).get("status", ""),
                 }
-                validation_results = _proof_route_run_validation_commands(target_root=target_root, commands=validation_commands)
+                validation_results = _proof_route_run_validation_commands(
+                    target_root=target_root,
+                    commands=validation_commands,
+                    timeout_seconds=_proof_route_validation_timeout_seconds(selection=selection, commands=validation_commands),
+                )
                 post_revision = _proof_route_authority_revision(
                     target_root=target_root,
                     canonical_edit_surface=f"{normalized_authority_path} [{normalized_field_selector}]",
@@ -3889,7 +3926,9 @@ def _proof_route_repair_operation_payload(
                     "semantic_delta": semantic_preview,
                     "validation_commands": validation_commands,
                     "validation_authority": validation_authority,
+                    "validation_authority_refs": [validation_authority],
                     "submitted_route_commands": submitted_route_commands,
+                    "rejected_validation_overlap": overlapping_validation_commands,
                     "validation_results": validation_results,
                     "validation_status": "passed",
                     "validation_commands_complete": True,
@@ -3928,7 +3967,11 @@ def _proof_route_repair_operation_payload(
                     "safe_recovery": "Rerun proof route maintenance and rebuild the repair operation against the current authority revision.",
                 }
             post_revision = locked_revision
-            validation_results = _proof_route_run_validation_commands(target_root=target_root, commands=validation_commands)
+            validation_results = _proof_route_run_validation_commands(
+                target_root=target_root,
+                commands=validation_commands,
+                timeout_seconds=_proof_route_validation_timeout_seconds(selection=selection, commands=validation_commands),
+            )
             receipt_id = _proof_route_apply_receipt_id(
                 finding_id=str(finding_id).strip(),
                 idempotency_key=str(idempotency_key or "").strip(),
@@ -3949,7 +3992,9 @@ def _proof_route_repair_operation_payload(
                 "semantic_delta": semantic_preview,
                 "validation_commands": validation_commands,
                 "validation_authority": validation_authority,
+                "validation_authority_refs": [validation_authority],
                 "submitted_route_commands": submitted_route_commands,
+                "rejected_validation_overlap": overlapping_validation_commands,
                 "validation_results": validation_results,
                 "validation_status": "passed",
                 "validation_commands_complete": True,
@@ -4937,6 +4982,8 @@ def _host_domain_proof_lanes_for_changed_paths(
         task_matches = [marker for marker in lane.applies_to_task_markers if marker.lower() in haystack]
         if not (path_matches or task_matches):
             continue
+        path_match_values = [match["path"] for match in path_matches]
+        matched_paths = _dedupe([*path_match_values, *changed_paths]) if task_matches else path_match_values
         lanes.append(
             {
                 "id": f"domain:{lane.id}",
@@ -4954,6 +5001,7 @@ def _host_domain_proof_lanes_for_changed_paths(
                     "source": ".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
                     "owner": lane.owner or "",
                     "matched_paths": path_matches,
+                    "matched_scope": "task-claim" if task_matches else "path-pattern",
                     "matched_task_markers": task_matches,
                     "manual_evidence": list(lane.manual_evidence),
                     "evidence_concepts": list(lane.evidence_concepts),
@@ -4968,7 +5016,9 @@ def _host_domain_proof_lanes_for_changed_paths(
                     "allowed_composition": list(lane.allowed_composition),
                     "notes": lane.notes or "",
                 },
-                "matched_paths": [match["path"] for match in path_matches],
+                "matched_paths": matched_paths,
+                "matched_path_patterns": path_match_values,
+                "matched_scope": "task-claim" if task_matches else "path-pattern",
                 "review_aids": list(lane.review_aids),
                 "manual_evidence": list(lane.manual_evidence),
                 "evidence_concepts": list(lane.evidence_concepts),
@@ -7177,6 +7227,8 @@ def _proof_selection_for_changed_paths(
         for command in lane.get("enough_proof", []):
             command_text = str(command)
             command_cwd, run_command = _split_validation_command(command_text)
+            command_identity = hashlib.sha256(command_text.encode("utf-8")).hexdigest()[:16]
+            route_id = str(lane.get("id", ""))
             route_source = _proof_route_source_for_lane(
                 lane=lane, command=command_text, adjustments_by_replacement=adjustments_by_replacement
             )
@@ -7189,6 +7241,8 @@ def _proof_selection_for_changed_paths(
                 {
                     "kind": "proof-command/v1",
                     "command": command_text,
+                    "command_identity": command_identity,
+                    "route_id": route_id,
                     "cwd": command_cwd,
                     "run": run_command,
                     "selected_from": route_source,
@@ -7198,7 +7252,7 @@ def _proof_selection_for_changed_paths(
                     "promotion_candidate": route_authority["promotion_candidate"],
                     "maintenance_target": route_authority["maintenance_target"],
                     "intent_type": str(intent.get("type", "behavior-test")),
-                    "lane": str(lane.get("id", "")),
+                    "lane": route_id,
                     "required": True,
                     **_lane_execution_metadata(lane),
                     "authority_resolution": _proof_template_authority_resolution_for_lane(

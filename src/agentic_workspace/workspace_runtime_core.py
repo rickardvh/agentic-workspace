@@ -45907,19 +45907,14 @@ def _record_proof_receipt_payload(
         except (TypeError, ValueError) as exc:
             raise WorkspaceUsageError("--receipt-route-budget-seconds must be numeric.") from exc
     try:
-        from agentic_workspace.workspace_runtime_proof import _proof_selection_for_changed_paths
+        from agentic_workspace.workspace_runtime_proof import _proof_selection_for_changed_paths, _selected_proof_command_for_receipt
 
         selection = _proof_selection_for_changed_paths(
             changed_paths=receipt["changed_paths"],
             target_root=target_root,
             include_durable_intent=False,
         )
-        selected_by_command = {
-            str(item.get("command") or "").strip(): item
-            for item in selection.get("selected_commands", [])
-            if isinstance(item, dict) and str(item.get("command") or "").strip()
-        }
-        selected = selected_by_command.get(command)
+        selected = _selected_proof_command_for_receipt(selection=selection, command=command)
         if isinstance(selected, dict):
             if receipt_route_id:
                 execution["submitted_route_id"] = str(receipt_route_id).strip()
@@ -45928,7 +45923,7 @@ def _record_proof_receipt_payload(
             if receipt_route_budget_seconds != "":
                 execution["submitted_route_budget_seconds"] = execution.get("route_budget_seconds")
             execution["route_id"] = str(selected.get("route_id") or selected.get("lane") or selected.get("selected_from") or "").strip()
-            execution["command_id"] = execution["command_identity"]
+            execution["command_id"] = str(selected.get("command_identity") or execution["command_identity"]).strip()
             expected_budget = str(
                 selected.get("route_budget_seconds")
                 or selected.get("timeout_seconds")
@@ -45942,8 +45937,15 @@ def _record_proof_receipt_payload(
                 except (TypeError, ValueError):
                     execution["route_budget_seconds"] = expected_budget
             execution["route_identity_source"] = "proof_selection.selected_commands"
-    except Exception:
-        execution.setdefault("route_identity_source", "unresolved")
+    except WorkspaceUsageError:
+        if receipt_repair_finding_id:
+            execution["route_id"] = f"proof-route-repair:{str(receipt_repair_finding_id).strip()}"
+            execution["command_id"] = execution["command_identity"]
+            execution["route_identity_source"] = "proof_route_repair.apply_receipt.validation_commands"
+        else:
+            raise
+    except Exception as exc:
+        raise WorkspaceUsageError("Proof receipt route identity could not be resolved from current proof selection.") from exc
     receipt["execution"] = execution
     receipt["proof_subject"] = build_proof_subject(
         target_root=target_root,
