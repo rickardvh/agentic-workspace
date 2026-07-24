@@ -24,6 +24,27 @@ MUTATION_CLAIM_LOCK_STALE_SECONDS = 2 * 60
 INSTRUCTION_PROVENANCE_RECEIPT_ROOT = Path(".agentic-workspace") / "authority" / "receipts"
 GOVERNANCE_RECEIPT_ROOT = Path(".agentic-workspace") / "governance" / "receipts"
 HOST_RECEIPT_INDEX_KIND = "agentic-workspace/host-receipt-index/v1"
+_MUTATION_BASELINE_PAYLOAD_CACHE: dict[tuple[str, tuple[str, ...], str, str], dict[str, Any]] | None = None
+_MUTATION_BASELINE_GIT_OBSERVATION_CACHE: dict[tuple[str, tuple[str, ...]], dict[str, Any]] | None = None
+
+
+@contextmanager
+def mutation_baseline_payload_cache_scope() -> Any:
+    """Cache repeated read-only mutation baseline observations for one command."""
+
+    global _MUTATION_BASELINE_PAYLOAD_CACHE, _MUTATION_BASELINE_GIT_OBSERVATION_CACHE
+    previous_cache = _MUTATION_BASELINE_PAYLOAD_CACHE
+    previous_git_cache = _MUTATION_BASELINE_GIT_OBSERVATION_CACHE
+    if previous_cache is None:
+        _MUTATION_BASELINE_PAYLOAD_CACHE = {}
+    if previous_git_cache is None:
+        _MUTATION_BASELINE_GIT_OBSERVATION_CACHE = {}
+    try:
+        yield
+    finally:
+        _MUTATION_BASELINE_PAYLOAD_CACHE = previous_cache
+        _MUTATION_BASELINE_GIT_OBSERVATION_CACHE = previous_git_cache
+
 
 INSTRUCTION_PROVENANCE_CLASSES: dict[str, dict[str, Any]] = {
     "host-platform": {
@@ -550,10 +571,17 @@ def _enforcement_fingerprint(*, head: str, scope: list[str], entries: list[dict[
 
 
 def _status_entries_z(target_root: Path, status_args: list[str]) -> dict[str, Any]:
+    cache = _MUTATION_BASELINE_GIT_OBSERVATION_CACHE
+    cache_key = (str(target_root.resolve()), tuple(status_args))
+    if cache is not None and cache_key in cache:
+        return cache[cache_key]
     raw_result = _git_bytes(target_root, *status_args)
     raw = raw_result.get("stdout_bytes") if isinstance(raw_result.get("stdout_bytes"), bytes) else b""
     if not raw:
-        return {**raw_result, "entries": []}
+        result = {**raw_result, "entries": []}
+        if cache is not None:
+            cache[cache_key] = result
+        return result
     parts = [item.decode("utf-8", errors="surrogateescape") for item in raw.split(b"\0") if item]
     entries: list[dict[str, Any]] = []
     index = 0
@@ -567,7 +595,10 @@ def _status_entries_z(target_root: Path, status_args: list[str]) -> dict[str, An
             index += 1
         entries.append(_status_entry(status=status, path=path, original_path=original_path))
         index += 1
-    return {**raw_result, "entries": _attach_entry_identities(target_root, entries)}
+    result = {**raw_result, "entries": _attach_entry_identities(target_root, entries)}
+    if cache is not None:
+        cache[cache_key] = result
+    return result
 
 
 def mutation_baseline_payload(
@@ -578,7 +609,23 @@ def mutation_baseline_payload(
     assignment_revision: str | None = None,
 ) -> dict[str, Any]:
     normalized_paths = [path for path in changed_paths if path]
-    head_observation = _git_value(target_root, "rev-parse", "HEAD")
+    cache = _MUTATION_BASELINE_PAYLOAD_CACHE
+    cache_key = (
+        str(target_root.resolve()),
+        tuple(normalized_paths),
+        str(assignment_target_identity_ref or ""),
+        str(assignment_revision or ""),
+    )
+    if cache is not None and cache_key in cache:
+        return cache[cache_key]
+    git_cache = _MUTATION_BASELINE_GIT_OBSERVATION_CACHE
+    head_cache_key = (str(target_root.resolve()), ("rev-parse", "HEAD"))
+    if git_cache is not None and head_cache_key in git_cache:
+        head_observation = git_cache[head_cache_key]
+    else:
+        head_observation = _git_value(target_root, "rev-parse", "HEAD")
+        if git_cache is not None:
+            git_cache[head_cache_key] = head_observation
     head = str(head_observation.get("value") or "")
     status_args = ["status", "--porcelain=v1", "-z", "--untracked-files=all"]
     if normalized_paths:
@@ -652,7 +699,7 @@ def mutation_baseline_payload(
         "assignment-revision-mismatch",
         "scope-expanded",
     ]
-    return {
+    payload = {
         "kind": "agentic-workspace/mutation-baseline/v1",
         "status": "baseline-observation-failed" if observation_errors else "dirty-scope-advisory-baseline" if dirty else "clean-scope",
         "baseline_id": digest,
@@ -732,6 +779,9 @@ def mutation_baseline_payload(
         },
         "host_enforcement": "fail-closed-at-aw-boundaries",
     }
+    if cache is not None:
+        cache[cache_key] = payload
+    return payload
 
 
 def compare_mutation_baseline(
