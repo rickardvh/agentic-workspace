@@ -11418,6 +11418,15 @@ def _release_recovery_payload(
         }
     release_publication_state = release_state.get("release_publication_state", {})
     publisher_retry = release_publication_state.get("publisher_retry", {}) if isinstance(release_publication_state, dict) else {}
+    publication_recovery_required = bool(
+        release_publication_state.get("publication", {}).get("recovery_required")
+        if isinstance(release_publication_state.get("publication"), dict)
+        else False
+    ) or release_publication_state.get("status") in {
+        "unresolved-version-publication-debt",
+        "verified-release-tag-missing",
+        "github-release-missing",
+    }
     recovery_next_action = (
         str(publisher_retry.get("command", ""))
         if isinstance(publisher_retry, dict)
@@ -11425,6 +11434,8 @@ def _release_recovery_payload(
         and release_publication_state.get("status") == "failed-release-unpublished"
         else "When a failed release remains unpublished without a verified publisher retry, rerun the release recovery helper for an exact existing-tag dispatch command."
         if isinstance(release_publication_state, dict) and release_publication_state.get("status") == "failed-release-unpublished"
+        else "Repair release publication state; successful no-op workflow runs do not clear version/tag/release disagreement."
+        if publication_recovery_required
         else "No failed-release publisher retry is active."
     )
     return {
@@ -11450,7 +11461,7 @@ def _release_recovery_payload(
         "release_publication_state": release_publication_state,
         "coordinated_recovery": {
             "status": "required"
-            if release_publication_state.get("status") == "failed-release-unpublished"
+            if release_publication_state.get("status") == "failed-release-unpublished" or publication_recovery_required
             else "not-required"
             if release_publication_state.get("status") == "cleared-by-newer-success"
             else "available",
