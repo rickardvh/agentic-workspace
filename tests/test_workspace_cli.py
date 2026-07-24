@@ -9770,7 +9770,60 @@ def test_report_release_recovery_section_exposes_payload_and_semver_recovery_rou
     assert recovery["release_publication_state"]["publisher_retry"]["status"] == "ready"
     assert "release_recovery_status.py" in recovery["semver_release_action"]["command"]
     assert "repair_route" in recovery["payload_drift"]
+    assert recovery["coordinated_recovery"]["status"] == "required"
     assert "required_version_paths" in recovery["coordinated_recovery"]["pr_shape"]
+
+
+def test_report_release_recovery_requires_unresolved_publication_state(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    monkeypatch.setattr(
+        cli,
+        "_release_recovery_live_state",
+        lambda **kwargs: {
+            "release_ci_failure": {
+                "kind": "agentic-workspace/release-ci-failure-summary/v1",
+                "status": "no-failed-release-run",
+                "workflow": "Release",
+                "latest_run": {
+                    "run_id": "29765337976",
+                    "run_url": "https://github.com/example/repo/actions/runs/29765337976",
+                    "conclusion": "success",
+                },
+                "freshness": {"status": "clear", "source": "gh-run-list"},
+            },
+            "release_publication_state": {
+                "status": "unresolved-version-publication-debt",
+                "publication": {
+                    "kind": "agentic-workspace/release-publication-state/v1",
+                    "status": "unresolved-version-publication-debt",
+                    "recovery_required": True,
+                    "reason": "version-not-newer-than-existing-tag-floor-v0.34.0",
+                },
+            },
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(repo_root),
+                "--section",
+                "release_recovery",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    recovery = payload["answer"]
+
+    assert recovery["release_ci_failure"]["status"] == "no-failed-release-run"
+    assert recovery["release_publication_state"]["status"] == "unresolved-version-publication-debt"
+    assert recovery["coordinated_recovery"]["status"] == "required"
+    assert "successful no-op workflow runs do not clear" in recovery["coordinated_recovery"]["next_action"]
 
 
 def test_start_surfaces_pr_comment_attention_only_for_pr_context(tmp_path: Path, capsys) -> None:
