@@ -39,9 +39,14 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return records
 
 
-def read_consequence_history(*, target_root: Path | None) -> list[dict[str, Any]]:
+def read_consequence_history(*, target_root: Path | None, allow_locked: bool = False) -> list[dict[str, Any]]:
     if target_root is None:
         return []
+    lock_path = _lock_path(target_root)
+    if lock_path.exists() and not allow_locked:
+        raise ConsequenceStoreUnavailable(
+            "consequence store write is in progress; lifecycle readers must fail closed until the writer exits."
+        )
     path = target_root / IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH
     if not path.is_file():
         return []
@@ -80,7 +85,7 @@ def record_consequence_event(*, target_root: Path | None, event: dict[str, Any])
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
                 stream.write(json.dumps({"pid": os.getpid(), "recorded_at": record["recorded_at"]}, sort_keys=True))
-            existing = {str(item.get("fingerprint") or "") for item in read_consequence_history(target_root=target_root)}
+            existing = {str(item.get("fingerprint") or "") for item in read_consequence_history(target_root=target_root, allow_locked=True)}
             if fingerprint not in existing:
                 append_consequence_record(target_root=target_root, record=record)
         finally:

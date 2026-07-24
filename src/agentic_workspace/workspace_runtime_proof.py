@@ -3485,16 +3485,29 @@ def _proof_route_run_validation_commands(*, target_root: Path, commands: list[st
         normalized = str(command or "").strip()
         if not normalized:
             continue
-        completed = subprocess.run(
-            normalized,
-            cwd=target_root,
-            shell=True,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=timeout_seconds,
-            check=False,
-        )
+        try:
+            completed = subprocess.run(
+                normalized,
+                cwd=target_root,
+                shell=True,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            results.append(
+                {
+                    "command": normalized,
+                    "returncode": "",
+                    "status": "timeout",
+                    "stdout_tail": str(exc.stdout or "")[-2000:],
+                    "stderr_tail": str(exc.stderr or "")[-2000:],
+                    "timeout_seconds": timeout_seconds,
+                }
+            )
+            raise WorkspaceUsageError(f"proof-route repair validation command exceeded selected route budget: {normalized}") from exc
         result = {
             "command": normalized,
             "returncode": completed.returncode,
@@ -3565,14 +3578,25 @@ def _proof_route_independent_validation_commands(
 
 
 def _proof_route_validation_timeout_seconds(*, selection: dict[str, Any], commands: list[str]) -> float:
-    selected_by_command = {
-        str(item.get("command") or "").strip(): item
-        for item in _list_payload(selection.get("selected_commands"))
-        if isinstance(item, dict) and str(item.get("command") or "").strip()
-    }
+    selected_commands = [item for item in _list_payload(selection.get("selected_commands")) if isinstance(item, dict)]
+    changed_paths = [str(path) for path in _list_payload(selection.get("changed_paths")) if str(path).strip()]
     budgets: list[float] = []
     for command in commands:
-        selected = selected_by_command.get(str(command).strip())
+        selected = next(
+            (
+                item
+                for item in selected_commands
+                if _proof_receipt_command_equivalent(str(item.get("command") or ""), str(command))
+                or _proof_receipt_command_equivalent(
+                    _proof_route_materialize_validation_command(
+                        command=str(item.get("command") or ""),
+                        changed_paths=changed_paths,
+                    ),
+                    str(command),
+                )
+            ),
+            None,
+        )
         if not isinstance(selected, dict):
             continue
         raw_budget = (
@@ -3587,7 +3611,33 @@ def _proof_route_validation_timeout_seconds(*, selection: dict[str, Any], comman
                 budgets.append(float(raw_budget))
         except (TypeError, ValueError):
             continue
-    return max([240.0, *budgets])
+    return max(budgets) if budgets else 240.0
+
+
+def _proof_route_candidate_commands_from_delta(*, delta: dict[str, Any], changed_paths: list[str]) -> tuple[list[str], list[str]]:
+    action = str(delta.get("action") or "").strip()
+    raw_commands: list[str] = []
+    if action == "upsert_domain_lane":
+        raw_commands = [str(command).strip() for command in _list_payload(_as_dict(delta.get("lane")).get("commands"))]
+    elif action == "replace_subsystem_proof":
+        raw_commands = [str(command).strip() for command in _list_payload(delta.get("proof"))]
+    elif action == "upsert_hint":
+        hint = _as_dict(delta.get("hint"))
+        raw_commands = [str(hint.get("candidate_command") or hint.get("command") or hint.get("proof_command") or "").strip()]
+    elif action == "remove_hint":
+        raw_commands = []
+    else:
+        raw_commands = []
+    raw_commands = [command for command in raw_commands if command]
+    return raw_commands, _proof_route_materialized_command_set(commands=raw_commands, changed_paths=changed_paths)
+
+
+def _proof_route_overlapping_commands(*, left: list[str], right: list[str]) -> list[str]:
+    overlapping: list[str] = []
+    for left_command in left:
+        if any(_proof_receipt_command_equivalent(left_command, right_command) for right_command in right):
+            overlapping.append(left_command)
+    return sorted(_dedupe(overlapping))
 
 
 def _proof_route_materialized_command_set(*, commands: list[str], changed_paths: list[str]) -> list[str]:
@@ -3645,6 +3695,19 @@ def _proof_route_audit_repaired_candidate(
     if refinement_status not in {"", "not-required"}:
         raise WorkspaceUsageError(
             f"proof-route repair candidate did not clear route refinement for the repaired scope: {refinement_status}"
+        )
+    selected_commands = [item for item in _list_payload(selection.get("selected_commands")) if isinstance(item, dict)]
+    broad_commands = [
+        str(item.get("command") or "").strip()
+        for item in selected_commands
+        if _proof_route_command_is_broad(str(item.get("command") or ""), proof_kind=str(item.get("proof_kind") or ""))
+    ]
+    route_strategy = _as_dict(selection.get("proof_route_strategy_decision"))
+    broad_escalation = _as_dict(route_strategy.get("broad_escalation"))
+    has_structured_escalation = str(route_strategy.get("outcome") or "") == "broad-escalated" and bool(broad_escalation)
+    if broad_commands and not has_structured_escalation:
+        raise WorkspaceUsageError(
+            "proof-route repair candidate left ordinary broad proof selected without a structured broad-escalation reason."
         )
     return {
         "status": "validated",
@@ -3962,10 +4025,10 @@ def _proof_route_repair_operation_payload(
     if not isinstance(delta, dict):
         raise WorkspaceUsageError("--route-repair-delta-json must be a JSON object.")
     delta_digest = hashlib.sha256(json.dumps(delta, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:16]
-    submitted_route_commands = [
-        str(command).strip() for command in _list_payload(_as_dict(delta.get("lane")).get("commands")) if str(command).strip()
-    ]
-    candidate_route_commands = _proof_route_materialized_command_set(commands=submitted_route_commands, changed_paths=changed_paths)
+    submitted_route_commands, candidate_route_commands = _proof_route_candidate_commands_from_delta(
+        delta=delta,
+        changed_paths=changed_paths,
+    )
     authority_file = target_root / normalized_authority_path
     previous_text = authority_file.read_text(encoding="utf-8") if authority_file.is_file() else ""
     new_text, semantic_preview = _proof_route_apply_semantic_delta(
@@ -4013,7 +4076,7 @@ def _proof_route_repair_operation_payload(
         changed_paths=changed_paths,
         fallback_selected_commands=selected_commands,
     )
-    overlapping_validation_commands = sorted(set(validation_commands).intersection(set(candidate_route_commands)))
+    overlapping_validation_commands = _proof_route_overlapping_commands(left=validation_commands, right=candidate_route_commands)
     if normalized_mode == "apply" and overlapping_validation_commands:
         raise WorkspaceUsageError(
             "proof-route repair validation rejected because proposed route commands cannot overlap validation authority."
