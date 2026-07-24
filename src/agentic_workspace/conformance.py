@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -211,6 +212,9 @@ def _expand_command_template(
     for token in template:
         if token.startswith("{") and token.endswith("}"):
             key = token[1:-1]
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+                command.append(token)
+                continue
             if key not in overrides:
                 raise AssertionError(f"unknown conformance command placeholder: {token}")
             command.extend(str(part) for part in overrides[key])

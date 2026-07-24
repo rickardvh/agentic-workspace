@@ -5,7 +5,7 @@ WORKDIR /work
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git python3 python3-pip \
     && find /usr/lib/python3/dist-packages -name '*.pyc' -delete \
-    && python3 -m pip install --break-system-packages --no-cache-dir jsonschema "command-generation @ https://github.com/rickardvh/command-generation/releases/download/v2.0.0/command_generation-2.0.0-py3-none-any.whl#sha256=c62c7ca4a7480af34ee628f87d9cb4175c598dcbdeb89f485daf539149d5a0e2"
+    && python3 -m pip install --break-system-packages --no-cache-dir jsonschema "command-generation @ git+https://github.com/rickardvh/command-generation.git@ac1b9c00bf41352010929de196e7d45e20014615"
 
 COPY pyproject.toml ./pyproject.toml
 COPY tests/test_workspace_packaging.py ./tests/test_workspace_packaging.py

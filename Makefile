@@ -14,9 +14,11 @@ WORKSPACE_TEST_CLI = \
 	tests/test_workspace_config_cli.py \
 	tests/test_workspace_defaults_cli.py \
 	tests/test_workspace_doctor_status_cli.py \
+	tests/test_workspace_evaluation.py \
 	tests/test_workspace_implement_cli.py \
 	tests/test_workspace_intent_cli.py \
 	tests/test_workspace_modules_cli.py \
+	tests/test_operating_decision.py \
 	tests/test_workspace_ownership_cli.py \
 	tests/test_workspace_planning_help_cli.py \
 	tests/test_workspace_projection_reuse.py \
