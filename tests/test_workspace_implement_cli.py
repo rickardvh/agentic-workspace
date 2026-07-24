@@ -3164,6 +3164,87 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
     assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
 
 
+def test_implement_broad_runtime_scope_returns_early_degraded_decision(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "contracts" / "operations.json", "{}\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_placeholder():\n    assert True\n")
+
+    def fail_expensive_proof_selection(**_: object) -> dict[str, object]:
+        raise AssertionError("broad default tiny implement should not build full proof selection")
+
+    def fail_expensive_test_strategy(**_: object) -> dict[str, object]:
+        raise AssertionError("broad default tiny implement should not build test strategy detail")
+
+    monkeypatch.setattr(workspace_runtime_implement, "_proof_selection_for_changed_paths", fail_expensive_proof_selection)
+    monkeypatch.setattr(workspace_runtime_implement, "_test_strategy_check_payload", fail_expensive_test_strategy)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--changed",
+                "src/agentic_workspace/contracts/operations.json",
+                "--changed",
+                "tests/test_workspace_proof_cli.py",
+                "--task",
+                "Measure broad implement latency.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["kind"] == "implementer-context-tiny/v1"
+    assert payload["status"] == "early-decision"
+    assert payload["reason_code"] == "broad-scope-degraded-first-decision"
+    assert payload["next"]["status"] == "broad-scope-deferred"
+    assert payload["proof"]["deferred_diagnostics"]["status"] == "selector-backed"
+    assert "proof.runtime_symbol_working_set" in payload["drill_down"]["available_selectors"]
+    assert "test_strategy_check" in payload["drill_down"]["available_selectors"]
+    _assert_json_payload_under(payload, 13_000, label="broad implement early-decision payload", sort_keys=False)
+
+
+def test_implement_accepts_runtime_symbol_working_set_selector(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "def changed_symbol():\n    return 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--select",
+                "proof.runtime_symbol_working_set",
+                "--task",
+                "Inspect runtime symbol detail.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["source_command"] == "implement"
+    assert payload.get("status") != "invalid-selector"
+
+
 def test_implement_tiny_profile_surfaces_manual_verification_obligations(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

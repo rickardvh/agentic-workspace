@@ -578,6 +578,7 @@
           "_fast_planning_lane_records",
           "_learned_route_reliance_payload",
           "_planning_hierarchy_owner_requirement",
+          "_planning_revision_payload_cache_scope",
           "_planning_revision_payload",
           "_planning_roadmap_candidates",
           "_planning_safety_path_classification",
