@@ -13,6 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CACHE_PATH = REPO_ROOT / ".agentic-workspace" / "local" / "cache" / "generated-cli-fingerprint.json"
+SOURCE_MANIFEST_PATH = REPO_ROOT / "generated" / ".agentic-workspace-cli-fingerprint.json"
 GENERATOR_SCRIPT = REPO_ROOT / "scripts" / "generate" / "generate_command_packages.py"
 CACHE_SCHEMA = "generated-cli-fingerprint/v1"
 
@@ -83,6 +84,35 @@ def _read_cached_fingerprint(*, cache_path: Path = CACHE_PATH) -> str | None:
         return None
     fingerprint = payload.get("fingerprint")
     return fingerprint if isinstance(fingerprint, str) and fingerprint else None
+
+
+def _git_worktree_is_clean(*, repo_root: Path) -> bool:
+    """Return whether Git can establish that no source input is dirty.
+
+    A source-owned manifest is valid only for a clean checkout.  This keeps the
+    cold path cheap without allowing an edited or unobservable worktree to skip
+    the content-fingerprint fallback.
+    """
+
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return False
+    return result.returncode == 0 and not result.stdout.strip()
+
+
+def _source_manifest_is_trustworthy(*, repo_root: Path) -> bool:
+    """Use the generated source manifest only when Git proves the tree is clean."""
+
+    source_manifest = repo_root / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    payload = _read_cached_fingerprint_payload(cache_path=source_manifest)
+    return payload is not None and _git_worktree_is_clean(repo_root=repo_root)
 
 
 def _cached_fingerprint_manifest_is_fresh(*, repo_root: Path, cache_path: Path) -> bool:
@@ -170,6 +200,8 @@ def ensure_generated_cli_current(
     effective_generator = generator_script or repo_root / "scripts" / "generate" / "generate_command_packages.py"
     force = os.environ.get("AW_FORCE_GENERATED_CLI_REFRESH") == "1"
     if not force and _cached_fingerprint_manifest_is_fresh(repo_root=repo_root, cache_path=effective_cache):
+        return False
+    if not force and _source_manifest_is_trustworthy(repo_root=repo_root):
         return False
     before = compute_generated_cli_fingerprint(repo_root=repo_root)
     cached = _read_cached_fingerprint(cache_path=effective_cache)

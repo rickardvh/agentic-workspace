@@ -74,6 +74,53 @@ def test_launcher_skips_content_hash_when_manifest_cache_is_fresh(tmp_path: Path
     assert refreshed is False
 
 
+def test_launcher_uses_source_owned_manifest_on_cold_clean_worktree(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    module._write_cached_fingerprint(module.compute_generated_cli_fingerprint(repo_root=tmp_path), cache_path=source_manifest)
+
+    monkeypatch.setattr(module, "_git_worktree_is_clean", lambda **_: True)
+
+    def fail_content_hash(repo_root: Path) -> dict[str, object]:
+        raise AssertionError(f"unexpected content hash for clean source manifest in {repo_root}")
+
+    module.compute_generated_cli_fingerprint = fail_content_hash
+    refreshed = module.ensure_generated_cli_current(
+        repo_root=tmp_path,
+        cache_path=tmp_path / ".agentic-workspace" / "local" / "cache" / "missing.json",
+        generator_script=tmp_path / "scripts" / "generate" / "generate_command_packages.py",
+        run_generator=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected regeneration")),
+    )
+
+    assert refreshed is False
+
+
+def test_launcher_hashes_when_source_manifest_worktree_is_dirty(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    module._write_cached_fingerprint(module.compute_generated_cli_fingerprint(repo_root=tmp_path), cache_path=source_manifest)
+    monkeypatch.setattr(module, "_git_worktree_is_clean", lambda **_: False)
+    calls: list[Path] = []
+    original = module.compute_generated_cli_fingerprint
+
+    def count_content_hash(*, repo_root: Path) -> dict[str, object]:
+        calls.append(repo_root)
+        return original(repo_root=repo_root)
+
+    module.compute_generated_cli_fingerprint = count_content_hash
+    refreshed = module.ensure_generated_cli_current(
+        repo_root=tmp_path,
+        cache_path=tmp_path / ".agentic-workspace" / "local" / "cache" / "missing.json",
+        generator_script=tmp_path / "scripts" / "generate" / "generate_command_packages.py",
+        run_generator=lambda *_: None,
+    )
+
+    assert refreshed is True
+    assert calls == [tmp_path, tmp_path]
+
+
 def test_launcher_regenerates_and_recaches_when_fingerprint_changes(tmp_path: Path) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)

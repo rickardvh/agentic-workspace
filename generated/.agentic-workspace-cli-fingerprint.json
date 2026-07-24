@@ -1,0 +1,5 @@
+{
+  "generation_command": "uv run python scripts/generate/generate_command_packages.py",
+  "kind": "generated-cli-source-manifest/v1",
+  "schema": "generated-cli-fingerprint/v1"
+}
