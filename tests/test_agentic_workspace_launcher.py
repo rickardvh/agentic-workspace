@@ -50,6 +50,30 @@ def test_launcher_skips_generation_when_fingerprint_cache_matches(tmp_path: Path
     assert refreshed is False
 
 
+def test_launcher_skips_content_hash_when_manifest_cache_is_fresh(tmp_path: Path) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "generated-cli-fingerprint.json"
+    fingerprint = module.compute_generated_cli_fingerprint(repo_root=tmp_path)
+    module._write_cached_fingerprint(fingerprint, cache_path=cache_path)
+
+    def fail_content_hash(repo_root: Path) -> dict[str, object]:
+        raise AssertionError(f"unexpected content hash for fresh cache in {repo_root}")
+
+    def fail_if_called(repo_root: Path, generator_script: Path) -> None:
+        raise AssertionError(f"unexpected regeneration for {repo_root} via {generator_script}")
+
+    module.compute_generated_cli_fingerprint = fail_content_hash
+    refreshed = module.ensure_generated_cli_current(
+        repo_root=tmp_path,
+        cache_path=cache_path,
+        generator_script=tmp_path / "scripts" / "generate" / "generate_command_packages.py",
+        run_generator=fail_if_called,
+    )
+
+    assert refreshed is False
+
+
 def test_launcher_regenerates_and_recaches_when_fingerprint_changes(tmp_path: Path) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)

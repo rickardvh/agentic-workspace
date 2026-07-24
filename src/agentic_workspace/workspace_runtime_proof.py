@@ -45,8 +45,11 @@ from agentic_workspace.proof_receipt_admission import (
     proof_receipt_admission,
 )
 from agentic_workspace.proof_subject import classify_proof_subject
-from agentic_workspace.runtime_source_review import runtime_source_edit_review_for_changed_paths
-from agentic_workspace.runtime_symbol_working_set import runtime_symbol_working_set_for_changed_paths
+from agentic_workspace.runtime_source_review import (
+    GENERATED_CLI_RUNTIME_SOURCE_EDIT_PATHS,
+    runtime_source_edit_review_for_changed_paths,
+)
+from agentic_workspace.runtime_symbol_working_set import LARGE_RUNTIME_PATHS, runtime_symbol_working_set_for_changed_paths
 from agentic_workspace.workspace_runtime_core import (
     _PROOF_EXECUTION_STATUSES,
     _PROOF_SELECTION_RULES,
@@ -6985,6 +6988,7 @@ def _proof_selection_for_changed_paths(
     include_assurance_requirements: bool = True,
     include_routine_work_context: bool = True,
     include_runtime_diagnostics: bool = True,
+    include_test_strategy_check: bool = True,
 ) -> dict[str, Any]:
     defaults = _defaults_payload()
     cli_invoke = DEFAULT_CLI_INVOKE
@@ -7972,16 +7976,27 @@ def _proof_selection_for_changed_paths(
         assurance_requirements=active_assurance_requirements,
         verification=verification,
     )
-    test_strategy_check = (
-        _test_strategy_check_payload(
+    if target_root is None:
+        test_strategy_check = {"kind": "agentic-workspace/test-strategy-check/v1", "status": "unavailable", "changed_test_paths": []}
+    elif include_test_strategy_check:
+        test_strategy_check = _test_strategy_check_payload(
             target_root=target_root,
             changed_paths=changed_paths,
             task_text=task_text,
             verification=verification,
         )
-        if target_root is not None
-        else {"kind": "agentic-workspace/test-strategy-check/v1", "status": "unavailable", "changed_test_paths": []}
-    )
+    else:
+        changed_test_paths = [path for path in changed_paths if "/test" in path or path.startswith("tests/") or "test_" in path]
+        test_strategy_check = {
+            "kind": "agentic-workspace/test-strategy-check/v1",
+            "status": "selector-backed" if changed_test_paths else "not-applicable",
+            "changed_test_paths": changed_test_paths,
+            "hotspot_file_count": 0,
+            "scenario_matrix_candidate_count": 0,
+            "detail_selector": "test_strategy_check",
+            "detail_command": f"{cli_invoke} implement --changed <paths> --select test_strategy_check --format json",
+            "rule": "Test strategy analysis is deferred on compact implement output; select this field for full evidence.",
+        }
     proof_decision = _proof_decision_packet(
         changed_paths=changed_paths,
         selected_lanes=selected_lanes,
@@ -8356,6 +8371,34 @@ def _proof_selection_for_changed_paths(
         runtime_source_review = runtime_source_edit_review_for_changed_paths(changed_paths, target_root=target_root, task_text=task_text)
         if runtime_source_review["changed_paths"]:
             proof_selection["runtime_source_edit_review"] = runtime_source_review
+    else:
+        runtime_symbol_paths = [path for path in changed_paths if path in LARGE_RUNTIME_PATHS]
+        runtime_source_paths = [
+            path for path in changed_paths if path in GENERATED_CLI_RUNTIME_SOURCE_EDIT_PATHS or path in LARGE_RUNTIME_PATHS
+        ]
+        if runtime_symbol_paths:
+            proof_selection["runtime_symbol_working_set"] = {
+                "kind": "agentic-workspace/runtime-symbol-working-set/v1",
+                "status": "selector-backed",
+                "changed_paths": runtime_symbol_paths,
+                "file_count": 0,
+                "files": [],
+                "detail_selector": "proof.runtime_symbol_working_set",
+                "detail_command": (f"{cli_invoke} implement --changed <paths> --select proof.runtime_symbol_working_set --format json"),
+                "rule": "Runtime symbol diagnostics are deferred on compact implement output; select this field for AST-backed detail.",
+            }
+        if runtime_source_paths:
+            proof_selection["runtime_source_edit_review"] = {
+                "kind": "agentic-workspace/runtime-source-edit-review/v1",
+                "status": "selector-backed",
+                "changed_paths": runtime_source_paths,
+                "detail_selector": "proof.runtime_source_edit_review",
+                "detail_command": (f"{cli_invoke} implement --changed <paths> --select proof.runtime_source_edit_review --format json"),
+                "completion_claim_rule": (
+                    "Runtime source edit review is deferred on compact implement output; select this field before claiming "
+                    "generated-CLI or mirrored runtime boundary satisfaction."
+                ),
+            }
     direct_cli_review = _direct_cli_edit_review_for_changed_paths(changed_paths)
     if direct_cli_review["changed_paths"]:
         proof_selection["direct_cli_edit_review"] = direct_cli_review

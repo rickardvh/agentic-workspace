@@ -48,8 +48,10 @@ def _fingerprint_files(*, repo_root: Path) -> list[Path]:
 def compute_generated_cli_fingerprint(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
     digest = hashlib.sha256()
     files = _fingerprint_files(repo_root=repo_root)
+    relative_paths: list[str] = []
     for path in files:
         relative = _repo_relative(path, repo_root=repo_root)
+        relative_paths.append(relative)
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
         digest.update(path.read_bytes())
@@ -59,10 +61,11 @@ def compute_generated_cli_fingerprint(*, repo_root: Path = REPO_ROOT) -> dict[st
         "algorithm": "sha256",
         "fingerprint": digest.hexdigest(),
         "file_count": len(files),
+        "file_paths": relative_paths,
     }
 
 
-def _read_cached_fingerprint(*, cache_path: Path = CACHE_PATH) -> str | None:
+def _read_cached_fingerprint_payload(*, cache_path: Path = CACHE_PATH) -> dict[str, object] | None:
     if not cache_path.is_file():
         return None
     try:
@@ -71,8 +74,39 @@ def _read_cached_fingerprint(*, cache_path: Path = CACHE_PATH) -> str | None:
         return None
     if not isinstance(payload, dict) or payload.get("schema") != CACHE_SCHEMA:
         return None
+    return payload
+
+
+def _read_cached_fingerprint(*, cache_path: Path = CACHE_PATH) -> str | None:
+    payload = _read_cached_fingerprint_payload(cache_path=cache_path)
+    if payload is None:
+        return None
     fingerprint = payload.get("fingerprint")
     return fingerprint if isinstance(fingerprint, str) and fingerprint else None
+
+
+def _cached_fingerprint_manifest_is_fresh(*, repo_root: Path, cache_path: Path) -> bool:
+    payload = _read_cached_fingerprint_payload(cache_path=cache_path)
+    if payload is None:
+        return False
+    cached_paths = payload.get("file_paths")
+    if not isinstance(cached_paths, list) or not all(isinstance(path, str) for path in cached_paths):
+        return False
+    current_files = _fingerprint_files(repo_root=repo_root)
+    current_paths = [_repo_relative(path, repo_root=repo_root) for path in current_files]
+    if current_paths != cached_paths:
+        return False
+    try:
+        cache_mtime_ns = cache_path.stat().st_mtime_ns
+    except OSError:
+        return False
+    for path in current_files:
+        try:
+            if path.stat().st_mtime_ns > cache_mtime_ns:
+                return False
+        except OSError:
+            return False
+    return True
 
 
 def _replace_cache_file_with_retries(
@@ -134,9 +168,11 @@ def ensure_generated_cli_current(
 ) -> bool:
     effective_cache = cache_path or repo_root / ".agentic-workspace" / "local" / "cache" / "generated-cli-fingerprint.json"
     effective_generator = generator_script or repo_root / "scripts" / "generate" / "generate_command_packages.py"
+    force = os.environ.get("AW_FORCE_GENERATED_CLI_REFRESH") == "1"
+    if not force and _cached_fingerprint_manifest_is_fresh(repo_root=repo_root, cache_path=effective_cache):
+        return False
     before = compute_generated_cli_fingerprint(repo_root=repo_root)
     cached = _read_cached_fingerprint(cache_path=effective_cache)
-    force = os.environ.get("AW_FORCE_GENERATED_CLI_REFRESH") == "1"
     if not force and cached == before["fingerprint"]:
         return False
 

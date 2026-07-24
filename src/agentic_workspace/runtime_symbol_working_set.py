@@ -202,7 +202,23 @@ def runtime_symbol_working_set_for_changed_paths(changed_paths: list[str], *, ta
 
 
 def tiny_runtime_symbol_working_set_payload(value: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(value, dict) or value.get("status") != "present":
+    if not isinstance(value, dict):
+        return {}
+    if value.get("status") == "selector-backed":
+        return {
+            key: value.get(key)
+            for key in (
+                "kind",
+                "status",
+                "changed_paths",
+                "file_count",
+                "detail_selector",
+                "detail_command",
+                "rule",
+            )
+            if key in value
+        }
+    if value.get("status") != "present":
         return {}
     files: list[dict[str, Any]] = []
     for file_payload in value.get("files", []) if isinstance(value.get("files"), list) else []:

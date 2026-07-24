@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
-from agentic_workspace.authority_envelope import authority_envelope_payload
+from agentic_workspace.authority_envelope import authority_envelope_payload, mutation_baseline_payload_cache_scope
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
 from agentic_workspace.reporting_support import (
@@ -29,7 +29,7 @@ from agentic_workspace.runtime_source_review import (
     tiny_generated_cli_freshness_payload,
     tiny_runtime_source_edit_review_payload,
 )
-from agentic_workspace.runtime_symbol_working_set import tiny_runtime_symbol_working_set_payload
+from agentic_workspace.runtime_symbol_working_set import LARGE_RUNTIME_PATHS, tiny_runtime_symbol_working_set_payload
 from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
     _acceptance_reconciliation_prompt_payload,
@@ -52,6 +52,7 @@ from agentic_workspace.workspace_runtime_core import (
     _compact_task_posture_packet_projection,
     _compact_tiny_required_proof_commands,
     _completion_boundary_payload,
+    _decision_point_binding_cache_scope,
     _decision_point_source_revision_status,
     _delegation_decision_requires_attention,
     _diagnostic_profile,
@@ -76,6 +77,7 @@ from agentic_workspace.workspace_runtime_core import (
     _parent_intent_status_payload,
     _persist_decision_point_forecast,
     _plan_delegation_packet_payload,
+    _planning_revision_payload_cache_scope,
     _read_changed_surface_text,
     _read_task_text_from_file,
     _record_decision_point_confirmation,
@@ -174,13 +176,14 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         return 0
     changed_paths = list(getattr(args, "changed", []) or [])
     if profile == "tiny" and _selector_tokens(selected_fields) == ["next"]:
-        payload = _implement_next_selected_payload(
-            target_root=target_root,
-            changed_paths=changed_paths,
-            task_text=task_text,
-            config=config,
-            startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
-        )
+        with _planning_revision_payload_cache_scope(), _decision_point_binding_cache_scope(), mutation_baseline_payload_cache_scope():
+            payload = _implement_next_selected_payload(
+                target_root=target_root,
+                changed_paths=changed_paths,
+                task_text=task_text,
+                config=config,
+                startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
+            )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
     change_impact_selected = _selector_requests_change_impact(selected_fields)
@@ -194,18 +197,25 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     requirement_grounding_selected = _selector_requests_requirement_grounding(selected_fields)
     plan_delegation_packet_selected = _selector_requests_plan_delegation_packet(selected_fields)
     test_strategy_check_selected = _selector_requests_test_strategy_check(selected_fields)
-    full_payload = _implement_payload(
-        target_root=target_root,
-        changed_paths=changed_paths,
-        task_text=task_text,
-        include_change_impact=(profile != "tiny" or change_impact_selected),
-        include_task_contract=(profile != "tiny" or task_contract_selected),
-        include_assurance_requirements=(profile != "tiny" or assurance_requirements_selected or routine_work_context_selected),
-        include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
-        include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
-        include_reuse_pressure=(profile != "tiny" or reuse_pressure_selected),
-        startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
+    runtime_diagnostics_selected = _selector_requests(selected_fields, "proof.runtime_source_edit_review") or _selector_requests(
+        selected_fields, "proof.runtime_symbol_working_set"
     )
+    broad_early_scope = _broad_implement_early_decision_required(changed_paths)
+    with _planning_revision_payload_cache_scope(), _decision_point_binding_cache_scope(), mutation_baseline_payload_cache_scope():
+        full_payload = _implement_payload(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            include_change_impact=(profile != "tiny" or change_impact_selected),
+            include_task_contract=(profile != "tiny" or task_contract_selected),
+            include_assurance_requirements=(profile != "tiny" or assurance_requirements_selected or routine_work_context_selected),
+            include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
+            include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
+            include_reuse_pressure=(profile != "tiny" or reuse_pressure_selected),
+            include_runtime_diagnostics=(profile != "tiny" or runtime_diagnostics_selected or not broad_early_scope),
+            include_test_strategy_check=(profile != "tiny" or test_strategy_check_selected or not broad_early_scope),
+            startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
+        )
     payload = full_payload
     if profile == "tiny":
         payload = _tiny_implement_payload(full_payload)
@@ -235,6 +245,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["decision_point_intent_confirmation"] = full_payload.get("decision_point_intent_confirmation", {})
         if plan_delegation_packet_selected:
             payload["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
+            payload.setdefault("context", {})["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
         if test_strategy_check_selected:
             payload["test_strategy_check"] = full_payload["test_strategy_check"]
         if _selector_requests(getattr(args, "select", None), "proof_route_strategy_preservation"):
@@ -315,6 +326,7 @@ def _implement_next_selected_payload(
             include_assurance_requirements=False,
             include_routine_work_context=False,
             include_runtime_diagnostics=False,
+            include_test_strategy_check=False,
         )
         if normalized_paths
         else copy.deepcopy(implementer_template["unknown_scope_proof"])
@@ -370,6 +382,24 @@ def _implement_next_selected_payload(
             }
         },
         source_command="implement",
+    )
+
+
+def _broad_implement_early_decision_required(changed_paths: list[str]) -> bool:
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    if len(normalized_paths) < 3:
+        return False
+    if any(
+        path == ".agentic-workspace/planning/state.toml" or path.startswith(".agentic-workspace/planning/execplans/")
+        for path in normalized_paths
+    ):
+        return False
+    return any(
+        path in LARGE_RUNTIME_PATHS
+        or path.startswith("generated/")
+        or path.startswith("src/agentic_workspace/contracts/")
+        or path.startswith("packages/")
+        for path in normalized_paths
     )
 
 
@@ -831,6 +861,8 @@ def _implement_payload(
     include_verification: bool = True,
     include_routine_work_context: bool = True,
     include_reuse_pressure: bool = True,
+    include_runtime_diagnostics: bool = True,
+    include_test_strategy_check: bool = True,
     startup_route_fingerprint: str = "",
 ) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
@@ -845,6 +877,8 @@ def _implement_payload(
             acceptance=_task_acceptance_payload(task_text=task_text, requested_outcomes=_extract_requested_outcomes(task_text)),
             include_assurance_requirements=include_assurance_requirements,
             include_routine_work_context=include_routine_work_context,
+            include_runtime_diagnostics=include_runtime_diagnostics,
+            include_test_strategy_check=include_test_strategy_check,
         )
         if normalized_paths
         else copy.deepcopy(implementer_template["unknown_scope_proof"])
@@ -1103,6 +1137,8 @@ def _implement_payload(
             target_root=target_root,
             include_durable_intent=False,
             task_text=task_text,
+            include_runtime_diagnostics=include_runtime_diagnostics,
+            include_test_strategy_check=include_test_strategy_check,
         )
         strategy_preservation = _as_dict(live_proof.get("proof_route_strategy_preservation"))
         if strategy_preservation:
@@ -1319,12 +1355,25 @@ def _implement_payload(
         task_text=task_text,
         changed_paths=normalized_paths,
     )
-    payload["test_strategy_check"] = _test_strategy_check_payload(
-        target_root=target_root,
-        changed_paths=normalized_paths,
-        task_text=task_text,
-        verification=verification_for_grounding,
-    )
+    if include_test_strategy_check:
+        payload["test_strategy_check"] = _test_strategy_check_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            task_text=task_text,
+            verification=verification_for_grounding,
+        )
+    else:
+        changed_test_paths = [path for path in normalized_paths if "/test" in path or path.startswith("tests/") or "test_" in path]
+        payload["test_strategy_check"] = {
+            "kind": "agentic-workspace/test-strategy-check/v1",
+            "status": "selector-backed" if changed_test_paths else "not-applicable",
+            "changed_test_paths": changed_test_paths,
+            "hotspot_file_count": 0,
+            "scenario_matrix_candidate_count": 0,
+            "detail_selector": "test_strategy_check",
+            "detail_command": f"{config.cli_invoke} implement --changed <paths> --select test_strategy_check --format json",
+            "rule": "Test strategy analysis is deferred on compact implement output; select this field for full evidence.",
+        }
     workflow_obligations = _workflow_obligations_report_payload(
         config=config,
         active_planning_record=active_planning_record_for_intent,
@@ -1504,6 +1553,31 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         context_reuse_pressure["summary"] = reuse_pressure.get("summary") if isinstance(reuse_pressure, dict) else None
     optimization_posture = _as_dict(payload.get("optimization_posture"))
     delegation_decision = execution_posture.get("delegation_decision", {}) if isinstance(execution_posture, dict) else {}
+    assignment_gate = _as_dict(execution_posture.get("assignment_gate")) if isinstance(execution_posture, dict) else {}
+    startup_route_rebind = _as_dict(payload.get("startup_route_rebind"))
+    stale_startup_route = str(startup_route_rebind.get("status") or "") == "stale-projection-rejected"
+    assignment_gate_status = str(assignment_gate.get("status") or "")
+    assignment_blocks_implementation = assignment_gate_status in {"blocked", "blocked-target-mismatch", "handoff-required"}
+    planning_implementation_allowed = (
+        bool(planning_safety_gate.get("implementation_allowed"))
+        if isinstance(planning_safety_gate, dict) and "implementation_allowed" in planning_safety_gate
+        else None
+    )
+    effective_implementation_allowed = planning_implementation_allowed
+    if stale_startup_route:
+        effective_implementation_allowed = False
+        next_action = str(
+            startup_route_rebind.get("safe_recovery")
+            or _as_dict(startup_route_rebind.get("route_identity_check")).get("action")
+            or "Rerun start, adopt its newly projected route packet, then retry implement."
+        )
+    elif assignment_blocks_implementation:
+        effective_implementation_allowed = False
+        next_action = str(
+            delegation_decision.get("required_next_action")
+            or assignment_gate.get("required_next_action")
+            or "Resolve assignment or delegation authority before implementation."
+        )
     delegation_attention = _delegation_decision_requires_attention(delegation_decision)
     advisory_selectors = [
         "context.reuse_pressure",
@@ -1601,12 +1675,14 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     if isinstance(planning_safety_gate, dict) and planning_safety_gate.get("workflow_sufficient") is False
                     else []
                 ),
+                *(
+                    [str(assignment_gate.get("status") or assignment_gate.get("assignment_policy"))]
+                    if assignment_blocks_implementation
+                    else []
+                ),
+                *(["stale-startup-route"] if stale_startup_route else []),
             ],
-            implementation_allowed=(
-                bool(planning_safety_gate.get("implementation_allowed"))
-                if isinstance(planning_safety_gate, dict) and "implementation_allowed" in planning_safety_gate
-                else None
-            ),
+            implementation_allowed=effective_implementation_allowed,
             read_only_allowed=(
                 bool(planning_safety_gate.get("read_only_allowed"))
                 if isinstance(planning_safety_gate, dict) and "read_only_allowed" in planning_safety_gate
@@ -2055,11 +2131,10 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         projected["proof"].pop("runtime_source_edit_review", None)
         remove_available_selector("proof.runtime_source_edit_review")
     runtime_symbol_working_set = projected["proof"].get("runtime_symbol_working_set", {})
-    if not (
-        isinstance(runtime_symbol_working_set, dict)
-        and runtime_symbol_working_set.get("status") == "present"
-        and runtime_symbol_working_set.get("files")
-    ):
+    if not isinstance(runtime_symbol_working_set, dict) or runtime_symbol_working_set.get("status") not in {
+        "present",
+        "selector-backed",
+    }:
         projected["proof"].pop("runtime_symbol_working_set", None)
         remove_available_selector("proof.runtime_symbol_working_set")
     task_argument_mode = payload.get("task_intent", {}).get("task_argument_mode") if isinstance(payload.get("task_intent"), dict) else ""
@@ -2150,6 +2225,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             and compact_gate.get("status") in {"clear", "satisfied"}
         ):
             projected["context"]["planning_safety_gate"] = compact_gate
+    if stale_startup_route:
+        projected["startup_route_rebind"] = startup_route_rebind
     if isinstance(intent_acknowledgement, dict) and intent_acknowledgement.get("decision") == "proceed-with-stated-assumption":
         projected["context"]["intent_acknowledgement"] = {
             "decision": intent_acknowledgement.get("decision"),
@@ -2157,7 +2234,24 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "proceed_unless_corrected": True,
             "clarify_only_if_blocked": True,
         }
-    handoff_gate = payload.get("handoff_proof_route_consumer_gate")
-    if isinstance(handoff_gate, dict) and handoff_gate:
-        projected["handoff_proof_route_consumer_gate"] = handoff_gate
+    tiny_context = projected.get("context", {})
+    if isinstance(tiny_context, dict):
+        durable_promotion = tiny_context.get("durable_intent_promotion", {})
+        if (
+            isinstance(durable_promotion, dict)
+            and durable_promotion.get("status") == "available"
+            and not durable_promotion.get("matched_markers")
+        ):
+            tiny_context.pop("durable_intent_promotion", None)
+        requirement_grounding = tiny_context.get("requirement_grounding", {})
+        if (
+            isinstance(requirement_grounding, dict)
+            and requirement_grounding.get("status") == "attention"
+            and _as_int(requirement_grounding.get("requirement_ref_count")) == 0
+            and _as_int(requirement_grounding.get("known_gap_count")) == 0
+        ):
+            tiny_context.pop("requirement_grounding", None)
+        plan_delegation = tiny_context.get("plan_delegation_packet", {})
+        if isinstance(plan_delegation, dict) and plan_delegation.get("status") == "unavailable":
+            tiny_context.pop("plan_delegation_packet", None)
     return projected
