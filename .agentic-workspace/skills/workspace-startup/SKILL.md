@@ -47,7 +47,7 @@ This skill is the hand-authored startup pilot for the `startup-router` SkillSpec
 - Interpreted fields: `workflow_participation`, `immediate_next_allowed_action`, `next_safe_action`, `planning_safety_gate`, `skill_routing.preferred_routes`, and `detail_commands`.
 - Direct work: if compact startup does not require planning and proof is obvious, keep the work direct and avoid planning, review, Memory, or handoff artifacts.
 - Planning work: if `planning_safety_gate.implementation_allowed` is false, run the named planning command before implementation.
-- No-CLI fallback: read `.agentic-workspace/WORKFLOW.md` only far enough to preserve the same forbidden actions and no-artifact-by-default rule.
+- No-CLI fallback: continue from this startup skill and `.agentic-workspace/docs/module-map.md` only far enough to preserve the same forbidden actions and no-artifact-by-default rule.
 
 ## Module Map
 

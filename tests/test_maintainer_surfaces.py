@@ -167,6 +167,7 @@ Boundaries:
 - Known dedicated Agentic Workspace commands are allowed only when the request maps directly to that command and no takeover, recovery, active-planning, or ambiguous safety decision is needed first.
 - Do not bake machine-local AW invocation paths into checked-in generic guidance; concrete commands come from the configured invocation or live router output.
 - Treat checked-in `.agentic-workspace/skills` and module skill trees as required operating surfaces, not optional payload mirror content.
+- Treat `.agentic-workspace/skills/workspace-startup/SKILL.md` as the shared startup fallback reached through this adapter.
 - Treat `preflight`, `config`, `defaults`, `skills`, `modules`, `ownership`, and `report` as routed drill-down or recovery surfaces, not the ordinary startup loop.
 - Report repo-relative paths, not local absolute paths.
 <!-- agentic-workspace:workflow:end -->

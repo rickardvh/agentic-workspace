@@ -10993,7 +10993,7 @@ def test_proof_route_strategy_identity_is_preserved_by_start_and_implement(tmp_p
         "--changed",
         "generated/workspace/python/cli.py",
         "--select",
-        "proof_route_strategy_preservation,next_safe_action",
+        "proof_route_strategy_preservation,proof_route_strategy_consumer_gate,next_safe_action",
         "--format",
         "json",
     ]
@@ -11007,7 +11007,7 @@ def test_proof_route_strategy_identity_is_preserved_by_start_and_implement(tmp_p
         "--changed",
         "generated/workspace/python/cli.py",
         "--select",
-        "proof_route_strategy_preservation,next",
+        "proof_route_strategy_preservation,proof_route_strategy_consumer_gate,next",
         "--format",
         "json",
     ]
@@ -11019,6 +11019,9 @@ def test_proof_route_strategy_identity_is_preserved_by_start_and_implement(tmp_p
     assert start_preservation["decision_id"] == implement_preservation["decision_id"]
     assert start_preservation["claim_effect"] == "claim-blocked"
     assert implement_preservation["claim_effect"] == "claim-blocked"
+    assert start_values["proof_route_strategy_consumer_gate"]["route_health_id"] == start_preservation["route_health_id"]
+    assert implement_values["proof_route_strategy_consumer_gate"]["route_health_id"] == implement_preservation["route_health_id"]
+    assert start_values["proof_route_strategy_consumer_gate"]["mismatch_effect"] == "claim-blocked"
     assert start_values["next_safe_action"]["next_safe_action"] == "route-refinement-required"
     assert implement_values["next"]["action"] == "Resolve proof-route refinement or structured escalation before closeout."
 

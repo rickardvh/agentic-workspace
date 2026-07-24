@@ -1971,6 +1971,16 @@
       "description": "Stable proof-route strategy identity and consumer-preservation packet shared by start, implement, proof, handoff, and closeout surfaces.",
       "type": "object"
     },
+    "proof_route_strategy_consumer_gate": {
+      "additionalProperties": true,
+      "description": "Live proof-route strategy consumer gate that re-resolves and compares route-health identity before action, handoff, or closeout.",
+      "type": "object"
+    },
+    "handoff_proof_route_consumer_gate": {
+      "additionalProperties": true,
+      "description": "Live proof-route strategy consumer gate projected into handoff requirements before handoff or closeout claims.",
+      "type": "object"
+    },
     "required_validation_commands": {
       "description": "Commands that must pass before claiming implementation complete.",
       "items": {
@@ -2222,6 +2232,16 @@
     "proof_route_strategy_preservation": {
       "type": "object",
       "description": "Stable proof-route strategy identity and consumer-preservation packet shared by start, implement, proof, handoff, and closeout surfaces.",
+      "additionalProperties": true
+    },
+    "proof_route_strategy_consumer_gate": {
+      "type": "object",
+      "description": "Live proof-route strategy consumer gate that re-resolves and compares route-health identity before action, handoff, or closeout.",
+      "additionalProperties": true
+    },
+    "handoff_proof_route_consumer_gate": {
+      "type": "object",
+      "description": "Live proof-route strategy consumer gate projected into handoff requirements before handoff or closeout claims.",
       "additionalProperties": true
     },
     "required_validation_commands": {

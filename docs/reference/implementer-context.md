@@ -131,6 +131,8 @@ Cheap implementer context for a bounded changed-path scope.
 | `proof.escalate_when` | array of string | yes |  | Signals that the implementer should not guess. |  |  |
 | `proof.acceptance_guidance` | object | no |  | Guidance that proof should demonstrate acceptance satisfaction, not only command success. |  |  |
 | `proof_route_strategy_preservation` | object | no |  | Stable proof-route strategy identity and consumer-preservation packet shared by start, implement, proof, handoff, and closeout surfaces. |  |  |
+| `proof_route_strategy_consumer_gate` | object | no |  | Live proof-route strategy consumer gate that re-resolves and compares route-health identity before action, handoff, or closeout. |  |  |
+| `handoff_proof_route_consumer_gate` | object | no |  | Live proof-route strategy consumer gate projected into handoff requirements before handoff or closeout claims. |  |  |
 | `required_validation_commands` | array of string | yes |  | Commands that must pass before claiming implementation complete. |  |  |
 | `acceptance_reconciliation` | object | yes |  | Closeout guard against passing self-authored tests while missing requested behavior. |  |  |
 | `acceptance_reconciliation.kind` | const `"agentic-workspace/acceptance-reconciliation/v1"` | yes |  | Discriminator for the acceptance reconciliation guidance. |  |  |

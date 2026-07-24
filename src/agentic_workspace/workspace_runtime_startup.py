@@ -1264,7 +1264,12 @@ def _start_payload(
             "read_first": [config_command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
-    closeout_inspection = _completion_closeout_inspection_payload(target_root=target_root, config=config, task_text=task_text)
+    closeout_inspection = _completion_closeout_inspection_payload(
+        target_root=target_root,
+        config=config,
+        task_text=task_text,
+        changed_paths=changed_paths,
+    )
     if closeout_inspection["status"] in {"required", "clear"}:
         payload["closeout_trust_inspection"] = closeout_inspection
         payload["closeout_report_route"] = _startup_closeout_report_route(closeout_inspection)
@@ -1351,6 +1356,7 @@ def _start_payload(
         strategy_preservation = _as_dict(proof_payload.get("proof_route_strategy_preservation"))
         if strategy_preservation:
             payload["proof_route_strategy_preservation"] = strategy_preservation
+            payload["proof_route_strategy_consumer_gate"] = _as_dict(strategy_preservation.get("consumer_gate"))
         if str(strategy_preservation.get("claim_effect", "")) == "claim-blocked":
             payload["immediate_next_allowed_action"] = {
                 "action": str(
@@ -1379,6 +1385,7 @@ def _start_payload(
         strategy_preservation = _as_dict(proof_payload.get("proof_route_strategy_preservation"))
         if strategy_preservation:
             payload["proof_route_strategy_preservation"] = strategy_preservation
+            payload["proof_route_strategy_consumer_gate"] = _as_dict(strategy_preservation.get("consumer_gate"))
         proof_command = str(
             _command_with_cli_invoke(
                 command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
@@ -1703,6 +1710,7 @@ def _hydrate_selected_start_advisory_payloads(
                 config=config,
                 task_text=task_text,
                 explicit_request=True,
+                changed_paths=_normalize_changed_paths(payload.get("changed_paths", [])),
             ),
         )
 

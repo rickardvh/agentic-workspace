@@ -239,6 +239,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["test_strategy_check"] = full_payload["test_strategy_check"]
         if _selector_requests(getattr(args, "select", None), "proof_route_strategy_preservation"):
             payload["proof_route_strategy_preservation"] = full_payload.get("proof_route_strategy_preservation", {})
+        if _selector_requests(getattr(args, "select", None), "proof_route_strategy_consumer_gate"):
+            payload["proof_route_strategy_consumer_gate"] = full_payload.get("proof_route_strategy_consumer_gate", {})
         if reuse_pressure_selected:
             payload["reuse_pressure"] = _reuse_pressure_payload(
                 target_root=target_root,
@@ -426,6 +428,7 @@ def _implement_next_action_resolution(
     return {
         "next_allowed_action": next_action,
         "proof_route_strategy_preservation": strategy_preservation,
+        "proof_route_strategy_consumer_gate": _as_dict(strategy_preservation.get("consumer_gate")),
         "proof_commands": proof_commands,
         "startup_route_rebind": startup_route_rebind,
         "stale_startup_route": stale_startup_route,
@@ -1094,14 +1097,47 @@ def _implement_payload(
     )
     payload["next_allowed_action"] = next_resolution["next_allowed_action"]
     strategy_preservation = _as_dict(next_resolution.get("proof_route_strategy_preservation"))
+    if not strategy_preservation and normalized_paths:
+        live_proof = _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths,
+            target_root=target_root,
+            include_durable_intent=False,
+            task_text=task_text,
+        )
+        strategy_preservation = _as_dict(live_proof.get("proof_route_strategy_preservation"))
+        if strategy_preservation:
+            next_resolution["proof_route_strategy_consumer_gate"] = _as_dict(strategy_preservation.get("consumer_gate"))
     if strategy_preservation:
         payload["proof_route_strategy_preservation"] = strategy_preservation
+        proof_route_consumer_gate = _as_dict(next_resolution.get("proof_route_strategy_consumer_gate"))
+        payload["proof_route_strategy_consumer_gate"] = proof_route_consumer_gate
+        proof_route_health = _as_dict(strategy_preservation.get("proof_route_health"))
+        route_gate_blocked = (
+            str(proof_route_consumer_gate.get("status") or "") == "blocked" or str(proof_route_health.get("status") or "") == "attention"
+        )
+        payload["handoff_proof_route_consumer_gate"] = {
+            "kind": "agentic-workspace/handoff-proof-route-consumer-gate/v1",
+            "consumer": "handoff",
+            "status": "blocked" if route_gate_blocked else "current",
+            "decision_id": str(strategy_preservation.get("decision_id") or ""),
+            "route_health_id": str(strategy_preservation.get("route_health_id") or ""),
+            "claim_effect": str(strategy_preservation.get("claim_effect") or ""),
+            "required_preserved_identity": [
+                "proof_route_strategy_preservation.decision_id",
+                "proof_route_strategy_preservation.route_health_id",
+                "proof_route_strategy_preservation.claim_effect",
+                "proof_route_strategy_consumer_gate.route_health_id",
+            ],
+            "rule": "Handoff packets must preserve the live proof-route strategy identity while route health blocks claims.",
+        }
     if str(strategy_preservation.get("claim_effect", "")) == "claim-blocked":
         payload["handoff_requirements"]["must_preserve"] = [
             *list(_list_payload(payload["handoff_requirements"].get("must_preserve"))),
             "proof_route_strategy_preservation.decision_id",
+            "proof_route_strategy_preservation.route_health_id",
             "proof_route_strategy_preservation.claim_effect",
             "proof_route_strategy_preservation.selected_requirement",
+            "proof_route_strategy_consumer_gate.route_health_id",
         ]
     stale_startup_route = bool(next_resolution.get("stale_startup_route"))
     if stale_startup_route:
@@ -2121,4 +2157,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "proceed_unless_corrected": True,
             "clarify_only_if_blocked": True,
         }
+    handoff_gate = payload.get("handoff_proof_route_consumer_gate")
+    if isinstance(handoff_gate, dict) and handoff_gate:
+        projected["handoff_proof_route_consumer_gate"] = handoff_gate
     return projected

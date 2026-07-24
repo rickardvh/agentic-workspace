@@ -2030,6 +2030,27 @@
                 "name": "target"
               },
               {
+                "flags": [
+                  "--scope"
+                ],
+                "help": "Current handoff scope used by proof-route transition gates.",
+                "name": "scope"
+              },
+              {
+                "flags": [
+                  "--changed-surfaces"
+                ],
+                "help": "Changed surfaces used to scope proof-route transition gates.",
+                "name": "changed_surfaces"
+              },
+              {
+                "flags": [
+                  "--current-work-id"
+                ],
+                "help": "Current work identity used to scope proof-route transition gates.",
+                "name": "current_work_id"
+              },
+              {
                 "choices": [
                   "text",
                   "json"
@@ -4805,6 +4826,166 @@
             "name": "receipt_log"
           },
           {
+            "default": "",
+            "flags": [
+              "--receipt-route-id"
+            ],
+            "help": "Structured proof route identity for the executed receipt.",
+            "name": "receipt_route_id"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--receipt-command-id"
+            ],
+            "help": "Structured command identity for the executed receipt.",
+            "name": "receipt_command_id"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--receipt-duration-seconds"
+            ],
+            "help": "Seconds-normalized execution duration for the receipt.",
+            "name": "receipt_duration_seconds"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--receipt-timeout"
+            ],
+            "help": "Record that the validation execution timed out.",
+            "name": "receipt_timeout"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--receipt-exit-state"
+            ],
+            "help": "Structured exit state for the validation execution.",
+            "name": "receipt_exit_state"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--receipt-environment"
+            ],
+            "help": "JSON object describing the execution environment or resource posture.",
+            "name": "receipt_environment"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--receipt-claim-sufficiency"
+            ],
+            "help": "Independent claim sufficiency review: sufficient, insufficient, or not-reviewed.",
+            "name": "receipt_claim_sufficiency"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--receipt-route-budget-seconds"
+            ],
+            "help": "Route-specific duration budget in seconds, when declared by route authority.",
+            "name": "receipt_route_budget_seconds"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--receipt-repair-finding-id"
+            ],
+            "help": "Stable proof-route finding id retired by this validation receipt.",
+            "name": "receipt_repair_finding_id"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--receipt-repair-authority-revision"
+            ],
+            "help": "Verified proof-route authority revision after applying the repair.",
+            "name": "receipt_repair_authority_revision"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--receipt-repair-disposition"
+            ],
+            "help": "Disposition for the repaired proof-route finding.",
+            "name": "receipt_repair_disposition"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--receipt-repair-idempotency-key"
+            ],
+            "help": "Idempotency key from the proof-route repair operation.",
+            "name": "receipt_repair_idempotency_key"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--route-repair-mode"
+            ],
+            "help": "Preview or apply a guarded proof-route authority repair.",
+            "name": "route_repair_mode"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--route-repair-finding-id"
+            ],
+            "help": "Stable proof-route finding id being repaired.",
+            "name": "route_repair_finding_id"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--route-repair-authority-path"
+            ],
+            "help": "Single repo-relative authority path to update.",
+            "name": "route_repair_authority_path"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--route-repair-field-selector"
+            ],
+            "help": "Single authority field selector scoped by the repair.",
+            "name": "route_repair_field_selector"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--route-repair-expected-revision"
+            ],
+            "help": "Expected proof-route authority revision before apply.",
+            "name": "route_repair_expected_revision"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--route-repair-delta-json"
+            ],
+            "help": "Machine-readable field-scoped repair delta JSON.",
+            "name": "route_repair_delta_json"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--route-repair-disposition"
+            ],
+            "help": "Disposition to associate with the repaired finding.",
+            "name": "route_repair_disposition"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--route-repair-idempotency-key"
+            ],
+            "help": "Idempotency key for the guarded proof-route repair apply.",
+            "name": "route_repair_idempotency_key"
+          },
+          {
             "action": "store_true",
             "flags": [
               "--dry-run"
@@ -5107,6 +5288,27 @@
             ],
             "help": "Target repository path. Defaults to the current directory.",
             "name": "target"
+          },
+          {
+            "flags": [
+              "--scope"
+            ],
+            "help": "Current handoff scope used by proof-route transition gates.",
+            "name": "scope"
+          },
+          {
+            "flags": [
+              "--changed-surfaces"
+            ],
+            "help": "Changed surfaces used to scope proof-route transition gates.",
+            "name": "changed_surfaces"
+          },
+          {
+            "flags": [
+              "--current-work-id"
+            ],
+            "help": "Current work identity used to scope proof-route transition gates.",
+            "name": "current_work_id"
           },
           {
             "choices": [
@@ -11288,6 +11490,11 @@
             "import_module": "agentic_workspace.workspace_runtime_primitives"
           },
           {
+            "command": "handoff",
+            "function": "_run_planning_handoff_adapter",
+            "import_module": "agentic_workspace.workspace_runtime_primitives"
+          },
+          {
             "command": "reconcile",
             "function": "_run_reconcile_report_adapter",
             "import_module": "agentic_workspace.workspace_runtime_planning"
@@ -11777,6 +11984,125 @@
             "default": "",
             "kind": "attr",
             "name": "receipt_log"
+          },
+          {
+            "attr": "receipt_route_id",
+            "default": "",
+            "kind": "attr",
+            "name": "receipt_route_id"
+          },
+          {
+            "attr": "receipt_command_id",
+            "default": "",
+            "kind": "attr",
+            "name": "receipt_command_id"
+          },
+          {
+            "attr": "receipt_duration_seconds",
+            "default": "",
+            "kind": "attr",
+            "name": "receipt_duration_seconds"
+          },
+          {
+            "attr": "receipt_timeout",
+            "kind": "bool_attr",
+            "name": "receipt_timeout"
+          },
+          {
+            "attr": "receipt_exit_state",
+            "default": "",
+            "kind": "attr",
+            "name": "receipt_exit_state"
+          },
+          {
+            "attr": "receipt_environment",
+            "default": "",
+            "kind": "attr",
+            "name": "receipt_environment"
+          },
+          {
+            "attr": "receipt_claim_sufficiency",
+            "default": "",
+            "kind": "attr",
+            "name": "receipt_claim_sufficiency"
+          },
+          {
+            "attr": "receipt_route_budget_seconds",
+            "default": "",
+            "kind": "attr",
+            "name": "receipt_route_budget_seconds"
+          },
+          {
+            "attr": "receipt_repair_finding_id",
+            "default": "",
+            "kind": "attr",
+            "name": "receipt_repair_finding_id"
+          },
+          {
+            "attr": "receipt_repair_authority_revision",
+            "default": "",
+            "kind": "attr",
+            "name": "receipt_repair_authority_revision"
+          },
+          {
+            "attr": "receipt_repair_disposition",
+            "default": "",
+            "kind": "attr",
+            "name": "receipt_repair_disposition"
+          },
+          {
+            "attr": "receipt_repair_idempotency_key",
+            "default": "",
+            "kind": "attr",
+            "name": "receipt_repair_idempotency_key"
+          },
+          {
+            "attr": "route_repair_mode",
+            "default": "",
+            "kind": "attr",
+            "name": "route_repair_mode"
+          },
+          {
+            "attr": "route_repair_finding_id",
+            "default": "",
+            "kind": "attr",
+            "name": "route_repair_finding_id"
+          },
+          {
+            "attr": "route_repair_authority_path",
+            "default": "",
+            "kind": "attr",
+            "name": "route_repair_authority_path"
+          },
+          {
+            "attr": "route_repair_field_selector",
+            "default": "",
+            "kind": "attr",
+            "name": "route_repair_field_selector"
+          },
+          {
+            "attr": "route_repair_expected_revision",
+            "default": "",
+            "kind": "attr",
+            "name": "route_repair_expected_revision"
+          },
+          {
+            "attr": "route_repair_delta_json",
+            "default": "",
+            "kind": "attr",
+            "name": "route_repair_delta_json"
+          },
+          {
+            "attr": "route_repair_disposition",
+            "default": "",
+            "kind": "attr",
+            "name": "route_repair_disposition"
+          },
+          {
+            "attr": "route_repair_idempotency_key",
+            "default": "",
+            "kind": "attr",
+            "name": "route_repair_idempotency_key"
           },
           {
             "attr": "dry_run",

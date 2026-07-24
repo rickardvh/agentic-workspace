@@ -409,6 +409,38 @@ owner = "workspace-cli-runtime"
     )
 
 
+def _replace_workspace_subsystem_proof(target: Path, command: str) -> None:
+    ownership = target / ".agentic-workspace" / "OWNERSHIP.toml"
+    text = ownership.read_text(encoding="utf-8")
+    ownership.write_text(
+        text.replace('proof = ["uv run pytest tests/test_workspace_cli.py -q"]', f'proof = ["{command}"]'), encoding="utf-8"
+    )
+
+
+def _append_root_workspace_guidance_lane(target: Path) -> None:
+    config = target / ".agentic-workspace" / "config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.root_workspace_guidance]
+purpose = "Focused root Workspace startup/report/defaults guidance behavior."
+applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/reporting_support.py", "src/agentic_workspace/workspace_runtime_generated_surface.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/contracts/skill_specs.json", "tests/test_maintainer_surfaces.py", "tests/test_workspace_defaults_cli.py"]
+applies_to_task_markers = ["host guidance target localization", "root workspace guidance", "startup fallback authority"]
+commands = ["uv run pytest tests/test_workspace_proof_cli.py -k root_workspace_guidance -q", "uv run pytest tests/test_workspace_defaults_cli.py -q", "uv run pytest tests/test_maintainer_surfaces.py -q", "make typecheck"]
+review_aids = ["Confirm root guidance proof stays focused."]
+evidence_concepts = ["root-workspace-guidance"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
+escalation = ["focused route cannot prove the changed guidance behavior"]
+claim_boundary = "focused-root-guidance-required"
+owner = "workspace-cli-runtime"
+route_role = "behavior"
+""",
+        encoding="utf-8",
+    )
+
+
 def _append_session_logging_lane(target: Path) -> None:
     config = target / ".agentic-workspace" / "config.toml"
     config.write_text(
@@ -429,6 +461,1184 @@ owner = "workspace-cli-runtime"
 """,
         encoding="utf-8",
     )
+
+
+def test_proof_root_workspace_guidance_2383_replay_uses_focused_lane_without_broad_workspace_cli(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_root_workspace_guidance_lane(tmp_path)
+    changed_paths = [
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_generated_surface.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_runtime_startup.py",
+        "src/agentic_workspace/contracts/skill_specs.json",
+        "src/agentic_workspace/contracts/workspace_defaults/payload.json",
+        "tests/test_maintainer_surfaces.py",
+        "tests/test_workspace_defaults_cli.py",
+    ]
+    for changed_path in changed_paths:
+        _write(tmp_path / changed_path, "# fixture\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "# fixture\n")
+    _write(tmp_path / "scripts" / "run_agentic_workspace.py", "# fixture\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                *changed_paths,
+                "--task",
+                "Replay PR 2383 host guidance target localization proof plan",
+                "--select",
+                "proof_route_strategy_decision,route_refinement_required,required_commands,selected_lanes,proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert values["route_refinement_required"]["status"] == "not-required"
+    assert "domain:root_workspace_guidance" in [lane["id"] for lane in values["selected_lanes"]]
+    assert "uv run pytest tests/test_workspace_cli.py -q" not in values["required_commands"]
+    assert "make test-workspace" not in values["required_commands"]
+    subsystem_lane = next(lane for lane in values["selected_lanes"] if lane["id"] == "subsystem:workspace-cli-runtime")
+    assert subsystem_lane["focused_route_reduction"]["status"] == "required-proof-satisfied-by-domain-proof-lane"
+    assert "uv run pytest tests/test_workspace_cli.py -q" in subsystem_lane["focused_route_reduction"]["withheld_commands"]
+    route_health_classes = {finding["finding_class"] for finding in values["proof_route_maintenance"]["route_health"]["findings"]}
+    assert "missing_coverage" not in route_health_classes
+    assert "excessive_breadth_cost" not in route_health_classes
+    preservation = values["proof_route_strategy_preservation"]
+    claim_gate = values["proof_route_strategy_claim_gate"]
+    assert preservation["route_health_id"]
+    assert claim_gate["route_health_id"] == preservation["route_health_id"]
+    assert claim_gate["proof_route_health"]["surface"] == "proof_route_maintenance.route_health"
+    for consumer in preservation["consumers"].values():
+        assert consumer["route_health_id"] == preservation["route_health_id"]
+
+
+def test_proof_route_maintenance_selector_reports_route_health_repair_packet(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    changed_path = "src/agentic_workspace/workspace_runtime_primitives.py"
+    _write(tmp_path / changed_path, "# fixture\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed_path,
+                "--select",
+                "proof_route_maintenance,route_refinement_required",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["route_refinement_required"]["status"] == "required"
+    route_health = values["proof_route_maintenance"]["route_health"]
+    assert route_health["status"] == "attention"
+    finding_classes = {finding["finding_class"] for finding in route_health["findings"]}
+    assert {"missing_coverage", "excessive_breadth_cost"}.issubset(finding_classes)
+    repair_packets = values["proof_route_maintenance"]["route_health"]["repair_packets"]
+    assert any(packet["canonical_edit_surface"].startswith(".agentic-workspace/config.toml") for packet in repair_packets)
+    assert all(packet["finding_id"] for packet in repair_packets)
+    assert all(packet["consequence_record"]["kind"] == "workspace-improvement-pressure-record/v1" for packet in repair_packets)
+    assert all(packet["disposition"]["status"] == "active" for packet in repair_packets)
+    assert all(packet["repair_operation"]["expected_authority_revision"] for packet in repair_packets)
+    assert all(packet["repair_operation"]["preview_command"] for packet in repair_packets)
+    assert all(packet["repair_operation"]["field_selector"] for packet in repair_packets)
+    assert all(packet["repair_operation"]["apply_command"] for packet in repair_packets)
+    assert route_health["duplicate_disposition_contract"]["status"] == "external-lifecycle-owned"
+    assert "#2310" not in json.dumps(route_health)
+    assert "#2367" not in json.dumps(route_health)
+    assert "5058804538" not in json.dumps(route_health)
+
+
+def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_route_repair(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "config.py", "# fixture\n")
+    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.root_workspace_guidance]
+purpose = "Focused root Workspace guidance behavior."
+applies_to_paths = ["src/agentic_workspace/config.py"]
+commands = ['python -c "import sys; sys.exit(1)"']
+review_aids = ["Confirm the selected proof route and route-health packet match the changed root workspace behavior."]
+evidence_concepts = ["root-workspace-guidance", "focused-serial-proof"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/config.toml"]
+escalation = ["the change crosses package, generated-command, lifecycle, or closeout behavior boundaries"]
+claim_boundary = "focused-root-workspace-guidance-required-before-runtime-routing-claim"
+owner = "workspace-cli-runtime"
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--record-receipt",
+                "--receipt-command",
+                'python -c "import sys; sys.exit(1)"',
+                "--receipt-result",
+                "failed",
+                "--receipt-log",
+                "make test-workspace timed out after 240s",
+                "--receipt-timeout",
+                "--receipt-duration-seconds",
+                "240",
+                "--receipt-route-id",
+                "root_workspace_guidance",
+                "--receipt-claim-sufficiency",
+                "insufficient",
+                "--receipt-route-budget-seconds",
+                "120",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--select",
+                "proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    before_values = json.loads(capsys.readouterr().out)["values"]
+    before_health = before_values["proof_route_maintenance"]["route_health"]
+    before_findings = {finding["finding_class"]: finding for finding in before_health["findings"]}
+    assert "route_execution_failure" in before_findings
+    execution_finding = before_findings["route_execution_failure"]
+    assert execution_finding["consequence_record"]["kind"] == "workspace-improvement-pressure-record/v1"
+    assert execution_finding["disposition"]["durable_owner_ref"] == execution_finding["consequence_record"]["id"]
+    assert execution_finding["repair_operation"]["apply_contract"]["idempotency_key"].startswith("proof-route-health:")
+    assert execution_finding["repair_operation"]["apply_contract"]["authority_path"] == ".agentic-workspace/config.toml"
+    assert execution_finding["repair_operation"]["apply_contract"]["field_selector"] == "assurance.domain_proof_lanes"
+    assert before_values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "blocked"
+
+    delta = {
+        "action": "upsert_domain_lane",
+        "lane_id": "root_workspace_guidance",
+        "lane": {
+            "purpose": "Focused root Workspace guidance behavior.",
+            "applies_to_paths": ["src/agentic_workspace/config.py"],
+            "commands": ["python -c \"print('route validation ok')\""],
+            "review_aids": ["Confirm the selected proof route and route-health packet match the changed root workspace behavior."],
+            "evidence_concepts": ["root-workspace-guidance", "focused-serial-proof"],
+            "proof_profiles": ["workspace_behavior"],
+            "authority_refs": [".agentic-workspace/config.toml"],
+            "escalation": ["the change crosses package, generated-command, lifecycle, or closeout behavior boundaries"],
+            "claim_boundary": "focused-root-workspace-guidance-required-before-runtime-routing-claim",
+            "owner": "workspace-cli-runtime",
+        },
+    }
+
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "# fixture\n")
+    _write(tmp_path / "tests" / "test_workspace_defaults_cli.py", "# fixture\n")
+    _write(tmp_path / "tests" / "test_maintainer_surfaces.py", "# fixture\n")
+    _write(tmp_path / "scripts" / "run_agentic_workspace.py", "# fixture\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--route-repair-mode",
+                "apply",
+                "--route-repair-finding-id",
+                execution_finding["id"],
+                "--route-repair-authority-path",
+                ".agentic-workspace/config.toml",
+                "--route-repair-field-selector",
+                "assurance.domain_proof_lanes",
+                "--route-repair-expected-revision",
+                execution_finding["route_authority_revision"],
+                "--route-repair-delta-json",
+                json.dumps(delta),
+                "--route-repair-disposition",
+                "fixed",
+                "--route-repair-idempotency-key",
+                execution_finding["repair_operation"]["apply_contract"]["idempotency_key"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    apply_payload = json.loads(capsys.readouterr().out)
+    assert apply_payload["status"] == "applied"
+    assert apply_payload["semantic_delta"]["action"] == "upsert_domain_lane"
+    assert apply_payload["apply_receipt"]["id"]
+    assert apply_payload["apply_receipt"]["validation_authority"] == (
+        "proof_route_maintenance.route_health.repair_packets.validation_commands"
+    )
+    assert set(apply_payload["apply_receipt"]["validation_commands"]) != set(delta["lane"]["commands"])
+    assert apply_payload["apply_receipt"]["candidate_route_commands"] == delta["lane"]["commands"]
+    assert apply_payload["apply_receipt"]["candidate_route_status"] == "passed"
+    assert apply_payload["apply_receipt"]["candidate_route_commands_complete"] is True
+    post_authority_revision = apply_payload["post_authority_revision"]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--select",
+                "proof_route_strategy_decision,route_refinement_required,proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert values["route_refinement_required"]["status"] == "not-required"
+    route_health = values["proof_route_maintenance"]["route_health"]
+    assert route_health["status"] == "attention"
+    assert route_health["retired_finding_count"] == 0
+    assert route_health["retirement_candidate_count"] == 1
+    assert values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "blocked"
+
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--select",
+                "closeout_trust_inspection",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    closeout_before = json.loads(capsys.readouterr().out)["values"]["closeout_trust_inspection"]
+    assert closeout_before["status"] == "required"
+    assert closeout_before["proof_route_strategy_consumer_gate"]["status"] == "blocked"
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    handoff_before = json.loads(capsys.readouterr().out)["handoff_proof_route_consumer_gate"]
+    assert handoff_before["status"] == "blocked"
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "handoff",
+                "--target",
+                str(tmp_path),
+                "--changed-surfaces",
+                "src/agentic_workspace/config.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    handoff_transition_before = json.loads(capsys.readouterr().out)
+    assert handoff_transition_before["kind"] == "agentic-workspace/planning-handoff-proof-route-gate/v1"
+    assert handoff_transition_before["status"] == "blocked"
+    assert handoff_transition_before["proof_route_transition_gate"]["blocked_finding_ids"]
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "closeout",
+                "--target",
+                str(tmp_path),
+                "--changed-surfaces",
+                "src/agentic_workspace/config.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    closeout_transition_before = json.loads(capsys.readouterr().out)
+    assert closeout_transition_before["kind"] == "agentic-workspace/planning-closeout-proof-route-gate/v1"
+    assert closeout_transition_before["status"] == "blocked"
+    assert closeout_transition_before["proof_route_transition_gate"]["blocked_finding_ids"]
+
+    focused_command = apply_payload["apply_receipt"]["validation_commands"][0]
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--record-receipt",
+                "--receipt-command",
+                focused_command,
+                "--receipt-result",
+                "passed",
+                "--receipt-repair-finding-id",
+                execution_finding["id"],
+                "--receipt-repair-authority-revision",
+                post_authority_revision,
+                "--receipt-repair-disposition",
+                "fixed",
+                "--receipt-repair-idempotency-key",
+                execution_finding["repair_operation"]["apply_contract"]["idempotency_key"],
+                "--receipt-claim-sufficiency",
+                "sufficient",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--select",
+                "proof_route_strategy_decision,route_refinement_required,proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    route_health = values["proof_route_maintenance"]["route_health"]
+    assert route_health["status"] == "quiet"
+    assert route_health["findings"] == []
+    assert route_health["retired_finding_count"] == 1
+    assert route_health["retired_findings"][0]["finding_id"] == execution_finding["id"]
+    assert route_health["retired_findings"][0]["verified_authority_revision"]
+    assert values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "current"
+
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--select",
+                "closeout_trust_inspection",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    closeout_after = json.loads(capsys.readouterr().out)["values"]["closeout_trust_inspection"]
+    assert closeout_after["proof_route_strategy_consumer_gate"]["status"] == "current"
+    assert "claim-proof-route-health-resolved" not in closeout_after["action_effect"]["blocked_until_reconciled"]
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    handoff_after = json.loads(capsys.readouterr().out)["handoff_proof_route_consumer_gate"]
+    assert handoff_after["status"] == "current"
+
+    assert cli.main(["planning", "handoff", "--target", str(tmp_path), "--format", "json"]) == 0
+    handoff_transition_after = json.loads(capsys.readouterr().out)
+    assert handoff_transition_after.get("kind") != "agentic-workspace/planning-handoff-proof-route-gate/v1"
+
+    assert cli.main(["planning", "closeout", "--target", str(tmp_path), "--format", "json"]) == 0
+    closeout_transition_after = json.loads(capsys.readouterr().out)
+    assert closeout_transition_after.get("kind") != "agentic-workspace/planning-closeout-proof-route-gate/v1"
+    assert values["proof_route_strategy_preservation"]["proof_route_health"] == {
+        "status": "quiet",
+        "finding_count": 0,
+        "finding_ids": [],
+        "repair_packet_count": 0,
+        "repair_packet_ids": [],
+        "retired_finding_count": 1,
+        "execution_observation_status": "quiet",
+        "surface": "proof_route_maintenance.route_health",
+    }
+
+
+def test_proof_route_repair_rejects_raw_append_delta(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import _proof_route_authority_revision, _proof_route_repair_operation_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=[],
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="append_text is not admitted"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-alpha",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps({"append_text": "[assurance.domain_proof_lanes.bad]\n"}),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-alpha:test",
+        )
+
+    config_text = (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+    assert "[assurance.domain_proof_lanes.bad]" not in config_text
+
+
+def test_proof_route_repair_receipt_rejects_forged_retirement_without_apply(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
+
+    _write_repo_local_proof_target(tmp_path)
+
+    with pytest.raises(WorkspaceUsageError, match="matching guarded apply receipt"):
+        _record_proof_receipt_payload(
+            target_root=tmp_path,
+            command="uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q",
+            result="passed",
+            changed_paths=["src/agentic_workspace/config.py"],
+            receipt_repair_finding_id="forged-finding",
+            receipt_repair_authority_revision="forged-revision",
+            receipt_repair_disposition="fixed",
+            receipt_repair_idempotency_key="proof-route-health:forged:test",
+            receipt_claim_sufficiency="sufficient",
+        )
+
+    assert not (tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json").exists()
+
+
+def test_proof_route_consequence_owner_does_not_bulk_retire_unrelated_findings(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_proof import _improvement_consequence_record_event, _improvement_consequence_summary
+
+    _write_repo_local_proof_target(tmp_path)
+
+    _improvement_consequence_record_event(
+        target_root=tmp_path,
+        event={
+            "event": "observed",
+            "finding_id": "finding-alpha",
+            "record_id": "pressure-proof-route-finding-alpha",
+            "finding_class": "route_execution_failure",
+            "authority_revision": "rev-a",
+        },
+    )
+    _improvement_consequence_record_event(
+        target_root=tmp_path,
+        event={
+            "event": "observed",
+            "finding_id": "finding-beta",
+            "record_id": "pressure-proof-route-finding-beta",
+            "finding_class": "route_execution_failure",
+            "authority_revision": "rev-b",
+        },
+    )
+    _improvement_consequence_record_event(
+        target_root=tmp_path,
+        event={
+            "event": "retired",
+            "finding_id": "finding-alpha",
+            "record_id": "pressure-proof-route-finding-alpha",
+            "disposition": "fixed",
+            "authority_revision": "rev-a2",
+            "apply_receipt_id": "apply-alpha",
+        },
+    )
+
+    summary = _improvement_consequence_summary(target_root=tmp_path, active_finding_ids=set())
+    assert summary["open_finding_ids"] == ["finding-beta"]
+
+    _improvement_consequence_record_event(
+        target_root=tmp_path,
+        event={
+            "event": "observed",
+            "finding_id": "finding-alpha",
+            "record_id": "pressure-proof-route-finding-alpha",
+            "finding_class": "route_execution_failure",
+            "authority_revision": "rev-a3",
+        },
+    )
+    recurrence = _improvement_consequence_summary(target_root=tmp_path, active_finding_ids=set())
+    assert recurrence["open_finding_ids"] == ["finding-alpha", "finding-beta"]
+
+
+def test_proof_route_consequence_store_corruption_fails_closed(tmp_path: Path) -> None:
+    from agentic_workspace.improvement_consequence import IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH
+    from agentic_workspace.workspace_runtime_proof import _improvement_consequence_summary, _proof_route_transition_gate_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    history_path = tmp_path / IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    history_path.write_text('{"kind": "ok"}\n{broken-json\n', encoding="utf-8")
+
+    summary = _improvement_consequence_summary(target_root=tmp_path, active_finding_ids=set())
+    assert summary["status"] == "blocked-store-unavailable"
+    assert summary["fail_closed"] is True
+    assert summary["open_finding_ids"] == ["consequence-store-unavailable"]
+
+    gate = _proof_route_transition_gate_payload(
+        target_root=tmp_path,
+        transition="planning-handoff",
+        changed_paths=["README.md"],
+    )
+    assert gate["status"] == "blocked"
+    assert gate["blocked_finding_ids"] == ["consequence-store-unavailable"]
+
+
+def test_proof_route_consequence_store_writer_lock_fails_closed_for_readers(tmp_path: Path) -> None:
+    from agentic_workspace.improvement_consequence import ConsequenceStoreUnavailable, read_consequence_history
+    from agentic_workspace.workspace_runtime_proof import _improvement_consequence_summary, _proof_route_transition_gate_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    lock_path = tmp_path / ".agentic-workspace" / "local" / "improvement-pressure" / "consequence-history.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path.write_text('{"pid":1}\n', encoding="utf-8")
+
+    with pytest.raises(ConsequenceStoreUnavailable, match="write is in progress"):
+        read_consequence_history(target_root=tmp_path)
+
+    summary = _improvement_consequence_summary(target_root=tmp_path, active_finding_ids=set())
+    assert summary["status"] == "blocked-store-unavailable"
+    assert summary["fail_closed"] is True
+
+    gate = _proof_route_transition_gate_payload(
+        target_root=tmp_path,
+        transition="planning-handoff",
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    assert gate["status"] == "blocked"
+    assert gate["blocked_finding_ids"] == ["consequence-store-unavailable"]
+
+
+def test_proof_route_transition_gate_blocks_only_matching_scoped_findings(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_proof import _improvement_consequence_record_event, _proof_route_transition_gate_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    _improvement_consequence_record_event(
+        target_root=tmp_path,
+        event={
+            "event": "observed",
+            "finding_id": "finding-config",
+            "finding_class": "route_execution_failure",
+            "affected_route": "domain:config",
+            "scope": {
+                "changed_paths": ["src/agentic_workspace/config.py"],
+                "changed_paths_digest": "config-digest",
+                "scope_ref": "domain:config",
+            },
+        },
+    )
+
+    unrelated = _proof_route_transition_gate_payload(
+        target_root=tmp_path,
+        transition="planning-handoff",
+        changed_paths=["README.md"],
+    )
+    assert unrelated["status"] == "current"
+    assert unrelated["blocked_finding_ids"] == []
+    assert unrelated["non_blocking_open_finding_ids"] == ["finding-config"]
+
+    matching = _proof_route_transition_gate_payload(
+        target_root=tmp_path,
+        transition="planning-handoff",
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    assert matching["status"] == "blocked"
+    assert matching["blocked_finding_ids"] == ["finding-config"]
+
+
+def test_proof_route_repair_validation_failure_rolls_back_without_receipt(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_proof
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import (
+        PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH,
+        _proof_route_authority_revision,
+        _proof_route_repair_operation_payload,
+    )
+
+    _write_repo_local_proof_target(tmp_path)
+    authority_path = tmp_path / ".agentic-workspace" / "config.toml"
+    before = authority_path.read_text(encoding="utf-8")
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    delta = {
+        "action": "upsert_domain_lane",
+        "lane_id": "broken_validation_route",
+        "lane": {
+            "purpose": "Broken validation route.",
+            "applies_to_paths": ["src/agentic_workspace/config.py"],
+            "commands": ["python -c \"print('proposed route command is not validation authority')\""],
+        },
+    }
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_route_independent_validation_commands",
+        lambda **_: (['python -c "import sys; sys.exit(7)"'], "test-independent-validation-owner"),
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="validation command failed"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-validation-fails",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps(delta),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-validation-fails:test",
+        )
+
+    assert authority_path.read_text(encoding="utf-8") == before
+    assert not (tmp_path / PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH).exists()
+
+
+def test_proof_route_repair_candidate_command_failure_rolls_back_without_receipt(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_proof
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import (
+        PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH,
+        _proof_route_authority_revision,
+        _proof_route_repair_operation_payload,
+    )
+
+    _write_repo_local_proof_target(tmp_path)
+    authority_path = tmp_path / ".agentic-workspace" / "config.toml"
+    before = authority_path.read_text(encoding="utf-8")
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    delta = {
+        "action": "upsert_domain_lane",
+        "lane_id": "candidate_fails",
+        "lane": {
+            "purpose": "Failing candidate route must not be promoted.",
+            "applies_to_paths": ["src/agentic_workspace/config.py"],
+            "commands": ['python -c "import sys; sys.exit(5)"'],
+        },
+    }
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_route_independent_validation_commands",
+        lambda **_: (["python -c \"print('independent ok')\""], "test-independent-validation-owner"),
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="validation command failed"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-candidate-fails",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps(delta),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-candidate-fails:test",
+        )
+
+    assert authority_path.read_text(encoding="utf-8") == before
+    assert not (tmp_path / PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH).exists()
+
+
+def test_proof_route_repair_candidate_must_be_selected_for_repaired_scope(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_proof
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import (
+        PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH,
+        _proof_route_authority_revision,
+        _proof_route_repair_operation_payload,
+    )
+
+    _write_repo_local_proof_target(tmp_path)
+    authority_path = tmp_path / ".agentic-workspace" / "config.toml"
+    before = authority_path.read_text(encoding="utf-8")
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    delta = {
+        "action": "upsert_domain_lane",
+        "lane_id": "wrong_scope_candidate",
+        "lane": {
+            "purpose": "Wrong-scope route must not repair config.py.",
+            "applies_to_paths": ["README.md"],
+            "commands": ["python -c \"print('wrong scope')\""],
+        },
+    }
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_route_independent_validation_commands",
+        lambda **_: (["python -c \"print('independent ok')\""], "test-independent-validation-owner"),
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="candidate route was not selected"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-wrong-scope",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps(delta),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-wrong-scope:test",
+        )
+
+    assert authority_path.read_text(encoding="utf-8") == before
+    assert not (tmp_path / PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH).exists()
+
+
+def test_proof_route_repair_replace_subsystem_proof_executes_candidate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_proof
+    from agentic_workspace.workspace_runtime_proof import _proof_route_authority_revision, _proof_route_repair_operation_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    candidate = "python -c \"print('subsystem candidate ok')\""
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/OWNERSHIP.toml [subsystems]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+    )
+    selection = {
+        "changed_paths": ["src/agentic_workspace/workspace_runtime_proof.py"],
+        "selected_commands": [{"command": candidate, "route_budget_seconds": 5, "route_id": "subsystem:workspace-cli-runtime"}],
+        "route_refinement_required": {"status": "not-required"},
+        "proof_route_strategy_decision": {"outcome": "focused"},
+    }
+    monkeypatch.setattr(workspace_runtime_proof, "_proof_selection_for_changed_paths", lambda **_: selection)
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_route_independent_validation_commands",
+        lambda **_: (["python -c \"print('independent ok')\""], "test-independent-validation-owner"),
+    )
+
+    payload = _proof_route_repair_operation_payload(
+        target_root=tmp_path,
+        changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+        mode="apply",
+        finding_id="finding-subsystem-proof",
+        authority_path=".agentic-workspace/OWNERSHIP.toml",
+        field_selector="subsystems",
+        expected_revision=revision,
+        delta_json=json.dumps(
+            {
+                "action": "replace_subsystem_proof",
+                "subsystem_id": "workspace-cli-runtime",
+                "proof": [candidate],
+            }
+        ),
+        disposition="fixed",
+        idempotency_key="proof-route-health:finding-subsystem-proof:test",
+    )
+
+    receipt = payload["apply_receipt"]
+    assert receipt["candidate_route_commands"] == [candidate]
+    assert receipt["candidate_route_status"] == "passed"
+    assert receipt["candidate_route_commands_complete"] is True
+
+
+def test_proof_route_repair_upsert_hint_executes_candidate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_proof
+    from agentic_workspace.workspace_runtime_proof import _proof_route_authority_revision, _proof_route_repair_operation_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    candidate = "python -c \"print('hint candidate ok')\""
+    _write(
+        tmp_path / ".agentic-workspace" / "proof-route-hints.json",
+        json.dumps({"kind": "agentic-workspace/proof-route-hints/v1", "hints": []}),
+    )
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/proof-route-hints.json [hints]",
+        selected_commands=[],
+        changed_paths=["src/app.py"],
+    )
+    selection = {
+        "changed_paths": ["src/app.py"],
+        "selected_commands": [{"command": candidate, "route_budget_seconds": 5, "route_id": "hint:python"}],
+        "route_refinement_required": {"status": "not-required"},
+        "proof_route_strategy_decision": {"outcome": "focused"},
+    }
+    monkeypatch.setattr(workspace_runtime_proof, "_proof_selection_for_changed_paths", lambda **_: selection)
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_route_independent_validation_commands",
+        lambda **_: (["python -c \"print('independent ok')\""], "test-independent-validation-owner"),
+    )
+
+    payload = _proof_route_repair_operation_payload(
+        target_root=tmp_path,
+        changed_paths=["src/app.py"],
+        mode="apply",
+        finding_id="finding-hint-proof",
+        authority_path=".agentic-workspace/proof-route-hints.json",
+        field_selector="hints",
+        expected_revision=revision,
+        delta_json=json.dumps(
+            {
+                "action": "upsert_hint",
+                "hint_id": "python:app",
+                "hint": {
+                    "candidate_command": candidate,
+                    "state": "confirmed",
+                    "intent_type": "behavior-test",
+                    "source": "test",
+                    "confidence": "high",
+                    "requires_live_confirmation": False,
+                },
+            }
+        ),
+        disposition="fixed",
+        idempotency_key="proof-route-health:finding-hint-proof:test",
+    )
+
+    receipt = payload["apply_receipt"]
+    assert receipt["candidate_route_commands"] == [candidate]
+    assert receipt["candidate_route_status"] == "passed"
+    assert receipt["candidate_route_commands_complete"] is True
+
+
+def test_proof_route_repair_rejects_proposed_route_as_sole_validation_authority(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import _proof_route_authority_revision, _proof_route_repair_operation_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    delta = {
+        "action": "upsert_domain_lane",
+        "lane_id": "self_validating_route",
+        "lane": {
+            "purpose": "Self-validating route must not authorize itself.",
+            "applies_to_paths": ["src/agentic_workspace/config.py"],
+            "commands": ["make test-workspace"],
+        },
+    }
+
+    with pytest.raises(WorkspaceUsageError, match="proposed route commands cannot overlap validation authority"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-self-validating",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps(delta),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-self-validating:test",
+        )
+
+
+def test_proof_route_repair_rejects_candidate_that_contains_validation_command(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import _proof_route_authority_revision, _proof_route_repair_operation_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    delta = {
+        "action": "upsert_domain_lane",
+        "lane_id": "partly_self_validating_route",
+        "lane": {
+            "purpose": "Partly self-validating route must not authorize itself.",
+            "applies_to_paths": ["src/agentic_workspace/config.py"],
+            "commands": ["make test-workspace", "uv run pytest tests/test_workspace_defaults_cli.py -q"],
+        },
+    }
+
+    with pytest.raises(WorkspaceUsageError, match="proposed route commands cannot overlap validation authority"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-partly-self-validating",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps(delta),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-partly-self-validating:test",
+        )
+
+
+def test_proof_route_repair_rejects_equivalent_wrapper_self_validation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_proof
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import _proof_route_authority_revision, _proof_route_repair_operation_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    delta = {
+        "action": "upsert_domain_lane",
+        "lane_id": "equivalent_self_validating_route",
+        "lane": {
+            "purpose": "Equivalent wrapper self-validation must not authorize itself.",
+            "applies_to_paths": ["src/agentic_workspace/config.py"],
+            "commands": ["uv run --active python scripts/check.py"],
+        },
+    }
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_route_independent_validation_commands",
+        lambda **_: (["uv run python scripts/check.py"], "test-independent-validation-owner"),
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="proposed route commands cannot overlap validation authority"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-equivalent-self-validating",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps(delta),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-equivalent-self-validating:test",
+        )
+
+
+def test_proof_route_repair_enforces_selected_route_budget(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_proof
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import (
+        PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH,
+        _proof_route_authority_revision,
+        _proof_route_repair_operation_payload,
+    )
+
+    _write_repo_local_proof_target(tmp_path)
+    authority_path = tmp_path / ".agentic-workspace" / "config.toml"
+    before = authority_path.read_text(encoding="utf-8")
+    candidate = 'python -c "import time; time.sleep(1)"'
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    selection = {
+        "changed_paths": ["src/agentic_workspace/config.py"],
+        "selected_commands": [{"command": candidate, "route_budget_seconds": 0.01, "route_id": "domain:slow"}],
+        "route_refinement_required": {"status": "not-required"},
+        "proof_route_strategy_decision": {"outcome": "focused"},
+    }
+    monkeypatch.setattr(workspace_runtime_proof, "_proof_selection_for_changed_paths", lambda **_: selection)
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_route_independent_validation_commands",
+        lambda **_: (["python -c \"print('independent ok')\""], "test-independent-validation-owner"),
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="exceeded selected route budget"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-slow-budget",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps(
+                {
+                    "action": "upsert_domain_lane",
+                    "lane_id": "slow_budget_candidate",
+                    "lane": {
+                        "purpose": "Slow route must honor selected budget.",
+                        "applies_to_paths": ["src/agentic_workspace/config.py"],
+                        "commands": [candidate],
+                    },
+                }
+            ),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-slow-budget:test",
+        )
+
+    assert authority_path.read_text(encoding="utf-8") == before
+    assert not (tmp_path / PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH).exists()
+
+
+def test_proof_route_repair_audit_rejects_residual_ordinary_broad_proof() -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import _proof_route_audit_repaired_candidate
+
+    selection = {
+        "changed_paths": ["src/agentic_workspace/config.py"],
+        "selected_commands": [
+            {"command": "python -c \"print('focused ok')\"", "route_id": "domain:focused"},
+            {"command": "make test-workspace", "proof_kind": "full-test", "route_id": "workspace_broad_suite"},
+        ],
+        "route_refinement_required": {"status": "not-required"},
+        "proof_route_strategy_decision": {"outcome": "focused"},
+    }
+
+    with pytest.raises(WorkspaceUsageError, match="ordinary broad proof"):
+        _proof_route_audit_repaired_candidate(
+            selection=selection,
+            candidate_commands=["python -c \"print('focused ok')\""],
+        )
+
+
+def test_proof_route_repair_receipt_uses_aw_admission_not_caller_sufficiency(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
+    from agentic_workspace.workspace_runtime_proof import (
+        PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH,
+        _proof_route_append_jsonl,
+        _proof_route_apply_receipt_id,
+        _proof_route_authority_revision,
+    )
+
+    _write_repo_local_proof_target(tmp_path)
+    command = "python -c \"print('route validation ok')\""
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    receipt_id = _proof_route_apply_receipt_id(
+        finding_id="finding-aw-sufficiency",
+        idempotency_key="proof-route-health:finding-aw-sufficiency:test",
+        post_revision=revision,
+        delta_digest="digest",
+    )
+    _proof_route_append_jsonl(
+        tmp_path / PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH,
+        {
+            "kind": "agentic-workspace/proof-route-apply-receipt/v1",
+            "id": receipt_id,
+            "status": "applied",
+            "finding_id": "finding-aw-sufficiency",
+            "idempotency_key": "proof-route-health:finding-aw-sufficiency:test",
+            "authority_path": ".agentic-workspace/config.toml",
+            "field_selector": "assurance.domain_proof_lanes",
+            "post_authority_revision": revision,
+            "delta_digest": "digest",
+            "validation_commands": [command],
+            "validation_results": [{"command": command, "status": "passed", "returncode": 0}],
+            "validation_status": "passed",
+            "validation_commands_complete": True,
+        },
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="passed validation receipt"):
+        _record_proof_receipt_payload(
+            target_root=tmp_path,
+            command=command,
+            result="failed",
+            changed_paths=["src/agentic_workspace/config.py"],
+            receipt_repair_finding_id="finding-aw-sufficiency",
+            receipt_repair_authority_revision=revision,
+            receipt_repair_disposition="fixed",
+            receipt_repair_idempotency_key="proof-route-health:finding-aw-sufficiency:test",
+            receipt_claim_sufficiency="sufficient",
+        )
+
+    assert not (tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json").exists()
 
 
 def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys) -> None:
@@ -463,6 +1673,116 @@ def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys
     assert "make test-workspace" not in answer["required_commands"]
     assert "focused proof does not exercise the changed behavior" in lane["escalate_when"]
     assert answer["focused_route_coverage_audit"]["status"] == "covered"
+
+
+def test_proof_receipt_resolves_selected_route_identity_when_caller_omits_it(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_changed_selector():\n    assert True\n")
+    command = "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q"
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--record-receipt",
+                "--receipt-command",
+                command,
+                "--receipt-result",
+                "passed",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    receipt = json.loads((tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json").read_text(encoding="utf-8"))
+    execution = receipt["execution"]
+    assert execution["route_id"] == "domain:proof_runtime"
+    assert execution["command_id"] == execution["command_identity"]
+    assert execution["route_identity_source"] == "proof_selection.selected_commands"
+
+
+def test_proof_receipt_rejects_unmatched_wrapper_command(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_changed_selector():\n    assert True\n")
+
+    with pytest.raises(WorkspaceUsageError, match="does not resolve to a current selected proof command"):
+        _record_proof_receipt_payload(
+            target_root=tmp_path,
+            command='powershell -Command "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q"',
+            result="passed",
+            changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+        )
+
+
+def test_proof_changed_selector_does_not_cover_unrelated_workspace_runtime(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _append_root_workspace_guidance_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--select",
+                "required_commands,selected_lanes,proof_route_maintenance",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["values"]
+    assert "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q" not in answer["required_commands"]
+    assert answer["required_commands"] == ["make typecheck"]
+    assert "domain:proof_runtime" not in [lane["id"] for lane in answer["selected_lanes"]]
+    assert "domain:root_workspace_guidance" not in [lane["id"] for lane in answer["selected_lanes"]]
+
+
+def test_proof_root_workspace_guidance_does_not_claim_unrelated_primitives_without_task_marker(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_root_workspace_guidance_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--select",
+                "required_commands,selected_lanes,focused_route_coverage_audit",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["values"]
+    assert "domain:root_workspace_guidance" not in [lane["id"] for lane in answer["selected_lanes"]]
+    assert answer["required_commands"] == ["make typecheck"]
 
 
 def test_proof_changed_selector_domain_route_covers_multi_path_scope(tmp_path: Path, capsys) -> None:
@@ -2510,6 +3830,11 @@ force = "required-before-closeout"
     ]
     assert answer["manual_verification"]["status"] == "required"
     assert answer["manual_verification"]["unavailable_commands"] == answer["unavailable_commands"]
+    route_health = answer["proof_route_maintenance"]["route_health"]
+    assert "execution_environment_mismatch" in {finding["finding_class"] for finding in route_health["findings"]}
+    repair_packet = next(packet for packet in route_health["repair_packets"] if packet["finding_class"] == "execution_environment_mismatch")
+    assert repair_packet["affected_route"] == "assurance-requirement:model_harness"
+    assert repair_packet["claim_effect"] == "repair-required-before-route-claim"
 
 
 def test_proof_changed_keeps_existing_path_specific_proof_required(tmp_path: Path, capsys) -> None:
@@ -4238,10 +5563,10 @@ def test_proof_requirement_tiers_keep_environmental_probes_non_blocking() -> Non
     assert [item["command"] for item in reconciliation["commands"]] == ["make test-workspace"]
 
 
-def test_proof_changed_marks_receipt_stale_for_changed_path_mismatch(tmp_path: Path, capsys) -> None:
+def test_proof_record_receipt_rejects_command_not_selected_for_changed_paths(tmp_path: Path) -> None:
     _write_repo_local_proof_target(tmp_path)
 
-    assert (
+    with pytest.raises(SystemExit) as exc_info:
         cli.main(
             [
                 "proof",
@@ -4258,30 +5583,7 @@ def test_proof_changed_marks_receipt_stale_for_changed_path_mismatch(tmp_path: P
                 "json",
             ]
         )
-        == 0
-    )
-    capsys.readouterr()
-
-    assert (
-        cli.main(
-            [
-                "proof",
-                "--verbose",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/workspace_runtime_proof.py",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    answer = json.loads(capsys.readouterr().out)["answer"]
-    states = {item["command"]: item for item in answer["proof_receipt_reconciliation"]["commands"]}
-    assert states["make test-workspace"]["evidence_state"] == "subject-unverifiable"
-    assert states["make test-workspace"]["subject_freshness"]["reasons"] == ["incomplete-subject-identity"]
+    assert exc_info.value.code == 2
 
 
 def test_proof_changed_reports_dependency_scoped_staleness_and_minimum_rerun(tmp_path: Path, capsys) -> None:

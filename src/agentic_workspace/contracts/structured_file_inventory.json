@@ -2001,7 +2001,7 @@
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
       "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote to generated-on-demand once publishing no longer requires checked-in generated TypeScript resource files",
-      "max_bytes": 320000
+      "max_bytes": 330000
     },
     {
       "pattern": "generated/*/typescript/resources/operations/*.json",
