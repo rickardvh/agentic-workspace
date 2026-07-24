@@ -710,6 +710,9 @@ owner = "workspace-cli-runtime"
         "proof_route_maintenance.route_health.repair_packets.validation_commands"
     )
     assert set(apply_payload["apply_receipt"]["validation_commands"]) != set(delta["lane"]["commands"])
+    assert apply_payload["apply_receipt"]["candidate_route_commands"] == delta["lane"]["commands"]
+    assert apply_payload["apply_receipt"]["candidate_route_status"] == "passed"
+    assert apply_payload["apply_receipt"]["candidate_route_commands_complete"] is True
     post_authority_revision = apply_payload["post_authority_revision"]
 
     assert (
@@ -775,13 +778,41 @@ owner = "workspace-cli-runtime"
     handoff_before = json.loads(capsys.readouterr().out)["handoff_proof_route_consumer_gate"]
     assert handoff_before["status"] == "blocked"
 
-    assert cli.main(["planning", "handoff", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "planning",
+                "handoff",
+                "--target",
+                str(tmp_path),
+                "--changed-surfaces",
+                "src/agentic_workspace/config.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
     handoff_transition_before = json.loads(capsys.readouterr().out)
     assert handoff_transition_before["kind"] == "agentic-workspace/planning-handoff-proof-route-gate/v1"
     assert handoff_transition_before["status"] == "blocked"
     assert handoff_transition_before["proof_route_transition_gate"]["blocked_finding_ids"]
 
-    assert cli.main(["planning", "closeout", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "planning",
+                "closeout",
+                "--target",
+                str(tmp_path),
+                "--changed-surfaces",
+                "src/agentic_workspace/config.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
     closeout_transition_before = json.loads(capsys.readouterr().out)
     assert closeout_transition_before["kind"] == "agentic-workspace/planning-closeout-proof-route-gate/v1"
     assert closeout_transition_before["status"] == "blocked"
@@ -1007,6 +1038,66 @@ def test_proof_route_consequence_owner_does_not_bulk_retire_unrelated_findings(t
     assert recurrence["open_finding_ids"] == ["finding-alpha", "finding-beta"]
 
 
+def test_proof_route_consequence_store_corruption_fails_closed(tmp_path: Path) -> None:
+    from agentic_workspace.improvement_consequence import IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH
+    from agentic_workspace.workspace_runtime_proof import _improvement_consequence_summary, _proof_route_transition_gate_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    history_path = tmp_path / IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    history_path.write_text('{"kind": "ok"}\n{broken-json\n', encoding="utf-8")
+
+    summary = _improvement_consequence_summary(target_root=tmp_path, active_finding_ids=set())
+    assert summary["status"] == "blocked-store-unavailable"
+    assert summary["fail_closed"] is True
+    assert summary["open_finding_ids"] == ["consequence-store-unavailable"]
+
+    gate = _proof_route_transition_gate_payload(
+        target_root=tmp_path,
+        transition="planning-handoff",
+        changed_paths=["README.md"],
+    )
+    assert gate["status"] == "blocked"
+    assert gate["blocked_finding_ids"] == ["consequence-store-unavailable"]
+
+
+def test_proof_route_transition_gate_blocks_only_matching_scoped_findings(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_proof import _improvement_consequence_record_event, _proof_route_transition_gate_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    _improvement_consequence_record_event(
+        target_root=tmp_path,
+        event={
+            "event": "observed",
+            "finding_id": "finding-config",
+            "finding_class": "route_execution_failure",
+            "affected_route": "domain:config",
+            "scope": {
+                "changed_paths": ["src/agentic_workspace/config.py"],
+                "changed_paths_digest": "config-digest",
+                "scope_ref": "domain:config",
+            },
+        },
+    )
+
+    unrelated = _proof_route_transition_gate_payload(
+        target_root=tmp_path,
+        transition="planning-handoff",
+        changed_paths=["README.md"],
+    )
+    assert unrelated["status"] == "current"
+    assert unrelated["blocked_finding_ids"] == []
+    assert unrelated["non_blocking_open_finding_ids"] == ["finding-config"]
+
+    matching = _proof_route_transition_gate_payload(
+        target_root=tmp_path,
+        transition="planning-handoff",
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    assert matching["status"] == "blocked"
+    assert matching["blocked_finding_ids"] == ["finding-config"]
+
+
 def test_proof_route_repair_validation_failure_rolls_back_without_receipt(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from agentic_workspace import workspace_runtime_proof
     from agentic_workspace.config import WorkspaceUsageError
@@ -1052,6 +1143,108 @@ def test_proof_route_repair_validation_failure_rolls_back_without_receipt(tmp_pa
             delta_json=json.dumps(delta),
             disposition="fixed",
             idempotency_key="proof-route-health:finding-validation-fails:test",
+        )
+
+    assert authority_path.read_text(encoding="utf-8") == before
+    assert not (tmp_path / PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH).exists()
+
+
+def test_proof_route_repair_candidate_command_failure_rolls_back_without_receipt(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_proof
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import (
+        PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH,
+        _proof_route_authority_revision,
+        _proof_route_repair_operation_payload,
+    )
+
+    _write_repo_local_proof_target(tmp_path)
+    authority_path = tmp_path / ".agentic-workspace" / "config.toml"
+    before = authority_path.read_text(encoding="utf-8")
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    delta = {
+        "action": "upsert_domain_lane",
+        "lane_id": "candidate_fails",
+        "lane": {
+            "purpose": "Failing candidate route must not be promoted.",
+            "applies_to_paths": ["src/agentic_workspace/config.py"],
+            "commands": ['python -c "import sys; sys.exit(5)"'],
+        },
+    }
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_route_independent_validation_commands",
+        lambda **_: (["python -c \"print('independent ok')\""], "test-independent-validation-owner"),
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="validation command failed"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-candidate-fails",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps(delta),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-candidate-fails:test",
+        )
+
+    assert authority_path.read_text(encoding="utf-8") == before
+    assert not (tmp_path / PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH).exists()
+
+
+def test_proof_route_repair_candidate_must_be_selected_for_repaired_scope(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_proof
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_proof import (
+        PROOF_ROUTE_REPAIR_HISTORY_RELATIVE_PATH,
+        _proof_route_authority_revision,
+        _proof_route_repair_operation_payload,
+    )
+
+    _write_repo_local_proof_target(tmp_path)
+    authority_path = tmp_path / ".agentic-workspace" / "config.toml"
+    before = authority_path.read_text(encoding="utf-8")
+    revision = _proof_route_authority_revision(
+        target_root=tmp_path,
+        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        selected_commands=[],
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    delta = {
+        "action": "upsert_domain_lane",
+        "lane_id": "wrong_scope_candidate",
+        "lane": {
+            "purpose": "Wrong-scope route must not repair config.py.",
+            "applies_to_paths": ["README.md"],
+            "commands": ["python -c \"print('wrong scope')\""],
+        },
+    }
+    monkeypatch.setattr(
+        workspace_runtime_proof,
+        "_proof_route_independent_validation_commands",
+        lambda **_: (["python -c \"print('independent ok')\""], "test-independent-validation-owner"),
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="candidate route was not selected"):
+        _proof_route_repair_operation_payload(
+            target_root=tmp_path,
+            changed_paths=["src/agentic_workspace/config.py"],
+            mode="apply",
+            finding_id="finding-wrong-scope",
+            authority_path=".agentic-workspace/config.toml",
+            field_selector="assurance.domain_proof_lanes",
+            expected_revision=revision,
+            delta_json=json.dumps(delta),
+            disposition="fixed",
+            idempotency_key="proof-route-health:finding-wrong-scope:test",
         )
 
     assert authority_path.read_text(encoding="utf-8") == before

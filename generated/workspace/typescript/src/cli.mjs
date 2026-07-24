@@ -1926,6 +1926,27 @@ const commandDefinitions = [
               "name": "target"
             },
             {
+              "flags": [
+                "--scope"
+              ],
+              "help": "Current handoff scope used by proof-route transition gates.",
+              "name": "scope"
+            },
+            {
+              "flags": [
+                "--changed-surfaces"
+              ],
+              "help": "Changed surfaces used to scope proof-route transition gates.",
+              "name": "changed_surfaces"
+            },
+            {
+              "flags": [
+                "--current-work-id"
+              ],
+              "help": "Current work identity used to scope proof-route transition gates.",
+              "name": "current_work_id"
+            },
+            {
               "choices": [
                 "text",
                 "json"
@@ -4437,6 +4458,27 @@ const commandDefinitions = [
           ],
           "help": "Target repository path. Defaults to the current directory.",
           "name": "target"
+        },
+        {
+          "flags": [
+            "--scope"
+          ],
+          "help": "Current handoff scope used by proof-route transition gates.",
+          "name": "scope"
+        },
+        {
+          "flags": [
+            "--changed-surfaces"
+          ],
+          "help": "Changed surfaces used to scope proof-route transition gates.",
+          "name": "changed_surfaces"
+        },
+        {
+          "flags": [
+            "--current-work-id"
+          ],
+          "help": "Current work identity used to scope proof-route transition gates.",
+          "name": "current_work_id"
         },
         {
           "choices": [

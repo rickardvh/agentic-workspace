@@ -44030,7 +44030,13 @@ def _run_planning_handoff_adapter(args: argparse.Namespace) -> int:
         return 0
     from agentic_workspace.workspace_runtime_proof import _proof_route_transition_gate_payload
 
-    proof_route_gate = _proof_route_transition_gate_payload(target_root=target_root, transition="planning-handoff")
+    proof_route_gate = _proof_route_transition_gate_payload(
+        target_root=target_root,
+        transition="planning-handoff",
+        changed_paths=_changed_surface_paths(getattr(args, "changed_surfaces", None)),
+        scope=str(getattr(args, "scope", "") or ""),
+        current_work_id=str(getattr(args, "current_work_id", "") or ""),
+    )
     if proof_route_gate["status"] == "blocked":
         _emit_payload(
             payload={
@@ -44046,6 +44052,9 @@ def _run_planning_handoff_adapter(args: argparse.Namespace) -> int:
     argv = ["handoff"]
     option_specs = [
         ("--target", "target", "value"),
+        ("--scope", "scope", "value"),
+        ("--changed-surfaces", "changed_surfaces", "value"),
+        ("--current-work-id", "current_work_id", "value"),
         ("--audit-page-size", "audit_page_size", "value"),
         ("--verbose", "verbose", "flag"),
         ("--format", "format", "value"),
@@ -44105,7 +44114,13 @@ def _run_planning_closeout_adapter(args: argparse.Namespace) -> int:
         return 0
     from agentic_workspace.workspace_runtime_proof import _proof_route_transition_gate_payload
 
-    proof_route_gate = _proof_route_transition_gate_payload(target_root=target_root, transition="planning-closeout")
+    proof_route_gate = _proof_route_transition_gate_payload(
+        target_root=target_root,
+        transition="planning-closeout",
+        changed_paths=_changed_surface_paths(getattr(args, "changed_surfaces", None)),
+        scope=str(getattr(args, "scope", "") or ""),
+        current_work_id=str(getattr(args, "current_work_id", "") or ""),
+    )
     if proof_route_gate["status"] == "blocked":
         _emit_payload(
             payload={
