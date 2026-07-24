@@ -3502,6 +3502,40 @@ def _proof_route_run_validation_commands(*, target_root: Path, commands: list[st
     return results
 
 
+def _proof_route_materialize_validation_command(*, command: str, changed_paths: list[str]) -> str:
+    normalized = str(command or "").strip()
+    if not normalized:
+        return ""
+    changed_part = " ".join(_shell_quote(path) for path in changed_paths)
+    return normalized.replace("<paths>", changed_part)
+
+
+def _proof_route_independent_validation_commands(
+    *,
+    selection: dict[str, Any],
+    finding_id: str,
+    changed_paths: list[str],
+    fallback_selected_commands: list[dict[str, Any]],
+) -> tuple[list[str], str]:
+    route_health = _as_dict(_as_dict(selection.get("proof_route_maintenance")).get("route_health"))
+    for packet in _list_payload(route_health.get("repair_packets")):
+        if not isinstance(packet, dict) or str(packet.get("finding_id") or "") != str(finding_id or "").strip():
+            continue
+        commands = [
+            _proof_route_materialize_validation_command(command=str(command), changed_paths=changed_paths)
+            for command in _list_payload(packet.get("validation_commands"))
+        ]
+        commands = [command for command in commands if command]
+        if commands:
+            return commands, "proof_route_maintenance.route_health.repair_packets.validation_commands"
+    commands = [
+        str(command.get("command") or "").strip()
+        for command in fallback_selected_commands
+        if isinstance(command, dict) and str(command.get("command") or "").strip()
+    ]
+    return commands, "pre_existing_selected_route" if commands else ""
+
+
 def _proof_route_current_authority_revision_for_receipt(*, target_root: Path, receipt: dict[str, Any]) -> str:
     return _proof_route_authority_revision(
         target_root=target_root,
@@ -3609,7 +3643,8 @@ def _improvement_consequence_summary(*, target_root: Path | None, active_finding
         if str(record.get("event") or "") in {"disposed", "retired"}:
             disposed_ids.add(finding_id)
             open_ids.discard(finding_id)
-        elif str(record.get("event") or "") == "observed" and finding_id not in disposed_ids:
+        elif str(record.get("event") or "") == "observed":
+            disposed_ids.discard(finding_id)
             open_ids.add(finding_id)
     open_ids.update(active_finding_ids - disposed_ids)
     return {
@@ -3720,7 +3755,7 @@ def _proof_route_repair_operation_payload(
     if not isinstance(delta, dict):
         raise WorkspaceUsageError("--route-repair-delta-json must be a JSON object.")
     delta_digest = hashlib.sha256(json.dumps(delta, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:16]
-    declared_validation_commands = [
+    submitted_route_commands = [
         str(command).strip() for command in _list_payload(_as_dict(delta.get("lane")).get("commands")) if str(command).strip()
     ]
     authority_file = target_root / normalized_authority_path
@@ -3764,11 +3799,18 @@ def _proof_route_repair_operation_payload(
             "rule": "Idempotent replay returned the persisted guarded apply receipt.",
         }
     rollback_performed = False
-    validation_commands = declared_validation_commands or [
-        str(command.get("command") or "")
-        for command in selected_commands
-        if isinstance(command, dict) and str(command.get("command") or "").strip()
-    ]
+    validation_commands, validation_authority = _proof_route_independent_validation_commands(
+        selection=selection,
+        finding_id=str(finding_id).strip(),
+        changed_paths=changed_paths,
+        fallback_selected_commands=selected_commands,
+    )
+    if normalized_mode == "apply" and submitted_route_commands and set(validation_commands) == set(submitted_route_commands):
+        raise WorkspaceUsageError(
+            "proof-route repair validation rejected because the proposed route cannot be the sole validation authority."
+        )
+    if normalized_mode == "apply" and not validation_commands:
+        raise WorkspaceUsageError("proof-route repair apply requires an independent validation command set.")
     route_audit: dict[str, Any] = {}
     validation_results: list[dict[str, Any]] = []
     post_revision = current_revision
@@ -3820,15 +3862,6 @@ def _proof_route_repair_operation_payload(
                     "required_command_count": len(_list_payload(audit_selection.get("required_commands"))),
                     "route_refinement_required": _as_dict(audit_selection.get("route_refinement_required")).get("status", ""),
                 }
-                validation_commands = (
-                    declared_validation_commands
-                    or [
-                        str(command.get("command") or "")
-                        for command in _list_payload(audit_selection.get("selected_commands"))
-                        if isinstance(command, dict) and str(command.get("command") or "").strip()
-                    ]
-                    or validation_commands
-                )
                 validation_results = _proof_route_run_validation_commands(target_root=target_root, commands=validation_commands)
                 post_revision = _proof_route_authority_revision(
                     target_root=target_root,
@@ -3855,6 +3888,8 @@ def _proof_route_repair_operation_payload(
                     "delta_digest": delta_digest,
                     "semantic_delta": semantic_preview,
                     "validation_commands": validation_commands,
+                    "validation_authority": validation_authority,
+                    "submitted_route_commands": submitted_route_commands,
                     "validation_results": validation_results,
                     "validation_status": "passed",
                     "validation_commands_complete": True,
@@ -3913,6 +3948,8 @@ def _proof_route_repair_operation_payload(
                 "delta_digest": delta_digest,
                 "semantic_delta": semantic_preview,
                 "validation_commands": validation_commands,
+                "validation_authority": validation_authority,
+                "submitted_route_commands": submitted_route_commands,
                 "validation_results": validation_results,
                 "validation_status": "passed",
                 "validation_commands_complete": True,
@@ -4049,7 +4086,15 @@ def _proof_route_execution_observations(
             duration_seconds = float(duration) if duration else 0.0
         except (TypeError, ValueError):
             duration_seconds = 0.0
-        budget = str(execution.get("route_budget_seconds") or "").strip()
+        observed_budget = str(execution.get("route_budget_seconds") or "").strip()
+        expected_budget = str(
+            selected.get("route_budget_seconds")
+            or selected.get("timeout_seconds")
+            or selected.get("budget_seconds")
+            or selected.get("duration_budget_seconds")
+            or ""
+        ).strip()
+        budget = expected_budget or observed_budget
         try:
             route_budget_seconds: float | None = float(budget) if budget else None
         except (TypeError, ValueError):
@@ -4063,10 +4108,16 @@ def _proof_route_execution_observations(
             str(selected.get("selected_from") or "").strip(),
         } - {""}
         authority_mismatches: list[str] = []
-        if observed_command_id and observed_command_id != expected_command_identity:
+        if selected and not observed_command_id:
+            authority_mismatches.append("missing_command_id")
+        elif observed_command_id and observed_command_id != expected_command_identity:
             authority_mismatches.append("command_id")
-        if observed_route_id and expected_route_ids and observed_route_id not in expected_route_ids:
+        if selected and expected_route_ids and not observed_route_id:
+            authority_mismatches.append("missing_route_id")
+        elif observed_route_id and expected_route_ids and observed_route_id not in expected_route_ids:
             authority_mismatches.append("route_id")
+        if observed_budget and expected_budget and observed_budget != expected_budget:
+            authority_mismatches.append("route_budget_seconds")
         observations.append(
             {
                 "kind": "agentic-workspace/proof-route-execution-observation/v1",
@@ -4088,6 +4139,8 @@ def _proof_route_execution_observations(
                 "timeout": timeout,
                 "duration_seconds": duration_seconds,
                 "route_budget_seconds": route_budget_seconds,
+                "observed_route_budget_seconds": observed_budget,
+                "route_budget_authority": "selected_route" if expected_budget else "receipt-observation-only",
                 "environment": execution.get("environment", {}),
                 "claim_sufficiency": str(execution.get("claim_sufficiency") or "not-reviewed"),
                 "evidence_state": evidence_state,
@@ -5233,19 +5286,22 @@ def _proof_route_strategy_decision_payload(
     focused_lanes = _focused_domain_lanes(domain_lanes)
     domain_handled_paths = {str(path) for lane in focused_lanes for path in _list_payload(lane.get("matched_paths")) if str(path).strip()}
     focused_covers_all = bool(domain_handled_paths) and set(changed_paths).issubset(domain_handled_paths)
+    focused_route_replaces_generic_broad = focused_covers_all and any(
+        "broad" in {str(item) for item in _list_payload(lane.get("allowed_composition"))} for lane in focused_lanes
+    )
     route_refinement_status = str(route_refinement_required.get("status", ""))
     if route_refinement_status == "required":
         outcome = "route-refinement-required"
         reason_code = "focused-route-coverage-gap"
-    elif generic_broad_without_explicit_escalation:
-        outcome = "broad-escalation-required"
-        reason_code = "missing-structured-broad-escalation"
     elif broad_escalation_reason is not None:
         outcome = "broad-escalated"
         reason_code = str(broad_escalation_reason.get("reason_code", "structured-broad-escalation"))
-    elif focused_covers_all:
+    elif focused_covers_all and (focused_route_replaces_generic_broad or not generic_broad_without_explicit_escalation):
         outcome = "focused"
         reason_code = "focused-route-sufficient"
+    elif generic_broad_without_explicit_escalation:
+        outcome = "broad-escalation-required"
+        reason_code = "missing-structured-broad-escalation"
     else:
         outcome = "no-focused-authority"
         reason_code = "focused-route-coverage-missing"
@@ -6951,9 +7007,12 @@ def _proof_selection_for_changed_paths(
             if not broad_commands:
                 continue
             lane_is_broad_profile = bool(lane.get("proof_profile")) or str(lane.get("id", "")) in generic_broad_lane_ids
+            lane_is_subsystem_broad = str(lane.get("id", "")).startswith("subsystem:") and any(
+                _proof_route_command_is_broad(command, proof_kind=str(lane.get("proof_kind", ""))) for command in broad_commands
+            )
             lane_is_generic_broad_escalation = str(lane.get("id", "")) in generic_broad_lane_ids
             if strategy_outcome in {"focused", "route-refinement-required"}:
-                should_withhold_broad = lane_is_broad_profile
+                should_withhold_broad = lane_is_broad_profile or lane_is_subsystem_broad
             else:
                 should_withhold_broad = lane_is_generic_broad_escalation or (
                     bool(lane.get("proof_profile"))
@@ -7187,6 +7246,13 @@ def _proof_selection_for_changed_paths(
             if str(lane.get("route_role") or _as_dict(lane.get("domain_lane")).get("route_role") or "") == "broad"
             or str(lane.get("id", "")) in generic_broad_lane_ids
             or str(lane.get("id", "")) == "domain:workspace_broad_suite"
+            or (
+                str(lane.get("id", "")).startswith("subsystem:")
+                and any(
+                    _proof_route_command_is_broad(command, proof_kind=str(lane.get("proof_kind", "")))
+                    for command in _list_payload(lane.get("enough_proof"))
+                )
+            )
         }
         broad_commands = {
             str(command.get("command", ""))

@@ -132,7 +132,6 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         focused_proof,
         "uv run --active python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
-        "uv run pytest tests/test_workspace_cli.py -q",
         "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
         "uv run python scripts/generate/generate_command_packages.py --check",
         "uv run python scripts/check/check_generated_command_packages.py --require-node",
@@ -146,7 +145,10 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
         in answer["required_commands"]
     )
     assert focused_proof in answer["required_commands"]
-    assert "uv run pytest tests/test_workspace_cli.py -q" in answer["required_commands"]
+    assert "uv run pytest tests/test_workspace_cli.py -q" not in answer["required_commands"]
+    subsystem_lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "subsystem:workspace-cli-runtime")
+    assert subsystem_lane["focused_route_reduction"]["status"] == "required-proof-satisfied-by-domain-proof-lane"
+    assert "uv run pytest tests/test_workspace_cli.py -q" in subsystem_lane["focused_route_reduction"]["withheld_commands"]
     assert "CI may repeat generated-package proof" in answer["selected_lanes"][0]["ci_relationship"]
     domain_commands = [command for command in answer["selected_commands"] if command["lane"] == "domain:generated_command_packages"]
     assert [command["command"] for command in domain_commands] == [
