@@ -92,13 +92,15 @@ def _git_input_paths_are_unmodified(*, repo_root: Path, paths: list[str]) -> boo
     """Return whether the manifest's exact inputs are clean in the worktree.
 
     Unrelated local edits must not discard a source-owned freshness witness.
-    Git is queried with the manifest pathset so a dirty relevant input, staged
-    change, deletion, rename, or untracked replacement still fails closed.
+    Git is queried once without the 1,000+ path argv payload (which exceeds
+    Windows' process limit), then porcelain records are filtered locally. A
+    dirty relevant input, staged change, deletion, rename, or untracked
+    replacement still fails closed.
     """
 
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", *paths],
+            ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
             cwd=repo_root,
             capture_output=True,
             text=True,
@@ -106,7 +108,26 @@ def _git_input_paths_are_unmodified(*, repo_root: Path, paths: list[str]) -> boo
         )
     except OSError:
         return False
-    return result.returncode == 0 and not result.stdout
+    if result.returncode != 0:
+        return False
+    expected = set(paths)
+    records = iter(result.stdout.split("\0"))
+    for record in records:
+        if not record:
+            continue
+        if len(record) < 4 or record[2] != " ":
+            return False
+        status, path = record[:2], record[3:]
+        if path in expected:
+            return False
+        if "R" in status or "C" in status:
+            try:
+                original_path = next(records)
+            except StopIteration:
+                return False
+            if original_path in expected:
+                return False
+    return True
 
 
 def _git_index_entries(*, repo_root: Path, paths: list[str]) -> dict[str, str] | None:
