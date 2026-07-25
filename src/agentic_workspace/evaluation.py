@@ -1449,6 +1449,64 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
     return {"kind": EVALUATION_SUMMARY_KIND, "path": WORKSPACE_EVALUATIONS_PATH.as_posix(), "summaries": summaries}
 
 
+def evaluation_collection_actions(
+    *,
+    target_root: Path,
+    surface: str,
+    issue_refs: list[str] | None = None,
+    operation_id: str | None = None,
+    phase: str | None = None,
+) -> dict[str, Any]:
+    """Project only collecting evaluations selected by structured work facts."""
+    context = {
+        "issue_refs": {str(item) for item in issue_refs or [] if str(item).strip()},
+        "operation_ids": {str(operation_id)} if operation_id else set(),
+        "phases": {str(phase)} if phase else set(),
+        "surfaces": {str(surface)},
+        "commands": {str(surface)},
+        "profiles": {"default"},
+    }
+    actions: list[dict[str, Any]] = []
+    for definition in _definitions_payload(target_root)["evaluations"]:
+        if not isinstance(definition, dict) or str(definition.get("lifecycle") or "") != "collecting":
+            continue
+        selectors = definition.get("selectors")
+        if not isinstance(selectors, dict):
+            continue
+        matched_by: list[str] = []
+        for selector, observed in context.items():
+            expected = {str(item) for item in selectors.get(selector, []) if str(item).strip()}
+            if not expected:
+                continue
+            if not expected.intersection(observed):
+                matched_by = []
+                break
+            matched_by.append(selector)
+        else:
+            if not matched_by:
+                continue
+            criteria = definition.get("criteria") if isinstance(definition.get("criteria"), list) else []
+            criterion = next((item for item in criteria if isinstance(item, dict) and item.get("required", True)), {})
+            actions.append(
+                {
+                    "evaluation_id": str(definition.get("id") or ""),
+                    "criterion": str(criterion.get("id") or ""),
+                    "match_reason": matched_by,
+                    "decision_owner": definition.get("decision_owner", {}),
+                    "report_sinks": definition.get("report_sinks", []),
+                    "next_action": "record-evaluation-observation-after-bound-proof",
+                    "rule": "Use the evaluation observation operation after assignment, authority, baseline, and proof admission; do not append an unbound reminder observation.",
+                }
+            )
+    return {
+        "kind": "agentic-workspace/evaluation-collection-actions/v1",
+        "status": "matched" if actions else "not-applicable",
+        "surface": surface,
+        "actions": actions,
+        "rule": "Only explicitly selected collecting evaluations appear; non-matching work stays quiet.",
+    }
+
+
 def prune_observations(*, target_root: Path, evaluation_id: str, dry_run: bool = False) -> dict[str, Any]:
     definitions = _definitions_payload(target_root)
     definition = _definition_by_id(definitions, evaluation_id)
