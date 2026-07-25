@@ -1180,6 +1180,28 @@ def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
     assert loop._load_state(tmp_path, 12)["terminal_result"]["proof_status"] == "failed"
 
 
+def test_explicit_pr_handoff_accepts_detached_pushed_head(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    runner.branch = ""
+
+    result = loop.handoff(
+        cwd=tmp_path,
+        session_id=SESSION,
+        pr=12,
+        max_cycles=3,
+        max_repeated_blockers=2,
+        replace_session=False,
+        existing_only=False,
+        runner=runner,
+    )
+
+    assert result["status"] == "handoff-recorded"
+    recorded = loop._load_state(tmp_path, 12)
+    assert recorded["branch"] == runner.pr_branch
+    assert recorded["handoff_head"] == HEAD_A
+    assert recorded["session_id"] == SESSION
+
+
 def test_job_result_is_exactly_once_and_requires_a_complete_result(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
     saved = state(tmp_path, status="resume-in-progress")

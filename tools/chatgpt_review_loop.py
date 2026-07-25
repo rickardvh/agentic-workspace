@@ -656,8 +656,21 @@ def handoff(
     owner_root = Path(os.environ.get(OWNER_ROOT_ENV, root.as_posix()) if detached_owner_handoff else root).resolve()
     branch = os.environ.get(OWNER_BRANCH_ENV, "") if detached_owner_handoff else checkout_branch
     head = _git_value(root, runner, "rev-parse", "HEAD")
+    repo = _repo_slug(root, runner)
+    detached_explicit_handoff = not branch and not existing_only and pr is not None
+    detached_payload: dict[str, Any] | None = None
+    if detached_explicit_handoff:
+        # A review continuation intentionally runs in a detached worktree and
+        # pushes with HEAD:<known PR branch>.  An explicit PR supplies the
+        # missing branch identity without guessing from local history.
+        detached_payload = _pr_view(root, runner, pr=pr, repo=repo)
+        branch = str(detached_payload.get("headRefName", ""))
     if not branch:
-        raise LoopError("detached-head", "handoff does not guess a PR from a detached HEAD")
+        raise LoopError(
+            "detached-head",
+            "handoff does not guess a PR from a detached HEAD",
+            recovery="pass --pr after pushing HEAD:<the exact PR branch>, or run from the PR branch",
+        )
     if existing_only:
         candidates = [
             item
@@ -687,8 +700,7 @@ def handoff(
                 recovery="inspect status and stop or clean up stale loop state",
             )
         pr = int(candidates[0]["pr_number"])
-    repo = _repo_slug(root, runner)
-    payload = _pr_view(root, runner, pr=pr, repo=repo if pr else None)
+    payload = detached_payload or _pr_view(root, runner, pr=pr, repo=repo if pr else None)
     number = int(payload.get("number", 0))
     if payload.get("state") != "OPEN":
         raise LoopError("pr-not-open", f"PR #{number} is not open")
