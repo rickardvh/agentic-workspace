@@ -1293,6 +1293,19 @@ def test_setup_surfaces_host_orientation_candidates_for_jumpstarted_repo(tmp_pat
     assert any("report --target " in command for command in payload["next_action"]["commands"])
 
 
+def test_setup_does_not_claim_an_idle_planning_queue_is_current_work(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--non-interactive", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    planning_candidates = payload["discovery"]["planning_candidates"]
+    assert not planning_candidates
+    assert payload["orientation"].get("reason") != "active queue carries the current work slice"
+
+
 def test_start_context_adapter_routes_through_startup_owner_facade() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     start_command = (repo_root / "generated" / "workspace" / "python" / "commands" / "start_context.py").read_text(encoding="utf-8")

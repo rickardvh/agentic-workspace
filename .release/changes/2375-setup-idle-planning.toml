@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Avoid presenting an idle Planning surface as the current active work during setup."
