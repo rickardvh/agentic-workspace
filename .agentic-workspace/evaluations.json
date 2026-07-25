@@ -119,6 +119,9 @@
       ],
       "revision": 1,
       "selectors": {
+        "issue_refs": [
+          "#1969"
+        ],
         "commands": [
           "start",
           "implement",

@@ -22,6 +22,7 @@ from agentic_workspace.evaluation import (
     _write_indexed_owner_receipt,
     append_observation,
     closure_authority,
+    evaluation_collection_actions,
     evaluation_summary,
     prune_observations,
     record_material_finding_followup,
@@ -147,6 +148,40 @@ def _definition_kwargs() -> dict:
         "conclusion_policy": {"rule": "owner-reviews-summary"},
         "action_policy": {"material_negative_finding": "create-bounded-follow-up"},
     }
+
+
+def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(tmp_path: Path) -> None:
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+
+    matched = evaluation_collection_actions(
+        target_root=tmp_path,
+        surface="start",
+        issue_refs=["#1969"],
+        operation_id="start.context",
+        phase="startup",
+    )
+    assert matched["status"] == "matched"
+    assert matched["actions"] == [
+        {
+            "evaluation_id": "eval-1969-operating-loop",
+            "criterion": "reconstruction-cost",
+            "match_reason": ["issue_refs", "operation_ids", "phases"],
+            "decision_owner": {"id": "workspace-maintainer", "class": "maintainer"},
+            "report_sinks": [{"id": "#1969", "class": "closed-issue"}],
+            "next_action": "record-evaluation-observation-after-bound-proof",
+            "rule": "Use the evaluation observation operation after assignment, authority, baseline, and proof admission; do not append an unbound reminder observation.",
+        }
+    ]
+
+    quiet = evaluation_collection_actions(
+        target_root=tmp_path,
+        surface="start",
+        issue_refs=["#unrelated"],
+        operation_id="start.context",
+        phase="startup",
+    )
+    assert quiet["status"] == "not-applicable"
+    assert quiet["actions"] == []
 
 
 def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path) -> None:
