@@ -64,6 +64,7 @@ WORKSPACE_TEST_GENERATED_RELEASE = \
 WORKSPACE_TEST_INTEGRATION = \
 	tests/test_agentic_workspace_launcher.py \
 	tests/test_compact_command_runner.py \
+	tests/test_composed_operation_scenarios.py \
 	tests/test_completion_cost_json_corpus.py \
 	tests/test_completion_cost_lane_evidence.py \
 	tests/test_completion_cost_live_behavior_proof.py \
@@ -87,7 +88,7 @@ WORKSPACE_TEST_INTEGRATION = \
 	typecheck typecheck-workspace typecheck-memory typecheck-planning typecheck-verification \
 	format format-workspace format-memory format-planning format-verification \
 	format-check format-check-workspace format-check-memory format-check-planning format-check-verification \
-	verify verify-workspace verify-memory verify-planning verify-verification \
+	verify verify-workspace verify-memory verify-planning verify-verification composed-operation-scenarios \
 	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict structured-file-inventory package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
 	generated-command-packages generated-command-packages-docker \
 	check check-memory check-planning check-verification check-all start-review-poller
@@ -318,6 +319,9 @@ schema-reference-docs:
 absolute-paths:
 	@$(COMPACT_RUN) --label "absolute paths" -- uv run python scripts/check/check_no_absolute_paths.py
 
+composed-operation-scenarios:
+	@$(COMPACT_RUN) --label "composed operation scenarios" -- uv run python scripts/check/check_composed_operation_scenarios.py
+
 generated-command-packages:
 	@uv run python scripts/check/run_generated_command_package_proof.py --all
 
@@ -331,6 +335,6 @@ check-planning: sync-all test-planning lint-planning typecheck-planning maintain
 check-verification: sync-all test-verification lint-verification typecheck-verification verify-verification
 	@$(COMPACT_RUN) --label "generated command packages" -- uv run python scripts/check/check_generated_command_packages.py
 
-check: sync-all test lint typecheck format-check verify memory-freshness-strict maintainer-surfaces structured-file-inventory package-artifact-duplicates agent-aids absolute-paths
+check: sync-all test lint typecheck format-check verify memory-freshness-strict maintainer-surfaces structured-file-inventory package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios
 
 check-all: check-memory check-planning check-verification
