@@ -23,12 +23,29 @@ from agentic_workspace.operating_decision import (
     derive_operating_blockers_from_authorities,
     live_decision_input_revision,
 )
+from agentic_workspace.workspace_runtime_core import _ordinary_decision_packet
 
 SCHEMA_ROOT = Path("src/agentic_workspace/contracts/schemas")
 
 
 def _schema(name: str) -> dict:
     return json.loads((SCHEMA_ROOT / name).read_text(encoding="utf-8"))
+
+
+def test_ordinary_decision_packet_projects_a_stable_decision_envelope() -> None:
+    packet = _ordinary_decision_packet(
+        surface="start",
+        phase_question="What should happen next?",
+        next_action="continue current work",
+        claim_boundary="do not claim completion before proof",
+    )
+
+    assert packet["decision_identity"]["id"].startswith("ordinary:start:")
+    assert packet["decision_identity"]["input_digest"].startswith("sha256:")
+    assert packet["primary_action_identity"] == {"id": "start:continue current work", "label": "continue current work"}
+    assert packet["expected_transition"] == "follow-primary-action"
+    assert packet["mutation_precondition"] == "resolve action-specific authority before mutation"
+    assert packet["claim_continuation_boundary"] == packet["claim_boundary"]
 
 
 def test_operating_decision_emits_one_typed_primary_action() -> None:

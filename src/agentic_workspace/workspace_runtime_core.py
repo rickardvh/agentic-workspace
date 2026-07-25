@@ -28066,19 +28066,51 @@ def _ordinary_decision_packet(
     shown_because: list[str] | None = None,
     absence_states: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    return {
-        "kind": "agentic-workspace/ordinary-decision-packet/v1",
+    normalized_blocked_actions = [item for item in (blocked_actions or []) if str(item).strip()][:8]
+    normalized_required_commands = [item for item in (required_commands or []) if str(item).strip()][:6]
+    normalized_reasons = [item for item in (reasons or []) if str(item).strip()][:6]
+    normalized_detail_routes = {key: value for key, value in (detail_routes or {}).items() if value}
+    normalized_absence_states = {
+        key: value for key, value in (absence_states or {}).items() if value not in (None, "", [], {})
+    }
+    decision_input = {
         "surface": surface,
         "phase_question": phase_question,
         "next_action": next_action,
-        "blocked_actions": [item for item in (blocked_actions or []) if str(item).strip()][:8],
-        "required_commands": [item for item in (required_commands or []) if str(item).strip()][:6],
+        "blocked_actions": normalized_blocked_actions,
+        "required_commands": normalized_required_commands,
         "claim_boundary": claim_boundary or "not-evaluated",
         "residue_owner": residue_owner or "none",
-        "reasons": [item for item in (reasons or []) if str(item).strip()][:6],
-        "detail_routes": {key: value for key, value in (detail_routes or {}).items() if value},
+        "reasons": normalized_reasons,
+        "detail_routes": normalized_detail_routes,
+        "absence_states": normalized_absence_states,
+    }
+    input_digest = "sha256:" + hashlib.sha256(
+        json.dumps(decision_input, sort_keys=True, ensure_ascii=True, default=str).encode("utf-8")
+    ).hexdigest()
+    return {
+        "kind": "agentic-workspace/ordinary-decision-packet/v1",
+        "decision_identity": {
+            "id": f"ordinary:{surface}:{input_digest[7:23]}",
+            "input_digest": input_digest,
+            "projection_contract": "ordinary-decision-packet/v1",
+        },
+        "surface": surface,
+        "phase_question": phase_question,
+        "next_action": next_action,
+        "primary_action_identity": {"id": f"{surface}:{next_action}", "label": next_action},
+        "expected_transition": "follow-primary-action" if next_action else "inspect-detail-route",
+        "effect_scope": "read-only-or-surface-declared",
+        "mutation_precondition": "resolve action-specific authority before mutation",
+        "blocked_actions": normalized_blocked_actions,
+        "required_commands": normalized_required_commands,
+        "claim_boundary": claim_boundary or "not-evaluated",
+        "claim_continuation_boundary": claim_boundary or "not-evaluated",
+        "residue_owner": residue_owner or "none",
+        "reasons": normalized_reasons,
+        "detail_routes": normalized_detail_routes,
         "shown_because": [item for item in (shown_because or []) if str(item).strip()][:6],
-        "absence_states": {key: value for key, value in (absence_states or {}).items() if value not in (None, "", [], {})},
+        "absence_states": normalized_absence_states,
     }
 
 
