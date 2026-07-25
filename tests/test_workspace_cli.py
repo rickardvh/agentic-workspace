@@ -7451,6 +7451,9 @@ def test_start_compiles_session_improvement_pressure_into_task_posture(tmp_path:
     assert packet["improvement_pressure_evaluation"]["status"] == "active"
     assert packet["improvement_pressure_evaluation"]["source_intake"] == "session_improvement_intake"
     assert packet["improvement_pressure_evaluation"]["active_obligation_count"] == 1
+    consequence = packet["improvement_pressure_evaluation"]["primary_consequence"]
+    assert consequence["consequence"] == "create-task-posture-obligation"
+    assert consequence["next_allowed_action"] == "route active improvement pressure or record accepted-risk"
     assert packet["improvement_obligations"][0]["source"] == "improvement-pressure"
     assert packet["next_allowed_action"] == "route active improvement pressure or record accepted-risk"
     assert "claim improvement pressure resolved without owner, dismissal, or accepted-risk state" in packet["forbidden_actions"]
