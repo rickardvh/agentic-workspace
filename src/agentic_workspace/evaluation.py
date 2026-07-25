@@ -1525,6 +1525,22 @@ def external_evaluation_report_delivery_request(*, target_root: Path, evaluation
     }
 
 
+def record_external_evaluation_report_delivery(*, target_root: Path, request: dict[str, Any], succeeded: bool, detail: str = "") -> dict[str, Any]:
+    """Persist adapter outcome; a failed attempt remains retryable."""
+    if request.get("status") != "adapter-required":
+        return {"kind": "agentic-workspace/evaluation-external-delivery-receipt/v1", "status": "not-due"}
+    evaluation_id = str(request.get("report", {}).get("evaluation_id") or "")
+    identity = str(request.get("delivery_id") or "")
+    path = target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.external-deliveries.json"
+    payload = _load_json(path, default={"deliveries": []})
+    deliveries = payload.get("deliveries", []) if isinstance(payload.get("deliveries"), list) else []
+    if any(isinstance(item, dict) and item.get("identity") == identity and item.get("status") == "delivered" for item in deliveries):
+        return {"kind": "agentic-workspace/evaluation-external-delivery-receipt/v1", "status": "already-delivered", "delivery_id": identity}
+    receipt = {"identity": identity, "status": "delivered" if succeeded else "failed", "detail": detail, "sinks": request.get("sinks", [])}
+    _write_json(path, {"deliveries": [*deliveries, receipt]})
+    return {"kind": "agentic-workspace/evaluation-external-delivery-receipt/v1", "status": receipt["status"], "delivery_id": identity, "retry": not succeeded}
+
+
 def evaluation_collection_actions(
     *,
     target_root: Path,
