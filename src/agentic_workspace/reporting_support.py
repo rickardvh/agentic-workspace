@@ -3059,7 +3059,7 @@ def setup_discovery_payload(
         if (target_root / surface).exists():
             _add_candidate(memory_candidates, surface=surface, reason=reason, confidence=confidence, refs=refs)
 
-    if (target_root / ".agentic-workspace" / "planning" / "state.toml").exists():
+    if active_todo_surface and (target_root / ".agentic-workspace" / "planning" / "state.toml").exists():
         _add_candidate(
             planning_candidates,
             surface=".agentic-workspace/planning/state.toml",
