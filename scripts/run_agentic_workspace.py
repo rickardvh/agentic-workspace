@@ -116,7 +116,10 @@ def _git_index_entries(*, repo_root: Path, paths: list[str]) -> dict[str, str] |
         return None
     try:
         result = subprocess.run(
-            ["git", "ls-files", "-s", "-z", "--", *paths],
+            # Windows process creation cannot carry the 1,000+ exact paths as
+            # arguments. Read the index once and retain only the manifest set;
+            # this is still metadata-only and never reads source contents.
+            ["git", "ls-files", "-s", "-z"],
             cwd=repo_root,
             capture_output=True,
             check=False,
@@ -138,7 +141,7 @@ def _git_index_entries(*, repo_root: Path, paths: list[str]) -> dict[str, str] |
         if len(fields) != 3 or fields[2] != "0":
             return None
         entries_by_path[indexed_path] = fields[1]
-    if set(entries_by_path) != set(paths):
+    if not set(paths).issubset(entries_by_path):
         return None
     return {path: entries_by_path[path] for path in paths}
 
