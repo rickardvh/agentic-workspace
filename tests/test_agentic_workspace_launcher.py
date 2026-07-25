@@ -200,11 +200,17 @@ def test_manifest_status_filter_is_bounded_and_rejects_relevant_records(tmp_path
         assert not module._git_input_paths_are_unmodified(repo_root=tmp_path, paths=["src/example.py"])
 
 
-def test_manifest_status_filter_rejects_renamed_or_malformed_relevant_records(tmp_path: Path, monkeypatch) -> None:
+def test_manifest_status_filter_rejects_renamed_copied_or_malformed_relevant_records(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
-    for record in ("R  renamed.py\0src/example.py\0", "R  src/example.py\0renamed.py\0", "bad\0"):
+    for record in ("R  renamed.py\0src/example.py\0", "R  src/example.py\0renamed.py\0", "C  copied.py\0src/example.py\0", "bad\0"):
         monkeypatch.setattr(module.subprocess, "run", lambda *_args, record=record, **_kwargs: SimpleNamespace(returncode=0, stdout=record))
         assert not module._git_input_paths_are_unmodified(repo_root=tmp_path, paths=["src/example.py"])
+
+
+def test_manifest_status_filter_fails_closed_when_git_fails(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module.subprocess, "run", lambda *_args, **_kwargs: SimpleNamespace(returncode=1, stdout=""))
+    assert not module._git_input_paths_are_unmodified(repo_root=tmp_path, paths=["src/example.py"])
 
 
 def test_launcher_rejects_clean_but_stale_source_manifest(tmp_path: Path, monkeypatch) -> None:
