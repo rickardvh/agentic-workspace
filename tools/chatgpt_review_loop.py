@@ -406,6 +406,18 @@ def _record_job_terminal(
     # Never inherit declared proof or push evidence from an earlier attempt.
     if terminal.get("attempt_id") != attempt.get("id"):
         terminal = {}
+    resolved_proof_status = terminal.get("proof_status", proof_status)
+    proof_commands = terminal.get("proof_commands", [])
+    repair = (
+        {
+            "status": "repair-required",
+            "failed_command": proof_commands[0] if proof_commands else "",
+            "action": "repair the failed focused proof, rerun it, then report the exact job result",
+            "blocked_claims": ["handoff-recorded", "merge-ready", "proof-passed"],
+        }
+        if resolved_proof_status == "failed"
+        else {}
+    )
     state["terminal_result"] = {
         **terminal,
         "kind": "agentic-workspace/chatgpt-review-job-result/v1",
@@ -417,13 +429,14 @@ def _record_job_terminal(
         "attempt_id": str(attempt.get("id", "")),
         "mode": mode,
         "exit_code": exit_code,
-        "proof_status": terminal.get("proof_status", proof_status),
-        "proof_commands": terminal.get("proof_commands", []),
+        "proof_status": resolved_proof_status,
+        "proof_commands": proof_commands,
         "proof_exit_code": terminal.get("proof_exit_code"),
         "push_status": terminal.get("push_status", "unreported"),
         "disposition": disposition,
         "event": event,
         "diagnostic": diagnostic[-2000:],
+        "repair": repair,
         "recorded_at": datetime.now(timezone.utc).isoformat(),
     }
 

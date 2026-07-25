@@ -1209,7 +1209,14 @@ def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
     result = loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
 
     assert result["event"] == "handoff-proof-unreported"
-    assert loop._load_state(tmp_path, 12)["terminal_result"]["proof_status"] == "failed"
+    terminal = loop._load_state(tmp_path, 12)["terminal_result"]
+    assert terminal["proof_status"] == "failed"
+    assert terminal["repair"] == {
+        "status": "repair-required",
+        "failed_command": "pytest -q",
+        "action": "repair the failed focused proof, rerun it, then report the exact job result",
+        "blocked_claims": ["handoff-recorded", "merge-ready", "proof-passed"],
+    }
 
 
 def test_explicit_pr_handoff_accepts_detached_pushed_head(tmp_path: Path) -> None:
