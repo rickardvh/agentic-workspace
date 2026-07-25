@@ -718,6 +718,20 @@ def test_new_plan_does_not_attach_unrelated_plan_to_single_active_lane(tmp_path:
     assert not any("attached execplan" in action.detail for action in result.actions)
 
 
+def test_new_plan_overwrite_preserves_the_existing_active_owner_record(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_execplan_scaffold(plan_id="active-owner", title="Active Owner", target=tmp_path, activate=True)
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/active-owner.plan.json"
+    before = record_path.read_text(encoding="utf-8")
+
+    result = create_execplan_scaffold(
+        plan_id="active-owner", title="Active Owner", target=tmp_path, activate=True, overwrite=True
+    )
+
+    assert not [action for action in result.actions if action.kind == "manual review"]
+    assert record_path.read_text(encoding="utf-8") == before
+
+
 def test_lane_activate_without_execplan_is_a_noop(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)

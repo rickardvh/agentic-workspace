@@ -15808,6 +15808,11 @@ def create_execplan_scaffold(
         )
         return result
 
+    existing_record = _load_execplan_record(record_path) if record_path.exists() else None
+    if record_path.exists() and existing_record is None:
+        result.add("manual review", record_path, "existing execplan is not a readable canonical record; refusing to overwrite it")
+        return result
+
     source_text = source.strip()
     plan_record = _build_execplan_record_from_todo_item(
         title=plan_title,
@@ -15821,6 +15826,14 @@ def create_execplan_scaffold(
         plan_record["references"] = [{"kind": "source", "target": source_text, "label": source_text, "role": "intake", "locator": ""}]
     if prep_only:
         _apply_prep_only_execplan_defaults(plan_record)
+    if existing_record is not None:
+        # `--overwrite` tightens one canonical owner; it is not a
+        # delete-and-recreate shortcut that discards its execution boundaries.
+        preserved = copy.deepcopy(existing_record)
+        preserved["title"] = plan_title or str(existing_record.get("title") or "")
+        if source_text:
+            preserved["references"] = plan_record["references"]
+        plan_record = preserved
 
     try:
         findings = _json_schema_findings(payload=plan_record, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
@@ -15844,7 +15857,8 @@ def create_execplan_scaffold(
     attached_active_lane_id = ""
     lane_record_update: tuple[Path, dict[str, Any]] | None = None
     if activate or queue:
-        if _compact_todo_item_from_state(updated_state, slug) is not None:
+        existing_state_item = _compact_todo_item_from_state(updated_state, slug)
+        if existing_state_item is not None and not overwrite:
             result.add("manual review", state_path, f"planning item '{slug}' already exists in state.toml")
             return result
         todo = updated_state.get("todo")
@@ -15857,6 +15871,11 @@ def create_execplan_scaffold(
         queued_items = todo.get("queued_items", [])
         if not isinstance(queued_items, list):
             queued_items = []
+        if existing_state_item is not None and overwrite:
+            # Replace only this owner's state projection.  Other active and
+            # queued items retain their ordering and byte-level meaning.
+            items = [item for item in items if not isinstance(item, dict) or str(item.get("id") or "") != slug]
+            queued_items = [item for item in queued_items if not isinstance(item, dict) or str(item.get("id") or "") != slug]
         if activate and items and not switch_active:
             result.add(
                 "manual review",
