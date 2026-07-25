@@ -1212,6 +1212,84 @@ def test_job_result_is_exactly_once_and_requires_a_complete_result(tmp_path: Pat
     assert error.value.code == "job-result-duplicate"
 
 
+def test_job_result_supersede_records_later_pushed_head_for_same_launch(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    saved = state(tmp_path, status="resume-in-progress")
+    loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
+    loop._save_state(tmp_path, saved)
+
+    first = loop.report_job_result(
+        cwd=tmp_path,
+        session_id=SESSION,
+        proof_status="passed",
+        proof_command="pytest -q",
+        proof_exit_code=0,
+        push_status="passed",
+        runner=runner,
+    )
+    runner.head = HEAD_B  # Rebase and later successful force-with-lease push.
+    final = loop.report_job_result(
+        cwd=tmp_path,
+        session_id=SESSION,
+        proof_status="passed",
+        proof_command="pytest -q",
+        proof_exit_code=0,
+        push_status="passed",
+        runner=runner,
+        supersede=True,
+    )
+
+    assert first["ending_head"] == HEAD_A
+    assert final["ending_head"] == HEAD_B
+    assert final["head_corrections"][-1]["prior_ending_head"] == HEAD_A
+    assert final["head_corrections"][-1]["corrected_ending_head"] == HEAD_B
+    recorded = loop._load_state(tmp_path, 12)
+    assert recorded["handoff_head"] == HEAD_B
+    assert loop._validated_attempt_result(recorded, worktree=tmp_path, start_head=HEAD_A)
+
+
+def test_job_result_supersede_rejects_unverified_or_unchanged_duplicates(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    saved = state(tmp_path, status="resume-in-progress")
+    loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
+    loop._save_state(tmp_path, saved)
+    loop.report_job_result(
+        cwd=tmp_path,
+        session_id=SESSION,
+        proof_status="passed",
+        proof_command="pytest -q",
+        proof_exit_code=0,
+        push_status="passed",
+        runner=runner,
+    )
+
+    with pytest.raises(loop.LoopError) as unchanged:
+        loop.report_job_result(
+            cwd=tmp_path,
+            session_id=SESSION,
+            proof_status="passed",
+            proof_command="pytest -q",
+            proof_exit_code=0,
+            push_status="passed",
+            runner=runner,
+            supersede=True,
+        )
+    assert unchanged.value.code == "job-result-correction-noop"
+    runner.head = HEAD_B
+    with pytest.raises(loop.LoopError) as unverified:
+        loop.report_job_result(
+            cwd=tmp_path,
+            session_id=SESSION,
+            proof_status="passed",
+            proof_command="pytest -q",
+            proof_exit_code=0,
+            push_status="failed",
+            runner=runner,
+            supersede=True,
+        )
+    assert unverified.value.code == "job-result-correction-push-unverified"
+
+
 def test_malformed_result_and_mismatched_ending_head_cannot_validate(tmp_path: Path) -> None:
     saved = state(tmp_path, status="resume-in-progress", handoff_head=HEAD_B)
     attempt = loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
