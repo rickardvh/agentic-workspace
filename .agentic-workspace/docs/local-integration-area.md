@@ -46,6 +46,30 @@ Each shim should record metadata before its output is promoted or acted on:
 
 Local shim output is never shared authority by itself. Promote useful results only through checked-in planning, memory, agent-aid, docs, or repo-native review surfaces, with proof attached to the promoted surface.
 
+## Delegated-run protocol
+
+An external orchestrator consumes the released external-consumer profile and
+generated Python or TypeScript client. It must not read or edit Planning files.
+The small vendor-neutral sequence is:
+
+1. Query the current assignment/action decision and its revision.
+2. Use `assignment.export` to obtain the canonical packet and run identity.
+3. Invoke its own target and record only transport provenance; transport success
+   is neither worker success nor AW admission, proof, integration, or closeout.
+4. Use `assignment.import` to return structured success, failure, cancellation,
+   or blocked output. Duplicate or stale returns remain recoverable states.
+5. Query the assignment state and recovery action, then use `assignment.admit`,
+   reject/repair/reassign, or the authorised override operation as directed.
+6. Let AW-owned admission, integration, proof, intent satisfaction, and
+   closeout remain separate transitions. An adapter cannot mark any of them.
+
+Manual and automatic transport use this same packet/import/admission sequence.
+The adapter owns credentials, target discovery, invocation, cancellation, and
+disposable local logs; AW owns assignment selection, lifecycle, recovery,
+proof, and closeout. Unknown additive result fields must be preserved, and an
+incompatible profile or missing operation must fail closed rather than causing
+an adapter to reconstruct lifecycle semantics.
+
 ## Scratch Space
 
 Use `.agentic-workspace/local/scratch/` freely for temporary agent working files. It is git-ignored local space and is there so agents do not need to invent a repo-specific scratch convention.
