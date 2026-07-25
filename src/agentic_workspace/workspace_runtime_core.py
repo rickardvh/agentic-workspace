@@ -25495,6 +25495,24 @@ def _refresh_github_external_intent_evidence(
             ),
         }
     )
+    refreshed_items = []
+    items_by_id = {str(item.get("id") or "").strip(): item for item in items}
+    for ref in normalized_issue_refs:
+        item = items_by_id.get(ref)
+        if item is None:
+            continue
+        freshness = _as_dict(item.get("freshness"))
+        refreshed_items.append(
+            {
+                "id": ref,
+                "title": str(item.get("title") or "").strip(),
+                "status": str(item.get("status") or "").strip(),
+                "kind": str(item.get("kind") or "").strip(),
+                "external_revision": str(item.get("external_revision") or "").strip(),
+                "observed_at": str(item.get("observed_at") or "").strip(),
+                "freshness": {key: freshness.get(key, "") for key in ("status", "observed_at", "expires_at")},
+            }
+        )
     return {
         "kind": "external-intent-refresh/v1",
         "provider": "github",
@@ -25520,11 +25538,34 @@ def _refresh_github_external_intent_evidence(
         "limit_source": limit_source,
         "issue_refs": normalized_issue_refs,
         "fetch_mode": fetch_mode,
+        "refreshed_items": refreshed_items,
         "planning_candidate_suggestions": planning_candidate_suggestions,
         "planning_candidate_grouping": planning_candidate_grouping,
         "planning_candidate_apply": planning_candidate_apply,
         "stale_planning_candidate_reconciliation": stale_planning_candidate_reconciliation,
         "provider_rule": "Core planning consumes only provider-agnostic external intent evidence; GitHub access stays in this optional adapter.",
+    }
+
+
+def _compact_issue_scoped_external_intent_refresh(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return the ordinary decision receipt for an explicit issue refresh."""
+    issue_refs = [str(ref) for ref in _list_payload(payload.get("issue_refs")) if str(ref).strip()]
+    refreshed_items = [item for item in _list_payload(payload.get("refreshed_items")) if isinstance(item, dict)]
+    return {
+        "kind": "external-intent-refresh/v1",
+        "provider": payload.get("provider", "github"),
+        "adapter": payload.get("adapter", "github-gh-cli"),
+        "storage": payload.get("storage", ""),
+        "path": payload.get("path", ""),
+        "dry_run": payload.get("dry_run", False),
+        "written": payload.get("written", False),
+        "repository": payload.get("repository", ""),
+        "refreshed_at": payload.get("refreshed_at", ""),
+        "issue_refs": issue_refs,
+        "fetch_mode": payload.get("fetch_mode", "issue-view"),
+        "refreshed_items": refreshed_items,
+        "detail_command": "Repeat with --verbose to inspect candidate, grouping, cache, and reconciliation detail.",
+        "provider_rule": payload.get("provider_rule", ""),
     }
 
 
@@ -46564,6 +46605,8 @@ def _run_external_intent_refresh_github_adapter(args: argparse.Namespace) -> int
         apply_planning_candidates=bool(getattr(args, "apply_planning_candidates", False)),
         issue_refs=list(getattr(args, "issue", []) or []),
     )
+    if payload["issue_refs"] and not bool(getattr(args, "verbose", False)):
+        payload = _compact_issue_scoped_external_intent_refresh(payload)
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 
