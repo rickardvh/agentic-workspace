@@ -3762,7 +3762,7 @@ candidates = []
     assert payload["strict_closeout_gate"]["blocking"] is True
     current = payload["current_task_closeout"]
     assert current["status"] == "active"
-    assert current["scope"]["relationship"] == "bounded-current-task"
+    assert current["scope"]["relationship"] == "bounded-task-switch"
     assert current["scope"]["planning_safety_gate"]["gate_result"] == "bounded-current-task"
     switch = current["scope"]["planning_safety_gate"]["task_switch_reconciliation"]
     assert switch["status"] == "current-task-route-acknowledged"

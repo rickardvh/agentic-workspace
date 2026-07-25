@@ -17728,7 +17728,7 @@ def _operating_loop_planning_state(
         }
     task_switch = _as_dict(gate.get("task_switch_reconciliation"))
     if (
-        str(gate.get("gate_result") or "") in {"active-plan-task-switch", "current-task-route-acknowledged"}
+        str(gate.get("gate_result") or "") in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
         and gate.get("workflow_sufficient") is True
         and str(task_switch.get("status") or "") in {"active", "current-task-route-acknowledged"}
     ):
@@ -21872,7 +21872,8 @@ def _report_closeout_trust_payload(
         task_switch = _as_dict(planning_safety_gate.get("task_switch_reconciliation"))
         route_decision = _as_dict(planning_safety_gate.get("route_decision"))
         if (
-            str(planning_safety_gate.get("gate_result") or "") not in {"active-plan-task-switch", "current-task-route-acknowledged"}
+            str(planning_safety_gate.get("gate_result") or "")
+            not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
             or planning_safety_gate.get("workflow_sufficient") is not True
             or str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
         ):
