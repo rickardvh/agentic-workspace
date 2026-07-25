@@ -641,6 +641,63 @@ def _repo_relative(path: Path, *, root: Path) -> str:
         return path.as_posix()
 
 
+def guidance_promotion_decision(*, admission: dict[str, Any], explicit_remember: bool = False) -> dict[str, Any]:
+    """Derive one compact, reviewable guidance candidate from admitted events.
+
+    This is intentionally a pure projection: correction-event admission remains
+    the authority for evidence, while callers own the chosen durable sink.
+    """
+    events = [event for event in admission.get("admitted_events", []) if isinstance(event, dict)]
+    candidates: list[dict[str, Any]] = []
+    for event in events:
+        authority = str(event.get("authority") or "")
+        recurrence = int(event.get("recurrence_count") or 1)
+        immediate = explicit_remember and authority == "explicit-user-correction"
+        promotable = immediate or recurrence >= 2
+        applicability = event.get("semantic_identity") if isinstance(event.get("semantic_identity"), dict) else {}
+        desired = str(event.get("desired_behavior") or "").strip()
+        candidates.append(
+            {
+                "guidance_id": "guidance:"
+                + hashlib.sha256(str(event.get("normalized_correction_key") or event.get("event_id")).encode()).hexdigest()[:20],
+                "status": "active" if promotable else "candidate",
+                "instruction": desired,
+                "applicability": applicability,
+                "authority": authority,
+                "promotion_reason": "explicit-authorised-remember"
+                if immediate
+                else "independent-recurrence"
+                if promotable
+                else "insufficient-independent-evidence",
+                "evidence_refs": [str(event.get("source_ref"))],
+                "source_event_refs": [str(event.get("event_id"))],
+                "recurrence_count": recurrence,
+                "primary_owner": "agent-local" if "target-guidance" in event.get("route_decisions", []) else "review-required",
+                "lifecycle": {
+                    "allowed": ["edit", "merge", "split", "suppress", "revalidate", "weaken", "supersede", "retire", "delete"],
+                    "provenance_retained": True,
+                },
+            }
+        )
+    low_authority = [event for event in admission.get("low_authority_events", []) if isinstance(event, dict)]
+    return {
+        "kind": "agentic-workspace/agent-guidance-promotion-decision/v1",
+        "status": "ready"
+        if any(item["status"] == "active" for item in candidates)
+        else "review-required"
+        if candidates or low_authority
+        else "no-candidate",
+        "guidance": candidates,
+        "low_authority_evidence": [str(event.get("event_id")) for event in low_authority],
+        "hygiene": {
+            "duplicate_prevented_by": "normalized correction identity",
+            "oversized_instruction_count": sum(len(item["instruction"]) > 280 for item in candidates),
+            "raw_transcripts_retained": False,
+        },
+        "rule": "Only explicit authorised remember instructions or independently admitted repeated corrections may activate durable guidance; self-observation remains a candidate.",
+    }
+
+
 def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_root: Path | None) -> dict[str, Any]:
     subjects = [_target_identity_subject(profile) for profile in local_override.delegation_targets]
     current_name = local_override.current_target or ""
