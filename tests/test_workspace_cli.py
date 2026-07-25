@@ -3762,8 +3762,8 @@ candidates = []
     assert payload["strict_closeout_gate"]["blocking"] is True
     current = payload["current_task_closeout"]
     assert current["status"] == "active"
-    assert current["scope"]["relationship"] == "bounded-task-switch"
-    assert current["scope"]["planning_safety_gate"]["gate_result"] == "current-task-route-acknowledged"
+    assert current["scope"]["relationship"] == "bounded-current-task"
+    assert current["scope"]["planning_safety_gate"]["gate_result"] == "bounded-current-task"
     switch = current["scope"]["planning_safety_gate"]["task_switch_reconciliation"]
     assert switch["status"] == "current-task-route-acknowledged"
     assert switch["route_acknowledgement"]["status"] == "acknowledged"
@@ -4692,6 +4692,7 @@ def test_start_embeds_active_planning_orientation_without_immediate_summary_reru
             "active-planning-summary-needed",
             "delegation-decision-required",
             "planning-backed",
+            "current-task-scope-inspection-required",
         }
     assert "summary --target . --format json" not in payload["decision_packet"]["detail_routes"]["active_plan"]
 
