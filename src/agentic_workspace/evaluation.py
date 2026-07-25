@@ -1504,6 +1504,27 @@ def record_local_evaluation_report_delivery(*, target_root: Path, evaluation_id:
     return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "delivered-local", "receipt": receipt, "report": report}
 
 
+def external_evaluation_report_delivery_request(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:
+    """Prepare, but never perform, an external report delivery."""
+    report = evaluation_report_payload(target_root=target_root, evaluation_id=evaluation_id, explicit=explicit)
+    sinks = [
+        sink
+        for sink in report.get("report_sinks", [])
+        if isinstance(sink, dict) and sink.get("class") in {"issue-or-report", "closed-issue"}
+    ]
+    if report["status"] != "ready" or not sinks:
+        return {"kind": "agentic-workspace/evaluation-external-delivery-request/v1", "status": "not-due", "report": report}
+    identity = hashlib.sha256(json.dumps({"evaluation_id": evaluation_id, "sinks": sinks, "coverage": report["coverage"]}, sort_keys=True).encode()).hexdigest()[:24]
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-request/v1",
+        "status": "adapter-required",
+        "delivery_id": identity,
+        "sinks": sinks,
+        "report": report,
+        "authority_boundary": "This request recommends delivery to the declared external sink; a provider adapter records success or failure and never changes the evaluation conclusion.",
+    }
+
+
 def evaluation_collection_actions(
     *,
     target_root: Path,
