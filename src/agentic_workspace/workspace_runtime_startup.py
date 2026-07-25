@@ -1902,6 +1902,21 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         if read_only_compact_default
         else payload.get("memory_consult", {}),
     }
+    # The compact default already exposes the complete next-action packet at
+    # top level.  For ordinary low-risk work, keeping a second copy of that
+    # action plus the full planning-sufficiency record in context spends the
+    # tiny-response budget without adding a decision.  Preserve both routes
+    # as selectors and retain the full projections for every escalated path.
+    if next_safe_action.get("next_safe_action") == "choose-smallest-workflow-shape":
+        context["primary_action"] = {
+            "status": "projected-in-next_safe_action",
+            "detail_selector": "next_safe_action",
+        }
+        context["planning"] = {
+            "status": compact_workflow.get("sufficiency_result", "unknown"),
+            "detail_selector": "planning_safety_gate",
+            "rule": "Low-risk compact startup keeps planning detail behind its selector.",
+        }
     if isinstance(payload.get("evaluation_actions"), dict) and payload["evaluation_actions"].get("status") == "matched":
         context["evaluation_actions"] = payload["evaluation_actions"]
     compact_closeout_obligations = _selector_first_closeout_obligations(payload)
