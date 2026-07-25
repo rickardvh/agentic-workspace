@@ -1672,7 +1672,7 @@
     "scripts/github/inspect_pr_checks.py": "399bed4bb89a73221a34c8227a86f66a0f4f09cf",
     "scripts/github/pr_comment_delta.py": "3f214000cab964efef134601de46e66604d11cf9",
     "scripts/github/release_recovery_status.py": "c9452e2bf203a0dec0c0ae840a9e73f6f944afa4",
-    "scripts/install_git_hooks.py": "0c1899d4012d14f567f62dbaa0e7ec992d68edd3",
+    "scripts/install_git_hooks.py": "de89c873d801adfa6d84dd8606edaaf8ce6959ba",
     "scripts/model_cli_harness/build_sbx_codex_template.py": "fd91bf5996bc2a95aed30e2645f6ac4e38bb032b",
     "scripts/model_cli_harness/external_agent_evaluation_lane.py": "0b8243bac4a9950d29ae580765db09006a089c7b",
     "scripts/model_cli_harness/long_horizon_episode.py": "370acd11daa2d3c7705ee1f7c37bfece687098e4",
@@ -2059,7 +2059,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "7030548e29cbf1a76e4d17df159ba6f254503ada"
   },
-  "git_index_identity": "3d24544ecab946e4655f09cacc17271195b9c9f5f36abc659257315740eb77d7",
+  "git_index_identity": "356af194ea3a8ba7e3c6ba3f11fdebcef87ad781371c0f8872dfecbfb33c1171",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
