@@ -2039,7 +2039,7 @@
     "src/agentic_workspace/projection_reuse.py": "a74099ac3579c3e449a7cc98c2284edbbf907839",
     "src/agentic_workspace/proof_receipt_admission.py": "60893fff9ce2710f63fa7c2bf66b114d080a2d94",
     "src/agentic_workspace/proof_subject.py": "666a35412c76c085c1974ecc99ca24a266593fa6",
-    "src/agentic_workspace/reporting_support.py": "829ebe729c7177a3a3e5b7b7b0932a112faa9789",
+    "src/agentic_workspace/reporting_support.py": "fb3ce984c3e8ff1998e4e1a4b97c471139362681",
     "src/agentic_workspace/repository_scanning.py": "dd15eb2f01c793f3bdbcde2c84bcdaa90d08a821",
     "src/agentic_workspace/result_adapter.py": "057da2cd0bd0ccfc024e2b84c17e28441176ba38",
     "src/agentic_workspace/review_stack_transitions.py": "0c46ae4e49e488a527e5820712de0a004de55879",
