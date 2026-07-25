@@ -44468,20 +44468,18 @@ def _lifecycle_count(value: Any) -> int:
     return 0
 
 
-def _emit_lifecycle_mutation_result(
+def _lifecycle_mutation_summary_payload(
     *, args: argparse.Namespace, payload: dict[str, Any], target_root: Path, config: WorkspaceConfig
-) -> None:
+) -> dict[str, Any]:
+    """Build the compact upgrade decision and its selectable detail aliases."""
+
     command_name = str(args.command)
-    select = getattr(args, "select", None)
-    if select:
-        _emit_payload(payload=_select_payload_fields(payload, select=select, source_command=command_name), format_name=args.format)
-        return
-    compact_payload_route = command_name == "upgrade" and bool(getattr(args, "to_payload_target", False))
-    if not compact_payload_route or bool(getattr(args, "verbose", False)):
-        _emit_payload(payload=payload, format_name=args.format)
-        return
+    changed_keys = ("created", "updated_managed", "removed", "generated_artifacts")
+    attention_keys = ("needs_review", "warnings")
     changed_count = sum(_lifecycle_count(payload.get(key)) for key in ("created", "updated_managed", "removed"))
-    manual_attention_count = sum(_lifecycle_count(payload.get(key)) for key in ("needs_review", "warnings"))
+    manual_attention_count = sum(_lifecycle_count(payload.get(key)) for key in attention_keys)
+    changed_paths = sorted({str(path) for key in changed_keys for path in payload.get(key, [])})
+    manual_attention_paths = sorted({str(path) for key in attention_keys for path in payload.get(key, [])})
     compatibility = _as_dict(payload.get("installed_state_compatibility"))
     action_state = _as_dict(compatibility.get("action_state"))
     apply_command = str(action_state.get("apply_command") or "").strip()
@@ -44492,13 +44490,27 @@ def _emit_lifecycle_mutation_result(
             command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=config.cli_invoke
         )
     )
-    compact = {
+    invocation_flags = ["--to-payload-target"]
+    modules = getattr(args, "modules", None)
+    preset = getattr(args, "preset", None)
+    if modules:
+        invocation_flags.extend(["--modules", str(modules)])
+    if preset:
+        invocation_flags.extend(["--preset", str(preset)])
+    if bool(getattr(args, "non_interactive", False)):
+        invocation_flags.append("--non-interactive")
+    if bool(getattr(args, "dry_run", False)):
+        invocation_flags.append("--dry-run")
+    select_fields = "changed_count,changed_paths,manual_attention_count,manual_attention_paths"
+    return {
         "kind": "agentic-workspace/lifecycle-mutation-summary/v1",
         "command": command_name,
         "status": compatibility.get("status") or payload.get("health") or ("attention-needed" if manual_attention_count else "ready"),
         "dry_run": bool(getattr(args, "dry_run", False)),
         "changed_count": changed_count,
+        "changed_paths": changed_paths,
         "manual_attention_count": manual_attention_count,
+        "manual_attention_paths": manual_attention_paths,
         "safe_explicit_apply": action_state.get("safe_to_apply") is True,
         "next_action": {"command": next_command},
         "detail_commands": {
@@ -44508,15 +44520,39 @@ def _emit_lifecycle_mutation_result(
             ),
             "select": _command_with_cli_invoke(
                 command=(
-                    f"agentic-workspace upgrade --target {target_root.as_posix()} --to-payload-target "
-                    "--select <field[,field...]> --format json"
+                    f"agentic-workspace upgrade --target {target_root.as_posix()} {' '.join(invocation_flags)} "
+                    f"--select {select_fields} --format json"
                 ),
                 cli_invoke=config.cli_invoke,
             ),
         },
-        "rule": "Default lifecycle output answers the decision question; request verbose or selected fields for per-file detail.",
+        "rule": "Default lifecycle output answers the decision question; select changed paths or manual attention without loading verbose output.",
     }
-    _emit_payload(payload=compact, format_name=args.format)
+
+
+def _emit_lifecycle_mutation_result(
+    *, args: argparse.Namespace, payload: dict[str, Any], target_root: Path, config: WorkspaceConfig
+) -> None:
+    command_name = str(args.command)
+    select = getattr(args, "select", None)
+    compact_payload_route = command_name == "upgrade" and bool(getattr(args, "to_payload_target", False))
+    if select:
+        selectable_payload = (
+            _lifecycle_mutation_summary_payload(args=args, payload=payload, target_root=target_root, config=config)
+            if compact_payload_route
+            else payload
+        )
+        _emit_payload(
+            payload=_select_payload_fields(selectable_payload, select=select, source_command=command_name), format_name=args.format
+        )
+        return
+    if not compact_payload_route or bool(getattr(args, "verbose", False)):
+        _emit_payload(payload=payload, format_name=args.format)
+        return
+    _emit_payload(
+        payload=_lifecycle_mutation_summary_payload(args=args, payload=payload, target_root=target_root, config=config),
+        format_name=args.format,
+    )
 
 
 def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
