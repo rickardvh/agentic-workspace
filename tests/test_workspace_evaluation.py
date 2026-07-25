@@ -23,6 +23,7 @@ from agentic_workspace.evaluation import (
     append_observation,
     closure_authority,
     evaluation_collection_actions,
+    evaluation_report_payload,
     evaluation_summary,
     prune_observations,
     record_material_finding_followup,
@@ -182,6 +183,16 @@ def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(t
     )
     assert quiet["status"] == "not-applicable"
     assert quiet["actions"] == []
+
+
+def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -> None:
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    quiet = evaluation_report_payload(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+    assert quiet["status"] == "not-due"
+    explicit = evaluation_report_payload(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
+    assert explicit["status"] == "ready"
+    assert explicit["decision_owner"] == {"id": "workspace-maintainer", "class": "maintainer"}
+    assert explicit["report_sinks"] == [{"id": "#1969", "class": "closed-issue"}]
 
 
 def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path) -> None:
