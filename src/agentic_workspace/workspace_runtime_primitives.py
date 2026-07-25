@@ -32526,6 +32526,13 @@ def _run_autopilot_adapter(args: argparse.Namespace) -> int:
         "effect_contract": "executor-mode-conservative",
         "rule": "The canonical ordinary autopilot route delegates all executor finals through final-response admission before output.",
     }
+    payload["delegated_worker_kernel"] = {
+        "kind": "agentic-workspace/delegated-worker-kernel/v1",
+        "status": "bounded-executor",
+        "executor_boundary": "autopilot.run",
+        "return_admission": "final-response.admit",
+        "worker_limit": "Executor output is a candidate final only; it cannot bypass current authority, proof, continuation, or final-response admission.",
+    }
     payload["rule"] = "This command is the canonical ordinary AW/autopilot execution boundary for model-authored final responses."
     _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
     return 0
