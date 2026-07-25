@@ -10,6 +10,18 @@
   },
   "skills": [
     {
+      "id": "planning-returned-result",
+      "path": "planning-returned-result/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "admit or route a returned delegated result through authoritative assignment operations",
+      "activation_hints": {
+        "verbs": ["admit", "integrate", "reject", "repair", "reassign"],
+        "nouns": ["returned result", "worker return", "delegated return", "assignment result"],
+        "when": ["delegated run returned", "assignment admission required"]
+      }
+    },
+    {
       "id": "bootstrap-upgrade",
       "path": "bootstrap-upgrade/SKILL.md",
       "scope": "bundled",
