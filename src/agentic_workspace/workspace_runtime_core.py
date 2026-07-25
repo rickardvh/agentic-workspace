@@ -5749,6 +5749,37 @@ def _improvement_pressure_obligation_for_record(record: dict[str, Any]) -> dict[
     }
 
 
+def _improvement_consequence_for_record(record: dict[str, Any]) -> dict[str, Any]:
+    """Choose one operational consequence for a routed context finding."""
+    state = str(record.get("state") or "").strip()
+    record_id = str(record.get("id") or "improvement-pressure").strip()
+    if state != "active":
+        return {
+            "kind": "agentic-workspace/context-finding-consequence/v1",
+            "finding_ref": record_id,
+            "consequence": "non-applicable",
+            "owner": str(record.get("resulting_owner") or "none"),
+            "reason": f"lifecycle state is {state or 'unknown'}",
+        }
+    obligation = _as_dict(record.get("posture_obligation"))
+    validation_class = str(record.get("validation_failure_class") or "").strip()
+    if validation_class in {"interface_design_error", "unclear_proof_contract"}:
+        consequence = "require-review-now"
+        action = str(obligation.get("next_allowed_action") or "record improvement obligation adherence")
+    else:
+        consequence = "create-task-posture-obligation"
+        action = str(obligation.get("next_allowed_action") or "route active improvement pressure or record accepted-risk")
+    return {
+        "kind": "agentic-workspace/context-finding-consequence/v1",
+        "finding_ref": record_id,
+        "consequence": consequence,
+        "owner": str(record.get("resulting_owner") or record.get("owner_surface") or "unknown"),
+        "next_allowed_action": action,
+        "blocked_claims": list(obligation.get("forbidden_actions") or []),
+        "obligation_ref": str(obligation.get("id") or record.get("posture_obligation_ref") or ""),
+    }
+
+
 def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[str, Any]:
     candidates = [item for item in _list_payload(improvement_intake.get("improvement_signal_candidates")) if isinstance(item, dict)]
     records: list[dict[str, Any]] = []
@@ -5792,6 +5823,7 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
             record["issue_ref"] = candidate["issue_ref"]
         if state == "active":
             record["posture_obligation"] = _improvement_pressure_obligation_for_record({**record, "kind": str(candidate.get("kind") or "")})
+        record["consequence"] = _improvement_consequence_for_record(record)
         records.append(record)
     active_records = [record for record in records if record.get("state") == "active"]
     obligations = [record["posture_obligation"] for record in active_records if isinstance(record.get("posture_obligation"), dict)]
@@ -5805,6 +5837,10 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
         "inactive_record_refs": [str(record.get("id")) for record in records if record.get("state") != "active"],
         "posture_obligations": obligations,
         "active_obligation_refs": [str(obligation.get("id")) for obligation in obligations],
+        "primary_consequence": next(
+            (record["consequence"] for record in active_records if isinstance(record.get("consequence"), dict)),
+            {"kind": "agentic-workspace/context-finding-consequence/v1", "consequence": "quiet", "owner": "none"},
+        ),
         "routing_rule": "Active pressure may compile into posture obligations; inactive pressure stays as compact audit detail.",
     }
 
@@ -41906,6 +41942,7 @@ def _task_posture_packet_payload(
             str(item) for item in _list_payload(improvement_pressure.get("non_applicability_reasons")) if str(item).strip()
         ],
         "detail_command": str(improvement_pressure.get("detail_command") or ""),
+        "primary_consequence": _as_dict(improvement_pressure.get("primary_consequence")),
     }
     improvement_pressure_evaluation = {key: value for key, value in improvement_pressure_evaluation.items() if value not in ("", [], {})}
     relevant_obligations = [
