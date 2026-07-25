@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Expose an exact failed-proof repair route in durable review-loop job results."
