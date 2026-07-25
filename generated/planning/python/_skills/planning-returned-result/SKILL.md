@@ -8,5 +8,9 @@ Use this only after a delegated run returns, fails, blocks, or becomes stale. Do
 4. Integrate only an admitted return through the normal repository ownership path.
 5. After integration, run AW-owned proof and reconcile intent and closeout separately. A worker result never authorizes either claim by itself.
 
-Keep the compact path for a current, bounded, schema-valid return. Expand only for conflicts, high risk, uncertainty, human override, or changed scope.
+Workers, explorers, and reviewers must return at their declared boundary:
+workers cannot widen scope or close parent work; explorers cannot write or
+claim implementation; reviewers cannot turn findings into implementation
+without a new assignment.
 
+Keep the compact path for a current, bounded, schema-valid return. Expand only for conflicts, high risk, uncertainty, human override, or changed scope.
