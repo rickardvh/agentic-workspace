@@ -34,3 +34,16 @@ def test_pre_commit_repo_root_uses_current_linked_worktree(tmp_path: Path) -> No
     pre_commit = _load_pre_commit_module()
 
     assert pre_commit._repo_root(cwd=linked) == linked.resolve()
+
+
+def test_installed_hook_enters_the_invoking_worktree() -> None:
+    installer_path = Path(__file__).resolve().parents[1] / "scripts" / "install_git_hooks.py"
+    spec = importlib.util.spec_from_file_location("install_git_hooks_under_test", installer_path)
+    assert spec is not None and spec.loader is not None
+    installer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(installer)
+
+    hook = installer._hook_script(Path("python"), Path("scripts/git_hooks/pre_commit.py"))
+
+    assert "git rev-parse --show-toplevel" in hook
+    assert 'cd "$repo_root"' in hook
