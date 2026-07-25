@@ -1922,44 +1922,36 @@ def _planning_safety_gate_payload(
         reason = "The active execplan is a slice with a recorded parent lane, but no first-class lane owner artifact exists."
         required_next_action = "create-or-promote-lane-owner"
         workflow_sufficient = False
-    elif route_evidence.get("status") == "completed-active-plan-route":
+    elif route_decision.get("owner_posture") == "completed-residue":
         status = "attention"
         decision = "archive-or-retire-completed-plan"
-        reason = str(route_evidence.get("summary") or "The active execplan appears complete and should be routed to archive or retire.")
+        reason = "The selected owner has completed residue and needs the route-decision closeout transition."
         required_next_action = "archive-or-retire-completed-plan"
         workflow_sufficient = True
-    elif route_evidence.get("status") == "bounded-reflection-reporting":
+    elif route_decision.get("task_relation") == "bounded-independent" and route_decision.get("required_transition") == "none":
         status = "satisfied"
-        decision = "bounded-reflection-reporting"
-        reason = str(
-            route_evidence.get("summary") or "Bounded reflection/reporting may proceed while preserving active-plan claim boundaries."
-        )
-        required_next_action = "produce-bounded-reflection-report"
+        decision = "bounded-current-task"
+        reason = "The structured route permits bounded current-task work while preserving selected-owner claim boundaries."
+        required_next_action = str(_as_dict(route_decision.get("next_safe_action")).get("action") or "prove-current-task")
         workflow_sufficient = True
-    elif route_evidence.get("status") == "current-task-route-acknowledged":
-        status = "satisfied"
-        decision = "current-task-route-acknowledged"
-        reason = str(route_evidence.get("summary") or "Current task route is acknowledged; active-plan state remains protected.")
-        required_next_action = "prove-current-task"
-        workflow_sufficient = True
-    elif route_evidence.get("status") == "scope-inspection-required":
+    elif route_decision.get("task_relation") == "independent-pending-scope":
         status = "attention"
         decision = "current-task-scope-inspection-required"
-        reason = str(route_evidence.get("summary") or "Current task differs from the active plan; inspect scope before mutation.")
+        reason = "Structured current-work evidence is incomplete; inspect scope before mutation while preserving the selected owner."
         required_next_action = "inspect-current-task-scope"
         workflow_sufficient = True
-    elif route_evidence.get("status") == "active":
-        status = "attention"
-        decision = "active-plan-task-switch"
-        reason = str(route_evidence.get("summary") or "Current task differs from the active plan; choose a safe task route.")
-        required_next_action = "choose-task-switch-route"
-        workflow_sufficient = True
-    elif active_planning_present:
+    elif route_decision.get("task_relation") == "continues-selected-owner":
         status = "satisfied"
         decision = "planning-backed"
-        reason = "Active planning owns broad or high-assurance implementation."
-        required_next_action = "continue-from-active-plan"
+        reason = "The structured route continues the selected owner."
+        required_next_action = str(_as_dict(route_decision.get("next_safe_action")).get("action") or "continue-active-plan")
         workflow_sufficient = True
+    elif active_planning_present:
+        status = "attention"
+        decision = "planning-route-transition-required"
+        reason = "The structured Planning route requires an explicit transition before ordinary work can continue."
+        required_next_action = str(_as_dict(route_decision.get("next_safe_action")).get("action") or "inspect-current-task-scope")
+        workflow_sufficient = False
     elif path_classification["dirty_shape"] == "planning-only":
         status = "clear"
         decision = "planning-recovery-or-prep"
