@@ -119,9 +119,12 @@
       ],
       "revision": 1,
       "selectors": {
+<<<<<<< HEAD
         "issue_refs": [
           "#1969"
         ],
+=======
+>>>>>>> 4956e45c (Register state-delta effectiveness evaluation)
         "commands": [
           "start",
           "implement",
