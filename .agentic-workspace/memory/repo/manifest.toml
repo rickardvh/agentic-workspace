@@ -46,6 +46,18 @@ surfaces = ["architecture", "routing"]
 routes_from = [".agentic-workspace/memory/repo/index.md"]
 stale_when = [".agentic-workspace/memory/repo/index.md"]
 
+[notes.".agentic-workspace/memory/repo/domains/example-runtime-boundary.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/example-runtime-boundary.md"
+authority = "advisory"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "conditional"
+subsystems = ["workspace-runtime", "command-generation", "package-boundaries"]
+surfaces = ["runtime", "contracts", "generated-targets", "source-payload-install"]
+routes_from = ["src/agentic_workspace/**", "generated/**", "scripts/generate/**", "src/agentic_workspace/contracts/**", "packages/**/bootstrap/**"]
+stale_when = ["src/agentic_workspace/**", "generated/**", "scripts/generate/**", "docs/maintainer/source-payload-operational-install.md"]
+
 [notes.".agentic-workspace/memory/repo/invariants/README.md"]
 note_type = "invariant"
 canonical_home = ".agentic-workspace/memory/repo/invariants/README.md"
