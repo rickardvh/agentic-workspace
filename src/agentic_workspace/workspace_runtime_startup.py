@@ -1019,6 +1019,15 @@ def _start_payload(
     execution_posture = _execution_posture_payload(
         config=config, changed_paths=_normalize_changed_paths(changed_paths), task_text=task_text, target_root=target_root
     )
+    delegated_lifecycle = execution_posture.get("delegated_run_lifecycle", {})
+    if isinstance(delegated_lifecycle, dict) and delegated_lifecycle.get("assignment", {}).get("state") not in {None, "", "not-applicable"}:
+        payload["assignment_lifecycle"] = {
+            "kind": delegated_lifecycle.get("kind"),
+            "status": delegated_lifecycle.get("status"),
+            "assignment": delegated_lifecycle.get("assignment"),
+            "manual_transport": delegated_lifecycle.get("manual_transport", {}),
+            "rule": "Startup projects current assignment authority; lifecycle mutations remain owned by assignment operations.",
+        }
     payload["delegation_decision"] = _compact_start_delegation_decision(execution_posture["delegation_decision"])
     planning_safety_gate = _planning_safety_gate_payload(
         target_root=target_root,
