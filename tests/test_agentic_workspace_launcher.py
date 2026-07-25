@@ -4,6 +4,7 @@ import importlib.util
 import json
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "run_agentic_workspace.py"
 
@@ -180,6 +181,30 @@ def test_source_manifest_ignores_unrelated_dirtiness_but_rejects_input_changes(t
 
     _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 2\n")
     assert not module._source_manifest_is_trustworthy(repo_root=tmp_path)
+
+
+def test_manifest_status_filter_is_bounded_and_rejects_relevant_records(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    calls: list[list[str]] = []
+
+    def status(command, **_kwargs):
+        calls.append(command)
+        return SimpleNamespace(returncode=0, stdout=" M README.md\0")
+
+    monkeypatch.setattr(module.subprocess, "run", status)
+    assert module._git_input_paths_are_unmodified(repo_root=tmp_path, paths=["src/example.py"])
+    assert calls == [["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"]]
+
+    for record in ("M  src/example.py\0", " M src/example.py\0", "?? src/example.py\0", "D  src/example.py\0"):
+        monkeypatch.setattr(module.subprocess, "run", lambda *_args, record=record, **_kwargs: SimpleNamespace(returncode=0, stdout=record))
+        assert not module._git_input_paths_are_unmodified(repo_root=tmp_path, paths=["src/example.py"])
+
+
+def test_manifest_status_filter_rejects_renamed_or_malformed_relevant_records(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    for record in ("R  renamed.py\0src/example.py\0", "R  src/example.py\0renamed.py\0", "bad\0"):
+        monkeypatch.setattr(module.subprocess, "run", lambda *_args, record=record, **_kwargs: SimpleNamespace(returncode=0, stdout=record))
+        assert not module._git_input_paths_are_unmodified(repo_root=tmp_path, paths=["src/example.py"])
 
 
 def test_launcher_rejects_clean_but_stale_source_manifest(tmp_path: Path, monkeypatch) -> None:
