@@ -26,6 +26,7 @@ from agentic_workspace.evaluation import (
     evaluation_report_payload,
     evaluation_summary,
     prune_observations,
+    record_local_evaluation_report_delivery,
     record_material_finding_followup,
     register_evaluation,
     transition_evaluation,
@@ -193,6 +194,9 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
     assert explicit["status"] == "ready"
     assert explicit["decision_owner"] == {"id": "workspace-maintainer", "class": "maintainer"}
     assert explicit["report_sinks"] == [{"id": "#1969", "class": "closed-issue"}]
+    delivered = record_local_evaluation_report_delivery(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
+    assert delivered["status"] == "delivered-local"
+    assert record_local_evaluation_report_delivery(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)["status"] == "already-delivered"
 
 
 def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path) -> None:
