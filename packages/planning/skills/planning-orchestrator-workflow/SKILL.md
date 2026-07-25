@@ -1,11 +1,14 @@
 ---
 name: planning-orchestrator-workflow
-description: Run planner-to-worker delegated execution from checked-in planning using the local mixed-agent posture and a derived handoff contract.
+description: Primary procedure for an assigned orchestrator to dispatch, track, and admit bounded delegated work from canonical Planning state.
 ---
 
 # Planning Orchestrator Workflow
 
-Use this skill when work is broad enough to benefit from stronger planning first and a bounded worker later.
+Use this skill only when canonical Planning state assigns the current agent the
+orchestrator role for a delegated run. It is the single primary procedure for
+assigned orchestration; it does not select the target, redefine the assignment,
+or replace the action gate.
 
 This skill is agent-agnostic.
 The worker may be:
@@ -14,36 +17,42 @@ The worker may be:
 - a read-only explorer for one bounded inspection question
 - a local model run through CLI or API
 - another vendor executor reached through CLI or API
-- the same agent continuing directly when delegation is not worth it
+
+If the canonical assignment selects the current target for direct work, do not
+load this skill. Use the normal bounded execution route instead.
 
 ## Read First
 
-1. `AGENTS.md`
-2. `.agentic-workspace/planning/state.toml`
-3. the active execplan
-4. `agentic-workspace config --target . --format json`
-5. `agentic-workspace defaults --section relay --format json`
-6. `agentic-workspace planning handoff --format json`
+1. `AGENTS.md` and the startup action gate.
+2. The canonical assignment decision and delegated-run state from Planning.
+3. `agentic-workspace planning handoff --target . --format json` or the
+   canonical assignment export when manual transport is selected.
+4. The active execplan only through the packet's authoritative references.
 
 ## Workflow
 
-1. Confirm the task is planning-backed and bounded enough for delegation.
-2. Inspect the effective mixed-agent posture from local config.
-3. After decomposition, classify each slice as `keep-local`, `delegate-exploration`, `delegate-implementation`, `delegate-validation`, `escalate-review`, or `no-safe-route`.
-4. If delegation is not supported or not worthwhile, stay direct and record the skipped reason.
-5. If delegation is worthwhile, derive the worker handoff from `agentic-workspace planning handoff --format json`.
-6. Choose any execution method that preserves that contract:
-   - internal delegation when the environment supports it and prefers it
-   - read-only exploration when one bounded question can avoid broad rereads
-   - external CLI or API handoff when another executor is cheaper or more available
-   - direct single-agent fallback when delegation would cost more than it saves
-7. Give the worker only the delegated handoff contract plus any explicit assignment for cleanup or commit.
-8. Keep lane shaping, roadmap routing, and issue decisions with the orchestrator unless they are explicitly delegated.
-9. Mirror durable residue and delegation outcome feedback back into checked-in planning before review, handoff, or session end.
+1. Consume the canonical assignment and action gate. If the gate forbids the
+   current target, stop: do not reinterpret the worker slice as local work.
+2. Retain orchestrator ownership of intent, decomposition, assignment target,
+   work bounds, admission, integration, proof interpretation, and closeout.
+3. Retrieve the assigned-run packet. Never re-rank candidates or alter target
+   ownership from this skill.
+4. Select only the transport permitted by that packet:
+   - internal delegated-worker execution: `planning-autopilot` / `autopilot.run`
+   - manual or external transport: `planning-manual-delegation`
+   - returned result: `planning-returned-result`
+5. Dispatch or export the assignment unchanged except for an explicitly
+   authorized transport envelope.
+6. Track `returned`, `failed`, `blocked`, `stale`, and `stopped` states through
+   Planning operations. Route repair, override, or reassignment back to the
+   canonical assignment operation; do not repair by silently implementing.
+7. On return, use `planning-returned-result` for admission and integration;
+   then route proof to `planning-intent-verification` and closeout to
+   `planning-closeout-trust`.
 
 ## Worker Contract
 
-Default worker ownership:
+The worker owns only the assigned bounded slice:
 
 - read-only exploration for one explicit question when assigned
 - bounded implementation
@@ -64,12 +73,13 @@ Default worker stop conditions:
 - Do not hardcode vendor-specific routing rules into checked-in planning.
 - Do not let the delegated worker become the only place continuity lives.
 - Do not widen requested ends just because a stronger planner is available.
+- A binding non-local assignment forbids local implementation of that worker
+  slice, even if local execution seems cheaper.
 
 ## Output
 
-For each orchestrated run, record:
+For each orchestrated run, record through the canonical Planning operation:
 
-- whether delegation stayed direct, internal, or external
 - which bounded slice was delegated
 - what the handoff contract contained
 - route skipped reason when direct work was chosen

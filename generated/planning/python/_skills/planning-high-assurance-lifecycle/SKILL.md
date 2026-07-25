@@ -19,10 +19,14 @@ Route intent satisfaction to `planning-intent-verification`, closeout mechanics 
 1. Classify the work shape before editing: direct task, bounded execplan, decomposition lane, epic, review, or recovery.
 2. If the work is broad or cross-boundary, run the planning CLI to create or promote a checked-in planning artifact before implementation.
 3. Tighten intent, non-goals, touched paths, proof, delegation posture, and closeout expectations until a weaker worker could implement a bounded slice mechanically.
-4. Record the assurance and delegation decision before implementation continues.
-5. Execute one bounded slice at a time; update the active execplan or decomposition when scope, proof, or residue changes.
+4. When a canonical delegated assignment exists, invoke
+   `planning-orchestrator-workflow`; do not repeat dispatch, worker, return,
+   admission, or integration instructions here.
+5. Otherwise execute one bounded slice at a time; update the active execplan
+   or decomposition when scope, proof, or residue changes.
 6. Promote dogfooding findings or review findings to planning records before implementing them.
-7. Close out with proof, intent satisfaction, durable residue routing, and `planning close-item` or `archive-plan` as appropriate.
+7. Close out with proof, intent satisfaction, durable residue routing, and
+   `planning close-item` or `archive-plan` as appropriate.
 
 ## Required Surfaces
 

@@ -76,7 +76,7 @@
       "path": "planning-orchestrator-workflow/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "run planner-to-worker delegated execution from checked-in planning using the local mixed-agent posture and a derived handoff contract",
+      "summary": "primary procedure for an assigned orchestrator to dispatch, track, and admit bounded delegated work",
       "activation_hints": {
         "verbs": ["delegate", "orchestrate", "handoff", "split", "route"],
         "nouns": ["worker", "planner", "delegation", "handoff", "orchestrator workflow"],
@@ -86,7 +86,7 @@
           "derive worker handoff",
           "orchestrate delegated execution"
         ],
-        "when": ["strong planner then bounded worker", "external or internal delegation", "delegated handoff reuse"]
+        "when": ["binding orchestrator assignment", "external or internal delegated run", "delegated handoff reuse"]
       }
     },
     {
@@ -169,7 +169,7 @@
       "path": "planning-assurance-delegation/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "apply assurance and delegation posture before handing off or implementing planned work",
+      "summary": "narrow pre-decision assessment reference for risk, proof cost, ambiguity, and capability fit",
       "activation_hints": {
         "verbs": ["assess", "classify", "delegate", "escalate", "handoff"],
         "nouns": ["assurance", "delegation posture", "risk", "human input", "strong planner", "weak implementer"],
@@ -180,7 +180,7 @@
           "handoff to weaker implementer",
           "human input needed"
         ],
-        "when": ["risk or capability fit is unclear", "delegation may improve quality", "delegation may save tokens safely"]
+        "when": ["risk or capability fit is unclear before assignment", "no canonical assignment decision exists"]
       }
     },
     {

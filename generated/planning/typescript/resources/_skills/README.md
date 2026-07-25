@@ -21,7 +21,7 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 - `planning-autopilot`
   - execute bounded planning slices from checked-in planning surfaces until the active objective reaches an authorized terminal outcome
 - `planning-orchestrator-workflow`
-  - run planner-to-worker delegated execution from checked-in planning using the local mixed-agent posture and a derived handoff contract
+  - primary procedure for an assigned orchestrator to dispatch, track, and admit bounded delegated work
 - `planning-intake-upstream-task`
   - turn an externally tracked issue or task into checked-in planning while keeping the upstream tracker as an intake source only
 - `planning-decompose`
@@ -29,7 +29,7 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 - `planning-new-plan-tighten`
   - create or tighten a schema-backed execplan scaffold before coding
 - `planning-assurance-delegation`
-  - apply assurance and delegation posture before handing off or implementing planned work
+  - narrow pre-decision assessment reference for risk, proof cost, ambiguity, and capability fit
 - `planning-high-assurance-lifecycle`
   - preserve intent, decomposition, assurance, delegation, proof, and closeout for broad or high-assurance planning work
 - `planning-intent-verification`
@@ -43,4 +43,4 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 - `planning-reporting`
   - report active planning state, proof expectations, and next-action guidance from the canonical summary JSON
 
-These bundled skills cover payload refresh, bounded planning execution, high-assurance lifecycle preservation, intent verification, work decomposition, execplan tightening, assurance and delegation decisions, closeout trust, delegated planning workflow, review capture, review-to-plan promotion, and upstream-task intake.
+These bundled skills cover payload refresh, bounded planning execution, high-assurance lifecycle preservation, intent verification, work decomposition, execplan tightening, pre-decision assurance assessment, the primary assigned-orchestrator workflow, closeout trust, review capture, review-to-plan promotion, and upstream-task intake.

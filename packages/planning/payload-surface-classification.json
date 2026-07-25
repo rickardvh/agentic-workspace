@@ -639,6 +639,20 @@
       "rationale": "Assurance and delegation steering is useful where skills and delegation targets are configured, but core planning must still work without skill support."
     },
     {
+      "source_path": "packages/planning/skills/planning-manual-delegation/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-manual-delegation/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Manual transport is an opt-in adapter over canonical assignment export and import, not a core planning dependency."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-returned-result/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-returned-result/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Returned-result admission is needed only by delegated runs and remains discoverable without burdening direct execution."
+    },
+    {
       "source_path": "packages/planning/skills/planning-autopilot/SKILL.md",
       "installed_path": ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md",
       "classification": "config-enabled extension",

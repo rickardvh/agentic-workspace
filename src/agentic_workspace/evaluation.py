@@ -1458,7 +1458,7 @@ def evaluation_report_payload(*, target_root: Path, evaluation_id: str, explicit
     summary = evaluation_summary(target_root=target_root, evaluation_id=evaluation_id)["summaries"][0]
     admission = summary.get("fresh_result_admission") if isinstance(summary.get("fresh_result_admission"), dict) else {}
     raw_finding_followup = admission.get("finding_followup")
-    finding_followup = raw_finding_followup if isinstance(raw_finding_followup, dict) else {}
+    finding_followup: dict[str, Any] = raw_finding_followup if isinstance(raw_finding_followup, dict) else {}
     meaningful = bool(
         explicit
         or (summary.get("conclusion_readiness") if isinstance(summary.get("conclusion_readiness"), dict) else {}).get("ready")
