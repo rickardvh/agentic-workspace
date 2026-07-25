@@ -88,17 +88,17 @@ def _read_cached_fingerprint(*, cache_path: Path = CACHE_PATH) -> str | None:
     return fingerprint if isinstance(fingerprint, str) and fingerprint else None
 
 
-def _git_worktree_is_clean(*, repo_root: Path) -> bool:
-    """Return whether Git can establish that no source input is dirty.
+def _git_input_paths_are_unmodified(*, repo_root: Path, paths: list[str]) -> bool:
+    """Return whether the manifest's exact inputs are clean in the worktree.
 
-    A source-owned manifest is valid only for a clean checkout.  This keeps the
-    cold path cheap without allowing an edited or unobservable worktree to skip
-    the content-fingerprint fallback.
+    Unrelated local edits must not discard a source-owned freshness witness.
+    Git is queried with the manifest pathset so a dirty relevant input, staged
+    change, deletion, rename, or untracked replacement still fails closed.
     """
 
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=all"],
+            ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", *paths],
             cwd=repo_root,
             capture_output=True,
             text=True,
@@ -106,17 +106,17 @@ def _git_worktree_is_clean(*, repo_root: Path) -> bool:
         )
     except OSError:
         return False
-    return result.returncode == 0 and not result.stdout.strip()
+    return result.returncode == 0 and not result.stdout
 
 
-def _git_index_identity(*, repo_root: Path, paths: list[str]) -> str | None:
-    """Return the Git index identity for exactly the fingerprint inputs."""
+def _git_index_entries(*, repo_root: Path, paths: list[str]) -> dict[str, str] | None:
+    """Return stage-zero Git index entries for exactly the fingerprint inputs."""
 
     if not paths:
         return None
     try:
         result = subprocess.run(
-            ["git", "ls-files", "-s", "-z"],
+            ["git", "ls-files", "-s", "-z", "--", *paths],
             cwd=repo_root,
             capture_output=True,
             check=False,
@@ -131,23 +131,29 @@ def _git_index_identity(*, repo_root: Path, paths: list[str]) -> str | None:
             continue
         entry = raw_entry.decode("utf-8")
         try:
-            _, indexed_path = entry.split("\t", 1)
-        except ValueError:
-            return None
-        entries_by_path[indexed_path] = entry
-    digest = hashlib.sha256()
-    for expected_path in paths:
-        entry = entries_by_path.get(expected_path)
-        if entry is None:
-            return None
-        try:
             metadata, indexed_path = entry.split("\t", 1)
         except ValueError:
             return None
         fields = metadata.split()
-        if indexed_path != expected_path or len(fields) != 3 or fields[2] != "0":
+        if len(fields) != 3 or fields[2] != "0":
             return None
-        digest.update(entry.encode("utf-8"))
+        entries_by_path[indexed_path] = f"{fields[0]} {fields[1]}"
+    if set(entries_by_path) != set(paths):
+        return None
+    return {path: entries_by_path[path] for path in paths}
+
+
+def _git_index_identity(*, repo_root: Path, paths: list[str]) -> str | None:
+    """Return a stable digest of exact, stage-zero fingerprint input entries."""
+
+    entries_by_path = _git_index_entries(repo_root=repo_root, paths=paths)
+    if entries_by_path is None:
+        return None
+    digest = hashlib.sha256()
+    for expected_path in paths:
+        digest.update(expected_path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(entries_by_path[expected_path].encode("utf-8"))
         digest.update(b"\0")
     return digest.hexdigest()
 
@@ -161,23 +167,28 @@ def source_cli_fingerprint_manifest(*, repo_root: Path = REPO_ROOT) -> dict[str,
         "kind": "generated-cli-source-manifest/v1",
         "file_count": len(paths),
         "file_paths": paths,
+        "git_index_entries": _git_index_entries(repo_root=repo_root, paths=paths),
         "git_index_identity": _git_index_identity(repo_root=repo_root, paths=paths),
         "generation_command": "uv run python scripts/generate/generate_command_packages.py",
     }
 
 
 def _source_manifest_is_trustworthy(*, repo_root: Path) -> bool:
-    """Use a clean source manifest only when it binds this exact Git index."""
+    """Use a manifest when its exact inputs are unchanged and index-bound."""
 
     source_manifest = repo_root / "generated" / ".agentic-workspace-cli-fingerprint.json"
     payload = _read_cached_fingerprint_payload(cache_path=source_manifest)
-    if payload is None or not _git_worktree_is_clean(repo_root=repo_root):
+    if payload is None:
         return False
     paths = payload.get("file_paths")
+    expected_entries = payload.get("git_index_entries")
     expected_identity = payload.get("git_index_identity")
     if (
         not isinstance(paths, list)
         or not all(isinstance(path, str) for path in paths)
+        or not isinstance(expected_entries, dict)
+        or set(expected_entries) != set(paths)
+        or not all(isinstance(entry, str) and entry for entry in expected_entries.values())
         or not isinstance(expected_identity, str)
         or not expected_identity
     ):
@@ -185,7 +196,12 @@ def _source_manifest_is_trustworthy(*, repo_root: Path) -> bool:
     current_paths = [_repo_relative(path, repo_root=repo_root) for path in _fingerprint_files(repo_root=repo_root)]
     if current_paths != paths:
         return False
-    return _git_index_identity(repo_root=repo_root, paths=paths) == expected_identity
+    if not _git_input_paths_are_unmodified(repo_root=repo_root, paths=paths):
+        return False
+    return (
+        _git_index_entries(repo_root=repo_root, paths=paths) == expected_entries
+        and _git_index_identity(repo_root=repo_root, paths=paths) == expected_identity
+    )
 
 
 def _cached_fingerprint_manifest_is_fresh(*, repo_root: Path, cache_path: Path) -> bool:

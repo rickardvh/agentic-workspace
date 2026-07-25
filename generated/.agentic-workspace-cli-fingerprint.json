@@ -1030,7 +1030,8 @@
     "uv.lock"
   ],
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
-  "git_index_identity": "1e4e5b3ab579f0b8598a53676d2c7c2a79d990aa8b32f6ea9dd32e14852d407f",
+  "git_index_entries": null,
+  "git_index_identity": null,
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }

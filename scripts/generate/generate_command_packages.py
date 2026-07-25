@@ -39,8 +39,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def _write_source_cli_fingerprint_manifest() -> None:
     """Publish the generator-owned cold-start freshness witness.
 
-    The launcher accepts it only in a clean Git worktree; a modified checkout
-    still computes the full input fingerprint before it decides to regenerate.
+    The launcher accepts it when the manifest's exact Git-tracked inputs are
+    unchanged; unrelated worktree edits do not force a full content scan.
     """
 
     launcher_path = REPO_ROOT / "scripts" / "run_agentic_workspace.py"

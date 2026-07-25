@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "run_agentic_workspace.py"
@@ -28,6 +29,21 @@ def _minimal_repo(root: Path) -> None:
     _write(root / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
     _write(root / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json", "{}\n")
     _write(root / "generated" / "workspace" / "python" / "cli.py", "def main(argv=None):\n    return 0\n")
+
+
+def _source_manifest(module, root: Path, *, paths: list[str] | None = None, identity: str = "current-index") -> dict[str, object]:
+    paths = paths or [module._repo_relative(path, repo_root=root) for path in module._fingerprint_files(repo_root=root)]
+    return {
+        "schema": module.CACHE_SCHEMA,
+        "kind": "generated-cli-source-manifest/v1",
+        "file_paths": paths,
+        "git_index_entries": {path: "100644 current" for path in paths},
+        "git_index_identity": identity,
+    }
+
+
+def _git(root: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
 
 
 def test_launcher_skips_generation_when_fingerprint_cache_matches(tmp_path: Path) -> None:
@@ -79,15 +95,11 @@ def test_launcher_uses_source_owned_manifest_on_cold_clean_worktree(tmp_path: Pa
     module = _load_module()
     _minimal_repo(tmp_path)
     source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
-    manifest = {
-        "schema": module.CACHE_SCHEMA,
-        "kind": "generated-cli-source-manifest/v1",
-        "file_paths": [module._repo_relative(path, repo_root=tmp_path) for path in module._fingerprint_files(repo_root=tmp_path)],
-        "git_index_identity": "current-index",
-    }
+    manifest = _source_manifest(module, tmp_path)
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
 
-    monkeypatch.setattr(module, "_git_worktree_is_clean", lambda **_: True)
+    monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: True)
+    monkeypatch.setattr(module, "_git_index_entries", lambda **_: manifest["git_index_entries"])
     monkeypatch.setattr(module, "_git_index_identity", lambda **_: "current-index")
 
     def fail_content_hash(repo_root: Path) -> dict[str, object]:
@@ -104,18 +116,37 @@ def test_launcher_uses_source_owned_manifest_on_cold_clean_worktree(tmp_path: Pa
     assert refreshed is False
 
 
-def test_launcher_hashes_when_source_manifest_worktree_is_dirty(tmp_path: Path, monkeypatch) -> None:
+def test_launcher_uses_source_manifest_with_unrelated_dirty_worktree(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
     source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
-    manifest = {
-        "schema": module.CACHE_SCHEMA,
-        "kind": "generated-cli-source-manifest/v1",
-        "file_paths": ["pyproject.toml"],
-        "git_index_identity": "old-index",
-    }
+    manifest = _source_manifest(module, tmp_path)
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
-    monkeypatch.setattr(module, "_git_worktree_is_clean", lambda **_: False)
+    monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: True)
+    monkeypatch.setattr(module, "_git_index_entries", lambda **_: manifest["git_index_entries"])
+    monkeypatch.setattr(module, "_git_index_identity", lambda **_: "current-index")
+
+    def fail_content_hash(*, repo_root: Path) -> dict[str, object]:
+        raise AssertionError(f"unrelated dirtiness must not hash inputs in {repo_root}")
+
+    module.compute_generated_cli_fingerprint = fail_content_hash
+    refreshed = module.ensure_generated_cli_current(
+        repo_root=tmp_path,
+        cache_path=tmp_path / ".agentic-workspace" / "local" / "cache" / "missing.json",
+        generator_script=tmp_path / "scripts" / "generate" / "generate_command_packages.py",
+        run_generator=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected regeneration")),
+    )
+
+    assert refreshed is False
+
+
+def test_launcher_hashes_when_a_manifest_input_is_dirty(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    manifest = _source_manifest(module, tmp_path)
+    source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: False)
     calls: list[Path] = []
     original = module.compute_generated_cli_fingerprint
 
@@ -124,29 +155,41 @@ def test_launcher_hashes_when_source_manifest_worktree_is_dirty(tmp_path: Path, 
         return original(repo_root=repo_root)
 
     module.compute_generated_cli_fingerprint = count_content_hash
-    refreshed = module.ensure_generated_cli_current(
+    assert module.ensure_generated_cli_current(
         repo_root=tmp_path,
         cache_path=tmp_path / ".agentic-workspace" / "local" / "cache" / "missing.json",
         generator_script=tmp_path / "scripts" / "generate" / "generate_command_packages.py",
         run_generator=lambda *_: None,
     )
-
-    assert refreshed is True
     assert calls == [tmp_path, tmp_path]
+
+
+def test_source_manifest_ignores_unrelated_dirtiness_but_rejects_input_changes(tmp_path: Path) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "fixture@example.invalid")
+    _git(tmp_path, "config", "user.name", "Fixture")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "fixture")
+    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest.write_text(json.dumps(module.source_cli_fingerprint_manifest(repo_root=tmp_path)), encoding="utf-8")
+
+    _write(tmp_path / "README.md", "unrelated local note\n")
+    assert module._source_manifest_is_trustworthy(repo_root=tmp_path)
+
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 2\n")
+    assert not module._source_manifest_is_trustworthy(repo_root=tmp_path)
 
 
 def test_launcher_rejects_clean_but_stale_source_manifest(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
     source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
-    manifest = {
-        "schema": module.CACHE_SCHEMA,
-        "kind": "generated-cli-source-manifest/v1",
-        "file_paths": ["pyproject.toml"],
-        "git_index_identity": "stale-index",
-    }
+    manifest = _source_manifest(module, tmp_path, identity="stale-index")
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
-    monkeypatch.setattr(module, "_git_worktree_is_clean", lambda **_: True)
+    monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: True)
+    monkeypatch.setattr(module, "_git_index_entries", lambda **_: manifest["git_index_entries"])
     monkeypatch.setattr(module, "_git_index_identity", lambda **_: "current-index")
     original = module.compute_generated_cli_fingerprint
     calls: list[Path] = []
@@ -169,14 +212,10 @@ def test_launcher_rejects_clean_source_manifest_missing_new_input(tmp_path: Path
     module = _load_module()
     _minimal_repo(tmp_path)
     source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
-    manifest = {
-        "schema": module.CACHE_SCHEMA,
-        "kind": "generated-cli-source-manifest/v1",
-        "file_paths": ["pyproject.toml"],
-        "git_index_identity": "current-index",
-    }
+    manifest = _source_manifest(module, tmp_path, paths=["pyproject.toml"])
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
-    monkeypatch.setattr(module, "_git_worktree_is_clean", lambda **_: True)
+    monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: True)
+    monkeypatch.setattr(module, "_git_index_entries", lambda **_: manifest["git_index_entries"])
     monkeypatch.setattr(module, "_git_index_identity", lambda **_: "current-index")
     original = module.compute_generated_cli_fingerprint
     calls: list[Path] = []
