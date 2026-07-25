@@ -9,7 +9,7 @@
     "implement": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "skills", "target-guidance"],
     "next": ["planning", "assignment", "skills", "target-guidance"],
     "proof": ["planning", "proof", "mutation-baseline", "evaluation"],
-    "start": ["system-intent", "planning", "memory", "skills", "target-guidance"],
+    "start": ["system-intent", "architecture-principles", "scoped-instructions", "ownership", "planning", "memory", "skills", "target-guidance"],
     "status": ["planning", "assignment", "proof", "evaluation", "terminal-outcome"],
     "summary": ["planning", "memory", "terminal-outcome"]
   },
@@ -25,6 +25,42 @@
       "proof_route": "system-intent sync and contract tooling checks",
       "disposition": "retain as durable shaping authority",
       "revision_fields": ["system_intent_revision", "mirror_revision"]
+    },
+    {
+      "surface": "architecture-principles",
+      "owner": "workspace-system-intent",
+      "authority_class": "canonical",
+      "consumers": ["start", "startup", "implement", "proof", "report", "closeout"],
+      "activation": "matched durable shaping or validation principle for the task or changed paths",
+      "editable_by": "system-intent sync and explicit repo edits",
+      "stale_when": "system-intent revision or matched-principle identity changes",
+      "proof_route": "architecture-principle route and closeout tests",
+      "disposition": "retain as selective durable validation authority",
+      "revision_fields": ["system_intent_revision", "principle_id", "principle_revision"]
+    },
+    {
+      "surface": "scoped-instructions",
+      "owner": "workspace instruction routing",
+      "authority_class": "canonical",
+      "consumers": ["start", "startup", "implement", "skills"],
+      "activation": "root or registered path-scoped instruction matches the task or changed paths",
+      "editable_by": "registered instruction sources and workspace configuration",
+      "stale_when": "instruction source, scope match, or configured registry revision changes",
+      "proof_route": "startup skill-routing and scoped-instruction selection tests",
+      "disposition": "retain as routed instruction authority; historical guidance remains excluded",
+      "revision_fields": ["instruction_source", "scope_match", "registry_revision"]
+    },
+    {
+      "surface": "ownership",
+      "owner": "workspace ownership declarations",
+      "authority_class": "canonical",
+      "consumers": ["start", "implement", "proof", "report"],
+      "activation": "changed path or selected task route has a registered ownership boundary",
+      "editable_by": "ownership declarations and registered source metadata",
+      "stale_when": "ownership declaration or changed-path classification changes",
+      "proof_route": "ownership and changed-path proof-routing tests",
+      "disposition": "retain as source/generated and mutation-boundary authority",
+      "revision_fields": ["ownership_source", "path_classification", "ownership_revision"]
     },
     {
       "surface": "planning",

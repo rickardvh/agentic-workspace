@@ -286,12 +286,14 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
 
     assert "implement" in coverage["ordinary_consumers"]
     assert "autopilot-executor" in coverage["surfaces"]
+    assert {"architecture-principles", "scoped-instructions", "ownership"}.issubset(set(coverage["surfaces"]))
     assert coverage["registry_authority"] == "versioned-contract"
     assert coverage["registry_source"] == "src/agentic_workspace/contracts/context_authority_registry.json"
     assert set(coverage["ordinary_consumers"]) == set(registry["ordinary_decision_consumers"])
     assert coverage["missing_required_sources"] == {}
     for consumer in coverage["ordinary_consumers"]:
         assert set(coverage["consumer_requirements"][consumer]).issubset(set(coverage["consumer_to_surfaces"][consumer]))
+    assert {"architecture-principles", "scoped-instructions", "ownership"}.issubset(set(coverage["consumer_requirements"]["start"]))
     gaps = derive_context_gaps(
         declarations=declarations,
         selected_surfaces=[
