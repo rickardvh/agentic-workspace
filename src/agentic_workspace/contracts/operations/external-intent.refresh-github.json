@@ -25,6 +25,11 @@
       "required": false
     },
     {
+      "name": "issue",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "limit",
       "source": "cli-option",
       "required": false
@@ -36,6 +41,11 @@
     },
     {
       "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "verbose",
       "source": "cli-option",
       "required": false
     },
@@ -123,6 +133,7 @@
   "guards": [
     "Core planning must continue to consume only provider-agnostic evidence.",
     "GitHub-specific behavior must stay inside this optional adapter path.",
+    "An explicit --issue refresh emits a compact receipt by default; --verbose exposes unrelated audit detail.",
     "Ordinary refresh should stay small; closed-history audit refresh requires explicit --state all.",
     "Default writes go to ignored local cache, not checked-in planning state.",
     "Do not write secrets, tokens, or gh authentication data into evidence."

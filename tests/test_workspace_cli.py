@@ -9335,8 +9335,30 @@ def test_external_intent_issue_scoped_refresh_satisfies_issue_reference_intent(t
     refresh = json.loads(capsys.readouterr().out)
     assert refresh["fetch_mode"] == "issue-view"
     assert refresh["issue_refs"] == ["#103"]
-    assert refresh["item_count"] == 1
+    assert refresh["refreshed_items"][0]["id"] == "#103"
+    assert "planning_candidate_suggestions" not in refresh
+    assert "stale_planning_candidate_reconciliation" not in refresh
     assert not any(call[:3] == ["gh", "issue", "list"] for call in calls)
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(tmp_path),
+                "--issue",
+                "103",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    verbose_refresh = json.loads(capsys.readouterr().out)
+    assert verbose_refresh["item_count"] == 1
+    assert "planning_candidate_suggestions" in verbose_refresh
 
     assert (
         cli.main(

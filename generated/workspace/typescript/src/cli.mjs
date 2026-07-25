@@ -5100,6 +5100,14 @@ const commandDefinitions = [
               ],
               "help": "Preview refresh counts without writing external intent evidence.",
               "name": "dry_run"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--verbose"
+              ],
+              "help": "Include candidate, grouping, cache, and reconciliation detail for an issue-scoped refresh.",
+              "name": "verbose"
             }
           ]
         }
