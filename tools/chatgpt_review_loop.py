@@ -466,7 +466,17 @@ def _validated_attempt_result(state: dict[str, Any], *, worktree: Path, start_he
     )
 
 
-def report_job_result(*, cwd: Path, session_id: str, proof_status: str, proof_command: str, proof_exit_code: int, push_status: str, runner: CommandRunner) -> dict[str, Any]:
+def report_job_result(
+    *,
+    cwd: Path,
+    session_id: str,
+    proof_status: str,
+    proof_command: str,
+    proof_exit_code: int,
+    push_status: str,
+    runner: CommandRunner,
+    supersede: bool = False,
+) -> dict[str, Any]:
     """Record agent-supplied proof/push evidence for the exact owning session."""
     root = _repo_root(cwd, runner)
     # The command is invoked from the launched worktree.  Keep that path as the
@@ -497,10 +507,41 @@ def report_job_result(*, cwd: Path, session_id: str, proof_status: str, proof_co
         raise LoopError("job-result-session-ambiguous", "job result requires exactly one bound owning session")
     state = candidates[0]
     attempt = state["job_attempt"]
-    if attempt.get("result_recorded"):
-        raise LoopError("job-result-duplicate", "job result was already recorded for this exact launch")
     if state.get("session_id") not in {"", session_id} or attempt.get("session_id") not in {"", session_id}:
         raise LoopError("job-result-session-mismatch", "job result session does not match the launched job")
+    ending_head = _git_value(worktree, runner, "rev-parse", "HEAD")
+    if attempt.get("result_recorded"):
+        if not supersede:
+            raise LoopError("job-result-duplicate", "job result was already recorded for this exact launch")
+        terminal = state.get("terminal_result")
+        if not isinstance(terminal, dict) or (
+            terminal.get("kind") != "agentic-workspace/chatgpt-review-job-result/v1"
+            or terminal.get("attempt_id") != attempt.get("id")
+            or terminal.get("session_id") != session_id
+            or terminal.get("worktree") != worktree.as_posix()
+            or terminal.get("launch_identity") != attempt.get("launch_identity")
+        ):
+            raise LoopError("job-result-correction-invalid", "cannot supersede an invalid or unrelated job result")
+        prior_head = terminal.get("ending_head")
+        if not isinstance(prior_head, str) or not prior_head:
+            raise LoopError("job-result-correction-invalid", "cannot supersede a job result without an ending head")
+        if ending_head == prior_head:
+            raise LoopError("job-result-correction-noop", "current HEAD is already the recorded job-result head")
+        if push_status != "passed":
+            raise LoopError("job-result-correction-push-unverified", "superseding a final head requires a successful push")
+        corrections = terminal.get("head_corrections", [])
+        if not isinstance(corrections, list) or not all(isinstance(item, dict) for item in corrections):
+            raise LoopError("job-result-correction-invalid", "cannot supersede a job result with malformed correction history")
+        corrections.append(
+            {
+                "prior_ending_head": prior_head,
+                "corrected_ending_head": ending_head,
+                "prior_reported_at": terminal.get("reported_at"),
+                "corrected_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+    else:
+        corrections = []
     state["session_id"] = session_id
     attempt["session_id"] = session_id
     state["terminal_result"] = {
@@ -508,12 +549,17 @@ def report_job_result(*, cwd: Path, session_id: str, proof_status: str, proof_co
         "pr_number": int(state["pr_number"]), "session_id": session_id,
         "attempt_id": attempt["id"], "mode": attempt["mode"],
         "worktree": worktree.as_posix(), "starting_head": attempt["starting_head"],
-        "ending_head": _git_value(worktree, runner, "rev-parse", "HEAD"),
+        "ending_head": ending_head,
         "launch_identity": attempt["launch_identity"],
         "proof_status": proof_status, "proof_commands": [proof_command] if proof_command else [],
         "proof_exit_code": proof_exit_code, "push_status": push_status,
         "reported_at": datetime.now(timezone.utc).isoformat(),
+        "head_corrections": corrections,
     }
+    if supersede:
+        # The explicit correction records the same launch's later successful
+        # push, so subsequent validation uses the final exact head.
+        state["handoff_head"] = ending_head
     attempt["result_recorded"] = True
     _save_state(owner_root, state)
     return state["terminal_result"]
@@ -1564,6 +1610,11 @@ def _parser() -> argparse.ArgumentParser:
     result_parser.add_argument("--proof-command", default="")
     result_parser.add_argument("--proof-exit-code", type=int, required=True)
     result_parser.add_argument("--push-status", choices=["passed", "failed"], required=True)
+    result_parser.add_argument(
+        "--supersede",
+        action="store_true",
+        help="Correct this exact launch's recorded final head after a later successful push.",
+    )
 
     poll_parser = sub.add_parser("poll", help="Poll with gh and resume only exact blocked handoffs.")
     poll_parser.add_argument("--target", type=Path, default=Path.cwd())
@@ -1650,7 +1701,7 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
             result = report_job_result(
                 cwd=args.target.resolve(), session_id=args.session_id.strip(), proof_status=args.proof_status,
                 proof_command=args.proof_command, proof_exit_code=args.proof_exit_code,
-                push_status=args.push_status, runner=runner,
+                push_status=args.push_status, runner=runner, supersede=args.supersede,
             )
             _emit(result)
             return 0

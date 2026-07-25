@@ -91,6 +91,14 @@ Use `recover` only after a human has fixed the reported malformed or ambiguous G
 
 The controller reports explicit recovery for a closed PR, changed local or remote branch, an unrecorded remote head, a missing/ambiguous session, malformed or multiple matching markers, missing blocked findings, resume failure, no new handoff, maximum cycles, and repeated identical blockers. Stale-SHA reviews are visible no-ops and never resume Codex.
 
+If the exact same Codex launch has already recorded `job-result`, but a rebase and later successful push produce the final head, record the correction explicitly from that worktree:
+
+```powershell
+uv run python tools/chatgpt_review_loop.py job-result --session-id $env:CODEX_THREAD_ID --proof-status passed --proof-command "<proof command>" --proof-exit-code 0 --push-status passed --supersede
+```
+
+`--supersede` is not a general duplicate override: it requires the same bound launch and session, a changed `HEAD`, and a successful push. It preserves the prior head in correction history and updates the result's final head for later exact-head validation. An unchanged or unverified duplicate remains fail-closed.
+
 ## Validation and current evidence boundary
 
 Run the focused deterministic suite with:
