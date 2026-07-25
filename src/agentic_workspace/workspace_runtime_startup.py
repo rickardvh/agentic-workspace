@@ -1920,6 +1920,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         context["primary_action"] = {
             "status": "projected-in-next_safe_action",
             "detail_selector": "next_safe_action",
+            "command": None,
         }
         context["planning"] = {
             "status": compact_workflow.get("sufficiency_result", "unknown"),
