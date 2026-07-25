@@ -1175,6 +1175,42 @@ def test_generated_output_git_dirtiness_classifies_line_ending_only_changes() ->
     ]
 
 
+def test_generated_output_git_dirtiness_classifies_untracked_rendered_output() -> None:
+    errors = _checker_case_errors(
+        """
+        relative_path = "generated/workspace/python/untracked-fixture.txt"
+        path = checker.REPO_ROOT / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        class Output:
+            def __init__(self, path, content):
+                self.path = path
+                self.content = content
+
+        def fake_render_outputs(ir, *, repo_root):
+            return [Output(path, "alpha\\n")]
+
+        def fake_git_output(args):
+            if args == ["status", "--porcelain=v1", "--", "generated"]:
+                return f"?? {relative_path}\\n"
+            return ""
+
+        try:
+            path.write_text("alpha\\n", encoding="utf-8")
+            checker.render_workspace_command_package_outputs = fake_render_outputs
+            checker._run_git_output = fake_git_output
+            _emit({"errors": checker._validate_generated_output_git_dirtiness({})})
+        finally:
+            path.unlink(missing_ok=True)
+        """
+    )
+
+    assert errors == [
+        "generated/workspace/python/untracked-fixture.txt is an untracked generated output; "
+        "run git add -- generated/workspace/python/untracked-fixture.txt after confirming generation, or regenerate packages."
+    ]
+
+
 def test_lifecycle_dry_run_generation_regression_is_blocked() -> None:
     errors = _checker_case_errors(
         """

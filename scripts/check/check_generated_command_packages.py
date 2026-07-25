@@ -4628,7 +4628,11 @@ def _line_ending_only_generated_output_paths(ir: dict[str, object]) -> list[str]
         for output in render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT)
     }
     status = _run_git_output(["status", "--porcelain=v1", "--", "generated"])
-    dirty_paths = [_git_dirty_path_from_porcelain_line(line) for line in status.splitlines() if line.strip()]
+    dirty_paths = [
+        _git_dirty_path_from_porcelain_line(line)
+        for line in status.splitlines()
+        if line.strip() and not line.startswith("?? ")
+    ]
     classified: list[str] = []
     for relative_path in dirty_paths:
         expected = rendered.get(relative_path)
@@ -4647,8 +4651,24 @@ def _line_ending_only_generated_output_paths(ir: dict[str, object]) -> list[str]
     return sorted(classified)
 
 
+def _untracked_generated_output_paths(ir: dict[str, object]) -> list[str]:
+    rendered_paths = {
+        _repo_relative(output.path if output.path.is_absolute() else REPO_ROOT / output.path)
+        for output in render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT)
+    }
+    status = _run_git_output(["status", "--porcelain=v1", "--", "generated"])
+    return sorted(
+        _git_dirty_path_from_porcelain_line(line)
+        for line in status.splitlines()
+        if line.startswith("?? ") and _git_dirty_path_from_porcelain_line(line) in rendered_paths
+    )
+
+
 def _validate_generated_output_git_dirtiness(ir: dict[str, object]) -> list[str]:
     return [
+        f"{path} is an untracked generated output; run git add -- {path} after confirming generation, or regenerate packages."
+        for path in _untracked_generated_output_paths(ir)
+    ] + [
         f"{path} is line-ending-only generated output dirtiness; run git restore -- {path} or regenerate packages to normalize LF output."
         for path in _line_ending_only_generated_output_paths(ir)
     ]
