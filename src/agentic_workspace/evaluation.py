@@ -1449,6 +1449,38 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
     return {"kind": EVALUATION_SUMMARY_KIND, "path": WORKSPACE_EVALUATIONS_PATH.as_posix(), "summaries": summaries}
 
 
+def evaluation_report_payload(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:
+    """Compile a compact owner-facing report without delivering it to a sink."""
+    definitions = _definitions_payload(target_root)
+    definition = _definition_by_id(definitions, evaluation_id)
+    if definition is None:
+        raise WorkspaceUsageError(f"evaluation {evaluation_id!r} is not registered.")
+    summary = evaluation_summary(target_root=target_root, evaluation_id=evaluation_id)["summaries"][0]
+    admission = summary.get("fresh_result_admission") if isinstance(summary.get("fresh_result_admission"), dict) else {}
+    finding_followup = admission.get("finding_followup") if isinstance(admission.get("finding_followup"), dict) else {}
+    meaningful = bool(
+        explicit
+        or (summary.get("conclusion_readiness") if isinstance(summary.get("conclusion_readiness"), dict) else {}).get("ready")
+        or summary.get("contradictions")
+        or finding_followup.get("status") == "unresolved"
+    )
+    return {
+        "kind": "agentic-workspace/evaluation-report/v1",
+        "status": "ready" if meaningful else "not-due",
+        "evaluation_id": evaluation_id,
+        "subject": definition.get("subject", {}),
+        "question": definition.get("question", ""),
+        "coverage": summary.get("coverage", {}),
+        "material_findings": finding_followup.get("unresolved", []),
+        "contradictions": summary.get("contradictions", []),
+        "conclusion": summary.get("conclusion_readiness", {}),
+        "decision_owner": definition.get("decision_owner", {}),
+        "report_sinks": definition.get("report_sinks", []),
+        "recommended_action": definition.get("action_policy", {}),
+        "delivery": "recommendation-only; external delivery requires an adapter receipt",
+    }
+
+
 def evaluation_collection_actions(
     *,
     target_root: Path,
