@@ -30666,6 +30666,20 @@ def _start_tiny_payload_fast(
         payload["task_intent"] = task_intent
         payload["acceptance"] = task_intent["acceptance"]
         payload["durable_intent_promotion"] = task_intent["promotion_guidance"]
+    # Evaluations opt in through structured selectors.  Keep this local import
+    # so the compact startup core remains independent of evaluation lifecycle
+    # mechanics until a repository actually declares an evaluation.
+    from agentic_workspace.evaluation import evaluation_collection_actions
+
+    evaluation_actions = evaluation_collection_actions(
+        target_root=target_root,
+        surface="start",
+        issue_refs=sorted(set(re.findall(r"#\d+", str(task_text or "")))),
+        operation_id="start.context",
+        phase="startup",
+    )
+    if evaluation_actions["status"] == "matched":
+        payload["evaluation_actions"] = evaluation_actions
     read_only_response = _read_only_response_posture_payload(task_text=task_text, changed_paths=changed_paths)
     if read_only_response["status"] == "read-only-reporting":
         payload["read_only_response"] = read_only_response

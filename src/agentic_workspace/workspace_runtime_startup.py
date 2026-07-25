@@ -336,6 +336,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "active_state_summary": payload["active_state_summary"],
         "planning_revision": payload.get("planning_revision", {}),
         "active_plan_reliance": payload.get("active_plan_reliance", {}),
+        **({"evaluation_actions": payload["evaluation_actions"]} if "evaluation_actions" in payload else {}),
         **({"route_decision": _compact_start_route_decision(payload.get("route_decision"))} if payload.get("route_decision") else {}),
         "workflow_sufficiency": payload.get("workflow_sufficiency"),
         **({"planning_safety_gate": payload["planning_safety_gate"]} if "planning_safety_gate" in payload else {}),
@@ -1901,6 +1902,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         if read_only_compact_default
         else payload.get("memory_consult", {}),
     }
+    if isinstance(payload.get("evaluation_actions"), dict) and payload["evaluation_actions"].get("status") == "matched":
+        context["evaluation_actions"] = payload["evaluation_actions"]
     compact_closeout_obligations = _selector_first_closeout_obligations(payload)
     if compact_closeout_obligations:
         context["closeout_obligations"] = compact_closeout_obligations
