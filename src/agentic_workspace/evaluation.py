@@ -1481,6 +1481,29 @@ def evaluation_report_payload(*, target_root: Path, evaluation_id: str, explicit
     }
 
 
+def record_local_evaluation_report_delivery(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:
+    """Record one compact local delivery receipt; external adapters stay optional."""
+    report = evaluation_report_payload(target_root=target_root, evaluation_id=evaluation_id, explicit=explicit)
+    if report["status"] != "ready":
+        return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "not-due", "report": report}
+    identity = hashlib.sha256(
+        json.dumps(
+            {"evaluation_id": evaluation_id, "coverage": report["coverage"], "conclusion": report["conclusion"], "findings": report["material_findings"]},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()[:24]
+    path = target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.report-deliveries.json"
+    previous = _load_json(path, default={"deliveries": []})
+    deliveries = previous.get("deliveries", []) if isinstance(previous.get("deliveries"), list) else []
+    existing = next((item for item in deliveries if isinstance(item, dict) and item.get("identity") == identity), None)
+    if existing:
+        return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "already-delivered", "receipt": existing, "report": report}
+    receipt = {"identity": identity, "status": "delivered-local", "evaluation_id": evaluation_id, "sinks": report["report_sinks"], "delivery": report["delivery"]}
+    _write_json(path, {"deliveries": [*deliveries, receipt]})
+    return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "delivered-local", "receipt": receipt, "report": report}
+
+
 def evaluation_collection_actions(
     *,
     target_root: Path,
