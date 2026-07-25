@@ -281,6 +281,38 @@ def test_system_trigger_reports_failed_ci_and_merge_conflict_for_exact_head() ->
     assert "PR CI or mergeability" in loop._review_prompt(trigger)
 
 
+def test_system_trigger_ignores_a_stale_semver_label_failure_with_later_success() -> None:
+    payload = {
+        "statusCheckRollup": [
+            {
+                "name": "Require semver label for package changes",
+                "conclusion": "FAILURE",
+                "completedAt": "2026-07-20T19:50:00Z",
+            },
+            {
+                "name": "Require semver label for package changes",
+                "conclusion": "SUCCESS",
+                "completedAt": "2026-07-20T19:54:00Z",
+            },
+        ]
+    }
+
+    assert loop._system_trigger(payload, pr=12, head=HEAD_A) is None
+
+
+def test_system_trigger_keeps_non_label_failures_actionable_after_label_success() -> None:
+    payload = {
+        "statusCheckRollup": [
+            {"name": "Require semver label for package changes", "conclusion": "SUCCESS", "completedAt": "2026-07-20T19:54:00Z"},
+            {"name": "workspace-checks", "conclusion": "FAILURE", "completedAt": "2026-07-20T19:55:00Z"},
+        ]
+    }
+
+    trigger = loop._system_trigger(payload, pr=12, head=HEAD_A)
+    assert trigger is not None
+    assert "workspace-checks" in trigger.findings
+
+
 def test_fresh_session_json_requires_one_durable_identity() -> None:
     assert loop._session_id_from_jsonl('{"type":"thread.started","thread_id":"fresh-12"}\n') == "fresh-12"
     with pytest.raises(loop.LoopError, match="did not report one session"):
