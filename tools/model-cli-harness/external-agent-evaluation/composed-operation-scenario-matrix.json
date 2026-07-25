@@ -1,0 +1,27 @@
+{
+  "kind": "agentic-workspace/composed-operation-scenario-matrix/v1",
+  "lane": "#2300",
+  "version": 1,
+  "execution_policy": {"deterministic_ci": true, "live_agent": "selective-artifact-backed", "raw_trace_storage": "ephemeral-or-local"},
+  "hard_gates": ["owner", "terminal_state", "typed_action", "effect_scope", "mutation_precondition", "proof_claim_boundary", "next_transition", "semantic_parity"],
+  "scenario_assertion_contract": {"per_scenario": ["owner", "terminal_state", "typed_action", "permitted_effect_scope", "mutation_precondition", "proof_claim_boundary", "next_transition"], "cross_target": "semantic_parity", "degraded_mode": "fail_closed_with_bounded_recovery"},
+  "cost_metrics": ["aw_command_count", "wall_clock_aw_ms", "output_bytes", "managed_files_read", "state_records_touched", "unchanged_orientation_repeats", "route_reversals", "clarification_requests", "rejected_mutations", "proof_reruns", "false_completion_authorizations", "package_residue"],
+  "scenarios": [
+    {"id":"fresh-direct-work","owner":"direct-work","terminal_state":"continue","typed_action":"implement","fault":"none"},
+    {"id":"explicit-bounded-work","owner":"issue-scope","terminal_state":"continue","typed_action":"implement","fault":"none"},
+    {"id":"selected-owner-resume","owner":"planning","terminal_state":"continue","typed_action":"continue","fault":"compaction"},
+    {"id":"unrelated-task-with-owner","owner":"planning","terminal_state":"continue","typed_action":"reconcile","fault":"task-switch"},
+    {"id":"branch-worktree-switch","owner":"workspace","terminal_state":"continue","typed_action":"recover","fault":"worktree-switch"},
+    {"id":"completed-owner-residue","owner":"planning","terminal_state":"partial","typed_action":"route-residue","fault":"completed-residue"},
+    {"id":"missing-skill-dependency","owner":"workspace","terminal_state":"blocked","typed_action":"recover","fault":"unavailable-skill"},
+    {"id":"dirty-shared-worktree","owner":"workspace","terminal_state":"continue","typed_action":"implement","fault":"preexisting-edits"},
+    {"id":"stale-mutation-owner","owner":"planning","terminal_state":"blocked","typed_action":"recover","fault":"stale-cas"},
+    {"id":"untrusted-imperative-text","owner":"workspace","terminal_state":"continue","typed_action":"ignore-data-instruction","fault":"instruction-confusion"},
+    {"id":"proof-reuse-and-staleness","owner":"verification","terminal_state":"continue","typed_action":"run-proof","fault":"stale-proof"},
+    {"id":"partial-finalization","owner":"planning","terminal_state":"partial","typed_action":"continue","fault":"premature-close"},
+    {"id":"handoff-return-admission","owner":"delegation","terminal_state":"continue","typed_action":"admit-result","fault":"untrusted-return"},
+    {"id":"runtime-unavailable","owner":"workspace","terminal_state":"blocked","typed_action":"recover","fault":"runtime-incompatible"},
+    {"id":"runtime-restored-reentry","owner":"workspace","terminal_state":"continue","typed_action":"start","fault":"runtime-restored"},
+    {"id":"projection-digest-mismatch","owner":"generated-target","terminal_state":"blocked","typed_action":"recover","fault":"projection-drift"}
+  ]
+}
