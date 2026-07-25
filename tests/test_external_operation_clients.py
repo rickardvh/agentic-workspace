@@ -17,6 +17,7 @@ from agentic_workspace import (
     AWClientError,
     detect_workspace,
     external_contract_bundle,
+    external_readiness_report,
     invoke_operation,
     negotiate_requirements,
     operation_compatibility_fingerprint,
@@ -37,6 +38,13 @@ from agentic_workspace.generated_operations import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_external_readiness_report_fails_closed_for_runtime_backed_operations() -> None:
+    report = external_readiness_report(["assignment.export", "does.not.exist"])
+    assert report["status"] in {"ready", "subset-only", "not-ready"}
+    assert report["excluded_operations"]
+    assert report["excluded_operations"][-1]["id"] == "does.not.exist"
 
 
 def _python_client():
