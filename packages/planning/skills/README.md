@@ -12,6 +12,8 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 
 ## Available skills
 
+- `planning-returned-result`
+  - admit or route a returned delegated result through authoritative assignment operations
 - `bootstrap-upgrade`
   - upgrade planning bootstrap files for an already bootstrapped repository safely
 - `planning-autopilot`
