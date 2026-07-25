@@ -16325,9 +16325,9 @@ def _operating_loop_planning_state(
         }
     task_switch = _as_dict(gate.get("task_switch_reconciliation"))
     if (
-        str(gate.get("gate_result") or "") == "active-plan-task-switch"
+        str(gate.get("gate_result") or "") in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
         and gate.get("workflow_sufficient") is True
-        and str(task_switch.get("status") or "") == "active"
+        and str(task_switch.get("status") or "") in {"active", "current-task-route-acknowledged"}
     ):
         return {"state": "unrelated_active_plan", "plan_ref": plan_ref, "blocks_full_closure": False}
     if str(reliance.get("status") or "") not in {"", "no-active-plan", "not-applicable", "clear", "satisfied"}:
