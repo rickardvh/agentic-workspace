@@ -44490,6 +44490,17 @@ def _lifecycle_mutation_summary_payload(
             command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=config.cli_invoke
         )
     )
+    invocation_flags = ["--to-payload-target"]
+    modules = getattr(args, "modules", None)
+    preset = getattr(args, "preset", None)
+    if modules:
+        invocation_flags.extend(["--modules", str(modules)])
+    if preset:
+        invocation_flags.extend(["--preset", str(preset)])
+    if bool(getattr(args, "non_interactive", False)):
+        invocation_flags.append("--non-interactive")
+    if bool(getattr(args, "dry_run", False)):
+        invocation_flags.append("--dry-run")
     select_fields = "changed_count,changed_paths,manual_attention_count,manual_attention_paths"
     return {
         "kind": "agentic-workspace/lifecycle-mutation-summary/v1",
@@ -44509,7 +44520,7 @@ def _lifecycle_mutation_summary_payload(
             ),
             "select": _command_with_cli_invoke(
                 command=(
-                    f"agentic-workspace upgrade --target {target_root.as_posix()} --to-payload-target "
+                    f"agentic-workspace upgrade --target {target_root.as_posix()} {' '.join(invocation_flags)} "
                     f"--select {select_fields} --format json"
                 ),
                 cli_invoke=config.cli_invoke,

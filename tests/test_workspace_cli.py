@@ -4998,30 +4998,19 @@ def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: P
     )
     assert compact_payload["detail_commands"]["select"].endswith(
         f"upgrade --target {tmp_path.as_posix()} --to-payload-target "
-        "--select changed_count,changed_paths,manual_attention_count,manual_attention_paths --format json"
+        "--dry-run --select changed_count,changed_paths,manual_attention_count,manual_attention_paths --format json"
     )
 
-    assert (
-        cli.main(
-            [
-                "upgrade",
-                "--target",
-                str(tmp_path),
-                "--to-payload-target",
-                "--dry-run",
-                "--select",
-                "changed_count,changed_paths,manual_attention_count,manual_attention_paths",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
+    provenance_before_select = provenance_path.read_bytes()
+    detail_command = compact_payload["detail_commands"]["select"]
+    detail_argv = shlex.split(detail_command.split("agentic-workspace ", 1)[1])
+    assert cli.main(detail_argv) == 0
     selected_payload = json.loads(capsys.readouterr().out)
     assert selected_payload["kind"] == "agentic-workspace/selected-output/v1"
     assert selected_payload["values"]["changed_count"] >= 1
     assert ".agentic-workspace/payload-provenance.json" in selected_payload["values"]["changed_paths"]
     assert selected_payload["values"]["manual_attention_count"] == len(selected_payload["values"]["manual_attention_paths"])
+    assert provenance_path.read_bytes() == provenance_before_select
 
     assert cli.main(["upgrade", "--target", str(tmp_path), "--to-payload-target", "--dry-run", "--verbose", "--format", "json"]) == 0
     dry_run_payload = json.loads(capsys.readouterr().out)
