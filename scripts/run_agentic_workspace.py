@@ -137,10 +137,38 @@ def _git_index_entries(*, repo_root: Path, paths: list[str]) -> dict[str, str] |
         fields = metadata.split()
         if len(fields) != 3 or fields[2] != "0":
             return None
-        entries_by_path[indexed_path] = f"{fields[0]} {fields[1]}"
+        entries_by_path[indexed_path] = fields[1]
     if set(entries_by_path) != set(paths):
         return None
     return {path: entries_by_path[path] for path in paths}
+
+
+def _git_worktree_blob_entries(*, repo_root: Path, paths: list[str]) -> dict[str, str] | None:
+    """Return blob identities for the finalized working-tree inputs.
+
+    Generation runs before callers stage its outputs, so an index snapshot at
+    generation time is not a stable witness for the eventual committed tree.
+    Git's content-addressed blob identities are stable across staging, commit,
+    rebase, and merge-ref checkout.
+    """
+
+    if not paths:
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "hash-object", "--stdin-paths"],
+            cwd=repo_root,
+            input="\n".join(paths) + "\n",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    blobs = result.stdout.splitlines()
+    if result.returncode != 0 or len(blobs) != len(paths) or not all(blobs):
+        return None
+    return dict(zip(paths, blobs, strict=True))
 
 
 def _git_index_identity(*, repo_root: Path, paths: list[str]) -> str | None:
@@ -167,7 +195,7 @@ def source_cli_fingerprint_manifest(*, repo_root: Path = REPO_ROOT) -> dict[str,
         "kind": "generated-cli-source-manifest/v1",
         "file_count": len(paths),
         "file_paths": paths,
-        "git_index_entries": _git_index_entries(repo_root=repo_root, paths=paths),
+        "git_index_entries": _git_worktree_blob_entries(repo_root=repo_root, paths=paths),
         "git_index_identity": _git_index_identity(repo_root=repo_root, paths=paths),
         "generation_command": "uv run python scripts/generate/generate_command_packages.py",
     }
