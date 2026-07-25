@@ -29142,6 +29142,10 @@ def _cli_invocation_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "bare_command": DEFAULT_CLI_INVOKE,
         "fallback_when_unavailable": "Use primary from resolved config; config.local.toml [workspace].cli_invoke overrides bare PATH lookup.",
     }
+    payload["compatibility_identity"] = {
+        "status": "configured",
+        "detail_command": "agentic-workspace config --target . --format json",
+    }
     if config.cli_invoke != DEFAULT_CLI_INVOKE:
         payload["stale_bare_command_warning"] = (
             "Do not substitute the bare command for primary; PATH may resolve a stale installed selector outside this repo."
