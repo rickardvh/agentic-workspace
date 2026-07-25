@@ -22,6 +22,17 @@
       "type": "string",
       "minLength": 1
     },
+    "shared_evaluation_observation": {
+      "type": "object",
+      "description": "Optional generic Evaluation projection. The harness remains owner of scenario and rubric detail.",
+      "required": ["evaluation_id", "criterion", "evidence_ref"],
+      "properties": {
+        "evaluation_id": {"type": "string", "minLength": 1},
+        "criterion": {"type": "string", "minLength": 1},
+        "evidence_ref": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": true
+    },
     "mode": {
       "type": "string",
       "minLength": 1
