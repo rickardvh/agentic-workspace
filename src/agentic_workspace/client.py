@@ -47,6 +47,29 @@ def external_consumer_profile() -> dict[str, Any]:
     return json.loads(resource.read_text(encoding="utf-8"))
 
 
+def external_readiness_report(required_operations: Sequence[str]) -> dict[str, Any]:
+    """Report the exact released operation subset an independent consumer may use."""
+    entries = {str(entry.get("id")): entry for entry in external_consumer_profile().get("operations", []) if isinstance(entry, dict)}
+    supported: list[str] = []
+    excluded: list[dict[str, Any]] = []
+    for operation_id in required_operations:
+        entry = entries.get(str(operation_id))
+        status = str((entry or {}).get("external_consumption", {}).get("status") if entry else "unavailable")
+        if status == "supported":
+            supported.append(str(operation_id))
+        else:
+            excluded.append(
+                {"id": str(operation_id), "status": status, "recovery": "negotiate a supported subset; do not reconstruct AW semantics"}
+            )
+    return {
+        "kind": "agentic-workspace/external-readiness-report/v1",
+        "status": "ready" if not excluded else "subset-only" if supported else "not-ready",
+        "supported_operations": supported,
+        "excluded_operations": excluded,
+        "rule": "Runtime-backed and unavailable operations are explicitly excluded from broad adapter-readiness claims.",
+    }
+
+
 def external_contract_bundle() -> dict[str, Any]:
     return json.loads(_resource("external_contract_bundle.json").read_text(encoding="utf-8"))
 
