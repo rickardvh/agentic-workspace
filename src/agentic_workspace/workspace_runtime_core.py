@@ -25,6 +25,7 @@ import time
 import tomllib
 import uuid
 from collections.abc import Callable, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -19169,6 +19170,21 @@ def _architecture_principles_forecast_payload(
 
 _DECISION_POINT_FORECAST_DIR = Path(".agentic-workspace/local/decision-point-intent")
 _DECISION_POINT_SELECTION_FILE = "selection.json"
+_DECISION_POINT_BINDING_CACHE: dict[tuple[str, str], dict[str, Any]] | None = None
+
+
+@contextmanager
+def _decision_point_binding_cache_scope() -> Any:
+    """Cache current-work binding reads for one command projection."""
+
+    global _DECISION_POINT_BINDING_CACHE
+    previous_cache = _DECISION_POINT_BINDING_CACHE
+    if previous_cache is None:
+        _DECISION_POINT_BINDING_CACHE = {}
+    try:
+        yield
+    finally:
+        _DECISION_POINT_BINDING_CACHE = previous_cache
 
 
 def _decision_point_carry_records(*, target_root: Path) -> list[tuple[Path, dict[str, Any]]]:
@@ -19377,6 +19393,10 @@ def _prune_decision_point_carry(*, target_root: Path, key: str, expected_context
 
 
 def _decision_point_binding(*, target_root: Path, task_text: str | None) -> dict[str, Any]:
+    cache = _DECISION_POINT_BINDING_CACHE
+    cache_key = (str(target_root.resolve()), str(task_text or ""))
+    if cache is not None and cache_key in cache:
+        return cache[cache_key]
     context = resolve_current_work_context(root=target_root, task=str(task_text or ""))
     owner_binding = _as_dict(context.get("owner_binding"))
     basis = {
@@ -19386,7 +19406,7 @@ def _decision_point_binding(*, target_root: Path, task_text: str | None) -> dict
         "thread_id": context.get("thread_id", ""),
         "relation": owner_binding.get("relation", "ambiguous"),
     }
-    return {
+    binding = {
         **basis,
         "context_id": context.get("id", ""),
         "status": context.get("status", "unknown"),
@@ -19395,6 +19415,9 @@ def _decision_point_binding(*, target_root: Path, task_text: str | None) -> dict
         "owner_binding": owner_binding,
         "key": hashlib.sha256(json.dumps(basis, sort_keys=True).encode()).hexdigest()[:16],
     }
+    if cache is not None:
+        cache[cache_key] = binding
+    return binding
 
 
 def _persist_decision_point_forecast(
@@ -38249,7 +38272,35 @@ def _capability_structural_hints(capability: Any) -> tuple[str, str]:
     return str(work_shape), str(proof_burden)
 
 
+_PLANNING_REVISION_PAYLOAD_CACHE: dict[str, dict[str, Any]] | None = None
+
+
+@contextmanager
+def _planning_revision_payload_cache_scope() -> Any:
+    """Cache Planning revision reads for one bounded command projection.
+
+    The Planning revision walks and hashes checked-in Planning state. Several
+    compact runtime projections need the same immutable read during one command
+    invocation, but callers and tests can run multiple CLI commands in the same
+    Python process. Keep caching opt-in and scoped so separate commands still
+    observe fresh state.
+    """
+
+    global _PLANNING_REVISION_PAYLOAD_CACHE
+    previous_cache = _PLANNING_REVISION_PAYLOAD_CACHE
+    if previous_cache is None:
+        _PLANNING_REVISION_PAYLOAD_CACHE = {}
+    try:
+        yield
+    finally:
+        _PLANNING_REVISION_PAYLOAD_CACHE = previous_cache
+
+
 def _planning_revision_payload(*, target_root: Path) -> dict[str, Any]:
+    cache = _PLANNING_REVISION_PAYLOAD_CACHE
+    cache_key = str(target_root.resolve()) if cache is not None else ""
+    if cache is not None and cache_key in cache:
+        return cache[cache_key]
     try:
         from repo_planning_bootstrap.installer import planning_revision
 
@@ -38263,6 +38314,8 @@ def _planning_revision_payload(*, target_root: Path) -> dict[str, Any]:
             "rule": "Planning revision is unavailable; rerun a Planning read surface before active-plan-sensitive mutation.",
         }
     revision.setdefault("status", "observed")
+    if cache is not None:
+        cache[cache_key] = revision
     return revision
 
 
@@ -46411,7 +46464,13 @@ def _selector_requests_architecture_principles(select: str | None) -> bool:
 
 
 def _selector_requests_plan_delegation_packet(select: str | None) -> bool:
-    return any(token == "plan_delegation_packet" or token.startswith("plan_delegation_packet.") for token in _selector_tokens(select))
+    return any(
+        token == "plan_delegation_packet"
+        or token.startswith("plan_delegation_packet.")
+        or token == "context.plan_delegation_packet"
+        or token.startswith("context.plan_delegation_packet.")
+        for token in _selector_tokens(select)
+    )
 
 
 def _selector_requests_test_strategy_check(select: str | None) -> bool:

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -34,6 +36,37 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _write_source_cli_fingerprint_manifest() -> None:
+    """Publish the generator-owned cold-start freshness witness.
+
+    The launcher accepts it when the manifest's exact Git-tracked inputs are
+    unchanged; unrelated worktree edits do not force a full content scan.
+    """
+
+    launcher_path = REPO_ROOT / "scripts" / "run_agentic_workspace.py"
+    spec = importlib.util.spec_from_file_location("run_agentic_workspace", launcher_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Unable to load launcher from {launcher_path}")
+    launcher = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(launcher)
+    manifest = launcher.source_cli_fingerprint_manifest(repo_root=REPO_ROOT)
+    launcher.SOURCE_MANIFEST_PATH.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _source_cli_fingerprint_manifest_is_current() -> bool:
+    launcher_path = REPO_ROOT / "scripts" / "run_agentic_workspace.py"
+    spec = importlib.util.spec_from_file_location("run_agentic_workspace", launcher_path)
+    if spec is None or spec.loader is None:
+        return False
+    launcher = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(launcher)
+    try:
+        actual = json.loads(launcher.SOURCE_MANIFEST_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return actual == launcher.source_cli_fingerprint_manifest(repo_root=REPO_ROOT)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     stale_outputs = generate_workspace_command_packages(repo_root=REPO_ROOT, check=bool(args.check))
@@ -48,7 +81,12 @@ def main(argv: list[str] | None = None) -> int:
                 else:
                     print(f"{output} is stale; regenerate command packages.")
             return 1
+        if not _source_cli_fingerprint_manifest_is_current():
+            print("generated/.agentic-workspace-cli-fingerprint.json is stale; regenerate command packages.")
+            return 1
         print("[ok] generated command packages")
+    else:
+        _write_source_cli_fingerprint_manifest()
     return 0
 
 

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Reduce broad implement changed-path first-decision latency by deferring expensive diagnostics behind explicit selectors."

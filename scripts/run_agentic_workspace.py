@@ -13,6 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CACHE_PATH = REPO_ROOT / ".agentic-workspace" / "local" / "cache" / "generated-cli-fingerprint.json"
+SOURCE_MANIFEST_PATH = REPO_ROOT / "generated" / ".agentic-workspace-cli-fingerprint.json"
 GENERATOR_SCRIPT = REPO_ROOT / "scripts" / "generate" / "generate_command_packages.py"
 CACHE_SCHEMA = "generated-cli-fingerprint/v1"
 
@@ -41,15 +42,19 @@ def _fingerprint_files(*, repo_root: Path) -> list[Path]:
     for pattern in FINGERPRINT_PATTERNS:
         for path in repo_root.glob(pattern):
             if path.is_file() and "__pycache__" not in path.parts:
-                files[_repo_relative(path, repo_root=repo_root)] = path
+                relative = _repo_relative(path, repo_root=repo_root)
+                if relative != "generated/.agentic-workspace-cli-fingerprint.json":
+                    files[relative] = path
     return [files[relative] for relative in sorted(files)]
 
 
 def compute_generated_cli_fingerprint(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
     digest = hashlib.sha256()
     files = _fingerprint_files(repo_root=repo_root)
+    relative_paths: list[str] = []
     for path in files:
         relative = _repo_relative(path, repo_root=repo_root)
+        relative_paths.append(relative)
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
         digest.update(path.read_bytes())
@@ -59,10 +64,11 @@ def compute_generated_cli_fingerprint(*, repo_root: Path = REPO_ROOT) -> dict[st
         "algorithm": "sha256",
         "fingerprint": digest.hexdigest(),
         "file_count": len(files),
+        "file_paths": relative_paths,
     }
 
 
-def _read_cached_fingerprint(*, cache_path: Path = CACHE_PATH) -> str | None:
+def _read_cached_fingerprint_payload(*, cache_path: Path = CACHE_PATH) -> dict[str, object] | None:
     if not cache_path.is_file():
         return None
     try:
@@ -71,8 +77,179 @@ def _read_cached_fingerprint(*, cache_path: Path = CACHE_PATH) -> str | None:
         return None
     if not isinstance(payload, dict) or payload.get("schema") != CACHE_SCHEMA:
         return None
+    return payload
+
+
+def _read_cached_fingerprint(*, cache_path: Path = CACHE_PATH) -> str | None:
+    payload = _read_cached_fingerprint_payload(cache_path=cache_path)
+    if payload is None:
+        return None
     fingerprint = payload.get("fingerprint")
     return fingerprint if isinstance(fingerprint, str) and fingerprint else None
+
+
+def _git_input_paths_are_unmodified(*, repo_root: Path, paths: list[str]) -> bool:
+    """Return whether the manifest's exact inputs are clean in the worktree.
+
+    Unrelated local edits must not discard a source-owned freshness witness.
+    Git is queried once without the 1,000+ path argv payload (which exceeds
+    Windows' process limit), then porcelain records are filtered locally. A
+    dirty relevant input, staged change, deletion, rename, or untracked
+    replacement still fails closed.
+    """
+
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return False
+    if result.returncode != 0:
+        return False
+    expected = set(paths)
+    records = iter(result.stdout.split("\0"))
+    for record in records:
+        if not record:
+            continue
+        if len(record) < 4 or record[2] != " ":
+            return False
+        status, path = record[:2], record[3:]
+        if path in expected:
+            return False
+        if "R" in status or "C" in status:
+            try:
+                original_path = next(records)
+            except StopIteration:
+                return False
+            if original_path in expected:
+                return False
+    return True
+
+
+def _git_index_entries(*, repo_root: Path, paths: list[str]) -> dict[str, str] | None:
+    """Return stage-zero Git index entries for exactly the fingerprint inputs."""
+
+    if not paths:
+        return None
+    try:
+        result = subprocess.run(
+            # Windows process creation cannot carry the 1,000+ exact paths as
+            # arguments. Read the index once and retain only the manifest set;
+            # this is still metadata-only and never reads source contents.
+            ["git", "ls-files", "-s", "-z"],
+            cwd=repo_root,
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    entries_by_path: dict[str, str] = {}
+    for raw_entry in result.stdout.split(b"\0"):
+        if not raw_entry:
+            continue
+        entry = raw_entry.decode("utf-8")
+        try:
+            metadata, indexed_path = entry.split("\t", 1)
+        except ValueError:
+            return None
+        fields = metadata.split()
+        if len(fields) != 3 or fields[2] != "0":
+            return None
+        entries_by_path[indexed_path] = fields[1]
+    if not set(paths).issubset(entries_by_path):
+        return None
+    return {path: entries_by_path[path] for path in paths}
+
+
+def _git_index_identity(*, repo_root: Path, paths: list[str]) -> str | None:
+    """Return a stable digest of exact, stage-zero fingerprint input entries."""
+
+    entries_by_path = _git_index_entries(repo_root=repo_root, paths=paths)
+    if entries_by_path is None:
+        return None
+    digest = hashlib.sha256()
+    for expected_path in paths:
+        digest.update(expected_path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(entries_by_path[expected_path].encode("utf-8"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def source_cli_fingerprint_manifest(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
+    """Build the checked-in freshness witness from exact inputs and Git index."""
+
+    paths = [_repo_relative(path, repo_root=repo_root) for path in _fingerprint_files(repo_root=repo_root)]
+    return {
+        "schema": CACHE_SCHEMA,
+        "kind": "generated-cli-source-manifest/v1",
+        "file_count": len(paths),
+        "file_paths": paths,
+        "git_index_entries": _git_index_entries(repo_root=repo_root, paths=paths),
+        "git_index_identity": _git_index_identity(repo_root=repo_root, paths=paths),
+        "generation_command": "uv run python scripts/generate/generate_command_packages.py",
+    }
+
+
+def _source_manifest_is_trustworthy(*, repo_root: Path) -> bool:
+    """Use a manifest when its exact inputs are unchanged and index-bound."""
+
+    source_manifest = repo_root / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    payload = _read_cached_fingerprint_payload(cache_path=source_manifest)
+    if payload is None:
+        return False
+    paths = payload.get("file_paths")
+    expected_entries = payload.get("git_index_entries")
+    expected_identity = payload.get("git_index_identity")
+    if (
+        not isinstance(paths, list)
+        or not all(isinstance(path, str) for path in paths)
+        or not isinstance(expected_entries, dict)
+        or set(expected_entries) != set(paths)
+        or not all(isinstance(entry, str) and entry for entry in expected_entries.values())
+        or not isinstance(expected_identity, str)
+        or not expected_identity
+    ):
+        return False
+    current_paths = [_repo_relative(path, repo_root=repo_root) for path in _fingerprint_files(repo_root=repo_root)]
+    if current_paths != paths:
+        return False
+    if not _git_input_paths_are_unmodified(repo_root=repo_root, paths=paths):
+        return False
+    return (
+        _git_index_entries(repo_root=repo_root, paths=paths) == expected_entries
+        and _git_index_identity(repo_root=repo_root, paths=paths) == expected_identity
+    )
+
+
+def _cached_fingerprint_manifest_is_fresh(*, repo_root: Path, cache_path: Path) -> bool:
+    payload = _read_cached_fingerprint_payload(cache_path=cache_path)
+    if payload is None:
+        return False
+    cached_paths = payload.get("file_paths")
+    if not isinstance(cached_paths, list) or not all(isinstance(path, str) for path in cached_paths):
+        return False
+    current_files = _fingerprint_files(repo_root=repo_root)
+    current_paths = [_repo_relative(path, repo_root=repo_root) for path in current_files]
+    if current_paths != cached_paths:
+        return False
+    try:
+        cache_mtime_ns = cache_path.stat().st_mtime_ns
+    except OSError:
+        return False
+    for path in current_files:
+        try:
+            if path.stat().st_mtime_ns > cache_mtime_ns:
+                return False
+        except OSError:
+            return False
+    return True
 
 
 def _replace_cache_file_with_retries(
@@ -134,9 +311,13 @@ def ensure_generated_cli_current(
 ) -> bool:
     effective_cache = cache_path or repo_root / ".agentic-workspace" / "local" / "cache" / "generated-cli-fingerprint.json"
     effective_generator = generator_script or repo_root / "scripts" / "generate" / "generate_command_packages.py"
+    force = os.environ.get("AW_FORCE_GENERATED_CLI_REFRESH") == "1"
+    if not force and _cached_fingerprint_manifest_is_fresh(repo_root=repo_root, cache_path=effective_cache):
+        return False
+    if not force and _source_manifest_is_trustworthy(repo_root=repo_root):
+        return False
     before = compute_generated_cli_fingerprint(repo_root=repo_root)
     cached = _read_cached_fingerprint(cache_path=effective_cache)
-    force = os.environ.get("AW_FORCE_GENERATED_CLI_REFRESH") == "1"
     if not force and cached == before["fingerprint"]:
         return False
 

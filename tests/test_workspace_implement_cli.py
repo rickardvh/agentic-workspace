@@ -5,6 +5,7 @@ import shlex
 
 from tests.workspace_cli_support import *
 
+from agentic_workspace import authority_envelope
 from agentic_workspace.authority_envelope import (
     admit_live_mutation_boundary,
     admit_mutation_boundary,
@@ -3162,6 +3163,357 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
     assert "change_impact" in payload["drill_down"]["available_selectors"]
     assert "routine_work_context" in payload["drill_down"]["available_selectors"]
     assert "generated_surface_trust" in payload["drill_down"]["available_selectors"]
+
+
+def test_implement_broad_runtime_scope_returns_authoritative_deferred_decision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "contracts" / "operations.json", "{}\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_placeholder():\n    assert True\n")
+    proof_call_count = 0
+    original_proof_selection = workspace_runtime_implement._proof_selection_for_changed_paths
+
+    def counted_proof_selection(**kwargs: object) -> dict[str, object]:
+        nonlocal proof_call_count
+        proof_call_count += 1
+        assert kwargs.get("include_runtime_diagnostics") is False
+        assert kwargs.get("include_test_strategy_check") is False
+        return original_proof_selection(**kwargs)
+
+    def fail_expensive_test_strategy(**_: object) -> dict[str, object]:
+        raise AssertionError("broad default tiny implement should not build test strategy detail")
+
+    def fail_runtime_symbol_working_set(*_: object, **__: object) -> dict[str, object]:
+        raise AssertionError("broad default tiny implement should not build runtime symbol detail")
+
+    def fail_runtime_source_review(*_: object, **__: object) -> dict[str, object]:
+        raise AssertionError("broad default tiny implement should not build runtime source detail")
+
+    monkeypatch.setattr(workspace_runtime_implement, "_proof_selection_for_changed_paths", counted_proof_selection)
+    monkeypatch.setattr(workspace_runtime_implement, "_test_strategy_check_payload", fail_expensive_test_strategy)
+    monkeypatch.setattr(workspace_runtime_proof, "runtime_symbol_working_set_for_changed_paths", fail_runtime_symbol_working_set)
+    monkeypatch.setattr(workspace_runtime_proof, "runtime_source_edit_review_for_changed_paths", fail_runtime_source_review)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--changed",
+                "src/agentic_workspace/contracts/operations.json",
+                "--changed",
+                "tests/test_workspace_proof_cli.py",
+                "--task",
+                "Measure broad implement latency.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["kind"] == "implementer-context-tiny/v1"
+    assert payload["next"]["status"] == "changed-path-context"
+    assert payload["context"]["planning_safety_gate"]["workflow_sufficient"] is True
+    assert payload["context"]["delegation_decision"]["recommended_route"] == "manual-handoff"
+    assert payload["action_signals"]["implementation_allowed"] is True
+    assert payload["action_signals"]["hard_blockers"] == []
+    assert payload["decision_packet"]["next_action"] == payload["next"]["action"]
+    assert proof_call_count == 1
+    assert payload["proof"]["runtime_symbol_working_set"]["status"] == "selector-backed"
+    assert payload["proof"]["runtime_source_edit_review"]["status"] == "selector-backed"
+    assert payload["context"]["test_strategy_check"]["status"] == "selector-backed"
+    assert "proof.runtime_symbol_working_set" in payload["drill_down"]["available_selectors"]
+    assert "test_strategy_check" in payload["drill_down"]["available_selectors"]
+    _assert_json_payload_under(payload, 48_000, label="broad implement authoritative deferred payload", sort_keys=False)
+
+
+def _run_broad_implement_for_review_parity(
+    tmp_path: Path, capsys, *, task: str, extra_args: list[str] | None = None, verbose: bool = False
+) -> dict[str, object]:
+    args = [
+        "implement",
+        "--target",
+        str(tmp_path),
+        "--changed",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "--changed",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "--changed",
+        "src/agentic_workspace/contracts/operations.json",
+        "--changed",
+        "tests/test_workspace_proof_cli.py",
+        "--task",
+        task,
+    ]
+    if extra_args:
+        args.extend(extra_args)
+    if verbose:
+        args.append("--verbose")
+    args.extend(["--format", "json"])
+    assert cli.main(args) == 0
+    return json.loads(capsys.readouterr().out)
+
+
+def _write_broad_implement_review_fixture(tmp_path: Path) -> None:
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "contracts" / "operations.json", "{}\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_placeholder():\n    assert True\n")
+
+
+def test_broad_deferred_implement_matches_ordinary_direct_work_authority(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_broad_implement_review_fixture(tmp_path)
+    task = "Measure broad implement latency."
+
+    broad = _run_broad_implement_for_review_parity(tmp_path, capsys, task=task)
+    monkeypatch.setattr(workspace_runtime_implement, "_broad_implement_early_decision_required", lambda changed_paths: False)
+    ordinary = _run_broad_implement_for_review_parity(tmp_path, capsys, task=task)
+
+    assert broad["next"]["action"] == ordinary["next"]["action"]
+    assert broad["action_signals"]["implementation_allowed"] == ordinary["action_signals"]["implementation_allowed"] is True
+    assert broad["action_signals"]["hard_blockers"] == ordinary["action_signals"]["hard_blockers"] == []
+    assert broad["decision_packet"]["claim_boundary"] == ordinary["decision_packet"]["claim_boundary"]
+    assert broad["context"]["planning_safety_gate"]["gate_result"] == ordinary["context"]["planning_safety_gate"]["gate_result"]
+    assert broad["context"]["planning_safety_gate"]["implementation_allowed"] is True
+    assert broad["proof"]["runtime_symbol_working_set"]["status"] == "selector-backed"
+    assert ordinary["proof"].get("runtime_symbol_working_set", {}).get("status") != "selector-backed"
+
+
+def test_broad_deferred_implement_preserves_required_assignment_handoff(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_broad_implement_review_fixture(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[runtime]",
+                "strong_planner_available = true",
+                "",
+                "[delegation]",
+                'assignment_policy = "required-best-fit"',
+                'current_target = "planner"',
+                'mode = "manual"',
+                'manual_transport_policy = "allowed"',
+                "",
+                "[delegation_targets.planner]",
+                'strength = "strong"',
+                'location = "local"',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
+                'execution_methods = ["manual"]',
+            ]
+        ),
+    )
+    task = "update delegation config schema"
+
+    broad = _run_broad_implement_for_review_parity(tmp_path, capsys, task=task)
+    monkeypatch.setattr(workspace_runtime_implement, "_broad_implement_early_decision_required", lambda changed_paths: False)
+    ordinary = _run_broad_implement_for_review_parity(tmp_path, capsys, task=task)
+
+    assert broad["next"]["action"] == ordinary["next"]["action"] == "prepare-assigned-handoff"
+    assert broad["action_signals"]["implementation_allowed"] == ordinary["action_signals"]["implementation_allowed"] is False
+    assert broad["action_signals"]["hard_blockers"] == ordinary["action_signals"]["hard_blockers"] == ["handoff-required"]
+    assert broad["context"]["delegation_decision"]["required_next_action"] == "prepare-assigned-handoff"
+    assert broad["context"]["delegation_decision"]["recommended_route"] == "assignment-handoff-required"
+
+
+def test_broad_deferred_implement_preserves_stale_startup_route_rebind(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_broad_implement_review_fixture(tmp_path)
+    original_principles = workspace_runtime_implement._architecture_principles_payload
+
+    def matched_principles(*args: object, **kwargs: object) -> dict[str, object]:
+        packet = dict(original_principles(*args, **kwargs))
+        packet["matched_count"] = 1
+        packet["matched_principles"] = [{"id": "selector-next-parity", "summary": "Exercise stale startup route checks."}]
+        return packet
+
+    def route_identity(*, root: Path, task: str) -> dict[str, object]:
+        return {"fingerprint": "actual-fingerprint", "observed": {"head": "new"}}
+
+    def fingerprint_check(*, expected_fingerprint: str, root: Path, task: str) -> dict[str, object]:
+        return {
+            "status": "mismatch",
+            "expected": expected_fingerprint,
+            "actual": {"fingerprint": "actual-fingerprint", "observed": {"head": "new"}},
+        }
+
+    monkeypatch.setattr(workspace_runtime_implement, "_architecture_principles_payload", matched_principles)
+    monkeypatch.setattr(workspace_runtime_implement, "startup_route_identity", route_identity)
+    monkeypatch.setattr(workspace_runtime_implement, "startup_route_fingerprint_check", fingerprint_check)
+    task = "Update runtime architecture contracts"
+
+    broad = _run_broad_implement_for_review_parity(
+        tmp_path, capsys, task=task, extra_args=["--startup-route-fingerprint", "stale-fingerprint"]
+    )
+    monkeypatch.setattr(workspace_runtime_implement, "_broad_implement_early_decision_required", lambda changed_paths: False)
+    ordinary = _run_broad_implement_for_review_parity(
+        tmp_path, capsys, task=task, extra_args=["--startup-route-fingerprint", "stale-fingerprint"]
+    )
+
+    assert broad["next"]["action"] == ordinary["next"]["action"]
+    assert broad["next"]["action"].startswith("Rerun start")
+    assert broad["action_signals"]["implementation_allowed"] == ordinary["action_signals"]["implementation_allowed"] is False
+    assert broad["action_signals"]["hard_blockers"] == ordinary["action_signals"]["hard_blockers"] == ["stale-startup-route"]
+    assert broad["context"]["architecture_principles"]["matched_count"] == 1
+    assert ordinary["context"]["architecture_principles"]["matched_count"] == 1
+    assert broad["startup_route_rebind"]["status"] == ordinary["startup_route_rebind"]["status"] == "stale-projection-rejected"
+
+
+def test_broad_deferred_implement_preserves_failed_git_observation_authority(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    _init_git_repo(tmp_path)
+    _write_broad_implement_review_fixture(tmp_path)
+    original_git_observation = authority_envelope._git_observation
+
+    def failed_head_observation(target_root: Path, *args: str, text: bool = True) -> dict[str, object]:
+        if args == ("rev-parse", "HEAD"):
+            return {
+                "ok": False,
+                "command": ["git", *args],
+                "exit_code": 128,
+                "stdout": "" if text else b"",
+                "stderr": "fatal: test head failure",
+                "error": "CalledProcessError",
+            }
+        return original_git_observation(target_root, *args, text=text)
+
+    monkeypatch.setattr(authority_envelope, "_git_observation", failed_head_observation)
+    task = "Update runtime contracts"
+
+    broad = _run_broad_implement_for_review_parity(tmp_path, capsys, task=task, verbose=True)
+    monkeypatch.setattr(workspace_runtime_implement, "_broad_implement_early_decision_required", lambda changed_paths: False)
+    ordinary = _run_broad_implement_for_review_parity(tmp_path, capsys, task=task, verbose=True)
+
+    assert broad["authority_envelope"]["mutation_baseline"]["status"] == "baseline-observation-failed"
+    assert ordinary["authority_envelope"]["mutation_baseline"]["status"] == "baseline-observation-failed"
+    assert broad["next_allowed_action"] == ordinary["next_allowed_action"]
+    assert broad["planning_safety_gate"]["implementation_allowed"] == ordinary["planning_safety_gate"]["implementation_allowed"]
+
+
+def test_broad_deferred_implement_preserves_planning_archive_residue_authority(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    _init_git_repo(tmp_path)
+    _write_broad_implement_review_fixture(tmp_path)
+    closeout_path = ".agentic-workspace/planning/closeout-evidence/partial-slice.closeout.json"
+    state_path = ".agentic-workspace/planning/state.toml"
+    _write(
+        tmp_path / closeout_path,
+        json.dumps(
+            {
+                "kind": "planning-closeout-evidence/v1",
+                "status": "completed",
+                "subject": "partial-slice",
+                "closeout": {"closeout scope": "slice"},
+            }
+        ),
+    )
+    _write(tmp_path / state_path, "schema_version = 1\n[todo]\nactive_items = []\n")
+    task = "Publish planning closeout evidence"
+    changed_paths = [
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/contracts/operations.json",
+        "tests/test_workspace_proof_cli.py",
+        closeout_path,
+    ]
+
+    def run(paths: list[str]) -> dict[str, object]:
+        args = ["implement", "--target", str(tmp_path)]
+        for path in paths:
+            args.extend(["--changed", path])
+        args.extend(["--task", task, "--format", "json"])
+        assert cli.main(args) == 0
+        return json.loads(capsys.readouterr().out)
+
+    broad = run(changed_paths)
+    monkeypatch.setattr(workspace_runtime_implement, "_broad_implement_early_decision_required", lambda paths: False)
+    ordinary = run(changed_paths)
+
+    assert broad["context"]["planning_safety_gate"]["gate_result"] == ordinary["context"]["planning_safety_gate"]["gate_result"]
+    assert (
+        broad["context"]["planning_safety_gate"]["required_next_action"]
+        == ordinary["context"]["planning_safety_gate"]["required_next_action"]
+    )
+    assert broad["action_signals"]["implementation_allowed"] == ordinary["action_signals"]["implementation_allowed"]
+
+
+def test_broad_deferred_implement_reuses_authoritative_observations_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    import repo_planning_bootstrap.installer as planning_installer
+
+    _init_git_repo(tmp_path)
+    _write_broad_implement_review_fixture(tmp_path)
+    original_planning_revision = planning_installer.planning_revision
+    original_git_observation = authority_envelope._git_observation
+    planning_call_count = 0
+    git_call_counts: dict[tuple[tuple[str, ...], bool], int] = {}
+
+    def counted_planning_revision(target_root: Path) -> dict[str, object]:
+        nonlocal planning_call_count
+        planning_call_count += 1
+        return original_planning_revision(target_root)
+
+    def counted_git_observation(target_root: Path, *args: str, text: bool = True) -> dict[str, object]:
+        key = (tuple(args), text)
+        git_call_counts[key] = git_call_counts.get(key, 0) + 1
+        return original_git_observation(target_root, *args, text=text)
+
+    monkeypatch.setattr(planning_installer, "planning_revision", counted_planning_revision)
+    monkeypatch.setattr(authority_envelope, "_git_observation", counted_git_observation)
+
+    payload = _run_broad_implement_for_review_parity(tmp_path, capsys, task="Update runtime contracts")
+
+    assert payload["proof"]["runtime_symbol_working_set"]["status"] == "selector-backed"
+    assert payload["proof"]["runtime_source_edit_review"]["status"] == "selector-backed"
+    assert payload["context"]["test_strategy_check"]["status"] == "selector-backed"
+    assert planning_call_count <= 1
+    assert all(count <= 1 for count in git_call_counts.values())
+
+
+def test_implement_accepts_runtime_symbol_working_set_selector(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "def changed_symbol():\n    return 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--select",
+                "proof.runtime_symbol_working_set",
+                "--task",
+                "Inspect runtime symbol detail.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["source_command"] == "implement"
+    assert payload.get("status") != "invalid-selector"
 
 
 def test_implement_tiny_profile_surfaces_manual_verification_obligations(tmp_path: Path, capsys) -> None:

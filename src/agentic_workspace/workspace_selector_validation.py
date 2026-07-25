@@ -62,6 +62,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "proof.proof_route_strategy_claim_gate",
         "proof_route_strategy_consumer_gate",
         "proof.runtime_source_edit_review",
+        "proof.runtime_symbol_working_set",
         "proof_route_strategy_preservation",
         "context",
         "context.delegation_decision",
@@ -251,69 +252,71 @@ _DEPRECATED_SELECTOR_REPLACEMENTS_BY_COMMAND: dict[str, dict[str, str]] = {
 }
 
 
-def _selector_tokens(select: str | None) -> list[str]:
+def _selector_tokens(select: Any) -> list[str]:
     tokens, _ = _selector_request(select=select, source_command="")
     return tokens
 
 
-def _selector_request(*, select: str | None, source_command: str) -> tuple[list[str], dict[str, Any] | None]:
+def _selector_request(*, select: Any, source_command: str) -> tuple[list[str], dict[str, Any] | None]:
     if not select:
         return ([], None)
     tokens: list[str] = []
     seen: set[str] = set()
     requested_count = 0
     selector_request_bytes = 0
-    for raw in str(select).split(","):
-        token = raw.strip()
-        if not token:
-            continue
-        requested_count += 1
-        token_bytes = len(token.encode("utf-8", errors="replace"))
-        if requested_count > _MAX_SELECTOR_COUNT:
-            return (
-                tokens,
-                _selector_request_validation_error(
-                    source_command=source_command,
-                    reason="too-many-selectors",
-                    selectors=tokens,
-                    requested_selector_count=requested_count,
-                    selector_request_bytes=selector_request_bytes,
-                    selector_index=requested_count - 1,
-                    offending_selector=token,
-                ),
-            )
-        if token_bytes > _MAX_SELECTOR_BYTES:
-            return (
-                tokens,
-                _selector_request_validation_error(
-                    source_command=source_command,
-                    reason="selector-too-long",
-                    selectors=tokens,
-                    requested_selector_count=requested_count,
-                    selector_request_bytes=selector_request_bytes + token_bytes,
-                    selector_index=requested_count - 1,
-                    selector_bytes=token_bytes,
-                    offending_selector=token,
-                ),
-            )
-        if selector_request_bytes + token_bytes > _MAX_SELECTOR_REQUEST_BYTES:
-            return (
-                tokens,
-                _selector_request_validation_error(
-                    source_command=source_command,
-                    reason="selector-request-too-large",
-                    selectors=tokens,
-                    requested_selector_count=requested_count,
-                    selector_request_bytes=selector_request_bytes + token_bytes,
-                    selector_index=requested_count - 1,
-                    offending_selector=token,
-                ),
-            )
-        selector_request_bytes += token_bytes
-        if token in seen:
-            continue
-        tokens.append(token)
-        seen.add(token)
+    raw_selectors = select if isinstance(select, (list, tuple, set)) else [select]
+    for raw_selector in raw_selectors:
+        for raw in str(raw_selector).split(","):
+            token = raw.strip()
+            if not token:
+                continue
+            requested_count += 1
+            token_bytes = len(token.encode("utf-8", errors="replace"))
+            if requested_count > _MAX_SELECTOR_COUNT:
+                return (
+                    tokens,
+                    _selector_request_validation_error(
+                        source_command=source_command,
+                        reason="too-many-selectors",
+                        selectors=tokens,
+                        requested_selector_count=requested_count,
+                        selector_request_bytes=selector_request_bytes,
+                        selector_index=requested_count - 1,
+                        offending_selector=token,
+                    ),
+                )
+            if token_bytes > _MAX_SELECTOR_BYTES:
+                return (
+                    tokens,
+                    _selector_request_validation_error(
+                        source_command=source_command,
+                        reason="selector-too-long",
+                        selectors=tokens,
+                        requested_selector_count=requested_count,
+                        selector_request_bytes=selector_request_bytes + token_bytes,
+                        selector_index=requested_count - 1,
+                        selector_bytes=token_bytes,
+                        offending_selector=token,
+                    ),
+                )
+            if selector_request_bytes + token_bytes > _MAX_SELECTOR_REQUEST_BYTES:
+                return (
+                    tokens,
+                    _selector_request_validation_error(
+                        source_command=source_command,
+                        reason="selector-request-too-large",
+                        selectors=tokens,
+                        requested_selector_count=requested_count,
+                        selector_request_bytes=selector_request_bytes + token_bytes,
+                        selector_index=requested_count - 1,
+                        offending_selector=token,
+                    ),
+                )
+            selector_request_bytes += token_bytes
+            if token in seen:
+                continue
+            tokens.append(token)
+            seen.add(token)
     return (tokens, None)
 
 
