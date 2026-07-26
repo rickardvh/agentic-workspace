@@ -2415,16 +2415,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         }
         selected["drill_down"]["omitted_detail"] = {
             "selectors": [
-                "planning_safety_gate",
-                "active_state_summary",
                 "work_threads",
-                "installed_state_compatibility",
-                "installed_state_drift_triage",
                 "memory_decision_packet",
-                "architecture_principles_forecast",
-                "drill_down.selector_inventory",
             ],
-            "rule": "Reflection/reporting defaults stay decision-first; exact selectors expose omitted diagnostics.",
         }
     task_posture_packet = payload.get("task_posture_packet", {})
     if isinstance(task_posture_packet, dict) and task_posture_packet:
@@ -2450,20 +2443,25 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     )
     # Keep the compact communication contract complete even when the larger
     # state-delta packets are deliberately omitted from low-risk startup.
-    selected["message_economy"] = message_economy_payload(
-        surface="startup",
-        communication_contract=compact_communication_contract_payload(surface="startup"),
-        state_delta_core=state_delta_core,
-    )
-    selected["current_decision"] = current_decision_payload(
-        surface="startup",
-        decision_packet=selected["decision_packet"],
-        state_delta_core=state_delta_core,
-    )
-    selected["evidence_bundle"] = evidence_bundle_payload(
-        surface="startup", current_decision=selected["current_decision"], state_delta_core=state_delta_core
-    )
-    if show_state_delta_packets:
+    # The smallest-workflow prompt is the ordinary first-contact surface.  It
+    # carries the state-delta trio; active-plan routes already expose their
+    # compact routing decision and keep the larger trio selector-addressable.
+    include_state_delta_packets = next_safe_action.get("next_safe_action") == "choose-smallest-workflow-shape"
+    if include_state_delta_packets:
+        selected["message_economy"] = message_economy_payload(
+            surface="startup",
+            communication_contract=compact_communication_contract_payload(surface="startup"),
+            state_delta_core=state_delta_core,
+        )
+        selected["current_decision"] = current_decision_payload(
+            surface="startup",
+            decision_packet=selected["decision_packet"],
+            state_delta_core=state_delta_core,
+        )
+        selected["evidence_bundle"] = evidence_bundle_payload(
+            surface="startup", current_decision=selected["current_decision"], state_delta_core=state_delta_core
+        )
+    if show_state_delta_packets and include_state_delta_packets:
         continuation_answers = (
             payload.get("continuation_view", {}).get("answers", {}) if isinstance(payload.get("continuation_view"), dict) else {}
         )
@@ -2555,10 +2553,27 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     maintainer_mode = payload.get("maintainer_mode", {})
     if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
         context["maintainer_mode"] = maintainer_mode
-    if not show_state_delta_packets:
+    if not show_state_delta_packets and next_safe_action.get("next_safe_action") == "choose-smallest-workflow-shape":
         # The compact current-decision packet retains the decision-facing
         # fields, so avoid duplicating the much larger routing packet.
         selected.pop("decision_packet", None)
+    elif next_safe_action.get("next_safe_action") == "inspect-current-task-scope":
+        decision = selected.get("decision_packet", {})
+        if isinstance(decision, dict):
+            selected["decision_packet"] = {
+                key: decision.get(key)
+                for key in (
+                    "kind",
+                    "surface",
+                    "phase_question",
+                    "next_action",
+                    "blocked_actions",
+                    "reasons",
+                    "shown_because",
+                    "absence_states",
+                )
+                if decision.get(key) not in (None, "", [], {})
+            }
     return selected
 
 
