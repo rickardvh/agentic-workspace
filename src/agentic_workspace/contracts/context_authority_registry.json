@@ -16,7 +16,7 @@
   "surfaces": [
     {
       "surface": "system-intent",
-      "owner": "workspace-system-intent",
+      "owner": "system-intent resolver",
       "authority_class": "canonical",
       "consumers": ["start", "startup", "implement", "proof", "report", "status", "closeout"],
       "activation": "durable shaping input, not active task state",
@@ -28,7 +28,7 @@
     },
     {
       "surface": "architecture-principles",
-      "owner": "workspace-system-intent",
+      "owner": "architecture-principles resolver",
       "authority_class": "canonical",
       "consumers": ["start", "startup", "implement", "proof", "report", "closeout"],
       "activation": "matched durable shaping or validation principle for the task or changed paths",

@@ -143,7 +143,7 @@ def context_authority_coverage(
         > 4
     )
     status = "measured"
-    if uncovered_consumers or missing_required_sources or missing_owner_surfaces or duplicate_surfaces:
+    if uncovered_consumers or missing_required_sources or missing_owner_surfaces or duplicate_surfaces or duplicate_canonical_owners:
         status = "coverage-gap"
     return {
         "kind": "agentic-workspace/context-authority-coverage/v1",

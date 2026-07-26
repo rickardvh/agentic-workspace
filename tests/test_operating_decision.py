@@ -575,3 +575,14 @@ def test_context_authority_projection_is_registry_driven_for_start() -> None:
         "memory",
         "skills",
     }
+
+
+def test_context_authority_coverage_fails_closed_for_duplicate_canonical_owner() -> None:
+    declarations = context_authority_declarations()
+    duplicate = next(item for item in declarations if item["surface"] == "architecture-principles")
+    duplicate["owner"] = "system-intent resolver"
+
+    coverage = context_authority_coverage(declarations=declarations)
+
+    assert coverage["status"] == "coverage-gap"
+    assert coverage["duplicate_canonical_owners"] == ["system-intent resolver"]
