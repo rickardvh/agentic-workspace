@@ -1219,6 +1219,37 @@ def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
     }
 
 
+def test_terminal_repair_names_the_later_failed_proof_not_the_first_command(tmp_path: Path) -> None:
+    """A repair route must retain the command that actually failed."""
+    saved = state(tmp_path, status="resume-in-progress")
+    attempt = loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
+    saved["session_id"] = SESSION
+    attempt["session_id"] = SESSION
+    saved["terminal_result"] = {
+        "attempt_id": attempt["id"],
+        "proof_status": "failed",
+        "proof_commands": ["ruff check", "pytest tests/test_chatgpt_review_loop.py -q"],
+        "failed_command": "pytest tests/test_chatgpt_review_loop.py -q",
+        "proof_exit_code": 1,
+        "push_status": "passed",
+    }
+
+    loop._record_job_terminal(
+        saved,
+        mode="resume",
+        worktree=tmp_path,
+        start_head=HEAD_A,
+        exit_code=0,
+        disposition="proof-failed",
+        event="handoff-proof-unreported",
+    )
+
+    terminal = saved["terminal_result"]
+    assert terminal["proof_commands"] == ["ruff check", "pytest tests/test_chatgpt_review_loop.py -q"]
+    assert terminal["repair"]["failed_command"] == "pytest tests/test_chatgpt_review_loop.py -q"
+    assert terminal["repair"]["failed_command"] != terminal["proof_commands"][0]
+
+
 def test_explicit_pr_handoff_accepts_detached_pushed_head(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
     runner.branch = ""
