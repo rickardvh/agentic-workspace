@@ -89,6 +89,35 @@ def _independent_review_host_result_fixture(tmp_path: Path, *, changed_paths: li
     return host_result_ref, host_result, resolver
 
 
+def _readiness_conformance_evidence(profile: dict, operation: dict, *, status: str = "passed") -> dict:
+    return {
+        "kind": "agentic-workspace/external-operation-conformance-result/v1",
+        "status": status,
+        "operation_id": operation["id"],
+        "operation_fingerprint": operation["operation_compatibility"]["fingerprint"],
+        "profile_fingerprint": profile["compatibility"]["fingerprint"],
+        "runtime_exception_revision": "#2044@accepted",
+        "transports": {
+            "cli-json": {"status": "passed"},
+            "python": {"status": "passed"},
+            "typescript": {"status": "passed"},
+            "vendor-neutral": {"status": "passed"},
+        },
+        "cases": {
+            "absent": {"status": "passed"},
+            "disabled": {"status": "passed"},
+            "incompatible": {"status": "passed"},
+            "malformed": {"status": "passed"},
+            "retryable": {"status": "passed"},
+            "additive-field": {"status": "passed"},
+            "mutation-applied": {"status": "passed"},
+            "mutation-noop": {"status": "passed"},
+            "mutation-rejected": {"status": "passed"},
+            "mutation-failed": {"status": "passed"},
+        },
+    }
+
+
 def test_external_readiness_report_fails_closed_for_runtime_backed_operations() -> None:
     report = external_readiness_report(["assignment.export", "does.not.exist"])
     assert report["status"] == "not-ready"
@@ -96,6 +125,7 @@ def test_external_readiness_report_fails_closed_for_runtime_backed_operations() 
     assert runtime_backed["id"] == "assignment.export"
     assert runtime_backed["status"] == "runtime-backed"
     assert runtime_backed["evidence"]["conformance_refs"]
+    assert "executed-conformance-receipt" in runtime_backed["missing_evidence"]
     assert runtime_backed["evidence"]["runtime_exceptions"]
     assert unknown["id"] == "does.not.exist"
     assert "released-python-resource" in unknown["missing_evidence"]
@@ -113,7 +143,35 @@ def test_external_readiness_report_requires_released_client_and_conformance_evid
 
     assert report["status"] == "not-ready"
     excluded = report["excluded_operations"][0]
-    assert set(excluded["missing_evidence"]) == {"released-typescript-resource", "conformance-reference"}
+    assert set(excluded["missing_evidence"]) == {
+        "released-typescript-resource",
+        "conformance-reference",
+        "executed-conformance-receipt",
+    }
+
+
+def test_external_readiness_report_requires_current_executed_cross_transport_conformance(monkeypatch) -> None:
+    profile = copy.deepcopy(public_client.external_consumer_profile())
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"]["status"] = "supported"
+    candidate["conformance_evidence"] = _readiness_conformance_evidence(profile, candidate)
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
+
+    report = external_readiness_report(["assignment.export"])
+
+    assert report["status"] == "ready"
+    assert report["supported_operations"] == ["assignment.export"]
+    assert report["excluded_operations"] == []
+
+    stale_profile = copy.deepcopy(profile)
+    stale_candidate = next(entry for entry in stale_profile["operations"] if entry["id"] == "assignment.export")
+    stale_candidate["conformance_evidence"]["profile_fingerprint"] = "sha256:stale"
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: stale_profile)
+
+    stale_report = external_readiness_report(["assignment.export"])
+
+    assert stale_report["status"] == "not-ready"
+    assert "current-profile-fingerprint" in stale_report["excluded_operations"][0]["missing_evidence"]
 
 
 def _python_client():
@@ -173,6 +231,80 @@ def test_packed_typescript_client_loads_and_enforces_shipped_constraints(tmp_pat
     loaded = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=tmp_path, text=True, capture_output=True)
     assert loaded.returncode == 0, loaded.stderr
     assert loaded.stdout.strip() == "malformed"
+
+
+def test_packed_python_client_loads_external_readiness_without_source_checkout(tmp_path: Path) -> None:
+    wheel_dir = tmp_path / "wheels"
+    site_dir = tmp_path / "site"
+    build = subprocess.run(
+        [shutil.which("uv") or shutil.which("uv.exe") or "uv", "build", "--wheel", "--out-dir", str(wheel_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert build.returncode == 0, build.stderr
+    wheel = next(wheel_dir.glob("agentic_workspace-*.whl"))
+    install = subprocess.run(
+        [
+            shutil.which("uv") or shutil.which("uv.exe") or "uv",
+            "pip",
+            "install",
+            "--python",
+            sys.executable,
+            "--no-deps",
+            "--target",
+            str(site_dir),
+            str(wheel),
+        ],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert install.returncode == 0, install.stderr
+    install_jsonschema = subprocess.run(
+        [
+            shutil.which("uv") or shutil.which("uv.exe") or "uv",
+            "pip",
+            "install",
+            "--python",
+            sys.executable,
+            "--target",
+            str(site_dir),
+            "jsonschema",
+        ],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert install_jsonschema.returncode == 0, install_jsonschema.stderr
+    script = f"""
+import json
+import sys
+from pathlib import Path
+
+site = Path({str(site_dir)!r})
+root = Path({str(ROOT)!r}).resolve()
+sys.path = [str(site)] + [item for item in sys.path if str(root) not in str(Path(item or '.').resolve())]
+import agentic_workspace
+
+report = agentic_workspace.external_readiness_report(['does.not.exist'])
+print(json.dumps({{'module': agentic_workspace.__file__, 'status': report['status'], 'missing': report['excluded_operations'][0]['missing_evidence']}}))
+"""
+    loaded = subprocess.run(
+        [shutil.which("uv") or shutil.which("uv.exe") or "uv", "run", "--project", str(ROOT), "python", "-c", script],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert loaded.returncode == 0, loaded.stderr
+    payload = json.loads(loaded.stdout)
+    assert str(ROOT) not in payload["module"]
+    assert payload["status"] == "not-ready"
+    assert "released-python-resource" in payload["missing"]
 
 
 def test_typescript_client_fails_closed_and_detects_workspace() -> None:

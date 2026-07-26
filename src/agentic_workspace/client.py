@@ -13,6 +13,19 @@ from typing import Any, Mapping, Sequence, cast
 from jsonschema import Draft202012Validator
 
 FAILURE_KINDS = {"absent", "disabled", "incompatible", "unsupported", "rejected", "failed", "malformed", "invocation-unavailable"}
+READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
+READINESS_CASES = (
+    "absent",
+    "disabled",
+    "incompatible",
+    "malformed",
+    "retryable",
+    "additive-field",
+    "mutation-applied",
+    "mutation-noop",
+    "mutation-rejected",
+    "mutation-failed",
+)
 
 
 @dataclass
@@ -47,6 +60,47 @@ def external_consumer_profile() -> dict[str, Any]:
     return json.loads(resource.read_text(encoding="utf-8"))
 
 
+def _external_conformance_readiness(entry: Mapping[str, Any], profile: Mapping[str, Any]) -> tuple[list[str], dict[str, Any]]:
+    evidence = entry.get("conformance_evidence")
+    if not isinstance(evidence, Mapping):
+        return ["executed-conformance-receipt"], {}
+    missing: list[str] = []
+    operation_fingerprint = str((entry.get("operation_compatibility") or {}).get("fingerprint") or "")
+    profile_fingerprint = str((profile.get("compatibility") or {}).get("fingerprint") or "")
+    if evidence.get("status") != "passed":
+        missing.append("executed-conformance-passed")
+    if evidence.get("operation_fingerprint") != operation_fingerprint:
+        missing.append("current-operation-fingerprint")
+    if evidence.get("profile_fingerprint") != profile_fingerprint:
+        missing.append("current-profile-fingerprint")
+    transports = evidence.get("transports")
+    if not isinstance(transports, Mapping):
+        missing.extend(f"transport-{transport}" for transport in READINESS_TRANSPORTS)
+    else:
+        for transport in READINESS_TRANSPORTS:
+            if not isinstance(transports.get(transport), Mapping) or transports[transport].get("status") != "passed":
+                missing.append(f"transport-{transport}")
+    cases = evidence.get("cases")
+    if not isinstance(cases, Mapping):
+        missing.extend(f"case-{case}" for case in READINESS_CASES)
+    else:
+        for case in READINESS_CASES:
+            if not isinstance(cases.get(case), Mapping) or cases[case].get("status") != "passed":
+                missing.append(f"case-{case}")
+    runtime_revision = evidence.get("runtime_exception_revision")
+    runtime_exceptions = (entry.get("external_consumption") or {}).get("runtime_exceptions", [])
+    if runtime_exceptions and not runtime_revision:
+        missing.append("runtime-exception-current-revision")
+    return missing, {
+        "status": evidence.get("status", ""),
+        "operation_fingerprint": evidence.get("operation_fingerprint", ""),
+        "profile_fingerprint": evidence.get("profile_fingerprint", ""),
+        "runtime_exception_revision": runtime_revision or "",
+        "transports": transports if isinstance(transports, Mapping) else {},
+        "cases": cases if isinstance(cases, Mapping) else {},
+    }
+
+
 def external_readiness_report(required_operations: Sequence[str]) -> dict[str, Any]:
     """Report whether a released operation subset has its declared proof surface.
 
@@ -55,7 +109,8 @@ def external_readiness_report(required_operations: Sequence[str]) -> dict[str, A
     insufficient: an operation needs released-client resources, schemas,
     conformance references, and any required runtime-exception disposition.
     """
-    entries = {str(entry.get("id")): entry for entry in external_consumer_profile().get("operations", []) if isinstance(entry, dict)}
+    profile = external_consumer_profile()
+    entries = {str(entry.get("id")): entry for entry in profile.get("operations", []) if isinstance(entry, dict)}
     supported: list[str] = []
     excluded: list[dict[str, Any]] = []
     for operation_id in required_operations:
@@ -78,27 +133,38 @@ def external_readiness_report(required_operations: Sequence[str]) -> dict[str, A
             missing_evidence.append("input-output-schema-coverage")
         if not isinstance(conformance, list) or not conformance:
             missing_evidence.append("conformance-reference")
+        conformance_missing, conformance_result = _external_conformance_readiness(entry or {}, profile)
+        missing_evidence.extend(conformance_missing)
         runtime_exceptions = consumption.get("runtime_exceptions", []) if isinstance(consumption, Mapping) else []
         if status == "runtime-backed" and not runtime_exceptions:
             missing_evidence.append("runtime-exception-disposition")
         evidence = {
-            "resources": {language: resources.get(language, {}) for language in ("python", "typescript")} if isinstance(resources, Mapping) else {},
+            "resources": {language: resources.get(language, {}) for language in ("python", "typescript")}
+            if isinstance(resources, Mapping)
+            else {},
             "schemas": schemas if isinstance(schemas, Mapping) else {},
             "conformance_refs": conformance if isinstance(conformance, list) else [],
+            "conformance_result": conformance_result,
             "runtime_exceptions": runtime_exceptions if isinstance(runtime_exceptions, list) else [],
         }
         if status == "supported" and not missing_evidence:
             supported.append(str(operation_id))
         else:
             excluded.append(
-                {"id": str(operation_id), "status": status, "missing_evidence": missing_evidence, "evidence": evidence, "recovery": "negotiate a supported subset; do not reconstruct AW semantics"}
+                {
+                    "id": str(operation_id),
+                    "status": status,
+                    "missing_evidence": missing_evidence,
+                    "evidence": evidence,
+                    "recovery": "negotiate a supported subset; do not reconstruct AW semantics",
+                }
             )
     return {
         "kind": "agentic-workspace/external-readiness-report/v1",
         "status": "ready" if not excluded else "subset-only" if supported else "not-ready",
         "supported_operations": supported,
         "excluded_operations": excluded,
-        "rule": "Ready requires declared support plus released Python/TypeScript resources, schemas, conformance references, and any runtime-exception disposition.",
+        "rule": "Ready requires declared support plus released Python/TypeScript resources, schemas, current executed cross-transport conformance evidence, and any runtime-exception disposition.",
     }
 
 
