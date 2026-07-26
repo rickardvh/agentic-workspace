@@ -7345,6 +7345,68 @@ certification_limits = ["does not certify production authorization safety"]
     assert posture["matched_count"] == 0
 
 
+def test_high_assurance_closeout_posture_accepts_admitted_independent_review_receipt(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.closeout_postures.critical_access]
+purpose = "Critical access changes need explicit closeout evidence."
+applies_to_paths = ["services/auth/**"]
+required_evidence = ["domain_review_recorded"]
+review_owner = "security"
+authority_refs = ["SECURITY.md#critical-access"]
+claim_boundary = "critical-access-closeout"
+certification_limits = ["does not certify production authorization safety"]
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "review-receipts" / "critical-access.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/independent-review-receipt/v1",
+                "status": "admitted",
+                "review_revision": "review-rev-1",
+                "reviewed_at": "2026-07-26T13:22:00Z",
+                "assignment_id": "critical-access-review",
+                "implementer": {"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
+                "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "services/auth/policy.py",
+                "--select",
+                "proof_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+    assert packet["separation_of_duty"]["status"] == "satisfied"
+    assert packet["separation_of_duty"]["authority"] == "repo-local-admitted-independent-review-receipt"
+    assert packet["separation_of_duty"]["receipt"]["source_path"] == ".agentic-workspace/local/review-receipts/critical-access.json"
+    assert "high-assurance review separation is required" not in packet["missing_or_unresolved"]["blockers"]
+    assert "high-assurance closeout posture evidence is missing" in packet["missing_or_unresolved"]["blockers"]
+
+
 def test_high_assurance_closeout_posture_projects_waiver_and_uncertainty(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_proof_planning_state(tmp_path)

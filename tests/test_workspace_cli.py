@@ -2443,6 +2443,31 @@ def test_autopilot_ordinary_route_admits_executor_and_real_repo_state_transition
 
     attempt_log = tmp_path / "attempts.log"
     monkeypatch.setenv("ATTEMPT_LOG", str(attempt_log))
+    assignment_dir = tmp_path / ".agentic-workspace" / "planning" / "assignments"
+    assignment_dir.mkdir(parents=True, exist_ok=True)
+    (assignment_dir / "issue-1981.assignment.json").write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/planning-assignment/v1",
+                "assignment_id": "assign-1981",
+                "current_revision": "assign-rev-1981",
+                "status": "current",
+                "target_name": "local-codex",
+                "assignment_gate": {
+                    "role": "implementer",
+                    "selected_target": "local-codex",
+                    "allowed_effects": ["repo-write"],
+                    "allowed_paths": [".agentic-workspace/planning/execplans/issue-1981.plan.json"],
+                    "proof_obligation": {"id": "proof:issue-1981", "revision": "proof-owner-a"},
+                    "stop_conditions": ["scope-expanded", "proof-stale"],
+                    "mutation_baseline": "baseline-issue-1981",
+                },
+                "delegation_decision": {"delegation_next_step": {"handoff_run_id": "run-1981", "return_schema": "delegated-return/v1"}},
+                "current_attempt": {"run_id": "run-1981", "owner": "local-codex", "status": "handoff-prepared"},
+            }
+        ),
+        encoding="utf-8",
+    )
     executor_script = tmp_path / "autopilot_executor.py"
     executor_script.write_text(
         """
@@ -2452,6 +2477,12 @@ from pathlib import Path
 
 slice_no = os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_SLICE"]
 assert os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_CUSTODY"] == "agent"
+kernel = json.loads(os.environ["AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL"])
+assert kernel["status"] == "assignment-bound"
+assert kernel["assignment"]["assignment_id"] == "assign-1981"
+assert kernel["assignment"]["run_id"] == "run-1981"
+assert kernel["scope"]["allowed_paths"] == [".agentic-workspace/planning/execplans/issue-1981.plan.json"]
+assert kernel["admission"]["return_schema"] == "delegated-return/v1"
 log = Path(os.environ["ATTEMPT_LOG"])
 log.write_text((log.read_text() if log.exists() else "") + slice_no + "\\n")
 plan_path = Path(".agentic-workspace/planning/execplans/issue-1981.plan.json")
@@ -2498,6 +2529,8 @@ print("Actually delivered.")
     assert payload["ordinary_autopilot_route"]["ordinary_host_path_unavoidable"] is True
     assert payload["ordinary_autopilot_route"]["depends_on_codex_goal_mode"] is False
     assert payload["ordinary_autopilot_route"]["depends_on_model_cli_harness"] is False
+    assert payload["delegated_worker_kernel"]["status"] == "assignment-bound"
+    assert payload["delegated_worker_kernel"]["route_consumers"]["implement"].startswith("must keep mutations within assignment")
     loop = payload["ordinary_execution_loop"]
     assert loop["slice_count"] == 2
     assert loop["slices"][0]["admission_status"] == "rejected_auto_resumed"
@@ -2506,6 +2539,44 @@ print("Actually delivered.")
     assert attempt_log.read_text(encoding="utf-8").splitlines() == ["1", "2"]
     record = json.loads((tmp_path / ".agentic-workspace/planning/execplans/issue-1981.plan.json").read_text())
     assert record["proof_report"]["validation proof"] == "autopilot executor wrote real repo proof"
+
+
+def test_delegated_worker_kernel_blocks_stale_assignment_and_preserves_direct_work(tmp_path: Path) -> None:
+    direct_kernel = cli._delegated_worker_kernel_payload(target_root=tmp_path)
+    assert direct_kernel["status"] == "direct-compatible"
+    assert direct_kernel["assignment"]["state"] == "not-applicable"
+
+    assignment_dir = tmp_path / ".agentic-workspace" / "planning" / "assignments"
+    assignment_dir.mkdir(parents=True)
+    (assignment_dir / "stale.assignment.json").write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/planning-assignment/v1",
+                "assignment_id": "assign-stale",
+                "current_revision": "assign-rev-stale",
+                "status": "current",
+                "target_name": "worker",
+                "assignment_gate": {
+                    "role": "implementer",
+                    "selected_target": "worker",
+                    "allowed_effects": ["repo-write"],
+                    "allowed_paths": ["src/feature.py"],
+                    "proof_obligation": {"id": "proof:feature", "revision": "proof-rev-1"},
+                    "stop_conditions": ["scope-expanded"],
+                    "mutation_baseline": "baseline-1",
+                },
+                "delegation_decision": {"delegation_next_step": {"handoff_run_id": "run-stale", "return_schema": "delegated-return/v1"}},
+                "current_attempt": {"run_id": "run-stale", "owner": "worker", "status": "integrated"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    stale_kernel = cli._delegated_worker_kernel_payload(target_root=tmp_path)
+    assert stale_kernel["status"] == "blocked-stale-assignment"
+    assert stale_kernel["admission"]["status"] == "blocked"
+    assert stale_kernel["admission"]["reason_code"] == "stale-or-terminal-assignment"
+    assert stale_kernel["route_consumers"]["skills"].startswith("must bind assignment skills")
 
 
 def _autopilot_executor_binding_fixture(*, owner: str, slice_number: int, target_root: Path) -> dict[str, Any]:

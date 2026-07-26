@@ -1025,6 +1025,16 @@ def _start_payload(
             "status": delegated_lifecycle.get("status"),
             "assignment": delegated_lifecycle.get("assignment"),
             "manual_transport": delegated_lifecycle.get("manual_transport", {}),
+            "route_consumers": {
+                "start": "authoritatively projects current assignment custody before ordinary route advice",
+                "implement": "must preserve assignment scope/effect/proof boundaries unless a lifecycle override or reassign receipt exists",
+                "skills": "must bind manual delegation and returned-result skills to lifecycle operation receipts",
+            },
+            "state_transitions": ["export", "import", "admit", "reject", "repair", "reassign", "integrate", "close", "cleanup", "override"],
+            "claim_limit": (
+                "Assignment guidance is actionable only through lifecycle operation state; copied skill prose or caller-attested "
+                "return fields do not admit delegated work."
+            ),
             "rule": "Startup projects current assignment authority; lifecycle mutations remain owned by assignment operations.",
         }
     payload["delegation_decision"] = _compact_start_delegation_decision(execution_posture["delegation_decision"])

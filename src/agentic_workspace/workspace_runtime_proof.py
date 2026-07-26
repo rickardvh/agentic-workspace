@@ -6677,7 +6677,7 @@ def _separation_of_duty_gate(*, required_mode: str, implementer: dict[str, Any],
         (required_mode == "fresh-context" and fresh_context)
         or (required_mode == "separate-actor" and not same_actor)
         or (required_mode == "distinct-provider" and not same_actor and distinct_provider)
-        or (required_mode == "human" and human)
+        or (required_mode == "human" and human and not same_actor)
     )
     return {
         "kind": "agentic-workspace/separation-of-duty-gate/v1",
@@ -6689,8 +6689,67 @@ def _separation_of_duty_gate(*, required_mode: str, implementer: dict[str, Any],
     }
 
 
+def _load_admitted_independent_review_receipt(*, target_root: Path | None, required_mode: str) -> dict[str, Any]:
+    """Load an admitted review receipt from repo-local state instead of caller fields."""
+    if target_root is None or required_mode in {"", "none", "not-applicable"}:
+        return {}
+    receipt_roots = [
+        target_root / ".agentic-workspace" / "local" / "review-receipts",
+        target_root / ".agentic-workspace" / "local" / "assignment-runs",
+    ]
+    candidates: list[tuple[str, str, Path, dict[str, Any]]] = []
+    for receipt_root in receipt_roots:
+        if not receipt_root.exists():
+            continue
+        for path in sorted(receipt_root.rglob("*.json")):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(payload, dict):
+                continue
+            status = str(payload.get("status") or payload.get("admission_status") or "").strip()
+            if status not in {"admitted", "accepted", "satisfied"}:
+                continue
+            implementer = _as_dict(payload.get("implementer"))
+            reviewer = _as_dict(payload.get("reviewer"))
+            if not implementer.get("actor_id") or not reviewer.get("actor_id"):
+                continue
+            if required_mode == "human" and reviewer.get("role") != "human-approver":
+                continue
+            observed = str(payload.get("reviewed_at") or payload.get("admitted_at") or payload.get("observed_at") or "").strip()
+            revision = str(payload.get("review_revision") or payload.get("assignment_revision") or payload.get("revision") or "").strip()
+            candidates.append((observed, revision, path, payload))
+    if not candidates:
+        return {}
+    _, _, path, payload = sorted(candidates, key=lambda item: (item[0], item[1], str(item[2])))[-1]
+    try:
+        relative_path = path.relative_to(target_root).as_posix()
+    except ValueError:
+        relative_path = path.as_posix()
+    receipt_bytes = path.read_bytes()
+    return {
+        "kind": "agentic-workspace/admitted-independent-review-receipt/v1",
+        "status": "admitted",
+        "source_path": relative_path,
+        "receipt_digest": hashlib.sha256(receipt_bytes).hexdigest(),
+        "review_revision": str(
+            payload.get("review_revision") or payload.get("assignment_revision") or payload.get("revision") or ""
+        ).strip(),
+        "implementer": _as_dict(payload.get("implementer")),
+        "reviewer": _as_dict(payload.get("reviewer")),
+        "admission": {
+            "status": str(payload.get("status") or payload.get("admission_status") or "").strip(),
+            "reviewed_at": str(payload.get("reviewed_at") or payload.get("admitted_at") or payload.get("observed_at") or "").strip(),
+            "assignment_id": str(payload.get("assignment_id") or "").strip(),
+        },
+        "rule": "Only repo-local admitted receipts can satisfy proof separation; caller-supplied reviewer fields are ignored.",
+    }
+
+
 def _proof_decision_packet(
     *,
+    target_root: Path | None,
     changed_paths: list[str],
     selected_lanes: list[dict[str, Any]],
     selected_commands: list[dict[str, Any]],
@@ -6774,16 +6833,25 @@ def _proof_decision_packet(
     closeout_posture_uncertainty = (
         _list_payload(high_assurance_closeout_posture.get("uncertainty")) if isinstance(high_assurance_closeout_posture, dict) else []
     )
-    # A matched high-assurance posture may not be discharged by the implementer
-    # rerunning its own proof.  The current receipt store does not yet carry an
-    # independently admitted reviewer identity, so make that absence explicit
-    # and fail closed at the proof/claim boundary rather than accepting caller
-    # supplied actor fields.
+    required_review_mode = "human" if int(high_assurance_closeout_posture.get("matched_count", 0) or 0) else "not-applicable"
+    admitted_review_receipt = _load_admitted_independent_review_receipt(target_root=target_root, required_mode=required_review_mode)
     separation_gate = _separation_of_duty_gate(
-        required_mode="human" if int(high_assurance_closeout_posture.get("matched_count", 0) or 0) else "not-applicable",
-        implementer={},
-        reviewer=None,
+        required_mode=required_review_mode,
+        implementer=_as_dict(admitted_review_receipt.get("implementer")),
+        reviewer=_as_dict(admitted_review_receipt.get("reviewer")) or None,
     )
+    if admitted_review_receipt:
+        separation_gate = {
+            **separation_gate,
+            "receipt": {
+                "source_path": admitted_review_receipt.get("source_path", ""),
+                "receipt_digest": admitted_review_receipt.get("receipt_digest", ""),
+                "review_revision": admitted_review_receipt.get("review_revision", ""),
+                "admission": admitted_review_receipt.get("admission", {}),
+            },
+            "authority": "repo-local-admitted-independent-review-receipt",
+        }
+    separation_blocked = separation_gate.get("status") not in {"not-applicable", "satisfied"}
     blockers: list[str] = []
     if required_commands:
         blockers.append("required proof commands have not been recorded as passed")
@@ -6805,7 +6873,7 @@ def _proof_decision_packet(
         blockers.append("high-assurance closeout posture evidence is missing")
     if closeout_posture_waivers or closeout_posture_uncertainty:
         blockers.append("high-assurance closeout posture requires human waiver or uncertainty acknowledgement")
-    if separation_gate.get("status") != "not-applicable":
+    if separation_blocked:
         blockers.append("high-assurance review separation is required")
     overlay_claim_effects = _local_overlay_claim_effects(local_high_risk_overlay or {})
     overlay_blockers = _list_payload(overlay_claim_effects.get("blockers"))
@@ -6819,6 +6887,8 @@ def _proof_decision_packet(
         safe_claim_state = "human-waiver-required"
     elif overlay_blockers:
         safe_claim_state = "overlay-review-required"
+    elif separation_blocked:
+        safe_claim_state = "manual-review-required"
     elif manual_required:
         safe_claim_state = "manual-review-required"
     elif required_commands or unavailable_commands or architecture_count or assurance_active or closeout_posture_missing:
@@ -8039,6 +8109,7 @@ def _proof_selection_for_changed_paths(
             "rule": "Test strategy analysis is deferred on compact implement output; select this field for full evidence.",
         }
     proof_decision = _proof_decision_packet(
+        target_root=target_root,
         changed_paths=changed_paths,
         selected_lanes=selected_lanes,
         selected_commands=selected_commands,
