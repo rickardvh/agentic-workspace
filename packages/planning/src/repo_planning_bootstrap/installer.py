@@ -16624,6 +16624,22 @@ def targeted_execplan_write(
             "status": "owner-not-live",
             "owner": _planning_surface_relative(target_root, record_path),
         }
+    request = {
+        "owner": _planning_surface_relative(target_root, record_path),
+        "patch": dict(patch),
+        "planning_revision": expected_planning_revision,
+        "owner_revision": expected_owner_revision,
+        "lane_revision": expected_lane_revision,
+    }
+    receipt_id = hashlib.sha256(json.dumps(request, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+    receipt_path = target_root / ".agentic-workspace/local/planning/targeted-execplan-receipts" / f"{receipt_id}.json"
+    if apply and receipt_path.is_file():
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            receipt = {}
+        if receipt.get("request") == request:
+            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "already-applied", "receipt_path": _planning_surface_relative(target_root, receipt_path), "receipt": receipt}
     if str(record.get("revision") or "") != str(expected_owner_revision):
         return {
             "kind": "agentic-planning/targeted-execplan-write/v1",
@@ -16667,15 +16683,6 @@ def targeted_execplan_write(
         "changes": changed,
     }
     if apply and changed:
-        request = {
-            "owner": _planning_surface_relative(target_root, record_path),
-            "patch": dict(patch),
-            "planning_revision": expected_planning_revision,
-            "owner_revision": expected_owner_revision,
-            "lane_revision": expected_lane_revision,
-        }
-        receipt_id = hashlib.sha256(json.dumps(request, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
-        receipt_path = target_root / ".agentic-workspace/local/planning/targeted-execplan-receipts" / f"{receipt_id}.json"
         receipt = {"kind": "agentic-planning/targeted-execplan-write-receipt/v1", "request": request, "result": payload}
 
         def write_transaction() -> None:

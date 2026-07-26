@@ -192,6 +192,12 @@ def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_p
     updated = json.loads(plan_path.read_text(encoding="utf-8"))
     assert updated["next_action"] == "run the focused proof"
     assert updated["title"] == record["title"]
+    replay = installer_mod.targeted_execplan_write(
+        target=tmp_path, plan="active-plan", patch={"next_action": "run the focused proof"}, expected_planning_revision=planning_before,
+        expected_owner_revision=record["revision"], expected_lane_revision=lane_revision, apply=True,
+    )
+    assert replay["status"] == "already-applied"
+    assert json.loads(plan_path.read_text(encoding="utf-8"))["revision"] == updated["revision"]
 
     stale = installer_mod.targeted_execplan_write(
         target=tmp_path,
