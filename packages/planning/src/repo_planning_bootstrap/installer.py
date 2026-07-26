@@ -16667,7 +16667,27 @@ def targeted_execplan_write(
         "changes": changed,
     }
     if apply and changed:
-        _write_execplan_record(record_path=record_path, record=updated)
+        request = {
+            "owner": _planning_surface_relative(target_root, record_path),
+            "patch": dict(patch),
+            "planning_revision": expected_planning_revision,
+            "owner_revision": expected_owner_revision,
+            "lane_revision": expected_lane_revision,
+        }
+        receipt_id = hashlib.sha256(json.dumps(request, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+        receipt_path = target_root / ".agentic-workspace/local/planning/targeted-execplan-receipts" / f"{receipt_id}.json"
+        receipt = {"kind": "agentic-planning/targeted-execplan-write-receipt/v1", "request": request, "result": payload}
+
+        def write_transaction() -> None:
+            _write_execplan_record(record_path=record_path, record=updated)
+            receipt_path.parent.mkdir(parents=True, exist_ok=True)
+            receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+        try:
+            _apply_planning_writes_atomically([record_path, receipt_path], write_transaction)
+        except OSError as exc:
+            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "rolled-back", "reason": str(exc)}
+        payload["receipt_path"] = _planning_surface_relative(target_root, receipt_path)
     return payload
 
 
