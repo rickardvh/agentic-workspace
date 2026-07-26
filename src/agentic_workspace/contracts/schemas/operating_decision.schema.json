@@ -17,6 +17,7 @@
     "selected_owner": {"type": "object", "description": "Selected owner identity admitted into the composed decision."},
     "terminal_state": {"type": "string", "description": "Terminal outcome state used for continuation or finalization claims."},
     "primary_action": {"type": "object", "description": "Exactly one typed primary action when status is actionable; empty otherwise."},
+    "action_identity": {"type": "object", "description": "Typed operation identity and live input revision used for execution-safety comparison."},
     "external_blocker": {"type": "object", "description": "Exactly one typed blocker when status is blocked; empty otherwise."},
     "blocked_claim_classes": {"type": "array", "items": {"type": "string"}, "description": "Claim classes this decision does not authorize."},
     "provenance": {"type": "object", "description": "Specialist authority inputs and owners preserved for traceability."},
