@@ -128,6 +128,7 @@ from agentic_workspace.contract_tooling import (
 )
 from agentic_workspace.current_work_context import resolve_current_work_context
 from agentic_workspace.evaluation import evaluation_summary
+from agentic_workspace.operating_decision import compile_operating_decision
 from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
@@ -9057,6 +9058,15 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
         current_input_revision=proposed_action_input_revision(proposed_action),
     )
     payload["actionability"] = actionability
+    payload["operating_decision"] = compile_operating_decision(
+        inputs={
+            "consumer": command_name,
+            "task": str(payload.get("task") or ""),
+            "changed_paths": _list_payload(payload.get("changed_paths")),
+            "actionability": actionability,
+            "authorities": _as_dict(payload.get("authorities")),
+        }
+    )
     payload["action_required"] = actionability["action_required"]
     payload["next_action"] = actionability["next_action"]
     return payload
