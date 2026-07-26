@@ -22,6 +22,7 @@ from agentic_workspace.operating_decision import (
     derive_context_gaps,
     derive_operating_blockers_from_authorities,
     live_decision_input_revision,
+    resolve_context_authority_projection,
 )
 
 SCHEMA_ROOT = Path("src/agentic_workspace/contracts/schemas")
@@ -272,6 +273,7 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
     assert {"architecture-principles", "scoped-instructions", "ownership"}.issubset(set(coverage["surfaces"]))
     assert coverage["registry_authority"] == "versioned-contract"
     assert coverage["registry_source"] == "src/agentic_workspace/contracts/context_authority_registry.json"
+
     assert set(coverage["ordinary_consumers"]) == set(registry["ordinary_decision_consumers"])
     assert coverage["missing_required_sources"] == {}
     for consumer in coverage["ordinary_consumers"]:
@@ -558,3 +560,18 @@ def test_admitted_handoff_and_not_required_evaluation_can_reach_actionable_termi
     assert decision["status"] == "actionable"
     assert decision["primary_action"]["operation_invocation"]["operation_id"] == "handoff.prepare"
     assert decision["canonical_decision_input_revision"] == bound_invocation["expected_input_revision"]
+
+
+def test_context_authority_projection_is_registry_driven_for_start() -> None:
+    projection = resolve_context_authority_projection(consumer="start", task="shape authority routing")
+
+    assert projection["status"] == "admitted"
+    assert projection["registry_revision"].startswith("sha256:")
+    assert {item["surface"] for item in projection["authorities"]} >= {
+        "architecture-principles",
+        "scoped-instructions",
+        "ownership",
+        "planning",
+        "memory",
+        "skills",
+    }

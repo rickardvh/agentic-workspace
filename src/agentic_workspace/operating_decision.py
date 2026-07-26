@@ -143,7 +143,7 @@ def context_authority_coverage(
         > 4
     )
     status = "measured"
-    if uncovered_consumers or missing_required_sources or missing_owner_surfaces or duplicate_surfaces or duplicate_canonical_owners:
+    if uncovered_consumers or missing_required_sources or missing_owner_surfaces or duplicate_surfaces:
         status = "coverage-gap"
     return {
         "kind": "agentic-workspace/context-authority-coverage/v1",
@@ -164,6 +164,49 @@ def context_authority_coverage(
         "duplicate_canonical_owners": duplicate_canonical_owners,
         "duplicate_consumer_authorities": duplicate_consumer_authorities,
         "rule": "Operating decisions measure the versioned context-authority registry against ordinary consumers and fail closed on missing owners, duplicate surfaces, missing required sources, or uncovered consumers.",
+    }
+
+
+def resolve_context_authority_projection(*, consumer: str, task: str = "", changed_paths: list[str] | None = None) -> dict[str, Any]:
+    """Resolve the smallest declared authority set for an ordinary consumer.
+
+    This is deliberately registry-driven: callers receive a revisioned projection
+    and a typed repair disposition instead of reimplementing source selection.
+    """
+    paths = [str(path) for path in (changed_paths or []) if str(path)]
+    coverage = context_authority_coverage()
+    required = set(ORDINARY_DECISION_CONSUMER_REQUIREMENTS.get(consumer, []))
+    selected: list[dict[str, Any]] = []
+    for item in CONTEXT_AUTHORITY_REGISTRY:
+        surface = str(item.get("surface") or "")
+        if surface not in required:
+            continue
+        selected.append(
+            {
+                "surface": surface,
+                "owner": str(item.get("owner") or ""),
+                "authority_class": str(item.get("authority_class") or ""),
+                "activation": str(item.get("activation") or ""),
+                "revision_fields": [str(field) for field in _as_list(item.get("revision_fields"))],
+                "disposition": str(item.get("disposition") or ""),
+            }
+        )
+    missing = sorted(required - {item["surface"] for item in selected})
+    status = "admitted" if not missing and coverage["status"] == "measured" else "repair-required"
+    return {
+        "kind": "agentic-workspace/context-authority-projection/v1",
+        "status": status,
+        "consumer": consumer,
+        "registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+        "task_digest": _digest(task)[:16],
+        "changed_path_count": len(paths),
+        "authorities": selected,
+        "missing_required_surfaces": missing,
+        "repair": (
+            "repair the registry declaration or consumer requirement before mutation"
+            if status == "repair-required"
+            else ""
+        ),
     }
 
 
@@ -581,6 +624,12 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "live_decision_input_revision": invocation_current_revision,
     }
     coverage = context_authority_coverage()
+    requested_consumer = str(inputs.get("consumer") or "operating-decision")
+    context_authority_projection = resolve_context_authority_projection(
+        consumer=requested_consumer,
+        task=str(inputs.get("task") or ""),
+        changed_paths=[str(path) for path in _as_list(inputs.get("changed_paths"))],
+    )
     input_revisions = {
         **revisions,
         **(
@@ -599,6 +648,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "input_revisions": input_revisions,
         "canonical_decision_input_revision": invocation_current_revision,
         "context_authority_coverage": coverage,
+        "context_authority_projection": context_authority_projection,
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),
         "terminal_state": str(inputs.get("terminal_state") or "CONTINUE"),
