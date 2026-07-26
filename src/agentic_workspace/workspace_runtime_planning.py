@@ -1406,6 +1406,23 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
     posture = str(route_decision.get("owner_posture") or "not-applicable")
     transition = str(route_decision.get("required_transition") or "none")
     action = _as_dict(route_decision.get("next_safe_action"))
+    structured_inputs = _as_dict(route_decision.get("structured_inputs"))
+    binding = _as_dict(structured_inputs.get("task_binding"))
+    baseline = _as_dict(structured_inputs.get("mutation_baseline"))
+    mode = str(binding.get("mode") or "")
+    action_safety = {
+        "owner": _as_dict(route_decision.get("selected_owner_identity")),
+        "relation": relation,
+        "posture": posture,
+        "transition": transition,
+        "typed_action": str(action.get("action") or ""),
+        "allowed_claims": [str(item) for item in route_decision.get("allowed_claims", []) if isinstance(route_decision.get("allowed_claims"), list)],
+        "blocked_claims": [str(item) for item in route_decision.get("blocked_claims", []) if isinstance(route_decision.get("blocked_claims"), list)],
+        "effect_scope": [str(item) for item in binding.get("allowed_paths", []) if isinstance(binding.get("allowed_paths"), list)],
+        "mutation_baseline": baseline,
+        "proof_expectation": str(route_decision.get("proof_expectation") or ""),
+        "state_update_policy": str(route_decision.get("state_update_policy") or ""),
+    }
     if posture == "completed-residue":
         return {
             "status": "attention",
@@ -1415,13 +1432,24 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
             "workflow_sufficient": True,
         }
     if relation == "bounded-independent" and transition == "none":
-        mode = str(_as_dict(_as_dict(route_decision.get("structured_inputs")).get("task_binding")).get("mode") or "")
+        if mode == "mutation" and (
+            not action_safety["effect_scope"] or str(baseline.get("status") or "") not in {"current", "fresh"}
+        ):
+            return {
+                "status": "attention",
+                "decision": "mutation-baseline-required",
+                "reason": "Bounded mutation requires explicit path scope and a current mutation baseline.",
+                "required_next_action": "refresh-mutation-baseline",
+                "workflow_sufficient": True,
+                "action_safety": action_safety,
+            }
         return {
             "status": "satisfied",
             "decision": "bounded-read-only-work" if mode == "read-only" else "current-task-route-acknowledged",
             "reason": "The resolved route admits bounded work without an active-plan progress claim.",
             "required_next_action": str(action.get("action") or "prove-current-task"),
             "workflow_sufficient": True,
+            "action_safety": action_safety,
         }
     if relation == "independent-pending-scope":
         return {
@@ -1511,9 +1539,11 @@ def _structured_route_inputs(
                 "shared_refs": shared_refs,
                 "current_task_class": current_task_class,
                 "changed_path_count": len(changed_paths),
+                "allowed_paths": list(changed_paths) if bounded_mutation else [],
                 "mutation_scope_acknowledged": bounded_mutation,
                 "mode": "read-only" if bounded_read_only else "mutation" if bounded_mutation else "unresolved",
             },
+            "mutation_baseline": _as_dict(route_evidence.get("mutation_baseline")),
             "owner": {
                 "ref": active_owner,
                 "lifecycle": lifecycle,

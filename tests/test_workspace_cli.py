@@ -6948,17 +6948,35 @@ def test_route_safety_projection_ignores_legacy_task_switch_status() -> None:
             "owner_posture": "current",
             "required_transition": "none",
             "next_safe_action": {"action": "prove-current-task"},
-            "structured_inputs": {"task_binding": {"mode": "mutation"}},
+            "structured_inputs": {
+                "task_binding": {"mode": "mutation", "allowed_paths": ["README.md"]},
+                "mutation_baseline": {"status": "current", "baseline_id": "baseline-a"},
+            },
         }
     )
 
-    assert outcome == {
-        "status": "satisfied",
-        "decision": "current-task-route-acknowledged",
-        "reason": "The resolved route admits bounded work without an active-plan progress claim.",
-        "required_next_action": "prove-current-task",
-        "workflow_sufficient": True,
-    }
+    assert outcome["status"] == "satisfied"
+    assert outcome["decision"] == "current-task-route-acknowledged"
+    assert outcome["action_safety"]["effect_scope"] == ["README.md"]
+    assert outcome["action_safety"]["mutation_baseline"]["baseline_id"] == "baseline-a"
+
+
+def test_route_safety_projection_fails_closed_for_unbaselined_bounded_mutation() -> None:
+    from agentic_workspace.workspace_runtime_planning import _route_safety_outcome
+
+    outcome = _route_safety_outcome(
+        {
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "required_transition": "none",
+            "next_safe_action": {"action": "prove-current-task"},
+            "structured_inputs": {"task_binding": {"mode": "mutation", "allowed_paths": ["README.md"]}},
+        }
+    )
+
+    assert outcome["status"] == "attention"
+    assert outcome["decision"] == "mutation-baseline-required"
+    assert outcome["required_next_action"] == "refresh-mutation-baseline"
 
 
 def test_route_decision_uses_current_reconciliation_proposal_without_recompiling_it() -> None:
