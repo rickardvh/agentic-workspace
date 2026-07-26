@@ -198,13 +198,18 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
     assert explicit["report_sinks"] == [{"id": "#1969", "class": "closed-issue"}]
     delivered = record_local_evaluation_report_delivery(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
     assert delivered["status"] == "delivered-local"
-    assert record_local_evaluation_report_delivery(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)["status"] == "already-delivered"
+    assert (
+        record_local_evaluation_report_delivery(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)["status"]
+        == "already-delivered"
+    )
     external = external_evaluation_report_delivery_request(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
     assert external["status"] == "adapter-required"
     assert external["sinks"] == [{"id": "#1969", "class": "closed-issue"}]
     assert record_external_evaluation_report_delivery(target_root=tmp_path, request=external, succeeded=False)["retry"] is True
     assert record_external_evaluation_report_delivery(target_root=tmp_path, request=external, succeeded=True)["status"] == "delivered"
-    assert record_external_evaluation_report_delivery(target_root=tmp_path, request=external, succeeded=True)["status"] == "already-delivered"
+    assert (
+        record_external_evaluation_report_delivery(target_root=tmp_path, request=external, succeeded=True)["status"] == "already-delivered"
+    )
 
 
 def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path) -> None:

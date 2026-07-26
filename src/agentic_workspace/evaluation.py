@@ -1457,7 +1457,8 @@ def evaluation_report_payload(*, target_root: Path, evaluation_id: str, explicit
         raise WorkspaceUsageError(f"evaluation {evaluation_id!r} is not registered.")
     summary = evaluation_summary(target_root=target_root, evaluation_id=evaluation_id)["summaries"][0]
     admission = summary.get("fresh_result_admission") if isinstance(summary.get("fresh_result_admission"), dict) else {}
-    finding_followup = admission.get("finding_followup") if isinstance(admission.get("finding_followup"), dict) else {}
+    raw_finding_followup = admission.get("finding_followup")
+    finding_followup = raw_finding_followup if isinstance(raw_finding_followup, dict) else {}
     meaningful = bool(
         explicit
         or (summary.get("conclusion_readiness") if isinstance(summary.get("conclusion_readiness"), dict) else {}).get("ready")
@@ -1488,7 +1489,12 @@ def record_local_evaluation_report_delivery(*, target_root: Path, evaluation_id:
         return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "not-due", "report": report}
     identity = hashlib.sha256(
         json.dumps(
-            {"evaluation_id": evaluation_id, "coverage": report["coverage"], "conclusion": report["conclusion"], "findings": report["material_findings"]},
+            {
+                "evaluation_id": evaluation_id,
+                "coverage": report["coverage"],
+                "conclusion": report["conclusion"],
+                "findings": report["material_findings"],
+            },
             sort_keys=True,
             separators=(",", ":"),
         ).encode("utf-8")
@@ -1498,8 +1504,19 @@ def record_local_evaluation_report_delivery(*, target_root: Path, evaluation_id:
     deliveries = previous.get("deliveries", []) if isinstance(previous.get("deliveries"), list) else []
     existing = next((item for item in deliveries if isinstance(item, dict) and item.get("identity") == identity), None)
     if existing:
-        return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "already-delivered", "receipt": existing, "report": report}
-    receipt = {"identity": identity, "status": "delivered-local", "evaluation_id": evaluation_id, "sinks": report["report_sinks"], "delivery": report["delivery"]}
+        return {
+            "kind": "agentic-workspace/evaluation-report-delivery/v1",
+            "status": "already-delivered",
+            "receipt": existing,
+            "report": report,
+        }
+    receipt = {
+        "identity": identity,
+        "status": "delivered-local",
+        "evaluation_id": evaluation_id,
+        "sinks": report["report_sinks"],
+        "delivery": report["delivery"],
+    }
     _write_json(path, {"deliveries": [*deliveries, receipt]})
     return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "delivered-local", "receipt": receipt, "report": report}
 
@@ -1514,7 +1531,9 @@ def external_evaluation_report_delivery_request(*, target_root: Path, evaluation
     ]
     if report["status"] != "ready" or not sinks:
         return {"kind": "agentic-workspace/evaluation-external-delivery-request/v1", "status": "not-due", "report": report}
-    identity = hashlib.sha256(json.dumps({"evaluation_id": evaluation_id, "sinks": sinks, "coverage": report["coverage"]}, sort_keys=True).encode()).hexdigest()[:24]
+    identity = hashlib.sha256(
+        json.dumps({"evaluation_id": evaluation_id, "sinks": sinks, "coverage": report["coverage"]}, sort_keys=True).encode()
+    ).hexdigest()[:24]
     return {
         "kind": "agentic-workspace/evaluation-external-delivery-request/v1",
         "status": "adapter-required",
@@ -1525,7 +1544,9 @@ def external_evaluation_report_delivery_request(*, target_root: Path, evaluation
     }
 
 
-def record_external_evaluation_report_delivery(*, target_root: Path, request: dict[str, Any], succeeded: bool, detail: str = "") -> dict[str, Any]:
+def record_external_evaluation_report_delivery(
+    *, target_root: Path, request: dict[str, Any], succeeded: bool, detail: str = ""
+) -> dict[str, Any]:
     """Persist adapter outcome; a failed attempt remains retryable."""
     if request.get("status") != "adapter-required":
         return {"kind": "agentic-workspace/evaluation-external-delivery-receipt/v1", "status": "not-due"}
@@ -1538,7 +1559,12 @@ def record_external_evaluation_report_delivery(*, target_root: Path, request: di
         return {"kind": "agentic-workspace/evaluation-external-delivery-receipt/v1", "status": "already-delivered", "delivery_id": identity}
     receipt = {"identity": identity, "status": "delivered" if succeeded else "failed", "detail": detail, "sinks": request.get("sinks", [])}
     _write_json(path, {"deliveries": [*deliveries, receipt]})
-    return {"kind": "agentic-workspace/evaluation-external-delivery-receipt/v1", "status": receipt["status"], "delivery_id": identity, "retry": not succeeded}
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
+        "status": receipt["status"],
+        "delivery_id": identity,
+        "retry": not succeeded,
+    }
 
 
 def evaluation_collection_actions(
