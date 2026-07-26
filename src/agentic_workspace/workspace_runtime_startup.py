@@ -2435,30 +2435,35 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         and not isinstance(payload.get("installed_state_compatibility"), dict)
         and not read_only_compact_default
     )
+    state_delta_core = state_delta_core_payload(
+        surface="startup",
+        decision_packet=selected["decision_packet"],
+        communication_contract=compact_communication_contract_payload(surface="startup"),
+        evidence_basis=[
+            "next_safe_action",
+            "action_signals",
+            "active planning summary" if payload.get("active_state_summary", {}).get("active_execplan") else "startup routing state",
+        ],
+        safe_probe=str(
+            next_safe_action.get("preferred_cli") or selected["decision_packet"].get("detail_routes", {}).get("active_plan") or ""
+        ),
+    )
+    # Keep the compact communication contract complete even when the larger
+    # state-delta packets are deliberately omitted from low-risk startup.
+    selected["message_economy"] = message_economy_payload(
+        surface="startup",
+        communication_contract=compact_communication_contract_payload(surface="startup"),
+        state_delta_core=state_delta_core,
+    )
+    selected["current_decision"] = current_decision_payload(
+        surface="startup",
+        decision_packet=selected["decision_packet"],
+        state_delta_core=state_delta_core,
+    )
+    selected["evidence_bundle"] = evidence_bundle_payload(
+        surface="startup", current_decision=selected["current_decision"], state_delta_core=state_delta_core
+    )
     if show_state_delta_packets:
-        state_delta_core = state_delta_core_payload(
-            surface="startup",
-            decision_packet=selected["decision_packet"],
-            communication_contract=compact_communication_contract_payload(surface="startup"),
-            evidence_basis=[
-                "next_safe_action",
-                "action_signals",
-                "active planning summary" if payload.get("active_state_summary", {}).get("active_execplan") else "startup routing state",
-            ],
-            safe_probe=str(
-                next_safe_action.get("preferred_cli") or selected["decision_packet"].get("detail_routes", {}).get("active_plan") or ""
-            ),
-        )
-        selected["message_economy"] = message_economy_payload(
-            surface="startup",
-            communication_contract=compact_communication_contract_payload(surface="startup"),
-            state_delta_core=state_delta_core,
-        )
-        selected["current_decision"] = current_decision_payload(
-            surface="startup",
-            decision_packet=selected["decision_packet"],
-            state_delta_core=state_delta_core,
-        )
         continuation_answers = (
             payload.get("continuation_view", {}).get("answers", {}) if isinstance(payload.get("continuation_view"), dict) else {}
         )
@@ -2471,9 +2476,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 state_delta_core=state_delta_core,
                 work_shape_study=(payload.get("planning_safety_gate", {}) or {}).get("work_shape_study", {}),
             )
-        selected["evidence_bundle"] = evidence_bundle_payload(
-            surface="startup", current_decision=selected["current_decision"], state_delta_core=state_delta_core
-        )
     if isinstance(payload.get("continuation_view"), dict) or isinstance(payload.get("continuation_reorientation"), dict):
         drill_down: dict[str, Any] = selected["drill_down"]
         omitted_detail = drill_down.get("omitted_detail")
@@ -2553,6 +2555,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     maintainer_mode = payload.get("maintainer_mode", {})
     if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
         context["maintainer_mode"] = maintainer_mode
+    if not show_state_delta_packets:
+        # The compact current-decision packet retains the decision-facing
+        # fields, so avoid duplicating the much larger routing packet.
+        selected.pop("decision_packet", None)
     return selected
 
 
