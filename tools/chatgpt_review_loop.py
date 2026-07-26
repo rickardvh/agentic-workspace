@@ -433,6 +433,94 @@ def _focused_proof_attempt_result(
     }
 
 
+def _split_proof_command(command: str) -> list[str]:
+    try:
+        return shlex.split(command, posix=os.name != "nt")
+    except ValueError as exc:
+        raise LoopError("proof-command-invalid", f"proof command is not parseable: {command}") from exc
+
+
+def _execute_focused_proof_attempt(
+    *,
+    attempt: dict[str, Any],
+    worktree: Path,
+    proof_commands: Sequence[str],
+    starting_head: str,
+    runner: CommandRunner,
+) -> dict[str, Any]:
+    commands = [str(command).strip() for command in proof_commands if str(command).strip()]
+    if not commands:
+        raise LoopError("proof-command-missing", "producer-owned proof execution requires at least one command")
+    command_results: list[dict[str, Any]] = []
+    failed_index = -1
+    proof_exit_code = 0
+    total_output_bytes = 0
+    started_all = time.perf_counter_ns()
+    for index, command in enumerate(commands):
+        started = time.perf_counter_ns()
+        completed = runner.run(_split_proof_command(command), cwd=worktree)
+        elapsed_ms = int((time.perf_counter_ns() - started) / 1_000_000)
+        stdout = completed.stdout or ""
+        stderr = completed.stderr or ""
+        output_bytes = len(stdout.encode("utf-8", errors="replace")) + len(stderr.encode("utf-8", errors="replace"))
+        total_output_bytes += output_bytes
+        command_results.append(
+            {
+                "command": command,
+                "exit_code": int(completed.returncode),
+                "elapsed_ms": elapsed_ms,
+                "output_bytes": output_bytes,
+                "status": "passed" if completed.returncode == 0 else "failed",
+            }
+        )
+        if completed.returncode != 0:
+            failed_index = index
+            proof_exit_code = int(completed.returncode)
+            break
+    status = "failed" if failed_index >= 0 else "passed"
+    ending_head = _git_value(worktree, runner, "rev-parse", "HEAD")
+    identity = {
+        "attempt_id": attempt.get("id"),
+        "launch_identity": attempt.get("launch_identity"),
+        "worktree": attempt.get("worktree"),
+        "starting_head": starting_head,
+        "ending_head": ending_head,
+        "proof_commands": commands,
+        "command_results": command_results,
+        "failed_command_index": failed_index,
+        "proof_exit_code": proof_exit_code,
+        "environment": {
+            "active_virtual_env": os.environ.get("VIRTUAL_ENV", ""),
+            "uv_active": os.environ.get("UV_ACTIVE", ""),
+        },
+    }
+    return {
+        "kind": "agentic-workspace/focused-proof-attempt-result/v1",
+        "status": status,
+        "attempt_id": str(attempt.get("id", "")),
+        "attempt_revision": "sha256:" + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest(),
+        "launch_identity": str(attempt.get("launch_identity", "")),
+        "worktree": str(attempt.get("worktree", "")),
+        "starting_head": starting_head,
+        "ending_head": ending_head,
+        "proof_boundary": "focused-proof",
+        "proof_commands": commands,
+        "failed_command_index": failed_index,
+        "failed_command": commands[failed_index] if failed_index >= 0 else "",
+        "proof_exit_code": proof_exit_code,
+        "producer": "chatgpt-review-loop.focused-proof-executor",
+        "command_results": command_results,
+        "metrics": {
+            "command_count": len(command_results),
+            "elapsed_ms": int((time.perf_counter_ns() - started_all) / 1_000_000),
+            "output_bytes": total_output_bytes,
+            "new_environment_created": False,
+            "environment_reuse": "configured-active-environment",
+        },
+        "repair_action": "repair the failed focused proof, rerun it, then report the exact job result",
+    }
+
+
 def _admitted_failed_proof_attempt(*, terminal: dict[str, Any], attempt: dict[str, Any], start_head: str) -> dict[str, Any] | None:
     proof_attempt = terminal.get("proof_attempt_result")
     if not isinstance(proof_attempt, dict) or proof_attempt.get("kind") != "agentic-workspace/focused-proof-attempt-result/v1":
@@ -593,6 +681,7 @@ def report_job_result(
     supersede: bool = False,
     proof_commands: Sequence[str] | None = None,
     failed_command_index: int | None = None,
+    producer_owned_proof_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Record agent-supplied proof/push evidence for the exact owning session."""
     root = _repo_root(cwd, runner)
@@ -659,16 +748,37 @@ def report_job_result(
         )
     else:
         corrections = []
-    proof_attempt_result = _focused_proof_attempt_result(
-        attempt=attempt,
-        proof_status=proof_status,
-        proof_command=proof_command,
-        proof_exit_code=proof_exit_code,
-        starting_head=str(attempt["starting_head"]),
-        ending_head=ending_head,
-        proof_commands=proof_commands,
-        failed_command_index=failed_command_index,
-    )
+    if producer_owned_proof_result is not None:
+        proof_attempt_result = producer_owned_proof_result
+        if (
+            proof_attempt_result.get("kind") != "agentic-workspace/focused-proof-attempt-result/v1"
+            or proof_attempt_result.get("producer") != "chatgpt-review-loop.focused-proof-executor"
+            or proof_attempt_result.get("attempt_id") != attempt.get("id")
+            or proof_attempt_result.get("launch_identity") != attempt.get("launch_identity")
+            or proof_attempt_result.get("worktree") != worktree.as_posix()
+            or proof_attempt_result.get("starting_head") != attempt.get("starting_head")
+            or proof_attempt_result.get("ending_head") != ending_head
+        ):
+            raise LoopError("proof-attempt-result-invalid", "producer-owned proof attempt result does not match this launch")
+        proof_status = str(proof_attempt_result["status"])
+        proof_exit_code = int(proof_attempt_result["proof_exit_code"])
+    else:
+        if proof_commands is not None or failed_command_index is not None:
+            raise LoopError(
+                "job-result-caller-proof-identity-unsupported",
+                "multi-command proof identity must be produced by --run-proof-commands-json, not caller-supplied list/index fields",
+            )
+        proof_attempt_result = _focused_proof_attempt_result(
+            attempt=attempt,
+            proof_status=proof_status,
+            proof_command=proof_command,
+            proof_exit_code=proof_exit_code,
+            starting_head=str(attempt["starting_head"]),
+            ending_head=ending_head,
+        )
+        failed_index = proof_attempt_result.get("failed_command_index")
+        if proof_status == "failed" and (not proof_attempt_result["proof_commands"] or failed_index != 0):
+            raise LoopError("job-result-failed-proof-incomplete", "failed proof result must identify the failed command")
     selected_proof_commands = [str(command) for command in proof_attempt_result["proof_commands"]]
     state["session_id"] = session_id
     attempt["session_id"] = session_id
@@ -694,6 +804,48 @@ def report_job_result(
     attempt["result_recorded"] = True
     _save_state(owner_root, state)
     return state["terminal_result"]
+
+
+def run_proof_and_report_job_result(
+    *,
+    cwd: Path,
+    session_id: str,
+    proof_commands: Sequence[str],
+    push_status: str,
+    runner: CommandRunner,
+    supersede: bool = False,
+) -> dict[str, Any]:
+    root = _repo_root(cwd, runner)
+    worktree = cwd.resolve()
+    owner_root = Path(os.environ.get(OWNER_ROOT_ENV, root.as_posix())).resolve()
+    candidates = [
+        state
+        for state in _all_states(owner_root)
+        if isinstance(state.get("job_attempt"), dict)
+        and state["job_attempt"].get("worktree") == worktree.as_posix()
+        and (state.get("session_id") in {"", session_id} or state["job_attempt"].get("session_id") in {"", session_id})
+    ]
+    if len(candidates) != 1:
+        raise LoopError("job-result-session-ambiguous", "job result requires exactly one bound owning session")
+    attempt = candidates[0]["job_attempt"]
+    producer_result = _execute_focused_proof_attempt(
+        attempt=attempt,
+        worktree=worktree,
+        proof_commands=proof_commands,
+        starting_head=str(attempt["starting_head"]),
+        runner=runner,
+    )
+    return report_job_result(
+        cwd=cwd,
+        session_id=session_id,
+        proof_status=str(producer_result["status"]),
+        proof_command=str(producer_result.get("failed_command") or (producer_result["proof_commands"][0] if producer_result["proof_commands"] else "")),
+        proof_exit_code=int(producer_result["proof_exit_code"]),
+        push_status=push_status,
+        runner=runner,
+        supersede=supersede,
+        producer_owned_proof_result=producer_result,
+    )
 
 
 def _load_state(root: Path, pr: int) -> dict[str, Any]:
@@ -1069,7 +1221,7 @@ def _review_prompt(review: Review, *, branch: str = "") -> str:
         f"Source: {review.url or review.comment_id}\n\n"
         f"Required work:\n{review.findings}\n\n"
         f"{'You are detached: push with git push origin HEAD:' + branch + '. ' if branch else ''}Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook record the next handoff. "
-        "After proof and push, record their exact outcomes with `python tools/chatgpt_review_loop.py job-result --session-id $CODEX_THREAD_ID --proof-status passed|failed --proof-command \"<command>\" --proof-exit-code <exit> --push-status passed|failed`. Do not merge from this continuation."
+        "After push, record proof and push custody with `python tools/chatgpt_review_loop.py job-result --session-id $CODEX_THREAD_ID --run-proof-commands-json '[\"<proof command>\"]' --push-status passed|failed`. Do not merge from this continuation."
     )
 
 
@@ -1797,11 +1949,16 @@ def _parser() -> argparse.ArgumentParser:
     result_parser = sub.add_parser("job-result", help="Record proof and push evidence for one bound review job.")
     result_parser.add_argument("--target", type=Path, default=Path.cwd())
     result_parser.add_argument("--session-id", default=os.environ.get("CODEX_THREAD_ID", ""))
-    result_parser.add_argument("--proof-status", choices=["passed", "failed"], required=True)
+    result_parser.add_argument("--proof-status", choices=["passed", "failed"])
     result_parser.add_argument("--proof-command", default="")
     result_parser.add_argument("--proof-commands-json", default="", help="JSON array of selected proof commands for this attempt.")
+    result_parser.add_argument(
+        "--run-proof-commands-json",
+        default="",
+        help="JSON array of selected proof commands for the loop to execute and record as producer-owned proof evidence.",
+    )
     result_parser.add_argument("--failed-command-index", type=int, default=None)
-    result_parser.add_argument("--proof-exit-code", type=int, required=True)
+    result_parser.add_argument("--proof-exit-code", type=int)
     result_parser.add_argument("--push-status", choices=["passed", "failed"], required=True)
     result_parser.add_argument(
         "--supersede",
@@ -1891,6 +2048,22 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                 _emit(result)
             return 0
         if args.command == "job-result":
+            run_proof_commands = json.loads(args.run_proof_commands_json) if args.run_proof_commands_json else None
+            if run_proof_commands is not None:
+                if not isinstance(run_proof_commands, list):
+                    raise LoopError("proof-commands-invalid", "--run-proof-commands-json must be a JSON array")
+                result = run_proof_and_report_job_result(
+                    cwd=args.target.resolve(),
+                    session_id=args.session_id.strip(),
+                    proof_commands=[str(command) for command in run_proof_commands],
+                    push_status=args.push_status,
+                    runner=runner,
+                    supersede=args.supersede,
+                )
+                _emit(result)
+                return 0
+            if not args.proof_status or args.proof_exit_code is None:
+                raise LoopError("job-result-proof-required", "manual job-result requires --proof-status and --proof-exit-code")
             proof_commands = json.loads(args.proof_commands_json) if args.proof_commands_json else None
             if proof_commands is not None and not isinstance(proof_commands, list):
                 raise LoopError("proof-commands-invalid", "--proof-commands-json must be a JSON array")

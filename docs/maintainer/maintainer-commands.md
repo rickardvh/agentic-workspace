@@ -18,7 +18,7 @@ Use this page when you need the canonical command to run, not the broader routin
 | --- | --- |
 | `python scripts/check/check_maintainer_surfaces.py` | Run the aggregate maintainer-surface checker directly |
 | `uv run python tools/chatgpt_review_loop.py handoff` | Opt the current pushed PR head into the repo-local external ChatGPT review continuation loop |
-| `uv run python tools/chatgpt_review_loop.py job-result --session-id <uuid> --proof-status passed --proof-command "<command>" --proof-exit-code 0 --push-status passed --supersede` | Explicitly correct an already-recorded same-launch result after a rebase and later successful push |
+| `uv run python tools/chatgpt_review_loop.py job-result --session-id <uuid> --run-proof-commands-json "[\"<command>\"]" --push-status passed --supersede` | Explicitly rerun producer-owned proof and correct an already-recorded same-launch result after a rebase and later successful push |
 | `uv run python tools/chatgpt_review_loop.py poll --watch --interval 60 --max-polls 60` | Run the bounded, model-free local review poller; see [ChatGPT review to Codex continuation](chatgpt-review-continuation.md) |
 | `make start-review-poller` | Idempotently start the detached global all-open PR-review poller for this checkout when a maintainer explicitly wants local review polling |
 | `make format` | Apply Ruff formatting across workspace and packages |
