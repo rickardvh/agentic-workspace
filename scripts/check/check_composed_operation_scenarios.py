@@ -7,14 +7,11 @@ import subprocess
 import sys
 import tempfile
 import time
-from contextlib import redirect_stdout
-from io import StringIO
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
-
-from agentic_workspace import cli  # noqa: E402
 
 MATRIX_PATH = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "composed-operation-scenario-matrix.json"
 REQUIRED_SCENARIOS = {
@@ -61,14 +58,25 @@ def validate_matrix(matrix: dict[str, object]) -> list[str]:
 def _run_cli(*args: str) -> tuple[dict[str, object], int, int]:
     """Execute the shipped CLI boundary and return its decoded packet and cost."""
 
-    stdout = StringIO()
     started = time.perf_counter_ns()
-    with redirect_stdout(stdout):
-        exit_code = cli.main([*args, "--format", "json"])
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from agentic_workspace import cli; import sys; raise SystemExit(cli.main(sys.argv[1:]))",
+            *args,
+            "--format",
+            "json",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     elapsed_ms = int((time.perf_counter_ns() - started) / 1_000_000)
-    rendered = stdout.getvalue()
-    if exit_code != 0:
-        raise RuntimeError(f"CLI exited {exit_code}: {rendered[:300]}")
+    rendered = completed.stdout
+    if completed.returncode != 0:
+        raise RuntimeError(f"CLI exited {completed.returncode}: {(rendered or completed.stderr)[:300]}")
     try:
         packet = json.loads(rendered)
     except json.JSONDecodeError as exc:
@@ -128,37 +136,47 @@ def _execute_composed_workspace_path(*, target: Path, scenario: dict[str, object
     }
 
 
-def execute_matrix(matrix: dict[str, object]) -> list[str]:
-    """Execute each row through ordinary CLI paths and the typed decision contract."""
+def _execute_scenario(scenario: dict[str, object], budget: dict[str, object]) -> list[str]:
+    """Run one scenario in its own repository; no row may inherit prior state."""
+
     errors: list[str] = []
+    scenario_id = str(scenario.get("id") or "<unknown>")
+    with tempfile.TemporaryDirectory(prefix=f"aw-composed-{scenario_id}-") as directory:
+        target = Path(directory)
+        subprocess.run(["git", "init", "--quiet", str(target)], check=True, capture_output=True, text=True)
+        (target / "README.md").write_text(f"scenario fixture: {scenario_id}\n", encoding="utf-8")
+        _run_cli("init", "--target", str(target))
+        try:
+            packets, metrics = _execute_composed_workspace_path(target=target, scenario=scenario)
+        except RuntimeError as exc:
+            return [f"{scenario_id} black-box execution failed: {exc}"]
+    if set(packets) != {"start", "implement", "summary", "closeout"}:
+        errors.append(f"{scenario_id} did not execute every ordinary consumer")
+    if not packets["start"].get("next_safe_action") or not packets["implement"].get("decision_packet"):
+        errors.append(f"{scenario_id} did not return ordinary route and implement packets")
+    if metrics["aw_command_count"] != int(budget.get("max_aw_command_count", 0)) or metrics["output_bytes"] <= 0:
+        errors.append(f"{scenario_id} emitted incomplete execution metrics")
+    if metrics["wall_clock_aw_ms"] > int(budget.get("max_wall_clock_aw_ms_per_scenario", 0)):
+        errors.append(f"{scenario_id} exceeded the lifecycle time budget ({metrics['wall_clock_aw_ms']}ms)")
+    if metrics["output_bytes"] > int(budget.get("max_output_bytes_per_scenario", 0)):
+        errors.append(f"{scenario_id} exceeded the lifecycle output budget ({metrics['output_bytes']} bytes)")
+    return errors
+
+
+def execute_matrix(matrix: dict[str, object]) -> list[str]:
+    """Execute isolated rows concurrently without weakening their black-box boundary."""
     budget = matrix.get("execution_budget", {})
     if not isinstance(budget, dict):
         return ["execution budget is missing or invalid"]
-    with tempfile.TemporaryDirectory(prefix="aw-composed-scenarios-") as directory:
-        target = Path(directory)
-        subprocess.run(["git", "init", "--quiet", str(target)], check=True, capture_output=True, text=True)
-        (target / "README.md").write_text("scenario fixture\n", encoding="utf-8")
-        _run_cli("init", "--target", str(target))
-        for scenario in matrix.get("scenarios", []):
-            if not isinstance(scenario, dict):
-                continue
-            scenario_id = str(scenario.get("id") or "<unknown>")
-            try:
-                packets, metrics = _execute_composed_workspace_path(target=target, scenario=scenario)
-            except RuntimeError as exc:
-                errors.append(f"{scenario_id} black-box execution failed: {exc}")
-                continue
-            if set(packets) != {"start", "implement", "summary", "closeout"}:
-                errors.append(f"{scenario_id} did not execute every ordinary consumer")
-            if not packets["start"].get("next_safe_action") or not packets["implement"].get("decision_packet"):
-                errors.append(f"{scenario_id} did not return ordinary route and implement packets")
-            if metrics["aw_command_count"] != int(budget.get("max_aw_command_count", 0)) or metrics["output_bytes"] <= 0:
-                errors.append(f"{scenario_id} emitted incomplete execution metrics")
-            if metrics["wall_clock_aw_ms"] > int(budget.get("max_wall_clock_aw_ms_per_scenario", 0)):
-                errors.append(f"{scenario_id} exceeded the lifecycle time budget ({metrics['wall_clock_aw_ms']}ms)")
-            if metrics["output_bytes"] > int(budget.get("max_output_bytes_per_scenario", 0)):
-                errors.append(f"{scenario_id} exceeded the lifecycle output budget ({metrics['output_bytes']} bytes)")
-    return errors
+    scenarios = [scenario for scenario in matrix.get("scenarios", []) if isinstance(scenario, dict)]
+    errors: list[str] = []
+    # Each worker is a distinct subprocess-backed CLI boundary. Four workers
+    # keep the release gate bounded while preserving every full scenario path.
+    with ThreadPoolExecutor(max_workers=min(4, len(scenarios) or 1)) as executor:
+        futures = [executor.submit(_execute_scenario, scenario, budget) for scenario in scenarios]
+        for future in as_completed(futures):
+            errors.extend(future.result())
+    return sorted(errors)
 
 
 def main() -> int:
