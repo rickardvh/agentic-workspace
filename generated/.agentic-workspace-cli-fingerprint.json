@@ -1645,7 +1645,7 @@
     "scripts/check/check_completion_cost_live_behavior_proof.py": "62f1626aa54f8a5ce5df465e5d9ea1266cede514",
     "scripts/check/check_completion_cost_schema_analysis.py": "f9f8175241d738e731d662c5037ff4dc0c9fd108",
     "scripts/check/check_contract_tooling_surfaces.py": "2fdd3e23710d415c4fd4087508cfedd3a0bfa1bf",
-    "scripts/check/check_generated_command_packages.py": "83613e0ea43c1def578a069ac0b38f1ffc573429",
+    "scripts/check/check_generated_command_packages.py": "b1483fc2c836957255f3b03e397779b6bb204ed5",
     "scripts/check/check_maintainer_surfaces.py": "a8cc22d09e7d1949f9245464b883bf610e095048",
     "scripts/check/check_master_tests.py": "1b0bd134de91073356481c08e3430ee07644970c",
     "scripts/check/check_memory_freshness.py": "389c819e9ecca49fb53742e096e051874872a3c3",
@@ -2059,7 +2059,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "f15bde9746aaf186ab37d86d23262d68aab1dd93fa1edf82e8dd00d81010febe",
+  "git_index_identity": "94fb96130787c7a689d154c0b7676bd5276400c568aa61572b1139bd7e471be8",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }

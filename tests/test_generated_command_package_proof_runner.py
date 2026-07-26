@@ -1175,6 +1175,77 @@ def test_generated_output_git_dirtiness_classifies_line_ending_only_changes() ->
     ]
 
 
+def test_generated_output_git_dirtiness_classifies_untracked_rendered_output() -> None:
+    errors = _checker_case_errors(
+        """
+        relative_path = "generated/workspace/python/nested/untracked-fixture.txt"
+        path = checker.REPO_ROOT / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        class Output:
+            def __init__(self, path, content):
+                self.path = path
+                self.content = content
+
+        def fake_render_outputs(ir, *, repo_root):
+            return [Output(path, "alpha\\n")]
+
+        def fake_git_output(args):
+            if args == ["status", "--porcelain=v1", "--untracked-files=all", "--", "generated"]:
+                return f"?? {relative_path}\\n"
+            return ""
+
+        try:
+            path.write_text("alpha\\n", encoding="utf-8")
+            checker.render_workspace_command_package_outputs = fake_render_outputs
+            checker._run_git_output = fake_git_output
+            _emit({"errors": checker._validate_generated_output_git_dirtiness({})})
+        finally:
+            path.unlink(missing_ok=True)
+        """
+    )
+
+    assert errors == [
+        "generated/workspace/python/nested/untracked-fixture.txt is an untracked generated output; "
+        "run git add -- generated/workspace/python/nested/untracked-fixture.txt after confirming generation, or regenerate packages."
+    ]
+
+
+def test_generated_output_git_dirtiness_detects_nested_untracked_file_in_real_git_repo(tmp_path: Path, monkeypatch) -> None:
+    """Exercise Git's real recursive untracked walk, not a mocked porcelain line."""
+    checker = _load_checker()
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "tests@example.invalid"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Generated output test"], cwd=tmp_path, check=True)
+    (tmp_path / "README.md").write_text("fixture\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-qm", "fixture"], cwd=tmp_path, check=True)
+
+    nested = tmp_path / "generated" / "workspace" / "python" / "nested" / "untracked fixture.txt"
+    nested.parent.mkdir(parents=True)
+    nested.write_text("alpha\n", encoding="utf-8")
+    unrelated = tmp_path / "scratch" / "untracked.txt"
+    unrelated.parent.mkdir()
+    unrelated.write_text("ignore me\n", encoding="utf-8")
+
+    class Output:
+        def __init__(self, path: Path, content: str):
+            self.path = path
+            self.content = content
+
+    monkeypatch.setattr(checker, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        checker,
+        "render_workspace_command_package_outputs",
+        lambda _ir, *, repo_root: [Output(nested, "alpha\n")],
+    )
+
+    assert checker._validate_generated_output_git_dirtiness({}) == [
+        "generated/workspace/python/nested/untracked fixture.txt is an untracked generated output; "
+        "run git add -- generated/workspace/python/nested/untracked fixture.txt after confirming generation, or regenerate packages."
+    ]
+
+
 def test_lifecycle_dry_run_generation_regression_is_blocked() -> None:
     errors = _checker_case_errors(
         """
