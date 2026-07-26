@@ -12,6 +12,7 @@ from agentic_workspace.config import (
     WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH,
     DelegationTargetProfile,
     MixedAgentLocalOverride,
+    WorkspaceUsageError,
     load_workspace_config,
 )
 
