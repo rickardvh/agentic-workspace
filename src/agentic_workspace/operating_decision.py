@@ -317,7 +317,13 @@ def resolve_context_authority_projection(
         if applicable:
             selected.append(authority)
         else:
-            excluded.append({"surface": surface, "reason": str(record.get("reason") or record_status), "caller_record_status": authority["caller_record_status"]})
+            excluded.append(
+                {
+                    "surface": surface,
+                    "reason": str(record.get("reason") or record_status),
+                    "caller_record_status": authority["caller_record_status"],
+                }
+            )
     missing = sorted(required - {item["surface"] for item in selected})
     status = "admitted" if not missing and coverage["status"] == "measured" else "repair-required"
     repairs = [
@@ -359,11 +365,7 @@ def resolve_context_authority_projection(
             "repairs": repairs,
             "blocked_claims": ["mutation", "proof-claim", "completion-claim"] if repairs else [],
         },
-        "repair": (
-            "repair the registry declaration or consumer requirement before mutation"
-            if status == "repair-required"
-            else ""
-        ),
+        "repair": ("repair the registry declaration or consumer requirement before mutation" if status == "repair-required" else ""),
     }
 
 

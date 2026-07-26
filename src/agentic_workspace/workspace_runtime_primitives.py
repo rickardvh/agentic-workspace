@@ -19833,13 +19833,10 @@ def _report_closeout_trust_payload(
             scope_gate["gate_result"] = "current-task-route-acknowledged"
             scope_gate["status"] = "satisfied"
             scope_gate["required_next_action"] = "prove-current-task"
-        if (
-            planning_safety_gate.get("workflow_sufficient") is not True
-            or (
-                str(planning_safety_gate.get("gate_result") or "")
-                not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
-                and str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
-            )
+        if planning_safety_gate.get("workflow_sufficient") is not True or (
+            str(planning_safety_gate.get("gate_result") or "")
+            not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
+            and str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
         ):
             return {
                 "kind": "agentic-workspace/current-task-closeout-scope/v1",
