@@ -6,6 +6,7 @@
   "hard_gates": ["owner", "terminal_state", "typed_action", "effect_scope", "mutation_precondition", "proof_claim_boundary", "next_transition", "semantic_parity"],
   "scenario_assertion_contract": {"per_scenario": ["owner", "terminal_state", "typed_action", "permitted_effect_scope", "mutation_precondition", "proof_claim_boundary", "next_transition"], "cross_target": "semantic_parity", "degraded_mode": "fail_closed_with_bounded_recovery"},
   "cost_metrics": ["aw_command_count", "wall_clock_aw_ms", "output_bytes", "managed_files_read", "state_records_touched", "unchanged_orientation_repeats", "route_reversals", "clarification_requests", "rejected_mutations", "proof_reruns", "false_completion_authorizations", "package_residue"],
+  "execution_budget": {"max_aw_command_count": 4, "max_wall_clock_aw_ms_per_scenario": 5000, "max_output_bytes_per_scenario": 85000},
   "scenarios": [
     {"id":"fresh-direct-work","owner":"direct-work","terminal_state":"continue","typed_action":"implement","fault":"none"},
     {"id":"explicit-bounded-work","owner":"issue-scope","terminal_state":"continue","typed_action":"implement","fault":"none"},

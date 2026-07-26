@@ -115,6 +115,9 @@ def _execute_composed_workspace_path(*, target: Path, scenario: dict[str, object
 def execute_matrix(matrix: dict[str, object]) -> list[str]:
     """Execute each row through ordinary CLI paths and the typed decision contract."""
     errors: list[str] = []
+    budget = matrix.get("execution_budget", {})
+    if not isinstance(budget, dict):
+        return ["execution budget is missing or invalid"]
     with tempfile.TemporaryDirectory(prefix="aw-composed-scenarios-") as directory:
         target = Path(directory)
         subprocess.run(["git", "init", "--quiet", str(target)], check=True, capture_output=True, text=True)
@@ -133,8 +136,12 @@ def execute_matrix(matrix: dict[str, object]) -> list[str]:
                 errors.append(f"{scenario_id} did not execute every ordinary consumer")
             if not packets["start"].get("next_safe_action") or not packets["implement"].get("decision_packet"):
                 errors.append(f"{scenario_id} did not return ordinary route and implement packets")
-            if metrics["aw_command_count"] != 4 or metrics["output_bytes"] <= 0:
+            if metrics["aw_command_count"] != int(budget.get("max_aw_command_count", 0)) or metrics["output_bytes"] <= 0:
                 errors.append(f"{scenario_id} emitted incomplete execution metrics")
+            if metrics["wall_clock_aw_ms"] > int(budget.get("max_wall_clock_aw_ms_per_scenario", 0)):
+                errors.append(f"{scenario_id} exceeded the lifecycle time budget ({metrics['wall_clock_aw_ms']}ms)")
+            if metrics["output_bytes"] > int(budget.get("max_output_bytes_per_scenario", 0)):
+                errors.append(f"{scenario_id} exceeded the lifecycle output budget ({metrics['output_bytes']} bytes)")
     return errors
 
 
