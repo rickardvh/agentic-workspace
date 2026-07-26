@@ -575,6 +575,13 @@ def test_context_authority_projection_requires_live_records_for_start() -> None:
         "memory",
         "skills",
     }
+    repair = projection["repair_operation"]
+    assert repair["status"] == "required"
+    assert repair["blocked_claims"] == ["mutation", "proof-claim", "completion-claim"]
+    planning = next(item for item in repair["repairs"] if item["surface"] == "planning")
+    assert planning["owner"] == "planning package"
+    assert planning["reason_code"] == "missing"
+    assert planning["action"] == "refresh-or-admit-source-record"
 
 
 def test_context_authority_projection_selects_live_source_records_and_excludes_inapplicable() -> None:
@@ -592,6 +599,16 @@ def test_context_authority_projection_selects_live_source_records_and_excludes_i
             "skills": {"status": "current", "source_id": "skills/registry", "revision": "skills-r2", "freshness": "current"},
         },
     )
+    assert projection["repair_operation"]["status"] == "required"
+    assert projection["repair_operation"]["repairs"] == [
+        {
+            "surface": "memory",
+            "owner": "memory package",
+            "reason_code": "not-applicable",
+            "action": "refresh-or-admit-source-record",
+            "required_record": ["status=current", "source_id", "revision", "freshness=current"],
+        }
+    ]
 
     skills = next(item for item in projection["authorities"] if item["surface"] == "skills")
     assert skills["source"] == {"id": "skills/registry", "revision": "skills-r2", "freshness": "current"}
