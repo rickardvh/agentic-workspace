@@ -1034,6 +1034,9 @@ candidates = []
     assert route["required_transition"] == "none"
     assert route["next_safe_action"]["action"] == "prove-current-task"
     assert "claim-active-plan-progress" in route["blocked_claims"]
+    assert route["allowed_claims"] == ["bounded-task-progress"]
+    assert route["proof_expectation"] == "run implement/proof-selected commands for the changed paths; do not claim active-plan progress"
+    assert route["state_update_policy"] == "read-only"
     packet = payload["operating_loop"]
     assert packet["verification"]["state"] == "proof_missing"
     assert packet["closeout_state"] == "blocked_missing_proof"
