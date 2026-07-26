@@ -371,17 +371,17 @@ def test_correction_event_generated_operations_store_query_and_preserve_low_auth
         "evidence_hash": "sha256:review-thread-1",
         "route_decisions": ["target-guidance", "target-suitability"],
     }
-    trusted_receipt = {
-        "authority": "pr-review",
-        "producer_class": "human-reviewer",
-        "producer_id": "reviewer-1",
-        "source": "github-review",
-        "source_ref": "review-thread-1",
-        "status": "current",
-    }
-    receipt_ref = ".agentic-workspace/local/correction-authority-receipts/review-thread-1.json"
-    (tmp_path / receipt_ref).parent.mkdir(parents=True)
-    (tmp_path / receipt_ref).write_text(json.dumps(trusted_receipt), encoding="utf-8")
+    from agentic_workspace.agent_guidance import record_trusted_authority_receipt
+
+    receipt_ref = record_trusted_authority_receipt(
+        target_root=tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref="review-thread-1",
+        target_revision="rev-1",
+    )["receipt_ref"]
 
     submitted = correction_event_submit(
         {"event_json": json.dumps(event), "trusted_authority_receipt_ref": receipt_ref},
@@ -456,21 +456,17 @@ def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(
         ),
         encoding="utf-8",
     )
-    receipt_ref = ".agentic-workspace/local/correction-authority-receipts/review-thread-1.json"
-    (tmp_path / receipt_ref).parent.mkdir(parents=True)
-    (tmp_path / receipt_ref).write_text(
-        json.dumps(
-            {
-                "authority": "pr-review",
-                "producer_class": "human-reviewer",
-                "producer_id": "reviewer-1",
-                "source": "github-review",
-                "source_ref": "review-thread-1",
-                "status": "current",
-            }
-        ),
-        encoding="utf-8",
-    )
+    from agentic_workspace.agent_guidance import record_trusted_authority_receipt
+
+    receipt_ref = record_trusted_authority_receipt(
+        target_root=tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref="review-thread-1",
+        target_revision="rev-1",
+    )["receipt_ref"]
     event = {
         "delivery_id": "delivery-ts-1",
         "target_identity_ref": "fast",

@@ -1605,7 +1605,11 @@ def test_guidance_promotion_reads_only_the_canonical_correction_store(tmp_path: 
 
 
 def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tmp_path: Path) -> None:
-    from agentic_workspace.agent_guidance import apply_guidance_promotion, guidance_promotion_from_store
+    from agentic_workspace.agent_guidance import (
+        apply_guidance_promotion,
+        guidance_promotion_from_store,
+        record_guidance_remember_receipt,
+    )
 
     target = tmp_path / "repo"
     target.mkdir()
@@ -1616,24 +1620,14 @@ def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tm
     )
     store = target / ".agentic-workspace/local/correction-events.json"
     store.parent.mkdir(parents=True, exist_ok=True)
-    remember_ref = ".agentic-workspace/local/correction-event-receipts/remember-1.json"
-    receipt = target / remember_ref
-    receipt.parent.mkdir(parents=True, exist_ok=True)
-    receipt.write_text(
-        json.dumps(
-            {
-                "kind": "agentic-workspace/guidance-remember-receipt/v1",
-                "status": "current",
-                "authority": "explicit-user-correction",
-                "producer_class": "human-reviewer",
-                "producer_id": "reviewer-1",
-                "source_ref": "remember-1",
-                "target_revision": "rev-b",
-                "instruction": "remember",
-            }
-        ),
-        encoding="utf-8",
+    remember_ref = record_guidance_remember_receipt(
+        target_root=target,
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source_ref="remember-1",
+        target_revision="rev-b",
     )
+    remember_receipt_ref = remember_ref["receipt_ref"]
     store.write_text(
         json.dumps(
             {
@@ -1642,7 +1636,7 @@ def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tm
                     _correction_event(
                         target_identity_ref="user-local:fast-worker",
                         source_ref="remember-1",
-                        remember_receipt_ref=remember_ref,
+                        remember_receipt_ref=remember_receipt_ref,
                     )
                 ],
             }
@@ -1658,10 +1652,62 @@ def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tm
 
     assert remembered["status"] == "ready"
     assert remembered["guidance"][0]["promotion_reason"] == "explicit-authorised-remember"
-    assert remembered["guidance"][0]["promotion_authority"]["remember_receipt"]["receipt_ref"] == remember_ref
+    assert remembered["guidance"][0]["promotion_authority"]["remember_receipt"]["receipt_ref"] == remember_receipt_ref
     assert promoted["status"] == "promoted"
     assert promoted["record"]["provenance"]["promotion_reason"] == "explicit-authorised-remember"
     assert promoted["record"]["destination"]["owner"] == "repo-local-target-guidance-overlay"
+
+
+def test_guidance_promotion_rejects_hand_authored_remember_receipt_path(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import guidance_promotion_from_store
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
+        encoding="utf-8",
+    )
+    forged_ref = ".agentic-workspace/local/correction-event-receipts/remember-1.json"
+    forged = target / forged_ref
+    forged.parent.mkdir(parents=True, exist_ok=True)
+    forged.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/guidance-remember-receipt/v1",
+                "status": "current",
+                "authority": "explicit-user-correction",
+                "producer_class": "human-reviewer",
+                "producer_id": "reviewer-1",
+                "source_ref": "remember-1",
+                "target_revision": "rev-b",
+            }
+        ),
+        encoding="utf-8",
+    )
+    store = target / ".agentic-workspace/local/correction-events.json"
+    store.parent.mkdir(parents=True, exist_ok=True)
+    store.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/correction-event-store/v1",
+                "events": [
+                    _correction_event(
+                        target_identity_ref="user-local:fast-worker",
+                        source_ref="remember-1",
+                        remember_receipt_ref=forged_ref,
+                    )
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    remembered = guidance_promotion_from_store(target_root=target, explicit_remember=True)
+
+    assert remembered["status"] == "review-required"
+    assert remembered["guidance"][0]["promotion_authority"]["remember_receipt"] is None
+    assert remembered["guidance"][0]["promotion_authority"]["caller_explicit_remember_ignored"] is True
 
 
 def test_guidance_promotion_ignores_caller_immediate_remember_without_receipt(tmp_path: Path) -> None:
@@ -1892,6 +1938,7 @@ def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_
         operation="merge",
         reason="same target behavior",
         expected_revision=edited["record"]["revision"],
+        expected_record_revisions={second["guidance_id"]: second["revision"]},
         merge_guidance_ids=[second["guidance_id"]],
     )
     split = transition_guidance(
@@ -1909,6 +1956,7 @@ def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_
         operation="supersede",
         reason="replacement must exist",
         expected_revision=split_replacement["revision"],
+        expected_record_revisions={"guidance:missing": 1},
         replacement_guidance_id="guidance:missing",
     )
     superseded = transition_guidance(
@@ -1917,6 +1965,7 @@ def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_
         operation="supersede",
         reason="replacement accepted",
         expected_revision=split_replacement["revision"],
+        expected_record_revisions={third["guidance_id"]: third["revision"]},
         replacement_guidance_id=third["guidance_id"],
     )
 
