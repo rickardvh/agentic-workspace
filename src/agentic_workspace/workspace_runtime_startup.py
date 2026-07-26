@@ -2446,7 +2446,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     # The smallest-workflow prompt is the ordinary first-contact surface.  It
     # carries the state-delta trio; active-plan routes already expose their
     # compact routing decision and keep the larger trio selector-addressable.
-    include_state_delta_packets = next_safe_action.get("next_safe_action") == "choose-smallest-workflow-shape"
+    include_state_delta_packets = next_safe_action.get("next_safe_action") in {
+        "choose-smallest-workflow-shape",
+        "inspect-current-workflow-context",
+    }
     if include_state_delta_packets:
         selected["message_economy"] = message_economy_payload(
             surface="startup",
