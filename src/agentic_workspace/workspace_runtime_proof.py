@@ -147,6 +147,8 @@ from agentic_workspace.workspace_runtime_generated_surface import (
 )
 from agentic_workspace.workspace_runtime_planning import _active_planning_record_for_report_section
 
+INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
+
 
 def _proof_lifecycle_command(*args: Any, **kwargs: Any) -> dict[str, Any]:
     generated_cli: Any = None
@@ -6689,50 +6691,171 @@ def _separation_of_duty_gate(*, required_mode: str, implementer: dict[str, Any],
     }
 
 
-def _load_admitted_independent_review_receipt(*, target_root: Path | None, required_mode: str) -> dict[str, Any]:
-    """Load an admitted review receipt from repo-local state instead of caller fields."""
+def _stable_review_json_digest(value: Any) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _independent_review_scope_digest(changed_paths: list[str] | None) -> str:
+    normalized = sorted({str(path).replace("\\", "/").strip() for path in (changed_paths or []) if str(path).strip()})
+    return hashlib.sha256(json.dumps(normalized, sort_keys=True).encode("utf-8")).hexdigest()[:20] if normalized else ""
+
+
+def _read_independent_review_receipt_index(target_root: Path) -> tuple[Path, dict[str, Any]]:
+    path = target_root / INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH
+    if not path.exists():
+        return path, {"kind": "agentic-workspace/independent-review-receipt-index/v1", "receipts": []}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("independent review receipt index is unreadable; repair it before proof closeout.") from exc
+    if payload.get("kind") != "agentic-workspace/independent-review-receipt-index/v1" or not isinstance(payload.get("receipts"), list):
+        raise WorkspaceUsageError("independent review receipt index is malformed; repair it before proof closeout.")
+    return path, payload
+
+
+def _write_independent_review_receipt_index(path: Path, payload: dict[str, Any], *, expected_digest: str | None = None) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if expected_digest is not None and path.exists():
+        current_digest = _stable_review_json_digest(json.loads(path.read_text(encoding="utf-8")))
+        if current_digest != expected_digest:
+            raise WorkspaceUsageError("independent review receipt index changed before write; retry with current state.")
+    lock_path = path.with_name(f".{path.name}.lock")
+    lock_fd: int | None = None
+    try:
+        try:
+            lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError as exc:
+            raise WorkspaceUsageError("independent review receipt index is locked; retry after the current write completes.") from exc
+        os.write(lock_fd, str(os.getpid()).encode("utf-8"))
+        tmp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+        tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        tmp_path.replace(path)
+    finally:
+        if lock_fd is not None:
+            os.close(lock_fd)
+        try:
+            lock_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def record_admitted_independent_review_receipt(
+    *,
+    target_root: Path,
+    required_mode: str,
+    implementer: dict[str, Any],
+    reviewer: dict[str, Any],
+    assignment_id: str,
+    review_revision: str,
+    changed_paths: list[str] | None = None,
+    reviewed_at: str = "",
+    result: str = "accepted",
+    expires_at: str = "",
+) -> dict[str, Any]:
+    if required_mode in {"", "none", "not-applicable"}:
+        raise WorkspaceUsageError("independent review receipts require a concrete required_mode.")
+    if result not in {"accepted", "admitted", "satisfied"}:
+        raise WorkspaceUsageError("independent review receipts require an accepted/admitted/satisfied result.")
+    if not implementer.get("actor_id") or not reviewer.get("actor_id"):
+        raise WorkspaceUsageError("independent review receipts require implementer and reviewer actor ids.")
+    if required_mode == "human" and reviewer.get("role") != "human-approver":
+        raise WorkspaceUsageError("human review receipts require reviewer.role=human-approver.")
+    index_path, index = _read_independent_review_receipt_index(target_root)
+    receipt_basis = {
+        "required_mode": required_mode,
+        "assignment_id": assignment_id,
+        "review_revision": review_revision,
+        "scope_digest": _independent_review_scope_digest(changed_paths),
+        "implementer": implementer,
+        "reviewer": reviewer,
+        "result": result,
+    }
+    receipt = {
+        "kind": "agentic-workspace/admitted-independent-review-receipt/v1",
+        "receipt_ref": "independent-review:" + _stable_review_json_digest(receipt_basis)[:24],
+        "status": "admitted",
+        "required_mode": required_mode,
+        "assignment_id": assignment_id,
+        "review_revision": review_revision,
+        "changed_paths": sorted({str(path).replace("\\", "/").strip() for path in (changed_paths or []) if str(path).strip()}),
+        "scope_digest": receipt_basis["scope_digest"],
+        "implementer": implementer,
+        "reviewer": reviewer,
+        "result": result,
+        "reviewed_at": reviewed_at or datetime.now(timezone.utc).isoformat(),
+        "expires_at": expires_at,
+        "custody": {
+            "operation_id": "independent-review.admit",
+            "producer": "agentic-workspace.independent-review-admission",
+            "trusted_channel": "producer-owned-local-operation",
+            "index_ref": INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH.as_posix(),
+        },
+    }
+    receipts = [item for item in index.get("receipts", []) if isinstance(item, dict)]
+    existing = next((item for item in receipts if item.get("receipt_ref") == receipt["receipt_ref"]), None)
+    if existing is None:
+        _write_independent_review_receipt_index(
+            index_path,
+            {"kind": "agentic-workspace/independent-review-receipt-index/v1", "receipts": [*receipts, receipt]},
+            expected_digest=_stable_review_json_digest(index) if index_path.exists() else None,
+        )
+        stored = receipt
+    else:
+        stored = existing
+    return {
+        "kind": "agentic-workspace/independent-review-receipt-operation-result/v1",
+        "status": "stored",
+        "operation_id": "independent-review.admit",
+        "receipt_ref": str(stored.get("receipt_ref") or ""),
+        "receipt": stored,
+        "store": INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH.as_posix(),
+    }
+
+
+def _load_admitted_independent_review_receipt(
+    *, target_root: Path | None, required_mode: str, changed_paths: list[str] | None = None
+) -> dict[str, Any]:
+    """Load an admitted review receipt from a producer-owned indexed store."""
     if target_root is None or required_mode in {"", "none", "not-applicable"}:
         return {}
-    receipt_roots = [
-        target_root / ".agentic-workspace" / "local" / "review-receipts",
-        target_root / ".agentic-workspace" / "local" / "assignment-runs",
-    ]
-    candidates: list[tuple[str, str, Path, dict[str, Any]]] = []
-    for receipt_root in receipt_roots:
-        if not receipt_root.exists():
+    try:
+        index_path, index = _read_independent_review_receipt_index(target_root)
+    except WorkspaceUsageError:
+        return {}
+    expected_scope_digest = _independent_review_scope_digest(changed_paths)
+    candidates: list[tuple[str, str, dict[str, Any]]] = []
+    for payload in [item for item in index.get("receipts", []) if isinstance(item, dict)]:
+        if payload.get("kind") != "agentic-workspace/admitted-independent-review-receipt/v1":
             continue
-        for path in sorted(receipt_root.rglob("*.json")):
-            try:
-                payload = json.loads(path.read_text(encoding="utf-8-sig"))
-            except (OSError, json.JSONDecodeError):
-                continue
-            if not isinstance(payload, dict):
-                continue
-            status = str(payload.get("status") or payload.get("admission_status") or "").strip()
-            if status not in {"admitted", "accepted", "satisfied"}:
-                continue
-            implementer = _as_dict(payload.get("implementer"))
-            reviewer = _as_dict(payload.get("reviewer"))
-            if not implementer.get("actor_id") or not reviewer.get("actor_id"):
-                continue
-            if required_mode == "human" and reviewer.get("role") != "human-approver":
-                continue
-            observed = str(payload.get("reviewed_at") or payload.get("admitted_at") or payload.get("observed_at") or "").strip()
-            revision = str(payload.get("review_revision") or payload.get("assignment_revision") or payload.get("revision") or "").strip()
-            candidates.append((observed, revision, path, payload))
+        custody = payload.get("custody") if isinstance(payload.get("custody"), dict) else {}
+        if custody.get("producer") != "agentic-workspace.independent-review-admission":
+            continue
+        if str(payload.get("status") or "").strip() not in {"admitted", "accepted", "satisfied"}:
+            continue
+        if str(payload.get("required_mode") or "").strip() != required_mode:
+            continue
+        if str(payload.get("revoked_at") or payload.get("superseded_by") or "").strip():
+            continue
+        if expected_scope_digest and str(payload.get("scope_digest") or "").strip() != expected_scope_digest:
+            continue
+        implementer = _as_dict(payload.get("implementer"))
+        reviewer = _as_dict(payload.get("reviewer"))
+        if not implementer.get("actor_id") or not reviewer.get("actor_id"):
+            continue
+        if required_mode == "human" and reviewer.get("role") != "human-approver":
+            continue
+        observed = str(payload.get("reviewed_at") or payload.get("admitted_at") or payload.get("observed_at") or "").strip()
+        revision = str(payload.get("review_revision") or payload.get("assignment_revision") or payload.get("revision") or "").strip()
+        candidates.append((observed, revision, payload))
     if not candidates:
         return {}
-    _, _, path, payload = sorted(candidates, key=lambda item: (item[0], item[1], str(item[2])))[-1]
-    try:
-        relative_path = path.relative_to(target_root).as_posix()
-    except ValueError:
-        relative_path = path.as_posix()
-    receipt_bytes = path.read_bytes()
+    _, _, payload = sorted(candidates, key=lambda item: (item[0], item[1], str(item[2].get("receipt_ref") or "")))[-1]
     return {
         "kind": "agentic-workspace/admitted-independent-review-receipt/v1",
         "status": "admitted",
-        "source_path": relative_path,
-        "receipt_digest": hashlib.sha256(receipt_bytes).hexdigest(),
+        "source_path": index_path.relative_to(target_root).as_posix(),
+        "receipt_ref": str(payload.get("receipt_ref") or ""),
+        "receipt_digest": _stable_review_json_digest(payload),
         "review_revision": str(
             payload.get("review_revision") or payload.get("assignment_revision") or payload.get("revision") or ""
         ).strip(),
@@ -6743,7 +6866,7 @@ def _load_admitted_independent_review_receipt(*, target_root: Path | None, requi
             "reviewed_at": str(payload.get("reviewed_at") or payload.get("admitted_at") or payload.get("observed_at") or "").strip(),
             "assignment_id": str(payload.get("assignment_id") or "").strip(),
         },
-        "rule": "Only repo-local admitted receipts can satisfy proof separation; caller-supplied reviewer fields are ignored.",
+        "rule": "Only producer-owned indexed independent review receipts can satisfy proof separation; caller-supplied reviewer fields and arbitrary JSON files are ignored.",
     }
 
 
@@ -6834,7 +6957,11 @@ def _proof_decision_packet(
         _list_payload(high_assurance_closeout_posture.get("uncertainty")) if isinstance(high_assurance_closeout_posture, dict) else []
     )
     required_review_mode = "human" if int(high_assurance_closeout_posture.get("matched_count", 0) or 0) else "not-applicable"
-    admitted_review_receipt = _load_admitted_independent_review_receipt(target_root=target_root, required_mode=required_review_mode)
+    admitted_review_receipt = _load_admitted_independent_review_receipt(
+        target_root=target_root,
+        required_mode=required_review_mode,
+        changed_paths=changed_paths,
+    )
     separation_gate = _separation_of_duty_gate(
         required_mode=required_review_mode,
         implementer=_as_dict(admitted_review_receipt.get("implementer")),
@@ -6845,6 +6972,7 @@ def _proof_decision_packet(
             **separation_gate,
             "receipt": {
                 "source_path": admitted_review_receipt.get("source_path", ""),
+                "receipt_ref": admitted_review_receipt.get("receipt_ref", ""),
                 "receipt_digest": admitted_review_receipt.get("receipt_digest", ""),
                 "review_revision": admitted_review_receipt.get("review_revision", ""),
                 "admission": admitted_review_receipt.get("admission", {}),
