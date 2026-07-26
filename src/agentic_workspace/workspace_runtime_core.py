@@ -17737,11 +17737,9 @@ def _operating_loop_planning_state(
             "blocks_full_closure": True,
             "custody": "recommended",
         }
-    task_switch = _as_dict(gate.get("task_switch_reconciliation"))
     if (
         str(gate.get("gate_result") or "") in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
         and gate.get("workflow_sufficient") is True
-        and str(task_switch.get("status") or "") in {"active", "current-task-route-acknowledged"}
     ):
         return {"state": "unrelated_active_plan", "plan_ref": plan_ref, "blocks_full_closure": False}
     if str(reliance.get("status") or "") not in {"", "no-active-plan", "not-applicable", "clear", "satisfied"}:
@@ -21886,7 +21884,6 @@ def _report_closeout_trust_payload(
             str(planning_safety_gate.get("gate_result") or "")
             not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
             or planning_safety_gate.get("workflow_sufficient") is not True
-            or str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
         ):
             return {
                 "kind": "agentic-workspace/current-task-closeout-scope/v1",
