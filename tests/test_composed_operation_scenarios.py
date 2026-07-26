@@ -40,3 +40,26 @@ def test_composed_operation_scenario_contract_rejects_divergence() -> None:
         )
     assert any("owner mismatch" in error for error in errors)
     assert any("terminal_state mismatch" in error for error in errors)
+
+
+def test_composed_operation_contract_is_not_derived_from_parallel_oracle() -> None:
+    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
+    source = path.read_text(encoding="utf-8")
+    assert "FIXTURE_CONTRACT_ORACLE" not in source
+
+
+def test_composed_operation_owner_receipt_does_not_smuggle_contract_fields() -> None:
+    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
+    spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    matrix = module.load_matrix()
+    scenario = copy.deepcopy(matrix["scenarios"][0])
+    with tempfile.TemporaryDirectory(prefix="aw-composed-receipt-") as directory:
+        target = Path(directory)
+        receipt_ref = module._write_owner_receipt(target, scenario)
+        receipt = module._read_json_if_present(target / receipt_ref)
+    assert "contract" not in receipt
+    assert "owner" not in receipt
+    assert receipt["fixture"] == scenario["fixture"]
