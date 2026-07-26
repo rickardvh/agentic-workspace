@@ -5859,7 +5859,10 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
                     active_records,
                     key=lambda record: (
                         0 if str(_as_dict(record.get("consequence")).get("claim_effect") or "") == "blocks" else 1,
-                        0 if str(_as_dict(record.get("consequence")).get("severity") or record.get("severity") or "") in {"blocking", "critical"} else 1,
+                        0
+                        if str(_as_dict(record.get("consequence")).get("severity") or record.get("severity") or "")
+                        in {"blocking", "critical"}
+                        else 1,
                         0 if str(_as_dict(record.get("consequence")).get("safety_effect") or "") == "action-safety-blocking" else 1,
                         str(record.get("id") or ""),
                     ),
@@ -21896,12 +21899,9 @@ def _report_closeout_trust_payload(
         )
         route_decision = _as_dict(planning_safety_gate.get("route_decision"))
         scope_gate = copy.deepcopy(planning_safety_gate)
-        if (
-            planning_safety_gate.get("workflow_sufficient") is not True
-            or (
-                str(planning_safety_gate.get("gate_result") or "")
-                not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
-            )
+        if planning_safety_gate.get("workflow_sufficient") is not True or (
+            str(planning_safety_gate.get("gate_result") or "")
+            not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
         ):
             return {
                 "kind": "agentic-workspace/current-task-closeout-scope/v1",

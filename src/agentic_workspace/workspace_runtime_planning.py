@@ -1301,11 +1301,11 @@ def _planning_route_decision_payload(
     ambiguous = task_relation == "ambiguous"
     active_plan_protection = _as_dict(route_evidence.get("active_plan_protection"))
     blocked_claims = active_plan_protection.get("blocked_claims") or route_evidence.get("blocked_claims") or []
-    selected_owner_ref = str(route_evidence.get("active_execplan") or "")
     owner_admission = _as_dict(route_evidence.get("owner_admission"))
     route_inputs = _as_dict(route_evidence.get("route_inputs"))
     task_binding = _as_dict(route_inputs.get("task_binding"))
     owner_facts = _as_dict(route_inputs.get("owner"))
+    selected_owner_ref = str(route_evidence.get("active_execplan") or owner_facts.get("ref") or "")
     task_mode = str(task_binding.get("mode") or "")
     decision = {
         "kind": "agentic-planning/route-decision/v1",
@@ -1413,12 +1413,25 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
     mode = str(binding.get("mode") or "")
     baseline_status = str(baseline.get("status") or "")
     baseline_identity = str(baseline.get("baseline_id") or baseline.get("head") or baseline.get("revision") or "")
+    default_action = (
+        "prove-current-task"
+        if relation == "bounded-independent" and transition == "none"
+        else "continue-active-plan"
+        if relation == "continues-selected-owner" and transition == "none"
+        else "inspect-current-task-scope"
+        if relation == "independent-pending-scope"
+        else "choose-task-switch-route"
+        if relation == "ambiguous" or transition == "ask-for-route-decision"
+        else "archive-or-retire-completed-plan"
+        if posture == "completed-residue"
+        else ""
+    )
     action_safety = {
         "owner": _as_dict(route_decision.get("selected_owner_identity")),
         "relation": relation,
         "posture": posture,
         "transition": transition,
-        "typed_action": str(action.get("action") or ""),
+        "typed_action": str(action.get("action") or default_action),
         "allowed_claims": [
             str(item) for item in route_decision.get("allowed_claims", []) if isinstance(route_decision.get("allowed_claims"), list)
         ],
@@ -1434,7 +1447,20 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
         "state_update_policy": str(route_decision.get("state_update_policy") or ""),
         "repair_owner": str(route_decision.get("repair_owner") or "planning-route-decision"),
     }
-    route_identity_missing = not action_safety["owner"] or not action_safety["typed_action"] or not action_safety["state_update_policy"]
+    route_applicable = any(
+        (
+            relation != "not-applicable",
+            posture != "not-applicable",
+            bool(action_safety["owner"].get("ref")),
+            mode in {"read-only", "mutation"},
+            action_safety["proposal_freshness"] not in {"", "not-applicable", "absent"},
+        )
+    )
+    if not route_applicable:
+        return {}
+    route_identity_missing = (
+        not action_safety["owner"].get("ref") or not action_safety["typed_action"] or not action_safety["state_update_policy"]
+    )
     if route_identity_missing:
         return {
             "status": "attention",
@@ -1530,6 +1556,18 @@ def _structured_route_inputs(
     acknowledged = route_evidence.get("status") == "current-task-route-acknowledged"
     bounded_read_only = current_task_class.startswith("bounded-") and not acknowledged
     bounded_mutation = acknowledged and bool(changed_paths)
+    mutation_baseline = _as_dict(route_evidence.get("mutation_baseline"))
+    if bounded_mutation and not mutation_baseline:
+        baseline_identity = str(
+            planning_revision.get("revision_id") or planning_revision.get("revision") or planning_revision.get("source_head") or ""
+        )
+        mutation_baseline = {
+            "kind": "agentic-planning/mutation-baseline/v1",
+            "status": "current" if baseline_identity else "missing",
+            "baseline_id": baseline_identity,
+            "source": "planning-revision-and-changed-paths",
+            "changed_path_count": len(changed_paths),
+        }
     if shared_refs:
         task_relation, task_basis = "continues-selected-owner", "shared-structured-reference"
     elif bounded_read_only:
@@ -1571,7 +1609,7 @@ def _structured_route_inputs(
                 "mutation_scope_acknowledged": bounded_mutation,
                 "mode": "read-only" if bounded_read_only else "mutation" if bounded_mutation else "unresolved",
             },
-            "mutation_baseline": _as_dict(route_evidence.get("mutation_baseline")),
+            "mutation_baseline": mutation_baseline,
             "owner": {
                 "ref": active_owner,
                 "lifecycle": lifecycle,
