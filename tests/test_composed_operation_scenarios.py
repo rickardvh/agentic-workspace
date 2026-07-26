@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
+import subprocess
+import tempfile
 from pathlib import Path
 
 
@@ -12,3 +15,28 @@ def test_composed_operation_scenario_matrix_is_release_gate_ready() -> None:
     spec.loader.exec_module(module)
     assert module.validate_matrix(module.load_matrix()) == []
     assert module.execute_matrix(module.load_matrix()) == []
+
+
+def test_composed_operation_scenario_contract_rejects_divergence() -> None:
+    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
+    spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    matrix = module.load_matrix()
+    scenario = copy.deepcopy(matrix["scenarios"][0])
+    with tempfile.TemporaryDirectory(prefix="aw-composed-negative-") as directory:
+        target = Path(directory)
+        subprocess.run(["git", "init", "--quiet", str(target)], check=True, capture_output=True, text=True)
+        (target / "README.md").write_text("scenario fixture\n", encoding="utf-8")
+        module._run_cli("init", "--target", str(target))
+        packets, metrics = module._execute_composed_workspace_path(target=target, scenario=scenario)
+        divergent = {**scenario, "owner": "wrong-owner", "terminal_state": "blocked"}
+        errors = module._assert_scenario_contract(
+            scenario=divergent,
+            observation=packets["_scenario_contract"],
+            metrics=metrics,
+            budget=matrix["execution_budget"],
+        )
+    assert any("owner mismatch" in error for error in errors)
+    assert any("terminal_state mismatch" in error for error in errors)
