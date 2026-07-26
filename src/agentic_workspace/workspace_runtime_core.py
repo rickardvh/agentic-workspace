@@ -5838,7 +5838,18 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
         "posture_obligations": obligations,
         "active_obligation_refs": [str(obligation.get("id")) for obligation in obligations],
         "primary_consequence": next(
-            (record["consequence"] for record in active_records if isinstance(record.get("consequence"), dict)),
+            (
+                record["consequence"]
+                for record in sorted(
+                    active_records,
+                    key=lambda record: (
+                        0 if str(_as_dict(record.get("consequence")).get("claim_effect") or "") == "blocks" else 1,
+                        0 if str(record.get("severity") or "") in {"blocking", "critical"} else 1,
+                        str(record.get("id") or ""),
+                    ),
+                )
+                if isinstance(record.get("consequence"), dict)
+            ),
             {"kind": "agentic-workspace/context-finding-consequence/v1", "consequence": "quiet", "owner": "none"},
         ),
         "routing_rule": "Active pressure may compile into posture obligations; inactive pressure stays as compact audit detail.",
