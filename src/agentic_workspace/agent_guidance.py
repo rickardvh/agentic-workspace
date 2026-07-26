@@ -709,6 +709,7 @@ def guidance_promotion_from_store(
     target_root: Path,
     task_class: str | None = None,
     scope_class: str | None = None,
+    explicit_remember: bool = False,
 ) -> dict[str, Any]:
     """Derive promotion only from the bounded correction-event authority store.
 
@@ -729,10 +730,11 @@ def guidance_promotion_from_store(
         task_class=task_class,
         scope_class=scope_class,
     )
-    decision = guidance_promotion_decision(admission=admission, explicit_remember=False)
+    decision = guidance_promotion_decision(admission=admission, explicit_remember=explicit_remember)
     decision["authority_source"] = {
         "store": _repo_relative(target_root / config.local_override.correction_events_path, root=target_root),
         "store_update": admission.get("store_update", {}),
+        "explicit_remember": explicit_remember,
         "rule": "Promotion consumes admitted current store records; direct caller recurrence and authority assertions are ignored.",
     }
     return decision
@@ -740,6 +742,7 @@ def guidance_promotion_from_store(
 
 GUIDANCE_LIFECYCLE_STORE_PATH = Path(".agentic-workspace/local/guidance-lifecycle.json")
 _GUIDANCE_LIFECYCLE_OPERATIONS = {"edit", "merge", "split", "suppress", "revalidate", "weaken", "supersede", "retire", "delete"}
+_GUIDANCE_TERMINAL_STATUSES = {"retired", "deleted", "superseded"}
 
 
 def _guidance_lifecycle_store(target_root: Path) -> tuple[Path, dict[str, Any]]:
@@ -756,9 +759,52 @@ def _guidance_lifecycle_store(target_root: Path) -> tuple[Path, dict[str, Any]]:
     return path, payload
 
 
-def apply_guidance_promotion(*, target_root: Path, guidance_id: str, task_class: str | None = None, scope_class: str | None = None) -> dict[str, Any]:
+def _guidance_revision(record: dict[str, Any]) -> int:
+    try:
+        return int(record.get("revision") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _guidance_index(records: list[dict[str, Any]], guidance_id: str) -> int | None:
+    return next((index for index, item in enumerate(records) if item.get("guidance_id") == guidance_id), None)
+
+
+def _require_guidance_expected_revision(record: dict[str, Any], expected_revision: int | None) -> dict[str, Any] | None:
+    current_revision = _guidance_revision(record)
+    if expected_revision is None:
+        return {
+            "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+            "status": "expected-revision-required",
+            "guidance_id": record.get("guidance_id"),
+            "current_revision": current_revision,
+        }
+    if expected_revision != current_revision:
+        return {
+            "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+            "status": "stale-guidance-revision",
+            "guidance_id": record.get("guidance_id"),
+            "expected_revision": expected_revision,
+            "current_revision": current_revision,
+        }
+    return None
+
+
+def apply_guidance_promotion(
+    *,
+    target_root: Path,
+    guidance_id: str,
+    task_class: str | None = None,
+    scope_class: str | None = None,
+    explicit_remember: bool = False,
+) -> dict[str, Any]:
     """Persist one promoted candidate with its evidence and future lifecycle custody."""
-    decision = guidance_promotion_from_store(target_root=target_root, task_class=task_class, scope_class=scope_class)
+    decision = guidance_promotion_from_store(
+        target_root=target_root,
+        task_class=task_class,
+        scope_class=scope_class,
+        explicit_remember=explicit_remember,
+    )
     candidate = next((item for item in decision.get("guidance", []) if isinstance(item, dict) and item.get("guidance_id") == guidance_id), None)
     if decision.get("status") != "ready" or not isinstance(candidate, dict) or candidate.get("status") != "active":
         return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "promotion-not-authorized", "guidance_id": guidance_id, "decision": decision}
@@ -776,12 +822,24 @@ def apply_guidance_promotion(*, target_root: Path, guidance_id: str, task_class:
         "provenance": {"source_event_refs": candidate["source_event_refs"], "evidence_refs": candidate["evidence_refs"], "promotion_reason": candidate["promotion_reason"], "authority_source": decision.get("authority_source", {})},
         "transitions": [{"operation": "promote", "at": _guidance_now(), "reason": candidate["promotion_reason"]}],
         "revision": 1,
+        "schema_revision": hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest()[:20],
     }
     _write_correction_event_store(path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": [*records, record]})
     return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "promoted", "record": record, "store": _repo_relative(path, root=target_root)}
 
 
-def transition_guidance(*, target_root: Path, guidance_id: str, operation: str, reason: str, replacement_guidance_id: str = "") -> dict[str, Any]:
+def transition_guidance(
+    *,
+    target_root: Path,
+    guidance_id: str,
+    operation: str,
+    reason: str,
+    expected_revision: int | None = None,
+    replacement_guidance_id: str = "",
+    instruction: str | None = None,
+    merge_guidance_ids: list[str] | None = None,
+    split_instructions: list[str] | None = None,
+) -> dict[str, Any]:
     """Apply a reversible lifecycle transition without discarding promotion evidence."""
     if operation not in _GUIDANCE_LIFECYCLE_OPERATIONS:
         raise WorkspaceUsageError(f"unsupported guidance lifecycle operation: {operation}")
@@ -789,15 +847,55 @@ def transition_guidance(*, target_root: Path, guidance_id: str, operation: str, 
         raise WorkspaceUsageError("guidance lifecycle transitions require a reason.")
     path, store = _guidance_lifecycle_store(target_root)
     records = [item for item in store["records"] if isinstance(item, dict)]
-    index = next((index for index, item in enumerate(records) if item.get("guidance_id") == guidance_id), None)
+    index = _guidance_index(records, guidance_id)
     if index is None:
         return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "missing-guidance", "guidance_id": guidance_id}
     record = dict(records[index])
-    if record.get("status") in {"retired", "deleted", "superseded"}:
+    stale = _require_guidance_expected_revision(record, expected_revision)
+    if stale is not None:
+        return stale
+    if record.get("status") in _GUIDANCE_TERMINAL_STATUSES:
         return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "terminal-guidance", "record": record}
+    if operation == "edit":
+        if instruction is None or not instruction.strip():
+            raise WorkspaceUsageError("edit guidance transitions require a non-empty instruction.")
+        record["instruction"] = instruction.strip()
+    elif operation == "merge":
+        subjects = [item for item in (merge_guidance_ids or []) if item and item != guidance_id]
+        if not subjects:
+            raise WorkspaceUsageError("merge guidance transitions require at least one additional guidance id.")
+        missing = [item for item in subjects if _guidance_index(records, item) is None]
+        if missing:
+            return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "missing-merge-subject", "guidance_id": guidance_id, "missing_guidance_ids": missing}
+        record["merged_guidance_ids"] = sorted(set([*record.get("merged_guidance_ids", []), *subjects]))
+    elif operation == "split":
+        parts = [item.strip() for item in (split_instructions or []) if item and item.strip()]
+        if len(parts) < 2:
+            raise WorkspaceUsageError("split guidance transitions require at least two replacement instructions.")
+        record["split_replacements"] = [
+            {
+                "guidance_id": "guidance:" + hashlib.sha256(f"{guidance_id}:split:{position}:{item}".encode()).hexdigest()[:20],
+                "instruction": item,
+            }
+            for position, item in enumerate(parts, start=1)
+        ]
+    elif operation == "weaken":
+        record["strength"] = "weakened"
+    elif operation == "revalidate":
+        record["last_revalidated_at"] = _guidance_now()
+    elif operation == "supersede":
+        if not replacement_guidance_id or replacement_guidance_id == guidance_id:
+            raise WorkspaceUsageError("supersede guidance transitions require a distinct replacement guidance id.")
+        if _guidance_index(records, replacement_guidance_id) is None:
+            return {
+                "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+                "status": "missing-replacement-guidance",
+                "guidance_id": guidance_id,
+                "replacement_guidance_id": replacement_guidance_id,
+            }
     status = {"suppress": "suppressed", "retire": "retired", "delete": "deleted", "supersede": "superseded"}.get(operation, "active")
     transition = {"operation": operation, "at": _guidance_now(), "reason": reason, "replacement_guidance_id": replacement_guidance_id or None}
-    record.update(status=status, revision=int(record.get("revision") or 0) + 1, transitions=[*record.get("transitions", []), transition])
+    record.update(status=status, revision=_guidance_revision(record) + 1, transitions=[*record.get("transitions", []), transition])
     records[index] = record
     _write_correction_event_store(path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": records})
     return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "transitioned", "record": record, "store": _repo_relative(path, root=target_root)}

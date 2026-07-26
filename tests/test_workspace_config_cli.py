@@ -1602,6 +1602,43 @@ def test_guidance_promotion_reads_only_the_canonical_correction_store(tmp_path: 
     assert decision["authority_source"]["store"] == ".agentic-workspace/local/correction-events.json"
 
 
+def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import apply_guidance_promotion, guidance_promotion_from_store
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = \"user-local:fast-worker\"\ntarget_revision = \"rev-b\"\nstrength = \"strong\"\nexecution_methods = [\"internal\"]\nmodel_family = \"codex\"\nprovider = \"openai\"\n",
+        encoding="utf-8",
+    )
+    store = target / ".agentic-workspace/local/correction-events.json"
+    store.parent.mkdir(parents=True, exist_ok=True)
+    store.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/correction-event-store/v1",
+                "events": [_correction_event(target_identity_ref="user-local:fast-worker", source_ref="remember-1")],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    review_only = guidance_promotion_from_store(target_root=target)
+    remembered = guidance_promotion_from_store(target_root=target, explicit_remember=True)
+    promoted = apply_guidance_promotion(
+        target_root=target,
+        guidance_id=remembered["guidance"][0]["guidance_id"],
+        explicit_remember=True,
+    )
+
+    assert review_only["status"] == "review-required"
+    assert remembered["status"] == "ready"
+    assert remembered["guidance"][0]["promotion_reason"] == "explicit-authorised-remember"
+    assert promoted["status"] == "promoted"
+    assert promoted["record"]["provenance"]["promotion_reason"] == "explicit-authorised-remember"
+
+
 def test_guidance_promotion_persists_provenance_and_reversible_transition(tmp_path: Path) -> None:
     from agentic_workspace.agent_guidance import apply_guidance_promotion, guidance_promotion_from_store, transition_guidance
 
@@ -1620,11 +1657,126 @@ def test_guidance_promotion_persists_provenance_and_reversible_transition(tmp_pa
     ]}), encoding="utf-8")
     decision = guidance_promotion_from_store(target_root=target)
     promoted = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][0]["guidance_id"])
-    transitioned = transition_guidance(target_root=target, guidance_id=promoted["record"]["guidance_id"], operation="suppress", reason="conflicts with current policy")
+    transitioned = transition_guidance(
+        target_root=target,
+        guidance_id=promoted["record"]["guidance_id"],
+        operation="suppress",
+        reason="conflicts with current policy",
+        expected_revision=promoted["record"]["revision"],
+    )
     assert promoted["status"] == "promoted"
     assert promoted["record"]["provenance"]["source_event_refs"]
     assert transitioned["record"]["status"] == "suppressed"
     assert transitioned["record"]["transitions"][-1]["reason"] == "conflicts with current policy"
+
+
+def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import apply_guidance_promotion, guidance_promotion_from_store, transition_guidance
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = \"user-local:fast-worker\"\ntarget_revision = \"rev-b\"\nstrength = \"strong\"\nexecution_methods = [\"internal\"]\nmodel_family = \"codex\"\nprovider = \"openai\"\n",
+        encoding="utf-8",
+    )
+    store = target / ".agentic-workspace/local/correction-events.json"
+    store.parent.mkdir(parents=True, exist_ok=True)
+    store.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/correction-event-store/v1",
+                "events": [
+                    _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-1"),
+                    _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-2", evidence_hash="sha256:review-2"),
+                    _correction_event(
+                        target_identity_ref="user-local:fast-worker",
+                        invariant_id="proof-style",
+                        behavior_class="proof",
+                        desired_behavior="Keep proof narrow.",
+                        source_ref="review-3",
+                        evidence_hash="sha256:review-3",
+                    ),
+                    _correction_event(
+                        target_identity_ref="user-local:fast-worker",
+                        invariant_id="proof-style",
+                        behavior_class="proof",
+                        desired_behavior="Keep proof narrow.",
+                        source_ref="review-4",
+                        evidence_hash="sha256:review-4",
+                    ),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    decision = guidance_promotion_from_store(target_root=target)
+    first = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][0]["guidance_id"])["record"]
+    second = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][1]["guidance_id"])["record"]
+
+    missing_revision = transition_guidance(
+        target_root=target,
+        guidance_id=first["guidance_id"],
+        operation="edit",
+        reason="tighten wording",
+        instruction="Prefer focused edits.",
+    )
+    stale_revision = transition_guidance(
+        target_root=target,
+        guidance_id=first["guidance_id"],
+        operation="edit",
+        reason="tighten wording",
+        expected_revision=99,
+        instruction="Prefer focused edits.",
+    )
+    edited = transition_guidance(
+        target_root=target,
+        guidance_id=first["guidance_id"],
+        operation="edit",
+        reason="tighten wording",
+        expected_revision=first["revision"],
+        instruction="Prefer focused edits.",
+    )
+    merged = transition_guidance(
+        target_root=target,
+        guidance_id=edited["record"]["guidance_id"],
+        operation="merge",
+        reason="same target behavior",
+        expected_revision=edited["record"]["revision"],
+        merge_guidance_ids=[second["guidance_id"]],
+    )
+    split = transition_guidance(
+        target_root=target,
+        guidance_id=merged["record"]["guidance_id"],
+        operation="split",
+        reason="separate behavior and proof guidance",
+        expected_revision=merged["record"]["revision"],
+        split_instructions=["Prefer focused edits.", "Prefer focused proof."],
+    )
+    missing_replacement = transition_guidance(
+        target_root=target,
+        guidance_id=split["record"]["guidance_id"],
+        operation="supersede",
+        reason="replacement must exist",
+        expected_revision=split["record"]["revision"],
+        replacement_guidance_id="guidance:missing",
+    )
+    superseded = transition_guidance(
+        target_root=target,
+        guidance_id=split["record"]["guidance_id"],
+        operation="supersede",
+        reason="replacement accepted",
+        expected_revision=split["record"]["revision"],
+        replacement_guidance_id=second["guidance_id"],
+    )
+
+    assert missing_revision["status"] == "expected-revision-required"
+    assert stale_revision["status"] == "stale-guidance-revision"
+    assert edited["record"]["instruction"] == "Prefer focused edits."
+    assert second["guidance_id"] in merged["record"]["merged_guidance_ids"]
+    assert len(split["record"]["split_replacements"]) == 2
+    assert missing_replacement["status"] == "missing-replacement-guidance"
+    assert superseded["record"]["status"] == "superseded"
 
 
 def test_correction_event_lifecycle_rejects_delivery_replay_separately_from_recurrence() -> None:
