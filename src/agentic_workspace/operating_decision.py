@@ -35,6 +35,27 @@ def _digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
 
 
+def _file_digest(path: Path) -> str:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
+def _directory_digest(path: Path) -> str:
+    if not path.is_dir():
+        return ""
+    entries: list[dict[str, str]] = []
+    try:
+        children = sorted(item for item in path.rglob("*") if item.is_file())
+    except OSError:
+        return ""
+    for child in children[:200]:
+        rel = child.relative_to(path).as_posix()
+        entries.append({"path": rel, "digest": _file_digest(child)})
+    return _digest(entries)
+
+
 def _load_context_authority_registry_contract() -> dict[str, Any]:
     payload = (Path(__file__).resolve().parent / "contracts" / _CONTEXT_AUTHORITY_REGISTRY_RESOURCE).read_text(encoding="utf-8")
     data = json.loads(payload)
@@ -83,6 +104,78 @@ def _registry_consumers(item: dict[str, Any]) -> list[str]:
         return [str(consumer).strip() for consumer in consumers if str(consumer).strip()]
     consumer = str(item.get("consumer") or "").strip()
     return [part.strip() for part in consumer.split(",") if part.strip()]
+
+
+def _context_source_candidates(surface: str) -> list[str]:
+    return {
+        "system-intent": ["SYSTEM_INTENT.md", ".agentic-workspace/config.toml"],
+        "architecture-principles": ["SYSTEM_INTENT.md", ".agentic-workspace/config.toml"],
+        "scoped-instructions": ["AGENTS.md", ".agentic-workspace/skills/workspace-startup/SKILL.md"],
+        "ownership": [".agentic-workspace/OWNERSHIP.toml"],
+        "planning": [".agentic-workspace/planning"],
+        "memory": [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo"],
+        "assignment": [".agentic-workspace/config.local.toml", ".agentic-workspace/config.toml"],
+        "evaluation": [".agentic-workspace/evaluation", "src/agentic_workspace/evaluation.py"],
+        "proof": [".agentic-workspace/verification/manifest.toml", "src/agentic_workspace/proof_receipts.py"],
+        "mutation-baseline": [".git", ".agentic-workspace/planning"],
+        "autopilot-executor": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+        "skills": [".agentic-workspace/skills", "generated/workspace/python/commands"],
+        "target-guidance": [".agentic-workspace/config.local.toml", ".agentic-workspace/config.toml"],
+        "terminal-outcome": [".agentic-workspace/local", "src/agentic_workspace/workspace_runtime_primitives.py"],
+        "generated-references": ["generated/.agentic-workspace-cli-fingerprint.json", "src/agentic_workspace/contracts"],
+    }.get(surface, [])
+
+
+def _resolve_context_authority_source(
+    *,
+    item: dict[str, Any],
+    target_root: Path | None,
+    task: str,
+    paths: list[str],
+) -> dict[str, Any]:
+    surface = str(item.get("surface") or "")
+    if target_root is None:
+        return {"status": "missing", "reason": "missing-target-root"}
+    root = target_root
+    candidates = _context_source_candidates(surface)
+    chosen: Path | None = None
+    for candidate in candidates:
+        path = root / candidate
+        if path.exists():
+            chosen = path
+            break
+    if chosen is None:
+        return {"status": "missing", "reason": "canonical-source-missing", "candidates": candidates}
+    revision = _directory_digest(chosen) if chosen.is_dir() else _file_digest(chosen)
+    if not revision:
+        return {"status": "stale", "reason": "source-unreadable", "source_id": chosen.as_posix()}
+    path_tokens = {Path(path).parts[0] for path in paths if Path(path).parts}
+    source_token = chosen.parts[-1] if chosen.parts else chosen.as_posix()
+    applicable = bool(task.strip() or paths)
+    if surface in {"ownership", "mutation-baseline", "proof"} and not paths:
+        applicable = "start" in _registry_consumers(item)
+    return {
+        "status": "current",
+        "applicable": applicable,
+        "source_id": chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix(),
+        "revision": "sha256:" + revision,
+        "freshness": "current",
+        "selection": {
+            "task_digest": _digest(task)[:16],
+            "changed_path_count": len(paths),
+            "path_tokens": sorted(path_tokens),
+            "source_token": source_token,
+            "rule": "repository adapter resolved current source identity; caller supplied records are diagnostics only",
+        },
+        "admission": {
+            "kind": "agentic-workspace/context-authority-source-receipt/v1",
+            "producer": "context-authority-source-adapter",
+            "registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+            "surface": surface,
+            "owner": item.get("owner"),
+            "source_revision": "sha256:" + revision,
+        },
+    }
 
 
 def context_authority_coverage(
@@ -172,6 +265,7 @@ def resolve_context_authority_projection(
     consumer: str,
     task: str = "",
     changed_paths: list[str] | None = None,
+    target_root: Path | None = None,
     source_records: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Resolve the smallest declared authority set for an ordinary consumer.
@@ -180,7 +274,7 @@ def resolve_context_authority_projection(
     and a typed repair disposition instead of reimplementing source selection.
     """
     paths = [str(path) for path in (changed_paths or []) if str(path)]
-    records = _as_dict(source_records)
+    caller_records = _as_dict(source_records)
     coverage = context_authority_coverage()
     required = set(ORDINARY_DECISION_CONSUMER_REQUIREMENTS.get(consumer, []))
     selected: list[dict[str, Any]] = []
@@ -189,11 +283,8 @@ def resolve_context_authority_projection(
         surface = str(item.get("surface") or "")
         if surface not in required:
             continue
-        record = _as_dict(records.get(surface))
-        # A registry declaration names an authority; it is not proof that the
-        # authoritative source is available for this invocation.  Required
-        # context must therefore arrive through a live source record rather
-        # than being synthesized from the declaration itself.
+        record = _resolve_context_authority_source(item=item, target_root=target_root, task=task, paths=paths)
+        caller_record = _as_dict(caller_records.get(surface))
         record_status = str(record.get("status") or "missing")
         admission = _as_dict(record.get("admission"))
         applicable = (
@@ -218,12 +309,15 @@ def resolve_context_authority_projection(
                 "id": str(record.get("source_id") or record.get("source") or ""),
                 "revision": str(record.get("revision") or ""),
                 "freshness": str(record.get("freshness") or record_status),
+                "selection": _as_dict(record.get("selection")),
+                "admission": admission,
             },
+            "caller_record_status": "ignored" if caller_record else "absent",
         }
         if applicable:
             selected.append(authority)
         else:
-            excluded.append({"surface": surface, "reason": record_status})
+            excluded.append({"surface": surface, "reason": str(record.get("reason") or record_status), "caller_record_status": authority["caller_record_status"]})
     missing = sorted(required - {item["surface"] for item in selected})
     status = "admitted" if not missing and coverage["status"] == "measured" else "repair-required"
     repairs = [
@@ -239,7 +333,8 @@ def resolve_context_authority_projection(
                 "missing",
             ),
             "action": "refresh-or-admit-source-record",
-            "required_record": ["status=current", "source_id", "revision", "freshness=current", "canonical admission receipt"],
+            "repair_owner": "context-authority-source-adapter",
+            "required_record": ["canonical repository source", "producer-owned admission receipt", "freshness=current"],
         }
         for item in sorted(
             (item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in missing),
@@ -253,6 +348,7 @@ def resolve_context_authority_projection(
         "registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
         "task_digest": _digest(task)[:16],
         "changed_path_count": len(paths),
+        "target_root_status": "present" if target_root is not None else "missing",
         "authorities": selected,
         "excluded_authorities": excluded,
         "missing_required_surfaces": missing,
@@ -690,6 +786,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         consumer=requested_consumer,
         task=str(inputs.get("task") or ""),
         changed_paths=[str(path) for path in _as_list(inputs.get("changed_paths"))],
+        target_root=Path(str(inputs["target_root"])) if inputs.get("target_root") else None,
         source_records=_as_dict(inputs.get("authority_sources")) or _as_dict(inputs.get("authorities")),
     )
     # Context admission is an authority gate, not advisory route decoration.
