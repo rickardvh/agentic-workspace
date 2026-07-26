@@ -28065,6 +28065,7 @@ def _ordinary_decision_packet(
     detail_routes: dict[str, str] | None = None,
     shown_because: list[str] | None = None,
     absence_states: dict[str, str] | None = None,
+    canonical_decision: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     normalized_blocked_actions = [item for item in (blocked_actions or []) if str(item).strip()][:8]
     normalized_required_commands = [item for item in (required_commands or []) if str(item).strip()][:6]
@@ -28073,21 +28074,35 @@ def _ordinary_decision_packet(
     normalized_absence_states = {
         key: value for key, value in (absence_states or {}).items() if value not in (None, "", [], {})
     }
-    decision_input = {
-        "surface": surface,
-        "phase_question": phase_question,
-        "next_action": next_action,
-        "blocked_actions": normalized_blocked_actions,
-        "required_commands": normalized_required_commands,
-        "claim_boundary": claim_boundary or "not-evaluated",
-        "residue_owner": residue_owner or "none",
-        "reasons": normalized_reasons,
-        "detail_routes": normalized_detail_routes,
-        "absence_states": normalized_absence_states,
-    }
-    input_digest = "sha256:" + hashlib.sha256(
-        json.dumps(decision_input, sort_keys=True, ensure_ascii=True, default=str).encode("utf-8")
-    ).hexdigest()
+    canonical = canonical_decision if isinstance(canonical_decision, dict) else {}
+    invocation = canonical.get("primary_action", {}).get("operation_invocation", {}) if isinstance(canonical.get("primary_action"), dict) else {}
+    if canonical and canonical.get("decision_id") and canonical.get("canonical_decision_input_revision") and isinstance(invocation, dict):
+        return {
+            "kind": "agentic-workspace/ordinary-decision-packet/v1",
+            "decision_identity": {
+                "id": str(canonical["decision_id"]),
+                "input_digest": str(canonical["canonical_decision_input_revision"]),
+                "projection_contract": "canonical-operating-decision/v1",
+            },
+            "surface": surface,
+            "phase_question": phase_question,
+            "next_action": next_action,
+            "primary_action_identity": {"id": str(invocation.get("operation_id") or ""), "label": next_action},
+            "operation_invocation": invocation,
+            "expected_transition": str(invocation.get("expected_transition") or ""),
+            "effect_scope": str(invocation.get("effect_class") or ""),
+            "mutation_precondition": invocation.get("mutation_boundary", {}),
+            "blocked_actions": normalized_blocked_actions,
+            "required_commands": normalized_required_commands,
+            "claim_boundary": claim_boundary or "not-evaluated",
+            "claim_continuation_boundary": claim_boundary or "not-evaluated",
+            "residue_owner": residue_owner or "none",
+            "reasons": normalized_reasons,
+            "detail_routes": normalized_detail_routes,
+            "shown_because": [item for item in (shown_because or []) if str(item).strip()][:6],
+            "absence_states": normalized_absence_states,
+        }
+    input_digest = ""
     return {
         "kind": "agentic-workspace/ordinary-decision-packet/v1",
         "decision_identity": {

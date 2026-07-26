@@ -48,6 +48,20 @@ def test_ordinary_decision_packet_projects_a_stable_decision_envelope() -> None:
     assert packet["claim_continuation_boundary"] == packet["claim_boundary"]
 
 
+def test_ordinary_decision_packet_preserves_canonical_identity_when_rendering_changes() -> None:
+    invocation = operation_invocation(operation_id="proof.report", arguments={"target": "."}, expected_transition="proof refreshed")
+    decision = compile_operating_decision(
+        inputs={"consumer": "start", "actionability": {"next_action": {"action": "run proof", "operation_invocation": invocation}}}
+    )
+
+    first = _ordinary_decision_packet(surface="start", phase_question="q", next_action="display one", canonical_decision=decision)
+    second = _ordinary_decision_packet(surface="start", phase_question="q", next_action="display two", canonical_decision=decision)
+
+    assert first["decision_identity"] == second["decision_identity"]
+    assert first["primary_action_identity"]["id"] == "proof.report"
+    assert first["operation_invocation"] == invocation
+
+
 def test_operating_decision_emits_one_typed_primary_action() -> None:
     invocation = operation_invocation(
         operation_id="proof.report",
