@@ -1949,7 +1949,7 @@
     "src/agentic_workspace/contracts/schemas/local_work_thread_select_result.schema.json": "a12bce783525efa545ced63608369d355fa3f670",
     "src/agentic_workspace/contracts/schemas/module_capability.schema.json": "b2290a769c9fb341510521767301e1086fcef164",
     "src/agentic_workspace/contracts/schemas/module_registry.schema.json": "26e5009524cc6de0152f42fdd108ea106d9fcd69",
-    "src/agentic_workspace/contracts/schemas/operating_decision.schema.json": "c9a9e8d8da4d11395b30ecde24afdb7fdd825182",
+    "src/agentic_workspace/contracts/schemas/operating_decision.schema.json": "e0ecb25fde82baf86eae59023ee06d146067a821",
     "src/agentic_workspace/contracts/schemas/operation.schema.json": "0d29988c199032be49c6e1c2700e09f9db38fca9",
     "src/agentic_workspace/contracts/schemas/operation_artifact_registry.schema.json": "998f0c1b71aa841d4618417843c2185a2a529e8a",
     "src/agentic_workspace/contracts/schemas/operation_conformance_test_ir.schema.json": "6f22c37319df97bef2c9154317f736f1f2e36822",
@@ -2035,7 +2035,7 @@
     "src/agentic_workspace/evaluation.py": "533a55cd6ffff18c1bcd453236e92607f9c44210",
     "src/agentic_workspace/generated_operations.py": "add071271394e2471bf3477be2bf3594e4f238e5",
     "src/agentic_workspace/improvement_consequence.py": "e0e5c9ae4e504872cee1200c6806c865aa9d8059",
-    "src/agentic_workspace/operating_decision.py": "9a3e5790c3178376c27f8221c4a7dfa4b5d1adf8",
+    "src/agentic_workspace/operating_decision.py": "e7e9d58f1443043775ccb750c42d8a9e618af17e",
     "src/agentic_workspace/projection_reuse.py": "a74099ac3579c3e449a7cc98c2284edbbf907839",
     "src/agentic_workspace/proof_receipt_admission.py": "60893fff9ce2710f63fa7c2bf66b114d080a2d94",
     "src/agentic_workspace/proof_subject.py": "666a35412c76c085c1974ecc99ca24a266593fa6",
@@ -2059,7 +2059,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "a7673a62ba1eaec9ea0a1a2ebd9505ff25ddd55429e863470e5e8682d07549cd",
+  "git_index_identity": "a87602dc2306b71829c96f0d8694a00e5417be144640af74e2f4dc01047a8005",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
