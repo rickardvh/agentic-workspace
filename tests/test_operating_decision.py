@@ -579,6 +579,62 @@ def test_admitted_handoff_and_not_required_evaluation_can_reach_actionable_termi
     assert decision["canonical_decision_input_revision"] == bound_invocation["expected_input_revision"]
 
 
+def test_repo_mutation_action_requires_live_mutation_baseline() -> None:
+    invocation = operation_invocation(
+        operation_id="implement.apply",
+        arguments={"target": ".", "changed": ["src/app.py"]},
+        effect_class="repo-mutation",
+        authority_class="mutation-gate",
+        mutation_boundary={"writes_repo_state": True, "allowed_paths": ["src/app.py"]},
+    )
+
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": "unregistered-test-consumer",
+            "actionability": {"next_action": {"action": "implement", "operation_invocation": invocation}},
+            "authorities": {},
+        }
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["primary_action"] == {}
+    assert decision["external_blocker"]["reason_code"] == "stale-mutation-baseline"
+    assert decision["external_blocker"]["repair"] == "resolve and revalidate a live mutation baseline before admitting this typed action"
+
+
+def test_bound_repo_mutation_preserves_typed_action_identity() -> None:
+    authorities = {
+        "mutation_baseline": {
+            "baseline_id": "baseline-a",
+            "head": "abc123",
+            "scope": {"allowed_paths": ["src/app.py"]},
+            "revalidation_status": "fresh",
+        }
+    }
+    invocation = operation_invocation(
+        operation_id="implement.apply",
+        arguments={"target": ".", "changed": ["src/app.py"]},
+        effect_class="repo-mutation",
+        authority_class="mutation-gate",
+        mutation_boundary={"writes_repo_state": True, "allowed_paths": ["src/app.py"]},
+    )
+    bound = bind_operation_invocation_to_authorities(invocation=invocation, authorities=authorities)
+
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": "unregistered-test-consumer",
+            "actionability": {"next_action": {"action": "rendered text is not identity", "operation_invocation": bound}},
+            "authorities": authorities,
+        }
+    )
+
+    assert decision["status"] == "actionable"
+    assert decision["primary_action"]["action"] == "rendered text is not identity"
+    assert decision["action_identity"]["operation_invocation"]["operation_id"] == "implement.apply"
+    assert decision["action_identity"]["requested_mutation_boundary"]["allowed_paths"] == ["src/app.py"]
+    assert decision["action_identity"]["expected_input_revision"] == bound["expected_input_revision"]
+
+
 def test_context_authority_projection_requires_live_records_for_start() -> None:
     projection = resolve_context_authority_projection(consumer="start", task="shape authority routing ownership skill guidance memory")
 

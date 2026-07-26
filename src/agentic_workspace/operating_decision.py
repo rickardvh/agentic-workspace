@@ -2147,7 +2147,11 @@ def live_decision_input_revision(*, invocation: dict[str, Any], authorities: dic
 
 
 def bind_operation_invocation_to_authorities(*, invocation: dict[str, Any], authorities: dict[str, Any]) -> dict[str, Any]:
-    bound = {**invocation, **_live_authority_revision_fields(authorities=authorities)}
+    bound = {
+        **invocation,
+        "requested_mutation_boundary": _as_dict(invocation.get("mutation_boundary")),
+        **_live_authority_revision_fields(authorities=authorities),
+    }
     bound["expected_input_revision"] = invocation_decision_input_revision(bound)
     bound["producer_revision"] = bound["expected_input_revision"]
     bound["stale_action_rejection"] = {
@@ -2163,6 +2167,17 @@ def bind_operation_invocation_to_authorities(*, invocation: dict[str, Any], auth
         ],
     }
     return bound
+
+
+def _invocation_requires_mutation_baseline(invocation: dict[str, Any]) -> bool:
+    effect_class = str(invocation.get("effect_class") or "").strip()
+    boundary = _as_dict(invocation.get("mutation_boundary"))
+    return effect_class in {"repo-mutation", "workspace-state-mutation"} or boundary.get("writes_repo_state") is True
+
+
+def _mutation_baseline_is_current(mutation: dict[str, Any]) -> bool:
+    status = str(mutation.get("revalidation_status") or mutation.get("status") or "").strip()
+    return status in {"fresh", "current"} and bool(mutation.get("baseline_id")) and bool(mutation.get("head"))
 
 
 def _scope_fingerprint(paths: list[str]) -> str:
@@ -2311,6 +2326,19 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     blockers = [item for item in _as_list(inputs.get("blockers")) if isinstance(item, dict)]
     authority_blockers = derive_operating_blockers_from_authorities(authorities=authorities)
     blockers.extend(authority_blockers)
+    if (
+        invocation
+        and not authority_blockers
+        and _invocation_requires_mutation_baseline(invocation)
+        and not _mutation_baseline_is_current(_as_dict(authorities.get("mutation_baseline")))
+    ):
+        blockers.append(
+            {
+                "reason_code": "stale-mutation-baseline",
+                "owner": "mutation authority",
+                "repair": "resolve and revalidate a live mutation baseline before admitting this typed action",
+            }
+        )
     for gap in _as_list(inputs.get("context_gaps")):
         if isinstance(gap, dict) and str(gap.get("severity") or "") == "blocking":
             blockers.append({"reason_code": "context-coverage-gap", "owner": gap.get("owner", ""), "repair": gap.get("next_route", "")})
@@ -2434,6 +2462,16 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "selected_owner": _as_dict(inputs.get("selected_owner")),
         "terminal_state": str(inputs.get("terminal_state") or "CONTINUE"),
         "primary_action": primary_action,
+        "action_identity": {
+            "kind": "agentic-workspace/typed-action-identity/v1",
+            "operation_invocation": invocation,
+            "requested_mutation_boundary": _as_dict(invocation.get("requested_mutation_boundary"))
+            or _as_dict(invocation.get("mutation_boundary")),
+            "expected_input_revision": invocation_current_revision,
+            "revision_source": "live-authority-resolver" if authorities else "embedded-invocation",
+        }
+        if invocation
+        else {},
         "external_blocker": external_blocker,
         "blocked_claim_classes": _as_list(inputs.get("blocked_claim_classes")),
         "provenance": _as_dict(inputs.get("provenance")),
