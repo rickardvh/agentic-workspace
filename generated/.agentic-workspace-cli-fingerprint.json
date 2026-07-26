@@ -2035,7 +2035,7 @@
     "src/agentic_workspace/evaluation.py": "533a55cd6ffff18c1bcd453236e92607f9c44210",
     "src/agentic_workspace/generated_operations.py": "add071271394e2471bf3477be2bf3594e4f238e5",
     "src/agentic_workspace/improvement_consequence.py": "e0e5c9ae4e504872cee1200c6806c865aa9d8059",
-    "src/agentic_workspace/operating_decision.py": "e7e9d58f1443043775ccb750c42d8a9e618af17e",
+    "src/agentic_workspace/operating_decision.py": "952926d813987cc93e0ecb7bc1a8657488a2dcdb",
     "src/agentic_workspace/projection_reuse.py": "a74099ac3579c3e449a7cc98c2284edbbf907839",
     "src/agentic_workspace/proof_receipt_admission.py": "60893fff9ce2710f63fa7c2bf66b114d080a2d94",
     "src/agentic_workspace/proof_subject.py": "666a35412c76c085c1974ecc99ca24a266593fa6",
@@ -2051,7 +2051,7 @@
     "src/agentic_workspace/workspace_runtime_core.py": "78527caddebb2107e5e7cf1c14cd18363fa8950c",
     "src/agentic_workspace/workspace_runtime_generated_surface.py": "82203eefe65eab1653eaa36ae574ac07a9f96864",
     "src/agentic_workspace/workspace_runtime_implement.py": "1191c3c473bbfd7eeec36e7fda5573561753860b",
-    "src/agentic_workspace/workspace_runtime_planning.py": "c977755a2905f588ce2743e3e3de012c2f3f9ebb",
+    "src/agentic_workspace/workspace_runtime_planning.py": "8743299b90061333674c121c1b6a84c951565a34",
     "src/agentic_workspace/workspace_runtime_primitives.py": "f929886efc9f368fb737569996853de69e4f3e88",
     "src/agentic_workspace/workspace_runtime_projection.py": "8db623c90efe888f5a6bba8a75bb96d253d1f707",
     "src/agentic_workspace/workspace_runtime_proof.py": "02fc8632052e88e0bbdf480a011f46f8a1bed17a",
@@ -2059,7 +2059,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "a87602dc2306b71829c96f0d8694a00e5417be144640af74e2f4dc01047a8005",
+  "git_index_identity": "dc1702f71126cbfe35ae379eacb29080b83c2fd0cba1b0d2f6e18e5dce39ed88",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
