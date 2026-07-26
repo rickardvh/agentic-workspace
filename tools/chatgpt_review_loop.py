@@ -389,9 +389,20 @@ def _focused_proof_attempt_result(
     proof_exit_code: int,
     starting_head: str,
     ending_head: str,
+    proof_commands: Sequence[str] | None = None,
+    failed_command_index: int | None = None,
 ) -> dict[str, Any]:
-    commands = [proof_command] if proof_command else []
-    failed_index = 0 if proof_status == "failed" and proof_command else -1
+    commands = [str(command) for command in (proof_commands or []) if str(command).strip()]
+    if not commands and proof_command:
+        commands = [proof_command]
+    failed_index = (
+        int(failed_command_index)
+        if failed_command_index is not None
+        else 0
+        if proof_status == "failed" and commands
+        else -1
+    )
+    failed_command = commands[failed_index] if 0 <= failed_index < len(commands) else ""
     identity = {
         "attempt_id": attempt.get("id"),
         "launch_identity": attempt.get("launch_identity"),
@@ -401,6 +412,7 @@ def _focused_proof_attempt_result(
         "proof_commands": commands,
         "proof_status": proof_status,
         "proof_exit_code": proof_exit_code,
+        "failed_command_index": failed_index,
     }
     return {
         "kind": "agentic-workspace/focused-proof-attempt-result/v1",
@@ -414,7 +426,7 @@ def _focused_proof_attempt_result(
         "proof_boundary": "focused-proof",
         "proof_commands": commands,
         "failed_command_index": failed_index,
-        "failed_command": proof_command if failed_index >= 0 else "",
+        "failed_command": failed_command,
         "proof_exit_code": proof_exit_code,
         "producer": "chatgpt-review-loop.job-result",
         "repair_action": "repair the failed focused proof, rerun it, then report the exact job result",
@@ -579,6 +591,8 @@ def report_job_result(
     push_status: str,
     runner: CommandRunner,
     supersede: bool = False,
+    proof_commands: Sequence[str] | None = None,
+    failed_command_index: int | None = None,
 ) -> dict[str, Any]:
     """Record agent-supplied proof/push evidence for the exact owning session."""
     root = _repo_root(cwd, runner)
@@ -652,7 +666,10 @@ def report_job_result(
         proof_exit_code=proof_exit_code,
         starting_head=str(attempt["starting_head"]),
         ending_head=ending_head,
+        proof_commands=proof_commands,
+        failed_command_index=failed_command_index,
     )
+    selected_proof_commands = [str(command) for command in proof_attempt_result["proof_commands"]]
     state["session_id"] = session_id
     attempt["session_id"] = session_id
     state["terminal_result"] = {
@@ -662,8 +679,8 @@ def report_job_result(
         "worktree": worktree.as_posix(), "starting_head": attempt["starting_head"],
         "ending_head": ending_head,
         "launch_identity": attempt["launch_identity"],
-        "proof_status": proof_status, "proof_commands": [proof_command] if proof_command else [],
-        "failed_command": proof_command if proof_status == "failed" else "",
+        "proof_status": proof_status, "proof_commands": selected_proof_commands,
+        "failed_command": proof_attempt_result["failed_command"] if proof_status == "failed" else "",
         "proof_attempt_result": proof_attempt_result,
         "proof_boundary": proof_attempt_result["proof_boundary"],
         "proof_exit_code": proof_exit_code, "push_status": push_status,
@@ -1782,6 +1799,8 @@ def _parser() -> argparse.ArgumentParser:
     result_parser.add_argument("--session-id", default=os.environ.get("CODEX_THREAD_ID", ""))
     result_parser.add_argument("--proof-status", choices=["passed", "failed"], required=True)
     result_parser.add_argument("--proof-command", default="")
+    result_parser.add_argument("--proof-commands-json", default="", help="JSON array of selected proof commands for this attempt.")
+    result_parser.add_argument("--failed-command-index", type=int, default=None)
     result_parser.add_argument("--proof-exit-code", type=int, required=True)
     result_parser.add_argument("--push-status", choices=["passed", "failed"], required=True)
     result_parser.add_argument(
@@ -1872,10 +1891,14 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                 _emit(result)
             return 0
         if args.command == "job-result":
+            proof_commands = json.loads(args.proof_commands_json) if args.proof_commands_json else None
+            if proof_commands is not None and not isinstance(proof_commands, list):
+                raise LoopError("proof-commands-invalid", "--proof-commands-json must be a JSON array")
             result = report_job_result(
                 cwd=args.target.resolve(), session_id=args.session_id.strip(), proof_status=args.proof_status,
                 proof_command=args.proof_command, proof_exit_code=args.proof_exit_code,
                 push_status=args.push_status, runner=runner, supersede=args.supersede,
+                proof_commands=proof_commands, failed_command_index=args.failed_command_index,
             )
             _emit(result)
             return 0

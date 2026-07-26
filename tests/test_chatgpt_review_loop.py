@@ -1287,8 +1287,13 @@ def test_spawned_worktree_resume_records_failed_proof_and_exact_repair(tmp_path:
             runner.pr_head = HEAD_B
             runner.pr_heads = [HEAD_A, HEAD_B]
             loop.report_job_result(
-                cwd=cwd, session_id="fresh-session", proof_status="passed", proof_command="pytest -q",
-                proof_exit_code=0, push_status="passed", runner=runner,
+                cwd=cwd,
+                session_id="fresh-session",
+                proof_status="passed",
+                proof_command="pytest -q",
+                proof_exit_code=0,
+                push_status="passed",
+                runner=runner,
             )
             stop_hook(cwd)
         else:
@@ -1296,9 +1301,13 @@ def test_spawned_worktree_resume_records_failed_proof_and_exact_repair(tmp_path:
             runner.pr_head = runner.head
             runner.pr_heads = [HEAD_B, runner.head]
             loop.report_job_result(
-                cwd=cwd, session_id="fresh-session", proof_status="failed",
-                proof_command="pytest tests/test_chatgpt_review_loop.py -q", proof_exit_code=1,
-                push_status="passed", runner=runner,
+                cwd=cwd,
+                session_id="fresh-session",
+                proof_status="failed",
+                proof_command="pytest tests/test_chatgpt_review_loop.py -q",
+                proof_exit_code=1,
+                push_status="passed",
+                runner=runner,
             )
             stop_hook(cwd)
         return subprocess.CompletedProcess(command, 0, "", "")
@@ -1376,6 +1385,32 @@ def test_terminal_repair_names_the_later_failed_proof_not_the_first_command(tmp_
     assert terminal["repair"]["failed_command"] == "pytest tests/test_chatgpt_review_loop.py -q"
     assert terminal["repair"]["failed_command"] != terminal["proof_commands"][0]
     assert terminal["repair"]["attempt_revision"] == saved["terminal_result"]["proof_attempt_result"]["attempt_revision"]
+
+
+def test_job_result_records_full_selected_proof_command_set_and_failed_index(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    saved = state(tmp_path, status="resume-in-progress")
+    loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
+    loop._save_state(tmp_path, saved)
+
+    result = loop.report_job_result(
+        cwd=tmp_path,
+        session_id=SESSION,
+        proof_status="failed",
+        proof_command="pytest tests/test_chatgpt_review_loop.py -q",
+        proof_commands=["ruff check tools/chatgpt_review_loop.py", "pytest tests/test_chatgpt_review_loop.py -q"],
+        failed_command_index=1,
+        proof_exit_code=1,
+        push_status="passed",
+        runner=runner,
+    )
+
+    assert result["proof_commands"] == ["ruff check tools/chatgpt_review_loop.py", "pytest tests/test_chatgpt_review_loop.py -q"]
+    assert result["failed_command"] == "pytest tests/test_chatgpt_review_loop.py -q"
+    assert result["proof_attempt_result"]["failed_command_index"] == 1
+    assert result["proof_attempt_result"]["attempt_revision"]
+    assert result["proof_attempt_result"]["starting_head"] == HEAD_A
+    assert result["proof_attempt_result"]["ending_head"] == HEAD_A
 
 
 def test_terminal_repair_rejects_stale_failed_proof_attempt_identity(tmp_path: Path) -> None:
