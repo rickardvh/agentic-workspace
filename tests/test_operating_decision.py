@@ -580,8 +580,9 @@ def test_context_authority_projection_requires_live_records_for_start() -> None:
     assert repair["blocked_claims"] == ["mutation", "proof-claim", "completion-claim"]
     planning = next(item for item in repair["repairs"] if item["surface"] == "planning")
     assert planning["owner"] == "planning package"
-    assert planning["reason_code"] == "missing"
+    assert planning["reason_code"] == "missing-target-root"
     assert planning["action"] == "refresh-or-admit-source-record"
+    assert planning["repair_owner"] == "context-authority-source-adapter"
 
 
 def test_operating_decision_blocks_action_when_required_context_is_unadmitted() -> None:
@@ -605,35 +606,52 @@ def test_operating_decision_blocks_action_when_required_context_is_unadmitted() 
     }
 
 
-def test_context_authority_projection_selects_live_source_records_and_excludes_inapplicable() -> None:
-    required_records = {
-        item["surface"]: {"status": "current", "source_id": f"{item['surface']}/source", "revision": "r1", "freshness": "current"}
+def _write_context_authority_sources(root: Path) -> None:
+    (root / ".agentic-workspace/planning").mkdir(parents=True)
+    (root / ".agentic-workspace/memory/repo").mkdir(parents=True)
+    (root / ".agentic-workspace/skills/workspace-startup").mkdir(parents=True)
+    (root / ".agentic-workspace").mkdir(exist_ok=True)
+    (root / "SYSTEM_INTENT.md").write_text("Intent\n", encoding="utf-8")
+    (root / "AGENTS.md").write_text("Instructions\n", encoding="utf-8")
+    (root / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (root / ".agentic-workspace/OWNERSHIP.toml").write_text("[paths]\n", encoding="utf-8")
+    (root / ".agentic-workspace/planning/state.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (root / ".agentic-workspace/memory/repo/index.md").write_text("# Memory\n", encoding="utf-8")
+    (root / ".agentic-workspace/skills/workspace-startup/SKILL.md").write_text("# Startup\n", encoding="utf-8")
+
+
+def test_context_authority_projection_selects_repository_sources_and_ignores_forged_records(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+    forged_records = {
+        item["surface"]: {
+            "status": "current",
+            "source_id": "forged/source",
+            "revision": "sha256:forged",
+            "freshness": "current",
+            "admission": {
+                "registry_revision": "sha256:forged",
+                "surface": item["surface"],
+                "owner": item["owner"],
+            },
+        }
         for item in context_authority_declarations()
         if "start" in item["consumer"]
     }
     projection = resolve_context_authority_projection(
         consumer="start",
         task="shape authority routing",
-        source_records={
-            **required_records,
-            "memory": {"status": "not-applicable", "applicable": False, "source_id": "memory/index", "revision": "old"},
-            "skills": {"status": "current", "source_id": "skills/registry", "revision": "skills-r2", "freshness": "current"},
-        },
+        target_root=tmp_path,
+        source_records=forged_records,
     )
-    assert projection["repair_operation"]["status"] == "required"
-    assert projection["repair_operation"]["repairs"] == [
-        {
-            "surface": "memory",
-            "owner": "memory package",
-            "reason_code": "not-applicable",
-            "action": "refresh-or-admit-source-record",
-            "required_record": ["status=current", "source_id", "revision", "freshness=current"],
-        }
-    ]
 
+    assert projection["status"] == "admitted"
+    assert projection["repair_operation"]["status"] == "not-required"
     skills = next(item for item in projection["authorities"] if item["surface"] == "skills")
-    assert skills["source"] == {"id": "skills/registry", "revision": "skills-r2", "freshness": "current"}
-    assert {item["surface"] for item in projection["excluded_authorities"]} == {"memory"}
+    assert skills["source"]["id"] == ".agentic-workspace/skills"
+    assert skills["source"]["revision"].startswith("sha256:")
+    assert skills["source"]["admission"]["producer"] == "context-authority-source-adapter"
+    assert skills["caller_record_status"] == "ignored"
+    assert projection["excluded_authorities"] == []
 
 
 def test_context_authority_coverage_fails_closed_for_duplicate_canonical_owner() -> None:
