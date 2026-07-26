@@ -58,6 +58,12 @@ def planning_handoff(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
+def targeted_execplan_write(*args: Any, **kwargs: Any) -> Any:
+    from repo_planning_bootstrap.installer import targeted_execplan_write as source_function
+
+    return source_function(*args, **kwargs)
+
+
 def uninstall_bootstrap(*args: Any, **kwargs: Any) -> Any:
     from repo_planning_bootstrap.installer import uninstall_bootstrap as source_function
 
@@ -84,6 +90,7 @@ __all__ = [
     'doctor_bootstrap',
     'install_bootstrap',
     'planning_handoff',
+    'targeted_execplan_write',
     'uninstall_bootstrap',
     'upgrade_bootstrap',
     'verify_payload',

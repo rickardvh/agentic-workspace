@@ -1268,6 +1268,27 @@
       "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
+      "operation_id": "planning.targeted-write.lifecycle",
+      "program": "agentic-planning",
+      "command": "targeted-write",
+      "generated_transport": "generated/planning/python/cli.py",
+      "operation_contract": "operations/planning.targeted-write.lifecycle.json",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.targeted-write.apply",
+        "module-result text/json compatibility formatting"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.targeted-write.lifecycle.preview.process",
+      "domain_runtime_primitive_refs": [
+        "planning.targeted-write.apply"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but targeted execplan mutation, revision guards, projection updates, and transaction receipt policy remain package-specific Planning behavior.",
+      "what_would_make_portable_later": "Keep the package semantic primitive explicit until guarded Planning owner selection, revision checking, projection mutation, and atomic receipt writes can be represented as smaller schema-backed portable primitives without weakening safety.",
+      "generic_behavior_audit": "#2283 targeted writer path: generated operation IR owns CLI/dataflow and output emission; Planning owns the mutation safety boundary for exact owner selection, stale guard rejection, projection effects, and idempotent transaction receipts."
+    },
+    {
       "operation_id": "planning.close-item.lifecycle",
       "program": "agentic-planning",
       "command": "close-item",

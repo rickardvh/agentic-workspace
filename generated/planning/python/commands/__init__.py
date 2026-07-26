@@ -40,6 +40,7 @@ from . import planning_reconcile_report as _command_planning_reconcile_report
 from . import planning_report_report as _command_planning_report_report
 from . import planning_status_report as _command_planning_status_report
 from . import planning_summary_report as _command_planning_summary_report
+from . import planning_targeted_write_lifecycle as _command_planning_targeted_write_lifecycle
 from . import planning_uninstall_lifecycle as _command_planning_uninstall_lifecycle
 from . import planning_upgrade_lifecycle as _command_planning_upgrade_lifecycle
 from . import planning_verify_payload_report as _command_planning_verify_payload_report
@@ -75,6 +76,7 @@ GENERATED_COMMAND_HANDLERS = {
     'planning.report.report': _command_planning_report_report.run,
     'planning.status.report': _command_planning_status_report.run,
     'planning.summary.report': _command_planning_summary_report.run,
+    'planning.targeted-write.lifecycle': _command_planning_targeted_write_lifecycle.run,
     'planning.uninstall.lifecycle': _command_planning_uninstall_lifecycle.run,
     'planning.upgrade.lifecycle': _command_planning_upgrade_lifecycle.run,
     'planning.verify-payload.report': _command_planning_verify_payload_report.run,

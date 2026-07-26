@@ -9,7 +9,7 @@ const commandPackage = JSON.parse(readFileSync(new URL('../resources/command_pac
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 test('generated package resource exposes expected commands', () => {
-  const expected = ["adopt", "archive-plan", "close-item", "closeout", "create-review", "decomposition-create", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "integration-apply", "integration-propose", "issue-shape", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "owner-select", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"];
+  const expected = ["adopt", "archive-plan", "close-item", "closeout", "create-review", "decomposition-create", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "integration-apply", "integration-propose", "issue-shape", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "owner-select", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "targeted-write", "uninstall", "upgrade", "verify-payload"];
   assert.deepEqual(commandPackage.commands.map((command) => command.command.name).sort(), expected);
   assert.match(source, /resources\/command_package\.json/);
   assert.doesNotMatch(source, /adapter_id/);
@@ -73,12 +73,12 @@ test('generated runnable adapter validates choices before command execution', ()
 
 test('generated runnable adapter validates required options before command execution', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, ...["create-review"]], {
+  const result = spawnSync(process.execPath, [cli, ...["targeted-write"]], {
     encoding: 'utf8',
   });
   assert.equal(result.status, 2);
   assert.equal(result.stdout, '');
-  assert.match(result.stderr, /missing required option --title/);
+  assert.match(result.stderr, /missing required option --patch/);
   assert.doesNotMatch(result.stderr, /runtime handoff/i);
 });
 

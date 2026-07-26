@@ -1,0 +1,62 @@
+{
+  "id": "planning.targeted-write.lifecycle",
+  "kind": "agentic-workspace/operation-contract/v1",
+  "migration_status": "runtime-consumed",
+  "command": {
+    "name": "targeted-write"
+  },
+  "summary": "Preview or apply a guarded patch to exactly one canonical execplan.",
+  "intent": "Support the #2283 targeted-writer path without delete/recreate behavior or broad plan rewrites.",
+  "inputs": [
+    "plan",
+    "patch",
+    "expect_planning_revision",
+    "expect_owner_revision",
+    "expect_lane_revision",
+    "apply"
+  ],
+  "steps": [
+    {
+      "id": "apply_targeted_write",
+      "uses": "planning.targeted-write.apply",
+      "description": "Resolve one live owner, validate revision guards, derive projection effects, and preview or write atomically."
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "id": "apply_targeted_write",
+        "uses": "planning.targeted-write.apply",
+        "arguments": {},
+        "outputs": [
+          "result"
+        ]
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "arguments": {},
+        "outputs": [
+          "emitted"
+        ]
+      }
+    ]
+  },
+  "postconditions": [
+    "one exact canonical owner selected by id/path",
+    "preview returns owner/state/lane revisions and changed fields",
+    "apply writes owner/projection updates and local receipt atomically",
+    "replay is idempotent"
+  ],
+  "non_solutions": [
+    "title-based owner selection",
+    "delete and recreate an execplan",
+    "hand-edit lifecycle or lane state without projection effects"
+  ],
+  "evidence": [
+    "targeted writer CLI preview/apply tests",
+    "generated command conformance",
+    "Planning package tests"
+  ]
+}

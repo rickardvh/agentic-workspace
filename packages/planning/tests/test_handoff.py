@@ -7,6 +7,28 @@ from pathlib import Path as _Path
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from planning_test_support import *
+from repo_planning_bootstrap import cli as planning_cli
+
+
+def _write_live_execplan_state(tmp_path: Path, *, item_id: str, surface: str | None = None) -> None:
+    surface = surface or f".agentic-workspace/planning/execplans/{item_id}.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        f"""
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  {{ id = "{item_id}", maturity = "active", status = "active", surface = "{surface}", why_now = "prove targeted execplan writer projection.", next_action = "continue implementation" }},
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
 
 
 def test_planning_summary_projects_handoff_role_metadata(tmp_path: Path) -> None:
@@ -155,6 +177,7 @@ queued_items = []
 def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="active-plan")
     _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
     record = json.loads(plan_path.read_text(encoding="utf-8"))
     # Older compatibility fixtures do not carry the canonical owner revision.
@@ -189,12 +212,18 @@ def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_p
         apply=True,
     )
     assert applied["status"] == "applied"
+    assert applied["projection_effects"]["state"]["todo.active_items.active-plan"]["after"]["next_action"] == "run the focused proof"
     updated = json.loads(plan_path.read_text(encoding="utf-8"))
     assert updated["next_action"] == "run the focused proof"
     assert updated["title"] == record["title"]
     replay = installer_mod.targeted_execplan_write(
-        target=tmp_path, plan="active-plan", patch={"next_action": "run the focused proof"}, expected_planning_revision=planning_before,
-        expected_owner_revision=record["revision"], expected_lane_revision=lane_revision, apply=True,
+        target=tmp_path,
+        plan="active-plan",
+        patch={"next_action": "run the focused proof"},
+        expected_planning_revision=planning_before,
+        expected_owner_revision=record["revision"],
+        expected_lane_revision=lane_revision,
+        apply=True,
     )
     assert replay["status"] == "already-applied"
     assert json.loads(plan_path.read_text(encoding="utf-8"))["revision"] == updated["revision"]
@@ -238,17 +267,122 @@ def test_targeted_execplan_writer_rejects_missing_or_stale_lane_guard(tmp_path: 
     record = json.loads(plan_path.read_text(encoding="utf-8"))
     record["revision"] = 1
     plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-    lane_path = tmp_path / ".agentic-workspace/planning/lanes/writer.lane.json"
-    lane_path.parent.mkdir(parents=True, exist_ok=True)
-    lane_path.write_text(json.dumps({"id": "writer", "revision": 3, "current_slice": "lane-plan", "slice_sequence": []}) + "\n", encoding="utf-8")
+    lane_path = next((tmp_path / ".agentic-workspace/planning/lanes").glob("*.lane.json"))
+    lane_record = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane_record["current_slice"] = "lane-plan"
+    installer_mod._write_lane_record(record_path=lane_path, record=lane_record)
+    lane_revision = installer_mod._record_revision(json.loads(lane_path.read_text(encoding="utf-8")))
     revision = planning_revision(tmp_path)["revision_id"]
 
-    missing = installer_mod.targeted_execplan_write(target=tmp_path, plan="lane-plan", patch={"next_action": "prove"}, expected_planning_revision=revision, expected_owner_revision=1, apply=True)
-    stale = installer_mod.targeted_execplan_write(target=tmp_path, plan="lane-plan", patch={"next_action": "prove"}, expected_planning_revision=revision, expected_owner_revision=1, expected_lane_revision=2, apply=True)
+    missing = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="lane-plan",
+        patch={"next_action": "prove"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+    )
+    stale = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="lane-plan",
+        patch={"next_action": "prove"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        expected_lane_revision=f"stale-{lane_revision}",
+        apply=True,
+    )
 
     assert missing["status"] == "missing-lane-revision-guard"
     assert stale["status"] == "stale-lane-revision"
     assert json.loads(plan_path.read_text(encoding="utf-8"))["revision"] == 1
+
+
+def test_targeted_execplan_writer_cli_preview_apply_and_projection_effects(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="active-plan")
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    revision = planning_revision(tmp_path)["revision_id"]
+
+    assert (
+        planning_cli.main(
+            [
+                "targeted-write",
+                "active-plan",
+                "--target",
+                str(tmp_path),
+                "--patch",
+                json.dumps({"next_action": "run generated CLI proof"}),
+                "--expect-planning-revision",
+                revision,
+                "--expect-owner-revision",
+                "1",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["status"] == "preview"
+    assert preview["changes"]["next_action"]["after"] == "run generated CLI proof"
+    assert json.loads(plan_path.read_text(encoding="utf-8")).get("next_action") != "run generated CLI proof"
+
+    assert (
+        planning_cli.main(
+            [
+                "targeted-write",
+                "active-plan",
+                "--target",
+                str(tmp_path),
+                "--patch",
+                json.dumps({"next_action": "run generated CLI proof"}),
+                "--expect-planning-revision",
+                revision,
+                "--expect-owner-revision",
+                "1",
+                "--apply",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    applied = json.loads(capsys.readouterr().out)
+    assert applied["status"] == "applied"
+    assert applied["projection_effects"]["state"]["todo.active_items.active-plan"]["after"]["next_action"] == "run generated CLI proof"
+    assert json.loads(plan_path.read_text(encoding="utf-8"))["next_action"] == "run generated CLI proof"
+
+
+def test_targeted_execplan_writer_lifecycle_updates_lane_projection(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/lane-plan.plan.json"
+    _write_execplan_record(plan_path, item_id="lane-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    lane_path = next((tmp_path / ".agentic-workspace/planning/lanes").glob("*.lane.json"))
+    lane_record = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane_record["current_slice"] = "lane-plan"
+    installer_mod._write_lane_record(record_path=lane_path, record=lane_record)
+    lane_revision = installer_mod._record_revision(json.loads(lane_path.read_text(encoding="utf-8")))
+    revision = planning_revision(tmp_path)["revision_id"]
+    applied = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="lane-plan",
+        patch={"phase": "complete"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        expected_lane_revision=lane_revision,
+        apply=True,
+    )
+
+    assert applied["status"] == "applied"
+    assert applied["projection_effects"]["lane"]["current_slice"] == {"before": "lane-plan", "after": ""}
+    assert json.loads(lane_path.read_text(encoding="utf-8"))["current_slice"] == ""
 
 
 def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_path: Path) -> None:

@@ -724,9 +724,7 @@ def test_new_plan_overwrite_preserves_the_existing_active_owner_record(tmp_path:
     record_path = tmp_path / ".agentic-workspace/planning/execplans/active-owner.plan.json"
     before = record_path.read_text(encoding="utf-8")
 
-    result = create_execplan_scaffold(
-        plan_id="active-owner", title="Active Owner", target=tmp_path, activate=True, overwrite=True
-    )
+    result = create_execplan_scaffold(plan_id="active-owner", title="Active Owner", target=tmp_path, activate=True, overwrite=True)
 
     assert not [action for action in result.actions if action.kind == "manual review"]
     assert record_path.read_text(encoding="utf-8") == before

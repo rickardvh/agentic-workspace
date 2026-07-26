@@ -380,6 +380,82 @@
     "operation_path": "operations/planning.closeout.lifecycle.json"
   },
   {
+    "adapter_id": "planning.targeted-write.cli",
+    "interface": {
+      "arguments": [
+        {
+          "help": "Execplan path, slug, or id to patch.",
+          "name": "plan"
+        }
+      ],
+      "help": "Preview or apply a guarded patch to exactly one canonical execplan.",
+      "name": "targeted-write",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--patch"
+          ],
+          "help": "JSON object containing the bounded execplan patch.",
+          "name": "patch",
+          "required": true
+        },
+        {
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Planning revision id observed before the write.",
+          "name": "expect_planning_revision",
+          "required": true
+        },
+        {
+          "flags": [
+            "--expect-owner-revision"
+          ],
+          "help": "Owner record revision observed before the write.",
+          "name": "expect_owner_revision",
+          "required": true
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-lane-revision"
+          ],
+          "help": "Lane revision guard when the owner is lane-backed.",
+          "name": "expect_lane_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--apply"
+          ],
+          "help": "Apply the patch. Omit for preview.",
+          "name": "apply"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.targeted-write.lifecycle",
+    "operation_path": "operations/planning.targeted-write.lifecycle.json"
+  },
+  {
     "adapter_id": "planning.close-item.cli",
     "interface": {
       "arguments": [

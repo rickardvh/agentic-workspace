@@ -42,6 +42,7 @@
       "runtime-facade-call|generated/planning/python/primitives/planning_installer.py|doctor_bootstrap|repo_planning_bootstrap.installer|doctor_bootstrap",
       "runtime-facade-call|generated/planning/python/primitives/planning_installer.py|install_bootstrap|repo_planning_bootstrap.installer|install_bootstrap",
       "runtime-facade-call|generated/planning/python/primitives/planning_installer.py|planning_handoff|repo_planning_bootstrap.installer|planning_handoff",
+      "runtime-facade-call|generated/planning/python/primitives/planning_installer.py|targeted_execplan_write|repo_planning_bootstrap.installer|targeted_execplan_write",
       "runtime-facade-call|generated/planning/python/primitives/planning_installer.py|uninstall_bootstrap|repo_planning_bootstrap.installer|uninstall_bootstrap",
       "runtime-facade-call|generated/planning/python/primitives/planning_installer.py|upgrade_bootstrap|repo_planning_bootstrap.installer|upgrade_bootstrap",
       "runtime-facade-call|generated/planning/python/primitives/planning_installer.py|verify_payload|repo_planning_bootstrap.installer|verify_payload",
@@ -1245,6 +1246,34 @@
         "source_module": "repo_planning_bootstrap.installer",
         "source_symbol": "upgrade_bootstrap",
         "stale_when": "Stale when the mutation can be decomposed into generated composition plus smaller package primitives with equivalent safety and provenance proof.",
+        "status": "accepted-permanent-package-domain-boundary",
+        "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior."
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "conformance_ref": "planning.targeted-write.lifecycle.preview.process",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ],
+        "facade_path": "generated/planning/python/primitives/planning_installer.py",
+        "facade_symbol": "targeted_execplan_write",
+        "generic_behavior_audit": "#2283 targeted writer path: generated operation IR owns CLI/dataflow and output emission; Planning owns exact owner resolution, revision guard rejection, projection effects, atomic writes, and idempotent receipts.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_tracking_issue": "#2283",
+        "operation_ids": [
+          "planning.targeted-write.lifecycle"
+        ],
+        "owner_package": "planning package runtime boundary",
+        "primitive_refs": [
+          "planning.targeted-write.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "source_module": "repo_planning_bootstrap.installer",
+        "source_symbol": "targeted_execplan_write",
+        "stale_when": "Stale when guarded execplan owner selection, revision guards, projection mutation, and receipt writes can be decomposed into portable schema-backed primitives without weakening Planning safety.",
         "status": "accepted-permanent-package-domain-boundary",
         "why_not_generic_deterministic": "The symbol owns package lifecycle or planning-state mutation policy, validation, conflict handling, or provenance updates that are not portable target-executor behavior."
       },
