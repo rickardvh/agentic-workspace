@@ -428,8 +428,66 @@ def render_bundle(profile: dict[str, object]) -> str:
     return json.dumps(payload, indent=2) + "\n"
 
 
-def render_python_client() -> str:
+def _legacy_render_python_client() -> str:
     return '''# Generated from command_package_ir.json. Do not edit.\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nfrom importlib.resources import files\nfrom pathlib import Path\nfrom typing import Any, Sequence\n\n\ndef external_consumer_profile() -> dict[str, Any]:\n    resource = files("agentic_workspace._generated_cli_package_impl").joinpath("external_consumer_profile.json")\n    return json.loads(resource.read_text(encoding="utf-8"))\n\n\ndef require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:\n    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}\n    failures = []\n    for operation_id in operation_ids:\n        entry = entries.get(operation_id)\n        status = entry and entry["external_consumption"]["status"]\n        if entry is None or status == "internal" or (status == "runtime-backed" and not allow_runtime_backed):\n            failures.append(f"{operation_id}: {status or 'unknown'}")\n    if failures:\n        raise ValueError("incompatible operation requirements: " + ", ".join(failures))\n\n\ndef invoke_json(argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] = ("agentic-workspace",)) -> dict[str, Any]:\n    command = [*executable, *argv]\n    if target is not None and "--target" not in command:\n        command.extend(["--target", str(target)])\n    if "--format" not in command:\n        command.extend(["--format", "json"])\n    completed = subprocess.run(command, text=True, capture_output=True, check=False)\n    stream = completed.stdout or completed.stderr\n    try:\n        payload = json.loads(stream)\n    except json.JSONDecodeError as exc:\n        raise RuntimeError(f"AW returned non-JSON output (exit {completed.returncode})") from exc\n    if completed.returncode:\n        raise RuntimeError(json.dumps({"exit_code": completed.returncode, "error": payload}))\n    return payload\n'''
+
+
+def render_python_client() -> str:
+    return '''# Generated from command_package_ir.json. Do not edit.
+from __future__ import annotations
+
+import json
+import subprocess
+from importlib.resources import files
+from pathlib import Path
+from typing import Any, Sequence
+
+
+def external_consumer_profile() -> dict[str, Any]:
+    return json.loads(files("agentic_workspace._generated_cli_package_impl").joinpath("external_consumer_profile.json").read_text(encoding="utf-8"))
+
+
+def external_readiness_report(operation_ids: Sequence[str]) -> dict[str, Any]:
+    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}
+    supported, excluded = [], []
+    for operation_id in operation_ids:
+        entry = entries.get(operation_id, {})
+        consumption = entry.get("external_consumption", {})
+        resources, targets = entry.get("operation_resources", {}), entry.get("targets", {})
+        schemas, conformance = entry.get("schemas", {}), entry.get("conformance", [])
+        missing = []
+        for language in ("python", "typescript"):
+            if not resources.get(language, {}).get("exists"): missing.append(f"released-{language}-resource")
+            if targets.get(language, {}).get("status") not in {"adapter", "mutation-capable-adapter"}: missing.append(f"released-{language}-adapter")
+        if not schemas.get("input") or not schemas.get("output"): missing.append("input-output-schema-coverage")
+        if not conformance: missing.append("conformance-reference")
+        status = consumption.get("status", "unavailable")
+        if status == "runtime-backed" and not consumption.get("runtime_exceptions"): missing.append("runtime-exception-disposition")
+        if status == "supported" and not missing: supported.append(operation_id)
+        else: excluded.append({"id": operation_id, "status": status, "missing_evidence": missing, "conformance_refs": conformance})
+    return {"kind": "agentic-workspace/external-readiness-report/v1", "status": "ready" if not excluded else "subset-only" if supported else "not-ready", "supported_operations": supported, "excluded_operations": excluded}
+
+
+def require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:
+    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}
+    failures = []
+    for operation_id in operation_ids:
+        status = entries.get(operation_id, {}).get("external_consumption", {}).get("status", "unknown")
+        if status in {"internal", "unknown"} or (status == "runtime-backed" and not allow_runtime_backed):
+            failures.append(f"{operation_id}: {status}")
+    if failures: raise ValueError("incompatible operation requirements: " + ", ".join(failures))
+
+
+def invoke_json(argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] = ("agentic-workspace",)) -> dict[str, Any]:
+    command = [*executable, *argv]
+    if target is not None and "--target" not in command: command.extend(["--target", str(target)])
+    if "--format" not in command: command.extend(["--format", "json"])
+    completed = subprocess.run(command, text=True, capture_output=True, check=False)
+    try: payload = json.loads(completed.stdout or completed.stderr)
+    except json.JSONDecodeError as exc: raise RuntimeError(f"AW returned non-JSON output (exit {completed.returncode})") from exc
+    if completed.returncode: raise RuntimeError(json.dumps({"exit_code": completed.returncode, "error": payload}))
+    return payload
+'''
 
 
 def render_typescript_client() -> str:

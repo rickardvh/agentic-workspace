@@ -48,25 +48,57 @@ def external_consumer_profile() -> dict[str, Any]:
 
 
 def external_readiness_report(required_operations: Sequence[str]) -> dict[str, Any]:
-    """Report the exact released operation subset an independent consumer may use."""
+    """Report whether a released operation subset has its declared proof surface.
+
+    This is deliberately readiness evidence, not an assertion that an arbitrary
+    runtime can execute an operation. A profile declaration alone is
+    insufficient: an operation needs released-client resources, schemas,
+    conformance references, and any required runtime-exception disposition.
+    """
     entries = {str(entry.get("id")): entry for entry in external_consumer_profile().get("operations", []) if isinstance(entry, dict)}
     supported: list[str] = []
     excluded: list[dict[str, Any]] = []
     for operation_id in required_operations:
         entry = entries.get(str(operation_id))
-        status = str((entry or {}).get("external_consumption", {}).get("status") if entry else "unavailable")
-        if status == "supported":
+        consumption = (entry or {}).get("external_consumption", {})
+        status = str(consumption.get("status") if isinstance(consumption, Mapping) else "unavailable")
+        resources = (entry or {}).get("operation_resources", {})
+        targets = (entry or {}).get("targets", {})
+        schemas = (entry or {}).get("schemas", {})
+        conformance = (entry or {}).get("conformance", [])
+        missing_evidence: list[str] = []
+        for language in ("python", "typescript"):
+            resource = resources.get(language) if isinstance(resources, Mapping) else None
+            target = targets.get(language) if isinstance(targets, Mapping) else None
+            if not isinstance(resource, Mapping) or not resource.get("exists"):
+                missing_evidence.append(f"released-{language}-resource")
+            if not isinstance(target, Mapping) or target.get("status") not in {"adapter", "mutation-capable-adapter"}:
+                missing_evidence.append(f"released-{language}-adapter")
+        if not isinstance(schemas, Mapping) or not schemas.get("input") or not schemas.get("output"):
+            missing_evidence.append("input-output-schema-coverage")
+        if not isinstance(conformance, list) or not conformance:
+            missing_evidence.append("conformance-reference")
+        runtime_exceptions = consumption.get("runtime_exceptions", []) if isinstance(consumption, Mapping) else []
+        if status == "runtime-backed" and not runtime_exceptions:
+            missing_evidence.append("runtime-exception-disposition")
+        evidence = {
+            "resources": {language: resources.get(language, {}) for language in ("python", "typescript")} if isinstance(resources, Mapping) else {},
+            "schemas": schemas if isinstance(schemas, Mapping) else {},
+            "conformance_refs": conformance if isinstance(conformance, list) else [],
+            "runtime_exceptions": runtime_exceptions if isinstance(runtime_exceptions, list) else [],
+        }
+        if status == "supported" and not missing_evidence:
             supported.append(str(operation_id))
         else:
             excluded.append(
-                {"id": str(operation_id), "status": status, "recovery": "negotiate a supported subset; do not reconstruct AW semantics"}
+                {"id": str(operation_id), "status": status, "missing_evidence": missing_evidence, "evidence": evidence, "recovery": "negotiate a supported subset; do not reconstruct AW semantics"}
             )
     return {
         "kind": "agentic-workspace/external-readiness-report/v1",
         "status": "ready" if not excluded else "subset-only" if supported else "not-ready",
         "supported_operations": supported,
         "excluded_operations": excluded,
-        "rule": "Runtime-backed and unavailable operations are explicitly excluded from broad adapter-readiness claims.",
+        "rule": "Ready requires declared support plus released Python/TypeScript resources, schemas, conformance references, and any runtime-exception disposition.",
     }
 
 

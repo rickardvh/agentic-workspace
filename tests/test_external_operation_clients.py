@@ -91,9 +91,29 @@ def _independent_review_host_result_fixture(tmp_path: Path, *, changed_paths: li
 
 def test_external_readiness_report_fails_closed_for_runtime_backed_operations() -> None:
     report = external_readiness_report(["assignment.export", "does.not.exist"])
-    assert report["status"] in {"ready", "subset-only", "not-ready"}
-    assert report["excluded_operations"]
-    assert report["excluded_operations"][-1]["id"] == "does.not.exist"
+    assert report["status"] == "not-ready"
+    runtime_backed, unknown = report["excluded_operations"]
+    assert runtime_backed["id"] == "assignment.export"
+    assert runtime_backed["status"] == "runtime-backed"
+    assert runtime_backed["evidence"]["conformance_refs"]
+    assert runtime_backed["evidence"]["runtime_exceptions"]
+    assert unknown["id"] == "does.not.exist"
+    assert "released-python-resource" in unknown["missing_evidence"]
+
+
+def test_external_readiness_report_requires_released_client_and_conformance_evidence(monkeypatch) -> None:
+    profile = copy.deepcopy(public_client.external_consumer_profile())
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"] = {"status": "supported"}
+    candidate["operation_resources"]["typescript"]["exists"] = False
+    candidate["conformance"] = []
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
+
+    report = external_readiness_report(["assignment.export"])
+
+    assert report["status"] == "not-ready"
+    excluded = report["excluded_operations"][0]
+    assert set(excluded["missing_evidence"]) == {"released-typescript-resource", "conformance-reference"}
 
 
 def _python_client():
@@ -129,6 +149,14 @@ def test_typescript_client_public_export_reads_profile() -> None:
     completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True, check=False)
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.strip() == "agentic-workspace/external-consumer-profile/v1"
+
+
+def test_generated_clients_share_fail_closed_readiness_contract() -> None:
+    python_report = _python_client().external_readiness_report(["assignment.export", "does.not.exist"])
+    script = "import { externalReadinessReport } from './generated/workspace/typescript/src/client.mjs'; console.log(JSON.stringify(externalReadinessReport(['assignment.export', 'does.not.exist'])));"
+    completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True, check=False)
+    assert completed.returncode == 0, completed.stderr
+    assert python_report == json.loads(completed.stdout)
 
 
 def test_packed_typescript_client_loads_and_enforces_shipped_constraints(tmp_path: Path) -> None:

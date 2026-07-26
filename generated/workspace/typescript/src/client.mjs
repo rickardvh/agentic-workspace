@@ -10,6 +10,14 @@ export class AWClientError extends Error {
   constructor(kind, message, details = {}) { super(message); this.name = 'AWClientError'; this.kind = kind; this.details = details; }
 }
 export function externalConsumerProfile() { return JSON.parse(readFileSync(profileUrl, 'utf8')); }
+export function externalReadinessReport(operationIds) {
+  const entries = new Map(externalConsumerProfile().operations.map((entry) => [entry.id, entry])); const supported = [], excluded = [];
+  for (const id of operationIds) { const entry = entries.get(id) ?? {}, c = entry.external_consumption ?? {}, r = entry.operation_resources ?? {}, t = entry.targets ?? {}, s = entry.schemas ?? {}, refs = entry.conformance ?? [], missing = [];
+    for (const lang of ['python', 'typescript']) { if (!r[lang]?.exists) missing.push(`released-${lang}-resource`); if (!['adapter', 'mutation-capable-adapter'].includes(t[lang]?.status)) missing.push(`released-${lang}-adapter`); }
+    if (!s.input?.length || !s.output?.length) missing.push('input-output-schema-coverage'); if (!refs.length) missing.push('conformance-reference'); const status = c.status ?? 'unavailable'; if (status === 'runtime-backed' && !c.runtime_exceptions?.length) missing.push('runtime-exception-disposition');
+    if (status === 'supported' && !missing.length) supported.push(id); else excluded.push({id, status, missing_evidence: missing, conformance_refs: refs}); }
+  return {kind: 'agentic-workspace/external-readiness-report/v1', status: !excluded.length ? 'ready' : supported.length ? 'subset-only' : 'not-ready', supported_operations: supported, excluded_operations: excluded};
+}
 export function externalContractBundle() { return JSON.parse(readFileSync(bundleUrl, 'utf8')); }
 export function operationCompatibilityFingerprint(contract) {
   const normalized = Object.fromEntries(['schema_version', 'id', 'classification', 'inputs', 'output', 'effects', 'guards'].map((key) => [key, contract[key] ?? null]));
