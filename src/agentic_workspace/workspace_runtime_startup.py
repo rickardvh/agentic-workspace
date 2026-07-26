@@ -2344,12 +2344,32 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if isinstance(startup_high_risk_overlay, dict) and startup_high_risk_overlay.get("status") == "active":
         advisory_selectors.append("proof.high_risk_overlay")
     selector_sample = list(dict.fromkeys([*advisory_selectors, *available_selectors[:4]]))[:8]
+    authority_projection = _as_dict(payload.get("context_authority_projection"))
+    compact_authority_projection = {
+        "kind": authority_projection.get("kind"),
+        "status": authority_projection.get("status"),
+        "consumer": authority_projection.get("consumer"),
+        "registry_revision": authority_projection.get("registry_revision"),
+        "authorities": [
+            {
+                "surface": item.get("surface"),
+                "source": {
+                    key: _as_dict(item.get("source")).get(key)
+                    for key in ("id", "revision", "freshness")
+                    if _as_dict(item.get("source")).get(key) not in (None, "")
+                },
+            }
+            for item in _list_payload(authority_projection.get("authorities"))
+            if isinstance(item, dict)
+        ],
+        "detail_selector": "context_authority_projection",
+    }
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
         **(
-            {"context_authority_projection": payload["context_authority_projection"]}
-            if isinstance(payload.get("context_authority_projection"), dict)
+            {"context_authority_projection": compact_authority_projection}
+            if authority_projection
             else {}
         ),
         "workflow_participation": _workflow_participation_payload(surface="start", compact=True),
