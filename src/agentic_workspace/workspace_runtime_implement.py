@@ -868,9 +868,6 @@ def _implement_payload(
 ) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
-    context_authority_projection = resolve_context_authority_projection(
-        consumer="implement", task=task_text or "", changed_paths=normalized_paths
-    )
     config = _load_workspace_config(target_root=target_root)
     proof = (
         _proof_selection_for_changed_paths(
@@ -1419,7 +1416,22 @@ def _implement_payload(
             task_text=task_text,
             compact=False,
         )
-    payload["context_authority_projection"] = context_authority_projection
+    payload["context_authority_projection"] = resolve_context_authority_projection(
+        consumer="implement",
+        task=task_text or "",
+        changed_paths=normalized_paths,
+        source_records={
+            "architecture-principles": _as_dict(payload.get("architecture_principles")),
+            "ownership": {"status": "current", "source_id": "changed-path-boundaries", "revision": hashlib.sha256(json.dumps(payload.get("path_boundaries", []), sort_keys=True).encode()).hexdigest()[:16]},
+            "planning": _as_dict(payload.get("planning_safety_gate")),
+            "memory": _as_dict(payload.get("memory_consult")),
+            "assignment": _as_dict(payload.get("execution_posture")),
+            "proof": _as_dict(payload.get("proof")),
+            "mutation-baseline": _as_dict(payload.get("generated_surface_trust")),
+            "skills": _as_dict(payload.get("skill_routing")),
+            "target-guidance": _as_dict(payload.get("execution_posture")),
+        },
+    )
     return payload
 
 
