@@ -1208,7 +1208,7 @@ def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
 
     result = loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
 
-    assert result["event"] == "handoff-proof-unreported"
+    assert result["event"] == "proof-failed"
     terminal = loop._load_state(tmp_path, 12)["terminal_result"]
     assert terminal["proof_status"] == "failed"
     assert terminal["repair"] == {
@@ -1309,7 +1309,7 @@ def test_spawned_worktree_resume_records_failed_proof_and_exact_repair(tmp_path:
     )
 
     assert failed["status"] == "dispatched"
-    assert failed["result"] == {"pr_number": 12, "status": "recovery-required", "event": "handoff-proof-unreported"}
+    assert failed["result"] == {"pr_number": 12, "status": "recovery-required", "event": "proof-failed"}
     saved = loop._load_state(tmp_path, 12)
     assert saved["status"] == "recovery-required"
     assert saved["terminal_result"]["proof_status"] == "failed"

@@ -1134,6 +1134,28 @@ def poll_one(
             "exit_code": completed.returncode,
             "diagnostic": diagnostic,
         }
+    terminal = latest.get("terminal_result")
+    if isinstance(terminal, dict) and terminal.get("proof_status") == "failed":
+        # A failed focused proof is a terminal result in its own right.  Do not
+        # collapse it into the missing-result branch merely because the job also
+        # pushed a head or invoked its Stop hook: that would hide the exact
+        # repair command and make a false handoff look like an evidence gap.
+        latest.update(
+            status="recovery-required",
+            last_event="proof-failed",
+            recovery="repair the recorded focused proof, rerun it, then report the exact job result before another handoff",
+        )
+        _record_job_terminal(
+            latest,
+            mode="resume",
+            worktree=worktree,
+            start_head=review.head,
+            exit_code=0,
+            disposition="proof-failed",
+            event="proof-failed",
+        )
+        _save_state(owner_root, latest)
+        return {"pr_number": pr, "status": "recovery-required", "event": "proof-failed"}
     if latest.get("handoff_head") == review.head:
         latest.update(
             status="recovery-required",
