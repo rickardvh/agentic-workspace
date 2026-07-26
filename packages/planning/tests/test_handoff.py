@@ -152,6 +152,55 @@ queued_items = []
     assert stale_record.get("post_decomposition_delegation", {}).get("status") != "recorded"
 
 
+def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    # Older compatibility fixtures do not carry the canonical owner revision.
+    # The targeted writer deliberately requires it, so make this fixture a
+    # canonical live owner instead of weakening the production guard.
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    planning_before = planning_revision(tmp_path)["revision_id"]
+
+    preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={"next_action": "run the focused proof"},
+        expected_planning_revision=planning_before,
+        expected_owner_revision=record["revision"],
+    )
+
+    assert preview["status"] == "preview"
+    assert preview["changes"]["next_action"]["after"] == "run the focused proof"
+    assert json.loads(plan_path.read_text(encoding="utf-8")).get("next_action") != "run the focused proof"
+
+    applied = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={"next_action": "run the focused proof"},
+        expected_planning_revision=planning_before,
+        expected_owner_revision=record["revision"],
+        apply=True,
+    )
+    assert applied["status"] == "applied"
+    updated = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert updated["next_action"] == "run the focused proof"
+    assert updated["title"] == record["title"]
+
+    stale = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={"next_action": "should not write"},
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+        expected_owner_revision=record["revision"],
+        apply=True,
+    )
+    assert stale["status"] == "stale-owner-revision"
+    assert json.loads(plan_path.read_text(encoding="utf-8"))["next_action"] == "run the focused proof"
+
+
 def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
