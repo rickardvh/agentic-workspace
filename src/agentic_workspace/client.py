@@ -60,8 +60,50 @@ def external_consumer_profile() -> dict[str, Any]:
     return json.loads(resource.read_text(encoding="utf-8"))
 
 
-def _external_conformance_readiness(entry: Mapping[str, Any], profile: Mapping[str, Any]) -> tuple[list[str], dict[str, Any]]:
-    evidence = entry.get("conformance_evidence")
+def external_operation_conformance_receipts() -> dict[str, Any]:
+    try:
+        resource = _resource("external_operation_conformance_receipts.json")
+        if not resource.is_file():
+            raise FileNotFoundError
+        payload = json.loads(resource.read_text(encoding="utf-8"))
+    except (FileNotFoundError, ModuleNotFoundError):
+        return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []}
+    if not isinstance(payload, dict) or payload.get("kind") != "agentic-workspace/external-operation-conformance-receipt-store/v1":
+        return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []}
+    return payload
+
+
+def _external_conformance_receipt(
+    *, entry: Mapping[str, Any], profile: Mapping[str, Any], receipt_store: Mapping[str, Any]
+) -> Mapping[str, Any] | None:
+    operation_id = str(entry.get("id") or "")
+    operation_fingerprint = str((entry.get("operation_compatibility") or {}).get("fingerprint") or "")
+    profile_fingerprint = str((profile.get("compatibility") or {}).get("fingerprint") or "")
+    candidates = []
+    for receipt in receipt_store.get("receipts", []):
+        if not isinstance(receipt, Mapping):
+            continue
+        custody = receipt.get("custody") if isinstance(receipt.get("custody"), Mapping) else {}
+        if receipt.get("kind") != "agentic-workspace/external-operation-conformance-receipt/v1":
+            continue
+        if custody.get("producer") != "agentic-workspace.operation-conformance-runner":
+            continue
+        if receipt.get("operation_id") != operation_id:
+            continue
+        if receipt.get("operation_fingerprint") != operation_fingerprint:
+            continue
+        if receipt.get("profile_fingerprint") != profile_fingerprint:
+            continue
+        if str(receipt.get("status") or "") in {"revoked", "superseded", "stale"}:
+            continue
+        candidates.append(receipt)
+    return sorted(candidates, key=lambda item: str(item.get("executed_at") or item.get("receipt_ref") or ""))[-1] if candidates else None
+
+
+def _external_conformance_readiness(
+    entry: Mapping[str, Any], profile: Mapping[str, Any], receipt_store: Mapping[str, Any]
+) -> tuple[list[str], dict[str, Any]]:
+    evidence = _external_conformance_receipt(entry=entry, profile=profile, receipt_store=receipt_store)
     if not isinstance(evidence, Mapping):
         return ["executed-conformance-receipt"], {}
     missing: list[str] = []
@@ -98,6 +140,8 @@ def _external_conformance_readiness(entry: Mapping[str, Any], profile: Mapping[s
         "runtime_exception_revision": runtime_revision or "",
         "transports": transports if isinstance(transports, Mapping) else {},
         "cases": cases if isinstance(cases, Mapping) else {},
+        "receipt_ref": evidence.get("receipt_ref", ""),
+        "producer": (evidence.get("custody") or {}).get("producer", "") if isinstance(evidence.get("custody"), Mapping) else "",
     }
 
 
@@ -110,6 +154,7 @@ def external_readiness_report(required_operations: Sequence[str]) -> dict[str, A
     conformance references, and any required runtime-exception disposition.
     """
     profile = external_consumer_profile()
+    receipt_store = external_operation_conformance_receipts()
     entries = {str(entry.get("id")): entry for entry in profile.get("operations", []) if isinstance(entry, dict)}
     supported: list[str] = []
     excluded: list[dict[str, Any]] = []
@@ -133,7 +178,7 @@ def external_readiness_report(required_operations: Sequence[str]) -> dict[str, A
             missing_evidence.append("input-output-schema-coverage")
         if not isinstance(conformance, list) or not conformance:
             missing_evidence.append("conformance-reference")
-        conformance_missing, conformance_result = _external_conformance_readiness(entry or {}, profile)
+        conformance_missing, conformance_result = _external_conformance_readiness(entry or {}, profile, receipt_store)
         missing_evidence.extend(conformance_missing)
         runtime_exceptions = consumption.get("runtime_exceptions", []) if isinstance(consumption, Mapping) else []
         if status == "runtime-backed" and not runtime_exceptions:

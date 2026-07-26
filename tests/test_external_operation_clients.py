@@ -118,6 +118,21 @@ def _readiness_conformance_evidence(profile: dict, operation: dict, *, status: s
     }
 
 
+def _readiness_conformance_receipt_store(profile: dict, operation: dict, *, status: str = "passed") -> dict:
+    receipt = {
+        **_readiness_conformance_evidence(profile, operation, status=status),
+        "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+        "receipt_ref": f"external-conformance:{operation['id']}:test",
+        "executed_at": "2026-07-26T20:00:00Z",
+        "custody": {
+            "operation_id": "external-operation-conformance.run",
+            "producer": "agentic-workspace.operation-conformance-runner",
+            "trusted_channel": "producer-owned-test-fixture",
+        },
+    }
+    return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": [receipt]}
+
+
 def test_external_readiness_report_fails_closed_for_runtime_backed_operations() -> None:
     report = external_readiness_report(["assignment.export", "does.not.exist"])
     assert report["status"] == "not-ready"
@@ -154,8 +169,10 @@ def test_external_readiness_report_requires_current_executed_cross_transport_con
     profile = copy.deepcopy(public_client.external_consumer_profile())
     candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
     candidate["external_consumption"]["status"] = "supported"
-    candidate["conformance_evidence"] = _readiness_conformance_evidence(profile, candidate)
     monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
+    monkeypatch.setattr(
+        public_client, "external_operation_conformance_receipts", lambda: _readiness_conformance_receipt_store(profile, candidate)
+    )
 
     report = external_readiness_report(["assignment.export"])
 
@@ -164,14 +181,36 @@ def test_external_readiness_report_requires_current_executed_cross_transport_con
     assert report["excluded_operations"] == []
 
     stale_profile = copy.deepcopy(profile)
-    stale_candidate = next(entry for entry in stale_profile["operations"] if entry["id"] == "assignment.export")
-    stale_candidate["conformance_evidence"]["profile_fingerprint"] = "sha256:stale"
+    stale_profile["compatibility"]["fingerprint"] = "sha256:stale"
     monkeypatch.setattr(public_client, "external_consumer_profile", lambda: stale_profile)
+    monkeypatch.setattr(
+        public_client,
+        "external_operation_conformance_receipts",
+        lambda: _readiness_conformance_receipt_store(profile, candidate),
+    )
 
     stale_report = external_readiness_report(["assignment.export"])
 
     assert stale_report["status"] == "not-ready"
-    assert "current-profile-fingerprint" in stale_report["excluded_operations"][0]["missing_evidence"]
+    assert "executed-conformance-receipt" in stale_report["excluded_operations"][0]["missing_evidence"]
+
+
+def test_external_readiness_report_ignores_inline_profile_conformance_evidence(monkeypatch) -> None:
+    profile = copy.deepcopy(public_client.external_consumer_profile())
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"]["status"] = "supported"
+    candidate["conformance_evidence"] = _readiness_conformance_evidence(profile, candidate)
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
+    monkeypatch.setattr(
+        public_client,
+        "external_operation_conformance_receipts",
+        lambda: {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []},
+    )
+
+    report = external_readiness_report(["assignment.export"])
+
+    assert report["status"] == "not-ready"
+    assert "executed-conformance-receipt" in report["excluded_operations"][0]["missing_evidence"]
 
 
 def _python_client():

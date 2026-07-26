@@ -1,0 +1,6 @@
+{
+  "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
+  "receipts": [],
+  "producer": "scripts/check/run_operation_conformance_tests.py",
+  "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored."
+}

@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 
 const profileUrl = new URL('../external_consumer_profile.json', import.meta.url);
+const conformanceReceiptsUrl = new URL('../external_operation_conformance_receipts.json', import.meta.url);
 const bundleUrl = new URL('../external_contract_bundle.json', import.meta.url);
 const readinessTransports = ['cli-json', 'python', 'typescript', 'vendor-neutral'];
 const readinessCases = ['absent', 'disabled', 'incompatible', 'malformed', 'retryable', 'additive-field', 'mutation-applied', 'mutation-noop', 'mutation-rejected', 'mutation-failed'];
@@ -12,8 +13,28 @@ export class AWClientError extends Error {
   constructor(kind, message, details = {}) { super(message); this.name = 'AWClientError'; this.kind = kind; this.details = details; }
 }
 export function externalConsumerProfile() { return JSON.parse(readFileSync(profileUrl, 'utf8')); }
-function conformanceReadiness(entry, profile) {
-  const evidence = entry.conformance_evidence;
+export function externalOperationConformanceReceipts() {
+  try {
+    const payload = JSON.parse(readFileSync(conformanceReceiptsUrl, 'utf8'));
+    return payload?.kind === 'agentic-workspace/external-operation-conformance-receipt-store/v1' ? payload : { kind: 'agentic-workspace/external-operation-conformance-receipt-store/v1', receipts: [] };
+  } catch {
+    return { kind: 'agentic-workspace/external-operation-conformance-receipt-store/v1', receipts: [] };
+  }
+}
+function conformanceReceipt(entry, profile, receiptStore) {
+  const candidates = (receiptStore.receipts ?? []).filter((receipt) => {
+    const custody = receipt?.custody ?? {};
+    return receipt?.kind === 'agentic-workspace/external-operation-conformance-receipt/v1'
+      && custody.producer === 'agentic-workspace.operation-conformance-runner'
+      && receipt.operation_id === entry.id
+      && receipt.operation_fingerprint === entry.operation_compatibility?.fingerprint
+      && receipt.profile_fingerprint === profile.compatibility?.fingerprint
+      && !['revoked', 'superseded', 'stale'].includes(receipt.status);
+  });
+  return candidates.sort((left, right) => String(left.executed_at ?? left.receipt_ref ?? '').localeCompare(String(right.executed_at ?? right.receipt_ref ?? ''))).at(-1);
+}
+function conformanceReadiness(entry, profile, receiptStore) {
+  const evidence = conformanceReceipt(entry, profile, receiptStore);
   if (!evidence || typeof evidence !== 'object') return {missing: ['executed-conformance-receipt'], result: {}};
   const missing = [];
   if (evidence.status !== 'passed') missing.push('executed-conformance-passed');
@@ -23,15 +44,16 @@ function conformanceReadiness(entry, profile) {
   for (const transport of readinessTransports) if (transports[transport]?.status !== 'passed') missing.push(`transport-${transport}`);
   for (const item of readinessCases) if (cases[item]?.status !== 'passed') missing.push(`case-${item}`);
   if (entry.external_consumption?.runtime_exceptions?.length && !evidence.runtime_exception_revision) missing.push('runtime-exception-current-revision');
-  return {missing, result: {status: evidence.status ?? '', operation_fingerprint: evidence.operation_fingerprint ?? '', profile_fingerprint: evidence.profile_fingerprint ?? '', runtime_exception_revision: evidence.runtime_exception_revision ?? '', transports, cases}};
+  return {missing, result: {status: evidence.status ?? '', operation_fingerprint: evidence.operation_fingerprint ?? '', profile_fingerprint: evidence.profile_fingerprint ?? '', runtime_exception_revision: evidence.runtime_exception_revision ?? '', transports, cases, receipt_ref: evidence.receipt_ref ?? '', producer: evidence.custody?.producer ?? ''}};
 }
 export function externalReadinessReport(operationIds) {
   const profile = externalConsumerProfile();
+  const receiptStore = externalOperationConformanceReceipts();
   const entries = new Map(profile.operations.map((entry) => [entry.id, entry])); const supported = [], excluded = [];
   for (const id of operationIds) { const entry = entries.get(id) ?? {}, c = entry.external_consumption ?? {}, r = entry.operation_resources ?? {}, t = entry.targets ?? {}, s = entry.schemas ?? {}, refs = entry.conformance ?? [], missing = [];
     for (const lang of ['python', 'typescript']) { if (!r[lang]?.exists) missing.push(`released-${lang}-resource`); if (!['adapter', 'mutation-capable-adapter'].includes(t[lang]?.status)) missing.push(`released-${lang}-adapter`); }
     if (!s.input?.length || !s.output?.length) missing.push('input-output-schema-coverage'); if (!refs.length) missing.push('conformance-reference'); const status = c.status ?? 'unavailable'; if (status === 'runtime-backed' && !c.runtime_exceptions?.length) missing.push('runtime-exception-disposition');
-    const conformance = conformanceReadiness(entry, profile); missing.push(...conformance.missing);
+    const conformance = conformanceReadiness(entry, profile, receiptStore); missing.push(...conformance.missing);
     if (status === 'supported' && !missing.length) supported.push(id); else excluded.push({id, status, missing_evidence: missing, conformance_refs: refs, conformance_result: conformance.result}); }
   return {kind: 'agentic-workspace/external-readiness-report/v1', status: !excluded.length ? 'ready' : supported.length ? 'subset-only' : 'not-ready', supported_operations: supported, excluded_operations: excluded};
 }
