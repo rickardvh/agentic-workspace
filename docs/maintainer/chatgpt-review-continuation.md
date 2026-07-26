@@ -45,6 +45,14 @@ The handoff verifies repository, branch, open PR, and pushed full SHA; tolerates
 
 If another session already owns the PR, inspect it first. `--replace-session` is an explicit human decision to supersede that owner; it is never automatic.
 
+Detached continuation worktrees push with `git push origin HEAD:<PR branch>`. After that explicit push, record the handoff without creating a local branch workaround by naming the PR:
+
+```powershell
+uv run python tools/chatgpt_review_loop.py handoff --pr <number>
+```
+
+The command resolves the branch only from that open PR and still requires the detached `HEAD` to equal its remote head; without `--pr`, detached handoff remains fail-closed.
+
 ## Poll or watch
 
 Run one cheap deterministic poll:

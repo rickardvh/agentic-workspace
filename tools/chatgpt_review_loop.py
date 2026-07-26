@@ -656,8 +656,21 @@ def handoff(
     owner_root = Path(os.environ.get(OWNER_ROOT_ENV, root.as_posix()) if detached_owner_handoff else root).resolve()
     branch = os.environ.get(OWNER_BRANCH_ENV, "") if detached_owner_handoff else checkout_branch
     head = _git_value(root, runner, "rev-parse", "HEAD")
+    repo = _repo_slug(root, runner)
+    detached_explicit_handoff = not branch and not existing_only and pr is not None
+    detached_payload: dict[str, Any] | None = None
+    if detached_explicit_handoff:
+        # A review continuation intentionally runs in a detached worktree and
+        # pushes with HEAD:<known PR branch>.  An explicit PR supplies the
+        # missing branch identity without guessing from local history.
+        detached_payload = _pr_view(root, runner, pr=pr, repo=repo)
+        branch = str(detached_payload.get("headRefName", ""))
     if not branch:
-        raise LoopError("detached-head", "handoff does not guess a PR from a detached HEAD")
+        raise LoopError(
+            "detached-head",
+            "handoff does not guess a PR from a detached HEAD",
+            recovery="pass --pr after pushing HEAD:<the exact PR branch>, or run from the PR branch",
+        )
     if existing_only:
         candidates = [
             item
@@ -687,8 +700,7 @@ def handoff(
                 recovery="inspect status and stop or clean up stale loop state",
             )
         pr = int(candidates[0]["pr_number"])
-    repo = _repo_slug(root, runner)
-    payload = _pr_view(root, runner, pr=pr, repo=repo if pr else None)
+    payload = detached_payload or _pr_view(root, runner, pr=pr, repo=repo if pr else None)
     number = int(payload.get("number", 0))
     if payload.get("state") != "OPEN":
         raise LoopError("pr-not-open", f"PR #{number} is not open")
@@ -811,15 +823,41 @@ def parse_reviews(comments: list[dict[str, Any]], *, expected_pr: int, expected_
     return matches, rejected
 
 
+def _is_semver_label_check(check: dict[str, Any]) -> bool:
+    name = str(check.get("name") or check.get("context") or "").lower()
+    return "semver" in name and "label" in name
+
+
+def _current_failed_checks(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Discard a stale failed semver-label run superseded on the same PR head."""
+
+    checks = [item for item in payload.get("statusCheckRollup", []) if isinstance(item, dict)]
+    latest_success: dict[str, str] = {}
+    for check in checks:
+        if str(check.get("conclusion", "")).upper() != "SUCCESS" or not _is_semver_label_check(check):
+            continue
+        name = str(check.get("name") or check.get("context") or "")
+        latest_success[name] = max(latest_success.get(name, ""), str(check.get("completedAt") or check.get("startedAt") or ""))
+
+    failed = {"FAILURE", "FAILED", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE"}
+    current: list[dict[str, Any]] = []
+    for check in checks:
+        if str(check.get("conclusion", "")).upper() not in failed:
+            continue
+        name = str(check.get("name") or check.get("context") or "")
+        observed_at = str(check.get("completedAt") or check.get("startedAt") or "")
+        if _is_semver_label_check(check) and latest_success.get(name, "") > observed_at:
+            continue
+        current.append(check)
+    return current
+
+
 def _system_trigger(payload: dict[str, Any], *, pr: int, head: str) -> Review | None:
     """Return one deterministic actionable CI/conflict trigger for this head."""
     findings: list[str] = []
     if str(payload.get("mergeable", "")).upper() == "CONFLICTING" or str(payload.get("mergeStateStatus", "")).upper() == "DIRTY":
         findings.append("The PR has merge conflicts. Rebase or merge the base branch, resolve the conflicts, run the relevant proof, and push the result.")
-    failed = {"FAILURE", "FAILED", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE"}
-    for check in payload.get("statusCheckRollup", []):
-        if not isinstance(check, dict) or str(check.get("conclusion", "")).upper() not in failed:
-            continue
+    for check in _current_failed_checks(payload):
         name = str(check.get("name") or check.get("context") or "unnamed check")
         conclusion = str(check.get("conclusion")).lower()
         details = str(check.get("detailsUrl") or check.get("url") or "")
