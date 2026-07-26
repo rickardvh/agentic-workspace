@@ -16683,6 +16683,19 @@ def targeted_execplan_write(
     unknown = sorted(set(patch).difference(allowed))
     if unknown or not patch:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch", "unknown_fields": unknown}
+    unsupported_projection_fields = sorted(field for field in patch if field in {"parent"})
+    phase_value = str(patch.get("phase") or "").strip().lower()
+    lifecycle_value = str(patch.get("lifecycle") or "").strip().lower()
+    terminal_lifecycle = (lifecycle_value or phase_value) in {"completed", "complete", "closed", "archived", "superseded"}
+    if "phase" in patch and not terminal_lifecycle:
+        unsupported_projection_fields.append("phase")
+    if unsupported_projection_fields:
+        return {
+            "kind": "agentic-planning/targeted-execplan-write/v1",
+            "status": "unsupported-projection-patch",
+            "unsupported_fields": unsupported_projection_fields,
+            "reason": "targeted writer only applies fields whose Planning state/lane projection can be updated atomically",
+        }
     updated = copy.deepcopy(record)
     for key, value in patch.items():
         updated[key] = copy.deepcopy(value)
@@ -16695,32 +16708,54 @@ def targeted_execplan_write(
     state_before = _read_state_from_toml(target_root) or {}
     state_after = copy.deepcopy(state_before)
     state_projection_changes: dict[str, Any] = {}
-    lifecycle_patch = patch.get("lifecycle") or patch.get("phase") or patch.get("status")
     if changed and isinstance(state_after.get("todo"), dict):
         for bucket in ("active_items", "queued_items"):
             items = state_after["todo"].get(bucket)
             if not isinstance(items, list):
                 continue
+            retained_items: list[Any] = []
             for item in items:
                 if not isinstance(item, dict):
+                    retained_items.append(item)
                     continue
                 surface = str(item.get("surface") or item.get("path") or "")
                 if str(item.get("id") or "") == plan_id or surface == owner_relative:
                     before = copy.deepcopy(item)
+                    if terminal_lifecycle:
+                        state_projection_changes[f"todo.{bucket}.{plan_id}"] = {"before": before, "after": None}
+                        continue
                     if "next_action" in patch:
                         item["next_action"] = str(patch["next_action"])
-                    if lifecycle_patch:
-                        item["status"] = str(lifecycle_patch)
+                    if lifecycle_value:
+                        item["status"] = str(patch["lifecycle"])
                     if before != item:
                         state_projection_changes[f"todo.{bucket}.{plan_id}"] = {"before": before, "after": copy.deepcopy(item)}
+                retained_items.append(item)
+            state_after["todo"][bucket] = retained_items
     lane_after = copy.deepcopy(lane_record) if isinstance(lane_record, dict) else None
     lane_projection_changes: dict[str, Any] = {}
     if changed and isinstance(lane_after, dict):
-        terminal_lifecycle = str(lifecycle_patch or "").lower() in {"completed", "complete", "closed", "archived", "superseded"}
         if terminal_lifecycle and str(lane_after.get("current_slice") or "") == plan_id:
             before_current = lane_after.get("current_slice")
             lane_after["current_slice"] = ""
             lane_projection_changes["current_slice"] = {"before": before_current, "after": ""}
+            slice_sequence = lane_after.get("slice_sequence")
+            if isinstance(slice_sequence, list):
+                for index, raw_slice in enumerate(slice_sequence):
+                    if not isinstance(raw_slice, dict):
+                        continue
+                    execplan_ref = str(raw_slice.get("execplan_ref") or "")
+                    slice_id = str(raw_slice.get("id") or "")
+                    if slice_id == plan_id or execplan_ref.endswith(f"/{plan_id}.plan.json") or execplan_ref.endswith(f"/{plan_id}.md"):
+                        before_slice = copy.deepcopy(raw_slice)
+                        next_slice = dict(cast(Mapping[str, Any], raw_slice))
+                        next_slice["status"] = "completed"
+                        slice_sequence[index] = next_slice
+                        if before_slice != next_slice:
+                            lane_projection_changes[f"slice_sequence[{index}]"] = {
+                                "before": before_slice,
+                                "after": copy.deepcopy(next_slice),
+                            }
     payload = {
         "kind": "agentic-planning/targeted-execplan-write/v1",
         "status": "preview" if not apply else "applied" if changed else "no-op",
@@ -16737,12 +16772,12 @@ def targeted_execplan_write(
         },
     }
     if apply and changed:
-        receipt = {"kind": "agentic-planning/targeted-execplan-write-receipt/v1", "request": request, "result": payload}
         transaction_paths = [record_path, receipt_path]
         if state_projection_changes:
             transaction_paths.append(state_path)
         if lane_path is not None and lane_projection_changes:
             transaction_paths.append(lane_path)
+        final_payload: dict[str, Any] = {}
 
         def write_transaction() -> None:
             _write_execplan_record(record_path=record_path, record=updated)
@@ -16750,6 +16785,24 @@ def targeted_execplan_write(
                 _write_state_to_toml(target_root, state_after)
             if lane_path is not None and isinstance(lane_after, dict) and lane_projection_changes:
                 _write_lane_record(record_path=lane_path, record=lane_after)
+            state_revision_after = planning_revision(target_root).get("revision_id")
+            lane_revision_after = (
+                _record_revision(lane_after) if isinstance(lane_after, dict) and lane_projection_changes else lane_revision or None
+            )
+            final_payload.update(
+                {
+                    **payload,
+                    "state_revision_after": state_revision_after,
+                    "lane_revision_after": lane_revision_after,
+                    "postcondition": {
+                        "owner_revision": updated.get("revision"),
+                        "planning_revision": state_revision_after,
+                        "lane_revision": lane_revision_after,
+                        "terminal_owner_absent_from_active_state": bool(terminal_lifecycle and state_projection_changes),
+                    },
+                }
+            )
+            receipt = {"kind": "agentic-planning/targeted-execplan-write-receipt/v1", "request": request, "result": final_payload}
             receipt_path.parent.mkdir(parents=True, exist_ok=True)
             receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
 
@@ -16757,10 +16810,7 @@ def targeted_execplan_write(
             _apply_planning_writes_atomically(transaction_paths, write_transaction)
         except OSError as exc:
             return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "rolled-back", "reason": str(exc)}
-        payload["state_revision_after"] = planning_revision(target_root).get("revision_id")
-        payload["lane_revision_after"] = (
-            _record_revision(lane_after) if isinstance(lane_after, dict) and lane_projection_changes else lane_revision or None
-        )
+        payload = final_payload or payload
         payload["receipt_path"] = _planning_surface_relative(target_root, receipt_path)
     return payload
 
