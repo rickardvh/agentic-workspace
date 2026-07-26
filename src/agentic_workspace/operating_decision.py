@@ -195,6 +195,7 @@ def resolve_context_authority_projection(
         # context must therefore arrive through a live source record rather
         # than being synthesized from the declaration itself.
         record_status = str(record.get("status") or "missing")
+        admission = _as_dict(record.get("admission"))
         applicable = (
             bool(record)
             and record.get("applicable") is not False
@@ -202,6 +203,9 @@ def resolve_context_authority_projection(
             and bool(record.get("source_id") or record.get("source"))
             and bool(record.get("revision"))
             and str(record.get("freshness") or "") == "current"
+            and admission.get("registry_revision") == CONTEXT_AUTHORITY_REGISTRY_REVISION
+            and admission.get("surface") == surface
+            and admission.get("owner") == item.get("owner")
         )
         authority = {
             "surface": surface,
@@ -235,7 +239,7 @@ def resolve_context_authority_projection(
                 "missing",
             ),
             "action": "refresh-or-admit-source-record",
-            "required_record": ["status=current", "source_id", "revision", "freshness=current"],
+            "required_record": ["status=current", "source_id", "revision", "freshness=current", "canonical admission receipt"],
         }
         for item in sorted(
             (item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in missing),

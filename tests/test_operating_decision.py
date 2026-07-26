@@ -607,7 +607,7 @@ def test_operating_decision_blocks_action_when_required_context_is_unadmitted() 
 
 def test_context_authority_projection_selects_live_source_records_and_excludes_inapplicable() -> None:
     required_records = {
-        item["surface"]: {"status": "current", "source_id": f"{item['surface']}/source", "revision": "r1", "freshness": "current"}
+        item["surface"]: {"status": "current", "source_id": f"{item['surface']}/source", "revision": "r1", "freshness": "current", "admission": {"registry_revision": "sha256:" + __import__("agentic_workspace.operating_decision", fromlist=["CONTEXT_AUTHORITY_REGISTRY_REVISION"]).CONTEXT_AUTHORITY_REGISTRY_REVISION.removeprefix("sha256:"), "surface": item["surface"], "owner": item["owner"]}}
         for item in context_authority_declarations()
         if "start" in item["consumer"]
     }
@@ -617,7 +617,7 @@ def test_context_authority_projection_selects_live_source_records_and_excludes_i
         source_records={
             **required_records,
             "memory": {"status": "not-applicable", "applicable": False, "source_id": "memory/index", "revision": "old"},
-            "skills": {"status": "current", "source_id": "skills/registry", "revision": "skills-r2", "freshness": "current"},
+            "skills": {"status": "current", "source_id": "skills/registry", "revision": "skills-r2", "freshness": "current", "admission": {"registry_revision": __import__("agentic_workspace.operating_decision", fromlist=["CONTEXT_AUTHORITY_REGISTRY_REVISION"]).CONTEXT_AUTHORITY_REGISTRY_REVISION, "surface": "skills", "owner": "workspace skill registry"}},
         },
     )
     assert projection["repair_operation"]["status"] == "required"
@@ -627,7 +627,7 @@ def test_context_authority_projection_selects_live_source_records_and_excludes_i
             "owner": "memory package",
             "reason_code": "not-applicable",
             "action": "refresh-or-admit-source-record",
-            "required_record": ["status=current", "source_id", "revision", "freshness=current"],
+            "required_record": ["status=current", "source_id", "revision", "freshness=current", "canonical admission receipt"],
         }
     ]
 
