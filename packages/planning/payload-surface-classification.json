@@ -667,6 +667,20 @@
       "rationale": "High-assurance lifecycle steering helps skill-aware agents preserve intent, proof, delegation, and closeout across broad work without making skills mandatory for core planning."
     },
     {
+      "source_path": "packages/planning/skills/planning-manual-delegation/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-manual-delegation/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Manual assignment transport is optional skill guidance; the canonical assignment operations remain available without it."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-returned-result/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-returned-result/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Returned-result admission guidance is optional for skill-aware agents while canonical assignment admission remains the core surface."
+    },
+    {
       "source_path": "packages/planning/skills/planning-intent-verification/SKILL.md",
       "installed_path": ".agentic-workspace/planning/skills/planning-intent-verification/SKILL.md",
       "classification": "config-enabled extension",
