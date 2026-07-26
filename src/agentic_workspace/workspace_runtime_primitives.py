@@ -17458,7 +17458,13 @@ def _memory_manifest_notes(target_root: Path | None) -> dict[str, dict[str, Any]
     notes = manifest.get("notes", {})
     if not isinstance(notes, dict):
         return {}
-    return {str(path): note for path, note in notes.items() if isinstance(note, dict)}
+    return {
+        str(path): note
+        for path, note in notes.items()
+        if isinstance(note, dict)
+        and note.get("review_only") is not True
+        and str(note.get("routing_status") or "routable") != "review-only"
+    }
 
 
 def _note_glob_matches(*, changed_paths: list[str], patterns: Any) -> list[dict[str, str]]:
