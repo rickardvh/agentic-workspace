@@ -688,6 +688,19 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         changed_paths=[str(path) for path in _as_list(inputs.get("changed_paths"))],
         source_records=_as_dict(inputs.get("authority_sources")) or _as_dict(inputs.get("authorities")),
     )
+    # Context admission is an authority gate, not advisory route decoration.
+    # A typed action cannot remain actionable when one of its registered
+    # required inputs is absent, stale, ambiguous, or otherwise unadmitted.
+    if context_authority_projection["status"] == "repair-required":
+        status = "blocked"
+        primary_action = {}
+        external_blocker = {
+            "kind": "agentic-workspace/operating-decision-blocker/v1",
+            "reason_code": "context-authority-unavailable",
+            "owner": "context-authority-registry",
+            "repair": "run the typed context-authority repair operation before retrying the decision",
+        }
+        identity_input["blocker"] = external_blocker
     input_revisions = {
         **revisions,
         **(
