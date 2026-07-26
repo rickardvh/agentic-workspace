@@ -1395,6 +1395,61 @@ def _planning_route_decision_payload(
     return decision
 
 
+def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
+    """Project the canonical route contract into the planning-gate outcome.
+
+    ``task_switch_reconciliation`` remains evidence for compatibility and
+    diagnosis only.  Consumers must not reclassify that legacy packet: they
+    consume this projection of the already-resolved route decision.
+    """
+    relation = str(route_decision.get("task_relation") or "not-applicable")
+    posture = str(route_decision.get("owner_posture") or "not-applicable")
+    transition = str(route_decision.get("required_transition") or "none")
+    action = _as_dict(route_decision.get("next_safe_action"))
+    if posture == "completed-residue":
+        return {
+            "status": "attention",
+            "decision": "archive-or-retire-completed-plan",
+            "reason": "The selected owner is complete and requires closeout or archive.",
+            "required_next_action": "archive-or-retire-completed-plan",
+            "workflow_sufficient": True,
+        }
+    if relation == "bounded-independent" and transition == "none":
+        mode = str(_as_dict(_as_dict(route_decision.get("structured_inputs")).get("task_binding")).get("mode") or "")
+        return {
+            "status": "satisfied",
+            "decision": "bounded-read-only-work" if mode == "read-only" else "current-task-route-acknowledged",
+            "reason": "The resolved route admits bounded work without an active-plan progress claim.",
+            "required_next_action": str(action.get("action") or "prove-current-task"),
+            "workflow_sufficient": True,
+        }
+    if relation == "independent-pending-scope":
+        return {
+            "status": "attention",
+            "decision": "current-task-scope-inspection-required",
+            "reason": "The resolved route requires scope inspection before mutation.",
+            "required_next_action": str(action.get("action") or "inspect-current-task-scope"),
+            "workflow_sufficient": True,
+        }
+    if relation == "ambiguous" or transition == "ask-for-route-decision":
+        return {
+            "status": "attention",
+            "decision": "active-plan-task-switch",
+            "reason": "The resolved route is ambiguous and requires an explicit task-route decision.",
+            "required_next_action": str(action.get("action") or "choose-task-switch-route"),
+            "workflow_sufficient": True,
+        }
+    if relation == "continues-selected-owner" and transition == "none":
+        return {
+            "status": "satisfied",
+            "decision": "planning-backed",
+            "reason": "The resolved route continues the selected owner.",
+            "required_next_action": str(action.get("action") or "continue-active-plan"),
+            "workflow_sufficient": True,
+        }
+    return {}
+
+
 def _task_switch_reconciliation_payload(**kwargs: Any) -> dict[str, Any]:
     """Compatibility diagnostic alias; ordinary consumers must use route_decision."""
     return _planning_route_evidence_payload(**kwargs)
@@ -1893,12 +1948,19 @@ def _planning_safety_gate_payload(
         planning_revision=planning_revision,
         reconciliation_proposal=reconciliation_proposal,
     )
+    route_safety = _route_safety_outcome(route_decision)
     closeout_publication_residue = (
         path_classification.get("dirty_shape") == "implementation-with-archived-planning-residue"
         and _as_dict(path_classification.get("archived_planning_residue")).get("status") == "completed-closeout-residue"
     )
     pr_comment_repair_context = _pr_comment_repair_context_payload(task_text=task_text, changed_paths=changed_paths)
-    if active_planning_present and active_delegation_requirement.get("required"):
+    if route_safety:
+        status = str(route_safety["status"])
+        decision = str(route_safety["decision"])
+        reason = str(route_safety["reason"])
+        required_next_action = str(route_safety["required_next_action"])
+        workflow_sufficient = bool(route_safety["workflow_sufficient"])
+    elif active_planning_present and active_delegation_requirement.get("required"):
         status = "blocked"
         decision = "delegation-decision-required"
         reason = "Active decomposed or high-assurance planning exists, but no delegation decision is recorded."
@@ -1922,30 +1984,6 @@ def _planning_safety_gate_payload(
         reason = "The active execplan is a slice with a recorded parent lane, but no first-class lane owner artifact exists."
         required_next_action = "create-or-promote-lane-owner"
         workflow_sufficient = False
-    elif route_decision.get("owner_posture") == "completed-residue":
-        status = "attention"
-        decision = "archive-or-retire-completed-plan"
-        reason = "The selected owner has completed residue and needs the route-decision closeout transition."
-        required_next_action = "archive-or-retire-completed-plan"
-        workflow_sufficient = True
-    elif route_decision.get("task_relation") == "bounded-independent" and route_decision.get("required_transition") == "none":
-        status = "satisfied"
-        decision = "bounded-current-task"
-        reason = "The structured route permits bounded current-task work while preserving selected-owner claim boundaries."
-        required_next_action = str(_as_dict(route_decision.get("next_safe_action")).get("action") or "prove-current-task")
-        workflow_sufficient = True
-    elif route_decision.get("task_relation") == "independent-pending-scope":
-        status = "attention"
-        decision = "current-task-scope-inspection-required"
-        reason = "Structured current-work evidence is incomplete; inspect scope before mutation while preserving the selected owner."
-        required_next_action = "inspect-current-task-scope"
-        workflow_sufficient = True
-    elif route_decision.get("task_relation") == "continues-selected-owner":
-        status = "satisfied"
-        decision = "planning-backed"
-        reason = "The structured route continues the selected owner."
-        required_next_action = str(_as_dict(route_decision.get("next_safe_action")).get("action") or "continue-active-plan")
-        workflow_sufficient = True
     elif active_planning_present:
         status = "attention"
         decision = "planning-route-transition-required"
