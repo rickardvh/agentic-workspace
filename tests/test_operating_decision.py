@@ -32,7 +32,7 @@ def _schema(name: str) -> dict:
     return json.loads((SCHEMA_ROOT / name).read_text(encoding="utf-8"))
 
 
-def test_ordinary_decision_packet_projects_a_stable_decision_envelope() -> None:
+def test_ordinary_decision_packet_fails_closed_without_a_canonical_decision() -> None:
     packet = _ordinary_decision_packet(
         surface="start",
         phase_question="What should happen next?",
@@ -40,11 +40,13 @@ def test_ordinary_decision_packet_projects_a_stable_decision_envelope() -> None:
         claim_boundary="do not claim completion before proof",
     )
 
-    assert packet["decision_identity"]["id"].startswith("ordinary:start:")
-    assert packet["decision_identity"]["input_digest"].startswith("sha256:")
-    assert packet["primary_action_identity"] == {"id": "start:continue current work", "label": "continue current work"}
-    assert packet["expected_transition"] == "follow-primary-action"
-    assert packet["mutation_precondition"] == "resolve action-specific authority before mutation"
+    assert packet["decision_identity"] == {
+        "id": "",
+        "input_digest": "",
+        "projection_contract": "canonical-operating-decision-required/v1",
+    }
+    assert packet["primary_action_identity"] == {"id": "", "label": "continue current work"}
+    assert packet["external_blocker"]["reason_code"] == "missing-canonical-operating-decision"
     assert packet["claim_continuation_boundary"] == packet["claim_boundary"]
 
 
@@ -60,6 +62,33 @@ def test_ordinary_decision_packet_preserves_canonical_identity_when_rendering_ch
     assert first["decision_identity"] == second["decision_identity"]
     assert first["primary_action_identity"]["id"] == "proof.report"
     assert first["operation_invocation"] == invocation
+
+
+def test_ordinary_packets_share_the_same_canonical_action_across_consumers() -> None:
+    invocation = operation_invocation(
+        operation_id="proof.report",
+        arguments={"target": ".", "format": "json"},
+        effect_class="read-only-report",
+        authority_class="verification-owned",
+        owner_context_revision={"owner": "proof", "revision": "owner-a"},
+        mutation_boundary={"baseline": "baseline-a"},
+        proof_requirements=[{"receipt": "proof-a"}],
+        expected_transition="proof-refreshed",
+    )
+    decision = compile_operating_decision(
+        inputs={"revisions": {"owner": "owner-a", "proof": "proof-a"}, "primary_action": {"operation_invocation": invocation}}
+    )
+
+    packets = [
+        _ordinary_decision_packet(surface=surface, phase_question=surface, next_action=f"display-{surface}", canonical_decision=decision)
+        for surface in ("start", "implement", "proof", "closeout")
+    ]
+
+    for packet in packets:
+        assert packet["decision_identity"]["id"] == decision["decision_id"]
+        assert packet["decision_identity"]["input_digest"] == decision["canonical_decision_input_revision"]
+        assert packet["operation_invocation"] == invocation
+        assert packet["mutation_precondition"] == invocation["mutation_boundary"]
 
 
 def test_operating_decision_emits_one_typed_primary_action() -> None:

@@ -2062,7 +2062,7 @@
     "src/agentic_workspace/workspace_runtime_generated_surface.py": "82203eefe65eab1653eaa36ae574ac07a9f96864",
     "src/agentic_workspace/workspace_runtime_implement.py": "e6e81e55228ba0e266a1f608f1b618bdf0e0179a",
     "src/agentic_workspace/workspace_runtime_planning.py": "83eb3f8b07cfd1d13ec8edabd3a779ad31859de5",
-    "src/agentic_workspace/workspace_runtime_primitives.py": "93737ea79dbe13e9b12cc0ca57801570bcb31202",
+    "src/agentic_workspace/workspace_runtime_primitives.py": "a785166c284fe781f16e1642468fd42ba3f2dbf5",
     "src/agentic_workspace/workspace_runtime_projection.py": "8db623c90efe888f5a6bba8a75bb96d253d1f707",
     "src/agentic_workspace/workspace_runtime_proof.py": "02fc8632052e88e0bbdf480a011f46f8a1bed17a",
     "src/agentic_workspace/workspace_runtime_startup.py": "db38c7a7059c867d53ee7b2649225fb19b2e9f54",

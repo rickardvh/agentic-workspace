@@ -13,9 +13,11 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+from agentic_workspace.actionability import operation_invocation
 from agentic_workspace.authority_envelope import authority_envelope_payload, mutation_baseline_payload_cache_scope
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
+from agentic_workspace.operating_decision import compile_operating_decision
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -152,6 +154,38 @@ from agentic_workspace.workspace_selector_validation import (
     _selector_inventory_selected_payload,
     _selector_tokens,
 )
+
+
+def _canonical_implement_operating_decision(*, payload: dict[str, Any], proof_commands: list[str]) -> dict[str, Any]:
+    """Compile implement's typed scope action before rendering ordinary output."""
+
+    planning_gate = _as_dict(payload.get("planning_safety_gate"))
+    route = _as_dict(planning_gate.get("route_decision"))
+    owner = _as_dict(route.get("selected_owner_identity"))
+    changed_paths = sorted(_normalize_changed_paths(payload.get("changed_paths", [])))
+    planning_revision = _as_dict(payload.get("planning_revision"))
+    # The envelope is explanatory output; the admitted baseline is the
+    # executable authority record that must participate in the action digest.
+    mutation_baseline = _as_dict(_as_dict(payload.get("authority_envelope")).get("mutation_baseline"))
+    invocation = operation_invocation(
+        operation_id="workspace.implement.scope",
+        arguments={"changed_paths": changed_paths, "route_relation": str(route.get("task_relation") or "unclassified")},
+        effect_class="repo-mutation",
+        authority_class="planning-route",
+        expected_transition="changed-path-context-inspected",
+        owner_context_revision={"selected_owner": owner, "planning_revision": planning_revision},
+        mutation_boundary=mutation_baseline,
+        proof_requirements=[{"command": command} for command in proof_commands if command],
+    )
+    return compile_operating_decision(
+        inputs={
+            "revisions": {"planning": planning_revision, "changed_paths": changed_paths},
+            "selected_owner": owner,
+            "current_work": _as_dict(payload.get("applicable_intent_status")),
+            "primary_action": {"operation_invocation": invocation},
+            "terminal_state": "CONTINUE",
+        }
+    )
 
 
 def _run_implement_context_adapter(args: argparse.Namespace) -> int:
@@ -1604,6 +1638,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "takeover_or_recovery": _command_with_cli_invoke(command="agentic-workspace preflight --format json", cli_invoke=config.cli_invoke),
     }
     communication_contract = compact_communication_contract_payload(surface="implementation")
+    canonical_decision = _canonical_implement_operating_decision(payload=payload, proof_commands=proof_commands)
     decision_packet = _ordinary_decision_packet(
         surface="implement",
         phase_question="What narrow working set is safe to touch now?",
@@ -1641,6 +1676,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "architecture_detail": "not_action_changing",
             "raw_workspace_files": "not_action_changing",
         },
+        canonical_decision=canonical_decision,
     )
     state_delta_missing_evidence = [str(item) for item in proof_commands if str(item).strip()] or [
         "proof execution evidence before hard completion claim"

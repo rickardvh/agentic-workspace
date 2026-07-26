@@ -15,8 +15,10 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from agentic_workspace.actionability import operation_invocation
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
+from agentic_workspace.operating_decision import compile_operating_decision
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -162,6 +164,88 @@ def _startup_command_target_arg(target_root: Path | None) -> str:
     if relative == ".":
         return "."
     return Path(relative).as_posix()
+
+
+def _compact_ordinary_decision_packet(decision: dict[str, Any]) -> dict[str, Any]:
+    """Keep canonical action identity in tiny startup without its prose metadata."""
+
+    compact = {
+        key: decision.get(key)
+        for key in (
+            "kind",
+            "decision_identity",
+            "surface",
+            "phase_question",
+            "next_action",
+            "primary_action_identity",
+            "expected_transition",
+            "effect_scope",
+            "mutation_precondition",
+            "external_blocker",
+            "blocked_actions",
+            "reasons",
+            "shown_because",
+            "absence_states",
+        )
+        if decision.get(key) not in (None, "", [], {})
+    }
+    invocation = _as_dict(decision.get("operation_invocation"))
+    if invocation:
+        compact["operation_invocation"] = {
+            key: invocation.get(key)
+            for key in (
+                "kind",
+                "operation_id",
+                "contract_version",
+                "arguments",
+                "effect_class",
+                "authority_class",
+                "expected_input_revision",
+                "expected_transition",
+                "idempotency_key",
+                "owner_context_revision",
+                "mutation_boundary",
+                "proof_requirements",
+            )
+            if invocation.get(key) not in (None, "", [], {})
+        }
+    if decision.get("claim_boundary") not in (None, "", [], {}):
+        claim_boundary = str(decision["claim_boundary"])
+        compact["claim_boundary"] = claim_boundary if len(claim_boundary) <= 180 else f"{claim_boundary[:177]}..."
+    return compact
+
+
+def _canonical_start_operating_decision(
+    *, payload: dict[str, Any], next_safe_action: dict[str, Any], proof_commands: list[str]
+) -> dict[str, Any]:
+    """Compile startup's typed route action before rendering its display packet."""
+
+    planning_gate = _as_dict(payload.get("planning_safety_gate"))
+    route = _as_dict(payload.get("route_decision")) or _as_dict(planning_gate.get("route_decision"))
+    owner = _as_dict(route.get("selected_owner_identity"))
+    route_revision = hashlib.sha256(json.dumps(route, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:24]
+    invocation = operation_invocation(
+        operation_id="workspace.start.route",
+        arguments={
+            "route_relation": str(route.get("task_relation") or "unclassified"),
+            "required_transition": str(route.get("required_transition") or "none"),
+        },
+        effect_class="read-only-report",
+        authority_class="planning-route",
+        expected_transition=str(route.get("required_transition") or "route-inspected"),
+        owner_context_revision={"selected_owner": owner, "route_revision": route_revision},
+        mutation_boundary={"status": "not-applicable", "effect_class": "read-only-report"},
+        proof_requirements=[{"command": command} for command in proof_commands if command],
+    )
+    return compile_operating_decision(
+        inputs={
+            "revisions": {"planning_route": route_revision},
+            "selected_owner": owner,
+            "current_work": _as_dict(payload.get("active_state_summary")),
+            "primary_action": {"operation_invocation": invocation},
+            "terminal_state": "CONTINUE",
+        }
+    )
 
 
 def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
@@ -596,6 +680,9 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         agent_judgment="Agent owns work-shape unless blocked.",
     )
     startup_proof_commands = _tiny_required_proof_commands(payload.get("proof", {})) if isinstance(payload.get("proof"), dict) else []
+    canonical_decision = _canonical_start_operating_decision(
+        payload=payload, next_safe_action=projected["next_safe_action"], proof_commands=startup_proof_commands
+    )
     projected["decision_packet"] = _ordinary_decision_packet(
         surface="start",
         phase_question="Startup posture?",
@@ -629,6 +716,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "full_selector_inventory": "hidden_behind_detail_route",
             "verbose_planning_detail": "detail_omitted",
         },
+        canonical_decision=canonical_decision,
     )
     state_delta_core = state_delta_core_payload(
         surface="startup",
@@ -1487,6 +1575,9 @@ def _hydrate_selected_start_advisory_payloads(
         action_signals = payload.get("action_signals", {}) if isinstance(payload.get("action_signals"), dict) else {}
         startup_proof_commands = _tiny_required_proof_commands(payload.get("proof", {})) if isinstance(payload.get("proof"), dict) else []
         if "decision_packet" not in payload:
+            canonical_decision = _canonical_start_operating_decision(
+                payload=payload, next_safe_action=next_safe_action, proof_commands=startup_proof_commands
+            )
             payload["decision_packet"] = _ordinary_decision_packet(
                 surface="start",
                 phase_question="Startup posture?",
@@ -1522,6 +1613,7 @@ def _hydrate_selected_start_advisory_payloads(
                     "full_selector_inventory": "hidden_behind_detail_route",
                     "verbose_planning_detail": "detail_omitted",
                 },
+                canonical_decision=canonical_decision,
             )
         state_delta_core = state_delta_core_payload(
             surface="startup",
@@ -2348,6 +2440,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "full_selector_inventory": "hidden_behind_detail_route",
                 "verbose_planning_detail": "detail_omitted",
             },
+            canonical_decision=_canonical_start_operating_decision(
+                payload=payload, next_safe_action=next_safe_action, proof_commands=startup_proof_commands
+            ),
         ),
         "communication_contract": compact_communication_contract_payload(surface="startup"),
         "skills": (
@@ -2389,25 +2484,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if read_only_compact_default:
         decision = selected.get("decision_packet", {})
         if isinstance(decision, dict):
-            selected["decision_packet"] = {
-                key: decision.get(key)
-                for key in (
-                    "kind",
-                    "surface",
-                    "phase_question",
-                    "next_action",
-                    "blocked_actions",
-                    "reasons",
-                    "shown_because",
-                    "absence_states",
-                )
-                if decision.get(key) not in (None, "", [], {})
-            }
-            if decision.get("claim_boundary") not in (None, "", [], {}):
-                claim_boundary = str(decision.get("claim_boundary"))
-                selected["decision_packet"]["claim_boundary"] = (
-                    claim_boundary if len(claim_boundary) <= 180 else f"{claim_boundary[:177]}..."
-                )
+            selected["decision_packet"] = _compact_ordinary_decision_packet(decision)
         selected["communication_contract"] = {
             "status": "selector-only",
             "detail_selector": "communication_contract",
@@ -2563,20 +2640,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     elif next_safe_action.get("next_safe_action") == "inspect-current-task-scope":
         decision = selected.get("decision_packet", {})
         if isinstance(decision, dict):
-            selected["decision_packet"] = {
-                key: decision.get(key)
-                for key in (
-                    "kind",
-                    "surface",
-                    "phase_question",
-                    "next_action",
-                    "blocked_actions",
-                    "reasons",
-                    "shown_because",
-                    "absence_states",
-                )
-                if decision.get(key) not in (None, "", [], {})
-            }
+            selected["decision_packet"] = _compact_ordinary_decision_packet(decision)
     return selected
 
 

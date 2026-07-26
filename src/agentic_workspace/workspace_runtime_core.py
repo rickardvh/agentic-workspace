@@ -28075,7 +28075,9 @@ def _ordinary_decision_packet(
         key: value for key, value in (absence_states or {}).items() if value not in (None, "", [], {})
     }
     canonical = canonical_decision if isinstance(canonical_decision, dict) else {}
-    invocation = canonical.get("primary_action", {}).get("operation_invocation", {}) if isinstance(canonical.get("primary_action"), dict) else {}
+    invocation = (
+        canonical.get("primary_action", {}).get("operation_invocation", {}) if isinstance(canonical.get("primary_action"), dict) else {}
+    )
     if canonical and canonical.get("decision_id") and canonical.get("canonical_decision_input_revision") and isinstance(invocation, dict):
         return {
             "kind": "agentic-workspace/ordinary-decision-packet/v1",
@@ -28102,21 +28104,24 @@ def _ordinary_decision_packet(
             "shown_because": [item for item in (shown_because or []) if str(item).strip()][:6],
             "absence_states": normalized_absence_states,
         }
-    input_digest = ""
+    # An ordinary packet is a rendering boundary, never an authority source.
+    # Do not recover the former text-hash fallback here: doing so makes a
+    # different display rendering look like a second decision compiler.
     return {
         "kind": "agentic-workspace/ordinary-decision-packet/v1",
         "decision_identity": {
-            "id": f"ordinary:{surface}:{input_digest[7:23]}",
-            "input_digest": input_digest,
-            "projection_contract": "ordinary-decision-packet/v1",
+            "id": "",
+            "input_digest": "",
+            "projection_contract": "canonical-operating-decision-required/v1",
         },
         "surface": surface,
         "phase_question": phase_question,
         "next_action": next_action,
-        "primary_action_identity": {"id": f"{surface}:{next_action}", "label": next_action},
-        "expected_transition": "follow-primary-action" if next_action else "inspect-detail-route",
-        "effect_scope": "read-only-or-surface-declared",
-        "mutation_precondition": "resolve action-specific authority before mutation",
+        "primary_action_identity": {"id": "", "label": next_action},
+        "operation_invocation": {},
+        "expected_transition": "",
+        "effect_scope": "",
+        "mutation_precondition": {},
         "blocked_actions": normalized_blocked_actions,
         "required_commands": normalized_required_commands,
         "claim_boundary": claim_boundary or "not-evaluated",
@@ -28126,6 +28131,11 @@ def _ordinary_decision_packet(
         "detail_routes": normalized_detail_routes,
         "shown_because": [item for item in (shown_because or []) if str(item).strip()][:6],
         "absence_states": normalized_absence_states,
+        "external_blocker": {
+            "reason_code": "missing-canonical-operating-decision",
+            "owner": "operating-decision",
+            "repair": "Compile and pass the current typed operating decision before rendering an ordinary packet.",
+        },
     }
 
 

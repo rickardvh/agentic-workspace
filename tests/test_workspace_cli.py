@@ -6042,6 +6042,9 @@ candidates = []
 
     _assert_json_payload_under(payload, 12_000, label="active-plan issue start payload", sort_keys=False)
     assert payload["decision_packet"]["next_action"] == "inspect-current-task-scope"
+    assert payload["decision_packet"]["decision_identity"]["projection_contract"] == "canonical-operating-decision/v1"
+    assert payload["decision_packet"]["primary_action_identity"]["id"] == "workspace.start.route"
+    assert payload["decision_packet"]["operation_invocation"]["expected_transition"] == "inspect-current-task-scope"
     assert payload["decision_packet"]["absence_states"]["full_selector_inventory"] == "hidden_behind_detail_route"
     assert (
         cli.main(

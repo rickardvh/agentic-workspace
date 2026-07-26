@@ -3229,6 +3229,14 @@ def test_implement_broad_runtime_scope_returns_authoritative_deferred_decision(
     assert payload["action_signals"]["implementation_allowed"] is True
     assert payload["action_signals"]["hard_blockers"] == []
     assert payload["decision_packet"]["next_action"] == payload["next"]["action"]
+    assert payload["decision_packet"]["decision_identity"]["projection_contract"] == "canonical-operating-decision/v1"
+    assert payload["decision_packet"]["primary_action_identity"]["id"] == "workspace.implement.scope"
+    assert payload["decision_packet"]["operation_invocation"]["arguments"]["changed_paths"] == [
+        "src/agentic_workspace/contracts/operations.json",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_proof_cli.py",
+    ]
     assert proof_call_count == 1
     assert payload["proof"]["runtime_symbol_working_set"]["status"] == "selector-backed"
     assert payload["proof"]["runtime_source_edit_review"]["status"] == "selector-backed"
