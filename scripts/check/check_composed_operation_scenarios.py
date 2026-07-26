@@ -78,6 +78,17 @@ def _run_cli(*args: str) -> tuple[dict[str, object], int, int]:
     return packet, elapsed_ms, len(rendered.encode("utf-8"))
 
 
+def _file_snapshot(root: Path) -> dict[str, str]:
+    """Return a bounded observable filesystem state for one fixture run."""
+    snapshot: dict[str, str] = {}
+    for path in root.rglob("*"):
+        if not path.is_file() or ".git" in path.parts:
+            continue
+        relative = path.relative_to(root).as_posix()
+        snapshot[relative] = str(path.stat().st_mtime_ns) + ":" + str(path.stat().st_size)
+    return snapshot
+
+
 def _execute_composed_workspace_path(*, target: Path, scenario: dict[str, object]) -> tuple[dict[str, dict[str, object]], dict[str, int]]:
     """Exercise ordinary CLI consumers, not an in-process stand-in compiler."""
 
@@ -89,6 +100,7 @@ def _execute_composed_workspace_path(*, target: Path, scenario: dict[str, object
         ("closeout", ["report", "--target", str(target), "--section", "closeout_trust"]),
     ]
     packets: dict[str, dict[str, object]] = {}
+    before = _file_snapshot(target)
     elapsed = 0
     output = 0
     for name, command in commands:
@@ -96,19 +108,23 @@ def _execute_composed_workspace_path(*, target: Path, scenario: dict[str, object
         packets[name] = packet
         elapsed += command_ms
         output += command_bytes
+    after = _file_snapshot(target)
+    changed_files = {path for path in set(before) | set(after) if before.get(path) != after.get(path)}
+    managed_changes = {path for path in changed_files if path.startswith(".agentic-workspace/")}
+    command_signatures = [json.dumps(command, separators=(",", ":")) for _, command in commands]
     return packets, {
             "aw_command_count": len(commands),
             "wall_clock_aw_ms": elapsed,
             "output_bytes": output,
-            "managed_files_read": 1,
-            "state_records_touched": 0,
-            "unchanged_orientation_repeats": 0,
-            "route_reversals": 0,
-            "clarification_requests": 0,
-            "rejected_mutations": 0,
-            "proof_reruns": 0,
-            "false_completion_authorizations": 0,
-            "package_residue": 0,
+            "managed_files_read": len(managed_changes),
+            "state_records_touched": len(managed_changes),
+            "unchanged_orientation_repeats": len(command_signatures) - len(set(command_signatures)),
+            "route_reversals": sum(1 for packet in packets.values() if packet.get("next_safe_action", {}).get("action") == "inspect-current-task-scope"),
+            "clarification_requests": sum(1 for packet in packets.values() if packet.get("next_safe_action", {}).get("action") == "ask-for-route-decision"),
+            "rejected_mutations": sum(1 for packet in packets.values() if packet.get("action_signals", {}).get("implementation_allowed") is False),
+            "proof_reruns": sum(1 for name in packets if name == "closeout"),
+            "false_completion_authorizations": sum(1 for packet in packets.values() if packet.get("terminal_state") == "COMPLETE"),
+            "package_residue": len({path for path in changed_files if not path.startswith(".agentic-workspace/") and path != "README.md"}),
     }
 
 
