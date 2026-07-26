@@ -16586,6 +16586,66 @@ def record_delegation_decision(
     return result
 
 
+def targeted_execplan_write(
+    *,
+    target: str | Path | None = None,
+    plan: str,
+    patch: Mapping[str, Any],
+    expected_planning_revision: str,
+    expected_owner_revision: int | str,
+    apply: bool = False,
+) -> dict[str, Any]:
+    """Preview or apply a bounded patch to exactly one live canonical execplan.
+
+    This is intentionally a narrow writer: it never selects an owner by title,
+    never rewrites a Markdown compatibility view, and rejects stale Planning or
+    owner revisions before a write.  Unspecified record fields are copied
+    byte-for-byte through the semantic record representation.
+    """
+    target_root = resolve_target_root(target)
+    result = InstallResult(target_root=target_root, message="Targeted execplan writer", dry_run=not apply)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "stale-planning-revision", "result": result.to_dict()}
+    plan_path = _resolve_execplan_path(target_root, plan)
+    if plan_path is None:
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "ambiguous-or-missing-owner"}
+    record_path = _canonical_execplan_record_path(plan_path)
+    record = _load_execplan_record(record_path)
+    if record is None or _execplan_lifecycle(record) != "live":
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "owner-not-live", "owner": _planning_surface_relative(target_root, record_path)}
+    if str(record.get("revision") or "") != str(expected_owner_revision):
+        return {
+            "kind": "agentic-planning/targeted-execplan-write/v1",
+            "status": "stale-owner-revision",
+            "owner_revision": record.get("revision"),
+            "planning_revision": planning_revision(target_root).get("revision_id"),
+        }
+    allowed = {"intent", "parent", "scope", "blockers", "next_action", "proof", "continuation", "lifecycle", "phase"}
+    unknown = sorted(set(patch).difference(allowed))
+    if unknown or not patch:
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch", "unknown_fields": unknown}
+    updated = copy.deepcopy(record)
+    for key, value in patch.items():
+        updated[key] = copy.deepcopy(value)
+    updated["revision"] = int(record.get("revision") or 0) + 1
+    findings = _json_schema_findings(payload=updated, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
+    if findings:
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-result", "findings": findings}
+    changed = {key: {"before": record.get(key), "after": updated.get(key)} for key in patch if record.get(key) != updated.get(key)}
+    payload = {
+        "kind": "agentic-planning/targeted-execplan-write/v1",
+        "status": "preview" if not apply else "applied" if changed else "no-op",
+        "owner": _planning_surface_relative(target_root, record_path),
+        "owner_revision_before": record.get("revision"),
+        "owner_revision_after": updated.get("revision") if changed else record.get("revision"),
+        "planning_revision": planning_revision(target_root).get("revision_id"),
+        "changes": changed,
+    }
+    if apply and changed:
+        _write_execplan_record(record_path=record_path, record=updated)
+    return payload
+
+
 def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:
     # Prep-only records are stop/proof markers, not implementation contracts.
     # Drop closeout-only prompts that have repeatedly tempted agents into
