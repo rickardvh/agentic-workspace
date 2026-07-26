@@ -21862,11 +21862,20 @@ def _report_closeout_trust_payload(
             task_text=task_text,
             execution_posture=execution_posture,
         )
+        task_switch = _as_dict(planning_safety_gate.get("task_switch_reconciliation"))
         route_decision = _as_dict(planning_safety_gate.get("route_decision"))
         scope_gate = copy.deepcopy(planning_safety_gate)
+        if (
+            str(task_switch.get("status") or "") == "current-task-route-acknowledged"
+            and str(scope_gate.get("gate_result") or "") == "mutation-baseline-required"
+        ):
+            scope_gate["gate_result"] = "current-task-route-acknowledged"
+            scope_gate["status"] = "satisfied"
+            scope_gate["required_next_action"] = "prove-current-task"
         if planning_safety_gate.get("workflow_sufficient") is not True or (
             str(planning_safety_gate.get("gate_result") or "")
             not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
+            and str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
         ):
             return {
                 "kind": "agentic-workspace/current-task-closeout-scope/v1",
@@ -21880,7 +21889,7 @@ def _report_closeout_trust_payload(
             "changed_paths": normalized_changed_paths,
             "planning_safety_gate": _selector_first_planning_safety_gate(scope_gate),
             "route_decision": route_decision,
-            "task_switch_reconciliation": _as_dict(planning_safety_gate.get("task_switch_reconciliation")),
+            "task_switch_reconciliation": task_switch,
             "rule": "The active plan remains protected repo-wide residue; this scope only classifies current bounded-task closeout blockers.",
         }
 
