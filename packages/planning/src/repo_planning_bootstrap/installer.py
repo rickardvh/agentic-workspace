@@ -16611,8 +16611,6 @@ def targeted_execplan_write(
             "required": ["expected_planning_revision", "expected_owner_revision"],
         }
     result = InstallResult(target_root=target_root, message="Targeted execplan writer", dry_run=not apply)
-    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
-        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "stale-planning-revision", "result": result.to_dict()}
     plan_path = _resolve_execplan_path(target_root, plan)
     if plan_path is None:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "ambiguous-or-missing-owner"}
@@ -16640,6 +16638,8 @@ def targeted_execplan_write(
             receipt = {}
         if receipt.get("request") == request:
             return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "already-applied", "receipt_path": _planning_surface_relative(target_root, receipt_path), "receipt": receipt}
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "stale-planning-revision", "result": result.to_dict()}
     if str(record.get("revision") or "") != str(expected_owner_revision):
         return {
             "kind": "agentic-planning/targeted-execplan-write/v1",
