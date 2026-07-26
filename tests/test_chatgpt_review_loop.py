@@ -1219,6 +1219,112 @@ def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
     }
 
 
+def test_spawned_worktree_resume_records_failed_proof_and_exact_repair(tmp_path: Path, monkeypatch) -> None:
+    """The dispatched worktree keeps one failed proof attached to its exact resume.
+
+    This covers the executable #2323 failure route: a fresh session is oriented
+    in its owned worktree, a later changed-path review resumes that same session,
+    its focused proof fails, and the owning state exposes only the precise repair
+    action.  In particular, a pushed head must not turn the failed proof into a
+    handoff or merge-ready claim.
+    """
+    first_review = {"id": "fresh", "body": f"Orient\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[first_review])
+    worktree_root = tmp_path / "worktrees"
+    original_run = runner.run
+    launches: list[tuple[str, Path, str]] = []
+
+    def run(command, *, cwd, env=None):
+        command = list(command)
+        if command[:3] == ["git", "branch", "--show-current"] and cwd != tmp_path:
+            runner.commands.append(command)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps(
+                    [{"number": 12, "headRefName": runner.branch, "headRefOid": runner.pr_head, "comments": runner.comments, "url": "u"}]
+                ),
+                "",
+            )
+        if command[:3] == ["git", "fetch", "--no-tags"]:
+            runner.commands.append(command)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command == ["git", "rev-parse", "FETCH_HEAD"]:
+            runner.commands.append(command)
+            return subprocess.CompletedProcess(command, 0, runner.pr_head, "")
+        if command[:3] == ["git", "worktree", "add"]:
+            runner.commands.append(command)
+            Path(command[-2]).mkdir(parents=True)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        return original_run(command, cwd=cwd, env=env)
+
+    def stop_hook(worktree: Path) -> None:
+        monkeypatch.setattr(
+            sys,
+            "stdin",
+            io.StringIO(json.dumps({"hook_event_name": "Stop", "cwd": str(worktree), "session_id": "fresh-session"})),
+        )
+        assert loop.main(["handoff", "--hook"], runner=runner) == 0
+
+    def run_interactive(command, *, cwd, env=None, input_text=""):
+        command = list(command)
+        runner.commands.append(command)
+        mode = "resume" if "resume" in command else "fresh"
+        launches.append((mode, cwd, input_text))
+        assert env and env[loop.OWNER_ROOT_ENV] == tmp_path.as_posix()
+        if mode == "fresh":
+            runner.head = HEAD_B
+            runner.pr_head = HEAD_B
+            runner.pr_heads = [HEAD_A, HEAD_B]
+            loop.report_job_result(
+                cwd=cwd, session_id="fresh-session", proof_status="passed", proof_command="pytest -q",
+                proof_exit_code=0, push_status="passed", runner=runner,
+            )
+            stop_hook(cwd)
+        else:
+            runner.head = HEAD_B.replace("b", "c")
+            runner.pr_head = runner.head
+            runner.pr_heads = [HEAD_B, runner.head]
+            loop.report_job_result(
+                cwd=cwd, session_id="fresh-session", proof_status="failed",
+                proof_command="pytest tests/test_chatgpt_review_loop.py -q", proof_exit_code=1,
+                push_status="passed", runner=runner,
+            )
+            stop_hook(cwd)
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    runner.run = run
+    runner.run_interactive = run_interactive
+    monkeypatch.setenv(loop.OWNER_ROOT_ENV, tmp_path.as_posix())
+
+    first = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
+    )
+    assert first["mode"] == "fresh"
+    runner.comments = [{"id": "failed", "body": f"Repair the changed path\n{marker(head=HEAD_B)}", "url": "u"}]
+    failed = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
+    )
+
+    assert failed["status"] == "dispatched"
+    assert failed["result"] == {"pr_number": 12, "status": "recovery-required", "event": "handoff-proof-unreported"}
+    saved = loop._load_state(tmp_path, 12)
+    assert saved["status"] == "recovery-required"
+    assert saved["terminal_result"]["proof_status"] == "failed"
+    assert saved["terminal_result"]["failed_command"] == "pytest tests/test_chatgpt_review_loop.py -q"
+    assert saved["terminal_result"]["repair"]["action"] == "repair the failed focused proof, rerun it, then report the exact job result"
+    assert saved["terminal_result"]["repair"]["blocked_claims"] == ["handoff-recorded", "merge-ready", "proof-passed"]
+    assert [(mode, worktree) for mode, worktree, _ in launches] == [
+        ("fresh", worktree_root / "pr-12"),
+        ("resume", worktree_root / "pr-12"),
+    ]
+    assert "Orient" in launches[0][2]
+    assert "Repair the changed path" in launches[1][2]
+    assert len([command for command in runner.commands if command[:3] == ["git", "worktree", "add"]]) == 1
+
+
 def test_terminal_repair_names_the_later_failed_proof_not_the_first_command(tmp_path: Path) -> None:
     """A repair route must retain the command that actually failed."""
     saved = state(tmp_path, status="resume-in-progress")
