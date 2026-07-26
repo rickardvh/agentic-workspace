@@ -1580,14 +1580,46 @@ def evaluation_collection_actions(
                 continue
             criteria = definition.get("criteria") if isinstance(definition.get("criteria"), list) else []
             criterion = next((item for item in criteria if isinstance(item, dict) and item.get("required", True)), {})
+            evaluation_id = str(definition.get("id") or "")
+            criterion_id = str(criterion.get("id") or "")
+            observation_context = {
+                "issue_refs": sorted(context["issue_refs"]),
+                "operation_ids": sorted(context["operation_ids"]),
+                "phases": sorted(context["phases"]),
+                "surface": surface,
+                "definition_revision": definition.get("revision"),
+            }
             actions.append(
                 {
-                    "evaluation_id": str(definition.get("id") or ""),
-                    "criterion": str(criterion.get("id") or ""),
+                    "evaluation_id": evaluation_id,
+                    "criterion": criterion_id,
                     "match_reason": matched_by,
                     "decision_owner": definition.get("decision_owner", {}),
                     "report_sinks": definition.get("report_sinks", []),
                     "next_action": "record-evaluation-observation-after-bound-proof",
+                    "operation_invocation": {
+                        "kind": "agentic-workspace/operation-invocation/v1",
+                        "operation_id": "evaluation.observe",
+                        "arguments": {
+                            "target": target_root.as_posix(),
+                            "evaluation_id": evaluation_id,
+                            "criterion": criterion_id,
+                            "context": observation_context,
+                        },
+                        "effect_class": "local-record-append",
+                        "authority_class": "evaluation-admission",
+                        "required_before_apply": ["current assignment", "current mutation baseline", "current proof receipt"],
+                        "idempotency_identity": _observation_idempotency_key(
+                            {
+                                "evaluation_id": evaluation_id,
+                                "definition_revision": definition.get("revision"),
+                                "criterion": criterion_id,
+                                "result": "pending-collection",
+                                "evidence_refs": [],
+                            },
+                            {},
+                        ),
+                    },
                     "rule": "Use the evaluation observation operation after assignment, authority, baseline, and proof admission; do not append an unbound reminder observation.",
                 }
             )

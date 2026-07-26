@@ -165,7 +165,23 @@ def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(t
         phase="startup",
     )
     assert matched["status"] == "matched"
-    assert matched["actions"] == [
+    action = matched["actions"][0]
+    invocation = action.pop("operation_invocation")
+    assert invocation["operation_id"] == "evaluation.observe"
+    assert invocation["arguments"] == {
+        "target": tmp_path.as_posix(),
+        "evaluation_id": "eval-1969-operating-loop",
+        "criterion": "reconstruction-cost",
+        "context": {
+            "issue_refs": ["#1969"],
+            "operation_ids": ["start.context"],
+            "phases": ["startup"],
+            "surface": "start",
+            "definition_revision": 1,
+        },
+    }
+    assert invocation["idempotency_identity"].startswith("evaluation-observe:")
+    assert [action] == [
         {
             "evaluation_id": "eval-1969-operating-loop",
             "criterion": "reconstruction-cost",
