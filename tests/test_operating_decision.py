@@ -653,9 +653,69 @@ def test_context_authority_projection_selects_repository_sources_and_ignores_for
     skills = next(item for item in projection["authorities"] if item["surface"] == "skills")
     assert skills["source"]["id"] == ".agentic-workspace/skills/workspace-startup/SKILL.md"
     assert skills["source"]["revision"].startswith("sha256:")
-    assert skills["source"]["admission"]["producer"] == "context-authority-source-adapter"
+    assert skills["source"]["admission"]["producer"] == "skill-registry-source-adapter"
+    assert skills["source"]["source_adapter"] == "skill-registry-source-adapter"
+    assert skills["source"]["freshness_enforcement"]["status"] == "active"
     assert skills["caller_record_status"] == "ignored"
     assert projection["excluded_authorities"] == []
+
+
+def test_context_authority_projection_curates_memory_from_manifest_routes(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+    (tmp_path / ".agentic-workspace/memory/repo/domains").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".agentic-workspace/memory/repo/domains/runtime.md").write_text("Runtime note\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/memory/repo/manifest.toml").write_text(
+        """
+[[routes]]
+id = "legacy-shape"
+routes_from = ["ignored/**"]
+
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+task_relevance = "required"
+routes_from = [".agentic-workspace/memory/repo/**/*.md"]
+routing_only = true
+
+[notes.".agentic-workspace/memory/repo/domains/runtime.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/runtime.md"
+authority = "advisory"
+task_relevance = "conditional"
+subsystems = ["workspace-runtime"]
+surfaces = ["runtime"]
+routes_from = ["src/agentic_workspace/**"]
+stale_when = ["src/agentic_workspace/**"]
+
+[notes.".agentic-workspace/memory/repo/domains/unrelated.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/unrelated.md"
+authority = "advisory"
+task_relevance = "conditional"
+subsystems = ["other"]
+surfaces = ["other"]
+routes_from = ["docs/private/**"]
+""",
+        encoding="utf-8",
+    )
+
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="fix runtime context",
+        changed_paths=["src/agentic_workspace/workspace_runtime.py"],
+        target_root=tmp_path,
+    )
+
+    memory = next(item for item in projection["authorities"] if item["surface"] == "memory")
+    curation = memory["source"]["selection"]["memory_curation"]
+    selected_paths = [item["path"] for item in curation["selected_notes"]]
+    assert curation["status"] == "selected"
+    assert ".agentic-workspace/memory/repo/index.md" in selected_paths
+    assert ".agentic-workspace/memory/repo/domains/runtime.md" in selected_paths
+    assert ".agentic-workspace/memory/repo/domains/unrelated.md" not in selected_paths
+    runtime_note = next(item for item in curation["selected_notes"] if item["path"].endswith("runtime.md"))
+    assert runtime_note["stale_when_matched_paths"] == ["src/agentic_workspace/workspace_runtime.py"]
 
 
 def test_context_authority_projection_rejects_configured_empty_and_missing_required_sources(tmp_path: Path) -> None:

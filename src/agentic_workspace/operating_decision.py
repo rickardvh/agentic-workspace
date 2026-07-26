@@ -6,6 +6,7 @@ import fnmatch
 import hashlib
 import json
 import subprocess
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -75,62 +76,97 @@ CONTEXT_AUTHORITY_REGISTRY = [
 ]
 CONTEXT_AUTHORITY_REGISTRY_REVISION = "sha256:" + _digest(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT)
 CONTEXT_AUTHORITY_SOURCE_SPECS: dict[str, dict[str, Any]] = {
-    "system-intent": {"source": "SYSTEM_INTENT.md", "required": ["SYSTEM_INTENT.md"], "routes": ["SYSTEM_INTENT.md"]},
-    "architecture-principles": {"source": "SYSTEM_INTENT.md", "required": ["SYSTEM_INTENT.md"], "routes": ["SYSTEM_INTENT.md"]},
+    "system-intent": {
+        "source": "SYSTEM_INTENT.md",
+        "required": ["SYSTEM_INTENT.md"],
+        "routes": ["SYSTEM_INTENT.md"],
+        "source_adapter": "system-intent-source-adapter",
+    },
+    "architecture-principles": {
+        "source": "SYSTEM_INTENT.md",
+        "required": ["SYSTEM_INTENT.md"],
+        "routes": ["SYSTEM_INTENT.md"],
+        "source_adapter": "architecture-principles-source-adapter",
+    },
     "scoped-instructions": {
         "source": "AGENTS.md",
         "required": ["AGENTS.md", ".agentic-workspace/skills/workspace-startup/SKILL.md"],
         "routes": ["AGENTS.md", ".agentic-workspace/skills/**"],
+        "source_adapter": "scoped-instruction-source-adapter",
     },
-    "ownership": {"source": ".agentic-workspace/OWNERSHIP.toml", "required": [".agentic-workspace/OWNERSHIP.toml"], "routes": ["*"]},
+    "ownership": {
+        "source": ".agentic-workspace/OWNERSHIP.toml",
+        "required": [".agentic-workspace/OWNERSHIP.toml"],
+        "routes": ["*"],
+        "source_adapter": "ownership-source-adapter",
+    },
     "planning": {
         "source": ".agentic-workspace/planning/state.toml",
         "required": [".agentic-workspace/planning/state.toml"],
         "routes": [".agentic-workspace/planning/**"],
+        "source_adapter": "planning-source-adapter",
     },
     "memory": {
         "source": ".agentic-workspace/memory/repo/index.md",
         "required": [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/manifest.toml"],
         "routes": [".agentic-workspace/memory/repo/**"],
+        "source_adapter": "memory-route-source-adapter",
     },
-    "assignment": {"source": ".agentic-workspace/config.toml", "required": [".agentic-workspace/config.toml"], "routes": ["*"]},
+    "assignment": {
+        "source": ".agentic-workspace/config.toml",
+        "required": [".agentic-workspace/config.toml"],
+        "routes": ["*"],
+        "source_adapter": "assignment-source-adapter",
+    },
     "evaluation": {
         "source": "src/agentic_workspace/evaluation.py",
         "required": ["src/agentic_workspace/evaluation.py"],
         "routes": ["src/agentic_workspace/evaluation.py"],
+        "source_adapter": "evaluation-source-adapter",
     },
     "proof": {
         "source": ".agentic-workspace/verification/manifest.toml",
         "required": [".agentic-workspace/verification/manifest.toml"],
         "routes": [".agentic-workspace/verification/**", "tests/**"],
+        "source_adapter": "proof-source-adapter",
     },
     "mutation-baseline": {
         "source": ".agentic-workspace/planning/state.toml",
         "required": [".agentic-workspace/planning/state.toml"],
         "routes": ["*"],
         "requires_git_head": True,
+        "source_adapter": "mutation-baseline-source-adapter",
     },
     "autopilot-executor": {
         "source": "src/agentic_workspace/workspace_runtime_primitives.py",
         "required": ["src/agentic_workspace/workspace_runtime_primitives.py"],
         "routes": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+        "source_adapter": "autopilot-executor-source-adapter",
     },
     "skills": {
         "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
         "required": [".agentic-workspace/skills/workspace-startup/SKILL.md"],
         "routes": [".agentic-workspace/skills/**"],
+        "source_adapter": "skill-registry-source-adapter",
     },
-    "target-guidance": {"source": ".agentic-workspace/config.toml", "required": [".agentic-workspace/config.toml"], "routes": ["*"]},
+    "target-guidance": {
+        "source": ".agentic-workspace/config.toml",
+        "required": [".agentic-workspace/config.toml"],
+        "routes": ["*"],
+        "source_adapter": "target-guidance-source-adapter",
+    },
     "terminal-outcome": {
         "source": "src/agentic_workspace/workspace_runtime_primitives.py",
         "required": ["src/agentic_workspace/workspace_runtime_primitives.py"],
         "routes": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+        "source_adapter": "terminal-outcome-source-adapter",
     },
     "generated-references": {
         "source": "generated/.agentic-workspace-cli-fingerprint.json",
         "required": ["generated/.agentic-workspace-cli-fingerprint.json", "src/agentic_workspace/contracts/structured_file_inventory.json"],
         "routes": ["generated/**", "src/agentic_workspace/contracts/**"],
         "generated_freshness": True,
+        "source_adapter": "generated-reference-source-adapter",
     },
 }
 
@@ -175,6 +211,80 @@ def _context_source_candidates(surface: str) -> list[str]:
 def _path_matches_any(path: str, patterns: list[str]) -> bool:
     normalized = path.replace("\\", "/").strip()
     return any(pattern == "*" or fnmatch.fnmatch(normalized, pattern) for pattern in patterns)
+
+
+def _load_toml_dict(path: Path) -> dict[str, Any]:
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _memory_route_curation(root: Path, *, task: str, paths: list[str]) -> dict[str, Any]:
+    manifest_path = root / ".agentic-workspace/memory/repo/manifest.toml"
+    manifest = _load_toml_dict(manifest_path)
+    notes = _as_dict(manifest.get("notes"))
+    selected: list[dict[str, Any]] = []
+    stale_match_count = 0
+    routing_index = ".agentic-workspace/memory/repo/index.md"
+    task_terms = {term.strip("#.,:;()[]{}").lower() for term in task.split() if len(term.strip("#.,:;()[]{}")) > 2}
+    for note_path, raw_note in notes.items():
+        if not isinstance(raw_note, dict):
+            continue
+        canonical_home = str(raw_note.get("canonical_home") or note_path)
+        routes_from = [str(pattern) for pattern in _as_list(raw_note.get("routes_from")) if str(pattern)]
+        stale_when = [str(pattern) for pattern in _as_list(raw_note.get("stale_when")) if str(pattern)]
+        matched_paths = [path for path in paths if _path_matches_any(path, routes_from)]
+        stale_paths = [path for path in paths if _path_matches_any(path, stale_when)]
+        note_terms = {
+            str(value).lower()
+            for value in [
+                raw_note.get("note_type"),
+                *[str(item) for item in _as_list(raw_note.get("subsystems"))],
+                *[str(item) for item in _as_list(raw_note.get("surfaces"))],
+            ]
+            if str(value)
+        }
+        task_matched = bool(task_terms & {part for term in note_terms for part in term.replace("-", " ").split()})
+        routing_only = bool(raw_note.get("routing_only")) or canonical_home == routing_index
+        if routing_only or matched_paths or task_matched:
+            if stale_paths:
+                stale_match_count += 1
+            selected.append(
+                {
+                    "path": canonical_home,
+                    "note_type": str(raw_note.get("note_type") or ""),
+                    "authority": str(raw_note.get("authority") or ""),
+                    "task_relevance": str(raw_note.get("task_relevance") or ""),
+                    "routing_only": routing_only,
+                    "matched_paths": sorted(matched_paths),
+                    "stale_when_matched_paths": sorted(stale_paths),
+                }
+            )
+    if not selected and (root / routing_index).exists():
+        selected.append(
+            {
+                "path": routing_index,
+                "note_type": "routing",
+                "authority": "canonical",
+                "task_relevance": "required",
+                "routing_only": True,
+                "matched_paths": [],
+                "stale_when_matched_paths": [],
+                "fallback": "legacy-manifest-routing-index",
+            }
+        )
+    selected = sorted(selected, key=lambda item: (not bool(item.get("routing_only")), str(item.get("path") or "")))[:12]
+    return {
+        "kind": "agentic-workspace/memory-route-curation/v1",
+        "status": "selected" if selected else "empty",
+        "manifest": ".agentic-workspace/memory/repo/manifest.toml",
+        "selected_note_count": len(selected),
+        "selected_notes": selected,
+        "stale_when_match_count": stale_match_count,
+        "rule": "Memory authority is admitted as a compact manifest-routed note set; callers must not bulk-read or treat all memory as current context.",
+    }
 
 
 def _git_head(root: Path) -> str:
@@ -235,6 +345,7 @@ def _resolve_context_authority_source(
         return {"status": "missing", "reason": "git-head-unavailable", "source_id": chosen.relative_to(root).as_posix()}
     if spec.get("generated_freshness") and not _generated_fingerprint_is_current(root):
         return {"status": "stale", "reason": "stale-generated-projection", "source_id": chosen.relative_to(root).as_posix()}
+    source_adapter = str(spec.get("source_adapter") or f"{surface}-source-adapter")
     path_tokens = {Path(path).parts[0] for path in paths if Path(path).parts}
     source_token = chosen.parts[-1] if chosen.parts else chosen.as_posix()
     route_patterns = [str(pattern) for pattern in _as_list(spec.get("routes")) if str(pattern)]
@@ -242,11 +353,38 @@ def _resolve_context_authority_source(
     applicable = bool(task.strip() and not paths) or bool(matched_paths)
     if surface in {"ownership", "mutation-baseline", "proof"} and not paths:
         applicable = "start" in _registry_consumers(item)
+    if "start" in _registry_consumers(item) and surface != "memory":
+        applicable = True
     if surface == "memory" and paths and not matched_paths and not task.strip():
         applicable = False
+    source_specific: dict[str, Any] = {}
+    if surface == "memory":
+        memory_curation = _memory_route_curation(root, task=task, paths=paths)
+        if memory_curation["status"] == "empty":
+            applicable = False
+        else:
+            applicable = True
+        source_specific["memory_curation"] = memory_curation
+    freshness_enforcement = {
+        "kind": "agentic-workspace/context-authority-freshness-enforcement/v1",
+        "status": "active",
+        "surface": surface,
+        "source_adapter": source_adapter,
+        "freshness": "current",
+        "reject_when": [
+            "source-missing",
+            "source-unreadable",
+            "source-revision-changed",
+            "generated-projection-stale",
+            "registry-revision-mismatch",
+            "producer-mismatch",
+        ],
+        "repair_operation_id": f"context-authority.{surface}.refresh-source",
+    }
     return {
         "status": "current",
         "applicable": applicable,
+        "source_adapter": source_adapter,
         "source_id": chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix(),
         "revision": "sha256:" + _digest({"source": revision, "git_head": git_head}) if git_head else "sha256:" + revision,
         "freshness": "current",
@@ -258,16 +396,20 @@ def _resolve_context_authority_source(
             "route_patterns": route_patterns,
             "source_token": source_token,
             "rule": "repository adapter resolved current source identity; caller supplied records are diagnostics only",
+            **source_specific,
         },
+        "freshness_enforcement": freshness_enforcement,
         "admission": {
             "kind": "agentic-workspace/context-authority-source-receipt/v1",
-            "producer": "context-authority-source-adapter",
+            "producer": source_adapter,
             "registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
             "surface": surface,
             "owner": item.get("owner"),
             "source_revision": "sha256:" + revision,
             "git_head": git_head,
             "repair_operation_id": f"context-authority.{surface}.refresh-source",
+            "source_specific": source_specific,
+            "freshness_enforcement": freshness_enforcement,
         },
     }
 
@@ -391,6 +533,8 @@ def resolve_context_authority_projection(
             and admission.get("registry_revision") == CONTEXT_AUTHORITY_REGISTRY_REVISION
             and admission.get("surface") == surface
             and admission.get("owner") == item.get("owner")
+            and admission.get("producer") == record.get("source_adapter")
+            and _as_dict(record.get("freshness_enforcement")).get("status") == "active"
         )
         authority = {
             "surface": surface,
@@ -405,6 +549,8 @@ def resolve_context_authority_projection(
                 "freshness": str(record.get("freshness") or record_status),
                 "selection": _as_dict(record.get("selection")),
                 "admission": admission,
+                "source_adapter": str(record.get("source_adapter") or ""),
+                "freshness_enforcement": _as_dict(record.get("freshness_enforcement")),
             },
             "caller_record_status": "ignored" if caller_record else "absent",
         }
