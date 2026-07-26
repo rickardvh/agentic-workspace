@@ -6936,6 +6936,31 @@ def test_route_decision_fails_closed_for_genuine_ambiguity() -> None:
     assert decision["blocked_claims"] == ["claim-active-plan-progress", "silently-abandon-active-plan"]
 
 
+def test_route_safety_projection_ignores_legacy_task_switch_status() -> None:
+    from agentic_workspace.workspace_runtime_planning import _route_safety_outcome
+
+    outcome = _route_safety_outcome(
+        {
+            # This legacy label intentionally conflicts with the canonical
+            # route contract.  Gate consumers must use the latter.
+            "legacy_status": "active",
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "required_transition": "none",
+            "next_safe_action": {"action": "prove-current-task"},
+            "structured_inputs": {"task_binding": {"mode": "mutation"}},
+        }
+    )
+
+    assert outcome == {
+        "status": "satisfied",
+        "decision": "current-task-route-acknowledged",
+        "reason": "The resolved route admits bounded work without an active-plan progress claim.",
+        "required_next_action": "prove-current-task",
+        "workflow_sufficient": True,
+    }
+
+
 def test_route_decision_uses_current_reconciliation_proposal_without_recompiling_it() -> None:
     from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
 
