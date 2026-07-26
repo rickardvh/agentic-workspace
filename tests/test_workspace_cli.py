@@ -6957,7 +6957,19 @@ def test_route_safety_projection_ignores_legacy_task_switch_status() -> None:
             "next_safe_action": {"action": "prove-current-task"},
             "structured_inputs": {
                 "task_binding": {"mode": "mutation", "allowed_paths": ["README.md"]},
-                "mutation_baseline": {"status": "current", "baseline_id": "baseline-a"},
+                "mutation_baseline": {
+                    "kind": "agentic-workspace/mutation-baseline/v1",
+                    "status": "clean-scope",
+                    "revalidation_status": "current",
+                    "baseline_id": "baseline-a",
+                    "head": "abc123",
+                    "scope": {"allowed_paths": ["README.md"]},
+                    "observation": {"ok": True},
+                    "observed_state": {"enforcement_fingerprint": "fingerprint-a", "entry_count": 0},
+                    "boundary_enforcement": {"status": "fail-closed-contract"},
+                    "stale_revalidation": {"status": "required"},
+                    "ownership": {"owner": "current-agent-session"},
+                },
             },
         }
     )
@@ -7098,6 +7110,9 @@ def test_structured_route_inputs_cover_bounded_work_owner_lifecycle_and_missing_
 
     assert (read_only["task_relation"], read_only["owner_posture"]) == ("bounded-independent", "current")
     assert mutation["route_inputs"]["task_binding"]["mutation_scope_acknowledged"] is True
+    assert mutation["route_inputs"]["mutation_baseline"]["source"] == "authority-envelope-live-observation"
+    assert mutation["route_inputs"]["mutation_baseline"]["kind"] == "agentic-workspace/mutation-baseline/v1"
+    assert mutation["route_inputs"]["mutation_baseline"].get("baseline_id") != "planning-revision-a"
     assert (missing["task_relation"], missing["owner_posture"]) == ("not-applicable", "not-applicable")
 
 

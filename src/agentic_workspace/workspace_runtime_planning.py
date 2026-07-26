@@ -14,6 +14,7 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from agentic_workspace.authority_envelope import mutation_baseline_payload
 from agentic_workspace.config import WorkspaceConfig
 from agentic_workspace.workspace_runtime_core import (
     _active_plan_delegation_requirement,
@@ -1406,12 +1407,12 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
     posture = str(route_decision.get("owner_posture") or "not-applicable")
     transition = str(route_decision.get("required_transition") or "none")
     action = _as_dict(route_decision.get("next_safe_action"))
+    operation_invocation = _as_dict(action.get("operation_invocation"))
     structured_inputs = _as_dict(route_decision.get("structured_inputs"))
     binding = _as_dict(structured_inputs.get("task_binding"))
     baseline = _as_dict(structured_inputs.get("mutation_baseline"))
     proposal = _as_dict(route_decision.get("reconciliation_proposal"))
     mode = str(binding.get("mode") or "")
-    baseline_status = str(baseline.get("status") or "")
     baseline_identity = str(baseline.get("baseline_id") or baseline.get("head") or baseline.get("revision") or "")
     default_action = (
         "prove-current-task"
@@ -1431,7 +1432,13 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
         "relation": relation,
         "posture": posture,
         "transition": transition,
-        "typed_action": str(action.get("action") or default_action),
+        "typed_action": operation_invocation
+        or {
+            "operation_id": str(action.get("operation_id") or action.get("action") or default_action),
+            "authority": "planning-route-decision",
+            "identity_source": "route-next-safe-action",
+        },
+        "rendered_action": str(action.get("action") or default_action),
         "allowed_claims": [
             str(item) for item in route_decision.get("allowed_claims", []) if isinstance(route_decision.get("allowed_claims"), list)
         ],
@@ -1459,7 +1466,9 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
     if not route_applicable:
         return {}
     route_identity_missing = (
-        not action_safety["owner"].get("ref") or not action_safety["typed_action"] or not action_safety["state_update_policy"]
+        not action_safety["owner"].get("ref")
+        or not _as_dict(action_safety["typed_action"]).get("operation_id")
+        or not action_safety["state_update_policy"]
     )
     if route_identity_missing:
         return {
@@ -1479,13 +1488,13 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
             "workflow_sufficient": True,
         }
     if relation == "bounded-independent" and transition == "none":
-        if mode == "mutation" and (
-            not action_safety["effect_scope"] or baseline_status not in {"current", "fresh"} or not baseline_identity
+        if mode == "mutation" and not _mutation_baseline_route_current(
+            baseline, changed_paths=[str(path) for path in action_safety["effect_scope"]]
         ):
             return {
                 "status": "attention",
                 "decision": "mutation-baseline-required",
-                "reason": "Bounded mutation requires explicit path scope and a current mutation baseline identity.",
+                "reason": _mutation_baseline_repair_reason(baseline, changed_paths=[str(path) for path in action_safety["effect_scope"]]),
                 "required_next_action": "refresh-mutation-baseline",
                 "workflow_sufficient": True,
                 "action_safety": action_safety,
@@ -1532,6 +1541,48 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _mutation_baseline_route_current(baseline: dict[str, Any], *, changed_paths: list[str]) -> bool:
+    scope = _as_dict(baseline.get("scope"))
+    observed = _as_dict(baseline.get("observed_state"))
+    observation = _as_dict(baseline.get("observation"))
+    boundary = _as_dict(baseline.get("boundary_enforcement"))
+    stale_revalidation = _as_dict(baseline.get("stale_revalidation"))
+    ownership = _as_dict(baseline.get("ownership"))
+    allowed_paths = [str(path) for path in scope.get("allowed_paths", []) if isinstance(scope.get("allowed_paths"), list)]
+    requested = [path for path in changed_paths if path]
+    revalidation_status = str(baseline.get("revalidation_status") or "").strip()
+    return all(
+        (
+            baseline.get("kind") == "agentic-workspace/mutation-baseline/v1",
+            revalidation_status in {"current", "fresh"},
+            bool(baseline.get("baseline_id")),
+            bool(baseline.get("head")),
+            observation.get("ok") is True,
+            bool(observed.get("enforcement_fingerprint")),
+            boundary.get("status") == "fail-closed-contract",
+            stale_revalidation.get("status") == "required",
+            bool(ownership.get("owner")),
+            bool(requested),
+            set(requested).issubset(set(allowed_paths)),
+        )
+    )
+
+
+def _mutation_baseline_repair_reason(baseline: dict[str, Any], *, changed_paths: list[str]) -> str:
+    if not baseline:
+        return "Bounded mutation requires a live authority-envelope mutation baseline."
+    if baseline.get("kind") != "agentic-workspace/mutation-baseline/v1":
+        return "Bounded mutation baseline must come from the authority-envelope mutation owner."
+    if str(baseline.get("revalidation_status") or "") not in {"current", "fresh"}:
+        return "Bounded mutation baseline must carry a current live revalidation status."
+    scope = _as_dict(baseline.get("scope"))
+    allowed_paths = [str(path) for path in scope.get("allowed_paths", []) if isinstance(scope.get("allowed_paths"), list)]
+    requested = [path for path in changed_paths if path]
+    if not requested or not set(requested).issubset(set(allowed_paths)):
+        return "Bounded mutation baseline must cover the requested changed-path scope."
+    return "Bounded mutation baseline must include head, observed state, boundary enforcement, and ownership."
+
+
 def _task_switch_reconciliation_payload(**kwargs: Any) -> dict[str, Any]:
     """Compatibility diagnostic alias; ordinary consumers must use route_decision."""
     return _planning_route_evidence_payload(**kwargs)
@@ -1557,15 +1608,18 @@ def _structured_route_inputs(
     bounded_read_only = current_task_class.startswith("bounded-") and not acknowledged
     bounded_mutation = acknowledged and bool(changed_paths)
     mutation_baseline = _as_dict(route_evidence.get("mutation_baseline"))
-    if bounded_mutation and not mutation_baseline:
-        baseline_identity = str(
-            planning_revision.get("revision_id") or planning_revision.get("revision") or planning_revision.get("source_head") or ""
-        )
+    if bounded_mutation:
+        live_baseline = mutation_baseline_payload(target_root=target_root, changed_paths=changed_paths)
         mutation_baseline = {
-            "kind": "agentic-planning/mutation-baseline/v1",
-            "status": "current" if baseline_identity else "missing",
-            "baseline_id": baseline_identity,
-            "source": "planning-revision-and-changed-paths",
+            **live_baseline,
+            "source": "authority-envelope-live-observation",
+            "revalidation_status": "current" if _as_dict(live_baseline.get("observation")).get("ok") is True else "failed",
+            "overlap_claim": {
+                "status": "scoped-to-requested-paths",
+                "allowed_paths": list(changed_paths),
+                "unexpected_overlap_policy": "fail-closed-at-boundary-enforcement",
+            },
+            "allowed_effects": ["repo-mutation"],
             "changed_path_count": len(changed_paths),
         }
     if shared_refs:

@@ -2177,7 +2177,26 @@ def _invocation_requires_mutation_baseline(invocation: dict[str, Any]) -> bool:
 
 def _mutation_baseline_is_current(mutation: dict[str, Any]) -> bool:
     status = str(mutation.get("revalidation_status") or mutation.get("status") or "").strip()
-    return status in {"fresh", "current"} and bool(mutation.get("baseline_id")) and bool(mutation.get("head"))
+    scope = _as_dict(mutation.get("scope"))
+    observed = _as_dict(mutation.get("observed_state"))
+    observation = _as_dict(mutation.get("observation"))
+    boundary = _as_dict(mutation.get("boundary_enforcement"))
+    stale_revalidation = _as_dict(mutation.get("stale_revalidation"))
+    ownership = _as_dict(mutation.get("ownership"))
+    return all(
+        (
+            mutation.get("kind") == "agentic-workspace/mutation-baseline/v1",
+            status in {"fresh", "current"},
+            bool(mutation.get("baseline_id")),
+            bool(mutation.get("head")),
+            isinstance(scope.get("allowed_paths"), list),
+            observation.get("ok") is True,
+            bool(observed.get("enforcement_fingerprint")),
+            boundary.get("status") == "fail-closed-contract",
+            stale_revalidation.get("status") == "required",
+            bool(ownership.get("owner")),
+        )
+    )
 
 
 def _scope_fingerprint(paths: list[str]) -> str:
