@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:b0b88d1540253077122d66012434103605f4f89b390ac40cb9ef7deb6b11b043",
+  "profile_fingerprint": "sha256:aabc8f8ced8f0fcad3cb580c4474ee6209d0ab07c6c499a0e131d9745215991b",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -10569,6 +10569,542 @@
           }
         }
       }
+    },
+    "evaluation.observe": {
+      "identity": "evaluation.observe",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:9635d90397b25ffc92523f478e4e385cc008b44ba1cfd817ead15329f10ef278",
+      "compatibility_fingerprint": "sha256:3ad95af3342ef798ec156b1d874e555f734ccd0d8d475b6acc25bf7f46b4b3a7",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.observe",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "observe"
+        },
+        "summary": "Append one local-first evaluation observation after resolving current assignment, proof, and mutation authority.",
+        "classification": "local-record-append",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_observation_input.schema.json"
+          },
+          {
+            "name": "evaluation_id",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "criterion",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "result",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "evidence_refs",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "confidence",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "burden",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "context",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "finding",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "recommended_action",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_observe_result.schema.json"
+        },
+        "effects": {
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/evaluations.json",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.authority.json",
+            "required": true
+          },
+          {
+            "surface": "git HEAD and scoped status",
+            "required": true
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.jsonl",
+            "required": true,
+            "when": "locked atomic append or idempotent duplicate return"
+          }
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "append",
+            "uses": "evaluation.observation.append",
+            "description": "Resolve authority, take the local lock, detect duplicates, and atomically append or return the prior record."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit append result."
+          }
+        ],
+        "guards": [
+          "Observation criterion must exist in the registered definition.",
+          "Terminal evaluations reject additional observations.",
+          "Observation context is comparison evidence only; assignment, mutation baseline, and AW proof authority resolve from the local authority receipt and live Git.",
+          "Concurrent/retried observations use a local lock, store revision, and idempotency key.",
+          "Each admitted observation/result carries a stable identity and supersedes previous current results for the same criterion.",
+          "External evidence is referenced, not copied, unless separately promoted."
+        ],
+        "proof": [
+          "evaluation unit tests",
+          "operation contract validates against operation.schema.json"
+        ],
+        "migration_status": "runtime-consumed",
+        "ir_plan": {
+          "status": "representative",
+          "summary": "Generated command packages execute the evaluation observation operation through runtime-owned evaluation primitives.",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "Resolve the target root."
+            },
+            {
+              "id": "append",
+              "uses": "evaluation.observation.append",
+              "description": "Validate and append the observation."
+            },
+            {
+              "id": "emit_output",
+              "uses": "output.emit",
+              "description": "Emit append result."
+            }
+          ]
+        }
+      },
+      "schemas": [
+        "evaluation_observation_input.schema.json",
+        "evaluation_observe_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_observation_input.schema.json"
+        ],
+        "output": [
+          "evaluation_observe_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.observe",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_observation_input.schema.json"
+            },
+            {
+              "name": "evaluation_id",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "criterion",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "result",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "evidence_refs",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "confidence",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "burden",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "context",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "finding",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "recommended_action",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_observe_result.schema.json"
+          },
+          "effects": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Observation criterion must exist in the registered definition.",
+            "Terminal evaluations reject additional observations.",
+            "Observation context is comparison evidence only; assignment, mutation baseline, and AW proof authority resolve from the local authority receipt and live Git.",
+            "Concurrent/retried observations use a local lock, store revision, and idempotency key.",
+            "Each admitted observation/result carries a stable identity and supersedes previous current results for the same criterion.",
+            "External evidence is referenced, not copied, unless separately promoted."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_observation_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "schema-reference",
+              "type": "object",
+              "required": [
+                "evaluation_id",
+                "criterion",
+                "result"
+              ],
+              "properties": {
+                "target": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "evaluation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "criterion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "result": {
+                  "enum": [
+                    "supports",
+                    "contradicts",
+                    "mixed",
+                    "not-applicable",
+                    "unknown"
+                  ]
+                },
+                "evidence_refs": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  ]
+                },
+                "confidence": {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                },
+                "burden": {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                },
+                "context": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  ]
+                },
+                "finding": {
+                  "type": "string"
+                },
+                "recommended_action": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_observe_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "schema-reference",
+              "type": "object",
+              "required": [
+                "kind",
+                "path",
+                "outcome",
+                "evaluation_id",
+                "criterion",
+                "result",
+                "result_identity",
+                "supersedes",
+                "idempotency_key",
+                "store_revision"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/evaluation-observation/v1"
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "outcome": {
+                  "enum": [
+                    "appended",
+                    "duplicate"
+                  ]
+                },
+                "evaluation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "criterion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "result": {
+                  "enum": [
+                    "supports",
+                    "contradicts",
+                    "mixed",
+                    "not-applicable",
+                    "unknown"
+                  ]
+                },
+                "result_identity": {
+                  "type": "object",
+                  "required": [
+                    "kind",
+                    "id",
+                    "status",
+                    "evaluation_id",
+                    "definition_revision",
+                    "criterion"
+                  ],
+                  "additionalProperties": true
+                },
+                "supersedes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "store_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "storage": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
     }
   },
   "schemas": {
@@ -11200,6 +11736,205 @@
           }
         },
         "additionalProperties": true
+      }
+    },
+    "evaluation_observation_input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/evaluation_observation_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/evaluation-observation-input.schema.json",
+        "title": "Agentic Workspace Evaluation Observation Input",
+        "description": "Input accepted by the generated evaluation.observe operation.",
+        "x-agentic-workspace-doc-role": "schema-reference",
+        "type": "object",
+        "required": [
+          "evaluation_id",
+          "criterion",
+          "result"
+        ],
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "Target repository path."
+          },
+          "format": {
+            "enum": [
+              "text",
+              "json"
+            ],
+            "description": "Output format."
+          },
+          "evaluation_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered evaluation id that will receive the observation."
+          },
+          "criterion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Criterion id within the registered evaluation definition."
+          },
+          "result": {
+            "enum": [
+              "supports",
+              "contradicts",
+              "mixed",
+              "not-applicable",
+              "unknown"
+            ],
+            "description": "Observed result for the selected criterion."
+          },
+          "evidence_refs": {
+            "description": "External evidence references, either as the CLI comma-separated string or an array of references.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            ]
+          },
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Confidence in the observation."
+          },
+          "burden": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Collection or review burden for this observation."
+          },
+          "context": {
+            "description": "Structured authority and comparison context, either as a JSON string from CLI transport or an object.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "finding": {
+            "type": "string",
+            "description": "Compact finding text derived from the observation."
+          },
+          "recommended_action": {
+            "type": "string",
+            "description": "Bounded next action recommended by the observer, when any."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "evaluation_observe_result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/evaluation_observe_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/evaluation-observe-result.schema.json",
+        "title": "Agentic Workspace Evaluation Observe Result",
+        "description": "Result returned by the evaluation.observe generated operation.",
+        "x-agentic-workspace-doc-role": "schema-reference",
+        "type": "object",
+        "required": [
+          "kind",
+          "path",
+          "outcome",
+          "evaluation_id",
+          "criterion",
+          "result",
+          "result_identity",
+          "supersedes",
+          "idempotency_key",
+          "store_revision"
+        ],
+        "properties": {
+          "kind": {
+            "const": "agentic-workspace/evaluation-observation/v1",
+            "description": "Discriminator identifying an evaluation observe result."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Repo-relative local observation store path."
+          },
+          "outcome": {
+            "enum": [
+              "appended",
+              "duplicate"
+            ],
+            "description": "Whether the operation appended a new observation or returned an idempotent duplicate."
+          },
+          "evaluation_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered evaluation id that received the observation."
+          },
+          "criterion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Criterion id observed within the registered evaluation definition."
+          },
+          "result": {
+            "enum": [
+              "supports",
+              "contradicts",
+              "mixed",
+              "not-applicable",
+              "unknown"
+            ],
+            "description": "Observed result for the selected criterion."
+          },
+          "result_identity": {
+            "type": "object",
+            "required": [
+              "kind",
+              "id",
+              "status",
+              "evaluation_id",
+              "definition_revision",
+              "criterion"
+            ],
+            "additionalProperties": true,
+            "description": "Stable identity for the admitted decision-bearing evaluation result."
+          },
+          "supersedes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Result identities superseded by this admitted observation."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable duplicate-detection key for retry-safe observation append."
+          },
+          "store_revision": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Revision fingerprint of the local observation store after the operation."
+          },
+          "storage": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Storage and retention details returned for a newly appended observation."
+          }
+        },
+        "additionalProperties": false
       }
     },
     "operation_failure.schema.json": {

@@ -181,3 +181,13 @@ def delegation_outcome_append(values: Mapping[str, Any], *, target: str | Path, 
         invocation=invocation,
         allow_runtime_backed=True,
     )
+
+
+def evaluation_observe(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.observe",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )

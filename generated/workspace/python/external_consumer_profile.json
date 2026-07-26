@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:b0b88d1540253077122d66012434103605f4f89b390ac40cb9ef7deb6b11b043",
+    "fingerprint": "sha256:aabc8f8ced8f0fcad3cb580c4474ee6209d0ab07c6c499a0e131d9745215991b",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -2813,7 +2813,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/evaluation.observe.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:5d66f3b6d87de59d3f99bd26c3013b99c19e2ab019e97af2c8678f4a73f47712"
+        "fingerprint": "sha256:7980a683e871c25bdc78960c3e19798f892c0e19eac76826296477ded358b807"
       },
       "operation_resources": {
         "python": {
@@ -2828,11 +2828,11 @@
         }
       },
       "schemas": {
-        "input": [],
+        "input": [
+          "evaluation_observation_input.schema.json"
+        ],
         "output": [
-          "evaluation_definition.schema.json",
-          "evaluation_observation.schema.json",
-          "evaluation_summary.schema.json"
+          "evaluation_observe_result.schema.json"
         ]
       },
       "effects": {
@@ -2872,7 +2872,7 @@
         "evaluation.lifecycle.process"
       ],
       "external_consumption": {
-        "status": "internal",
+        "status": "runtime-backed",
         "runtime_exceptions": [
           {
             "owner": "root-workspace",
@@ -2937,8 +2937,6 @@
       "schemas": {
         "input": [],
         "output": [
-          "evaluation_definition.schema.json",
-          "evaluation_observation.schema.json",
           "evaluation_summary.schema.json"
         ]
       },
@@ -3044,9 +3042,7 @@
       "schemas": {
         "input": [],
         "output": [
-          "evaluation_definition.schema.json",
-          "evaluation_observation.schema.json",
-          "evaluation_summary.schema.json"
+          "evaluation_definition.schema.json"
         ]
       },
       "effects": {
@@ -3151,8 +3147,6 @@
       "schemas": {
         "input": [],
         "output": [
-          "evaluation_definition.schema.json",
-          "evaluation_observation.schema.json",
           "evaluation_summary.schema.json"
         ]
       },
@@ -3258,9 +3252,7 @@
       "schemas": {
         "input": [],
         "output": [
-          "evaluation_definition.schema.json",
-          "evaluation_observation.schema.json",
-          "evaluation_summary.schema.json"
+          "evaluation_definition.schema.json"
         ]
       },
       "effects": {
@@ -3569,7 +3561,9 @@
       },
       "schemas": {
         "input": [],
-        "output": []
+        "output": [
+          "implementer_context.schema.json"
+        ]
       },
       "effects": {
         "read_only": true,
@@ -10419,7 +10413,9 @@
       },
       "schemas": {
         "input": [],
-        "output": []
+        "output": [
+          "v1"
+        ]
       },
       "effects": {
         "read_only": true,
@@ -10487,7 +10483,7 @@
       "schemas": {
         "input": [],
         "output": [
-          "local_work_thread_prune_result.schema.json"
+          "decision_point_carry_inspect_result.schema.json"
         ]
       },
       "effects": {
@@ -10638,7 +10634,7 @@
       "schemas": {
         "input": [],
         "output": [
-          "local_work_thread_prune_result.schema.json"
+          "decision_point_carry_prune_result.schema.json"
         ]
       },
       "effects": {
@@ -10789,7 +10785,7 @@
       "schemas": {
         "input": [],
         "output": [
-          "local_work_thread_prune_result.schema.json"
+          "decision_point_carry_select_result.schema.json"
         ]
       },
       "effects": {
@@ -11091,7 +11087,7 @@
       "schemas": {
         "input": [],
         "output": [
-          "local_work_thread_prune_result.schema.json"
+          "local_work_thread_select_result.schema.json"
         ]
       },
       "effects": {

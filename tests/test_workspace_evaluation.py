@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ from agentic_workspace.evaluation import (
     EVALUATION_SUMMARY_KIND,
     EVALUATIONS_KIND,
     EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
+    EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND,
     OBSERVATION_RETENTION_CAP,
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
@@ -37,6 +39,8 @@ from agentic_workspace.evaluation import (
     transition_evaluation,
     write_observation_authority,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _init_git_repo(target_root: Path) -> None:
@@ -158,14 +162,33 @@ def _definition_kwargs() -> dict:
 
 
 def _adapter_receipt_file(tmp_path: Path, receipt: dict) -> str:
-    path = tmp_path / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR / f"{receipt['attempt_revision']}.json"
+    receipt_id = str(receipt.get("receipt_id") or receipt["attempt_revision"])
+    path = tmp_path / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR / f"{receipt_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+    indexed_receipt = {**receipt, "receipt_id": receipt_id}
+    path.write_text(json.dumps(indexed_receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+    index_path = path.parent / "index.json"
+    index = (
+        json.loads(index_path.read_text(encoding="utf-8"))
+        if index_path.exists()
+        else {"kind": EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND, "receipts": {}}
+    )
+    index["receipts"][receipt_id] = {
+        "path": path.name,
+        "status": receipt.get("status"),
+        "producer": receipt.get("producer"),
+        "receipt_revision": receipt.get("receipt_revision"),
+        "capability_revision": receipt.get("capability_revision"),
+    }
+    index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     return path.relative_to(tmp_path).as_posix()
 
 
 def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
+    workspace_config = tmp_path / ".agentic-workspace" / "config.toml"
+    workspace_config.parent.mkdir(parents=True, exist_ok=True)
+    workspace_config.write_text("schema_version = 1\n\n[workspace]\nenabled = true\n", encoding="utf-8")
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
 
     matched = evaluation_collection_actions(
@@ -229,6 +252,49 @@ def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(t
     )
     assert suppressed["status"] == "equivalent-observation-suppressed"
 
+    from agentic_workspace.generated_operations import evaluation_observe
+
+    generated = evaluation_observe(
+        {
+            "evaluation_id": "eval-1969-operating-loop",
+            "criterion": "coverage",
+            "result": "mixed",
+            "evidence_refs": "dogfood-session-log://generated-observe",
+            "confidence": "medium",
+            "burden": "medium",
+            "context": json.dumps(bound_context),
+            "finding": "generated observe path admitted",
+            "recommended_action": "keep collecting through the public operation",
+        },
+        target=tmp_path,
+        invocation=[sys.executable, str(ROOT / "scripts" / "run_agentic_workspace.py")],
+    )
+    assert generated["outcome"] == "appended"
+    assert generated["criterion"] == "coverage"
+
+    invalid_action = {
+        **action,
+        "operation_invocation": {
+            **invocation,
+            "arguments": {
+                **invocation["arguments"],
+                "criterion": "not-declared",
+            },
+        },
+    }
+    with pytest.raises(WorkspaceUsageError, match="not declared"):
+        execute_evaluation_collection_action(
+            target_root=tmp_path,
+            action=invalid_action,
+            result="supports",
+            evidence_refs=["dogfood-session-log://invalid-criterion"],
+            context=bound_context,
+        )
+    failed_pending = json.loads(pending_path.read_text(encoding="utf-8"))
+    failed_entries = [entry for entry in failed_pending["collections"] if entry["status"] == "admission-failed"]
+    assert failed_entries
+    assert "not-declared" in failed_entries[-1]["failure_reason"]
+
     quiet = evaluation_collection_actions(
         target_root=tmp_path,
         surface="start",
@@ -280,6 +346,15 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
         record_external_evaluation_report_delivery(target_root=tmp_path, request=external, adapter_receipt=failed_receipt)["status"]
         == "adapter-receipt-required"
     )
+    unindexed_path = tmp_path / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR / "unindexed.json"
+    unindexed_path.parent.mkdir(parents=True, exist_ok=True)
+    unindexed_path.write_text(json.dumps({**failed_receipt, "receipt_id": "unindexed"}, sort_keys=True) + "\n", encoding="utf-8")
+    with pytest.raises(WorkspaceUsageError, match="provider-owned receipt index"):
+        record_external_evaluation_report_delivery(
+            target_root=tmp_path,
+            request=external,
+            adapter_receipt_ref=unindexed_path.relative_to(tmp_path).as_posix(),
+        )
     assert (
         record_external_evaluation_report_delivery(
             target_root=tmp_path,

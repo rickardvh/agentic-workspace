@@ -25,6 +25,7 @@
     {
       "name": "target",
       "required": false,
+      "schema_ref": "schemas/evaluation_observation_input.schema.json",
       "source": "cli-option"
     },
     {
@@ -107,7 +108,7 @@
   "migration_status": "runtime-consumed",
   "output": {
     "kind": "json",
-    "schema_ref": "schemas/evaluation_observation.schema.json"
+    "schema_ref": "schemas/evaluation_observe_result.schema.json"
   },
   "proof": [
     "evaluation unit tests",

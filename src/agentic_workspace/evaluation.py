@@ -22,6 +22,7 @@ ASSIGNMENT_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/planning/assignment-
 PROOF_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/proof/receipts")
 EVALUATION_FINDING_FOLLOWUPS_PATH = Path(".agentic-workspace/planning/evaluation-finding-followups.json")
 EVALUATION_OWNER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-owner-receipt-index/v1"
+EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-external-delivery-adapter-receipt-index/v1"
 EVALUATION_FINDING_FOLLOWUPS_KIND = "agentic-workspace/evaluation-finding-followups/v1"
 OBSERVATION_RETENTION_CAP = 100
 OBSERVATION_BYTE_CAP = 256_000
@@ -338,9 +339,32 @@ def _load_external_delivery_adapter_receipt(*, target_root: Path, receipt_ref: s
     )
     raw_bytes = path.read_bytes()
     receipt = _load_json(path, default={})
+    receipt_id = str(receipt.get("receipt_id") or path.stem).strip()
+    index_path = (target_root / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR / "index.json").resolve()
+    index = _load_json(index_path, default={})
+    entries = index.get("receipts") if index.get("kind") == EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND else {}
+    entry = entries.get(receipt_id) if isinstance(entries, dict) else None
+    if not isinstance(entry, dict):
+        raise WorkspaceUsageError("external evaluation adapter receipt is not registered in the provider-owned receipt index.")
+    indexed_path = ((target_root / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR).resolve() / str(entry.get("path") or "")).resolve()
+    if indexed_path != path.resolve():
+        raise WorkspaceUsageError("external evaluation adapter receipt index path does not match the resolved receipt.")
+    if str(entry.get("status") or receipt.get("status") or "") not in {"current", "fresh", "accepted", "delivered", "failed"}:
+        raise WorkspaceUsageError("external evaluation adapter receipt index entry is not current.")
+    if entry.get("superseded_by") or entry.get("revoked_at") or receipt.get("superseded_by") or receipt.get("revoked_at"):
+        raise WorkspaceUsageError("external evaluation adapter receipt is superseded or revoked.")
+    if str(entry.get("producer") or receipt.get("producer") or "").strip() != str(receipt.get("producer") or "").strip():
+        raise WorkspaceUsageError("external evaluation adapter receipt producer does not match the provider-owned index.")
+    if str(entry.get("receipt_revision") or "") and str(entry.get("receipt_revision")) != str(receipt.get("receipt_revision") or ""):
+        raise WorkspaceUsageError("external evaluation adapter receipt revision does not match the provider-owned index.")
+    if str(entry.get("capability_revision") or "") and str(entry.get("capability_revision")) != str(
+        receipt.get("capability_revision") or ""
+    ):
+        raise WorkspaceUsageError("external evaluation adapter capability revision does not match the provider-owned index.")
     receipt.setdefault("source_ref", path.relative_to(target_root).as_posix())
     receipt["_source_ref"] = path.relative_to(target_root).as_posix()
     receipt["_source_digest"] = hashlib.sha256(raw_bytes).hexdigest()
+    receipt["_index_ref"] = index_path.relative_to(target_root).as_posix()
     return receipt
 
 
@@ -1201,26 +1225,30 @@ def execute_evaluation_collection_action(
         "recorded_at": _now(),
     }
     next_collections = [item for item in collections if not (isinstance(item, dict) and item.get("id") == pending_id)]
-    _write_json(
-        pending_path,
-        {
-            "kind": "agentic-workspace/evaluation-pending-collections/v1",
-            "evaluation_id": evaluation_id,
-            "collections": [*next_collections, pending_entry],
-        },
-    )
-    admitted = append_observation(
-        target_root=target_root,
-        evaluation_id=evaluation_id,
-        criterion=criterion,
-        result=result,
-        evidence_refs=evidence_refs,
-        confidence=confidence,
-        burden=burden,
-        context=observation_context,
-        finding=finding,
-        recommended_action=recommended_action,
-    )
+    try:
+        admitted = append_observation(
+            target_root=target_root,
+            evaluation_id=evaluation_id,
+            criterion=criterion,
+            result=result,
+            evidence_refs=evidence_refs,
+            confidence=confidence,
+            burden=burden,
+            context=observation_context,
+            finding=finding,
+            recommended_action=recommended_action,
+        )
+    except WorkspaceUsageError as exc:
+        failed_entry = {**pending_entry, "status": "admission-failed", "failure_reason": str(exc)}
+        _write_json(
+            pending_path,
+            {
+                "kind": "agentic-workspace/evaluation-pending-collections/v1",
+                "evaluation_id": evaluation_id,
+                "collections": [*next_collections, failed_entry],
+            },
+        )
+        raise
     collection_status = "equivalent-observation-suppressed" if admitted.get("outcome") == "duplicate" else "admitted-observation"
     pending_entry = {
         **pending_entry,
