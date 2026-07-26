@@ -584,6 +584,27 @@ def test_context_authority_projection_requires_live_records_for_start() -> None:
     assert planning["action"] == "refresh-or-admit-source-record"
 
 
+def test_operating_decision_blocks_action_when_required_context_is_unadmitted() -> None:
+    invocation = operation_invocation(operation_id="proof.report", arguments={})
+
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": "start",
+            "task": "prove the context gate",
+            "actionability": {"next_action": {"action": "run-proof", "operation_invocation": invocation}},
+        }
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["primary_action"] == {}
+    assert decision["external_blocker"] == {
+        "kind": "agentic-workspace/operating-decision-blocker/v1",
+        "reason_code": "context-authority-unavailable",
+        "owner": "context-authority-registry",
+        "repair": "run the typed context-authority repair operation before retrying the decision",
+    }
+
+
 def test_context_authority_projection_selects_live_source_records_and_excludes_inapplicable() -> None:
     required_records = {
         item["surface"]: {"status": "current", "source_id": f"{item['surface']}/source", "revision": "r1", "freshness": "current"}
