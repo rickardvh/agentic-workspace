@@ -738,7 +738,13 @@ _GUIDANCE_LIFECYCLE_OPERATIONS = {"edit", "merge", "split", "suppress", "revalid
 
 def _guidance_lifecycle_store(target_root: Path) -> tuple[Path, dict[str, Any]]:
     path = target_root / GUIDANCE_LIFECYCLE_STORE_PATH
-    payload = _load_json(path, default={"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": []})
+    if not path.exists():
+        payload = {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": []}
+    else:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise WorkspaceUsageError("guidance lifecycle store is unreadable; repair it before promotion or transition.") from exc
     if payload.get("kind") != "agentic-workspace/guidance-lifecycle-store/v1" or not isinstance(payload.get("records"), list):
         raise WorkspaceUsageError("guidance lifecycle store is malformed; repair it before promotion or transition.")
     return path, payload
