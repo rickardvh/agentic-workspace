@@ -1483,7 +1483,7 @@ def evaluation_report_payload(*, target_root: Path, evaluation_id: str, explicit
 
 
 def record_local_evaluation_report_delivery(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:
-    """Record one compact local delivery receipt; external adapters stay optional."""
+    """Persist a local compilation receipt without claiming external sink delivery."""
     report = evaluation_report_payload(target_root=target_root, evaluation_id=evaluation_id, explicit=explicit)
     if report["status"] != "ready":
         return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "not-due", "report": report}
@@ -1500,9 +1500,16 @@ def record_local_evaluation_report_delivery(*, target_root: Path, evaluation_id:
     existing = next((item for item in deliveries if isinstance(item, dict) and item.get("identity") == identity), None)
     if existing:
         return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "already-delivered", "receipt": existing, "report": report}
-    receipt = {"identity": identity, "status": "delivered-local", "evaluation_id": evaluation_id, "sinks": report["report_sinks"], "delivery": report["delivery"]}
+    receipt = {
+        "identity": identity,
+        "status": "recorded-local",
+        "evaluation_id": evaluation_id,
+        "declared_sinks": report["report_sinks"],
+        "delivery_scope": "local-compilation-receipt-only",
+        "external_delivery": "unattempted; require one adapter receipt per external sink",
+    }
     _write_json(path, {"deliveries": [*deliveries, receipt]})
-    return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "delivered-local", "receipt": receipt, "report": report}
+    return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "recorded-local", "receipt": receipt, "report": report}
 
 
 def external_evaluation_report_delivery_request(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:

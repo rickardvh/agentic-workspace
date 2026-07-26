@@ -213,7 +213,9 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
     assert explicit["decision_owner"] == {"id": "workspace-maintainer", "class": "maintainer"}
     assert explicit["report_sinks"] == [{"id": "#1969", "class": "closed-issue"}]
     delivered = record_local_evaluation_report_delivery(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
-    assert delivered["status"] == "delivered-local"
+    assert delivered["status"] == "recorded-local"
+    assert delivered["receipt"]["delivery_scope"] == "local-compilation-receipt-only"
+    assert delivered["receipt"]["external_delivery"].startswith("unattempted")
     assert record_local_evaluation_report_delivery(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)["status"] == "already-delivered"
     external = external_evaluation_report_delivery_request(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
     assert external["status"] == "adapter-required"
