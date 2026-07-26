@@ -562,12 +562,12 @@ def test_admitted_handoff_and_not_required_evaluation_can_reach_actionable_termi
     assert decision["canonical_decision_input_revision"] == bound_invocation["expected_input_revision"]
 
 
-def test_context_authority_projection_is_registry_driven_for_start() -> None:
+def test_context_authority_projection_requires_live_records_for_start() -> None:
     projection = resolve_context_authority_projection(consumer="start", task="shape authority routing")
 
-    assert projection["status"] == "admitted"
+    assert projection["status"] == "repair-required"
     assert projection["registry_revision"].startswith("sha256:")
-    assert {item["surface"] for item in projection["authorities"]} >= {
+    assert set(projection["missing_required_surfaces"]) >= {
         "architecture-principles",
         "scoped-instructions",
         "ownership",
@@ -578,10 +578,16 @@ def test_context_authority_projection_is_registry_driven_for_start() -> None:
 
 
 def test_context_authority_projection_selects_live_source_records_and_excludes_inapplicable() -> None:
+    required_records = {
+        item["surface"]: {"status": "current", "source_id": f"{item['surface']}/source", "revision": "r1", "freshness": "current"}
+        for item in context_authority_declarations()
+        if "start" in item["consumer"]
+    }
     projection = resolve_context_authority_projection(
         consumer="start",
         task="shape authority routing",
         source_records={
+            **required_records,
             "memory": {"status": "not-applicable", "applicable": False, "source_id": "memory/index", "revision": "old"},
             "skills": {"status": "current", "source_id": "skills/registry", "revision": "skills-r2", "freshness": "current"},
         },
