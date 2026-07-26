@@ -381,6 +381,65 @@ def _save_state(root: Path, state: dict[str, Any]) -> None:
     temporary.replace(path)
 
 
+def _focused_proof_attempt_result(
+    *,
+    attempt: dict[str, Any],
+    proof_status: str,
+    proof_command: str,
+    proof_exit_code: int,
+    starting_head: str,
+    ending_head: str,
+) -> dict[str, Any]:
+    commands = [proof_command] if proof_command else []
+    failed_index = 0 if proof_status == "failed" and proof_command else -1
+    identity = {
+        "attempt_id": attempt.get("id"),
+        "launch_identity": attempt.get("launch_identity"),
+        "worktree": attempt.get("worktree"),
+        "starting_head": starting_head,
+        "ending_head": ending_head,
+        "proof_commands": commands,
+        "proof_status": proof_status,
+        "proof_exit_code": proof_exit_code,
+    }
+    return {
+        "kind": "agentic-workspace/focused-proof-attempt-result/v1",
+        "status": "failed" if proof_status == "failed" else "passed" if proof_status == "passed" else "unreported",
+        "attempt_id": str(attempt.get("id", "")),
+        "attempt_revision": "sha256:" + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest(),
+        "launch_identity": str(attempt.get("launch_identity", "")),
+        "worktree": str(attempt.get("worktree", "")),
+        "starting_head": starting_head,
+        "ending_head": ending_head,
+        "proof_boundary": "focused-proof",
+        "proof_commands": commands,
+        "failed_command_index": failed_index,
+        "failed_command": proof_command if failed_index >= 0 else "",
+        "proof_exit_code": proof_exit_code,
+        "producer": "chatgpt-review-loop.job-result",
+        "repair_action": "repair the failed focused proof, rerun it, then report the exact job result",
+    }
+
+
+def _admitted_failed_proof_attempt(*, terminal: dict[str, Any], attempt: dict[str, Any], start_head: str) -> dict[str, Any] | None:
+    proof_attempt = terminal.get("proof_attempt_result")
+    if not isinstance(proof_attempt, dict) or proof_attempt.get("kind") != "agentic-workspace/focused-proof-attempt-result/v1":
+        return None
+    if (
+        proof_attempt.get("status") != "failed"
+        or proof_attempt.get("attempt_id") != attempt.get("id")
+        or proof_attempt.get("launch_identity") != attempt.get("launch_identity")
+        or proof_attempt.get("worktree") != attempt.get("worktree")
+        or proof_attempt.get("starting_head") != start_head
+    ):
+        return None
+    failed_index = proof_attempt.get("failed_command_index")
+    commands = proof_attempt.get("proof_commands")
+    if not isinstance(commands, list) or not commands or not isinstance(failed_index, int) or failed_index < 0 or failed_index >= len(commands):
+        return None
+    return proof_attempt
+
+
 def _record_job_terminal(
     state: dict[str, Any],
     *,
@@ -407,16 +466,34 @@ def _record_job_terminal(
     if terminal.get("attempt_id") != attempt.get("id"):
         terminal = {}
     resolved_proof_status = terminal.get("proof_status", proof_status)
-    proof_commands = terminal.get("proof_commands", [])
-    failed_command = str(terminal.get("failed_command") or "")
+    failed_attempt = _admitted_failed_proof_attempt(terminal=terminal, attempt=attempt, start_head=start_head)
+    if resolved_proof_status == "failed" and failed_attempt is None:
+        proof_commands = []
+        failed_command = ""
+        proof_boundary = "unresolved"
+        proof_exit_code: int | str | None = "unresolved"
+        attempt_revision = ""
+    elif failed_attempt is not None:
+        proof_commands = [str(item) for item in failed_attempt["proof_commands"]]
+        failed_command = str(failed_attempt["failed_command"])
+        proof_boundary = str(failed_attempt.get("proof_boundary") or "focused-proof")
+        proof_exit_code = failed_attempt.get("proof_exit_code")
+        attempt_revision = str(failed_attempt.get("attempt_revision") or "")
+    else:
+        proof_commands = terminal.get("proof_commands", [])
+        failed_command = str(terminal.get("failed_command") or "")
+        proof_boundary = str(terminal.get("proof_boundary", "focused-proof"))
+        proof_exit_code = terminal.get("proof_exit_code")
+        attempt_revision = ""
     repair = (
         {
             "status": "repair-required",
             "failed_command": failed_command or "unresolved",
-            "proof_exit_code": terminal.get("proof_exit_code"),
+            "proof_exit_code": proof_exit_code,
             "proof_commands": proof_commands,
-            "proof_boundary": terminal.get("proof_boundary", "focused-proof"),
+            "proof_boundary": proof_boundary,
             "attempt_id": str(attempt.get("id", "")),
+            "attempt_revision": attempt_revision,
             "starting_head": start_head,
             "action": (
                 "repair the failed focused proof, rerun it, then report the exact job result"
@@ -442,8 +519,9 @@ def _record_job_terminal(
         "proof_status": resolved_proof_status,
         "proof_commands": proof_commands,
         "failed_command": failed_command,
-        "proof_exit_code": terminal.get("proof_exit_code"),
-        "proof_boundary": terminal.get("proof_boundary", "focused-proof"),
+        "proof_exit_code": proof_exit_code,
+        "proof_boundary": proof_boundary,
+        "proof_attempt_result": failed_attempt or terminal.get("proof_attempt_result", {}),
         "push_status": terminal.get("push_status", "unreported"),
         "disposition": disposition,
         "event": event,
@@ -567,6 +645,14 @@ def report_job_result(
         )
     else:
         corrections = []
+    proof_attempt_result = _focused_proof_attempt_result(
+        attempt=attempt,
+        proof_status=proof_status,
+        proof_command=proof_command,
+        proof_exit_code=proof_exit_code,
+        starting_head=str(attempt["starting_head"]),
+        ending_head=ending_head,
+    )
     state["session_id"] = session_id
     attempt["session_id"] = session_id
     state["terminal_result"] = {
@@ -578,6 +664,8 @@ def report_job_result(
         "launch_identity": attempt["launch_identity"],
         "proof_status": proof_status, "proof_commands": [proof_command] if proof_command else [],
         "failed_command": proof_command if proof_status == "failed" else "",
+        "proof_attempt_result": proof_attempt_result,
+        "proof_boundary": proof_attempt_result["proof_boundary"],
         "proof_exit_code": proof_exit_code, "push_status": push_status,
         "reported_at": datetime.now(timezone.utc).isoformat(),
         "head_corrections": corrections,

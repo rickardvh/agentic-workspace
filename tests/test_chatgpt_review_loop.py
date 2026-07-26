@@ -1218,10 +1218,13 @@ def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
         "proof_commands": ["pytest -q"],
         "proof_boundary": "focused-proof",
         "attempt_id": terminal["attempt_id"],
+        "attempt_revision": terminal["proof_attempt_result"]["attempt_revision"],
         "starting_head": HEAD_A,
         "action": "repair the failed focused proof, rerun it, then report the exact job result",
         "blocked_claims": ["handoff-recorded", "merge-ready", "proof-passed"],
     }
+    assert terminal["proof_attempt_result"]["kind"] == "agentic-workspace/focused-proof-attempt-result/v1"
+    assert terminal["proof_attempt_result"]["failed_command_index"] == 0
 
 
 def test_spawned_worktree_resume_records_failed_proof_and_exact_repair(tmp_path: Path, monkeypatch) -> None:
@@ -1320,6 +1323,7 @@ def test_spawned_worktree_resume_records_failed_proof_and_exact_repair(tmp_path:
     assert saved["terminal_result"]["proof_status"] == "failed"
     assert saved["terminal_result"]["failed_command"] == "pytest tests/test_chatgpt_review_loop.py -q"
     assert saved["terminal_result"]["repair"]["action"] == "repair the failed focused proof, rerun it, then report the exact job result"
+    assert saved["terminal_result"]["repair"]["attempt_revision"] == saved["terminal_result"]["proof_attempt_result"]["attempt_revision"]
     assert saved["terminal_result"]["repair"]["blocked_claims"] == ["handoff-recorded", "merge-ready", "proof-passed"]
     assert [(mode, worktree) for mode, worktree, _ in launches] == [
         ("fresh", worktree_root / "pr-12"),
@@ -1342,6 +1346,18 @@ def test_terminal_repair_names_the_later_failed_proof_not_the_first_command(tmp_
         "proof_commands": ["ruff check", "pytest tests/test_chatgpt_review_loop.py -q"],
         "failed_command": "pytest tests/test_chatgpt_review_loop.py -q",
         "proof_exit_code": 1,
+        "proof_attempt_result": {
+            **loop._focused_proof_attempt_result(
+                attempt=attempt,
+                proof_status="failed",
+                proof_command="pytest tests/test_chatgpt_review_loop.py -q",
+                proof_exit_code=1,
+                starting_head=HEAD_A,
+                ending_head=HEAD_A,
+            ),
+            "proof_commands": ["ruff check", "pytest tests/test_chatgpt_review_loop.py -q"],
+            "failed_command_index": 1,
+        },
         "push_status": "passed",
     }
 
@@ -1359,6 +1375,49 @@ def test_terminal_repair_names_the_later_failed_proof_not_the_first_command(tmp_
     assert terminal["proof_commands"] == ["ruff check", "pytest tests/test_chatgpt_review_loop.py -q"]
     assert terminal["repair"]["failed_command"] == "pytest tests/test_chatgpt_review_loop.py -q"
     assert terminal["repair"]["failed_command"] != terminal["proof_commands"][0]
+    assert terminal["repair"]["attempt_revision"] == saved["terminal_result"]["proof_attempt_result"]["attempt_revision"]
+
+
+def test_terminal_repair_rejects_stale_failed_proof_attempt_identity(tmp_path: Path) -> None:
+    saved = state(tmp_path, status="resume-in-progress")
+    attempt = loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
+    saved["session_id"] = SESSION
+    attempt["session_id"] = SESSION
+    saved["terminal_result"] = {
+        "attempt_id": attempt["id"],
+        "proof_status": "failed",
+        "proof_commands": ["pytest tests/test_chatgpt_review_loop.py -q"],
+        "failed_command": "pytest tests/test_chatgpt_review_loop.py -q",
+        "proof_exit_code": 1,
+        "proof_attempt_result": {
+            **loop._focused_proof_attempt_result(
+                attempt=attempt,
+                proof_status="failed",
+                proof_command="pytest tests/test_chatgpt_review_loop.py -q",
+                proof_exit_code=1,
+                starting_head=HEAD_A,
+                ending_head=HEAD_A,
+            ),
+            "attempt_id": "stale-attempt",
+        },
+        "push_status": "passed",
+    }
+
+    loop._record_job_terminal(
+        saved,
+        mode="resume",
+        worktree=tmp_path,
+        start_head=HEAD_A,
+        exit_code=0,
+        disposition="proof-failed",
+        event="handoff-proof-unreported",
+    )
+
+    terminal = saved["terminal_result"]
+    assert terminal["failed_command"] == ""
+    assert terminal["repair"]["failed_command"] == "unresolved"
+    assert terminal["repair"]["attempt_revision"] == ""
+    assert terminal["repair"]["action"] == "recover the exact failed proof command and result before issuing a repair route"
 
 
 def test_explicit_pr_handoff_accepts_detached_pushed_head(tmp_path: Path) -> None:
