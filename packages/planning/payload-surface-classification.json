@@ -695,6 +695,20 @@
       "rationale": "Orchestrator workflow should be opt-in for repos and agents that actually delegate."
     },
     {
+      "source_path": "packages/planning/skills/planning-manual-delegation/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-manual-delegation/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Manual delegation guidance is an opt-in extension for agents and repositories that delegate work."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-returned-result/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-returned-result/SKILL.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Returned-result admission guidance is an opt-in extension for delegated work."
+    },
+    {
       "source_path": "packages/planning/skills/planning-promote-review-findings/SKILL.md",
       "installed_path": ".agentic-workspace/planning/skills/planning-promote-review-findings/SKILL.md",
       "classification": "extraction candidate",
