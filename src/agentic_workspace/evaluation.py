@@ -1451,6 +1451,35 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
 
 def evaluation_report_payload(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:
     """Compile a compact owner-facing report without delivering it to a sink."""
+    authority = evaluation_report_authority(target_root=target_root, evaluation_id=evaluation_id, explicit=explicit)
+    if authority["status"] == "not-due":
+        return {
+            "kind": "agentic-workspace/evaluation-report/v1",
+            "status": "not-due",
+            "evaluation_id": evaluation_id,
+            "report_authority": authority,
+            "delivery": "not-due",
+        }
+    return {
+        "kind": "agentic-workspace/evaluation-report/v1",
+        "status": "ready",
+        "evaluation_id": evaluation_id,
+        "subject": authority["subject"],
+        "question": authority["question"],
+        "coverage": authority["coverage"],
+        "material_findings": authority["material_findings"],
+        "contradictions": authority["contradictions"],
+        "conclusion": authority["conclusion"],
+        "decision_owner": authority["decision_owner"],
+        "report_sinks": authority["report_sinks"],
+        "recommended_action": authority["recommended_action"],
+        "report_authority": authority,
+        "delivery": "recommendation-only; external delivery requires an adapter receipt",
+    }
+
+
+def evaluation_report_authority(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:
+    """Resolve the current owner, sink, result, evidence, and finding authority for one report."""
     definitions = _definitions_payload(target_root)
     definition = _definition_by_id(definitions, evaluation_id)
     if definition is None:
@@ -1465,20 +1494,46 @@ def evaluation_report_payload(*, target_root: Path, evaluation_id: str, explicit
         or summary.get("contradictions")
         or finding_followup.get("status") == "unresolved"
     )
-    return {
-        "kind": "agentic-workspace/evaluation-report/v1",
-        "status": "ready" if meaningful else "not-due",
+    current_result = admission.get("current_result_identity") if isinstance(admission.get("current_result_identity"), dict) else {}
+    authority_source = {
         "evaluation_id": evaluation_id,
+        "definition_revision": definition.get("revision"),
+        "lifecycle": definition.get("lifecycle"),
+        "decision_owner": definition.get("decision_owner", {}),
+        "report_sinks": definition.get("report_sinks", []),
+        "current_result_identity": current_result,
+        "coverage": summary.get("coverage", {}),
+        "conclusion": summary.get("conclusion_readiness", {}),
+        "material_findings": finding_followup.get("unresolved", []),
+        "contradictions": summary.get("contradictions", []),
+        "finding_followup_status": finding_followup.get("status"),
+    }
+    revision = hashlib.sha256(json.dumps(authority_source, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()[:24]
+    return {
+        "kind": "agentic-workspace/evaluation-report-authority/v1",
+        "status": "ready" if meaningful else "not-due",
+        "revision": revision,
+        "source": "current-definition-plus-admitted-summary",
+        "evaluation_id": evaluation_id,
+        "definition_revision": definition.get("revision"),
         "subject": definition.get("subject", {}),
         "question": definition.get("question", ""),
         "coverage": summary.get("coverage", {}),
         "material_findings": finding_followup.get("unresolved", []),
         "contradictions": summary.get("contradictions", []),
         "conclusion": summary.get("conclusion_readiness", {}),
+        "current_result_identity": current_result,
+        "thresholds": definition.get("reporting", {}),
+        "confidence_evidence": {
+            "criterion_status": summary.get("criterion_status", []),
+            "latest_material_changes": summary.get("latest_material_changes", []),
+        },
+        "material_finding_owner": finding_followup.get("owner", definition.get("decision_owner", {})),
         "decision_owner": definition.get("decision_owner", {}),
         "report_sinks": definition.get("report_sinks", []),
         "recommended_action": definition.get("action_policy", {}),
-        "delivery": "recommendation-only; external delivery requires an adapter receipt",
+        "authority_source": authority_source,
+        "rule": "Reports compile only from the current definition and admitted evaluation summary resolved at report time.",
     }
 
 
@@ -1522,31 +1577,130 @@ def external_evaluation_report_delivery_request(*, target_root: Path, evaluation
     ]
     if report["status"] != "ready" or not sinks:
         return {"kind": "agentic-workspace/evaluation-external-delivery-request/v1", "status": "not-due", "report": report}
-    identity = hashlib.sha256(json.dumps({"evaluation_id": evaluation_id, "sinks": sinks, "coverage": report["coverage"]}, sort_keys=True).encode()).hexdigest()[:24]
+    raw_report_authority = report.get("report_authority")
+    report_authority: dict[str, Any] = raw_report_authority if isinstance(raw_report_authority, dict) else {}
+    identity_source = {
+        "evaluation_id": evaluation_id,
+        "sinks": sinks,
+        "authority_revision": report_authority.get("revision"),
+        "current_result_identity": report_authority.get("current_result_identity"),
+    }
+    identity = hashlib.sha256(json.dumps(identity_source, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()[:24]
     return {
         "kind": "agentic-workspace/evaluation-external-delivery-request/v1",
         "status": "adapter-required",
         "delivery_id": identity,
+        "request_revision": identity,
+        "authority_revision": report_authority.get("revision"),
         "sinks": sinks,
+        "sink_requests": [
+            {
+                "sink_id": str(sink.get("id") or ""),
+                "sink_class": str(sink.get("class") or ""),
+                "idempotency_key": hashlib.sha256(
+                    json.dumps({"delivery_id": identity, "sink": sink}, sort_keys=True, separators=(",", ":")).encode()
+                ).hexdigest()[:24],
+            }
+            for sink in sinks
+        ],
         "report": report,
-        "authority_boundary": "This request recommends delivery to the declared external sink; a provider adapter records success or failure and never changes the evaluation conclusion.",
+        "authority_boundary": (
+            "This request recommends delivery to the declared external sink; a provider adapter must record one "
+            "producer receipt per sink and never changes the evaluation conclusion."
+        ),
     }
 
 
-def record_external_evaluation_report_delivery(*, target_root: Path, request: dict[str, Any], succeeded: bool, detail: str = "") -> dict[str, Any]:
+def record_external_evaluation_report_delivery(
+    *,
+    target_root: Path,
+    request: dict[str, Any],
+    succeeded: bool | None = None,
+    detail: str = "",
+    adapter_receipt: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Persist adapter outcome; a failed attempt remains retryable."""
     if request.get("status") != "adapter-required":
         return {"kind": "agentic-workspace/evaluation-external-delivery-receipt/v1", "status": "not-due"}
     evaluation_id = str(request.get("report", {}).get("evaluation_id") or "")
     identity = str(request.get("delivery_id") or "")
+    current_request = external_evaluation_report_delivery_request(target_root=target_root, evaluation_id=evaluation_id, explicit=True)
+    if current_request.get("delivery_id") != identity or current_request.get("request_revision") != request.get("request_revision"):
+        return {
+            "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
+            "status": "stale-request",
+            "delivery_id": identity,
+            "current_delivery_id": current_request.get("delivery_id"),
+            "retry": True,
+        }
+    receipt = dict(adapter_receipt or {})
+    if not receipt:
+        return {
+            "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
+            "status": "adapter-receipt-required",
+            "delivery_id": identity,
+            "retry": True,
+            "rule": "External evaluation delivery must be recorded from a provider adapter receipt, not caller success flags.",
+        }
+    if receipt.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-receipt/v1":
+        raise WorkspaceUsageError("adapter_receipt.kind is invalid for evaluation external delivery.")
+    if str(receipt.get("producer") or "").strip() == "":
+        raise WorkspaceUsageError("adapter_receipt.producer is required.")
+    if receipt.get("delivery_id") != identity:
+        raise WorkspaceUsageError("adapter_receipt.delivery_id does not match the current request.")
+    attempt_revision = str(receipt.get("attempt_revision") or "").strip()
+    sink_id = str(receipt.get("sink_id") or "").strip()
+    if not attempt_revision or not sink_id:
+        raise WorkspaceUsageError("adapter_receipt.attempt_revision and adapter_receipt.sink_id are required.")
+    status = str(receipt.get("status") or ("delivered" if succeeded else "failed"))
+    if status not in {"delivered", "failed"}:
+        raise WorkspaceUsageError("adapter_receipt.status must be delivered or failed.")
+    sink_requests = request.get("sink_requests", []) if isinstance(request.get("sink_requests"), list) else []
+    sink_request = next((item for item in sink_requests if isinstance(item, dict) and item.get("sink_id") == sink_id), None)
+    if not sink_request:
+        raise WorkspaceUsageError("adapter_receipt.sink_id is not part of the current delivery request.")
     path = target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.external-deliveries.json"
     payload = _load_json(path, default={"deliveries": []})
     deliveries = payload.get("deliveries", []) if isinstance(payload.get("deliveries"), list) else []
-    if any(isinstance(item, dict) and item.get("identity") == identity and item.get("status") == "delivered" for item in deliveries):
-        return {"kind": "agentic-workspace/evaluation-external-delivery-receipt/v1", "status": "already-delivered", "delivery_id": identity}
-    receipt = {"identity": identity, "status": "delivered" if succeeded else "failed", "detail": detail, "sinks": request.get("sinks", [])}
-    _write_json(path, {"deliveries": [*deliveries, receipt]})
-    return {"kind": "agentic-workspace/evaluation-external-delivery-receipt/v1", "status": receipt["status"], "delivery_id": identity, "retry": not succeeded}
+    existing = next(
+        (
+            item
+            for item in deliveries
+            if isinstance(item, dict)
+            and item.get("identity") == identity
+            and item.get("sink_id") == sink_id
+            and item.get("status") == "delivered"
+        ),
+        None,
+    )
+    if existing:
+        return {
+            "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
+            "status": "already-delivered",
+            "delivery_id": identity,
+            "sink_id": sink_id,
+        }
+    stored = {
+        "identity": identity,
+        "request_revision": request.get("request_revision"),
+        "authority_revision": request.get("authority_revision"),
+        "status": status,
+        "detail": detail or receipt.get("detail", ""),
+        "sink_id": sink_id,
+        "idempotency_key": sink_request.get("idempotency_key"),
+        "attempt_revision": attempt_revision,
+        "producer": receipt.get("producer"),
+        "adapter_receipt": receipt,
+    }
+    _write_json(path, {"deliveries": [*deliveries, stored]})
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
+        "status": stored["status"],
+        "delivery_id": identity,
+        "sink_id": sink_id,
+        "attempt_revision": attempt_revision,
+        "retry": status != "delivered",
+    }
 
 
 def evaluation_collection_actions(

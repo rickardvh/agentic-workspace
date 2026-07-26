@@ -210,6 +210,8 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
     assert quiet["status"] == "not-due"
     explicit = evaluation_report_payload(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
     assert explicit["status"] == "ready"
+    assert explicit["report_authority"]["kind"] == "agentic-workspace/evaluation-report-authority/v1"
+    assert explicit["report_authority"]["revision"]
     assert explicit["decision_owner"] == {"id": "workspace-maintainer", "class": "maintainer"}
     assert explicit["report_sinks"] == [{"id": "#1969", "class": "closed-issue"}]
     delivered = record_local_evaluation_report_delivery(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
@@ -220,9 +222,44 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
     external = external_evaluation_report_delivery_request(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
     assert external["status"] == "adapter-required"
     assert external["sinks"] == [{"id": "#1969", "class": "closed-issue"}]
-    assert record_external_evaluation_report_delivery(target_root=tmp_path, request=external, succeeded=False)["retry"] is True
-    assert record_external_evaluation_report_delivery(target_root=tmp_path, request=external, succeeded=True)["status"] == "delivered"
-    assert record_external_evaluation_report_delivery(target_root=tmp_path, request=external, succeeded=True)["status"] == "already-delivered"
+    assert external["request_revision"] == external["delivery_id"]
+    assert external["authority_revision"] == explicit["report_authority"]["revision"]
+    assert record_external_evaluation_report_delivery(target_root=tmp_path, request=external)["status"] == "adapter-receipt-required"
+    failed_receipt = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-receipt/v1",
+        "producer": "github-issues-adapter",
+        "delivery_id": external["delivery_id"],
+        "sink_id": "#1969",
+        "attempt_revision": "attempt-1",
+        "status": "failed",
+    }
+    assert record_external_evaluation_report_delivery(target_root=tmp_path, request=external, adapter_receipt=failed_receipt)["retry"] is True
+    delivered_receipt = {**failed_receipt, "attempt_revision": "attempt-2", "status": "delivered"}
+    assert (
+        record_external_evaluation_report_delivery(target_root=tmp_path, request=external, adapter_receipt=delivered_receipt)["status"]
+        == "delivered"
+    )
+    assert (
+        record_external_evaluation_report_delivery(target_root=tmp_path, request=external, adapter_receipt=delivered_receipt)["status"]
+        == "already-delivered"
+    )
+
+
+def test_external_evaluation_delivery_rejects_stale_request(tmp_path: Path) -> None:
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    request = external_evaluation_report_delivery_request(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
+    stale_request = {**request, "request_revision": "old-request"}
+    receipt = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-receipt/v1",
+        "producer": "github-issues-adapter",
+        "delivery_id": request["delivery_id"],
+        "sink_id": "#1969",
+        "attempt_revision": "attempt-1",
+        "status": "delivered",
+    }
+    result = record_external_evaluation_report_delivery(target_root=tmp_path, request=stale_request, adapter_receipt=receipt)
+    assert result["status"] == "stale-request"
+    assert result["retry"] is True
 
 
 def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path) -> None:
