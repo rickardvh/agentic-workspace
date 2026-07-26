@@ -2057,11 +2057,11 @@
     "src/agentic_workspace/workspace_runtime_primitives.py": "d650f63f4d78caae1a50feff54695bb45aaa3179",
     "src/agentic_workspace/workspace_runtime_projection.py": "8db623c90efe888f5a6bba8a75bb96d253d1f707",
     "src/agentic_workspace/workspace_runtime_proof.py": "cd34d96a69f24f5000dc505616d4e0855e159151",
-    "src/agentic_workspace/workspace_runtime_startup.py": "2f95be2fc80873cea2a91edacf5dcc13183660b2",
+    "src/agentic_workspace/workspace_runtime_startup.py": "2cea3244cd175e703744cd48b5090eb1718c71c8",
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "ac90ee7d6b80a58319cee9c6f2ca3aa71beb98ab4dccd46b8a304e02099aaa19",
+  "git_index_identity": "e355d9819fc9a780c06c8ef5987af582017c6bbb2b8f681c34b0e35b97a6463d",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
