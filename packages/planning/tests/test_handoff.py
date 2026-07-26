@@ -201,6 +201,25 @@ def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_p
     assert json.loads(plan_path.read_text(encoding="utf-8"))["next_action"] == "run the focused proof"
 
 
+def test_targeted_execplan_writer_requires_both_revision_guards(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    result = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={"next_action": "must not write"},
+        expected_planning_revision="",
+        expected_owner_revision="",
+        apply=True,
+    )
+
+    assert result == {
+        "kind": "agentic-planning/targeted-execplan-write/v1",
+        "status": "missing-revision-guard",
+        "required": ["expected_planning_revision", "expected_owner_revision"],
+    }
+
+
 def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(

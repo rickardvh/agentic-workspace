@@ -16603,6 +16603,12 @@ def targeted_execplan_write(
     byte-for-byte through the semantic record representation.
     """
     target_root = resolve_target_root(target)
+    if not str(expected_planning_revision or "").strip() or not str(expected_owner_revision or "").strip():
+        return {
+            "kind": "agentic-planning/targeted-execplan-write/v1",
+            "status": "missing-revision-guard",
+            "required": ["expected_planning_revision", "expected_owner_revision"],
+        }
     result = InstallResult(target_root=target_root, message="Targeted execplan writer", dry_run=not apply)
     if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "stale-planning-revision", "result": result.to_dict()}
@@ -16612,7 +16618,11 @@ def targeted_execplan_write(
     record_path = _canonical_execplan_record_path(plan_path)
     record = _load_execplan_record(record_path)
     if record is None or _execplan_lifecycle(record) != "live":
-        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "owner-not-live", "owner": _planning_surface_relative(target_root, record_path)}
+        return {
+            "kind": "agentic-planning/targeted-execplan-write/v1",
+            "status": "owner-not-live",
+            "owner": _planning_surface_relative(target_root, record_path),
+        }
     if str(record.get("revision") or "") != str(expected_owner_revision):
         return {
             "kind": "agentic-planning/targeted-execplan-write/v1",
