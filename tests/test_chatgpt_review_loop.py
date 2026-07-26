@@ -1214,6 +1214,11 @@ def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
     assert terminal["repair"] == {
         "status": "repair-required",
         "failed_command": "pytest -q",
+        "proof_exit_code": 1,
+        "proof_commands": ["pytest -q"],
+        "proof_boundary": "focused-proof",
+        "attempt_id": terminal["attempt_id"],
+        "starting_head": HEAD_A,
         "action": "repair the failed focused proof, rerun it, then report the exact job result",
         "blocked_claims": ["handoff-recorded", "merge-ready", "proof-passed"],
     }

@@ -413,6 +413,11 @@ def _record_job_terminal(
         {
             "status": "repair-required",
             "failed_command": failed_command or "unresolved",
+            "proof_exit_code": terminal.get("proof_exit_code"),
+            "proof_commands": proof_commands,
+            "proof_boundary": terminal.get("proof_boundary", "focused-proof"),
+            "attempt_id": str(attempt.get("id", "")),
+            "starting_head": start_head,
             "action": (
                 "repair the failed focused proof, rerun it, then report the exact job result"
                 if failed_command
@@ -438,6 +443,7 @@ def _record_job_terminal(
         "proof_commands": proof_commands,
         "failed_command": failed_command,
         "proof_exit_code": terminal.get("proof_exit_code"),
+        "proof_boundary": terminal.get("proof_boundary", "focused-proof"),
         "push_status": terminal.get("push_status", "unreported"),
         "disposition": disposition,
         "event": event,
