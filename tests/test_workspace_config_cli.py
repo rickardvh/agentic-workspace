@@ -1602,6 +1602,31 @@ def test_guidance_promotion_reads_only_the_canonical_correction_store(tmp_path: 
     assert decision["authority_source"]["store"] == ".agentic-workspace/local/correction-events.json"
 
 
+def test_guidance_promotion_persists_provenance_and_reversible_transition(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import apply_guidance_promotion, guidance_promotion_from_store, transition_guidance
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "[delegation_targets.fast_worker]\ntarget_id = \"user-local:fast-worker\"\ntarget_revision = \"rev-b\"\n",
+        encoding="utf-8",
+    )
+    store = target / ".agentic-workspace/local/correction-events.json"
+    store.parent.mkdir(parents=True, exist_ok=True)
+    store.write_text(json.dumps({"kind": "agentic-workspace/correction-event-store/v1", "events": [
+        _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-1"),
+        _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-2", evidence_hash="sha256:review-2"),
+    ]}), encoding="utf-8")
+    decision = guidance_promotion_from_store(target_root=target)
+    promoted = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][0]["guidance_id"])
+    transitioned = transition_guidance(target_root=target, guidance_id=promoted["record"]["guidance_id"], operation="suppress", reason="conflicts with current policy")
+    assert promoted["status"] == "promoted"
+    assert promoted["record"]["provenance"]["source_event_refs"]
+    assert transitioned["record"]["status"] == "suppressed"
+    assert transitioned["record"]["transitions"][-1]["reason"] == "conflicts with current policy"
+
+
 def test_correction_event_lifecycle_rejects_delivery_replay_separately_from_recurrence() -> None:
     from agentic_workspace.agent_guidance import admit_correction_events
 
