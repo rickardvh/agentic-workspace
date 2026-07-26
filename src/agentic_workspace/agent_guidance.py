@@ -732,6 +732,65 @@ def guidance_promotion_from_store(
     return decision
 
 
+GUIDANCE_LIFECYCLE_STORE_PATH = Path(".agentic-workspace/local/guidance-lifecycle.json")
+_GUIDANCE_LIFECYCLE_OPERATIONS = {"edit", "merge", "split", "suppress", "revalidate", "weaken", "supersede", "retire", "delete"}
+
+
+def _guidance_lifecycle_store(target_root: Path) -> tuple[Path, dict[str, Any]]:
+    path = target_root / GUIDANCE_LIFECYCLE_STORE_PATH
+    payload = _load_json(path, default={"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": []})
+    if payload.get("kind") != "agentic-workspace/guidance-lifecycle-store/v1" or not isinstance(payload.get("records"), list):
+        raise WorkspaceUsageError("guidance lifecycle store is malformed; repair it before promotion or transition.")
+    return path, payload
+
+
+def apply_guidance_promotion(*, target_root: Path, guidance_id: str, task_class: str | None = None, scope_class: str | None = None) -> dict[str, Any]:
+    """Persist one promoted candidate with its evidence and future lifecycle custody."""
+    decision = guidance_promotion_from_store(target_root=target_root, task_class=task_class, scope_class=scope_class)
+    candidate = next((item for item in decision.get("guidance", []) if isinstance(item, dict) and item.get("guidance_id") == guidance_id), None)
+    if decision.get("status") != "ready" or not isinstance(candidate, dict) or candidate.get("status") != "active":
+        return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "promotion-not-authorized", "guidance_id": guidance_id, "decision": decision}
+    path, store = _guidance_lifecycle_store(target_root)
+    records = [item for item in store["records"] if isinstance(item, dict)]
+    existing = next((item for item in records if item.get("guidance_id") == guidance_id), None)
+    if isinstance(existing, dict):
+        return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "already-promoted", "record": existing, "store": _repo_relative(path, root=target_root)}
+    record = {
+        "kind": "agentic-workspace/guidance-lifecycle-record/v1",
+        "guidance_id": guidance_id,
+        "status": "active",
+        "instruction": candidate["instruction"],
+        "applicability": candidate["applicability"],
+        "provenance": {"source_event_refs": candidate["source_event_refs"], "evidence_refs": candidate["evidence_refs"], "promotion_reason": candidate["promotion_reason"], "authority_source": decision.get("authority_source", {})},
+        "transitions": [{"operation": "promote", "at": _now(), "reason": candidate["promotion_reason"]}],
+        "revision": 1,
+    }
+    _write_correction_event_store(path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": [*records, record]})
+    return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "promoted", "record": record, "store": _repo_relative(path, root=target_root)}
+
+
+def transition_guidance(*, target_root: Path, guidance_id: str, operation: str, reason: str, replacement_guidance_id: str = "") -> dict[str, Any]:
+    """Apply a reversible lifecycle transition without discarding promotion evidence."""
+    if operation not in _GUIDANCE_LIFECYCLE_OPERATIONS:
+        raise WorkspaceUsageError(f"unsupported guidance lifecycle operation: {operation}")
+    if not reason.strip():
+        raise WorkspaceUsageError("guidance lifecycle transitions require a reason.")
+    path, store = _guidance_lifecycle_store(target_root)
+    records = [item for item in store["records"] if isinstance(item, dict)]
+    index = next((index for index, item in enumerate(records) if item.get("guidance_id") == guidance_id), None)
+    if index is None:
+        return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "missing-guidance", "guidance_id": guidance_id}
+    record = dict(records[index])
+    if record.get("status") in {"retired", "deleted", "superseded"}:
+        return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "terminal-guidance", "record": record}
+    status = {"suppress": "suppressed", "retire": "retired", "delete": "deleted", "supersede": "superseded"}.get(operation, "active")
+    transition = {"operation": operation, "at": _now(), "reason": reason, "replacement_guidance_id": replacement_guidance_id or None}
+    record.update(status=status, revision=int(record.get("revision") or 0) + 1, transitions=[*record.get("transitions", []), transition])
+    records[index] = record
+    _write_correction_event_store(path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": records})
+    return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "transitioned", "record": record, "store": _repo_relative(path, root=target_root)}
+
+
 def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_root: Path | None) -> dict[str, Any]:
     subjects = [_target_identity_subject(profile) for profile in local_override.delegation_targets]
     current_name = local_override.current_target or ""
