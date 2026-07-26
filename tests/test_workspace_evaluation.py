@@ -13,8 +13,10 @@ from agentic_workspace.contract_tooling import contract_schema
 from agentic_workspace.evaluation import (
     ASSIGNMENT_AUTHORITY_RECEIPT_DIR,
     EVALUATION_OBSERVATION_KIND,
+    EVALUATION_PENDING_COLLECTIONS_DIR,
     EVALUATION_SUMMARY_KIND,
     EVALUATIONS_KIND,
+    EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
     OBSERVATION_RETENTION_CAP,
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
@@ -25,6 +27,7 @@ from agentic_workspace.evaluation import (
     evaluation_collection_actions,
     evaluation_report_payload,
     evaluation_summary,
+    execute_evaluation_collection_action,
     external_evaluation_report_delivery_request,
     prune_observations,
     record_external_evaluation_report_delivery,
@@ -154,7 +157,15 @@ def _definition_kwargs() -> dict:
     }
 
 
+def _adapter_receipt_file(tmp_path: Path, receipt: dict) -> str:
+    path = tmp_path / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR / f"{receipt['attempt_revision']}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+    return path.relative_to(tmp_path).as_posix()
+
+
 def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
 
     matched = evaluation_collection_actions(
@@ -189,9 +200,34 @@ def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(t
             "decision_owner": {"id": "workspace-maintainer", "class": "maintainer"},
             "report_sinks": [{"id": "#1969", "class": "closed-issue"}],
             "next_action": "record-evaluation-observation-after-bound-proof",
+            "executable_operation": "execute_evaluation_collection_action",
             "rule": "Use the evaluation observation operation after assignment, authority, baseline, and proof admission; do not append an unbound reminder observation.",
         }
     ]
+    bound_context = _bound_context(tmp_path)
+    admitted = execute_evaluation_collection_action(
+        target_root=tmp_path,
+        action={**action, "operation_invocation": invocation},
+        result="supports",
+        evidence_refs=["dogfood-session-log://turn-1"],
+        context=bound_context,
+        finding="startup projection avoided a broad reread",
+        recommended_action="keep collecting",
+    )
+    assert admitted["status"] == "admitted-observation"
+    pending_path = tmp_path / EVALUATION_PENDING_COLLECTIONS_DIR / "eval-1969-operating-loop.json"
+    pending = json.loads(pending_path.read_text(encoding="utf-8"))
+    assert pending["collections"][0]["status"] == "admitted-observation"
+    suppressed = execute_evaluation_collection_action(
+        target_root=tmp_path,
+        action={**action, "operation_invocation": invocation},
+        result="supports",
+        evidence_refs=["dogfood-session-log://turn-1"],
+        context=bound_context,
+        finding="startup projection avoided a broad reread",
+        recommended_action="keep collecting",
+    )
+    assert suppressed["status"] == "equivalent-observation-suppressed"
 
     quiet = evaluation_collection_actions(
         target_root=tmp_path,
@@ -231,21 +267,42 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
     failed_receipt = {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-receipt/v1",
         "producer": "github-issues-adapter",
+        "status_owner": "provider-adapter",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "capability_status": "current",
         "delivery_id": external["delivery_id"],
         "sink_id": "#1969",
         "attempt_revision": "attempt-1",
         "status": "failed",
     }
     assert (
-        record_external_evaluation_report_delivery(target_root=tmp_path, request=external, adapter_receipt=failed_receipt)["retry"] is True
+        record_external_evaluation_report_delivery(target_root=tmp_path, request=external, adapter_receipt=failed_receipt)["status"]
+        == "adapter-receipt-required"
     )
-    delivered_receipt = {**failed_receipt, "attempt_revision": "attempt-2", "status": "delivered"}
     assert (
-        record_external_evaluation_report_delivery(target_root=tmp_path, request=external, adapter_receipt=delivered_receipt)["status"]
+        record_external_evaluation_report_delivery(
+            target_root=tmp_path,
+            request=external,
+            adapter_receipt_ref=_adapter_receipt_file(tmp_path, failed_receipt),
+        )["retry"]
+        is True
+    )
+    delivered_receipt = {**failed_receipt, "attempt_revision": "attempt-2", "receipt_revision": "receipt-2", "status": "delivered"}
+    assert (
+        record_external_evaluation_report_delivery(
+            target_root=tmp_path,
+            request=external,
+            adapter_receipt_ref=_adapter_receipt_file(tmp_path, delivered_receipt),
+        )["status"]
         == "delivered"
     )
     assert (
-        record_external_evaluation_report_delivery(target_root=tmp_path, request=external, adapter_receipt=delivered_receipt)["status"]
+        record_external_evaluation_report_delivery(
+            target_root=tmp_path,
+            request=external,
+            adapter_receipt_ref=_adapter_receipt_file(tmp_path, delivered_receipt),
+        )["status"]
         == "already-delivered"
     )
 
@@ -257,6 +314,10 @@ def test_external_evaluation_delivery_rejects_stale_request(tmp_path: Path) -> N
     receipt = {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-receipt/v1",
         "producer": "github-issues-adapter",
+        "status_owner": "provider-adapter",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "capability_status": "current",
         "delivery_id": request["delivery_id"],
         "sink_id": "#1969",
         "attempt_revision": "attempt-1",

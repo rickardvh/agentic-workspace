@@ -16,6 +16,8 @@ EVALUATION_OBSERVATION_KIND = "agentic-workspace/evaluation-observation/v1"
 EVALUATION_CLOSURE_AUTHORITY_KIND = "agentic-workspace/evaluation-closure-authority/v1"
 WORKSPACE_EVALUATIONS_PATH = Path(".agentic-workspace/evaluations.json")
 WORKSPACE_LOCAL_EVALUATIONS_DIR = Path(".agentic-workspace/local/evaluations")
+EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-receipts"
+EVALUATION_PENDING_COLLECTIONS_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "pending-collections"
 ASSIGNMENT_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/planning/assignment-receipts")
 PROOF_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/proof/receipts")
 EVALUATION_FINDING_FOLLOWUPS_PATH = Path(".agentic-workspace/planning/evaluation-finding-followups.json")
@@ -309,6 +311,37 @@ def _write_indexed_owner_receipt(
     }
     _write_json(index_path, {"kind": EVALUATION_OWNER_RECEIPT_INDEX_KIND, "receipts": receipts})
     return f"aw://{store_root.as_posix()}/{safe_id}"
+
+
+def _local_receipt_path(*, target_root: Path, store_root: Path, receipt_ref: str, field: str) -> Path:
+    text = str(receipt_ref or "").strip()
+    if not text:
+        raise WorkspaceUsageError(f"{field} is required.")
+    if "://" in text:
+        raise WorkspaceUsageError(f"{field} must be a repo-relative local receipt path.")
+    candidate = Path(text)
+    if candidate.is_absolute():
+        raise WorkspaceUsageError(f"{field} must be repo-relative.")
+    root = (target_root / store_root).resolve()
+    resolved = (target_root / candidate).resolve()
+    if not resolved.is_relative_to(root):
+        raise WorkspaceUsageError(f"{field} must resolve inside {store_root.as_posix()}.")
+    return resolved
+
+
+def _load_external_delivery_adapter_receipt(*, target_root: Path, receipt_ref: str) -> dict[str, Any]:
+    path = _local_receipt_path(
+        target_root=target_root,
+        store_root=EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
+        receipt_ref=receipt_ref,
+        field="adapter_receipt_ref",
+    )
+    raw_bytes = path.read_bytes()
+    receipt = _load_json(path, default={})
+    receipt.setdefault("source_ref", path.relative_to(target_root).as_posix())
+    receipt["_source_ref"] = path.relative_to(target_root).as_posix()
+    receipt["_source_digest"] = hashlib.sha256(raw_bytes).hexdigest()
+    return receipt
 
 
 def _producer_receipt(
@@ -1081,6 +1114,138 @@ def append_observation_from_values(*, target_root: Path, values: dict[str, Any])
     )
 
 
+def _pending_collection_identity(
+    *,
+    action: dict[str, Any],
+    result: str,
+    evidence_refs: list[str],
+    context: dict[str, Any],
+    authority: dict[str, Any],
+) -> str:
+    source = {
+        "operation_invocation": action.get("operation_invocation"),
+        "result": result,
+        "evidence_refs": evidence_refs,
+        "context": context,
+        "authority_revision": authority.get("proof", {}).get("revision") if isinstance(authority.get("proof"), dict) else None,
+        "mutation_baseline": authority.get("authority_envelope", {}).get("mutation_baseline")
+        if isinstance(authority.get("authority_envelope"), dict)
+        else None,
+    }
+    digest = hashlib.sha256(json.dumps(source, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
+    return f"evaluation-pending-collection:{digest[:24]}"
+
+
+def execute_evaluation_collection_action(
+    *,
+    target_root: Path,
+    action: dict[str, Any],
+    result: str,
+    evidence_refs: list[str],
+    confidence: str = "medium",
+    burden: str = "medium",
+    context: dict[str, Any] | None = None,
+    finding: str = "",
+    recommended_action: str = "",
+) -> dict[str, Any]:
+    """Execute a projected collection action through the normal observation admission gate."""
+    raw_invocation = action.get("operation_invocation")
+    invocation: dict[str, Any] = raw_invocation if isinstance(raw_invocation, dict) else {}
+    if invocation.get("operation_id") != "evaluation.observe":
+        raise WorkspaceUsageError("evaluation collection action must invoke evaluation.observe.")
+    raw_arguments = invocation.get("arguments")
+    arguments: dict[str, Any] = raw_arguments if isinstance(raw_arguments, dict) else {}
+    evaluation_id = _require_non_empty(arguments.get("evaluation_id") or action.get("evaluation_id"), "evaluation_id")
+    criterion = _require_non_empty(arguments.get("criterion") or action.get("criterion"), "criterion")
+    requested_target = str(arguments.get("target") or "").strip()
+    if requested_target and Path(requested_target).resolve() != target_root.resolve():
+        raise WorkspaceUsageError("evaluation collection action target does not match target_root.")
+    raw_projected_context = arguments.get("context")
+    projected_context: dict[str, Any] = raw_projected_context if isinstance(raw_projected_context, dict) else {}
+    submitted_context: dict[str, Any] = context if isinstance(context, dict) else {}
+    observation_context = {**projected_context, **submitted_context}
+    authority = _load_observation_authority(target_root, evaluation_id)
+    pending_id = _pending_collection_identity(
+        action=action,
+        result=result,
+        evidence_refs=evidence_refs,
+        context=observation_context,
+        authority=authority,
+    )
+    pending_path = target_root / EVALUATION_PENDING_COLLECTIONS_DIR / f"{evaluation_id}.json"
+    pending_payload = _load_json(
+        pending_path,
+        default={"kind": "agentic-workspace/evaluation-pending-collections/v1", "evaluation_id": evaluation_id, "collections": []},
+    )
+    raw_collections = pending_payload.get("collections")
+    collections = raw_collections if isinstance(raw_collections, list) else []
+    pending_entry = {
+        "id": pending_id,
+        "status": "pending-admission",
+        "operation_id": "evaluation.observe",
+        "evaluation_id": evaluation_id,
+        "criterion": criterion,
+        "result": result,
+        "evidence_refs": evidence_refs,
+        "projected_action": action,
+        "authority_snapshot": {
+            "assignment_revision": authority.get("assignment", {}).get("assignment_revision")
+            if isinstance(authority.get("assignment"), dict)
+            else None,
+            "proof_revision": authority.get("proof", {}).get("revision") if isinstance(authority.get("proof"), dict) else None,
+            "baseline_id": authority.get("authority_envelope", {}).get("mutation_baseline", {}).get("baseline_id")
+            if isinstance(authority.get("authority_envelope"), dict)
+            and isinstance(authority.get("authority_envelope", {}).get("mutation_baseline"), dict)
+            else None,
+        },
+        "recorded_at": _now(),
+    }
+    next_collections = [item for item in collections if not (isinstance(item, dict) and item.get("id") == pending_id)]
+    _write_json(
+        pending_path,
+        {
+            "kind": "agentic-workspace/evaluation-pending-collections/v1",
+            "evaluation_id": evaluation_id,
+            "collections": [*next_collections, pending_entry],
+        },
+    )
+    admitted = append_observation(
+        target_root=target_root,
+        evaluation_id=evaluation_id,
+        criterion=criterion,
+        result=result,
+        evidence_refs=evidence_refs,
+        confidence=confidence,
+        burden=burden,
+        context=observation_context,
+        finding=finding,
+        recommended_action=recommended_action,
+    )
+    collection_status = "equivalent-observation-suppressed" if admitted.get("outcome") == "duplicate" else "admitted-observation"
+    pending_entry = {
+        **pending_entry,
+        "status": collection_status,
+        "observation_idempotency_key": admitted.get("idempotency_key"),
+        "result_identity": admitted.get("result_identity"),
+        "store_revision": admitted.get("store_revision"),
+    }
+    _write_json(
+        pending_path,
+        {
+            "kind": "agentic-workspace/evaluation-pending-collections/v1",
+            "evaluation_id": evaluation_id,
+            "collections": [*next_collections, pending_entry],
+        },
+    )
+    return {
+        "kind": "agentic-workspace/evaluation-collection-admission/v1",
+        "status": collection_status,
+        "pending_collection_id": pending_id,
+        "pending_collection_path": EVALUATION_PENDING_COLLECTIONS_DIR.joinpath(f"{evaluation_id}.json").as_posix(),
+        "observation": admitted,
+    }
+
+
 def _criterion_status(definition: dict[str, Any], observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
     by_criterion: dict[str, list[dict[str, Any]]] = {}
     for observation in observations:
@@ -1628,6 +1793,7 @@ def record_external_evaluation_report_delivery(
     succeeded: bool | None = None,
     detail: str = "",
     adapter_receipt: dict[str, Any] | None = None,
+    adapter_receipt_ref: str | Path | None = None,
 ) -> dict[str, Any]:
     """Persist adapter outcome; a failed attempt remains retryable."""
     if request.get("status") != "adapter-required":
@@ -1643,19 +1809,41 @@ def record_external_evaluation_report_delivery(
             "current_delivery_id": current_request.get("delivery_id"),
             "retry": True,
         }
-    receipt = dict(adapter_receipt or {})
+    receipt_ref = str(adapter_receipt_ref or "").strip()
+    receipt = _load_external_delivery_adapter_receipt(target_root=target_root, receipt_ref=receipt_ref) if receipt_ref else {}
     if not receipt:
         return {
             "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
             "status": "adapter-receipt-required",
             "delivery_id": identity,
             "retry": True,
-            "rule": "External evaluation delivery must be recorded from a provider adapter receipt, not caller success flags.",
+            "rule": (
+                "External evaluation delivery must be recorded from a provider-owned local adapter receipt file, "
+                "not caller success flags or inline dictionaries."
+            ),
+        }
+    if adapter_receipt is not None:
+        return {
+            "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
+            "status": "adapter-receipt-required",
+            "delivery_id": identity,
+            "retry": True,
+            "rule": "Inline adapter_receipt is ignored; pass adapter_receipt_ref for a current producer-owned local receipt.",
         }
     if receipt.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-receipt/v1":
         raise WorkspaceUsageError("adapter_receipt.kind is invalid for evaluation external delivery.")
     if str(receipt.get("producer") or "").strip() == "":
         raise WorkspaceUsageError("adapter_receipt.producer is required.")
+    if str(receipt.get("status_owner") or "").strip() not in {"provider-adapter", "external-operation-adapter"}:
+        raise WorkspaceUsageError("adapter_receipt.status_owner must identify the provider adapter.")
+    if str(receipt.get("receipt_revision") or "").strip() == "":
+        raise WorkspaceUsageError("adapter_receipt.receipt_revision is required.")
+    if str(receipt.get("capability_revision") or "").strip() == "":
+        raise WorkspaceUsageError("adapter_receipt.capability_revision is required.")
+    if str(receipt.get("capability_status") or "current").strip() not in {"current", "fresh", "accepted"}:
+        raise WorkspaceUsageError("adapter_receipt capability is not current.")
+    if receipt.get("superseded_by") or receipt.get("revoked_at"):
+        raise WorkspaceUsageError("adapter_receipt is superseded or revoked.")
     if receipt.get("delivery_id") != identity:
         raise WorkspaceUsageError("adapter_receipt.delivery_id does not match the current request.")
     attempt_revision = str(receipt.get("attempt_revision") or "").strip()
@@ -1700,6 +1888,10 @@ def record_external_evaluation_report_delivery(
         "idempotency_key": sink_request.get("idempotency_key"),
         "attempt_revision": attempt_revision,
         "producer": receipt.get("producer"),
+        "adapter_receipt_ref": receipt.get("_source_ref"),
+        "adapter_receipt_digest": receipt.get("_source_digest"),
+        "adapter_receipt_revision": receipt.get("receipt_revision"),
+        "capability_revision": receipt.get("capability_revision"),
         "adapter_receipt": receipt,
     }
     _write_json(path, {"deliveries": [*deliveries, stored]})
@@ -1768,6 +1960,7 @@ def evaluation_collection_actions(
                     "decision_owner": definition.get("decision_owner", {}),
                     "report_sinks": definition.get("report_sinks", []),
                     "next_action": "record-evaluation-observation-after-bound-proof",
+                    "executable_operation": "execute_evaluation_collection_action",
                     "operation_invocation": {
                         "kind": "agentic-workspace/operation-invocation/v1",
                         "operation_id": "evaluation.observe",
