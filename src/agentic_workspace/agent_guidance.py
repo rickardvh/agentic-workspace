@@ -21,12 +21,26 @@ CORRECTION_EVENT_RETENTION_CAP = 20
 
 def _guidance_now() -> str:
     return datetime.now(UTC).isoformat()
+
+
 CORRECTION_EVENT_OPERATIONS = (
     "correction-event.submit",
     "correction-event.query",
     "correction-event.correct-dispute",
     "correction-event.withdraw-supersede",
     "correction-event.prune-compact",
+)
+GUIDANCE_LIFECYCLE_OPERATIONS = (
+    "agent-guidance.promote",
+    "agent-guidance.edit",
+    "agent-guidance.merge",
+    "agent-guidance.split",
+    "agent-guidance.suppress",
+    "agent-guidance.revalidate",
+    "agent-guidance.weaken",
+    "agent-guidance.supersede",
+    "agent-guidance.retire",
+    "agent-guidance.delete",
 )
 ADMITTED_CORRECTION_AUTHORITIES = {"explicit-user-correction", "pr-review", "orchestrator-review", "evaluator-finding"}
 ADMITTED_ROUTE_DECISIONS = {"target-guidance", "target-suitability", "memory", "config", "issue", "no-retention"}
@@ -36,6 +50,8 @@ TRUSTED_CORRECTION_PRODUCERS = {
     "orchestrator-review": {"orchestrator", "maintainer"},
     "evaluator-finding": {"evaluator", "verification"},
 }
+_GUIDANCE_REJECTING_LIFECYCLE_STATES = {"disputed", "withdrawn", "superseded", "revoked"}
+_BROAD_SCOPE_CLASSES = {"all", "*", "global", "any", "broad"}
 
 
 def _stable_event_id(event: dict[str, Any]) -> str:
@@ -69,6 +85,41 @@ def _semantic_correction_identity(*, event: dict[str, Any], subject: dict[str, A
 def _semantic_key(identity: dict[str, Any]) -> str:
     raw = json.dumps(identity, sort_keys=True, separators=(",", ":"), default=str)
     return "semantic:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _correction_lifecycle_state(event: dict[str, Any]) -> str:
+    return str(event.get("lifecycle_state") or event.get("evidence_state") or event.get("status") or "current")
+
+
+def _correction_requires_review(event: dict[str, Any]) -> str:
+    raw_applicability = event.get("applicability")
+    applicability: dict[str, Any] = raw_applicability if isinstance(raw_applicability, dict) else {}
+    scope_class = str(event.get("scope_class") or applicability.get("scope_class") or "").strip().lower()
+    applies_when = applicability.get("applies_when") or event.get("applies_when") or []
+    conflict = event.get("conflict_review") if isinstance(event.get("conflict_review"), dict) else {}
+    target_revision = str(event.get("target_revision") or "")
+    reviewed_revision = str(event.get("target_generation_reviewed") or event.get("target_revision_reviewed") or "")
+    if _correction_lifecycle_state(event) in _GUIDANCE_REJECTING_LIFECYCLE_STATES:
+        return "evidence-not-current"
+    if event.get("predecessor_event_id") and str(event.get("operation") or "submit") == "submit":
+        return "supersession-not-resolved"
+    if _truthy(event.get("contradiction")) or event.get("contradicts_event_id"):
+        return "contradiction-unresolved"
+    if _truthy(event.get("safety_sensitive")) or _truthy(applicability.get("safety_sensitive")):
+        return "safety-sensitive-review-required"
+    if scope_class in _BROAD_SCOPE_CLASSES or applies_when == ["*"] or applies_when == "*":
+        return "broad-applicability-review-required"
+    if conflict and conflict.get("status") not in {"resolved-no-conflict", "not-applicable"}:
+        return "conflicting-authority-review-required"
+    if target_revision and reviewed_revision and reviewed_revision != target_revision:
+        return "target-generation-drift"
+    return ""
 
 
 def _resolve_correction_authority(*, event: dict[str, Any], provenance: dict[str, Any]) -> dict[str, Any]:
@@ -195,6 +246,7 @@ def admit_correction_events(
     low_authority_events: list[dict[str, Any]] = []
     seen_delivery_ids: set[str] = set()
     recurrence_counts: dict[str, int] = {}
+    recurrence_evidence_by_key: dict[str, list[dict[str, str]]] = {}
     by_id: dict[str, dict[str, Any]] = {}
     for index, raw_event in enumerate(events):
         event = dict(raw_event)
@@ -284,6 +336,13 @@ def admit_correction_events(
         if unknown_routes:
             reject("rejected-unknown-route-decision", "Use admitted route decisions only.")
             continue
+        review_required = _correction_requires_review(event)
+        if review_required:
+            reject(
+                f"rejected-{review_required}",
+                "Resolve evidence lifecycle, breadth, safety, conflict, or target-generation review before promotion.",
+            )
+            continue
         revision_policy = str(subject.get("revision_policy") or "preserve")
         if event_revision and target_revision and event_revision != target_revision:
             if revision_policy == "retire":
@@ -347,6 +406,39 @@ def admit_correction_events(
         event["route_decisions"] = route_decisions
         recurrence_counts[normalized_key] = recurrence_counts.get(normalized_key, 0) + 1
         event["recurrence_count"] = recurrence_counts[normalized_key]
+        evidence_identity = {
+            "event_id": event_id,
+            "delivery_id": str(event.get("delivery_id") or event.get("idempotency_key") or event.get("source_ref") or ""),
+            "source_ref": str(event.get("source_ref") or ""),
+            "producer_id": str(event.get("producer_id") or ""),
+            "producer_class": str(event.get("producer_class") or ""),
+            "evidence_hash": str(event.get("evidence_hash") or ""),
+            "evidence_ref": str(event.get("evidence_ref") or ""),
+            "correlation_id": str(event.get("correlation_id") or provenance.get("correlation_id") or event.get("thread_id") or ""),
+        }
+        recurrence_evidence = [*recurrence_evidence_by_key.get(normalized_key, []), evidence_identity]
+        recurrence_evidence_by_key[normalized_key] = recurrence_evidence
+        distinct_delivery = {item["delivery_id"] for item in recurrence_evidence if item["delivery_id"]}
+        distinct_source = {item["source_ref"] for item in recurrence_evidence if item["source_ref"]}
+        distinct_evidence = {
+            item["evidence_hash"] or item["evidence_ref"] for item in recurrence_evidence if item["evidence_hash"] or item["evidence_ref"]
+        }
+        correlation_ids = [item["correlation_id"] for item in recurrence_evidence if item["correlation_id"]]
+        event["recurrence_evidence"] = recurrence_evidence
+        event["independent_recurrence"] = {
+            "status": "independent"
+            if recurrence_counts[normalized_key] >= 2
+            and len(distinct_delivery) >= 2
+            and len(distinct_source) >= 2
+            and len(distinct_evidence) >= 2
+            and len(correlation_ids) == len(set(correlation_ids))
+            else "insufficient-independent-evidence",
+            "distinct_delivery_count": len(distinct_delivery),
+            "distinct_source_count": len(distinct_source),
+            "distinct_evidence_count": len(distinct_evidence),
+            "correlated_delivery_detected": len(correlation_ids) != len(set(correlation_ids)),
+            "producer_ids": sorted({item["producer_id"] for item in recurrence_evidence if item["producer_id"]}),
+        }
         base_admission_state = (
             "accepted-preserved-revision" if event.get("admission_state") == "accepted-preserved-revision" else "accepted-candidate"
         )
@@ -616,6 +708,47 @@ def _trusted_authority_receipt(*, target_root: Path, value: Any) -> dict[str, st
     }
 
 
+def _guidance_remember_receipt(*, target_root: Path, event: dict[str, Any]) -> dict[str, Any] | None:
+    receipt_ref = str(event.get("remember_receipt_ref") or event.get("remember_instruction_ref") or "")
+    if not receipt_ref:
+        return None
+    try:
+        receipt_path = (target_root / receipt_ref).resolve()
+        receipt_path.relative_to(target_root.resolve())
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(receipt, dict):
+        return None
+    if receipt.get("kind") != "agentic-workspace/guidance-remember-receipt/v1":
+        return None
+    if str(receipt.get("status") or "") != "current":
+        return None
+    if str(receipt.get("authority") or "") != "explicit-user-correction":
+        return None
+    producer_class = str(receipt.get("producer_class") or "")
+    if producer_class not in TRUSTED_CORRECTION_PRODUCERS["explicit-user-correction"]:
+        return None
+    if str(receipt.get("producer_id") or "") != str(event.get("producer_id") or ""):
+        return None
+    if str(receipt.get("source_ref") or "") != str(event.get("source_ref") or ""):
+        return None
+    receipt_event_id = str(receipt.get("event_id") or "")
+    if receipt_event_id and receipt_event_id != str(event.get("event_id") or ""):
+        return None
+    target_revision = str(event.get("target_revision") or "")
+    receipt_target_revision = str(receipt.get("target_revision") or "")
+    if receipt_target_revision and target_revision and receipt_target_revision != target_revision:
+        return None
+    return {
+        "receipt_ref": _repo_relative(receipt_path, root=target_root),
+        "receipt_digest": hashlib.sha256(json.dumps(receipt, sort_keys=True, default=str).encode("utf-8")).hexdigest(),
+        "instruction": str(receipt.get("instruction") or "remember"),
+        "producer_id": str(receipt.get("producer_id") or ""),
+        "source_ref": str(receipt.get("source_ref") or ""),
+    }
+
+
 def _correction_operation_receipt(
     *,
     operation_id: str,
@@ -647,7 +780,74 @@ def _repo_relative(path: Path, *, root: Path) -> str:
         return path.as_posix()
 
 
-def guidance_promotion_decision(*, admission: dict[str, Any], explicit_remember: bool = False) -> dict[str, Any]:
+def _guidance_destination_for_event(*, event: dict[str, Any], target_root: Path | None = None, config: Any | None = None) -> dict[str, Any]:
+    routes = [str(item) for item in event.get("route_decisions", []) if str(item).strip()]
+    target_id = str(event.get("target_identity_ref") or "unknown-target")
+    safe_target_id = "".join(char if char.isalnum() or char in {"-", "_", "."} else "-" for char in target_id).strip("-") or "target"
+    if "no-retention" in routes:
+        return {"owner": "dismissal", "store": None, "route_decision": "no-retention", "promotable": False}
+    if "target-guidance" in routes:
+        if config is not None and getattr(config.local_override, "user_guidance_root", None):
+            store = Path(config.local_override.user_guidance_root) / safe_target_id / "guidance-lifecycle.json"
+            return {
+                "owner": "user-local-target-guidance",
+                "store": store.as_posix(),
+                "route_decision": "target-guidance",
+                "promotable": True,
+            }
+        overlay = (
+            config.local_override.target_guidance_overlay_path
+            if config is not None and getattr(config.local_override, "target_guidance_overlay_path", None)
+            else WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH
+        )
+        return {
+            "owner": "repo-local-target-guidance-overlay",
+            "store": Path(overlay).as_posix(),
+            "route_decision": "target-guidance",
+            "promotable": True,
+        }
+    if "memory" in routes:
+        return {
+            "owner": "checked-in-memory",
+            "store": ".agentic-workspace/memory/guidance-lifecycle.json",
+            "route_decision": "memory",
+            "promotable": True,
+        }
+    if "config" in routes:
+        return {
+            "owner": "policy-config-review",
+            "store": ".agentic-workspace/local/guidance-policy-review.json",
+            "route_decision": "config",
+            "promotable": True,
+        }
+    if "issue" in routes:
+        return {
+            "owner": "issue-intake",
+            "store": ".agentic-workspace/local/guidance-issue-intake.json",
+            "route_decision": "issue",
+            "promotable": True,
+        }
+    return {"owner": "review-required", "store": None, "route_decision": "unresolved", "promotable": False}
+
+
+def _promotion_blocker_for_event(*, event: dict[str, Any]) -> str:
+    review_required = _correction_requires_review(event)
+    if review_required:
+        return review_required
+    raw_independent = event.get("independent_recurrence")
+    independent: dict[str, Any] = raw_independent if isinstance(raw_independent, dict) else {}
+    if independent.get("correlated_delivery_detected"):
+        return "correlated-delivery"
+    return ""
+
+
+def guidance_promotion_decision(
+    *,
+    admission: dict[str, Any],
+    target_root: Path | None = None,
+    config: Any | None = None,
+    explicit_remember: bool = False,
+) -> dict[str, Any]:
     """Derive one compact, reviewable guidance candidate from admitted events.
 
     This is intentionally a pure projection: correction-event admission remains
@@ -658,8 +858,13 @@ def guidance_promotion_decision(*, admission: dict[str, Any], explicit_remember:
     for event in events:
         authority = str(event.get("authority") or "")
         recurrence = int(event.get("recurrence_count") or 1)
-        immediate = explicit_remember and authority == "explicit-user-correction"
-        promotable = immediate or recurrence >= 2
+        remember_receipt = _guidance_remember_receipt(target_root=target_root, event=event) if target_root is not None else None
+        immediate = remember_receipt is not None and authority == "explicit-user-correction"
+        independent = event.get("independent_recurrence") if isinstance(event.get("independent_recurrence"), dict) else {}
+        independent_recurrence = recurrence >= 2 and independent.get("status") == "independent"
+        promotion_blocker = _promotion_blocker_for_event(event=event)
+        destination = _guidance_destination_for_event(event=event, target_root=target_root, config=config)
+        promotable = (immediate or independent_recurrence) and not promotion_blocker and bool(destination.get("promotable"))
         applicability = event.get("semantic_identity") if isinstance(event.get("semantic_identity"), dict) else {}
         desired = str(event.get("desired_behavior") or "").strip()
         candidates.append(
@@ -674,11 +879,18 @@ def guidance_promotion_decision(*, admission: dict[str, Any], explicit_remember:
                 if immediate
                 else "independent-recurrence"
                 if promotable
-                else "insufficient-independent-evidence",
+                else promotion_blocker or "insufficient-independent-evidence",
+                "promotion_authority": {
+                    "remember_receipt": remember_receipt,
+                    "independent_recurrence": independent,
+                    "caller_explicit_remember_ignored": explicit_remember and remember_receipt is None,
+                    "blocker": promotion_blocker or None,
+                },
                 "evidence_refs": [str(event.get("source_ref"))],
                 "source_event_refs": [str(event.get("event_id"))],
                 "recurrence_count": recurrence,
-                "primary_owner": "agent-local" if "target-guidance" in event.get("route_decisions", []) else "review-required",
+                "primary_owner": destination["owner"],
+                "destination": destination,
                 "lifecycle": {
                     "allowed": ["edit", "merge", "split", "suppress", "revalidate", "weaken", "supersede", "retire", "delete"],
                     "provenance_retained": True,
@@ -730,23 +942,34 @@ def guidance_promotion_from_store(
         task_class=task_class,
         scope_class=scope_class,
     )
-    decision = guidance_promotion_decision(admission=admission, explicit_remember=explicit_remember)
+    decision = guidance_promotion_decision(admission=admission, target_root=target_root, config=config, explicit_remember=explicit_remember)
     decision["authority_source"] = {
         "store": _repo_relative(target_root / config.local_override.correction_events_path, root=target_root),
         "store_update": admission.get("store_update", {}),
-        "explicit_remember": explicit_remember,
-        "rule": "Promotion consumes admitted current store records; direct caller recurrence and authority assertions are ignored.",
+        "admission_summary": {
+            "admitted_event_ids": [
+                str(event.get("event_id") or "") for event in admission.get("admitted_events", []) if isinstance(event, dict)
+            ],
+            "rejected_reasons": sorted(
+                {str(event.get("reason") or "") for event in admission.get("rejected_events", []) if isinstance(event, dict)}
+            ),
+            "low_authority_event_ids": [
+                str(event.get("event_id") or "") for event in admission.get("low_authority_events", []) if isinstance(event, dict)
+            ],
+        },
+        "explicit_remember_requested": explicit_remember,
+        "rule": "Promotion consumes admitted current store records and producer-owned receipts; direct caller recurrence, authority, and remember assertions are ignored.",
     }
     return decision
 
 
 GUIDANCE_LIFECYCLE_STORE_PATH = Path(".agentic-workspace/local/guidance-lifecycle.json")
 _GUIDANCE_LIFECYCLE_OPERATIONS = {"edit", "merge", "split", "suppress", "revalidate", "weaken", "supersede", "retire", "delete"}
-_GUIDANCE_TERMINAL_STATUSES = {"retired", "deleted", "superseded"}
+_GUIDANCE_TERMINAL_STATUSES = {"retired", "deleted", "superseded", "merged", "split-retired"}
 
 
-def _guidance_lifecycle_store(target_root: Path) -> tuple[Path, dict[str, Any]]:
-    path = target_root / GUIDANCE_LIFECYCLE_STORE_PATH
+def _guidance_lifecycle_store(target_root: Path, store_ref: str | Path | None = None) -> tuple[Path, dict[str, Any]]:
+    path = target_root / (Path(store_ref) if store_ref else GUIDANCE_LIFECYCLE_STORE_PATH)
     if not path.exists():
         payload = {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": []}
     else:
@@ -757,6 +980,42 @@ def _guidance_lifecycle_store(target_root: Path) -> tuple[Path, dict[str, Any]]:
     if payload.get("kind") != "agentic-workspace/guidance-lifecycle-store/v1" or not isinstance(payload.get("records"), list):
         raise WorkspaceUsageError("guidance lifecycle store is malformed; repair it before promotion or transition.")
     return path, payload
+
+
+def _candidate_guidance_store_refs(*, target_root: Path, config: Any | None = None) -> list[Path]:
+    refs = [GUIDANCE_LIFECYCLE_STORE_PATH, WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH]
+    if config is not None:
+        overlay = getattr(config.local_override, "target_guidance_overlay_path", None)
+        if overlay:
+            refs.append(Path(overlay))
+        user_root = getattr(config.local_override, "user_guidance_root", None)
+        if user_root:
+            user_path = target_root / Path(user_root)
+            refs.extend(path.relative_to(target_root) for path in user_path.glob("*/guidance-lifecycle.json") if path.is_file())
+    refs.extend(
+        [
+            Path(".agentic-workspace/memory/guidance-lifecycle.json"),
+            Path(".agentic-workspace/local/guidance-policy-review.json"),
+            Path(".agentic-workspace/local/guidance-issue-intake.json"),
+        ]
+    )
+    deduped: list[Path] = []
+    for ref in refs:
+        if ref not in deduped:
+            deduped.append(ref)
+    return deduped
+
+
+def _find_guidance_lifecycle_store(target_root: Path, guidance_id: str) -> tuple[Path, dict[str, Any], int] | None:
+    config = load_workspace_config(target_root=target_root)
+    for store_ref in _candidate_guidance_store_refs(target_root=target_root, config=config):
+        path, store = _guidance_lifecycle_store(target_root, store_ref)
+        records = [item for item in store["records"] if isinstance(item, dict)]
+        index = _guidance_index(records, guidance_id)
+        if index is not None:
+            store["records"] = records
+            return path, store, index
+    return None
 
 
 def _guidance_revision(record: dict[str, Any]) -> int:
@@ -790,6 +1049,32 @@ def _require_guidance_expected_revision(record: dict[str, Any], expected_revisio
     return None
 
 
+def _guidance_mutation_receipt(
+    *,
+    operation: str,
+    target_root: Path,
+    store_path: Path,
+    records: list[dict[str, Any]],
+    affected_records: list[dict[str, Any]],
+    postconditions: list[str],
+) -> dict[str, Any]:
+    payload = {
+        "operation": operation,
+        "store_ref": _repo_relative(store_path, root=target_root),
+        "record_ids": [str(record.get("guidance_id") or "") for record in records],
+        "affected_record_ids": [str(record.get("guidance_id") or "") for record in affected_records],
+        "postconditions": postconditions,
+    }
+    return {
+        "kind": "agentic-workspace/guidance-mutation-receipt/v1",
+        **payload,
+        "idempotency_key": "guidance-mutation:"
+        + hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:20],
+        "store_digest": hashlib.sha256(json.dumps(records, sort_keys=True, default=str).encode("utf-8")).hexdigest(),
+        "atomic_record_count": len(affected_records),
+    }
+
+
 def apply_guidance_promotion(
     *,
     target_root: Path,
@@ -805,27 +1090,68 @@ def apply_guidance_promotion(
         scope_class=scope_class,
         explicit_remember=explicit_remember,
     )
-    candidate = next((item for item in decision.get("guidance", []) if isinstance(item, dict) and item.get("guidance_id") == guidance_id), None)
+    candidate = next(
+        (item for item in decision.get("guidance", []) if isinstance(item, dict) and item.get("guidance_id") == guidance_id), None
+    )
     if decision.get("status") != "ready" or not isinstance(candidate, dict) or candidate.get("status") != "active":
-        return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "promotion-not-authorized", "guidance_id": guidance_id, "decision": decision}
-    path, store = _guidance_lifecycle_store(target_root)
+        return {
+            "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+            "status": "promotion-not-authorized",
+            "guidance_id": guidance_id,
+            "decision": decision,
+        }
+    destination = candidate.get("destination") if isinstance(candidate.get("destination"), dict) else {}
+    store_ref = destination.get("store")
+    if not store_ref:
+        return {
+            "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+            "status": "promotion-destination-required",
+            "guidance_id": guidance_id,
+            "decision": decision,
+        }
+    path, store = _guidance_lifecycle_store(target_root, str(store_ref))
     records = [item for item in store["records"] if isinstance(item, dict)]
     existing = next((item for item in records if item.get("guidance_id") == guidance_id), None)
     if isinstance(existing, dict):
-        return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "already-promoted", "record": existing, "store": _repo_relative(path, root=target_root)}
+        return {
+            "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+            "status": "already-promoted",
+            "record": existing,
+            "store": _repo_relative(path, root=target_root),
+        }
     record = {
         "kind": "agentic-workspace/guidance-lifecycle-record/v1",
         "guidance_id": guidance_id,
         "status": "active",
         "instruction": candidate["instruction"],
         "applicability": candidate["applicability"],
-        "provenance": {"source_event_refs": candidate["source_event_refs"], "evidence_refs": candidate["evidence_refs"], "promotion_reason": candidate["promotion_reason"], "authority_source": decision.get("authority_source", {})},
+        "destination": destination,
+        "provenance": {
+            "source_event_refs": candidate["source_event_refs"],
+            "evidence_refs": candidate["evidence_refs"],
+            "promotion_reason": candidate["promotion_reason"],
+            "promotion_authority": candidate.get("promotion_authority", {}),
+            "authority_source": decision.get("authority_source", {}),
+        },
         "transitions": [{"operation": "promote", "at": _guidance_now(), "reason": candidate["promotion_reason"]}],
         "revision": 1,
         "schema_revision": hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest()[:20],
     }
     _write_correction_event_store(path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": [*records, record]})
-    return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "promoted", "record": record, "store": _repo_relative(path, root=target_root)}
+    return {
+        "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+        "status": "promoted",
+        "record": record,
+        "store": _repo_relative(path, root=target_root),
+        "mutation_receipt": _guidance_mutation_receipt(
+            operation="promote",
+            target_root=target_root,
+            store_path=path,
+            records=[*records, record],
+            affected_records=[record],
+            postconditions=["single-canonical-destination", "active-guidance-created", "promotion-authority-retained"],
+        ),
+    }
 
 
 def transition_guidance(
@@ -845,11 +1171,11 @@ def transition_guidance(
         raise WorkspaceUsageError(f"unsupported guidance lifecycle operation: {operation}")
     if not reason.strip():
         raise WorkspaceUsageError("guidance lifecycle transitions require a reason.")
-    path, store = _guidance_lifecycle_store(target_root)
-    records = [item for item in store["records"] if isinstance(item, dict)]
-    index = _guidance_index(records, guidance_id)
-    if index is None:
+    found = _find_guidance_lifecycle_store(target_root, guidance_id)
+    if found is None:
         return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "missing-guidance", "guidance_id": guidance_id}
+    path, store, index = found
+    records = [item for item in store["records"] if isinstance(item, dict)]
     record = dict(records[index])
     stale = _require_guidance_expected_revision(record, expected_revision)
     if stale is not None:
@@ -859,30 +1185,107 @@ def transition_guidance(
     if operation == "edit":
         if instruction is None or not instruction.strip():
             raise WorkspaceUsageError("edit guidance transitions require a non-empty instruction.")
-        record["instruction"] = instruction.strip()
+        new_instruction = instruction.strip()
+        if new_instruction == str(record.get("instruction") or ""):
+            return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "semantic-no-op", "record": record}
+        record["instruction"] = new_instruction
     elif operation == "merge":
         subjects = [item for item in (merge_guidance_ids or []) if item and item != guidance_id]
         if not subjects:
             raise WorkspaceUsageError("merge guidance transitions require at least one additional guidance id.")
         missing = [item for item in subjects if _guidance_index(records, item) is None]
         if missing:
-            return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "missing-merge-subject", "guidance_id": guidance_id, "missing_guidance_ids": missing}
+            return {
+                "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+                "status": "missing-merge-subject",
+                "guidance_id": guidance_id,
+                "missing_guidance_ids": missing,
+            }
         record["merged_guidance_ids"] = sorted(set([*record.get("merged_guidance_ids", []), *subjects]))
+        for subject_id in subjects:
+            subject_index = _guidance_index(records, subject_id)
+            if subject_index is None:
+                continue
+            subject = dict(records[subject_index])
+            if subject.get("status") in _GUIDANCE_TERMINAL_STATUSES:
+                return {
+                    "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+                    "status": "terminal-merge-subject",
+                    "guidance_id": subject_id,
+                }
+            subject_transition = {
+                "operation": "merge-source",
+                "at": _guidance_now(),
+                "reason": reason,
+                "replacement_guidance_id": guidance_id,
+            }
+            subject.update(
+                status="merged",
+                merged_into_guidance_id=guidance_id,
+                revision=_guidance_revision(subject) + 1,
+                transitions=[*subject.get("transitions", []), subject_transition],
+            )
+            records[subject_index] = subject
     elif operation == "split":
         parts = [item.strip() for item in (split_instructions or []) if item and item.strip()]
         if len(parts) < 2:
             raise WorkspaceUsageError("split guidance transitions require at least two replacement instructions.")
-        record["split_replacements"] = [
+        raw_provenance = record.get("provenance")
+        provenance: dict[str, Any] = raw_provenance if isinstance(raw_provenance, dict) else {}
+        replacements = [
             {
+                "kind": "agentic-workspace/guidance-lifecycle-record/v1",
                 "guidance_id": "guidance:" + hashlib.sha256(f"{guidance_id}:split:{position}:{item}".encode()).hexdigest()[:20],
+                "status": "active",
                 "instruction": item,
+                "applicability": record.get("applicability", {}),
+                "destination": record.get("destination", {}),
+                "provenance": {
+                    **provenance,
+                    "split_from_guidance_id": guidance_id,
+                },
+                "transitions": [
+                    {"operation": "split-replacement", "at": _guidance_now(), "reason": reason, "source_guidance_id": guidance_id}
+                ],
+                "revision": 1,
+                "schema_revision": hashlib.sha256(
+                    json.dumps({"source": guidance_id, "position": position, "instruction": item}, sort_keys=True).encode()
+                ).hexdigest()[:20],
             }
             for position, item in enumerate(parts, start=1)
         ]
+        record["split_replacements"] = [
+            {"guidance_id": replacement["guidance_id"], "instruction": replacement["instruction"]} for replacement in replacements
+        ]
+        record["split_replacement_ids"] = [replacement["guidance_id"] for replacement in replacements]
+        record["status"] = "split-retired"
+        records.extend(replacements)
     elif operation == "weaken":
         record["strength"] = "weakened"
+        record["claim_effect"] = "advisory-only"
+        record["routing_state"] = "backgrounded-until-repromoted"
     elif operation == "revalidate":
+        config = load_workspace_config(target_root=target_root)
+        raw_applicability = record.get("applicability")
+        applicability: dict[str, Any] = raw_applicability if isinstance(raw_applicability, dict) else {}
+        target_id = str(applicability.get("target_identity_ref") or "")
+        subject = next(
+            (
+                item
+                for item in [_target_identity_subject(profile) for profile in config.local_override.delegation_targets]
+                if item.get("stable_target_id") == target_id
+            ),
+            None,
+        )
+        if subject is None:
+            return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "revalidation-target-missing", "record": record}
         record["last_revalidated_at"] = _guidance_now()
+        record["authority_revalidation"] = {
+            "status": "current",
+            "target_identity_ref": target_id,
+            "target_revision": subject.get("target_revision"),
+            "owner": record.get("destination", {}).get("owner") if isinstance(record.get("destination"), dict) else None,
+        }
     elif operation == "supersede":
         if not replacement_guidance_id or replacement_guidance_id == guidance_id:
             raise WorkspaceUsageError("supersede guidance transitions require a distinct replacement guidance id.")
@@ -893,12 +1296,48 @@ def transition_guidance(
                 "guidance_id": guidance_id,
                 "replacement_guidance_id": replacement_guidance_id,
             }
-    status = {"suppress": "suppressed", "retire": "retired", "delete": "deleted", "supersede": "superseded"}.get(operation, "active")
-    transition = {"operation": operation, "at": _guidance_now(), "reason": reason, "replacement_guidance_id": replacement_guidance_id or None}
+    status = {
+        "suppress": "suppressed",
+        "retire": "retired",
+        "delete": "deleted",
+        "supersede": "superseded",
+        "split": "split-retired",
+    }.get(operation, str(record.get("status") or "active") if operation == "merge" else "active")
+    transition = {
+        "operation": operation,
+        "at": _guidance_now(),
+        "reason": reason,
+        "replacement_guidance_id": replacement_guidance_id or None,
+    }
     record.update(status=status, revision=_guidance_revision(record) + 1, transitions=[*record.get("transitions", []), transition])
     records[index] = record
     _write_correction_event_store(path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": records})
-    return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "transitioned", "record": record, "store": _repo_relative(path, root=target_root)}
+    affected = [record]
+    if operation == "merge":
+        affected.extend(item for item in records if item.get("guidance_id") in set(merge_guidance_ids or []))
+    if operation == "split":
+        affected.extend(item for item in records if item.get("guidance_id") in set(record.get("split_replacement_ids", [])))
+    return {
+        "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+        "status": "transitioned",
+        "record": record,
+        "records": affected,
+        "store": _repo_relative(path, root=target_root),
+        "mutation_receipt": _guidance_mutation_receipt(
+            operation=operation,
+            target_root=target_root,
+            store_path=path,
+            records=records,
+            affected_records=affected,
+            postconditions=[
+                "revision-guard-satisfied",
+                "lineage-preserved",
+                "no-duplicate-active-authority"
+                if operation in {"merge", "split", "supersede", "retire", "delete"}
+                else "single-record-postcondition",
+            ],
+        ),
+    }
 
 
 def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_root: Path | None) -> dict[str, Any]:
@@ -1005,6 +1444,38 @@ def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_r
         },
         "rule": "Target guidance routes only through a known stable target identity; display names and aliases alone are not sufficient.",
     }
+
+
+def _guidance_public_operation_entries() -> list[dict[str, Any]]:
+    lifecycle_requirements = {
+        "promote": "requires a current producer-owned remember receipt or independently admitted recurrence and one canonical destination owner",
+        "edit": "requires expected_revision and a semantic instruction change",
+        "merge": "requires expected_revision and active merge subjects; atomically marks sources merged into the target",
+        "split": "requires expected_revision and at least two replacement instructions; atomically creates replacements and retires the source",
+        "suppress": "requires expected_revision and records suppression without deleting provenance",
+        "revalidate": "requires expected_revision and resolves current target identity/authority before reuse",
+        "weaken": "requires expected_revision and backgrounds routing/claim authority",
+        "supersede": "requires expected_revision and an existing distinct replacement guidance id",
+        "retire": "requires expected_revision and terminates future routing",
+        "delete": "requires expected_revision and leaves provenance-preserving mutation receipt",
+    }
+    return [
+        {
+            "operation": operation_id.removeprefix("agent-guidance."),
+            "operation_id": operation_id,
+            "public": True,
+            "generated_operation": True,
+            "external_contract": True,
+            "schema": "agentic-workspace/guidance-lifecycle-record/v1",
+            "result_schema": "agentic-workspace/guidance-lifecycle-result/v1",
+            "receipt_schema": "agentic-workspace/guidance-mutation-receipt/v1",
+            "callable": "agentic_workspace.agent_guidance.apply_guidance_promotion"
+            if operation_id == "agent-guidance.promote"
+            else "agentic_workspace.agent_guidance.transition_guidance",
+            "admission": lifecycle_requirements[operation_id.removeprefix("agent-guidance.")],
+        }
+        for operation_id in GUIDANCE_LIFECYCLE_OPERATIONS
+    ]
 
 
 def correction_feedback_contract(*, identity_posture: dict[str, Any]) -> dict[str, Any]:
@@ -1119,6 +1590,7 @@ def correction_feedback_contract(*, identity_posture: dict[str, Any]) -> dict[st
                 "callable": "agentic_workspace.agent_guidance.admit_correction_events",
                 "admission": "applies the target revision policy before reuse: preserve, revalidate, migrate with predecessor, or retire",
             },
+            *_guidance_public_operation_entries(),
         ],
         "storage": {
             "path": correction_storage.get("path", WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH.as_posix()),

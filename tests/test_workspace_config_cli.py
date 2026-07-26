@@ -1351,6 +1351,8 @@ def test_config_command_reports_target_identity_and_guidance_storage(tmp_path: P
     assert "explicit-user-correction" in correction["event_schema"]["source_types"]
     assert "rejected-secret-bearing" in correction["event_schema"]["admission_states"]
     assert "correction-event.submit" in {item["operation_id"] for item in correction["operations"]}
+    assert "agent-guidance.promote" in {item["operation_id"] for item in correction["operations"]}
+    assert "agent-guidance.split" in {item["operation_id"] for item in correction["operations"]}
     assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in correction["operations"])
     assert correction["storage"]["retention_cap"] == 20
     assert correction["storage"]["retention_operations"] == ["correction-event.prune-compact"]
@@ -1609,7 +1611,67 @@ def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tm
     target.mkdir()
     _init_git_repo(target)
     (target / ".agentic-workspace/config.local.toml").write_text(
-        "schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = \"user-local:fast-worker\"\ntarget_revision = \"rev-b\"\nstrength = \"strong\"\nexecution_methods = [\"internal\"]\nmodel_family = \"codex\"\nprovider = \"openai\"\n",
+        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
+        encoding="utf-8",
+    )
+    store = target / ".agentic-workspace/local/correction-events.json"
+    store.parent.mkdir(parents=True, exist_ok=True)
+    remember_ref = ".agentic-workspace/local/correction-event-receipts/remember-1.json"
+    receipt = target / remember_ref
+    receipt.parent.mkdir(parents=True, exist_ok=True)
+    receipt.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/guidance-remember-receipt/v1",
+                "status": "current",
+                "authority": "explicit-user-correction",
+                "producer_class": "human-reviewer",
+                "producer_id": "reviewer-1",
+                "source_ref": "remember-1",
+                "target_revision": "rev-b",
+                "instruction": "remember",
+            }
+        ),
+        encoding="utf-8",
+    )
+    store.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/correction-event-store/v1",
+                "events": [
+                    _correction_event(
+                        target_identity_ref="user-local:fast-worker",
+                        source_ref="remember-1",
+                        remember_receipt_ref=remember_ref,
+                    )
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    remembered = guidance_promotion_from_store(target_root=target)
+    promoted = apply_guidance_promotion(
+        target_root=target,
+        guidance_id=remembered["guidance"][0]["guidance_id"],
+    )
+
+    assert remembered["status"] == "ready"
+    assert remembered["guidance"][0]["promotion_reason"] == "explicit-authorised-remember"
+    assert remembered["guidance"][0]["promotion_authority"]["remember_receipt"]["receipt_ref"] == remember_ref
+    assert promoted["status"] == "promoted"
+    assert promoted["record"]["provenance"]["promotion_reason"] == "explicit-authorised-remember"
+    assert promoted["record"]["destination"]["owner"] == "repo-local-target-guidance-overlay"
+
+
+def test_guidance_promotion_ignores_caller_immediate_remember_without_receipt(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import guidance_promotion_from_store
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
         encoding="utf-8",
     )
     store = target / ".agentic-workspace/local/correction-events.json"
@@ -1624,19 +1686,81 @@ def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tm
         encoding="utf-8",
     )
 
-    review_only = guidance_promotion_from_store(target_root=target)
-    remembered = guidance_promotion_from_store(target_root=target, explicit_remember=True)
-    promoted = apply_guidance_promotion(
-        target_root=target,
-        guidance_id=remembered["guidance"][0]["guidance_id"],
-        explicit_remember=True,
+    decision = guidance_promotion_from_store(target_root=target, explicit_remember=True)
+
+    assert decision["status"] == "review-required"
+    assert decision["guidance"][0]["promotion_authority"]["caller_explicit_remember_ignored"] is True
+    assert decision["guidance"][0]["promotion_reason"] == "insufficient-independent-evidence"
+
+
+def test_guidance_promotion_rejects_correlated_broad_sensitive_or_conflicting_evidence(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import guidance_promotion_from_store
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
+        encoding="utf-8",
+    )
+    store = target / ".agentic-workspace/local/correction-events.json"
+    store.parent.mkdir(parents=True, exist_ok=True)
+    store.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/correction-event-store/v1",
+                "events": [
+                    _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-1", correlation_id="thread-1"),
+                    _correction_event(
+                        target_identity_ref="user-local:fast-worker",
+                        source_ref="review-2",
+                        evidence_hash="sha256:review-2",
+                        correlation_id="thread-1",
+                    ),
+                    _correction_event(
+                        target_identity_ref="user-local:fast-worker",
+                        invariant_id="broad",
+                        behavior_class="scope",
+                        desired_behavior="Always prefer this.",
+                        source_ref="review-3",
+                        evidence_hash="sha256:review-3",
+                        scope_class="global",
+                    ),
+                    _correction_event(
+                        target_identity_ref="user-local:fast-worker",
+                        invariant_id="safe",
+                        behavior_class="safety",
+                        desired_behavior="Bypass safety checks.",
+                        source_ref="review-4",
+                        evidence_hash="sha256:review-4",
+                        safety_sensitive=True,
+                    ),
+                    _correction_event(
+                        target_identity_ref="user-local:fast-worker",
+                        invariant_id="conflict",
+                        behavior_class="authority",
+                        desired_behavior="Override current user guidance.",
+                        source_ref="review-5",
+                        evidence_hash="sha256:review-5",
+                        conflict_review={"status": "conflict-open"},
+                    ),
+                ],
+            }
+        ),
+        encoding="utf-8",
     )
 
-    assert review_only["status"] == "review-required"
-    assert remembered["status"] == "ready"
-    assert remembered["guidance"][0]["promotion_reason"] == "explicit-authorised-remember"
-    assert promoted["status"] == "promoted"
-    assert promoted["record"]["provenance"]["promotion_reason"] == "explicit-authorised-remember"
+    decision = guidance_promotion_from_store(target_root=target)
+
+    reasons = {item["promotion_reason"] for item in decision["guidance"]}
+    rejected_reasons = set(decision["authority_source"]["admission_summary"]["rejected_reasons"])
+    assert decision["status"] == "review-required"
+    assert "correlated-delivery" in reasons
+    assert rejected_reasons >= {
+        "rejected-broad-applicability-review-required",
+        "rejected-safety-sensitive-review-required",
+        "rejected-conflicting-authority-review-required",
+    }
 
 
 def test_guidance_promotion_persists_provenance_and_reversible_transition(tmp_path: Path) -> None:
@@ -1646,15 +1770,23 @@ def test_guidance_promotion_persists_provenance_and_reversible_transition(tmp_pa
     target.mkdir()
     _init_git_repo(target)
     (target / ".agentic-workspace/config.local.toml").write_text(
-        "schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = \"user-local:fast-worker\"\ntarget_revision = \"rev-b\"\nstrength = \"strong\"\nexecution_methods = [\"internal\"]\nmodel_family = \"codex\"\nprovider = \"openai\"\n",
+        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
         encoding="utf-8",
     )
     store = target / ".agentic-workspace/local/correction-events.json"
     store.parent.mkdir(parents=True, exist_ok=True)
-    store.write_text(json.dumps({"kind": "agentic-workspace/correction-event-store/v1", "events": [
-        _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-1"),
-        _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-2", evidence_hash="sha256:review-2"),
-    ]}), encoding="utf-8")
+    store.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/correction-event-store/v1",
+                "events": [
+                    _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-1"),
+                    _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-2", evidence_hash="sha256:review-2"),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
     decision = guidance_promotion_from_store(target_root=target)
     promoted = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][0]["guidance_id"])
     transitioned = transition_guidance(
@@ -1677,7 +1809,7 @@ def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_
     target.mkdir()
     _init_git_repo(target)
     (target / ".agentic-workspace/config.local.toml").write_text(
-        "schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = \"user-local:fast-worker\"\ntarget_revision = \"rev-b\"\nstrength = \"strong\"\nexecution_methods = [\"internal\"]\nmodel_family = \"codex\"\nprovider = \"openai\"\n",
+        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
         encoding="utf-8",
     )
     store = target / ".agentic-workspace/local/correction-events.json"
@@ -1705,6 +1837,22 @@ def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_
                         source_ref="review-4",
                         evidence_hash="sha256:review-4",
                     ),
+                    _correction_event(
+                        target_identity_ref="user-local:fast-worker",
+                        invariant_id="replacement-style",
+                        behavior_class="replacement",
+                        desired_behavior="Use replacement guidance.",
+                        source_ref="review-5",
+                        evidence_hash="sha256:review-5",
+                    ),
+                    _correction_event(
+                        target_identity_ref="user-local:fast-worker",
+                        invariant_id="replacement-style",
+                        behavior_class="replacement",
+                        desired_behavior="Use replacement guidance.",
+                        source_ref="review-6",
+                        evidence_hash="sha256:review-6",
+                    ),
                 ],
             }
         ),
@@ -1713,6 +1861,7 @@ def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_
     decision = guidance_promotion_from_store(target_root=target)
     first = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][0]["guidance_id"])["record"]
     second = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][1]["guidance_id"])["record"]
+    third = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][2]["guidance_id"])["record"]
 
     missing_revision = transition_guidance(
         target_root=target,
@@ -1753,28 +1902,33 @@ def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_
         expected_revision=merged["record"]["revision"],
         split_instructions=["Prefer focused edits.", "Prefer focused proof."],
     )
+    split_replacement = next(item for item in split["records"] if item["guidance_id"] in split["record"]["split_replacement_ids"])
     missing_replacement = transition_guidance(
         target_root=target,
-        guidance_id=split["record"]["guidance_id"],
+        guidance_id=split_replacement["guidance_id"],
         operation="supersede",
         reason="replacement must exist",
-        expected_revision=split["record"]["revision"],
+        expected_revision=split_replacement["revision"],
         replacement_guidance_id="guidance:missing",
     )
     superseded = transition_guidance(
         target_root=target,
-        guidance_id=split["record"]["guidance_id"],
+        guidance_id=split_replacement["guidance_id"],
         operation="supersede",
         reason="replacement accepted",
-        expected_revision=split["record"]["revision"],
-        replacement_guidance_id=second["guidance_id"],
+        expected_revision=split_replacement["revision"],
+        replacement_guidance_id=third["guidance_id"],
     )
 
     assert missing_revision["status"] == "expected-revision-required"
     assert stale_revision["status"] == "stale-guidance-revision"
     assert edited["record"]["instruction"] == "Prefer focused edits."
     assert second["guidance_id"] in merged["record"]["merged_guidance_ids"]
+    assert next(item for item in merged["records"] if item["guidance_id"] == second["guidance_id"])["status"] == "merged"
+    assert merged["mutation_receipt"]["atomic_record_count"] == 2
+    assert split["record"]["status"] == "split-retired"
     assert len(split["record"]["split_replacements"]) == 2
+    assert {item["status"] for item in split["records"] if item["guidance_id"] in split["record"]["split_replacement_ids"]} == {"active"}
     assert missing_replacement["status"] == "missing-replacement-guidance"
     assert superseded["record"]["status"] == "superseded"
 
