@@ -17461,9 +17461,7 @@ def _memory_manifest_notes(target_root: Path | None) -> dict[str, dict[str, Any]
     return {
         str(path): note
         for path, note in notes.items()
-        if isinstance(note, dict)
-        and note.get("review_only") is not True
-        and str(note.get("routing_status") or "routable") != "review-only"
+        if isinstance(note, dict) and note.get("review_only") is not True and str(note.get("routing_status") or "routable") != "review-only"
     }
 
 

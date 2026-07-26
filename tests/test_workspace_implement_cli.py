@@ -9901,6 +9901,46 @@ routes_from = ["src/sample_app/*.py"]
     assert "--target ." in reuse_pressure["memory_signals"]["route_command"]
 
 
+def test_implement_reuse_pressure_ignores_review_only_memory_notes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "manifest.toml",
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/reviews/stale-route.md"]
+note_type = "review"
+review_only = true
+routes_from = ["src/sample_app/*.py"]
+""",
+    )
+    _write(
+        tmp_path / "src" / "sample_app" / "text.py",
+        "def normalize_text(value):\n    return ' '.join(value.split())\n",
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--select",
+                "reuse_pressure",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
+    assert reuse_pressure["memory_signals"]["status"] == "none"
+    assert reuse_pressure["memory_signals"]["matches"] == []
+
+
 def test_implement_reuse_pressure_keeps_small_direct_task_unblocked(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
