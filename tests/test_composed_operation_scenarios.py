@@ -11,3 +11,4 @@ def test_composed_operation_scenario_matrix_is_release_gate_ready() -> None:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     assert module.validate_matrix(module.load_matrix()) == []
+    assert module.execute_matrix(module.load_matrix()) == []

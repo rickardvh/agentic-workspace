@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from agentic_workspace.actionability import operation_invocation
+from agentic_workspace.operating_decision import compile_operating_decision
 MATRIX_PATH = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "composed-operation-scenario-matrix.json"
 REQUIRED_SCENARIOS = {
     "fresh-direct-work", "explicit-bounded-work", "selected-owner-resume", "unrelated-task-with-owner",
@@ -48,8 +53,44 @@ def validate_matrix(matrix: dict[str, object]) -> list[str]:
     return errors
 
 
+def execute_matrix(matrix: dict[str, object]) -> list[str]:
+    """Execute each deterministic matrix row through the typed decision compiler."""
+    errors: list[str] = []
+    for scenario in matrix.get("scenarios", []):
+        if not isinstance(scenario, dict):
+            continue
+        scenario_id = str(scenario.get("id") or "<unknown>")
+        expected_action = str(scenario.get("typed_action") or "")
+        terminal_state = str(scenario.get("terminal_state") or "continue")
+        invocation = operation_invocation(
+            operation_id=f"scenario.{scenario_id}",
+            arguments={"scenario": scenario_id},
+            effect_class="read-only",
+            authority_class="scenario-fixture",
+            expected_transition="scenario-complete",
+        )
+        decision = compile_operating_decision(
+            inputs={
+                "consumer": "start",
+                "task": scenario_id,
+                "terminal_state": terminal_state,
+                "stale_revision": terminal_state == "blocked",
+                "actionability": {"next_action": {"action": expected_action, "operation_invocation": invocation}},
+            }
+        )
+        if terminal_state == "blocked":
+            if decision.get("status") != "blocked" or not decision.get("external_blocker"):
+                errors.append(f"{scenario_id} did not fail closed")
+        elif decision.get("primary_action", {}).get("action") != expected_action:
+            errors.append(f"{scenario_id} typed action did not match matrix")
+        if decision.get("terminal_state") != terminal_state:
+            errors.append(f"{scenario_id} terminal state did not match matrix")
+    return errors
+
+
 def main() -> int:
-    errors = validate_matrix(load_matrix())
+    matrix = load_matrix()
+    errors = [*validate_matrix(matrix), *execute_matrix(matrix)]
     if errors:
         print("[fail] " + "; ".join(errors))
         return 1
