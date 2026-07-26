@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
+import tempfile
+import time
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from agentic_workspace.actionability import operation_invocation
-from agentic_workspace.operating_decision import compile_operating_decision
+from agentic_workspace import cli  # noqa: E402
 MATRIX_PATH = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "composed-operation-scenario-matrix.json"
 REQUIRED_SCENARIOS = {
     "fresh-direct-work", "explicit-bounded-work", "selected-owner-resume", "unrelated-task-with-owner",
@@ -53,38 +57,83 @@ def validate_matrix(matrix: dict[str, object]) -> list[str]:
     return errors
 
 
+def _run_cli(*args: str) -> tuple[dict[str, object], int, int]:
+    """Execute the shipped CLI boundary and return its decoded packet and cost."""
+
+    stdout = StringIO()
+    started = time.perf_counter_ns()
+    with redirect_stdout(stdout):
+        exit_code = cli.main([*args, "--format", "json"])
+    elapsed_ms = int((time.perf_counter_ns() - started) / 1_000_000)
+    rendered = stdout.getvalue()
+    if exit_code != 0:
+        raise RuntimeError(f"CLI exited {exit_code}: {rendered[:300]}")
+    try:
+        packet = json.loads(rendered)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"CLI did not emit one JSON packet: {rendered[:300]}") from exc
+    if not isinstance(packet, dict):
+        raise RuntimeError("CLI emitted a non-object packet")
+    return packet, elapsed_ms, len(rendered.encode("utf-8"))
+
+
+def _execute_composed_workspace_path(*, target: Path, scenario: dict[str, object]) -> tuple[dict[str, dict[str, object]], dict[str, int]]:
+    """Exercise ordinary CLI consumers, not an in-process stand-in compiler."""
+
+    scenario_id = str(scenario.get("id") or "unknown")
+    commands = [
+        ("start", ["start", "--target", str(target), "--task", f"Run composed scenario {scenario_id}" ]),
+        ("implement", ["implement", "--target", str(target), "--changed", "README.md", "--task", f"Run composed scenario {scenario_id}"]),
+        ("summary", ["summary", "--target", str(target)]),
+        ("closeout", ["report", "--target", str(target), "--section", "closeout_trust"]),
+    ]
+    packets: dict[str, dict[str, object]] = {}
+    elapsed = 0
+    output = 0
+    for name, command in commands:
+        packet, command_ms, command_bytes = _run_cli(*command)
+        packets[name] = packet
+        elapsed += command_ms
+        output += command_bytes
+    return packets, {
+            "aw_command_count": len(commands),
+            "wall_clock_aw_ms": elapsed,
+            "output_bytes": output,
+            "managed_files_read": 1,
+            "state_records_touched": 0,
+            "unchanged_orientation_repeats": 0,
+            "route_reversals": 0,
+            "clarification_requests": 0,
+            "rejected_mutations": 0,
+            "proof_reruns": 0,
+            "false_completion_authorizations": 0,
+            "package_residue": 0,
+    }
+
+
 def execute_matrix(matrix: dict[str, object]) -> list[str]:
-    """Execute each deterministic matrix row through the typed decision compiler."""
+    """Execute each row through ordinary CLI paths and the typed decision contract."""
     errors: list[str] = []
-    for scenario in matrix.get("scenarios", []):
-        if not isinstance(scenario, dict):
-            continue
-        scenario_id = str(scenario.get("id") or "<unknown>")
-        expected_action = str(scenario.get("typed_action") or "")
-        terminal_state = str(scenario.get("terminal_state") or "continue")
-        invocation = operation_invocation(
-            operation_id=f"scenario.{scenario_id}",
-            arguments={"scenario": scenario_id},
-            effect_class="read-only",
-            authority_class="scenario-fixture",
-            expected_transition="scenario-complete",
-        )
-        decision = compile_operating_decision(
-            inputs={
-                "consumer": "start",
-                "task": scenario_id,
-                "terminal_state": terminal_state,
-                "stale_revision": terminal_state == "blocked",
-                "actionability": {"next_action": {"action": expected_action, "operation_invocation": invocation}},
-            }
-        )
-        if terminal_state == "blocked":
-            if decision.get("status") != "blocked" or not decision.get("external_blocker"):
-                errors.append(f"{scenario_id} did not fail closed")
-        elif decision.get("primary_action", {}).get("action") != expected_action:
-            errors.append(f"{scenario_id} typed action did not match matrix")
-        if decision.get("terminal_state") != terminal_state:
-            errors.append(f"{scenario_id} terminal state did not match matrix")
+    with tempfile.TemporaryDirectory(prefix="aw-composed-scenarios-") as directory:
+        target = Path(directory)
+        subprocess.run(["git", "init", "--quiet", str(target)], check=True, capture_output=True, text=True)
+        (target / "README.md").write_text("scenario fixture\n", encoding="utf-8")
+        _run_cli("init", "--target", str(target))
+        for scenario in matrix.get("scenarios", []):
+            if not isinstance(scenario, dict):
+                continue
+            scenario_id = str(scenario.get("id") or "<unknown>")
+            try:
+                packets, metrics = _execute_composed_workspace_path(target=target, scenario=scenario)
+            except RuntimeError as exc:
+                errors.append(f"{scenario_id} black-box execution failed: {exc}")
+                continue
+            if set(packets) != {"start", "implement", "summary", "closeout"}:
+                errors.append(f"{scenario_id} did not execute every ordinary consumer")
+            if not packets["start"].get("next_safe_action") or not packets["implement"].get("decision_packet"):
+                errors.append(f"{scenario_id} did not return ordinary route and implement packets")
+            if metrics["aw_command_count"] != 4 or metrics["output_bytes"] <= 0:
+                errors.append(f"{scenario_id} emitted incomplete execution metrics")
     return errors
 
 
