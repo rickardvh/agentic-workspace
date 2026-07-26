@@ -1200,7 +1200,7 @@
     "generated/planning/python/_payload/.agentic-workspace/planning/schemas/planning-lane.schema.json": "e5f0d7ead6c3596782a8daaeb4a4f60d161910c5",
     "generated/planning/python/_payload/.agentic-workspace/planning/schemas/planning-owner-selection-receipt.schema.json": "fdbe2924c8d3151ee1f999062db0c9eea78110a3",
     "generated/planning/python/_payload/.agentic-workspace/planning/schemas/planning-review.schema.json": "cf67b9185539e12007a8b91fa3b4fed4d3e844ac",
-    "generated/planning/python/_skills/REGISTRY.json": "46bef6252a269d293ef98114a822a8cf6b7b4eaf",
+    "generated/planning/python/_skills/REGISTRY.json": "8584818220d1b6b27bc01403184eab48daae3afd",
     "generated/planning/python/adapter_commands.json": "2c4a9d02d79f69e1ed69a93c7fe026682d648a8a",
     "generated/planning/python/cli.py": "b35e3a8c71b2b9b88d66acd745ea82922d333cdc",
     "generated/planning/python/command_package.json": "fb976c3a19725c8b8b0e8dbba3f6ec1581e0277a",
@@ -1296,7 +1296,7 @@
     "generated/planning/typescript/resources/_payload/.agentic-workspace/planning/schemas/planning-lane.schema.json": "e5f0d7ead6c3596782a8daaeb4a4f60d161910c5",
     "generated/planning/typescript/resources/_payload/.agentic-workspace/planning/schemas/planning-owner-selection-receipt.schema.json": "fdbe2924c8d3151ee1f999062db0c9eea78110a3",
     "generated/planning/typescript/resources/_payload/.agentic-workspace/planning/schemas/planning-review.schema.json": "cf67b9185539e12007a8b91fa3b4fed4d3e844ac",
-    "generated/planning/typescript/resources/_skills/REGISTRY.json": "46bef6252a269d293ef98114a822a8cf6b7b4eaf",
+    "generated/planning/typescript/resources/_skills/REGISTRY.json": "8584818220d1b6b27bc01403184eab48daae3afd",
     "generated/planning/typescript/resources/command_package.json": "2d5e3f839bcf703ec6de529ea509bcf832d523c2",
     "generated/planning/typescript/resources/operations/planning.adopt.lifecycle.json": "8656ae0125c96337d76696b79eb380616bc63bc9",
     "generated/planning/typescript/resources/operations/planning.archive-plan.lifecycle.json": "938d2d353c7f5f1ba04ec99de2f68db93c128e66",
@@ -2059,7 +2059,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "b15cd28b23ce0ede80bb2939fed5a75f90128a6e5b6d387f79f0d178afe946a2",
+  "git_index_identity": "a47e5f6eac7f4853f38ab89c43835508c8c20a039432b7bbd2e946802bbc42b9",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
