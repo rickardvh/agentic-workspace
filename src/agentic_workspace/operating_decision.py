@@ -222,6 +222,26 @@ def resolve_context_authority_projection(
             excluded.append({"surface": surface, "reason": record_status})
     missing = sorted(required - {item["surface"] for item in selected})
     status = "admitted" if not missing and coverage["status"] == "measured" else "repair-required"
+    repairs = [
+        {
+            "surface": item["surface"],
+            "owner": item["owner"],
+            "reason_code": next(
+                (
+                    str(excluded_authority.get("reason") or "missing")
+                    for excluded_authority in excluded
+                    if excluded_authority.get("surface") == item["surface"]
+                ),
+                "missing",
+            ),
+            "action": "refresh-or-admit-source-record",
+            "required_record": ["status=current", "source_id", "revision", "freshness=current"],
+        }
+        for item in sorted(
+            (item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in missing),
+            key=lambda item: str(item.get("surface") or ""),
+        )
+    ]
     return {
         "kind": "agentic-workspace/context-authority-projection/v1",
         "status": status,
@@ -232,6 +252,13 @@ def resolve_context_authority_projection(
         "authorities": selected,
         "excluded_authorities": excluded,
         "missing_required_surfaces": missing,
+        "repair_operation": {
+            "kind": "agentic-workspace/context-authority-repair/v1",
+            "status": "required" if repairs else "not-required",
+            "consumer": consumer,
+            "repairs": repairs,
+            "blocked_claims": ["mutation", "proof-claim", "completion-claim"] if repairs else [],
+        },
         "repair": (
             "repair the registry declaration or consumer requirement before mutation"
             if status == "repair-required"
