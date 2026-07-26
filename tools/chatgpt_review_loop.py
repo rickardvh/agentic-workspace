@@ -412,8 +412,12 @@ def _record_job_terminal(
     repair = (
         {
             "status": "repair-required",
-            "failed_command": failed_command,
-            "action": "repair the failed focused proof, rerun it, then report the exact job result",
+            "failed_command": failed_command or "unresolved",
+            "action": (
+                "repair the failed focused proof, rerun it, then report the exact job result"
+                if failed_command
+                else "recover the exact failed proof command and result before issuing a repair route"
+            ),
             "blocked_claims": ["handoff-recorded", "merge-ready", "proof-passed"],
         }
         if resolved_proof_status == "failed"
