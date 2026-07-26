@@ -823,15 +823,41 @@ def parse_reviews(comments: list[dict[str, Any]], *, expected_pr: int, expected_
     return matches, rejected
 
 
+def _is_semver_label_check(check: dict[str, Any]) -> bool:
+    name = str(check.get("name") or check.get("context") or "").lower()
+    return "semver" in name and "label" in name
+
+
+def _current_failed_checks(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Discard a stale failed semver-label run superseded on the same PR head."""
+
+    checks = [item for item in payload.get("statusCheckRollup", []) if isinstance(item, dict)]
+    latest_success: dict[str, str] = {}
+    for check in checks:
+        if str(check.get("conclusion", "")).upper() != "SUCCESS" or not _is_semver_label_check(check):
+            continue
+        name = str(check.get("name") or check.get("context") or "")
+        latest_success[name] = max(latest_success.get(name, ""), str(check.get("completedAt") or check.get("startedAt") or ""))
+
+    failed = {"FAILURE", "FAILED", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE"}
+    current: list[dict[str, Any]] = []
+    for check in checks:
+        if str(check.get("conclusion", "")).upper() not in failed:
+            continue
+        name = str(check.get("name") or check.get("context") or "")
+        observed_at = str(check.get("completedAt") or check.get("startedAt") or "")
+        if _is_semver_label_check(check) and latest_success.get(name, "") > observed_at:
+            continue
+        current.append(check)
+    return current
+
+
 def _system_trigger(payload: dict[str, Any], *, pr: int, head: str) -> Review | None:
     """Return one deterministic actionable CI/conflict trigger for this head."""
     findings: list[str] = []
     if str(payload.get("mergeable", "")).upper() == "CONFLICTING" or str(payload.get("mergeStateStatus", "")).upper() == "DIRTY":
         findings.append("The PR has merge conflicts. Rebase or merge the base branch, resolve the conflicts, run the relevant proof, and push the result.")
-    failed = {"FAILURE", "FAILED", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE"}
-    for check in payload.get("statusCheckRollup", []):
-        if not isinstance(check, dict) or str(check.get("conclusion", "")).upper() not in failed:
-            continue
+    for check in _current_failed_checks(payload):
         name = str(check.get("name") or check.get("context") or "unnamed check")
         conclusion = str(check.get("conclusion")).lower()
         details = str(check.get("detailsUrl") or check.get("url") or "")
