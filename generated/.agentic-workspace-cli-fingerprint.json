@@ -1,5 +1,5 @@
 {
-  "file_count": 1027,
+  "file_count": 1028,
   "file_paths": [
     "generated/memory/python/__init__.py",
     "generated/memory/python/_contracts/operations/memory.adopt.lifecycle.json",
@@ -614,6 +614,7 @@
     "scripts/check/check_completion_cost_lane_evidence.py",
     "scripts/check/check_completion_cost_live_behavior_proof.py",
     "scripts/check/check_completion_cost_schema_analysis.py",
+    "scripts/check/check_composed_operation_scenarios.py",
     "scripts/check/check_contract_tooling_surfaces.py",
     "scripts/check/check_generated_command_packages.py",
     "scripts/check/check_maintainer_surfaces.py",
@@ -1644,6 +1645,7 @@
     "scripts/check/check_completion_cost_lane_evidence.py": "75c5b8b6bc74b0dcce4ade314c140bd7c0e2b443",
     "scripts/check/check_completion_cost_live_behavior_proof.py": "62f1626aa54f8a5ce5df465e5d9ea1266cede514",
     "scripts/check/check_completion_cost_schema_analysis.py": "f9f8175241d738e731d662c5037ff4dc0c9fd108",
+    "scripts/check/check_composed_operation_scenarios.py": "e2d1dfdc0740fab1644044ad0035cc6a8b3d4239",
     "scripts/check/check_contract_tooling_surfaces.py": "2fdd3e23710d415c4fd4087508cfedd3a0bfa1bf",
     "scripts/check/check_generated_command_packages.py": "b1483fc2c836957255f3b03e397779b6bb204ed5",
     "scripts/check/check_maintainer_surfaces.py": "a8cc22d09e7d1949f9245464b883bf610e095048",
@@ -2059,7 +2061,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "8204075d579380930125a73d34b744bfd006bfa0d73c11fd32e7327b6d1d8865",
+  "git_index_identity": "44c129b3f59f68cb9e711d02d5ea86e7e7fb7cb09a0a3554687baeceba3406dd",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
