@@ -408,10 +408,11 @@ def _record_job_terminal(
         terminal = {}
     resolved_proof_status = terminal.get("proof_status", proof_status)
     proof_commands = terminal.get("proof_commands", [])
+    failed_command = str(terminal.get("failed_command") or "")
     repair = (
         {
             "status": "repair-required",
-            "failed_command": proof_commands[0] if proof_commands else "",
+            "failed_command": failed_command,
             "action": "repair the failed focused proof, rerun it, then report the exact job result",
             "blocked_claims": ["handoff-recorded", "merge-ready", "proof-passed"],
         }
@@ -431,6 +432,7 @@ def _record_job_terminal(
         "exit_code": exit_code,
         "proof_status": resolved_proof_status,
         "proof_commands": proof_commands,
+        "failed_command": failed_command,
         "proof_exit_code": terminal.get("proof_exit_code"),
         "push_status": terminal.get("push_status", "unreported"),
         "disposition": disposition,
@@ -565,6 +567,7 @@ def report_job_result(
         "ending_head": ending_head,
         "launch_identity": attempt["launch_identity"],
         "proof_status": proof_status, "proof_commands": [proof_command] if proof_command else [],
+        "failed_command": proof_command if proof_status == "failed" else "",
         "proof_exit_code": proof_exit_code, "push_status": push_status,
         "reported_at": datetime.now(timezone.utc).isoformat(),
         "head_corrections": corrections,
