@@ -1178,7 +1178,7 @@ def test_generated_output_git_dirtiness_classifies_line_ending_only_changes() ->
 def test_generated_output_git_dirtiness_classifies_untracked_rendered_output() -> None:
     errors = _checker_case_errors(
         """
-        relative_path = "generated/workspace/python/untracked-fixture.txt"
+        relative_path = "generated/workspace/python/nested/untracked-fixture.txt"
         path = checker.REPO_ROOT / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -1191,7 +1191,7 @@ def test_generated_output_git_dirtiness_classifies_untracked_rendered_output() -
             return [Output(path, "alpha\\n")]
 
         def fake_git_output(args):
-            if args == ["status", "--porcelain=v1", "--", "generated"]:
+            if args == ["status", "--porcelain=v1", "--untracked-files=all", "--", "generated"]:
                 return f"?? {relative_path}\\n"
             return ""
 
@@ -1206,8 +1206,8 @@ def test_generated_output_git_dirtiness_classifies_untracked_rendered_output() -
     )
 
     assert errors == [
-        "generated/workspace/python/untracked-fixture.txt is an untracked generated output; "
-        "run git add -- generated/workspace/python/untracked-fixture.txt after confirming generation, or regenerate packages."
+        "generated/workspace/python/nested/untracked-fixture.txt is an untracked generated output; "
+        "run git add -- generated/workspace/python/nested/untracked-fixture.txt after confirming generation, or regenerate packages."
     ]
 
 

@@ -4656,7 +4656,7 @@ def _untracked_generated_output_paths(ir: dict[str, object]) -> list[str]:
         _repo_relative(output.path if output.path.is_absolute() else REPO_ROOT / output.path)
         for output in render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT)
     }
-    status = _run_git_output(["status", "--porcelain=v1", "--", "generated"])
+    status = _run_git_output(["status", "--porcelain=v1", "--untracked-files=all", "--", "generated"])
     return sorted(
         _git_dirty_path_from_porcelain_line(line)
         for line in status.splitlines()
