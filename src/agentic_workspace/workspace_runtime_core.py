@@ -28070,9 +28070,7 @@ def _ordinary_decision_packet(
     normalized_required_commands = [item for item in (required_commands or []) if str(item).strip()][:6]
     normalized_reasons = [item for item in (reasons or []) if str(item).strip()][:6]
     normalized_detail_routes = {key: value for key, value in (detail_routes or {}).items() if value}
-    normalized_absence_states = {
-        key: value for key, value in (absence_states or {}).items() if value not in (None, "", [], {})
-    }
+    normalized_absence_states = {key: value for key, value in (absence_states or {}).items() if value not in (None, "", [], {})}
     decision_input = {
         "surface": surface,
         "phase_question": phase_question,
@@ -28085,9 +28083,9 @@ def _ordinary_decision_packet(
         "detail_routes": normalized_detail_routes,
         "absence_states": normalized_absence_states,
     }
-    input_digest = "sha256:" + hashlib.sha256(
-        json.dumps(decision_input, sort_keys=True, ensure_ascii=True, default=str).encode("utf-8")
-    ).hexdigest()
+    input_digest = (
+        "sha256:" + hashlib.sha256(json.dumps(decision_input, sort_keys=True, ensure_ascii=True, default=str).encode("utf-8")).hexdigest()
+    )
     return {
         "kind": "agentic-workspace/ordinary-decision-packet/v1",
         "decision_identity": {
