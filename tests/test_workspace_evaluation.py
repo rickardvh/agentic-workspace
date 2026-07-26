@@ -218,7 +218,10 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
     assert delivered["status"] == "recorded-local"
     assert delivered["receipt"]["delivery_scope"] == "local-compilation-receipt-only"
     assert delivered["receipt"]["external_delivery"].startswith("unattempted")
-    assert record_local_evaluation_report_delivery(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)["status"] == "already-delivered"
+    assert (
+        record_local_evaluation_report_delivery(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)["status"]
+        == "already-delivered"
+    )
     external = external_evaluation_report_delivery_request(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
     assert external["status"] == "adapter-required"
     assert external["sinks"] == [{"id": "#1969", "class": "closed-issue"}]
@@ -233,7 +236,9 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
         "attempt_revision": "attempt-1",
         "status": "failed",
     }
-    assert record_external_evaluation_report_delivery(target_root=tmp_path, request=external, adapter_receipt=failed_receipt)["retry"] is True
+    assert (
+        record_external_evaluation_report_delivery(target_root=tmp_path, request=external, adapter_receipt=failed_receipt)["retry"] is True
+    )
     delivered_receipt = {**failed_receipt, "attempt_revision": "attempt-2", "status": "delivered"}
     assert (
         record_external_evaluation_report_delivery(target_root=tmp_path, request=external, adapter_receipt=delivered_receipt)["status"]

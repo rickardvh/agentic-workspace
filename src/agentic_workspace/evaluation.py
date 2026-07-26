@@ -1544,7 +1544,12 @@ def record_local_evaluation_report_delivery(*, target_root: Path, evaluation_id:
         return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "not-due", "report": report}
     identity = hashlib.sha256(
         json.dumps(
-            {"evaluation_id": evaluation_id, "coverage": report["coverage"], "conclusion": report["conclusion"], "findings": report["material_findings"]},
+            {
+                "evaluation_id": evaluation_id,
+                "coverage": report["coverage"],
+                "conclusion": report["conclusion"],
+                "findings": report["material_findings"],
+            },
             sort_keys=True,
             separators=(",", ":"),
         ).encode("utf-8")
@@ -1554,7 +1559,12 @@ def record_local_evaluation_report_delivery(*, target_root: Path, evaluation_id:
     deliveries = previous.get("deliveries", []) if isinstance(previous.get("deliveries"), list) else []
     existing = next((item for item in deliveries if isinstance(item, dict) and item.get("identity") == identity), None)
     if existing:
-        return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "already-delivered", "receipt": existing, "report": report}
+        return {
+            "kind": "agentic-workspace/evaluation-report-delivery/v1",
+            "status": "already-delivered",
+            "receipt": existing,
+            "report": report,
+        }
     receipt = {
         "identity": identity,
         "status": "recorded-local",
