@@ -16593,6 +16593,7 @@ def targeted_execplan_write(
     patch: Mapping[str, Any],
     expected_planning_revision: str,
     expected_owner_revision: int | str,
+    expected_lane_revision: int | str = "",
     apply: bool = False,
 ) -> dict[str, Any]:
     """Preview or apply a bounded patch to exactly one live canonical execplan.
@@ -16630,6 +16631,19 @@ def targeted_execplan_write(
             "owner_revision": record.get("revision"),
             "planning_revision": planning_revision(target_root).get("revision_id"),
         }
+    lane_matches = []
+    for lane_path in sorted((target_root / ".agentic-workspace/planning/lanes").glob("*.lane.json")):
+        lane_record = _load_lane_record(lane_path)
+        if isinstance(lane_record, dict) and str(lane_record.get("current_slice") or "") == str(record.get("id") or ""):
+            lane_matches.append((lane_path, lane_record))
+    if len(lane_matches) > 1:
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "ambiguous-lane-relation"}
+    lane_path, lane_record = lane_matches[0] if lane_matches else (None, None)
+    lane_revision = _record_revision(lane_record) if isinstance(lane_record, dict) else ""
+    if lane_path is not None and not str(expected_lane_revision or "").strip():
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "missing-lane-revision-guard", "lane": _planning_surface_relative(target_root, lane_path)}
+    if lane_path is not None and str(expected_lane_revision) != lane_revision:
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "stale-lane-revision", "lane_revision": lane_revision}
     allowed = {"intent", "parent", "scope", "blockers", "next_action", "proof", "continuation", "lifecycle", "phase"}
     unknown = sorted(set(patch).difference(allowed))
     if unknown or not patch:
@@ -16649,6 +16663,7 @@ def targeted_execplan_write(
         "owner_revision_before": record.get("revision"),
         "owner_revision_after": updated.get("revision") if changed else record.get("revision"),
         "planning_revision": planning_revision(target_root).get("revision_id"),
+        "lane_revision": lane_revision or None,
         "changes": changed,
     }
     if apply and changed:
