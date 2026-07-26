@@ -17,6 +17,7 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
+from agentic_workspace.operating_decision import resolve_context_authority_projection
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -715,6 +716,9 @@ def _start_payload(
             if _task_posture_packet_changes_routing(task_posture_packet):
                 payload["task_posture_packet"] = task_posture_packet
         if profile is None:
+            payload["context_authority_projection"] = resolve_context_authority_projection(
+                consumer="start", task=task_text or "", changed_paths=normalized_paths
+            )
             return _selector_first_start_payload(payload, cli_invoke=config.cli_invoke, target_root=target_root)
         return payload
     descriptors = _module_operations()
@@ -2327,6 +2331,11 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
+        **(
+            {"context_authority_projection": payload["context_authority_projection"]}
+            if isinstance(payload.get("context_authority_projection"), dict)
+            else {}
+        ),
         "workflow_participation": _workflow_participation_payload(surface="start", compact=True),
         "action_signals": _compact_action_signals_payload(
             surface="start",

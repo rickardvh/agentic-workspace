@@ -16,6 +16,7 @@ from typing import Any, cast
 from agentic_workspace.authority_envelope import authority_envelope_payload, mutation_baseline_payload_cache_scope
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
+from agentic_workspace.operating_decision import resolve_context_authority_projection
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -867,6 +868,9 @@ def _implement_payload(
 ) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
+    context_authority_projection = resolve_context_authority_projection(
+        consumer="implement", task=task_text or "", changed_paths=normalized_paths
+    )
     config = _load_workspace_config(target_root=target_root)
     proof = (
         _proof_selection_for_changed_paths(
@@ -1415,6 +1419,7 @@ def _implement_payload(
             task_text=task_text,
             compact=False,
         )
+    payload["context_authority_projection"] = context_authority_projection
     return payload
 
 
@@ -1665,6 +1670,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     projected = {
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
+        "context_authority_projection": payload.get("context_authority_projection", {}),
         "communication_contract": communication_contract,
         "action_signals": _compact_action_signals_payload(
             surface="implement",
