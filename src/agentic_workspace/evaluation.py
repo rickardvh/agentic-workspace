@@ -1457,7 +1457,8 @@ def evaluation_report_payload(*, target_root: Path, evaluation_id: str, explicit
         raise WorkspaceUsageError(f"evaluation {evaluation_id!r} is not registered.")
     summary = evaluation_summary(target_root=target_root, evaluation_id=evaluation_id)["summaries"][0]
     admission = summary.get("fresh_result_admission") if isinstance(summary.get("fresh_result_admission"), dict) else {}
-    finding_followup = admission.get("finding_followup") if isinstance(admission.get("finding_followup"), dict) else {}
+    raw_finding_followup = admission.get("finding_followup")
+    finding_followup = raw_finding_followup if isinstance(raw_finding_followup, dict) else {}
     meaningful = bool(
         explicit
         or (summary.get("conclusion_readiness") if isinstance(summary.get("conclusion_readiness"), dict) else {}).get("ready")
