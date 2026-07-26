@@ -17,6 +17,7 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `input_revisions` | object | yes |  | Revision or freshness identifiers supplied by specialist authority inputs. |  |  |
 | `canonical_decision_input_revision` | string | no |  | Canonical revision of the typed action's current owner, context, authority, proof, mutation, evaluation, and executor inputs. |  |  |
 | `context_authority_coverage` | object | no |  | Registry-derived coverage of context authority sources and ordinary consumers considered by the decision compiler. |  |  |
+| `context_authority_projection` | object | no |  | Smallest admitted versioned context-authority projection for the decision consumer. |  |  |
 | `current_work` | object | no |  | Current-work identity admitted into the composed decision. |  |  |
 | `selected_owner` | object | no |  | Selected owner identity admitted into the composed decision. |  |  |
 | `terminal_state` | string | no |  | Terminal outcome state used for continuation or finalization claims. |  |  |
