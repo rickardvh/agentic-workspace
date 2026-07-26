@@ -6952,6 +6952,8 @@ def test_route_safety_projection_ignores_legacy_task_switch_status() -> None:
             "task_relation": "bounded-independent",
             "owner_posture": "current",
             "required_transition": "none",
+            "selected_owner_identity": {"ref": "current-task", "revision": "owner-a"},
+            "state_update_policy": "no-active-plan-state-update",
             "next_safe_action": {"action": "prove-current-task"},
             "structured_inputs": {
                 "task_binding": {"mode": "mutation", "allowed_paths": ["README.md"]},
@@ -6974,6 +6976,8 @@ def test_route_safety_projection_fails_closed_for_unbaselined_bounded_mutation()
             "task_relation": "bounded-independent",
             "owner_posture": "current",
             "required_transition": "none",
+            "selected_owner_identity": {"ref": "current-task", "revision": "owner-a"},
+            "state_update_policy": "no-active-plan-state-update",
             "next_safe_action": {"action": "prove-current-task"},
             "structured_inputs": {"task_binding": {"mode": "mutation", "allowed_paths": ["README.md"]}},
         }
@@ -6982,6 +6986,25 @@ def test_route_safety_projection_fails_closed_for_unbaselined_bounded_mutation()
     assert outcome["status"] == "attention"
     assert outcome["decision"] == "mutation-baseline-required"
     assert outcome["required_next_action"] == "refresh-mutation-baseline"
+
+
+def test_route_safety_projection_fails_closed_for_unsupported_transition() -> None:
+    from agentic_workspace.workspace_runtime_planning import _route_safety_outcome
+
+    outcome = _route_safety_outcome(
+        {
+            "task_relation": "continues-selected-owner",
+            "owner_posture": "current",
+            "required_transition": "reconcile",
+            "selected_owner_identity": {"ref": "issue-1", "revision": "owner-a"},
+            "state_update_policy": "fresh-reconciliation-proposal-required",
+            "next_safe_action": {"action": "refresh-proposal"},
+        }
+    )
+
+    assert outcome["status"] == "attention"
+    assert outcome["decision"] == "route-transition-required"
+    assert outcome["action_safety"]["repair_owner"] == "planning-route-decision"
 
 
 def test_route_decision_uses_current_reconciliation_proposal_without_recompiling_it() -> None:
@@ -7502,6 +7525,7 @@ def test_start_compiles_session_improvement_pressure_into_task_posture(tmp_path:
     assert packet["improvement_pressure_evaluation"]["active_obligation_count"] == 1
     consequence = packet["improvement_pressure_evaluation"]["primary_consequence"]
     assert consequence["consequence"] == "create-task-posture-obligation"
+    assert consequence["claim_effect"] == "blocks"
     assert consequence["next_allowed_action"] == "route active improvement pressure or record accepted-risk"
     assert packet["improvement_obligations"][0]["source"] == "improvement-pressure"
     assert packet["next_allowed_action"] == "route active improvement pressure or record accepted-risk"
