@@ -2430,7 +2430,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if isinstance(task_posture_packet, dict) and task_posture_packet:
         selected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
     show_state_delta_packets = (
-        str(next_safe_action.get("next_safe_action", "")) not in {"choose-task-switch-route", "inspect-current-task-scope"}
+        str(next_safe_action.get("next_safe_action", ""))
+        not in {"choose-smallest-workflow-shape", "choose-task-switch-route", "inspect-current-task-scope"}
         and not isinstance(payload.get("installed_state_compatibility"), dict)
         and not read_only_compact_default
     )
