@@ -1409,20 +1409,41 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
     structured_inputs = _as_dict(route_decision.get("structured_inputs"))
     binding = _as_dict(structured_inputs.get("task_binding"))
     baseline = _as_dict(structured_inputs.get("mutation_baseline"))
+    proposal = _as_dict(route_decision.get("reconciliation_proposal"))
     mode = str(binding.get("mode") or "")
+    baseline_status = str(baseline.get("status") or "")
+    baseline_identity = str(baseline.get("baseline_id") or baseline.get("head") or baseline.get("revision") or "")
     action_safety = {
         "owner": _as_dict(route_decision.get("selected_owner_identity")),
         "relation": relation,
         "posture": posture,
         "transition": transition,
         "typed_action": str(action.get("action") or ""),
-        "allowed_claims": [str(item) for item in route_decision.get("allowed_claims", []) if isinstance(route_decision.get("allowed_claims"), list)],
-        "blocked_claims": [str(item) for item in route_decision.get("blocked_claims", []) if isinstance(route_decision.get("blocked_claims"), list)],
+        "allowed_claims": [
+            str(item) for item in route_decision.get("allowed_claims", []) if isinstance(route_decision.get("allowed_claims"), list)
+        ],
+        "blocked_claims": [
+            str(item) for item in route_decision.get("blocked_claims", []) if isinstance(route_decision.get("blocked_claims"), list)
+        ],
         "effect_scope": [str(item) for item in binding.get("allowed_paths", []) if isinstance(binding.get("allowed_paths"), list)],
         "mutation_baseline": baseline,
+        "mutation_baseline_identity": baseline_identity,
+        "proposal_identity": str(proposal.get("proposal_id") or proposal.get("identity") or ""),
+        "proposal_freshness": str(proposal.get("status") or "not-applicable"),
         "proof_expectation": str(route_decision.get("proof_expectation") or ""),
         "state_update_policy": str(route_decision.get("state_update_policy") or ""),
+        "repair_owner": str(route_decision.get("repair_owner") or "planning-route-decision"),
     }
+    route_identity_missing = not action_safety["owner"] or not action_safety["typed_action"] or not action_safety["state_update_policy"]
+    if route_identity_missing:
+        return {
+            "status": "attention",
+            "decision": "route-authority-incomplete",
+            "reason": "The route decision is missing owner, typed action, or state-update authority.",
+            "required_next_action": "refresh-planning-route-decision",
+            "workflow_sufficient": True,
+            "action_safety": action_safety,
+        }
     if posture == "completed-residue":
         return {
             "status": "attention",
@@ -1433,12 +1454,12 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
         }
     if relation == "bounded-independent" and transition == "none":
         if mode == "mutation" and (
-            not action_safety["effect_scope"] or str(baseline.get("status") or "") not in {"current", "fresh"}
+            not action_safety["effect_scope"] or baseline_status not in {"current", "fresh"} or not baseline_identity
         ):
             return {
                 "status": "attention",
                 "decision": "mutation-baseline-required",
-                "reason": "Bounded mutation requires explicit path scope and a current mutation baseline.",
+                "reason": "Bounded mutation requires explicit path scope and a current mutation baseline identity.",
                 "required_next_action": "refresh-mutation-baseline",
                 "workflow_sufficient": True,
                 "action_safety": action_safety,
@@ -1475,7 +1496,14 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
             "required_next_action": str(action.get("action") or "continue-active-plan"),
             "workflow_sufficient": True,
         }
-    return {}
+    return {
+        "status": "attention",
+        "decision": "route-transition-required",
+        "reason": "The resolved route relation, posture, or transition is unsupported for direct action.",
+        "required_next_action": str(action.get("action") or "refresh-planning-route-decision"),
+        "workflow_sufficient": True,
+        "action_safety": action_safety,
+    }
 
 
 def _task_switch_reconciliation_payload(**kwargs: Any) -> dict[str, Any]:

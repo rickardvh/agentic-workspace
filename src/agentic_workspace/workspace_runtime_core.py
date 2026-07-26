@@ -5763,16 +5763,31 @@ def _improvement_consequence_for_record(record: dict[str, Any]) -> dict[str, Any
         }
     obligation = _as_dict(record.get("posture_obligation"))
     validation_class = str(record.get("validation_failure_class") or "").strip()
+    lifecycle = str(record.get("state") or "unknown")
+    severity = str(record.get("severity") or "").strip()
+    confidence = str(_as_dict(record.get("cost_or_frequency")).get("confidence") or record.get("confidence") or "medium")
     if validation_class in {"interface_design_error", "unclear_proof_contract"}:
         consequence = "require-review-now"
+        claim_effect = "blocks"
+        safety_effect = "action-safety-blocking"
+        severity = severity or "blocking"
         action = str(obligation.get("next_allowed_action") or "record improvement obligation adherence")
     else:
         consequence = "create-task-posture-obligation"
+        claim_effect = "blocks" if obligation.get("forbidden_actions") else "advises"
+        safety_effect = "claim-boundary"
+        severity = severity or "attention"
         action = str(obligation.get("next_allowed_action") or "route active improvement pressure or record accepted-risk")
     return {
         "kind": "agentic-workspace/context-finding-consequence/v1",
         "finding_ref": record_id,
         "consequence": consequence,
+        "claim_effect": claim_effect,
+        "safety_effect": safety_effect,
+        "severity": severity,
+        "confidence": confidence,
+        "lifecycle": lifecycle,
+        "applicability_stage": str(record.get("applicability_stage") or "current-task"),
         "owner": str(record.get("resulting_owner") or record.get("owner_surface") or "unknown"),
         "next_allowed_action": action,
         "blocked_claims": list(obligation.get("forbidden_actions") or []),
@@ -5844,7 +5859,8 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
                     active_records,
                     key=lambda record: (
                         0 if str(_as_dict(record.get("consequence")).get("claim_effect") or "") == "blocks" else 1,
-                        0 if str(record.get("severity") or "") in {"blocking", "critical"} else 1,
+                        0 if str(_as_dict(record.get("consequence")).get("severity") or record.get("severity") or "") in {"blocking", "critical"} else 1,
+                        0 if str(_as_dict(record.get("consequence")).get("safety_effect") or "") == "action-safety-blocking" else 1,
                         str(record.get("id") or ""),
                     ),
                 )
@@ -21843,25 +21859,13 @@ def _report_closeout_trust_payload(
             task_text=task_text,
             execution_posture=execution_posture,
         )
-        task_switch = _as_dict(planning_safety_gate.get("task_switch_reconciliation"))
         route_decision = _as_dict(planning_safety_gate.get("route_decision"))
         scope_gate = copy.deepcopy(planning_safety_gate)
-        if (
-            str(task_switch.get("status") or "") == "current-task-route-acknowledged"
-            and str(scope_gate.get("gate_result") or "") == "mutation-baseline-required"
-        ):
-            # This closeout report classifies an already-bounded task; it does
-            # not authorize the pending mutation. Preserve the mutation repair
-            # in route detail while exposing the admitted task-switch relation.
-            scope_gate["gate_result"] = "current-task-route-acknowledged"
-            scope_gate["status"] = "satisfied"
-            scope_gate["required_next_action"] = "prove-current-task"
         if (
             planning_safety_gate.get("workflow_sufficient") is not True
             or (
                 str(planning_safety_gate.get("gate_result") or "")
                 not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
-                and str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
             )
         ):
             return {
@@ -21876,7 +21880,7 @@ def _report_closeout_trust_payload(
             "changed_paths": normalized_changed_paths,
             "planning_safety_gate": _selector_first_planning_safety_gate(scope_gate),
             "route_decision": route_decision,
-            "task_switch_reconciliation": task_switch,
+            "task_switch_reconciliation": _as_dict(planning_safety_gate.get("task_switch_reconciliation")),
             "rule": "The active plan remains protected repo-wide residue; this scope only classifies current bounded-task closeout blockers.",
         }
 
