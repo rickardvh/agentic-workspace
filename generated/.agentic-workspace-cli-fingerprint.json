@@ -1631,7 +1631,7 @@
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.uninstall.lifecycle.json": "00d4e498f21df04fb9c55cc783584d69de521046",
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.upgrade.lifecycle.json": "09d668919ea060f22d9d184d29e01a81eb172782",
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.verify-payload.report.json": "9275479126e9db2455273654a2918ca3957a8021",
-    "packages/planning/src/repo_planning_bootstrap/installer.py": "8b285fb1d09b61f5c861c0da65f54079be4a29ff",
+    "packages/planning/src/repo_planning_bootstrap/installer.py": "bbfdab8f00c172921b0c70607cdb2cb007b91069",
     "packages/planning/src/repo_planning_bootstrap/runtime_projection.py": "4264015c1b83d851d753a346b7ec848bf24b57d3",
     "packages/verification/src/repo_verification_bootstrap/__init__.py": "e3907ed2815e2d612a03c18d62f9327a10afc673",
     "packages/verification/src/repo_verification_bootstrap/cli.py": "c63348a6174dd9be97b2764c0b8d5d332c45f689",
@@ -2061,7 +2061,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "1c55683bf633cdae0fe4da88e2f1d2157996d32728321cbfe2e00ca75263f428",
+  "git_index_identity": "5ef4e3b4663c616b9c767a0d933d323acb85ae35d09594cd8b32b1821d1e9f38",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
