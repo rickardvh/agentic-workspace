@@ -14,6 +14,7 @@ from agentic_workspace.actionability import (
     proposed_action_input_revision,
 )
 from agentic_workspace.operating_decision import (
+    _resolve_context_authority_source,
     bind_operation_invocation_to_authorities,
     compile_operating_decision,
     context_authority_coverage,
@@ -581,7 +582,7 @@ def test_context_authority_projection_requires_live_records_for_start() -> None:
     planning = next(item for item in repair["repairs"] if item["surface"] == "planning")
     assert planning["owner"] == "planning package"
     assert planning["reason_code"] == "missing-target-root"
-    assert planning["action"] == "refresh-or-admit-source-record"
+    assert planning["action"] == "context-authority.planning.refresh-source"
     assert planning["repair_owner"] == "context-authority-source-adapter"
 
 
@@ -617,6 +618,9 @@ def _write_context_authority_sources(root: Path) -> None:
     (root / ".agentic-workspace/OWNERSHIP.toml").write_text("[paths]\n", encoding="utf-8")
     (root / ".agentic-workspace/planning/state.toml").write_text("schema_version = 1\n", encoding="utf-8")
     (root / ".agentic-workspace/memory/repo/index.md").write_text("# Memory\n", encoding="utf-8")
+    (root / ".agentic-workspace/memory/repo/manifest.toml").write_text(
+        '[[routes]]\nid = "default"\nroutes_from = ["src/**"]\n', encoding="utf-8"
+    )
     (root / ".agentic-workspace/skills/workspace-startup/SKILL.md").write_text("# Startup\n", encoding="utf-8")
 
 
@@ -647,11 +651,55 @@ def test_context_authority_projection_selects_repository_sources_and_ignores_for
     assert projection["status"] == "admitted"
     assert projection["repair_operation"]["status"] == "not-required"
     skills = next(item for item in projection["authorities"] if item["surface"] == "skills")
-    assert skills["source"]["id"] == ".agentic-workspace/skills"
+    assert skills["source"]["id"] == ".agentic-workspace/skills/workspace-startup/SKILL.md"
     assert skills["source"]["revision"].startswith("sha256:")
     assert skills["source"]["admission"]["producer"] == "context-authority-source-adapter"
     assert skills["caller_record_status"] == "ignored"
     assert projection["excluded_authorities"] == []
+
+
+def test_context_authority_projection_rejects_configured_empty_and_missing_required_sources(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+    (tmp_path / ".agentic-workspace/memory/repo/manifest.toml").unlink()
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="shape authority routing",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    memory = next(item for item in projection["excluded_authorities"] if item["surface"] == "memory")
+    assert memory["reason"] == "canonical-source-missing"
+    repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "memory")
+    assert repair["action"] == "context-authority.memory.refresh-source"
+    assert "source-specific schema/population check" in repair["required_record"]
+
+
+def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path: Path) -> None:
+    (tmp_path / "generated").mkdir(parents=True)
+    (tmp_path / "src/agentic_workspace/contracts").mkdir(parents=True)
+    (tmp_path / "src/example.py").write_text("print('current')\n", encoding="utf-8")
+    (tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json").write_text("{}\n", encoding="utf-8")
+    (tmp_path / "generated/.agentic-workspace-cli-fingerprint.json").write_text(
+        json.dumps({"source_hashes": {"src/example.py": "not-current"}}),
+        encoding="utf-8",
+    )
+    item = next(item for item in context_authority_declarations() if item["surface"] == "generated-references")
+
+    record = _resolve_context_authority_source(item=item, target_root=tmp_path, task="", paths=["generated/client.py"])
+
+    assert record["status"] == "stale"
+    assert record["reason"] == "stale-generated-projection"
+
+
+def test_context_authority_resolver_rejects_mutation_baseline_without_git_head(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+    item = next(item for item in context_authority_declarations() if item["surface"] == "mutation-baseline")
+
+    record = _resolve_context_authority_source(item=item, target_root=tmp_path, task="", paths=["src/app.py"])
+
+    assert record["status"] == "missing"
+    assert record["reason"] == "git-head-unavailable"
 
 
 def test_context_authority_coverage_fails_closed_for_duplicate_canonical_owner() -> None:

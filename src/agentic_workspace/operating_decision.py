@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -72,6 +74,65 @@ CONTEXT_AUTHORITY_REGISTRY = [
     dict(item) for item in _as_list(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("surfaces")) if isinstance(item, dict)
 ]
 CONTEXT_AUTHORITY_REGISTRY_REVISION = "sha256:" + _digest(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT)
+CONTEXT_AUTHORITY_SOURCE_SPECS: dict[str, dict[str, Any]] = {
+    "system-intent": {"source": "SYSTEM_INTENT.md", "required": ["SYSTEM_INTENT.md"], "routes": ["SYSTEM_INTENT.md"]},
+    "architecture-principles": {"source": "SYSTEM_INTENT.md", "required": ["SYSTEM_INTENT.md"], "routes": ["SYSTEM_INTENT.md"]},
+    "scoped-instructions": {
+        "source": "AGENTS.md",
+        "required": ["AGENTS.md", ".agentic-workspace/skills/workspace-startup/SKILL.md"],
+        "routes": ["AGENTS.md", ".agentic-workspace/skills/**"],
+    },
+    "ownership": {"source": ".agentic-workspace/OWNERSHIP.toml", "required": [".agentic-workspace/OWNERSHIP.toml"], "routes": ["*"]},
+    "planning": {
+        "source": ".agentic-workspace/planning/state.toml",
+        "required": [".agentic-workspace/planning/state.toml"],
+        "routes": [".agentic-workspace/planning/**"],
+    },
+    "memory": {
+        "source": ".agentic-workspace/memory/repo/index.md",
+        "required": [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/manifest.toml"],
+        "routes": [".agentic-workspace/memory/repo/**"],
+    },
+    "assignment": {"source": ".agentic-workspace/config.toml", "required": [".agentic-workspace/config.toml"], "routes": ["*"]},
+    "evaluation": {
+        "source": "src/agentic_workspace/evaluation.py",
+        "required": ["src/agentic_workspace/evaluation.py"],
+        "routes": ["src/agentic_workspace/evaluation.py"],
+    },
+    "proof": {
+        "source": ".agentic-workspace/verification/manifest.toml",
+        "required": [".agentic-workspace/verification/manifest.toml"],
+        "routes": [".agentic-workspace/verification/**", "tests/**"],
+    },
+    "mutation-baseline": {
+        "source": ".agentic-workspace/planning/state.toml",
+        "required": [".agentic-workspace/planning/state.toml"],
+        "routes": ["*"],
+        "requires_git_head": True,
+    },
+    "autopilot-executor": {
+        "source": "src/agentic_workspace/workspace_runtime_primitives.py",
+        "required": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+        "routes": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+    },
+    "skills": {
+        "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+        "required": [".agentic-workspace/skills/workspace-startup/SKILL.md"],
+        "routes": [".agentic-workspace/skills/**"],
+    },
+    "target-guidance": {"source": ".agentic-workspace/config.toml", "required": [".agentic-workspace/config.toml"], "routes": ["*"]},
+    "terminal-outcome": {
+        "source": "src/agentic_workspace/workspace_runtime_primitives.py",
+        "required": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+        "routes": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+    },
+    "generated-references": {
+        "source": "generated/.agentic-workspace-cli-fingerprint.json",
+        "required": ["generated/.agentic-workspace-cli-fingerprint.json", "src/agentic_workspace/contracts/structured_file_inventory.json"],
+        "routes": ["generated/**", "src/agentic_workspace/contracts/**"],
+        "generated_freshness": True,
+    },
+}
 
 
 def context_authority_declarations() -> list[dict[str, Any]]:
@@ -107,23 +168,36 @@ def _registry_consumers(item: dict[str, Any]) -> list[str]:
 
 
 def _context_source_candidates(surface: str) -> list[str]:
-    return {
-        "system-intent": ["SYSTEM_INTENT.md", ".agentic-workspace/config.toml"],
-        "architecture-principles": ["SYSTEM_INTENT.md", ".agentic-workspace/config.toml"],
-        "scoped-instructions": ["AGENTS.md", ".agentic-workspace/skills/workspace-startup/SKILL.md"],
-        "ownership": [".agentic-workspace/OWNERSHIP.toml"],
-        "planning": [".agentic-workspace/planning"],
-        "memory": [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo"],
-        "assignment": [".agentic-workspace/config.local.toml", ".agentic-workspace/config.toml"],
-        "evaluation": [".agentic-workspace/evaluation", "src/agentic_workspace/evaluation.py"],
-        "proof": [".agentic-workspace/verification/manifest.toml", "src/agentic_workspace/proof_receipts.py"],
-        "mutation-baseline": [".git", ".agentic-workspace/planning"],
-        "autopilot-executor": ["src/agentic_workspace/workspace_runtime_primitives.py"],
-        "skills": [".agentic-workspace/skills", "generated/workspace/python/commands"],
-        "target-guidance": [".agentic-workspace/config.local.toml", ".agentic-workspace/config.toml"],
-        "terminal-outcome": [".agentic-workspace/local", "src/agentic_workspace/workspace_runtime_primitives.py"],
-        "generated-references": ["generated/.agentic-workspace-cli-fingerprint.json", "src/agentic_workspace/contracts"],
-    }.get(surface, [])
+    spec = CONTEXT_AUTHORITY_SOURCE_SPECS.get(surface, {})
+    return [str(path) for path in _as_list(spec.get("required") or [spec.get("source")]) if str(path)]
+
+
+def _path_matches_any(path: str, patterns: list[str]) -> bool:
+    normalized = path.replace("\\", "/").strip()
+    return any(pattern == "*" or fnmatch.fnmatch(normalized, pattern) for pattern in patterns)
+
+
+def _git_head(root: Path) -> str:
+    completed = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=False)
+    return completed.stdout.strip() if completed.returncode == 0 else ""
+
+
+def _generated_fingerprint_is_current(root: Path) -> bool:
+    fingerprint = root / "generated/.agentic-workspace-cli-fingerprint.json"
+    if not fingerprint.exists():
+        return False
+    try:
+        payload = json.loads(fingerprint.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False
+    sources = payload.get("source_hashes")
+    if not isinstance(sources, dict):
+        return False
+    for relative, expected in sources.items():
+        path = root / str(relative)
+        if path.exists() and _file_digest(path) != str(expected):
+            return False
+    return True
 
 
 def _resolve_context_authority_source(
@@ -137,33 +211,51 @@ def _resolve_context_authority_source(
     if target_root is None:
         return {"status": "missing", "reason": "missing-target-root"}
     root = target_root
+    spec = CONTEXT_AUTHORITY_SOURCE_SPECS.get(surface, {})
     candidates = _context_source_candidates(surface)
-    chosen: Path | None = None
-    for candidate in candidates:
-        path = root / candidate
-        if path.exists():
-            chosen = path
-            break
-    if chosen is None:
+    missing_required = [candidate for candidate in candidates if not (root / candidate).exists()]
+    if missing_required:
+        return {
+            "status": "missing",
+            "reason": "canonical-source-missing",
+            "candidates": candidates,
+            "missing_required": missing_required,
+            "repair_operation_id": f"context-authority.{surface}.refresh-source",
+        }
+    chosen = root / str(spec.get("source") or candidates[0])
+    if not chosen.exists():
         return {"status": "missing", "reason": "canonical-source-missing", "candidates": candidates}
     revision = _directory_digest(chosen) if chosen.is_dir() else _file_digest(chosen)
     if not revision:
-        return {"status": "stale", "reason": "source-unreadable", "source_id": chosen.as_posix()}
+        return {"status": "stale", "reason": "source-unreadable-or-empty", "source_id": chosen.as_posix()}
+    if chosen.is_dir() and not any(path.is_file() for path in chosen.rglob("*")):
+        return {"status": "missing", "reason": "configured-source-empty", "source_id": chosen.relative_to(root).as_posix()}
+    git_head = _git_head(root) if spec.get("requires_git_head") else ""
+    if spec.get("requires_git_head") and not git_head:
+        return {"status": "missing", "reason": "git-head-unavailable", "source_id": chosen.relative_to(root).as_posix()}
+    if spec.get("generated_freshness") and not _generated_fingerprint_is_current(root):
+        return {"status": "stale", "reason": "stale-generated-projection", "source_id": chosen.relative_to(root).as_posix()}
     path_tokens = {Path(path).parts[0] for path in paths if Path(path).parts}
     source_token = chosen.parts[-1] if chosen.parts else chosen.as_posix()
-    applicable = bool(task.strip() or paths)
+    route_patterns = [str(pattern) for pattern in _as_list(spec.get("routes")) if str(pattern)]
+    matched_paths = [path for path in paths if _path_matches_any(path, route_patterns)]
+    applicable = bool(task.strip() and not paths) or bool(matched_paths)
     if surface in {"ownership", "mutation-baseline", "proof"} and not paths:
         applicable = "start" in _registry_consumers(item)
+    if surface == "memory" and paths and not matched_paths and not task.strip():
+        applicable = False
     return {
         "status": "current",
         "applicable": applicable,
         "source_id": chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix(),
-        "revision": "sha256:" + revision,
+        "revision": "sha256:" + _digest({"source": revision, "git_head": git_head}) if git_head else "sha256:" + revision,
         "freshness": "current",
         "selection": {
             "task_digest": _digest(task)[:16],
             "changed_path_count": len(paths),
             "path_tokens": sorted(path_tokens),
+            "matched_paths": sorted(matched_paths),
+            "route_patterns": route_patterns,
             "source_token": source_token,
             "rule": "repository adapter resolved current source identity; caller supplied records are diagnostics only",
         },
@@ -174,6 +266,8 @@ def _resolve_context_authority_source(
             "surface": surface,
             "owner": item.get("owner"),
             "source_revision": "sha256:" + revision,
+            "git_head": git_head,
+            "repair_operation_id": f"context-authority.{surface}.refresh-source",
         },
     }
 
@@ -338,9 +432,14 @@ def resolve_context_authority_projection(
                 ),
                 "missing",
             ),
-            "action": "refresh-or-admit-source-record",
+            "action": f"context-authority.{item['surface']}.refresh-source",
             "repair_owner": "context-authority-source-adapter",
-            "required_record": ["canonical repository source", "producer-owned admission receipt", "freshness=current"],
+            "required_record": [
+                "canonical repository source",
+                "source-specific schema/population check",
+                "producer-owned admission receipt",
+                "freshness=current",
+            ],
         }
         for item in sorted(
             (item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in missing),
