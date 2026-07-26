@@ -860,7 +860,7 @@ def test_config_command_surfaces_unknown_local_override_fields_as_warnings(tmp_p
 
 
 def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> None:
-        target = tmp_path / "repo"
+    target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
     (target / ".agentic-workspace/config.toml").write_text(
@@ -1608,8 +1608,8 @@ def test_guidance_promotion_persists_provenance_and_reversible_transition(tmp_pa
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-        (target / ".agentic-workspace/config.local.toml").write_text(
-        "schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = \"user-local:fast-worker\"\ntarget_revision = \"rev-b\"\n",
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = \"user-local:fast-worker\"\ntarget_revision = \"rev-b\"\nstrength = \"strong\"\nexecution_methods = [\"internal\"]\nmodel_family = \"codex\"\nprovider = \"openai\"\n",
         encoding="utf-8",
     )
     store = target / ".agentic-workspace/local/correction-events.json"
