@@ -190,8 +190,19 @@ def resolve_context_authority_projection(
         if surface not in required:
             continue
         record = _as_dict(records.get(surface))
-        record_status = str(record.get("status") or "current")
-        applicable = record.get("applicable") is not False and record_status not in {"absent", "not-applicable", "deferred"}
+        # A registry declaration names an authority; it is not proof that the
+        # authoritative source is available for this invocation.  Required
+        # context must therefore arrive through a live source record rather
+        # than being synthesized from the declaration itself.
+        record_status = str(record.get("status") or "missing")
+        applicable = (
+            bool(record)
+            and record.get("applicable") is not False
+            and record_status == "current"
+            and bool(record.get("source_id") or record.get("source"))
+            and bool(record.get("revision"))
+            and str(record.get("freshness") or "") == "current"
+        )
         authority = {
             "surface": surface,
             "owner": str(item.get("owner") or ""),
@@ -200,15 +211,15 @@ def resolve_context_authority_projection(
             "revision_fields": [str(field) for field in _as_list(item.get("revision_fields"))],
             "disposition": str(item.get("disposition") or ""),
             "source": {
-                "id": str(record.get("source_id") or record.get("source") or surface),
-                "revision": str(record.get("revision") or _digest(record or item)[:16]),
+                "id": str(record.get("source_id") or record.get("source") or ""),
+                "revision": str(record.get("revision") or ""),
                 "freshness": str(record.get("freshness") or record_status),
             },
         }
         if applicable:
             selected.append(authority)
         else:
-            excluded.append({"surface": surface, "reason": record_status or "not-applicable"})
+            excluded.append({"surface": surface, "reason": record_status})
     missing = sorted(required - {item["surface"] for item in selected})
     status = "admitted" if not missing and coverage["status"] == "measured" else "repair-required"
     return {
