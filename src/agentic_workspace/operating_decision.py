@@ -167,30 +167,48 @@ def context_authority_coverage(
     }
 
 
-def resolve_context_authority_projection(*, consumer: str, task: str = "", changed_paths: list[str] | None = None) -> dict[str, Any]:
+def resolve_context_authority_projection(
+    *,
+    consumer: str,
+    task: str = "",
+    changed_paths: list[str] | None = None,
+    source_records: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Resolve the smallest declared authority set for an ordinary consumer.
 
     This is deliberately registry-driven: callers receive a revisioned projection
     and a typed repair disposition instead of reimplementing source selection.
     """
     paths = [str(path) for path in (changed_paths or []) if str(path)]
+    records = _as_dict(source_records)
     coverage = context_authority_coverage()
     required = set(ORDINARY_DECISION_CONSUMER_REQUIREMENTS.get(consumer, []))
     selected: list[dict[str, Any]] = []
+    excluded: list[dict[str, Any]] = []
     for item in CONTEXT_AUTHORITY_REGISTRY:
         surface = str(item.get("surface") or "")
         if surface not in required:
             continue
-        selected.append(
-            {
-                "surface": surface,
-                "owner": str(item.get("owner") or ""),
-                "authority_class": str(item.get("authority_class") or ""),
-                "activation": str(item.get("activation") or ""),
-                "revision_fields": [str(field) for field in _as_list(item.get("revision_fields"))],
-                "disposition": str(item.get("disposition") or ""),
-            }
-        )
+        record = _as_dict(records.get(surface))
+        record_status = str(record.get("status") or "current")
+        applicable = record.get("applicable") is not False and record_status not in {"absent", "not-applicable", "deferred"}
+        authority = {
+            "surface": surface,
+            "owner": str(item.get("owner") or ""),
+            "authority_class": str(item.get("authority_class") or ""),
+            "activation": str(item.get("activation") or ""),
+            "revision_fields": [str(field) for field in _as_list(item.get("revision_fields"))],
+            "disposition": str(item.get("disposition") or ""),
+            "source": {
+                "id": str(record.get("source_id") or record.get("source") or surface),
+                "revision": str(record.get("revision") or _digest(record or item)[:16]),
+                "freshness": str(record.get("freshness") or record_status),
+            },
+        }
+        if applicable:
+            selected.append(authority)
+        else:
+            excluded.append({"surface": surface, "reason": record_status or "not-applicable"})
     missing = sorted(required - {item["surface"] for item in selected})
     status = "admitted" if not missing and coverage["status"] == "measured" else "repair-required"
     return {
@@ -201,6 +219,7 @@ def resolve_context_authority_projection(*, consumer: str, task: str = "", chang
         "task_digest": _digest(task)[:16],
         "changed_path_count": len(paths),
         "authorities": selected,
+        "excluded_authorities": excluded,
         "missing_required_surfaces": missing,
         "repair": (
             "repair the registry declaration or consumer requirement before mutation"
@@ -629,6 +648,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         consumer=requested_consumer,
         task=str(inputs.get("task") or ""),
         changed_paths=[str(path) for path in _as_list(inputs.get("changed_paths"))],
+        source_records=_as_dict(inputs.get("authority_sources")) or _as_dict(inputs.get("authorities")),
     )
     input_revisions = {
         **revisions,

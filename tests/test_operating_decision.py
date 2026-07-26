@@ -594,6 +594,21 @@ def test_context_authority_projection_is_registry_driven_for_start() -> None:
     }
 
 
+def test_context_authority_projection_selects_live_source_records_and_excludes_inapplicable() -> None:
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="shape authority routing",
+        source_records={
+            "memory": {"status": "not-applicable", "applicable": False, "source_id": "memory/index", "revision": "old"},
+            "skills": {"status": "current", "source_id": "skills/registry", "revision": "skills-r2", "freshness": "current"},
+        },
+    )
+
+    skills = next(item for item in projection["authorities"] if item["surface"] == "skills")
+    assert skills["source"] == {"id": "skills/registry", "revision": "skills-r2", "freshness": "current"}
+    assert {item["surface"] for item in projection["excluded_authorities"]} == {"memory"}
+
+
 def test_context_authority_coverage_fails_closed_for_duplicate_canonical_owner() -> None:
     declarations = context_authority_declarations()
     duplicate = next(item for item in declarations if item["surface"] == "architecture-principles")
