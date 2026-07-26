@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,10 @@ from agentic_workspace.config import (
 )
 
 CORRECTION_EVENT_RETENTION_CAP = 20
+
+
+def _guidance_now() -> str:
+    return datetime.now(UTC).isoformat()
 CORRECTION_EVENT_OPERATIONS = (
     "correction-event.submit",
     "correction-event.query",
@@ -768,7 +773,7 @@ def apply_guidance_promotion(*, target_root: Path, guidance_id: str, task_class:
         "instruction": candidate["instruction"],
         "applicability": candidate["applicability"],
         "provenance": {"source_event_refs": candidate["source_event_refs"], "evidence_refs": candidate["evidence_refs"], "promotion_reason": candidate["promotion_reason"], "authority_source": decision.get("authority_source", {})},
-        "transitions": [{"operation": "promote", "at": _now(), "reason": candidate["promotion_reason"]}],
+        "transitions": [{"operation": "promote", "at": _guidance_now(), "reason": candidate["promotion_reason"]}],
         "revision": 1,
     }
     _write_correction_event_store(path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": [*records, record]})
@@ -790,7 +795,7 @@ def transition_guidance(*, target_root: Path, guidance_id: str, operation: str, 
     if record.get("status") in {"retired", "deleted", "superseded"}:
         return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "terminal-guidance", "record": record}
     status = {"suppress": "suppressed", "retire": "retired", "delete": "deleted", "supersede": "superseded"}.get(operation, "active")
-    transition = {"operation": operation, "at": _now(), "reason": reason, "replacement_guidance_id": replacement_guidance_id or None}
+    transition = {"operation": operation, "at": _guidance_now(), "reason": reason, "replacement_guidance_id": replacement_guidance_id or None}
     record.update(status=status, revision=int(record.get("revision") or 0) + 1, transitions=[*record.get("transitions", []), transition])
     records[index] = record
     _write_correction_event_store(path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": records})
