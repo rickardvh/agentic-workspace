@@ -1553,6 +1553,55 @@ def test_correction_event_lifecycle_returns_persistent_bounded_store_update() ->
     assert admitted["store_update"]["checked_in_repo_effect"] == "none"
 
 
+def test_guidance_promotion_reads_only_the_canonical_correction_store(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import guidance_promotion_from_store
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'current_target = "user-local:fast-worker"',
+                "",
+                "[delegation_targets.fast_worker]",
+                'target_id = "user-local:fast-worker"',
+                'target_revision = "rev-b"',
+                'aliases = ["fast"]',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+                'model_family = "codex"',
+                'provider = "openai"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    store_path = target / ".agentic-workspace/local/correction-events.json"
+    store_path.parent.mkdir(parents=True, exist_ok=True)
+    store_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/correction-event-store/v1",
+                "events": [
+                    _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-1"),
+                    _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-2", evidence_hash="sha256:review-2"),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    decision = guidance_promotion_from_store(target_root=target)
+
+    assert decision["status"] == "ready"
+    assert decision["guidance"][0]["status"] == "active"
+    assert decision["guidance"][0]["promotion_reason"] == "independent-recurrence"
+    assert decision["authority_source"]["store"] == ".agentic-workspace/local/correction-events.json"
+
+
 def test_correction_event_lifecycle_rejects_delivery_replay_separately_from_recurrence() -> None:
     from agentic_workspace.agent_guidance import admit_correction_events
 
