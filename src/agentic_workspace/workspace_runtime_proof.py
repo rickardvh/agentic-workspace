@@ -6774,6 +6774,16 @@ def _proof_decision_packet(
     closeout_posture_uncertainty = (
         _list_payload(high_assurance_closeout_posture.get("uncertainty")) if isinstance(high_assurance_closeout_posture, dict) else []
     )
+    # A matched high-assurance posture may not be discharged by the implementer
+    # rerunning its own proof.  The current receipt store does not yet carry an
+    # independently admitted reviewer identity, so make that absence explicit
+    # and fail closed at the proof/claim boundary rather than accepting caller
+    # supplied actor fields.
+    separation_gate = _separation_of_duty_gate(
+        required_mode="human" if int(high_assurance_closeout_posture.get("matched_count", 0) or 0) else "not-applicable",
+        implementer={},
+        reviewer=None,
+    )
     blockers: list[str] = []
     if required_commands:
         blockers.append("required proof commands have not been recorded as passed")
@@ -6795,6 +6805,8 @@ def _proof_decision_packet(
         blockers.append("high-assurance closeout posture evidence is missing")
     if closeout_posture_waivers or closeout_posture_uncertainty:
         blockers.append("high-assurance closeout posture requires human waiver or uncertainty acknowledgement")
+    if separation_gate.get("status") != "not-applicable":
+        blockers.append("high-assurance review separation is required")
     overlay_claim_effects = _local_overlay_claim_effects(local_high_risk_overlay or {})
     overlay_blockers = _list_payload(overlay_claim_effects.get("blockers"))
     if overlay_blockers:
@@ -6838,6 +6850,7 @@ def _proof_decision_packet(
             "test_strategy_status": str(test_strategy_check.get("status", "")) if isinstance(test_strategy_check, dict) else "",
         },
         "high_assurance_closeout_posture": high_assurance_closeout_posture,
+        "separation_of_duty": separation_gate,
         "local_overlay": local_overlay or {"status": "absent", "active_count": 0},
         "local_high_risk_overlay": local_high_risk_overlay or {"status": "absent", "active_count": 0},
         "missing_or_unresolved": {
@@ -6848,6 +6861,7 @@ def _proof_decision_packet(
             "closeout_posture_missing_evidence": closeout_posture_missing,
             "closeout_posture_human_waiver_refs": closeout_posture_waivers,
             "closeout_posture_uncertainty": closeout_posture_uncertainty,
+            "separation_of_duty": separation_gate,
             "local_overlay_blockers": overlay_blockers,
             "local_overlay_warnings": _list_payload(overlay_claim_effects.get("warnings")),
             "local_overlay_ci_validation": _list_payload(overlay_claim_effects.get("ci_validation")),

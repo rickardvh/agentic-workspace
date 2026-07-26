@@ -7315,6 +7315,11 @@ certification_limits = ["does not certify production authorization safety"]
     assert posture["status"] == "missing-proof"
     assert posture["matched_count"] == 1
     assert posture["matched_postures"][0]["claim_boundary"] == "critical-access-closeout"
+    assert packet["separation_of_duty"] == {
+        "kind": "agentic-workspace/separation-of-duty-gate/v1",
+        "status": "required",
+        "required_mode": "human",
+    }
     assert posture["missing_evidence"] == ["domain_review_recorded"]
     assert "high-assurance closeout posture evidence is missing" in packet["missing_or_unresolved"]["blockers"]
 
