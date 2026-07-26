@@ -698,6 +698,40 @@ def guidance_promotion_decision(*, admission: dict[str, Any], explicit_remember:
     }
 
 
+def guidance_promotion_from_store(
+    *,
+    target_root: Path,
+    task_class: str | None = None,
+    scope_class: str | None = None,
+) -> dict[str, Any]:
+    """Derive promotion only from the bounded correction-event authority store.
+
+    The public store path is the custody boundary: callers cannot provide a
+    recurrence count, source authority, or immediate-remember flag here.
+    """
+    config = load_workspace_config(target_root=target_root)
+    store = _read_correction_event_store(target_root / config.local_override.correction_events_path)
+    if store.get("status") == "unreadable":
+        return {
+            "kind": "agentic-workspace/agent-guidance-promotion-decision/v1",
+            "status": "repair-required",
+            "repair": "repair the canonical correction-event store before guidance promotion",
+        }
+    admission = admit_correction_events(
+        events=[item for item in store.get("events", []) if isinstance(item, dict)],
+        subjects=[_target_identity_subject(profile) for profile in config.local_override.delegation_targets],
+        task_class=task_class,
+        scope_class=scope_class,
+    )
+    decision = guidance_promotion_decision(admission=admission, explicit_remember=False)
+    decision["authority_source"] = {
+        "store": _repo_relative(target_root / config.local_override.correction_events_path, root=target_root),
+        "store_update": admission.get("store_update", {}),
+        "rule": "Promotion consumes admitted current store records; direct caller recurrence and authority assertions are ignored.",
+    }
+    return decision
+
+
 def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_root: Path | None) -> dict[str, Any]:
     subjects = [_target_identity_subject(profile) for profile in local_override.delegation_targets]
     current_name = local_override.current_target or ""
