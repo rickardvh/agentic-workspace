@@ -717,7 +717,23 @@ def _start_payload(
                 payload["task_posture_packet"] = task_posture_packet
         if profile is None:
             payload["context_authority_projection"] = resolve_context_authority_projection(
-                consumer="start", task=task_text or "", changed_paths=normalized_paths
+                consumer="start",
+                task=task_text or "",
+                changed_paths=normalized_paths,
+                source_records={
+                    "system-intent": _as_dict(payload.get("durable_intent")),
+                    "architecture-principles": _as_dict(payload.get("architecture_principles")),
+                    "scoped-instructions": _as_dict(payload.get("authority_markers")),
+                    "ownership": {
+                        "status": "current",
+                        "source_id": "changed-path-boundaries",
+                        "revision": hashlib.sha256(json.dumps(payload.get("authority_markers", []), sort_keys=True).encode()).hexdigest()[:16],
+                    },
+                    "planning": _as_dict(payload.get("planning_safety_gate")),
+                    "memory": _as_dict(payload.get("memory_consult")),
+                    "skills": _as_dict(payload.get("skill_routing")),
+                    "target-guidance": _as_dict(payload.get("execution_posture")),
+                },
             )
             return _selector_first_start_payload(payload, cli_invoke=config.cli_invoke, target_root=target_root)
         return payload
