@@ -141,5 +141,5 @@
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     }
   ],
-  "version_floor_rule": "The next coordinated version must be greater than every shipped package version and every existing vMAJOR.MINOR.PATCH tag."
+  "version_floor_rule": "The next coordinated version must be greater than every shipped package version and every AW coordinated-release vMAJOR.MINOR.PATCH tag; tags from other package domains do not set the AW release floor."
 }

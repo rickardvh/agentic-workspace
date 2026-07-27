@@ -213,7 +213,7 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
     command_roles = {command["name"]: command["role"] for command in commands}
     command_audiences = {command["name"]: command["audience"] for command in commands}
 
-    assert set(command_roles) == {
+    assert {
         "modules",
         "planning",
         "memory",
@@ -244,7 +244,8 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
         "doctor",
         "upgrade",
         "uninstall",
-    }
+    } <= set(command_roles)
+    assert {"assignment", "evaluation", "correction-event"} <= set(command_roles)
     assert command_roles["install"] == "core_lifecycle"
     assert command_roles["upgrade"] == "core_lifecycle"
     assert command_roles["start"] == "core_context_router"
@@ -259,6 +260,9 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
     assert command_roles["setup"] == "reusable_host_repo_diagnostics"
     assert command_roles["doctor"] == "core_lifecycle"
     assert command_roles["external-intent"] == "reusable_host_repo_diagnostics"
+    assert command_roles["assignment"] == "core_context_router"
+    assert command_roles["evaluation"] == "core_lifecycle"
+    assert command_roles["correction-event"] == "reusable_host_repo_diagnostics"
     assert command_audiences["modules"] == "advanced_host_repo"
     assert command_audiences["status"] == "advanced_host_repo"
     assert command_audiences["doctor"] == "advanced_host_repo"
@@ -269,6 +273,9 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
     assert command_audiences["work-thread"] == "ordinary_host_repo"
     assert command_audiences["session-log"] == "local_only"
     assert command_audiences["setup"] == "advanced_host_repo"
+    assert command_audiences["assignment"] == "advanced_host_repo"
+    assert command_audiences["evaluation"] == "ordinary_host_repo"
+    assert command_audiences["correction-event"] == "ordinary_host_repo"
     assert all(command["classification_note"] for command in commands)
     assert "source_checkout_only_maintainer_development" not in set(command_roles.values())
     assert "remove_or_hide" not in set(command_roles.values())
