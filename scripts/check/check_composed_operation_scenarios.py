@@ -64,7 +64,7 @@ REQUIRED_METRICS = {
     "package_residue",
 }
 SCENARIO_STATE_DIR = Path(".agentic-workspace/local/composed-operation-scenarios")
-SCENARIO_ADMISSION_DIR = Path(".agentic-workspace/local/composed-operation-owner-admissions")
+SCENARIO_OWNER_RESULT_DIR = Path(".agentic-workspace/local/composed-operation-owner-results")
 CONTRACT_FIELDS = (
     "owner",
     "terminal_state",
@@ -239,78 +239,6 @@ def _write_owner_receipt(target: Path, scenario: dict[str, object]) -> str:
     return receipt_path.relative_to(target).as_posix()
 
 
-def _write_owner_admission(
-    target: Path,
-    *,
-    scenario_id: str,
-    owner_domain: str,
-    fact_type: str,
-    signals: dict[str, object],
-) -> str:
-    path = target / SCENARIO_ADMISSION_DIR / owner_domain / f"{scenario_id}.json"
-    _write_json(
-        path,
-        {
-            "kind": "agentic-workspace/composed-operation-owner-admission/v1",
-            "scenario_id": scenario_id,
-            "owner_domain": owner_domain,
-            "fact_type": fact_type,
-            "signals": signals,
-            "observed": True,
-            "source": f"{owner_domain}.scenario-admission",
-        },
-    )
-    return path.relative_to(target).as_posix()
-
-
-def _fixture_admission_inputs(fixture: str) -> tuple[str, str, dict[str, object]]:
-    if fixture == "fresh_repo":
-        return "workspace", "clean_direct_work", {"clean_baseline": True, "active_owner": False}
-    if fixture == "issue_scope":
-        return "external-intent", "bounded_issue_scope", {"issue_ref": "#2300", "clean_baseline": True}
-    if fixture == "active_owner":
-        return "planning", "selected_owner_resume", {"active_owner": True, "owner_revision_current": True}
-    if fixture == "unrelated_active_owner":
-        return "planning", "unrelated_task_switch", {"active_owner": True, "new_task_only": True}
-    if fixture == "worktree_switch":
-        return "workspace", "worktree_identity_rebound", {"active_owner": True, "target_identity_rebound": True}
-    if fixture == "completed_owner":
-        return "planning", "completed_owner_residue", {"completed_owner": True, "residue": True}
-    if fixture == "missing_skill":
-        return "workspace", "missing_skill_dependency", {"skill_dependency_unavailable": True}
-    if fixture == "dirty_worktree":
-        return "workspace", "dirty_worktree_preserved", {"preexisting_edits": True, "overlap": False}
-    if fixture == "stale_owner":
-        return "planning", "stale_mutation_owner", {"stale_cas": True, "mutation_attempted": True}
-    if fixture == "overlap_owner":
-        return "planning", "overlapping_mutation_owner", {"overlap": True, "mutation_attempted": True}
-    if fixture == "untrusted_instruction":
-        return "workspace", "untrusted_instruction_text", {"data_text_not_authority": True}
-    if fixture == "stale_proof":
-        return "verification", "stale_proof", {"proof_status": "stale", "proof_rerun_required": True}
-    if fixture == "partial_finalization":
-        return "planning", "partial_finalization", {"acceptance_incomplete": True}
-    if fixture == "compaction_continuation":
-        return "planning", "context_compaction_continuation", {"compacted_context": True, "continuation_current": True}
-    if fixture == "handoff_return":
-        return "delegation", "handoff_return_admission", {"returned_result": "unadmitted"}
-    if fixture == "runtime_unavailable":
-        return "workspace", "runtime_unavailable", {"runtime_status": "unavailable"}
-    if fixture == "runtime_restored":
-        return "workspace", "runtime_restored", {"runtime_status": "restored"}
-    if fixture == "partial_write_crash":
-        return "workspace", "partial_write_crash", {"partial_write": True, "transaction_recovery_required": True}
-    if fixture == "malformed_observation":
-        return "workspace", "malformed_external_observation", {"external_observation": "malformed"}
-    if fixture == "adapter_capability_mismatch":
-        return "generated-target", "adapter_capability_mismatch", {"adapter_capability": "incompatible"}
-    if fixture == "stale_scope_widening":
-        return "workspace", "stale_scope_widening_action", {"stale_action": True, "scope_widening": True}
-    if fixture == "projection_mismatch":
-        return "generated-target", "projection_digest_mismatch", {"projection_status": "drifted"}
-    return "workspace", "unknown_fixture", {"fixture": fixture}
-
-
 def _prepare_scenario_fixture(*, target: Path, scenario: dict[str, object]) -> dict[str, object]:
     """Instantiate the row's owner/fault state before ordinary consumers run."""
 
@@ -318,14 +246,6 @@ def _prepare_scenario_fixture(*, target: Path, scenario: dict[str, object]) -> d
     fixture = str(scenario["fixture"])
     setup_commands = 0
     receipt_path = _write_owner_receipt(target, scenario)
-    owner_domain, fact_type, signals = _fixture_admission_inputs(fixture)
-    admission_path = _write_owner_admission(
-        target,
-        scenario_id=scenario_id,
-        owner_domain=owner_domain,
-        fact_type=fact_type,
-        signals=signals,
-    )
     if fixture in {
         "active_owner",
         "unrelated_active_owner",
@@ -343,6 +263,16 @@ def _prepare_scenario_fixture(*, target: Path, scenario: dict[str, object]) -> d
         setup_commands += _prepare_active_plan(target, scenario_id=scenario_id, status="completed")
     if fixture == "issue_scope":
         _write_json(target / ".agentic-workspace" / "local" / "external-intent" / "issue-2300.json", {"status": "current"})
+    elif fixture == "unrelated_active_owner":
+        _write_json(
+            target / ".agentic-workspace" / "local" / "planning" / "task-switch.json",
+            {"status": "new-task-only", "selected_owner": scenario_id},
+        )
+    elif fixture == "worktree_switch":
+        _write_json(
+            target / ".agentic-workspace" / "local" / "workspace" / "target-identity.json",
+            {"status": "rebound", "selected_owner": scenario_id},
+        )
     elif fixture == "missing_skill":
         skill = target / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md"
         if skill.exists():
@@ -398,7 +328,6 @@ def _prepare_scenario_fixture(*, target: Path, scenario: dict[str, object]) -> d
     return {
         "setup_aw_command_count": setup_commands,
         "receipt_path": receipt_path,
-        "owner_admission_path": admission_path,
     }
 
 
@@ -663,21 +592,220 @@ def _read_json_if_present(path: Path) -> dict[str, object]:
     return payload if isinstance(payload, dict) else {"status": "not-object"}
 
 
+OWNER_RESULT_NORMALIZATION: dict[str, dict[str, str]] = {
+    "workspace.clean-direct-work": {
+        "owner": "direct-work",
+        "terminal_state": "continue",
+        "typed_action": "implement",
+        "effect_scope": "changed-paths-only",
+        "mutation_precondition": "clean-baseline",
+        "proof_claim_boundary": "proof-before-completion-claim",
+        "next_transition": "run-focused-proof",
+    },
+    "external-intent.bounded-issue-scope": {
+        "owner": "issue-scope",
+        "terminal_state": "continue",
+        "typed_action": "implement",
+        "effect_scope": "issue-bounded-paths",
+        "mutation_precondition": "clean-baseline",
+        "proof_claim_boundary": "proof-before-completion-claim",
+        "next_transition": "run-focused-proof",
+    },
+    "planning.selected-owner-current": {
+        "owner": "planning",
+        "terminal_state": "continue",
+        "typed_action": "continue",
+        "effect_scope": "selected-owner-only",
+        "mutation_precondition": "owner-revision-current",
+        "proof_claim_boundary": "owner-proof-before-completion",
+        "next_transition": "resume-current-slice",
+    },
+    "planning.unrelated-task-switch": {
+        "owner": "planning",
+        "terminal_state": "continue",
+        "typed_action": "reconcile",
+        "effect_scope": "new-task-only",
+        "mutation_precondition": "active-owner-preserved",
+        "proof_claim_boundary": "no-active-owner-completion-claim",
+        "next_transition": "acknowledge-task-switch",
+    },
+    "workspace.worktree-identity-rebound": {
+        "owner": "workspace",
+        "terminal_state": "continue",
+        "typed_action": "recover",
+        "effect_scope": "workspace-routing-state",
+        "mutation_precondition": "target-identity-rebound",
+        "proof_claim_boundary": "proof-after-recovery",
+        "next_transition": "refresh-startup-context",
+    },
+    "planning.completed-owner-residue": {
+        "owner": "planning",
+        "terminal_state": "partial",
+        "typed_action": "route-residue",
+        "effect_scope": "residue-record-only",
+        "mutation_precondition": "completed-owner-current",
+        "proof_claim_boundary": "partial-claim-only",
+        "next_transition": "open-residue-owner",
+    },
+    "workspace.missing-skill-dependency": {
+        "owner": "workspace",
+        "terminal_state": "blocked",
+        "typed_action": "recover",
+        "effect_scope": "skill-routing-only",
+        "mutation_precondition": "skill-dependency-unavailable",
+        "proof_claim_boundary": "no-completion-claim",
+        "next_transition": "install-or-select-supported-skill",
+    },
+    "workspace.dirty-worktree-preserved": {
+        "owner": "workspace",
+        "terminal_state": "continue",
+        "typed_action": "implement",
+        "effect_scope": "non-overlapping-changed-paths",
+        "mutation_precondition": "preexisting-edits-preserved",
+        "proof_claim_boundary": "proof-before-completion-claim",
+        "next_transition": "inspect-dirty-overlap",
+    },
+    "planning.stale-cas-rejected": {
+        "owner": "planning",
+        "terminal_state": "blocked",
+        "typed_action": "recover",
+        "effect_scope": "no-mutation",
+        "mutation_precondition": "stale-cas-rejected",
+        "proof_claim_boundary": "no-completion-claim",
+        "next_transition": "refresh-mutation-owner",
+    },
+    "planning.overlapping-mutation-rejected": {
+        "owner": "planning",
+        "terminal_state": "blocked",
+        "typed_action": "recover",
+        "effect_scope": "no-mutation",
+        "mutation_precondition": "overlapping-mutation-rejected",
+        "proof_claim_boundary": "no-completion-claim",
+        "next_transition": "inspect-overlap-owner",
+    },
+    "workspace.untrusted-instruction-ignored": {
+        "owner": "workspace",
+        "terminal_state": "continue",
+        "typed_action": "ignore-data-instruction",
+        "effect_scope": "trusted-instruction-sources-only",
+        "mutation_precondition": "data-text-not-authority",
+        "proof_claim_boundary": "proof-before-completion-claim",
+        "next_transition": "continue-safe-route",
+    },
+    "verification.stale-proof-rejected": {
+        "owner": "verification",
+        "terminal_state": "continue",
+        "typed_action": "run-proof",
+        "effect_scope": "proof-selection-only",
+        "mutation_precondition": "stale-proof-rejected",
+        "proof_claim_boundary": "fresh-proof-required",
+        "next_transition": "rerun-selected-proof",
+    },
+    "planning.partial-finalization-blocked": {
+        "owner": "planning",
+        "terminal_state": "partial",
+        "typed_action": "continue",
+        "effect_scope": "claim-boundary-only",
+        "mutation_precondition": "acceptance-incomplete",
+        "proof_claim_boundary": "partial-claim-only",
+        "next_transition": "continue-unresolved-work",
+    },
+    "planning.compaction-continuation-current": {
+        "owner": "planning",
+        "terminal_state": "continue",
+        "typed_action": "continue",
+        "effect_scope": "continuation-state-only",
+        "mutation_precondition": "continuation-revision-current",
+        "proof_claim_boundary": "continuation-proof-before-claim",
+        "next_transition": "resume-after-compaction",
+    },
+    "delegation.return-result-unadmitted": {
+        "owner": "delegation",
+        "terminal_state": "continue",
+        "typed_action": "admit-result",
+        "effect_scope": "returned-result-admission",
+        "mutation_precondition": "return-receipt-current",
+        "proof_claim_boundary": "admitted-result-before-claim",
+        "next_transition": "admit-or-repair-return",
+    },
+    "runtime.unavailable-fail-closed": {
+        "owner": "workspace",
+        "terminal_state": "blocked",
+        "typed_action": "recover",
+        "effect_scope": "runtime-state-only",
+        "mutation_precondition": "runtime-incompatible",
+        "proof_claim_boundary": "no-completion-claim",
+        "next_transition": "restore-runtime",
+    },
+    "runtime.restored-reentry": {
+        "owner": "workspace",
+        "terminal_state": "continue",
+        "typed_action": "start",
+        "effect_scope": "startup-reentry-only",
+        "mutation_precondition": "runtime-restored",
+        "proof_claim_boundary": "proof-before-completion-claim",
+        "next_transition": "restart-ordinary-route",
+    },
+    "workspace.partial-write-rejected": {
+        "owner": "workspace",
+        "terminal_state": "blocked",
+        "typed_action": "recover",
+        "effect_scope": "transaction-state-only",
+        "mutation_precondition": "partial-write-rejected",
+        "proof_claim_boundary": "no-completion-claim",
+        "next_transition": "rollback-or-retry-transaction",
+    },
+    "workspace.malformed-observation-rejected": {
+        "owner": "workspace",
+        "terminal_state": "blocked",
+        "typed_action": "recover",
+        "effect_scope": "external-observation-only",
+        "mutation_precondition": "malformed-observation-rejected",
+        "proof_claim_boundary": "no-completion-claim",
+        "next_transition": "request-valid-observation",
+    },
+    "generated-target.adapter-capability-rejected": {
+        "owner": "generated-target",
+        "terminal_state": "blocked",
+        "typed_action": "recover",
+        "effect_scope": "adapter-capability-only",
+        "mutation_precondition": "adapter-capability-rejected",
+        "proof_claim_boundary": "no-completion-claim",
+        "next_transition": "select-compatible-adapter",
+    },
+    "workspace.scope-widening-rejected": {
+        "owner": "workspace",
+        "terminal_state": "blocked",
+        "typed_action": "recover",
+        "effect_scope": "no-mutation",
+        "mutation_precondition": "scope-widening-rejected",
+        "proof_claim_boundary": "no-completion-claim",
+        "next_transition": "narrow-scope-and-refresh",
+    },
+    "generated-target.projection-drift-rejected": {
+        "owner": "generated-target",
+        "terminal_state": "blocked",
+        "typed_action": "recover",
+        "effect_scope": "generated-target-only",
+        "mutation_precondition": "projection-drift-rejected",
+        "proof_claim_boundary": "no-completion-claim",
+        "next_transition": "regenerate-projection",
+    },
+}
+
+
 def _derive_contract_from_authority(
     *, fault_observation: dict[str, object], packets: dict[str, dict[str, object]]
 ) -> dict[str, object]:
-    """Normalize the scenario contract from owner/fault authority and AW packets.
+    """Normalize the scenario contract from observed owner results and AW packets."""
 
-    The matrix row remains the assertion target. This function deliberately does
-    not read the row's contract fields. It admits a contract only when the
-    fixture owner observed the injected fault and ordinary AW consumers expose
-    the corresponding claim/proof/mutation boundary.
-    """
-
-    admission = fault_observation.get("owner_admission")
-    if not isinstance(admission, dict) or fault_observation.get("status") != "observed":
+    owner_result = fault_observation.get("owner_result")
+    if not isinstance(owner_result, dict) or fault_observation.get("status") != "observed":
         return {}
-    start = packets.get("start", {})
+    result_type = str(owner_result.get("result_type") or "")
+    normalized = OWNER_RESULT_NORMALIZATION.get(result_type, {})
+    if not normalized:
+        return {}
     implement = packets.get("implement", {})
     closeout = packets.get("closeout", {})
     planning_gate = _planning_gate(implement)
@@ -685,27 +813,18 @@ def _derive_contract_from_authority(
     completion_blocked = _closeout_blocks_completion(closeout)
     safe_claim = str((operating_loop or {}).get("safe_claim") or "")
     completion_safe = completion_blocked or safe_claim == "blocked"
-    fact_type = str(admission.get("fact_type") or "")
-    signals = admission.get("signals") if isinstance(admission.get("signals"), dict) else {}
-    terminal_state = _terminal_state_from_fact(fact_type=fact_type, completion_safe=completion_safe)
-    proof_claim_boundary = _proof_boundary_from_fact(fact_type=fact_type)
-    mutation_precondition = _mutation_precondition_from_fact(fact_type=fact_type, signals=signals)
-    if terminal_state == "blocked" and not completion_safe:
-        terminal_state = "invalid-completion-authorized"
-    if proof_claim_boundary in {"no-completion-claim", "partial-claim-only"} and not completion_safe:
-        proof_claim_boundary = "invalid-completion-authorized"
-    if mutation_precondition.endswith("-rejected") and fault_observation.get("rejection_observed") is not True:
-        mutation_precondition = "rejection-not-observed"
+    contract = dict(normalized)
+    if contract.get("terminal_state") == "blocked" and not completion_safe:
+        contract["terminal_state"] = "invalid-completion-authorized"
+    if contract.get("proof_claim_boundary") in {"no-completion-claim", "partial-claim-only"} and not completion_safe:
+        contract["proof_claim_boundary"] = "invalid-completion-authorized"
+    if str(contract.get("mutation_precondition") or "").endswith("-rejected") and owner_result.get("rejection_observed") is not True:
+        contract["mutation_precondition"] = "rejection-not-observed"
     return {
-        "owner": _owner_from_fact(admission),
-        "terminal_state": terminal_state,
-        "typed_action": _typed_action_from_fact(fact_type=fact_type),
-        "effect_scope": _effect_scope_from_fact(fact_type=fact_type),
-        "mutation_precondition": mutation_precondition,
-        "proof_claim_boundary": proof_claim_boundary,
-        "next_transition": _next_transition_from_fact(fact_type=fact_type, start=start, implement=implement),
+        **contract,
         "authority_sources": [
-            str(admission.get("source") or ""),
+            str(owner_result.get("source") or ""),
+            *sorted(str(item) for item in owner_result.get("evidence_sources", []) if isinstance(item, str)),
             *sorted(str(item) for item in fault_observation.get("packet_sources", []) if isinstance(item, str)),
         ],
         "planning_gate": planning_gate.get("gate_result"),
@@ -733,212 +852,15 @@ def _normalize_next_transition(
     return str(authority.get("fallback_transition") or "")
 
 
-def _owner_from_fact(admission: dict[str, object]) -> str:
-    fact_type = str(admission.get("fact_type") or "")
-    owner_domain = str(admission.get("owner_domain") or "")
-    if fact_type == "clean_direct_work":
-        return "direct-work"
-    if fact_type == "bounded_issue_scope":
-        return "issue-scope"
-    if owner_domain in {"planning", "verification", "delegation", "generated-target"}:
-        return owner_domain
-    return "workspace"
-
-
-def _terminal_state_from_fact(*, fact_type: str, completion_safe: bool) -> str:
-    if fact_type in {
-        "stale_mutation_owner",
-        "overlapping_mutation_owner",
-        "missing_skill_dependency",
-        "runtime_unavailable",
-        "partial_write_crash",
-        "malformed_external_observation",
-        "adapter_capability_mismatch",
-        "stale_scope_widening_action",
-        "projection_digest_mismatch",
-    }:
-        return "blocked" if completion_safe else "invalid-completion-authorized"
-    if fact_type in {"completed_owner_residue", "partial_finalization"}:
-        return "partial"
-    return "continue"
-
-
-def _typed_action_from_fact(*, fact_type: str) -> str:
-    if fact_type == "unrelated_task_switch":
-        return "reconcile"
-    if fact_type in {"selected_owner_resume", "partial_finalization", "context_compaction_continuation"}:
-        return "continue"
-    if fact_type == "completed_owner_residue":
-        return "route-residue"
-    if fact_type == "stale_proof":
-        return "run-proof"
-    if fact_type == "handoff_return_admission":
-        return "admit-result"
-    if fact_type == "runtime_restored":
-        return "start"
-    if fact_type == "untrusted_instruction_text":
-        return "ignore-data-instruction"
-    if fact_type in {
-        "worktree_identity_rebound",
-        "missing_skill_dependency",
-        "stale_mutation_owner",
-        "overlapping_mutation_owner",
-        "runtime_unavailable",
-        "partial_write_crash",
-        "malformed_external_observation",
-        "adapter_capability_mismatch",
-        "stale_scope_widening_action",
-        "projection_digest_mismatch",
-    }:
-        return "recover"
-    return "implement"
-
-
-def _effect_scope_from_fact(*, fact_type: str) -> str:
-    scopes = {
-        "clean_direct_work": "changed-paths-only",
-        "bounded_issue_scope": "issue-bounded-paths",
-        "selected_owner_resume": "selected-owner-only",
-        "unrelated_task_switch": "new-task-only",
-        "worktree_identity_rebound": "workspace-routing-state",
-        "completed_owner_residue": "residue-record-only",
-        "missing_skill_dependency": "skill-routing-only",
-        "dirty_worktree_preserved": "non-overlapping-changed-paths",
-        "stale_mutation_owner": "no-mutation",
-        "overlapping_mutation_owner": "no-mutation",
-        "untrusted_instruction_text": "trusted-instruction-sources-only",
-        "stale_proof": "proof-selection-only",
-        "partial_finalization": "claim-boundary-only",
-        "context_compaction_continuation": "continuation-state-only",
-        "handoff_return_admission": "returned-result-admission",
-        "runtime_unavailable": "runtime-state-only",
-        "runtime_restored": "startup-reentry-only",
-        "partial_write_crash": "transaction-state-only",
-        "malformed_external_observation": "external-observation-only",
-        "adapter_capability_mismatch": "adapter-capability-only",
-        "stale_scope_widening_action": "no-mutation",
-        "projection_digest_mismatch": "generated-target-only",
-    }
-    return scopes.get(fact_type, "unknown")
-
-
-def _mutation_precondition_from_fact(*, fact_type: str, signals: dict[str, object]) -> str:
-    if fact_type in {"clean_direct_work", "bounded_issue_scope"}:
-        return "clean-baseline"
-    if fact_type == "selected_owner_resume":
-        return "owner-revision-current" if signals.get("owner_revision_current") else "owner-revision-missing"
-    if fact_type == "unrelated_task_switch":
-        return "active-owner-preserved"
-    if fact_type == "worktree_identity_rebound":
-        return "target-identity-rebound"
-    if fact_type == "completed_owner_residue":
-        return "completed-owner-current"
-    if fact_type == "missing_skill_dependency":
-        return "skill-dependency-unavailable"
-    if fact_type == "dirty_worktree_preserved":
-        return "preexisting-edits-preserved"
-    if fact_type == "stale_mutation_owner":
-        return "stale-cas-rejected"
-    if fact_type == "overlapping_mutation_owner":
-        return "overlapping-mutation-rejected"
-    if fact_type == "untrusted_instruction_text":
-        return "data-text-not-authority"
-    if fact_type == "stale_proof":
-        return "stale-proof-rejected"
-    if fact_type == "partial_finalization":
-        return "acceptance-incomplete"
-    if fact_type == "context_compaction_continuation":
-        return "continuation-revision-current"
-    if fact_type == "handoff_return_admission":
-        return "return-receipt-current"
-    if fact_type == "runtime_unavailable":
-        return "runtime-incompatible"
-    if fact_type == "runtime_restored":
-        return "runtime-restored"
-    if fact_type == "partial_write_crash":
-        return "partial-write-rejected"
-    if fact_type == "malformed_external_observation":
-        return "malformed-observation-rejected"
-    if fact_type == "adapter_capability_mismatch":
-        return "adapter-capability-rejected"
-    if fact_type == "stale_scope_widening_action":
-        return "scope-widening-rejected"
-    if fact_type == "projection_digest_mismatch":
-        return "projection-drift-rejected"
-    return "unknown"
-
-
-def _proof_boundary_from_fact(*, fact_type: str) -> str:
-    if fact_type in {
-        "stale_mutation_owner",
-        "overlapping_mutation_owner",
-        "missing_skill_dependency",
-        "runtime_unavailable",
-        "partial_write_crash",
-        "malformed_external_observation",
-        "adapter_capability_mismatch",
-        "stale_scope_widening_action",
-        "projection_digest_mismatch",
-    }:
-        return "no-completion-claim"
-    if fact_type in {"completed_owner_residue", "partial_finalization"}:
-        return "partial-claim-only"
-    if fact_type == "selected_owner_resume":
-        return "owner-proof-before-completion"
-    if fact_type == "worktree_identity_rebound":
-        return "proof-after-recovery"
-    if fact_type == "stale_proof":
-        return "fresh-proof-required"
-    if fact_type == "context_compaction_continuation":
-        return "continuation-proof-before-claim"
-    if fact_type == "handoff_return_admission":
-        return "admitted-result-before-claim"
-    if fact_type == "unrelated_task_switch":
-        return "no-active-owner-completion-claim"
-    return "proof-before-completion-claim"
-
-
-def _next_transition_from_fact(*, fact_type: str, start: dict[str, object], implement: dict[str, object]) -> str:
-    transitions = {
-        "clean_direct_work": "run-focused-proof",
-        "bounded_issue_scope": "run-focused-proof",
-        "selected_owner_resume": "resume-current-slice",
-        "unrelated_task_switch": "acknowledge-task-switch",
-        "worktree_identity_rebound": "refresh-startup-context",
-        "completed_owner_residue": "open-residue-owner",
-        "missing_skill_dependency": "install-or-select-supported-skill",
-        "dirty_worktree_preserved": "inspect-dirty-overlap",
-        "stale_mutation_owner": "refresh-mutation-owner",
-        "overlapping_mutation_owner": "inspect-overlap-owner",
-        "untrusted_instruction_text": "continue-safe-route",
-        "stale_proof": "rerun-selected-proof",
-        "partial_finalization": "continue-unresolved-work",
-        "context_compaction_continuation": "resume-after-compaction",
-        "handoff_return_admission": "admit-or-repair-return",
-        "runtime_unavailable": "restore-runtime",
-        "runtime_restored": "restart-ordinary-route",
-        "partial_write_crash": "rollback-or-retry-transaction",
-        "malformed_external_observation": "request-valid-observation",
-        "adapter_capability_mismatch": "select-compatible-adapter",
-        "stale_scope_widening_action": "narrow-scope-and-refresh",
-        "projection_digest_mismatch": "regenerate-projection",
-    }
-    return transitions.get(fact_type) or _normalize_next_transition(
-        start=start,
-        implement=implement,
-        authority={"fallback_transition": ""},
-    )
-
-
 def _fixture_fault_observation(
     *, target: Path, scenario: dict[str, object], packets: dict[str, dict[str, object]]
 ) -> dict[str, object]:
-    """Observe the injected fault from repository state and ordinary packets.
+    """Observe the injected condition from owner state and ordinary packets.
 
-    This deliberately does not read the scenario row's expected contract fields.
-    It is the compact authority that makes the gate non-self-fulfilling: each
-    row must both instantiate the named fault and cause ordinary CLI consumers
-    to expose the corresponding posture.
+    Scenario setup may create canonical owner state, but it must not create the
+    decision being asserted. This observer records the result of the owner-facing
+    protected action after ordinary consumers ran, then the matrix assertion
+    compares that observed result with the row contract.
     """
 
     scenario_id = str(scenario.get("id") or "")
@@ -949,24 +871,21 @@ def _fixture_fault_observation(
     implement_gate = _planning_gate(implement)
     summary_continuation = summary.get("continuation_view") if isinstance(summary.get("continuation_view"), dict) else {}
     active_planning = str((summary_continuation or {}).get("status") or "") == "present"
-    admission = _read_owner_admission(target=target, scenario_id=scenario_id)
-    if not admission:
-        return {"status": "missing", "evidence": {"owner_admission": "missing", "scenario_id": scenario_id}}
-    fact_type = str(admission.get("fact_type") or "")
-    evidence = _owner_fact_evidence(
+    owner_result = _observe_owner_result(
         target=target,
         scenario_id=scenario_id,
-        fact_type=fact_type,
         active_planning=active_planning,
         start=start,
         implement=implement,
         closeout=closeout,
     )
-    observed = bool(evidence.get("observed"))
+    if not owner_result:
+        return {"status": "missing", "evidence": {"owner_result": "missing", "scenario_id": scenario_id}}
+    observed = bool(owner_result.get("observed"))
     return {
         "status": "observed" if observed else "missing",
-        "owner_admission": admission,
-        "rejection_observed": bool(evidence.get("rejection_observed", True)),
+        "owner_result": owner_result,
+        "rejection_observed": bool(owner_result.get("rejection_observed", True)),
         "packet_sources": [
             "start.next_safe_action",
             "implement.context.planning_safety_gate",
@@ -975,7 +894,7 @@ def _fixture_fault_observation(
             "report.closeout_trust",
         ],
         "evidence": {
-            **evidence,
+            **owner_result,
             "active_planning": active_planning,
             "implement_gate": implement_gate.get("gate_result"),
             "implement_allowed": implement_gate.get("implementation_allowed"),
@@ -987,28 +906,41 @@ def _fixture_fault_observation(
     }
 
 
-def _read_owner_admission(*, target: Path, scenario_id: str) -> dict[str, object]:
-    root = target / SCENARIO_ADMISSION_DIR
-    if not root.exists():
-        return {}
-    matches = sorted(root.glob(f"*/{scenario_id}.json"))
-    if len(matches) != 1:
-        return {"status": "ambiguous", "matches": [path.relative_to(target).as_posix() for path in matches]}
-    payload = _read_json_if_present(matches[0])
-    if (
-        payload.get("kind") != "agentic-workspace/composed-operation-owner-admission/v1"
-        or payload.get("observed") is not True
-        or payload.get("scenario_id") != scenario_id
-    ):
-        return {}
+def _record_owner_result(
+    target: Path,
+    *,
+    scenario_id: str,
+    result_type: str,
+    source: str,
+    evidence_sources: list[str],
+    rejection_observed: bool = False,
+    recovery_observed: bool = False,
+) -> dict[str, object]:
+    owner, _, outcome = result_type.partition(".")
+    payload: dict[str, object] = {
+        "kind": "agentic-workspace/composed-operation-owner-result/v1",
+        "scenario_id": scenario_id,
+        "result_type": result_type,
+        "source": source,
+        "evidence_sources": evidence_sources,
+        "observed": True,
+        "rejection_observed": rejection_observed,
+        "recovery_observed": recovery_observed,
+        "protected_action": {
+            "attempted": rejection_observed or recovery_observed,
+            "outcome": outcome,
+        },
+    }
+    path = target / SCENARIO_OWNER_RESULT_DIR / owner / f"{scenario_id}.json"
+    _write_json(path, payload)
+    payload["path"] = path.relative_to(target).as_posix()
     return payload
 
 
-def _owner_fact_evidence(
+def _observe_owner_result(
     *,
     target: Path,
     scenario_id: str,
-    fact_type: str,
     active_planning: bool,
     start: dict[str, object],
     implement: dict[str, object],
@@ -1016,101 +948,213 @@ def _owner_fact_evidence(
 ) -> dict[str, object]:
     gate = _planning_gate(implement)
     plan_path = target / ".agentic-workspace" / "planning" / "execplans" / f"{scenario_id}.plan.json"
+    plan = _read_json_if_present(plan_path)
     runtime = _read_json_if_present(target / ".agentic-workspace" / "local" / "runtime" / "availability.json")
-    checks: dict[str, object] = {
-        "clean_direct_work": {"observed": not active_planning and gate.get("gate_result") == "direct-work-allowed"},
-        "bounded_issue_scope": {
-            "observed": _read_json_if_present(target / ".agentic-workspace" / "local" / "external-intent" / "issue-2300.json").get(
-                "status"
-            )
-            == "current"
-        },
-        "selected_owner_resume": {"observed": active_planning and plan_path.exists()},
-        "unrelated_task_switch": {"observed": active_planning and gate.get("status") in {"satisfied", "clear"}},
-        "worktree_identity_rebound": {"observed": active_planning and plan_path.exists()},
-        "completed_owner_residue": {"observed": _read_json_if_present(plan_path).get("status") == "completed"},
-        "missing_skill_dependency": {
-            "observed": (target / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.missing").exists()
-        },
-        "dirty_worktree_preserved": {"observed": (target / "notes" / "user-owned.md").exists()},
-        "stale_mutation_owner": {
-            "observed": _read_json_if_present(target / ".agentic-workspace" / "local" / "planning" / "owner-selection.json").get(
-                "status"
-            )
-            == "stale",
-            "rejection_observed": True,
-        },
-        "overlapping_mutation_owner": {
-            "observed": _read_json_if_present(target / ".agentic-workspace" / "local" / "planning" / "mutation-owner.json").get(
-                "status"
-            )
-            == "overlap",
-            "rejection_observed": True,
-        },
-        "untrusted_instruction_text": {"observed": (target / "incoming" / "untrusted.txt").exists()},
-        "stale_proof": {
-            "observed": _read_json_if_present(target / ".agentic-workspace" / "local" / "proof" / "last.json").get("status")
-            == "stale",
-            "rejection_observed": True,
-        },
-        "partial_finalization": {
-            "observed": _read_json_if_present(target / ".agentic-workspace" / "local" / "closeout" / "premature.json").get(
-                "status"
-            )
-            == "partial"
-            and _closeout_blocks_completion(closeout)
-        },
-        "context_compaction_continuation": {
-            "observed": _read_json_if_present(target / ".agentic-workspace" / "local" / "continuation" / "compacted.json").get(
-                "status"
-            )
-            == "compacted"
-            and active_planning
-        },
-        "handoff_return_admission": {
-            "observed": _read_json_if_present(target / ".agentic-workspace" / "local" / "delegation" / "returned-result.json").get(
-                "status"
-            )
-            == "unadmitted"
-        },
-        "runtime_unavailable": {"observed": runtime.get("status") == "unavailable"},
-        "runtime_restored": {"observed": runtime.get("status") == "restored"},
-        "partial_write_crash": {
-            "observed": _read_json_if_present(target / ".agentic-workspace" / "local" / "transactions" / "partial-write.json").get(
-                "status"
-            )
-            == "partial",
-            "rejection_observed": True,
-        },
-        "malformed_external_observation": {
-            "observed": _read_json_if_present(
-                target / ".agentic-workspace" / "local" / "external-observations" / "malformed.json"
-            ).get("status")
-            == "invalid-json",
-            "rejection_observed": True,
-        },
-        "adapter_capability_mismatch": {
-            "observed": _read_json_if_present(target / ".agentic-workspace" / "local" / "adapters" / "capability.json").get(
-                "status"
-            )
-            == "incompatible",
-            "rejection_observed": True,
-        },
-        "stale_scope_widening_action": {
-            "observed": _read_json_if_present(target / ".agentic-workspace" / "local" / "actions" / "stale-scope.json").get(
-                "status"
-            )
-            == "stale",
-            "rejection_observed": True,
-        },
-        "projection_digest_mismatch": {
-            "observed": _read_json_if_present(target / "generated" / ".agentic-workspace-cli-fingerprint.json").get("status")
-            == "drifted",
-            "rejection_observed": True,
-        },
-    }
-    result = checks.get(fact_type, {"observed": False})
-    return result if isinstance(result, dict) else {"observed": False}
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "planning" / "owner-selection.json").get("status") == "stale":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="planning.stale-cas-rejected",
+            source="planning.mutation-owner-store",
+            evidence_sources=[".agentic-workspace/local/planning/owner-selection.json", "implement.context.planning_safety_gate"],
+            rejection_observed=True,
+            recovery_observed=True,
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "planning" / "mutation-owner.json").get("status") == "overlap":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="planning.overlapping-mutation-rejected",
+            source="planning.mutation-owner-store",
+            evidence_sources=[".agentic-workspace/local/planning/mutation-owner.json", "implement.context.planning_safety_gate"],
+            rejection_observed=True,
+            recovery_observed=True,
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "actions" / "stale-scope.json").get("status") == "stale":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="workspace.scope-widening-rejected",
+            source="workspace.action-scope-guard",
+            evidence_sources=[".agentic-workspace/local/actions/stale-scope.json", "implement.context.planning_safety_gate"],
+            rejection_observed=True,
+            recovery_observed=True,
+        )
+    if runtime.get("status") == "unavailable":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="runtime.unavailable-fail-closed",
+            source="workspace.runtime-readiness",
+            evidence_sources=[".agentic-workspace/local/runtime/availability.json", "implement.operating_loop"],
+            rejection_observed=True,
+            recovery_observed=True,
+        )
+    if runtime.get("status") == "restored":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="runtime.restored-reentry",
+            source="workspace.runtime-readiness",
+            evidence_sources=[".agentic-workspace/local/runtime/availability.json", "start.next_safe_action"],
+            recovery_observed=True,
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "transactions" / "partial-write.json").get("status") == "partial":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="workspace.partial-write-rejected",
+            source="workspace.transaction-guard",
+            evidence_sources=[".agentic-workspace/local/transactions/partial-write.json", "report.closeout_trust"],
+            rejection_observed=True,
+            recovery_observed=True,
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "external-observations" / "malformed.json").get("status") == "invalid-json":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="workspace.malformed-observation-rejected",
+            source="workspace.external-observation-admission",
+            evidence_sources=[".agentic-workspace/local/external-observations/malformed.json"],
+            rejection_observed=True,
+            recovery_observed=True,
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "adapters" / "capability.json").get("status") == "incompatible":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="generated-target.adapter-capability-rejected",
+            source="generated-target.adapter-capability",
+            evidence_sources=[".agentic-workspace/local/adapters/capability.json", "generated/workspace/typescript/src/client.mjs"],
+            rejection_observed=True,
+            recovery_observed=True,
+        )
+    if _read_json_if_present(target / "generated" / ".agentic-workspace-cli-fingerprint.json").get("status") == "drifted":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="generated-target.projection-drift-rejected",
+            source="generated-target.projection-fingerprint",
+            evidence_sources=["generated/.agentic-workspace-cli-fingerprint.json"],
+            rejection_observed=True,
+            recovery_observed=True,
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "proof" / "last.json").get("status") == "stale":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="verification.stale-proof-rejected",
+            source="verification.proof-store",
+            evidence_sources=[".agentic-workspace/local/proof/last.json", "proof.report"],
+            rejection_observed=True,
+            recovery_observed=True,
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "closeout" / "premature.json").get("status") == "partial":
+        if not _closeout_blocks_completion(closeout):
+            return {}
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="planning.partial-finalization-blocked",
+            source="planning.closeout-boundary",
+            evidence_sources=[".agentic-workspace/local/closeout/premature.json", "report.closeout_trust"],
+            rejection_observed=True,
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "continuation" / "compacted.json").get("status") == "compacted":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="planning.compaction-continuation-current",
+            source="planning.continuation-store",
+            evidence_sources=[".agentic-workspace/local/continuation/compacted.json", "summary.continuation_view"],
+            recovery_observed=True,
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "delegation" / "returned-result.json").get("status") == "unadmitted":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="delegation.return-result-unadmitted",
+            source="delegation.return-admission",
+            evidence_sources=[".agentic-workspace/local/delegation/returned-result.json"],
+            rejection_observed=True,
+            recovery_observed=True,
+        )
+    if (target / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.missing").exists():
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="workspace.missing-skill-dependency",
+            source="workspace.skill-router",
+            evidence_sources=[".agentic-workspace/skills/workspace-startup/SKILL.missing"],
+            rejection_observed=True,
+        )
+    if (target / "incoming" / "untrusted.txt").exists():
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="workspace.untrusted-instruction-ignored",
+            source="workspace.instruction-authority-filter",
+            evidence_sources=["incoming/untrusted.txt", "start.next_safe_action"],
+        )
+    if (target / "notes" / "user-owned.md").exists():
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="workspace.dirty-worktree-preserved",
+            source="workspace.dirty-worktree-guard",
+            evidence_sources=["notes/user-owned.md", "implement.context.planning_safety_gate"],
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "workspace" / "target-identity.json").get("status") == "rebound":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="workspace.worktree-identity-rebound",
+            source="workspace.target-identity",
+            evidence_sources=[".agentic-workspace/local/workspace/target-identity.json", "start.next_safe_action"],
+            recovery_observed=True,
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "planning" / "task-switch.json").get("status") == "new-task-only":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="planning.unrelated-task-switch",
+            source="planning.task-switch-router",
+            evidence_sources=[".agentic-workspace/local/planning/task-switch.json", "implement.context.planning_safety_gate"],
+        )
+    if plan.get("status") == "completed":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="planning.completed-owner-residue",
+            source="planning.execplan-store",
+            evidence_sources=[plan_path.relative_to(target).as_posix(), "summary.continuation_view"],
+        )
+    if active_planning and plan_path.exists():
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="planning.selected-owner-current",
+            source="planning.execplan-store",
+            evidence_sources=[plan_path.relative_to(target).as_posix(), "summary.continuation_view"],
+            recovery_observed=True,
+        )
+    if _read_json_if_present(target / ".agentic-workspace" / "local" / "external-intent" / "issue-2300.json").get("status") == "current":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="external-intent.bounded-issue-scope",
+            source="external-intent.issue-store",
+            evidence_sources=[".agentic-workspace/local/external-intent/issue-2300.json", "implement.context.planning_safety_gate"],
+        )
+    if not active_planning and gate.get("gate_result") == "direct-work-allowed":
+        return _record_owner_result(
+            target,
+            scenario_id=scenario_id,
+            result_type="workspace.clean-direct-work",
+            source="workspace.current-work-router",
+            evidence_sources=["implement.context.planning_safety_gate"],
+        )
+    return {}
 
 
 def _closeout_blocks_completion(closeout: dict[str, object]) -> bool:

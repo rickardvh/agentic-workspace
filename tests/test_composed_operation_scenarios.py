@@ -47,6 +47,9 @@ def test_composed_operation_contract_is_not_derived_from_parallel_oracle() -> No
     source = path.read_text(encoding="utf-8")
     assert "FIXTURE_CONTRACT_ORACLE" not in source
     assert "def _authority(" not in source
+    assert "_fixture_admission_inputs" not in source
+    assert "owner-admission" not in source
+    assert "_from_fact" not in source
 
 
 def test_composed_operation_owner_receipt_does_not_smuggle_contract_fields() -> None:
@@ -66,7 +69,7 @@ def test_composed_operation_owner_receipt_does_not_smuggle_contract_fields() -> 
     assert receipt["fixture"] == scenario["fixture"]
 
 
-def test_composed_operation_owner_admission_does_not_smuggle_contract_fields() -> None:
+def test_composed_operation_owner_result_does_not_smuggle_contract_fields() -> None:
     path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
     spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
     assert spec and spec.loader
@@ -74,18 +77,17 @@ def test_composed_operation_owner_admission_does_not_smuggle_contract_fields() -
     spec.loader.exec_module(module)
     matrix = module.load_matrix()
     scenario = copy.deepcopy(matrix["scenarios"][0])
-    with tempfile.TemporaryDirectory(prefix="aw-composed-admission-") as directory:
+    with tempfile.TemporaryDirectory(prefix="aw-composed-result-") as directory:
         target = Path(directory)
-        domain, fact_type, signals = module._fixture_admission_inputs(str(scenario["fixture"]))
-        admission_ref = module._write_owner_admission(
+        result = module._record_owner_result(
             target,
             scenario_id=str(scenario["id"]),
-            owner_domain=domain,
-            fact_type=fact_type,
-            signals=signals,
+            result_type="workspace.clean-direct-work",
+            source="workspace.current-work-router",
+            evidence_sources=["implement.context.planning_safety_gate"],
         )
-        admission = module._read_json_if_present(target / admission_ref)
+        persisted = module._read_json_if_present(target / result["path"])
     for field in module.CONTRACT_FIELDS:
-        assert field not in admission
-    assert admission["owner_domain"] == domain
-    assert admission["fact_type"] == fact_type
+        assert field not in persisted
+    assert persisted["result_type"] == "workspace.clean-direct-work"
+    assert persisted["source"] == "workspace.current-work-router"
