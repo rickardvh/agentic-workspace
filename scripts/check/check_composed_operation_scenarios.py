@@ -14,6 +14,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from agentic_workspace.composed_operation_scenarios import observe_composed_operation_authority  # noqa: E402
+
 MATRIX_PATH = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "composed-operation-scenario-matrix.json"
 REQUIRED_SCENARIOS = {
     "fresh-direct-work",
@@ -64,7 +66,6 @@ REQUIRED_METRICS = {
     "package_residue",
 }
 SCENARIO_STATE_DIR = Path(".agentic-workspace/local/composed-operation-scenarios")
-SCENARIO_OWNER_RESULT_DIR = Path(".agentic-workspace/local/composed-operation-owner-results")
 CONTRACT_FIELDS = (
     "owner",
     "terminal_state",
@@ -595,12 +596,12 @@ def _read_json_if_present(path: Path) -> dict[str, object]:
 def _derive_contract_from_authority(
     *, fault_observation: dict[str, object], packets: dict[str, dict[str, object]]
 ) -> dict[str, object]:
-    """Normalize the scenario contract from producer-owned result packets."""
+    """Normalize the scenario contract from producer-owned authority packets."""
 
-    owner_result = fault_observation.get("owner_result")
-    if not isinstance(owner_result, dict) or fault_observation.get("status") != "observed":
+    authority_packet = fault_observation.get("authority_packet")
+    if not isinstance(authority_packet, dict) or fault_observation.get("status") != "observed":
         return {}
-    if not _owner_result_is_contract_authoritative(owner_result):
+    if not _authority_packet_is_contract_authoritative(authority_packet):
         return {}
     implement = packets.get("implement", {})
     closeout = packets.get("closeout", {})
@@ -609,18 +610,22 @@ def _derive_contract_from_authority(
     completion_blocked = _closeout_blocks_completion(closeout)
     safe_claim = str((operating_loop or {}).get("safe_claim") or "")
     completion_safe = completion_blocked or safe_claim == "blocked"
-    contract = {field: owner_result.get(field) for field in CONTRACT_FIELDS if field != "semantic_parity"}
+    decision = authority_packet.get("decision") if isinstance(authority_packet.get("decision"), dict) else {}
+    contract = {field: decision.get(field) for field in CONTRACT_FIELDS if field != "semantic_parity"}
     if contract.get("terminal_state") == "blocked" and not completion_safe:
         contract["terminal_state"] = "invalid-completion-authorized"
     if contract.get("proof_claim_boundary") in {"no-completion-claim", "partial-claim-only"} and not completion_safe:
         contract["proof_claim_boundary"] = "invalid-completion-authorized"
-    if str(contract.get("mutation_precondition") or "").endswith("-rejected") and owner_result.get("rejection_observed") is not True:
+    if (
+        str(contract.get("mutation_precondition") or "").endswith("-rejected")
+        and authority_packet.get("rejection_observed") is not True
+    ):
         contract["mutation_precondition"] = "rejection-not-observed"
     return {
         **contract,
         "authority_sources": [
-            str(owner_result.get("source") or ""),
-            *sorted(str(item) for item in owner_result.get("evidence_sources", []) if isinstance(item, str)),
+            str(authority_packet.get("source") or ""),
+            *sorted(str(item) for item in authority_packet.get("evidence_sources", []) if isinstance(item, str)),
             *sorted(str(item) for item in fault_observation.get("packet_sources", []) if isinstance(item, str)),
         ],
         "planning_gate": planning_gate.get("gate_result"),
@@ -628,20 +633,29 @@ def _derive_contract_from_authority(
     }
 
 
-def _owner_result_is_contract_authoritative(owner_result: dict[str, object]) -> bool:
-    if owner_result.get("kind") != "agentic-workspace/composed-operation-producer-result/v1":
+def _authority_packet_is_contract_authoritative(authority_packet: dict[str, object]) -> bool:
+    if authority_packet.get("kind") != "agentic-workspace/composed-operation-authority-observation/v1":
         return False
-    if owner_result.get("observed") is not True:
+    if authority_packet.get("producer_module") != "agentic_workspace.composed_operation_scenarios":
         return False
-    if not all(isinstance(owner_result.get(field), str) and owner_result.get(field) for field in CONTRACT_FIELDS if field != "semantic_parity"):
+    if authority_packet.get("observed") is not True:
         return False
-    evidence_sources = owner_result.get("evidence_sources")
+    decision = authority_packet.get("decision")
+    if not isinstance(decision, dict):
+        return False
+    if not all(
+        isinstance(decision.get(field), str) and decision.get(field)
+        for field in CONTRACT_FIELDS
+        if field != "semantic_parity"
+    ):
+        return False
+    evidence_sources = authority_packet.get("evidence_sources")
     if not isinstance(evidence_sources, list) or not evidence_sources:
         return False
-    protected_action = owner_result.get("protected_action")
+    protected_action = authority_packet.get("protected_action")
     if not isinstance(protected_action, dict):
         return False
-    if str(owner_result.get("mutation_precondition") or "").endswith("-rejected"):
+    if str(decision.get("mutation_precondition") or "").endswith("-rejected"):
         return protected_action.get("attempted") is True and protected_action.get("accepted") is False
     return True
 
@@ -685,21 +699,22 @@ def _fixture_fault_observation(
     implement_gate = _planning_gate(implement)
     summary_continuation = summary.get("continuation_view") if isinstance(summary.get("continuation_view"), dict) else {}
     active_planning = str((summary_continuation or {}).get("status") or "") == "present"
-    owner_result = _observe_owner_result(
+    authority_packet = observe_composed_operation_authority(
         target=target,
         scenario_id=scenario_id,
         active_planning=active_planning,
         start=start,
         implement=implement,
+        summary=summary,
         closeout=closeout,
     )
-    if not owner_result:
-        return {"status": "missing", "evidence": {"owner_result": "missing", "scenario_id": scenario_id}}
-    observed = bool(owner_result.get("observed"))
+    if not authority_packet:
+        return {"status": "missing", "evidence": {"authority_packet": "missing", "scenario_id": scenario_id}}
+    observed = bool(authority_packet.get("observed"))
     return {
         "status": "observed" if observed else "missing",
-        "owner_result": owner_result,
-        "rejection_observed": bool(owner_result.get("rejection_observed", True)),
+        "authority_packet": authority_packet,
+        "rejection_observed": bool(authority_packet.get("rejection_observed", True)),
         "packet_sources": [
             "start.next_safe_action",
             "implement.context.planning_safety_gate",
@@ -708,7 +723,7 @@ def _fixture_fault_observation(
             "report.closeout_trust",
         ],
         "evidence": {
-            **owner_result,
+            **authority_packet,
             "active_planning": active_planning,
             "implement_gate": implement_gate.get("gate_result"),
             "implement_allowed": implement_gate.get("implementation_allowed"),
@@ -719,400 +734,6 @@ def _fixture_fault_observation(
         },
     }
 
-
-def _record_owner_result(
-    target: Path,
-    *,
-    scenario_id: str,
-    owner: str,
-    terminal_state: str,
-    typed_action: str,
-    effect_scope: str,
-    mutation_precondition: str,
-    proof_claim_boundary: str,
-    next_transition: str,
-    source: str,
-    evidence_sources: list[str],
-    rejection_observed: bool = False,
-    recovery_observed: bool = False,
-) -> dict[str, object]:
-    payload: dict[str, object] = {
-        "kind": "agentic-workspace/composed-operation-producer-result/v1",
-        "scenario_id": scenario_id,
-        "owner": owner,
-        "terminal_state": terminal_state,
-        "typed_action": typed_action,
-        "effect_scope": effect_scope,
-        "mutation_precondition": mutation_precondition,
-        "proof_claim_boundary": proof_claim_boundary,
-        "next_transition": next_transition,
-        "source": source,
-        "evidence_sources": evidence_sources,
-        "observed": True,
-        "rejection_observed": rejection_observed,
-        "recovery_observed": recovery_observed,
-        "protected_action": {
-            "attempted": rejection_observed or recovery_observed,
-            "accepted": not rejection_observed,
-            "repair": next_transition if rejection_observed or recovery_observed else "",
-        },
-    }
-    path = target / SCENARIO_OWNER_RESULT_DIR / owner / f"{scenario_id}.json"
-    _write_json(path, payload)
-    payload["path"] = path.relative_to(target).as_posix()
-    return payload
-
-
-def _observe_owner_result(
-    *,
-    target: Path,
-    scenario_id: str,
-    active_planning: bool,
-    start: dict[str, object],
-    implement: dict[str, object],
-    closeout: dict[str, object],
-) -> dict[str, object]:
-    gate = _planning_gate(implement)
-    plan_path = target / ".agentic-workspace" / "planning" / "execplans" / f"{scenario_id}.plan.json"
-    plan = _read_json_if_present(plan_path)
-    runtime = _read_json_if_present(target / ".agentic-workspace" / "local" / "runtime" / "availability.json")
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "planning" / "owner-selection.json").get("status") == "stale":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="planning",
-            terminal_state="blocked",
-            typed_action="recover",
-            effect_scope="no-mutation",
-            mutation_precondition="stale-cas-rejected",
-            proof_claim_boundary="no-completion-claim",
-            next_transition="refresh-mutation-owner",
-            source="planning.mutation-owner-store",
-            evidence_sources=[".agentic-workspace/local/planning/owner-selection.json", "implement.context.planning_safety_gate"],
-            rejection_observed=True,
-            recovery_observed=True,
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "planning" / "mutation-owner.json").get("status") == "overlap":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="planning",
-            terminal_state="blocked",
-            typed_action="recover",
-            effect_scope="no-mutation",
-            mutation_precondition="overlapping-mutation-rejected",
-            proof_claim_boundary="no-completion-claim",
-            next_transition="inspect-overlap-owner",
-            source="planning.mutation-owner-store",
-            evidence_sources=[".agentic-workspace/local/planning/mutation-owner.json", "implement.context.planning_safety_gate"],
-            rejection_observed=True,
-            recovery_observed=True,
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "actions" / "stale-scope.json").get("status") == "stale":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="workspace",
-            terminal_state="blocked",
-            typed_action="recover",
-            effect_scope="no-mutation",
-            mutation_precondition="scope-widening-rejected",
-            proof_claim_boundary="no-completion-claim",
-            next_transition="narrow-scope-and-refresh",
-            source="workspace.action-scope-guard",
-            evidence_sources=[".agentic-workspace/local/actions/stale-scope.json", "implement.context.planning_safety_gate"],
-            rejection_observed=True,
-            recovery_observed=True,
-        )
-    if runtime.get("status") == "unavailable":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="workspace",
-            terminal_state="blocked",
-            typed_action="recover",
-            effect_scope="runtime-state-only",
-            mutation_precondition="runtime-incompatible",
-            proof_claim_boundary="no-completion-claim",
-            next_transition="restore-runtime",
-            source="workspace.runtime-readiness",
-            evidence_sources=[".agentic-workspace/local/runtime/availability.json", "implement.operating_loop"],
-            rejection_observed=True,
-            recovery_observed=True,
-        )
-    if runtime.get("status") == "restored":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="workspace",
-            terminal_state="continue",
-            typed_action="start",
-            effect_scope="startup-reentry-only",
-            mutation_precondition="runtime-restored",
-            proof_claim_boundary="proof-before-completion-claim",
-            next_transition="restart-ordinary-route",
-            source="workspace.runtime-readiness",
-            evidence_sources=[".agentic-workspace/local/runtime/availability.json", "start.next_safe_action"],
-            recovery_observed=True,
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "transactions" / "partial-write.json").get("status") == "partial":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="workspace",
-            terminal_state="blocked",
-            typed_action="recover",
-            effect_scope="transaction-state-only",
-            mutation_precondition="partial-write-rejected",
-            proof_claim_boundary="no-completion-claim",
-            next_transition="rollback-or-retry-transaction",
-            source="workspace.transaction-guard",
-            evidence_sources=[".agentic-workspace/local/transactions/partial-write.json", "report.closeout_trust"],
-            rejection_observed=True,
-            recovery_observed=True,
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "external-observations" / "malformed.json").get("status") == "invalid-json":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="workspace",
-            terminal_state="blocked",
-            typed_action="recover",
-            effect_scope="external-observation-only",
-            mutation_precondition="malformed-observation-rejected",
-            proof_claim_boundary="no-completion-claim",
-            next_transition="request-valid-observation",
-            source="workspace.external-observation-admission",
-            evidence_sources=[".agentic-workspace/local/external-observations/malformed.json"],
-            rejection_observed=True,
-            recovery_observed=True,
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "adapters" / "capability.json").get("status") == "incompatible":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="generated-target",
-            terminal_state="blocked",
-            typed_action="recover",
-            effect_scope="adapter-capability-only",
-            mutation_precondition="adapter-capability-rejected",
-            proof_claim_boundary="no-completion-claim",
-            next_transition="select-compatible-adapter",
-            source="generated-target.adapter-capability",
-            evidence_sources=[".agentic-workspace/local/adapters/capability.json", "generated/workspace/typescript/src/client.mjs"],
-            rejection_observed=True,
-            recovery_observed=True,
-        )
-    if _read_json_if_present(target / "generated" / ".agentic-workspace-cli-fingerprint.json").get("status") == "drifted":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="generated-target",
-            terminal_state="blocked",
-            typed_action="recover",
-            effect_scope="generated-target-only",
-            mutation_precondition="projection-drift-rejected",
-            proof_claim_boundary="no-completion-claim",
-            next_transition="regenerate-projection",
-            source="generated-target.projection-fingerprint",
-            evidence_sources=["generated/.agentic-workspace-cli-fingerprint.json"],
-            rejection_observed=True,
-            recovery_observed=True,
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "proof" / "last.json").get("status") == "stale":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="verification",
-            terminal_state="continue",
-            typed_action="run-proof",
-            effect_scope="proof-selection-only",
-            mutation_precondition="stale-proof-rejected",
-            proof_claim_boundary="fresh-proof-required",
-            next_transition="rerun-selected-proof",
-            source="verification.proof-store",
-            evidence_sources=[".agentic-workspace/local/proof/last.json", "proof.report"],
-            rejection_observed=True,
-            recovery_observed=True,
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "closeout" / "premature.json").get("status") == "partial":
-        if not _closeout_blocks_completion(closeout):
-            return {}
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="planning",
-            terminal_state="partial",
-            typed_action="continue",
-            effect_scope="claim-boundary-only",
-            mutation_precondition="acceptance-incomplete",
-            proof_claim_boundary="partial-claim-only",
-            next_transition="continue-unresolved-work",
-            source="planning.closeout-boundary",
-            evidence_sources=[".agentic-workspace/local/closeout/premature.json", "report.closeout_trust"],
-            rejection_observed=True,
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "continuation" / "compacted.json").get("status") == "compacted":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="planning",
-            terminal_state="continue",
-            typed_action="continue",
-            effect_scope="continuation-state-only",
-            mutation_precondition="continuation-revision-current",
-            proof_claim_boundary="continuation-proof-before-claim",
-            next_transition="resume-after-compaction",
-            source="planning.continuation-store",
-            evidence_sources=[".agentic-workspace/local/continuation/compacted.json", "summary.continuation_view"],
-            recovery_observed=True,
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "delegation" / "returned-result.json").get("status") == "unadmitted":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="delegation",
-            terminal_state="continue",
-            typed_action="admit-result",
-            effect_scope="returned-result-admission",
-            mutation_precondition="return-receipt-current",
-            proof_claim_boundary="admitted-result-before-claim",
-            next_transition="admit-or-repair-return",
-            source="delegation.return-admission",
-            evidence_sources=[".agentic-workspace/local/delegation/returned-result.json"],
-            rejection_observed=True,
-            recovery_observed=True,
-        )
-    if (target / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.missing").exists():
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="workspace",
-            terminal_state="blocked",
-            typed_action="recover",
-            effect_scope="skill-routing-only",
-            mutation_precondition="skill-dependency-unavailable",
-            proof_claim_boundary="no-completion-claim",
-            next_transition="install-or-select-supported-skill",
-            source="workspace.skill-router",
-            evidence_sources=[".agentic-workspace/skills/workspace-startup/SKILL.missing"],
-            rejection_observed=True,
-        )
-    if (target / "incoming" / "untrusted.txt").exists():
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="workspace",
-            terminal_state="continue",
-            typed_action="ignore-data-instruction",
-            effect_scope="trusted-instruction-sources-only",
-            mutation_precondition="data-text-not-authority",
-            proof_claim_boundary="proof-before-completion-claim",
-            next_transition="continue-safe-route",
-            source="workspace.instruction-authority-filter",
-            evidence_sources=["incoming/untrusted.txt", "start.next_safe_action"],
-        )
-    if (target / "notes" / "user-owned.md").exists():
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="workspace",
-            terminal_state="continue",
-            typed_action="implement",
-            effect_scope="non-overlapping-changed-paths",
-            mutation_precondition="preexisting-edits-preserved",
-            proof_claim_boundary="proof-before-completion-claim",
-            next_transition="inspect-dirty-overlap",
-            source="workspace.dirty-worktree-guard",
-            evidence_sources=["notes/user-owned.md", "implement.context.planning_safety_gate"],
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "workspace" / "target-identity.json").get("status") == "rebound":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="workspace",
-            terminal_state="continue",
-            typed_action="recover",
-            effect_scope="workspace-routing-state",
-            mutation_precondition="target-identity-rebound",
-            proof_claim_boundary="proof-after-recovery",
-            next_transition="refresh-startup-context",
-            source="workspace.target-identity",
-            evidence_sources=[".agentic-workspace/local/workspace/target-identity.json", "start.next_safe_action"],
-            recovery_observed=True,
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "planning" / "task-switch.json").get("status") == "new-task-only":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="planning",
-            terminal_state="continue",
-            typed_action="reconcile",
-            effect_scope="new-task-only",
-            mutation_precondition="active-owner-preserved",
-            proof_claim_boundary="no-active-owner-completion-claim",
-            next_transition="acknowledge-task-switch",
-            source="planning.task-switch-router",
-            evidence_sources=[".agentic-workspace/local/planning/task-switch.json", "implement.context.planning_safety_gate"],
-        )
-    if plan.get("status") == "completed":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="planning",
-            terminal_state="partial",
-            typed_action="route-residue",
-            effect_scope="residue-record-only",
-            mutation_precondition="completed-owner-current",
-            proof_claim_boundary="partial-claim-only",
-            next_transition="open-residue-owner",
-            source="planning.execplan-store",
-            evidence_sources=[plan_path.relative_to(target).as_posix(), "summary.continuation_view"],
-        )
-    if active_planning and plan_path.exists():
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="planning",
-            terminal_state="continue",
-            typed_action="continue",
-            effect_scope="selected-owner-only",
-            mutation_precondition="owner-revision-current",
-            proof_claim_boundary="owner-proof-before-completion",
-            next_transition="resume-current-slice",
-            source="planning.execplan-store",
-            evidence_sources=[plan_path.relative_to(target).as_posix(), "summary.continuation_view"],
-            recovery_observed=True,
-        )
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "external-intent" / "issue-2300.json").get("status") == "current":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="issue-scope",
-            terminal_state="continue",
-            typed_action="implement",
-            effect_scope="issue-bounded-paths",
-            mutation_precondition="clean-baseline",
-            proof_claim_boundary="proof-before-completion-claim",
-            next_transition="run-focused-proof",
-            source="external-intent.issue-store",
-            evidence_sources=[".agentic-workspace/local/external-intent/issue-2300.json", "implement.context.planning_safety_gate"],
-        )
-    if not active_planning and gate.get("gate_result") == "direct-work-allowed":
-        return _record_owner_result(
-            target,
-            scenario_id=scenario_id,
-            owner="direct-work",
-            terminal_state="continue",
-            typed_action="implement",
-            effect_scope="changed-paths-only",
-            mutation_precondition="clean-baseline",
-            proof_claim_boundary="proof-before-completion-claim",
-            next_transition="run-focused-proof",
-            source="workspace.current-work-router",
-            evidence_sources=["implement.context.planning_safety_gate"],
-        )
-    return {}
 
 
 def _closeout_blocks_completion(closeout: dict[str, object]) -> bool:

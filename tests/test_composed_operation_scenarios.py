@@ -6,6 +6,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from agentic_workspace.composed_operation_scenarios import observe_composed_operation_authority
+
 
 def test_composed_operation_scenario_matrix_is_release_gate_ready() -> None:
     path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
@@ -52,6 +54,9 @@ def test_composed_operation_contract_is_not_derived_from_parallel_oracle() -> No
     assert "_from_fact" not in source
     assert "OWNER_RESULT_NORMALIZATION" not in source
     assert "result_type" not in source
+    assert "_record_owner_result" not in source
+    assert "_observe_owner_result" not in source
+    assert "composed-operation-owner-results" not in source
 
 
 def test_composed_operation_owner_receipt_does_not_smuggle_contract_fields() -> None:
@@ -71,7 +76,7 @@ def test_composed_operation_owner_receipt_does_not_smuggle_contract_fields() -> 
     assert receipt["fixture"] == scenario["fixture"]
 
 
-def test_composed_operation_owner_result_does_not_smuggle_contract_fields() -> None:
+def test_composed_operation_checker_consumes_producer_authority_packet() -> None:
     path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
     spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
     assert spec and spec.loader
@@ -79,25 +84,23 @@ def test_composed_operation_owner_result_does_not_smuggle_contract_fields() -> N
     spec.loader.exec_module(module)
     matrix = module.load_matrix()
     scenario = copy.deepcopy(matrix["scenarios"][0])
-    with tempfile.TemporaryDirectory(prefix="aw-composed-result-") as directory:
+    with tempfile.TemporaryDirectory(prefix="aw-composed-authority-") as directory:
         target = Path(directory)
-        result = module._record_owner_result(
-            target,
+        authority_packet = observe_composed_operation_authority(
+            target=target,
             scenario_id=str(scenario["id"]),
-            owner="direct-work",
-            terminal_state="continue",
-            typed_action="implement",
-            effect_scope="changed-paths-only",
-            mutation_precondition="clean-baseline",
-            proof_claim_boundary="proof-before-completion-claim",
-            next_transition="run-focused-proof",
-            source="workspace.current-work-router",
-            evidence_sources=["implement.context.planning_safety_gate"],
+            active_planning=False,
+            start={},
+            implement={"context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}}},
+            summary={},
+            closeout={},
         )
-        persisted = module._read_json_if_present(target / result["path"])
+        observation = {"status": "observed", "authority_packet": authority_packet}
+        contract = module._derive_contract_from_authority(fault_observation=observation, packets={"implement": {}})
     for field in module.CONTRACT_FIELDS:
         if field == "semantic_parity":
-            assert field not in persisted
+            assert field not in authority_packet
         else:
-            assert persisted[field] == scenario[field]
-    assert persisted["source"] == "workspace.current-work-router"
+            assert contract[field] == scenario[field]
+    assert authority_packet["producer_module"] == "agentic_workspace.composed_operation_scenarios"
+    assert not (target / ".agentic-workspace" / "local" / "composed-operation-owner-results").exists()
