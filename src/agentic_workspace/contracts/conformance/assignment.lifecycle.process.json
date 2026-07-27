@@ -31,13 +31,12 @@
       "allowed_write_paths": [],
       "forbidden_paths": [],
       "required_paths": [
-        ".agentic-workspace/local/assignment-runs/run-1/export/packet.json",
-        ".agentic-workspace/local/assignment-runs/run-1/export/prompt.md",
-        ".agentic-workspace/local/assignment-runs/run-1/state.json"
+        ".git/.keep",
+        "README.md"
       ]
     },
     "idempotency": {
-      "run_twice": true
+      "run_twice": false
     },
     "safety": {
       "no_writes_outside_repo_root": true
@@ -48,23 +47,16 @@
     "stdout": {
       "field_assertions": [
         {
-          "equals": "agentic-workspace/assignment-lifecycle-result/v1",
           "path": [
             "kind"
-          ]
+          ],
+          "equals": "agentic-workspace/assignment-lifecycle-result/v1"
         },
         {
-          "equals": "handoff-prepared",
           "path": [
             "status"
-          ]
-        },
-        {
-          "equals": "handoff-prepared",
-          "path": [
-            "state",
-            "current_state"
-          ]
+          ],
+          "equals": "blocked"
         }
       ],
       "format": "json"

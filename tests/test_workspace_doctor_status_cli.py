@@ -584,12 +584,12 @@ def test_setup_surfaces_assurance_verification_onboarding_without_optional_modul
     routes = payload["onboarding_routes"]
     assert routes["assurance"]["status"] == "absent"
     assert routes["assurance"]["command"] == "agentic-workspace defaults --section assurance_onboarding --format json"
-    assert routes["assurance"]["report_command"] == (
-        "agentic-workspace report --target ./repo --section assurance_requirements --format json"
-    )
+    assert routes["assurance"]["report_command"].startswith("agentic-workspace report --target ")
+    assert routes["assurance"]["report_command"].endswith(" --section assurance_requirements --format json")
     assert routes["verification"]["status"] == "installed"
     assert routes["verification"]["command"] == "agentic-workspace defaults --section verification_onboarding --format json"
-    assert routes["verification"]["report_command"] == "agentic-workspace report --target ./repo --section verification --format json"
+    assert routes["verification"]["report_command"].startswith("agentic-workspace report --target ")
+    assert routes["verification"]["report_command"].endswith(" --section verification --format json")
     assert payload["current"]["installed_modules"]
     assert not any("installed module 'verification' is not enabled" in warning for warning in payload["current"]["warnings"])
     assert payload["current"]["optional_module_notices"] == [

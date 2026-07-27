@@ -1811,6 +1811,7 @@ candidates = [
             "#11",
             "--issue",
             "#12",
+            "--verbose",
             "--format",
             "json",
         ]

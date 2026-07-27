@@ -49,7 +49,8 @@ WORKSPACE_TEST_CONTRACTS = \
 	tests/test_package_artifact_duplicates.py \
 	tests/test_prompt_semantic_markers.py \
 	tests/test_schema_reference_docs.py \
-	tests/test_structured_file_inventory.py
+	tests/test_structured_file_inventory.py \
+	tests/test_workspace_makefile_targets.py
 
 WORKSPACE_TEST_GENERATED_RELEASE = \
 	tests/test_command_generation_integration.py \
