@@ -3,6 +3,8 @@ from __future__ import annotations
 import fnmatch
 import importlib.util
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,6 +51,7 @@ def _load_workspace_command_generation():
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -64,7 +67,8 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
     assert ownership["release_pr_branch"] == "automation/coordinated-release"
     assert ownership["publisher"]["trigger"] == "existing-tag-only"
     assert ownership["semver_labels"] == ["semver:major", "semver:minor", "semver:patch"]
-    assert "every existing vMAJOR.MINOR.PATCH tag" in ownership["version_floor_rule"]
+    assert "every AW coordinated-release vMAJOR.MINOR.PATCH tag" in ownership["version_floor_rule"]
+    assert "other package domains do not set the AW release floor" in ownership["version_floor_rule"]
 
     package_names = [package["name"] for package in ownership["packages"]]
     assert package_names == [
@@ -302,5 +306,54 @@ def test_release_model_uses_existing_tags_instead_of_stale_bootstrap_floor() -> 
     assert "existing_release_versions" in helper
     assert 'git", "tag", "--list"' in helper
     assert "floor = max([*package_versions, *tag_versions])" in helper
+    assert "_tag_declares_coordinated_release_version" in helper
     assert "pending_tag_plan" in helper
     assert "first_coordinated_release" not in helper
+
+
+def test_release_model_ignores_tags_from_other_package_domains(monkeypatch) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "coordinated_release_under_test",
+        ROOT / "scripts" / "release" / "coordinated_release.py",
+    )
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    def fake_run(args: list[str], *, check: bool = True):
+        if args[:4] == ["git", "tag", "--list", "v[0-9]*.[0-9]*.[0-9]*"]:
+            return subprocess.CompletedProcess(args, 0, stdout="v0.36.1\nv2.0.0\n", stderr="")
+        if args[:4] == ["git", "rev-list", "-n", "1"] and args[4] == "v0.36.1":
+            return subprocess.CompletedProcess(args, 0, stdout="aw-release\n", stderr="")
+        if args[:4] == ["git", "rev-list", "-n", "1"] and args[4] == "v2.0.0":
+            return subprocess.CompletedProcess(args, 0, stdout="cg-release\n", stderr="")
+        if args == ["git", "show", "cg-release:pyproject.toml"]:
+            return subprocess.CompletedProcess(
+                args,
+                0,
+                stdout='[project]\nname = "command-generation"\nversion = "2.0.0"\n',
+                stderr="",
+            )
+        if args[0:2] == ["git", "show"] and args[2].startswith("aw-release:"):
+            if args[2].endswith("package.json"):
+                return subprocess.CompletedProcess(args, 0, stdout='{"version": "0.36.1"}', stderr="")
+            package_name = "agentic-workspace"
+            if "packages/memory" in args[2]:
+                package_name = "agentic-memory"
+            elif "packages/planning" in args[2]:
+                package_name = "agentic-planning"
+            elif "packages/verification" in args[2]:
+                package_name = "agentic-verification"
+            return subprocess.CompletedProcess(
+                args,
+                0,
+                stdout=f'[project]\nname = "{package_name}"\nversion = "0.36.1"\n',
+                stderr="",
+            )
+        return subprocess.CompletedProcess(args, 1, stdout="", stderr="missing")
+
+    monkeypatch.setattr(module, "_run", fake_run)
+
+    assert [str(version) for version in module.existing_release_versions(_ownership())] == ["0.36.1"]

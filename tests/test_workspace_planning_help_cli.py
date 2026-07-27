@@ -145,7 +145,7 @@ def test_planning_front_door_runs_lane_create_operation(tmp_path, capsys) -> Non
 
     assert payload["message"] == "Create lane record 'front-door-lane'"
     assert payload["dry_run"] is True
-    assert payload["lifecycle_plan"]["next_safe_command"] == (
+    assert payload["lifecycle_plan"]["next_safe_guidance"] == (
         "Review actions and rerun the same command without --dry-run only if the plan matches intent."
     )
 
