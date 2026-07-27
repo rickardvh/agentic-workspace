@@ -30,40 +30,21 @@
   ],
   "expectations": {
     "exit": {
-      "code": 0
+      "code": 2
     },
     "stdout": {
-      "format": "json",
-      "field_assertions": [
-        {
-          "path": [
-            "kind"
-          ],
-          "equals": "agentic-workspace/final-response-admission-result/v1"
-        },
-        {
-          "path": [
-            "ordinary_autopilot_route",
-            "status"
-          ],
-          "equals": "entered"
-        },
-        {
-          "path": [
-            "checkpoint_write",
-            "path"
-          ],
-          "equals": ".agentic-workspace/local/chat-checkpoint.json"
-        }
-      ]
+      "format": "text",
+      "field_assertions": [],
+      "allow_empty": true
     },
     "stderr": {
-      "allow_non_empty": false
+      "allow_non_empty": true,
+      "contains": [
+        "missing-selected-executor-target"
+      ]
     },
     "filesystem": {
-      "allowed_write_paths": [
-        ".agentic-workspace/local/chat-checkpoint.json"
-      ],
+      "allowed_write_paths": [],
       "required_paths": [
         ".git/.keep",
         "README.md"

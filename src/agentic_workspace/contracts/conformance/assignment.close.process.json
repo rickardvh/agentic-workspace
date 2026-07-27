@@ -44,7 +44,7 @@
           ]
         },
         {
-          "equals": "close",
+          "equals": "closed",
           "path": [
             "status"
           ]

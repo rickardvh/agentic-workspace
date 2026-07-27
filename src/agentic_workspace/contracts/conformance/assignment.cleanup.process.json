@@ -44,7 +44,7 @@
           ]
         },
         {
-          "equals": "cleanup",
+          "equals": "archived",
           "path": [
             "status"
           ]
