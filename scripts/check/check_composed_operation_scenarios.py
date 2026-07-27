@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -436,6 +437,9 @@ def _semantic_parity_observation(*, target: Path, scenario: dict[str, object]) -
         and package_match
         and supported_operations == SUPPORTED_CONSUMER_OPERATIONS
         and execution.get("status") == "semantic-match"
+        and isinstance(execution.get("external"), dict)
+        and execution["external"].get("operation") == "config.report"
+        and execution["external"].get("kind")
         else "generated-contract-divergence"
     )
     return {
@@ -463,6 +467,7 @@ def _generated_consumer_execution_parity(*, target: Path, scenario: dict[str, ob
         target=target,
         argv=["implement", "--changed", changed_paths, "--task", task],
     )
+    external_config = _run_external_public_consumer(target=target)
     python_semantics = {
         "start": _packet_semantic_summary(python_start),
         "implement": _packet_semantic_summary(python_implement),
@@ -475,11 +480,12 @@ def _generated_consumer_execution_parity(*, target: Path, scenario: dict[str, ob
         "status": "semantic-match" if python_semantics == typescript_semantics else "semantic-mismatch",
         "python": python_semantics,
         "typescript": typescript_semantics,
+        "external": external_config,
         "cost": {
-            "aw_command_count": 4,
+            "aw_command_count": 5,
             "output_bytes": sum(
                 len(json.dumps(packet, sort_keys=True).encode("utf-8"))
-                for packet in (python_start, python_implement, typescript_start, typescript_implement)
+                for packet in (python_start, python_implement, typescript_start, typescript_implement, external_config)
             ),
         },
     }
@@ -530,6 +536,48 @@ console.log(JSON.stringify(payload));
     )
     if completed.returncode != 0:
         raise RuntimeError(f"generated TypeScript client failed: {(completed.stdout or completed.stderr)[:300]}")
+    return json.loads(completed.stdout)
+
+
+def _run_external_public_consumer(*, target: Path) -> dict[str, object]:
+    """Invoke the public operation client from outside the source-checkout cwd."""
+
+    script = """
+from __future__ import annotations
+import json
+import sys
+from agentic_workspace import invoke_operation
+payload = invoke_operation(
+    'config.report',
+    {},
+    target=sys.argv[1],
+    invocation=[
+        sys.executable,
+        '-c',
+        'from agentic_workspace import cli; import sys; raise SystemExit(cli.main(sys.argv[1:]))',
+    ],
+    allow_runtime_backed=True,
+)
+print(json.dumps({
+    'operation': 'config.report',
+    'kind': payload.get('kind'),
+    'status': payload.get('status', 'ok'),
+    'consumer': 'external-public-client-subprocess',
+}, sort_keys=True))
+"""
+    env = dict(os.environ)
+    python_path = str(REPO_ROOT / "src")
+    env["PYTHONPATH"] = python_path if not env.get("PYTHONPATH") else python_path + os.pathsep + env["PYTHONPATH"]
+    completed = subprocess.run(
+        [sys.executable, "-c", script, str(target)],
+        cwd=target,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(f"external public consumer failed: {(completed.stdout or completed.stderr)[:300]}")
     return json.loads(completed.stdout)
 
 
@@ -682,6 +730,17 @@ def _authority_packet_is_contract_authoritative(authority_packet: dict[str, obje
     protected_action = authority_packet.get("protected_action")
     if not isinstance(protected_action, dict):
         return False
+    owner_packet = authority_packet.get("owner_packet")
+    admission = owner_packet.get("admission") if isinstance(owner_packet, dict) else None
+    producer_receipt = owner_packet.get("producer_receipt") if isinstance(owner_packet, dict) else None
+    if not isinstance(admission, dict) or not isinstance(producer_receipt, dict):
+        return False
+    stable_reason = str(admission.get("stable_reason") or "")
+    if stable_reason != str(decision.get("mutation_precondition") or ""):
+        return False
+    repair_operation = owner_packet.get("repair_operation") if isinstance(owner_packet, dict) else None
+    if not isinstance(repair_operation, dict) or not repair_operation.get("id"):
+        return False
     if str(decision.get("mutation_precondition") or "").endswith("-rejected"):
         return protected_action.get("attempted") is True and protected_action.get("accepted") is False
     return True
@@ -825,16 +884,26 @@ def _clarification_request_count(packets: dict[str, dict[str, object]]) -> int:
     return json.dumps(packets, sort_keys=True).count("ask_human_only_if")
 
 
-def _rejected_mutation_count(observation: dict[str, object]) -> int:
-    precondition = str(observation.get("mutation_precondition") or "")
-    terminal = str(observation.get("terminal_state") or "")
-    return int(precondition.endswith("-rejected") or terminal == "blocked")
+def _authority_packet(observation: dict[str, object]) -> dict[str, object]:
+    fault = observation.get("fault_observation")
+    if not isinstance(fault, dict):
+        return {}
+    packet = fault.get("authority_packet")
+    return packet if isinstance(packet, dict) else {}
 
 
 def _proof_rerun_count(observation: dict[str, object]) -> int:
-    transition = str(observation.get("next_transition") or "")
-    boundary = str(observation.get("proof_claim_boundary") or "")
-    return int("proof" in transition or "proof" in boundary)
+    authority = _authority_packet(observation)
+    owner_packet = authority.get("owner_packet") if isinstance(authority.get("owner_packet"), dict) else {}
+    recovery = owner_packet.get("recovery_sequence") if isinstance(owner_packet, dict) else []
+    if isinstance(recovery, list) and any("proof" in str(item.get("operation") or "") for item in recovery if isinstance(item, dict)):
+        return 1
+    return 0
+
+
+def _rejected_mutation_count(observation: dict[str, object]) -> int:
+    authority = _authority_packet(observation)
+    return int(authority.get("rejection_observed") is True)
 
 
 def _assert_scenario_contract(

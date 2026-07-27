@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import json
 import subprocess
 import tempfile
 from pathlib import Path
@@ -57,6 +58,14 @@ def test_composed_operation_contract_is_not_derived_from_parallel_oracle() -> No
     assert "_record_owner_result" not in source
     assert "_observe_owner_result" not in source
     assert "composed-operation-owner-results" not in source
+    assert "scenario_fault_ref" not in source
+    assert "_with_fault_ref" not in source
+    assert "_decision_from_mutation_admission" not in source
+    assert "_decision_from_ordinary_state" not in source
+    assert "_decision_from_route_packet" not in source
+    assert "_decision_from_runtime" not in source
+    assert "proof-admission" not in source
+    assert "returned-worker-admission" not in source
 
 
 def test_composed_operation_owner_receipt_does_not_smuggle_contract_fields() -> None:
@@ -103,4 +112,43 @@ def test_composed_operation_checker_consumes_producer_authority_packet() -> None
         else:
             assert contract[field] == scenario[field]
     assert authority_packet["producer_module"] == "agentic_workspace.composed_operation_scenarios"
+    owner_packet = authority_packet["owner_packet"]
+    assert owner_packet["admission"]["stable_reason"] == scenario["mutation_precondition"]
+    assert owner_packet["producer_receipt"]["owner"] == scenario["owner"]
     assert not (target / ".agentic-workspace" / "local" / "composed-operation-owner-results").exists()
+
+
+def test_composed_operation_contract_rejects_accepted_stale_or_rejected_shortcut() -> None:
+    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
+    spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    matrix = module.load_matrix()
+    scenario = copy.deepcopy(matrix["scenarios"][0])
+    with tempfile.TemporaryDirectory(prefix="aw-composed-authority-shortcut-") as directory:
+        target = Path(directory)
+        authority_packet = observe_composed_operation_authority(
+            target=target,
+            scenario_id=str(scenario["id"]),
+            active_planning=False,
+            start={},
+            implement={"context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}}},
+            summary={},
+            closeout={},
+        )
+
+    shortcut = json.loads(json.dumps(authority_packet))
+    shortcut["decision"]["mutation_precondition"] = "stale-cas-rejected"
+    shortcut["owner_packet"]["admission"]["stable_reason"] = "stale-cas-rejected"
+    shortcut["owner_packet"]["admission"]["admitted"] = True
+    shortcut["owner_packet"]["status"] = "admitted"
+    shortcut["owner_packet"]["admitted"] = True
+    shortcut["protected_action"]["accepted"] = True
+
+    contract = module._derive_contract_from_authority(
+        fault_observation={"status": "observed", "authority_packet": shortcut},
+        packets={"implement": {"operating_loop": {"safe_claim": "blocked"}}},
+    )
+
+    assert contract == {}
