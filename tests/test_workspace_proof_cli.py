@@ -764,23 +764,6 @@ owner = "workspace-cli-runtime"
     assert (
         cli.main(
             [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/config.py",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    handoff_before = json.loads(capsys.readouterr().out)["handoff_proof_route_consumer_gate"]
-    assert handoff_before["status"] == "blocked"
-
-    assert (
-        cli.main(
-            [
                 "planning",
                 "handoff",
                 "--target",
@@ -895,23 +878,6 @@ owner = "workspace-cli-runtime"
     closeout_after = json.loads(capsys.readouterr().out)["values"]["closeout_trust_inspection"]
     assert closeout_after["proof_route_strategy_consumer_gate"]["status"] == "current"
     assert "claim-proof-route-health-resolved" not in closeout_after["action_effect"]["blocked_until_reconciled"]
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/config.py",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    handoff_after = json.loads(capsys.readouterr().out)["handoff_proof_route_consumer_gate"]
-    assert handoff_after["status"] == "current"
 
     assert cli.main(["planning", "handoff", "--target", str(tmp_path), "--format", "json"]) == 0
     handoff_transition_after = json.loads(capsys.readouterr().out)

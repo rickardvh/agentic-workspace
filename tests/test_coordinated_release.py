@@ -28,7 +28,7 @@ def test_plan_uses_existing_release_tags_as_floor(monkeypatch) -> None:
         lambda ownership: [module.Changeset(path=module.ROOT / ".release/changes/a.toml", bump="patch", summary="Fix")],
     )
     monkeypatch.setattr(module, "current_package_versions", lambda ownership: [module.Version.parse("0.33.9")])
-    monkeypatch.setattr(module, "existing_release_versions", lambda: [module.Version.parse("0.34.0")])
+    monkeypatch.setattr(module, "existing_release_versions", lambda ownership: [module.Version.parse("0.34.0")])
 
     plan = module.plan_release({})
 
@@ -49,7 +49,7 @@ def test_plan_applies_highest_pending_changeset_bump(monkeypatch) -> None:
         ],
     )
     monkeypatch.setattr(module, "current_package_versions", lambda ownership: [module.Version.parse("1.2.3")])
-    monkeypatch.setattr(module, "existing_release_versions", lambda: [module.Version.parse("1.2.3")])
+    monkeypatch.setattr(module, "existing_release_versions", lambda ownership: [module.Version.parse("1.2.3")])
 
     plan = module.plan_release({})
 
@@ -75,7 +75,7 @@ def test_prepare_updates_all_version_mirrors_and_consumes_changesets(tmp_path, m
         encoding="utf-8",
     )
     monkeypatch.setattr(module, "ROOT", tmp_path)
-    monkeypatch.setattr(module, "existing_release_versions", lambda: [module.Version.parse("0.1.0")])
+    monkeypatch.setattr(module, "existing_release_versions", lambda ownership: [module.Version.parse("0.1.0")])
     ownership = {
         "changeset_dir": ".release/changes",
         "packages": [{"pyproject": "pyproject.toml"}, {"pyproject": "packages/memory/pyproject.toml"}],

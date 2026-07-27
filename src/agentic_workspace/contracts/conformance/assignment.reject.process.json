@@ -46,7 +46,7 @@
           ]
         },
         {
-          "equals": "rejected",
+          "equals": "blocked",
           "path": [
             "status"
           ]

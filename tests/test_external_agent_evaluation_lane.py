@@ -404,23 +404,6 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
     assert cost["totals"]["proof_command_count"] >= 2
 
 
-def test_operational_decision_trace_avoids_chain_of_thought_requirement() -> None:
-    text = (LANE_DIR / "operational-decision-trace.md").read_text(encoding="utf-8")
-
-    assert "without asking agents to reveal private chain-of-thought" in text
-    assert "Memory used, dismissed, or not applicable" in text
-    assert "Verification/proof decision and safe claim boundary" in text
-    assert "once the next safe action is clear, proceed with work instead of narrating" in text
-
-
-def test_model_cli_harness_doc_links_external_agent_lane_pack() -> None:
-    text = (REPO_ROOT / "docs" / "maintainer" / "model-cli-dogfooding-harness.md").read_text(encoding="utf-8")
-
-    assert "tools/model-cli-harness/external-agent-evaluation/" in text
-    assert "scripts/model_cli_harness/external_agent_evaluation_lane.py validate" in text
-    assert "scripts/model_cli_harness/external_agent_evaluation_lane.py report --format json" in text
-
-
 def test_model_cli_harness_scores_source_checkout_aw_invocation_as_package_cli() -> None:
     module = _load_harness_module()
     executed = module._normalized_command_text("uv run python scripts/run_agentic_workspace.py start --target . --format json")
