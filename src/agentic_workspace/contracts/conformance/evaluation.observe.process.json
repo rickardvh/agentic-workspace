@@ -39,7 +39,7 @@
   ],
   "expectations": {
     "exit": {
-      "code": 0
+      "code": 2
     },
     "stdout": {
       "format": "json",
@@ -48,25 +48,13 @@
           "path": [
             "kind"
           ],
-          "equals": "agentic-workspace/evaluation-observation/v1"
+          "equals": "agentic-workspace/evaluation-error/v1"
         },
         {
           "path": [
-            "outcome"
+            "status"
           ],
-          "equals": "appended"
-        },
-        {
-          "path": [
-            "evaluation_id"
-          ],
-          "equals": "eval-cost"
-        },
-        {
-          "path": [
-            "criterion"
-          ],
-          "equals": "cost"
+          "equals": "failed"
         }
       ]
     },
@@ -74,14 +62,11 @@
       "allow_non_empty": false
     },
     "filesystem": {
-      "allowed_write_paths": [
-        ".agentic-workspace/local/evaluations/eval-cost.jsonl"
-      ],
+      "allowed_write_paths": [],
       "required_paths": [
         ".git/.keep",
         "README.md",
-        ".agentic-workspace/evaluations.json",
-        ".agentic-workspace/local/evaluations/eval-cost.jsonl"
+        ".agentic-workspace/evaluations.json"
       ],
       "forbidden_paths": []
     },

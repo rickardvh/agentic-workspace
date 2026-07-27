@@ -30,8 +30,6 @@
       "sha256:review-thread-1",
       "--route-decision",
       "target-guidance",
-      "--trusted-authority-receipt-json",
-      "{\"authority\":\"pr-review\",\"producer_class\":\"human-reviewer\",\"producer_id\":\"reviewer-1\",\"source\":\"github-review\",\"source_ref\":\"review-thread-1\"}",
       "--format",
       "json"
     ],
