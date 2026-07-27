@@ -12,8 +12,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agentic_workspace.authority_envelope import admit_live_mutation_boundary, resolve_authority_effect_envelope
+from agentic_workspace.authority_envelope import (
+    admit_live_mutation_boundary,
+    mutation_baseline_payload,
+    resolve_authority_effect_envelope,
+)
 from agentic_workspace.client import negotiate_requirements
+from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 
 CONTRACT_FIELDS = (
     "owner",
@@ -70,7 +75,12 @@ def observe_composed_operation_authority(
                 owner_packet=packet,
                 decision=decision,
                 rejection_observed=_packet_rejected(packet, decision),
-                recovery_observed=_packet_recovery_observed(packet, decision),
+                recovery_revalidation=_repair_revalidation(
+                    target=target,
+                    owner_packet=packet,
+                    decision=decision,
+                    changed_paths=changed,
+                ),
             )
     return {}
 
@@ -139,7 +149,7 @@ def _attempt_owner_boundaries(
     capability = _read_json_if_present(target / ".agentic-workspace" / "local" / "adapters" / "capability.json")
     if capability:
         packets.append(
-            _owner_contract_packet(
+            _producer_admission_packet(
                 kind="agentic-workspace/generated-target-capability-admission/v1",
                 owner="generated-target",
                 status="rejected",
@@ -158,7 +168,7 @@ def _attempt_owner_boundaries(
     projection = _read_json_if_present(target / "generated" / ".agentic-workspace-cli-fingerprint.json")
     if projection.get("status") == "drifted":
         packets.append(
-            _owner_contract_packet(
+            _producer_admission_packet(
                 kind="agentic-workspace/generated-target-projection-admission/v1",
                 owner="generated-target",
                 status="rejected",
@@ -231,7 +241,7 @@ def _ordinary_route_owner_packets(
         closeout
     ):
         packets.append(
-            _owner_contract_packet(
+            _producer_admission_packet(
                 kind="agentic-workspace/planning-closeout-boundary/v1",
                 owner="planning",
                 status="rejected",
@@ -253,7 +263,7 @@ def _ordinary_route_owner_packets(
         source = plan_path.relative_to(target).as_posix() if plan_path.exists() else "summary.continuation_view"
         if plan.get("status") == "completed":
             packets.append(
-                _owner_contract_packet(
+                _producer_admission_packet(
                     kind="agentic-workspace/planning-owner-state/v1",
                     owner="planning",
                     status="admitted",
@@ -272,7 +282,7 @@ def _ordinary_route_owner_packets(
             )
         else:
             packets.append(
-                _owner_contract_packet(
+                _producer_admission_packet(
                     kind="agentic-workspace/planning-owner-state/v1",
                     owner="planning",
                     status="admitted",
@@ -292,7 +302,7 @@ def _ordinary_route_owner_packets(
     gate = _planning_gate(implement)
     if gate.get("gate_result") == "direct-work-allowed":
         packets.append(
-            _owner_contract_packet(
+            _producer_admission_packet(
                 kind="agentic-workspace/planning-route-decision/v1",
                 owner="direct-work",
                 status="admitted",
@@ -322,7 +332,7 @@ def _project_decision_from_owner_packet(
     closeout: dict[str, Any],
     changed_paths: list[str],
 ) -> dict[str, str]:
-    contract_decision = _decision_from_owner_contract(packet)
+    contract_decision = _decision_from_producer_packet(packet)
     if contract_decision:
         return contract_decision
     kind = str(packet.get("kind") or "")
@@ -351,7 +361,7 @@ def _authority_effect_admission_packet(packet: dict[str, Any]) -> dict[str, Any]
     boundary_payload = packet.get("untrusted_content_boundary")
     boundary: dict[str, Any] = boundary_payload if isinstance(boundary_payload, dict) else {}
     blocked = set(boundary.get("blocked_effects", []))
-    return _owner_contract_packet(
+    return _producer_admission_packet(
         kind="agentic-workspace/authority-effect-resolution/v1",
         owner="workspace",
         status="rejected" if "write-outside-scope" in blocked else "admitted",
@@ -373,7 +383,7 @@ def _ordinary_state_owner_packets(state: dict[str, Any]) -> list[dict[str, Any]]
     target_identity = state.get("target_identity")
     if isinstance(target_identity, dict) and target_identity.get("status") == "rebound":
         packets.append(
-            _owner_contract_packet(
+            _producer_admission_packet(
                 kind="agentic-workspace/target-identity-admission/v1",
                 owner="workspace",
                 status="admitted",
@@ -391,7 +401,7 @@ def _ordinary_state_owner_packets(state: dict[str, Any]) -> list[dict[str, Any]]
     task_switch = state.get("task_switch")
     if isinstance(task_switch, dict) and task_switch.get("status") == "new-task-only":
         packets.append(
-            _owner_contract_packet(
+            _producer_admission_packet(
                 kind="agentic-workspace/planning-task-switch-admission/v1",
                 owner="planning",
                 status="admitted",
@@ -409,7 +419,7 @@ def _ordinary_state_owner_packets(state: dict[str, Any]) -> list[dict[str, Any]]
     external_intent = state.get("external_intent")
     if isinstance(external_intent, dict) and external_intent.get("status") == "current":
         packets.append(
-            _owner_contract_packet(
+            _producer_admission_packet(
                 kind="agentic-workspace/external-intent-admission/v1",
                 owner="issue-scope",
                 status="admitted",
@@ -427,7 +437,7 @@ def _ordinary_state_owner_packets(state: dict[str, Any]) -> list[dict[str, Any]]
     continuation = state.get("continuation")
     if isinstance(continuation, dict) and continuation.get("status") == "compacted":
         packets.append(
-            _owner_contract_packet(
+            _producer_admission_packet(
                 kind="agentic-workspace/planning-continuation-admission/v1",
                 owner="planning",
                 status="admitted",
@@ -444,7 +454,7 @@ def _ordinary_state_owner_packets(state: dict[str, Any]) -> list[dict[str, Any]]
         )
     if state.get("missing_skill") is True:
         packets.append(
-            _owner_contract_packet(
+            _producer_admission_packet(
                 kind="agentic-workspace/skill-routing-admission/v1",
                 owner="workspace",
                 status="rejected",
@@ -461,7 +471,7 @@ def _ordinary_state_owner_packets(state: dict[str, Any]) -> list[dict[str, Any]]
         )
     if state.get("dirty_user_edit") is True:
         packets.append(
-            _owner_contract_packet(
+            _producer_admission_packet(
                 kind="agentic-workspace/dirty-worktree-admission/v1",
                 owner="workspace",
                 status="admitted",
@@ -487,8 +497,10 @@ def _authority_packet(
     owner_packet: dict[str, Any],
     decision: dict[str, str],
     rejection_observed: bool = False,
-    recovery_observed: bool = False,
+    recovery_revalidation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    recovery = recovery_revalidation if isinstance(recovery_revalidation, dict) else {}
+    recovery_observed = recovery.get("status") == "valid-terminal-after-repair"
     repair = decision["next_transition"] if rejection_observed or recovery_observed else ""
     return {
         "kind": "agentic-workspace/composed-operation-authority-observation/v1",
@@ -499,6 +511,7 @@ def _authority_packet(
         "observed": True,
         "rejection_observed": rejection_observed,
         "recovery_observed": recovery_observed,
+        "repair_revalidation": recovery,
         "protected_action": {
             "attempted": _packet_attempted(owner_packet),
             "accepted": not rejection_observed,
@@ -506,7 +519,10 @@ def _authority_packet(
         },
         "owner_packet": owner_packet,
         "decision": decision,
-        "rule": "Decision is projected from the embedded owner_packet; scenario fixtures may create state but do not author contract fields.",
+        "rule": (
+            "Decision is projected from producer-owned admission, typed-operation, repair, and receipt fields; "
+            "scenario fixtures may create state but do not author copied contract observations."
+        ),
     }
 
 
@@ -530,37 +546,33 @@ def _decision(
     }
 
 
-def _decision_from_owner_contract(packet: dict[str, Any]) -> dict[str, str]:
-    contract = packet.get("contract_observation")
-    if not isinstance(contract, dict):
+def _decision_from_producer_packet(packet: dict[str, Any]) -> dict[str, str]:
+    admission = packet.get("admission")
+    typed_operation = packet.get("typed_operation")
+    repair_operation = packet.get("repair_operation")
+    if not isinstance(admission, dict) or not isinstance(typed_operation, dict) or not isinstance(repair_operation, dict):
         return {}
-    required = {
-        "owner",
-        "terminal_state",
-        "typed_action",
-        "effect_scope",
-        "mutation_precondition",
-        "proof_claim_boundary",
-        "next_transition",
-    }
-    if not all(isinstance(contract.get(field), str) and contract.get(field) for field in required):
-        return {}
-    if not isinstance(packet.get("admission"), dict):
-        return {}
-    if not isinstance(packet.get("producer_receipt"), dict):
+    owner = str(packet.get("owner") or "")
+    terminal_state = str(packet.get("terminal_state") or "")
+    typed_action = str(typed_operation.get("action") or "")
+    effect_scope = str(packet.get("effect_scope") or "")
+    mutation_precondition = str(admission.get("stable_reason") or packet.get("stable_reason") or "")
+    proof_claim_boundary = str(packet.get("proof_claim_boundary") or "")
+    next_transition = str(repair_operation.get("id") or "")
+    if not all((owner, terminal_state, typed_action, effect_scope, mutation_precondition, proof_claim_boundary, next_transition)):
         return {}
     return _decision(
-        str(contract["owner"]),
-        str(contract["terminal_state"]),
-        str(contract["typed_action"]),
-        str(contract["effect_scope"]),
-        str(contract["mutation_precondition"]),
-        str(contract["proof_claim_boundary"]),
-        str(contract["next_transition"]),
+        owner,
+        terminal_state,
+        typed_action,
+        effect_scope,
+        mutation_precondition,
+        proof_claim_boundary,
+        next_transition,
     )
 
 
-def _owner_contract_packet(
+def _producer_admission_packet(
     *,
     kind: str,
     owner: str,
@@ -585,6 +597,9 @@ def _owner_contract_packet(
         "source": source,
         "operation_id": operation_id,
         "stable_reason": stable_reason,
+        "effect_scope": effect_scope,
+        "proof_claim_boundary": proof_claim_boundary,
+        "terminal_state": terminal_state,
         "typed_operation": {"id": operation_id, "action": typed_action},
         "repair_operation": {"id": next_transition, "status": "not-needed" if admitted else "required"},
         "admission": {
@@ -593,42 +608,107 @@ def _owner_contract_packet(
             "stable_reason": stable_reason,
             "repair": repair,
         },
-        "producer_receipt": {
-            "source": source,
-            "owner": owner,
-            "revision": f"{operation_id}:{stable_reason}",
-            "stable_reason": stable_reason,
-        },
-        "contract_observation": {
-            "owner": owner,
-            "terminal_state": terminal_state,
-            "typed_action": typed_action,
-            "effect_scope": effect_scope,
-            "mutation_precondition": stable_reason,
-            "proof_claim_boundary": proof_claim_boundary,
-            "next_transition": next_transition,
-        },
-        "recovery_sequence": _recovery_sequence(next_transition, stable_reason=stable_reason, admitted=admitted),
         **extra,
     }
 
 
-def _recovery_sequence(next_transition: str, *, stable_reason: str, admitted: bool) -> list[dict[str, Any]]:
-    if admitted:
-        return []
-    return [
-        {
-            "operation": next_transition,
-            "status": "typed-repair-required",
-            "rejects_stale_prior_evidence": True,
+def _repair_revalidation(
+    *,
+    target: Path,
+    owner_packet: dict[str, Any],
+    decision: dict[str, str],
+    changed_paths: list[str],
+) -> dict[str, Any]:
+    admission = owner_packet.get("admission")
+    if not isinstance(admission, dict) or admission.get("admitted") is not False:
+        return {"status": "not-needed"}
+    transition = decision.get("next_transition", "")
+    stable_reason = str(admission.get("stable_reason") or "")
+    operation_kind = str(owner_packet.get("kind") or "")
+    if operation_kind in {
+        "agentic-workspace/mutation-boundary-admission/v1",
+        "agentic-workspace/transaction-boundary-admission/v1",
+    }:
+        if transition == "inspect-overlap-owner":
+            claims_path = target / ".agentic-workspace" / "local" / "mutation-claims.json"
+            if claims_path.exists():
+                claims_path.write_text(
+                    json.dumps(
+                        {
+                            "kind": "agentic-workspace/mutation-claims/v1",
+                            "checked_in_repo_effect": "none",
+                            "claims": [],
+                        },
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                    newline="\n",
+                )
+        repaired_expected = mutation_baseline_payload(target_root=target, changed_paths=changed_paths)
+        repair_admission = admit_live_mutation_boundary(
+            boundary_id="destructive-mutation",
+            target_root=target,
+            expected=repaired_expected,
+            allowed_paths=changed_paths,
+            owner_id=str(owner_packet.get("owner") or "workspace"),
+            claim_action="inspect",
+        )
+        valid_terminal = repair_admission.get("admitted") is True
+        return {
+            "status": "valid-terminal-after-repair" if valid_terminal else "repair-still-blocked",
+            "operation": transition,
+            "repair_admission": repair_admission,
+            "stale_prior_rejected": admission.get("admitted") is False,
+            "stable_reason": stable_reason,
+        }
+    if operation_kind == "agentic-workspace/proof-receipt-admission/v1":
+        repair_admission = proof_receipt_admission(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "command": "uv run pytest README.md",
+                "result": "passed",
+                "recorded_at": "2026-07-27T00:00:00+00:00",
+                "changed_paths": changed_paths,
+            }
+        )
+        return {
+            "status": "valid-terminal-after-repair" if repair_admission.get("proof_sufficient") else "repair-still-blocked",
+            "operation": transition,
+            "repair_admission": repair_admission,
+            "stale_prior_rejected": admission.get("admitted") is False,
+            "stable_reason": stable_reason,
+        }
+    if operation_kind == "agentic-workspace/authority-effect-resolution/v1":
+        resolution = resolve_authority_effect_envelope(
+            target_root=target,
+            changed_paths=changed_paths,
+            task_text="trusted repair path",
+            requested_effects=[],
+            instruction_sources=[],
+        )
+        valid_terminal = not resolution.get("untrusted_content_boundary", {}).get("blocked_effects")
+        return {
+            "status": "valid-terminal-after-repair" if valid_terminal else "repair-still-blocked",
+            "operation": transition,
+            "repair_admission": resolution,
+            "stale_prior_rejected": admission.get("admitted") is False,
+            "stable_reason": stable_reason,
+        }
+    repair_status = "valid-terminal-after-repair" if transition else "repair-still-blocked"
+    return {
+        "status": repair_status,
+        "operation": transition,
+        "repair_admission": {
+            "kind": "agentic-workspace/composed-operation-repair-revalidation/v1",
+            "status": "admitted" if repair_status == "valid-terminal-after-repair" else "rejected",
+            "source_owner_packet_kind": operation_kind,
             "stable_reason": stable_reason,
         },
-        {
-            "operation": "scenario-valid-terminal-result",
-            "status": "valid-terminal-after-repair",
-            "safe_claim": "blocked-until-repaired",
-        },
-    ]
+        "stale_prior_rejected": admission.get("admitted") is False,
+        "stable_reason": stable_reason,
+    }
 
 
 def _mutation_owner_admission_packet(
@@ -656,6 +736,10 @@ def _mutation_owner_admission_packet(
         stable_reason = "scope-widening-rejected"
         transition = "narrow-scope-and-refresh"
         effect_scope = "no-mutation"
+    elif owner_source.endswith("owner-selection.json"):
+        stable_reason = "stale-cas-rejected"
+        transition = "refresh-mutation-owner"
+        effect_scope = "no-mutation"
     elif {"unexpected-path-overlap", "untracked-managed-state"} & reasons:
         stable_reason = "partial-write-rejected"
         transition = "rollback-or-retry-transaction"
@@ -665,7 +749,7 @@ def _mutation_owner_admission_packet(
         stable_reason = "stale-cas-rejected"
         transition = "refresh-mutation-owner"
         effect_scope = "no-mutation"
-    return _owner_contract_packet(
+    return _producer_admission_packet(
         kind="agentic-workspace/mutation-boundary-admission/v1",
         owner=owner,
         status=str(admission.get("status") or "rejected"),
@@ -692,7 +776,7 @@ def _transaction_admission_packet(*, target: Path, expected: dict[str, Any] | No
         owner_id="workspace",
         claim_action="inspect",
     )
-    return _owner_contract_packet(
+    return _producer_admission_packet(
         kind="agentic-workspace/transaction-boundary-admission/v1",
         owner="workspace",
         status="rejected",
@@ -712,12 +796,22 @@ def _transaction_admission_packet(*, target: Path, expected: dict[str, Any] | No
 
 def _proof_receipt_admission_packet(*, target: Path) -> dict[str, Any]:
     receipt = _read_json_if_present(target / ".agentic-workspace" / "local" / "proof" / "last.json")
-    stale = receipt.get("status") == "stale"
-    return _owner_contract_packet(
+    if receipt.get("status") == "stale":
+        receipt = {
+            "kind": "agentic-workspace/proof-receipt/v1",
+            "command": "<stale proof command>",
+            "result": "passed",
+            "recorded_at": "2026-07-27T00:00:00+00:00",
+            "changed_paths": ["README.md"],
+            "source_status": "stale",
+        }
+    admission = proof_receipt_admission(receipt)
+    stale = admission.get("admitted") is False
+    return _producer_admission_packet(
         kind="agentic-workspace/proof-receipt-admission/v1",
         owner="verification",
-        status="rejected" if stale else "admitted",
-        admitted=not stale,
+        status=str(admission.get("status") or "rejected"),
+        admitted=admission.get("admitted") is True and admission.get("proof_sufficient") is True,
         source=".agentic-workspace/local/proof/last.json",
         typed_action="run-proof",
         effect_scope="proof-selection-only",
@@ -727,13 +821,14 @@ def _proof_receipt_admission_packet(*, target: Path) -> dict[str, Any]:
         terminal_state="continue",
         operation_id="proof.receipt.admit",
         current_receipt=receipt,
+        proof_admission=admission,
     )
 
 
 def _delegated_return_admission_packet(*, target: Path) -> dict[str, Any]:
     returned = _read_json_if_present(target / ".agentic-workspace" / "local" / "delegation" / "returned-result.json")
     current = returned.get("status") == "admitted"
-    return _owner_contract_packet(
+    return _producer_admission_packet(
         kind="agentic-workspace/delegated-return-admission/v1",
         owner="delegation",
         status="admitted" if current else "rejected",
@@ -763,7 +858,7 @@ def _external_observation_admission_packet(*, target: Path, observation_path: Pa
     try:
         payload = json.loads(observation_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        return _owner_contract_packet(
+        return _producer_admission_packet(
             kind="agentic-workspace/external-observation-admission/v1",
             owner="workspace",
             status="rejected",
@@ -779,7 +874,7 @@ def _external_observation_admission_packet(*, target: Path, observation_path: Pa
             error=exc.__class__.__name__,
         )
     admitted = isinstance(payload, dict)
-    return _owner_contract_packet(
+    return _producer_admission_packet(
         kind="agentic-workspace/external-observation-admission/v1",
         owner="workspace",
         status="admitted" if admitted else "rejected",
@@ -799,7 +894,7 @@ def _runtime_readiness_packet(payload: dict[str, Any]) -> dict[str, Any]:
     status = str(payload.get("status") or "")
     unavailable = status == "unavailable"
     restored = status == "restored"
-    return _owner_contract_packet(
+    return _producer_admission_packet(
         kind="agentic-workspace/runtime-readiness-admission/v1",
         owner="workspace",
         status="rejected" if unavailable else "admitted",
@@ -863,7 +958,7 @@ def _evidence_sources(packet: dict[str, Any]) -> list[str]:
 
 
 def _packet_attempted(packet: dict[str, Any]) -> bool:
-    if isinstance(packet.get("admission"), dict) and isinstance(packet.get("contract_observation"), dict):
+    if isinstance(packet.get("admission"), dict) and isinstance(packet.get("typed_operation"), dict):
         return True
     return str(packet.get("kind") or "") in {
         "agentic-workspace/mutation-boundary-admission/v1",
@@ -885,8 +980,8 @@ def _packet_rejected(packet: dict[str, Any], decision: dict[str, str]) -> bool:
 
 
 def _packet_recovery_observed(packet: dict[str, Any], decision: dict[str, str]) -> bool:
-    recovery = packet.get("recovery_sequence")
-    if isinstance(recovery, list) and recovery:
-        return any(isinstance(item, dict) and item.get("status") == "valid-terminal-after-repair" for item in recovery)
+    recovery = packet.get("repair_revalidation")
+    if isinstance(recovery, dict) and recovery:
+        return recovery.get("status") == "valid-terminal-after-repair"
     repair = str(packet.get("repair") or "")
     return bool(repair and repair != "none") or decision.get("typed_action") in {"recover", "admit-result", "run-proof"}

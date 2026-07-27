@@ -135,9 +135,7 @@ def validate_matrix(matrix: dict[str, object]) -> list[str]:
         "proof_claim_boundary",
         "next_transition",
     }
-    if not isinstance(assertion_contract, dict) or not required_contract.issubset(
-        set(assertion_contract.get("per_scenario", []))
-    ):
+    if not isinstance(assertion_contract, dict) or not required_contract.issubset(set(assertion_contract.get("per_scenario", []))):
         errors.append("scenario assertion contract is incomplete")
     if not REQUIRED_METRICS.issubset(set(matrix.get("cost_metrics", []))):
         errors.append("cost metrics do not cover total successful-completion cost")
@@ -197,6 +195,28 @@ def _write_json(path: Path, payload: dict[str, object]) -> None:
 def _write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8", newline="\n")
+
+
+def _commit_fixture_baseline(target: Path) -> None:
+    subprocess.run(["git", "-C", str(target), "add", "README.md"], check=True, capture_output=True, text=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(target),
+            "-c",
+            "user.name=Agentic Workspace",
+            "-c",
+            "user.email=agentic-workspace@example.invalid",
+            "commit",
+            "--quiet",
+            "-m",
+            "fixture baseline",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def _prepare_active_plan(target: Path, *, scenario_id: str, status: str = "active") -> int:
@@ -403,12 +423,7 @@ def _semantic_parity_observation(*, target: Path, scenario: dict[str, object]) -
         "python_profile": REPO_ROOT / "generated" / "workspace" / "python" / "external_consumer_profile.json",
         "typescript_profile": REPO_ROOT / "generated" / "workspace" / "typescript" / "external_consumer_profile.json",
         "python_package": REPO_ROOT / "generated" / "workspace" / "python" / "command_package.json",
-        "typescript_package": REPO_ROOT
-        / "generated"
-        / "workspace"
-        / "typescript"
-        / "resources"
-        / "command_package.json",
+        "typescript_package": REPO_ROOT / "generated" / "workspace" / "typescript" / "resources" / "command_package.json",
     }
     missing = sorted(name for name, path in paths.items() if not path.exists())
     if missing:
@@ -611,9 +626,7 @@ def _profile_operation_map(profile: dict[str, object]) -> dict[str, dict[str, ob
     }
 
 
-def _operation_supported(
-    python_operation: dict[str, object] | None, typescript_operation: dict[str, object] | None
-) -> bool:
+def _operation_supported(python_operation: dict[str, object] | None, typescript_operation: dict[str, object] | None) -> bool:
     if not isinstance(python_operation, dict) or not isinstance(typescript_operation, dict):
         return False
     comparable_fields = ("external_consumption", "effects", "conformance", "targets")
@@ -645,13 +658,11 @@ def _command_package_summary(package: dict[str, object]) -> dict[str, object]:
             (
                 str(command.get("command", {}).get("name")),
                 str(command.get("operation_ref", {}).get("id")),
-                tuple(sorted((command.get("effect_hints") or {}).items()))
-                if isinstance(command.get("effect_hints"), dict)
-                else (),
+                tuple(sorted((command.get("effect_hints") or {}).items())) if isinstance(command.get("effect_hints"), dict) else (),
             )
             for command in commands
             if isinstance(command, dict)
-        )
+        ),
     }
 
 
@@ -665,9 +676,7 @@ def _read_json_if_present(path: Path) -> dict[str, object]:
     return payload if isinstance(payload, dict) else {"status": "not-object"}
 
 
-def _derive_contract_from_authority(
-    *, fault_observation: dict[str, object], packets: dict[str, dict[str, object]]
-) -> dict[str, object]:
+def _derive_contract_from_authority(*, fault_observation: dict[str, object], packets: dict[str, dict[str, object]]) -> dict[str, object]:
     """Normalize the scenario contract from producer-owned authority packets."""
 
     authority_packet = fault_observation.get("authority_packet")
@@ -688,10 +697,7 @@ def _derive_contract_from_authority(
         contract["terminal_state"] = "invalid-completion-authorized"
     if contract.get("proof_claim_boundary") in {"no-completion-claim", "partial-claim-only"} and not completion_safe:
         contract["proof_claim_boundary"] = "invalid-completion-authorized"
-    if (
-        str(contract.get("mutation_precondition") or "").endswith("-rejected")
-        and authority_packet.get("rejection_observed") is not True
-    ):
+    if str(contract.get("mutation_precondition") or "").endswith("-rejected") and authority_packet.get("rejection_observed") is not True:
         contract["mutation_precondition"] = "rejection-not-observed"
     return {
         **contract,
@@ -715,11 +721,7 @@ def _authority_packet_is_contract_authoritative(authority_packet: dict[str, obje
     decision = authority_packet.get("decision")
     if not isinstance(decision, dict):
         return False
-    if not all(
-        isinstance(decision.get(field), str) and decision.get(field)
-        for field in CONTRACT_FIELDS
-        if field != "semantic_parity"
-    ):
+    if not all(isinstance(decision.get(field), str) and decision.get(field) for field in CONTRACT_FIELDS if field != "semantic_parity"):
         return False
     owner_packet = authority_packet.get("owner_packet")
     if not isinstance(owner_packet, dict) or not owner_packet.get("kind"):
@@ -732,8 +734,9 @@ def _authority_packet_is_contract_authoritative(authority_packet: dict[str, obje
         return False
     owner_packet = authority_packet.get("owner_packet")
     admission = owner_packet.get("admission") if isinstance(owner_packet, dict) else None
-    producer_receipt = owner_packet.get("producer_receipt") if isinstance(owner_packet, dict) else None
-    if not isinstance(admission, dict) or not isinstance(producer_receipt, dict):
+    if not isinstance(admission, dict):
+        return False
+    if "contract_observation" in owner_packet or "producer_receipt" in owner_packet:
         return False
     stable_reason = str(admission.get("stable_reason") or "")
     if stable_reason != str(decision.get("mutation_precondition") or ""):
@@ -741,6 +744,14 @@ def _authority_packet_is_contract_authoritative(authority_packet: dict[str, obje
     repair_operation = owner_packet.get("repair_operation") if isinstance(owner_packet, dict) else None
     if not isinstance(repair_operation, dict) or not repair_operation.get("id"):
         return False
+    if authority_packet.get("rejection_observed") is True:
+        repair_revalidation = authority_packet.get("repair_revalidation")
+        if not isinstance(repair_revalidation, dict):
+            return False
+        if repair_revalidation.get("status") != "valid-terminal-after-repair":
+            return False
+        if repair_revalidation.get("stale_prior_rejected") is not True:
+            return False
     if str(decision.get("mutation_precondition") or "").endswith("-rejected"):
         return protected_action.get("attempted") is True and protected_action.get("accepted") is False
     return True
@@ -752,9 +763,7 @@ def _planning_gate(packet: dict[str, object]) -> dict[str, object]:
     return gate if isinstance(gate, dict) else {}
 
 
-def _normalize_next_transition(
-    *, start: dict[str, object], implement: dict[str, object], authority: dict[str, object]
-) -> str:
+def _normalize_next_transition(*, start: dict[str, object], implement: dict[str, object], authority: dict[str, object]) -> str:
     if isinstance(start.get("next_safe_action"), dict):
         start_action = str(start["next_safe_action"].get("next_safe_action") or "")
         if start_action in {"inspect-current-task-scope", "choose-smallest-workflow-shape"}:
@@ -766,9 +775,7 @@ def _normalize_next_transition(
     return str(authority.get("fallback_transition") or "")
 
 
-def _fixture_fault_observation(
-    *, target: Path, scenario: dict[str, object], packets: dict[str, dict[str, object]]
-) -> dict[str, object]:
+def _fixture_fault_observation(*, target: Path, scenario: dict[str, object], packets: dict[str, dict[str, object]]) -> dict[str, object]:
     """Observe the injected condition from owner state and ordinary packets.
 
     Scenario setup may create canonical owner state, but it must not create the
@@ -821,7 +828,6 @@ def _fixture_fault_observation(
             "completion_blocked": _closeout_blocks_completion(closeout),
         },
     }
-
 
 
 def _closeout_blocks_completion(closeout: dict[str, object]) -> bool:
@@ -894,9 +900,8 @@ def _authority_packet(observation: dict[str, object]) -> dict[str, object]:
 
 def _proof_rerun_count(observation: dict[str, object]) -> int:
     authority = _authority_packet(observation)
-    owner_packet = authority.get("owner_packet") if isinstance(authority.get("owner_packet"), dict) else {}
-    recovery = owner_packet.get("recovery_sequence") if isinstance(owner_packet, dict) else []
-    if isinstance(recovery, list) and any("proof" in str(item.get("operation") or "") for item in recovery if isinstance(item, dict)):
+    recovery = authority.get("repair_revalidation") if isinstance(authority.get("repair_revalidation"), dict) else {}
+    if "proof" in str(recovery.get("operation") or ""):
         return 1
     return 0
 
@@ -981,9 +986,7 @@ def _execute_composed_workspace_path(*, target: Path, scenario: dict[str, object
     command_changes = _changed_paths(before_commands, after)
     changed = _changed_paths(before_fixture, after)
     state_changes = {path for path in changed if path.startswith(".agentic-workspace/") or path.startswith("generated/")}
-    packets["_scenario_contract"] = _scenario_contract_observation(
-        target=target, packets=packets, scenario=scenario, fixture=fixture
-    )
+    packets["_scenario_contract"] = _scenario_contract_observation(target=target, packets=packets, scenario=scenario, fixture=fixture)
     observation = packets["_scenario_contract"]
     parity_cost = {}
     parity = observation.get("semantic_parity_evidence")
@@ -992,9 +995,7 @@ def _execute_composed_workspace_path(*, target: Path, scenario: dict[str, object
         if isinstance(execution, dict) and isinstance(execution.get("cost"), dict):
             parity_cost = execution["cost"]
     return packets, {
-        "aw_command_count": len(commands)
-        + int(fixture.get("setup_aw_command_count", 0))
-        + int(parity_cost.get("aw_command_count", 0)),
+        "aw_command_count": len(commands) + int(fixture.get("setup_aw_command_count", 0)) + int(parity_cost.get("aw_command_count", 0)),
         "wall_clock_aw_ms": elapsed,
         "output_bytes": output + int(parity_cost.get("output_bytes", 0)),
         "managed_files_read": _managed_reference_count(packets),
@@ -1016,6 +1017,7 @@ def _execute_one_scenario(scenario: dict[str, object], budget: dict[str, object]
         target = Path(directory)
         subprocess.run(["git", "init", "--quiet", str(target)], check=True, capture_output=True, text=True)
         (target / "README.md").write_text("scenario fixture\n", encoding="utf-8", newline="\n")
+        _commit_fixture_baseline(target)
         _run_cli("init", "--target", str(target))
         try:
             packets, metrics = _execute_composed_workspace_path(target=target, scenario=scenario)
