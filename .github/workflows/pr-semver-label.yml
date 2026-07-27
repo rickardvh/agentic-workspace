@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   require-semver-label:
+    if: ${{ github.event.pull_request.draft == false }}
     name: Require semver label for package changes
     runs-on: ubuntu-latest
     steps:

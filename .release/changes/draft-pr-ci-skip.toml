@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Skip CI and semver-label jobs while pull requests remain drafts."

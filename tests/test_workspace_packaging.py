@@ -156,6 +156,8 @@ def test_workspace_package_declares_semver_identity() -> None:
 def test_ci_builds_and_uploads_root_package_artifacts() -> None:
     ci_text = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
+    assert "ready_for_review" in ci_text
+    assert ci_text.count("if: ${{ github.event.pull_request.draft == false }}") == 3
     assert "workspace-package-artifacts:" in ci_text
     assert "uv build --wheel --sdist --out-dir dist" in ci_text
     assert "uv build --wheel --sdist --out-dir dist packages/memory" in ci_text
@@ -172,6 +174,13 @@ def test_ci_runs_release_proof_typecheck_before_generated_verification() -> None
     assert "run: make typecheck" in ci_text
     assert ci_text.index("run: make lint-workspace") < ci_text.index("run: make typecheck")
     assert ci_text.index("run: make typecheck") < ci_text.index("run: make verify-workspace")
+
+
+def test_pr_semver_label_workflow_skips_draft_prs() -> None:
+    workflow_text = (WORKSPACE_ROOT / ".github" / "workflows" / "pr-semver-label.yml").read_text(encoding="utf-8")
+
+    assert "ready_for_review" in workflow_text
+    assert "if: ${{ github.event.pull_request.draft == false }}" in workflow_text
 
 
 def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:

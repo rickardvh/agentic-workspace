@@ -126,16 +126,46 @@ def current_workspace_version(ownership: dict[str, Any]) -> str:
     return version_texts[0]
 
 
-def existing_release_versions() -> list[Version]:
+def _tag_declares_coordinated_release_version(ownership: dict[str, Any], *, tag: str, version: Version) -> bool:
+    target = _run(["git", "rev-list", "-n", "1", tag], check=False)
+    if target.returncode != 0:
+        return False
+    commit = target.stdout.strip()
+    if not commit:
+        return False
+    expected = str(version)
+    owned_python_packages = {package["name"] for package in ownership["packages"]}
+    for path in version_file_paths(ownership):
+        result = _run(["git", "show", f"{commit}:{_repo_path(path)}"], check=False)
+        if result.returncode != 0:
+            return False
+        try:
+            if path.name == "package.json":
+                declared = str(json.loads(result.stdout)["version"])
+            else:
+                payload = tomllib.loads(result.stdout)
+                if payload.get("project", {}).get("name") not in owned_python_packages:
+                    return False
+                declared = str(payload["project"]["version"])
+        except (KeyError, json.JSONDecodeError, tomllib.TOMLDecodeError):
+            return False
+        if declared != expected:
+            return False
+    return True
+
+
+def existing_release_versions(ownership: dict[str, Any]) -> list[Version]:
     result = _run(["git", "tag", "--list", "v[0-9]*.[0-9]*.[0-9]*"], check=False)
     versions: list[Version] = []
     if result.returncode != 0:
         return versions
     for tag in result.stdout.splitlines():
         try:
-            versions.append(Version.parse(tag.removeprefix("v")))
+            version = Version.parse(tag.removeprefix("v"))
         except ValueError:
             continue
+        if _tag_declares_coordinated_release_version(ownership, tag=tag, version=version):
+            versions.append(version)
     return versions
 
 
@@ -146,7 +176,7 @@ def highest_bump(changesets: list[Changeset]) -> str:
 def plan_release(ownership: dict[str, Any], *, include_git_tags: bool = True) -> dict[str, Any]:
     changesets = parse_changesets(ownership)
     package_versions = current_package_versions(ownership)
-    tag_versions = existing_release_versions() if include_git_tags else []
+    tag_versions = existing_release_versions(ownership) if include_git_tags else []
     floor = max([*package_versions, *tag_versions])
 
     if not changesets:
@@ -221,13 +251,13 @@ def verify_workspace_versions(ownership: dict[str, Any], *, tag: str | None = No
     version = current_workspace_version(ownership)
     if tag and tag != f"v{version}":
         raise SystemExit(f"Release tag {tag!r} must match workspace version {version!r}")
-    release_versions = existing_release_versions()
+    release_versions = existing_release_versions(ownership)
     target = Version.parse(version)
     higher_or_equal = [release_version for release_version in release_versions if release_version >= target]
     if tag is None and higher_or_equal:
         raise SystemExit(
-            f"Workspace release version {version} must be greater than existing tags; "
-            f"highest existing tag is v{max(release_versions)}"
+            f"Workspace release version {version} must be greater than existing AW coordinated-release tags; "
+            f"highest existing AW coordinated-release tag is v{max(release_versions)}"
         )
     return {
         "kind": "agentic-workspace/coordinated-release-verification/v1",
@@ -287,7 +317,7 @@ def pending_tag_plan(ownership: dict[str, Any]) -> dict[str, Any]:
     target = Version.parse(version)
     tag = f"v{version}"
     existing = _run(["git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}"], check=False)
-    release_versions = existing_release_versions()
+    release_versions = existing_release_versions(ownership)
     if existing.returncode != 0 and release_versions and target <= max(release_versions):
         return {
             "kind": "agentic-workspace/coordinated-release-tag-plan/v1",
