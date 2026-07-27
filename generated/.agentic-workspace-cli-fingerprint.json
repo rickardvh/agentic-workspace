@@ -1678,7 +1678,7 @@
     "scripts/model_cli_harness/long_horizon_episode.py": "370acd11daa2d3c7705ee1f7c37bfece687098e4",
     "scripts/model_cli_harness/run_model_cli_harness.py": "5927f3be9fe6d6d88db7f17001d5677fdb160793",
     "scripts/model_cli_harness/run_sbx_codex_adapter.py": "7a9cb0c7a09519d098c093bed72970a83ff24d71",
-    "scripts/release/coordinated_release.py": "587b88cba469f9ae8c23ec9ecdea385be5049b70",
+    "scripts/release/coordinated_release.py": "6ff6b60d78481987e3e0634a6dce3b6f5b143bdd",
     "scripts/release/patch_workspace_release_wheel.py": "2742046cf933eb6a7656080ac936c93436bd5f7a",
     "scripts/release/promote_command_generation_release.py": "c8ab5e1df992585540f23b526417e9ce68f6e63a",
     "scripts/render_agent_docs.py": "d6883f8b7999ee8b0134c35d4c956550eff4c13a",
@@ -2059,7 +2059,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "8204075d579380930125a73d34b744bfd006bfa0d73c11fd32e7327b6d1d8865",
+  "git_index_identity": "3e119f7776da75c6fd48842e80b0aec6a7c01c89ebbb97ac1de9bd859acaaf43",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
