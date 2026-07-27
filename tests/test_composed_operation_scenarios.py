@@ -50,6 +50,8 @@ def test_composed_operation_contract_is_not_derived_from_parallel_oracle() -> No
     assert "_fixture_admission_inputs" not in source
     assert "owner-admission" not in source
     assert "_from_fact" not in source
+    assert "OWNER_RESULT_NORMALIZATION" not in source
+    assert "result_type" not in source
 
 
 def test_composed_operation_owner_receipt_does_not_smuggle_contract_fields() -> None:
@@ -82,12 +84,20 @@ def test_composed_operation_owner_result_does_not_smuggle_contract_fields() -> N
         result = module._record_owner_result(
             target,
             scenario_id=str(scenario["id"]),
-            result_type="workspace.clean-direct-work",
+            owner="direct-work",
+            terminal_state="continue",
+            typed_action="implement",
+            effect_scope="changed-paths-only",
+            mutation_precondition="clean-baseline",
+            proof_claim_boundary="proof-before-completion-claim",
+            next_transition="run-focused-proof",
             source="workspace.current-work-router",
             evidence_sources=["implement.context.planning_safety_gate"],
         )
         persisted = module._read_json_if_present(target / result["path"])
     for field in module.CONTRACT_FIELDS:
-        assert field not in persisted
-    assert persisted["result_type"] == "workspace.clean-direct-work"
+        if field == "semantic_parity":
+            assert field not in persisted
+        else:
+            assert persisted[field] == scenario[field]
     assert persisted["source"] == "workspace.current-work-router"
