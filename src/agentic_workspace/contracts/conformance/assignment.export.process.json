@@ -50,7 +50,7 @@
           ]
         },
         {
-          "equals": "handoff-prepared",
+          "equals": "blocked",
           "path": [
             "status"
           ]
