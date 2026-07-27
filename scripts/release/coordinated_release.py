@@ -134,7 +134,11 @@ def _tag_declares_coordinated_release_version(ownership: dict[str, Any], *, tag:
     if not commit:
         return False
     expected = str(version)
-    owned_python_packages = {package["name"] for package in ownership["packages"]}
+    owned_python_packages = {
+        str(package.get("name") or "").strip()
+        for package in ownership["packages"]
+        if str(package.get("name") or "").strip()
+    }
     for path in version_file_paths(ownership):
         result = _run(["git", "show", f"{commit}:{_repo_path(path)}"], check=False)
         if result.returncode != 0:
@@ -144,7 +148,8 @@ def _tag_declares_coordinated_release_version(ownership: dict[str, Any], *, tag:
                 declared = str(json.loads(result.stdout)["version"])
             else:
                 payload = tomllib.loads(result.stdout)
-                if payload.get("project", {}).get("name") not in owned_python_packages:
+                package_name = str(payload.get("project", {}).get("name") or "").strip()
+                if owned_python_packages and package_name not in owned_python_packages:
                     return False
                 declared = str(payload["project"]["version"])
         except (KeyError, json.JSONDecodeError, tomllib.TOMLDecodeError):

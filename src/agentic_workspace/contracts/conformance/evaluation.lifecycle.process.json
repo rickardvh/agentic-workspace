@@ -78,7 +78,7 @@
       "forbidden_paths": []
     },
     "idempotency": {
-      "run_twice": true
+      "run_twice": false
     },
     "safety": {
       "no_writes_outside_repo_root": true

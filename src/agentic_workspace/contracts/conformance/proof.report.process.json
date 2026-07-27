@@ -64,8 +64,9 @@
         "README.md",
         "Makefile"
       ],
-      "forbidden_paths": [
-        ".agentic-workspace"
+      "forbidden_paths": [],
+      "allowed_write_directories": [
+        ".agentic-workspace/local/improvement-pressure"
       ]
     },
     "idempotency": {

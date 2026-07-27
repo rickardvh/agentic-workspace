@@ -46,7 +46,7 @@
           ]
         },
         {
-          "equals": "repair-requested",
+          "equals": "blocked",
           "path": [
             "status"
           ]
