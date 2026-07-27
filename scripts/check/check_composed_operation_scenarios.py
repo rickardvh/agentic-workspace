@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -455,6 +454,8 @@ def _semantic_parity_observation(*, target: Path, scenario: dict[str, object]) -
         and isinstance(execution.get("external"), dict)
         and execution["external"].get("operation") == "config.report"
         and execution["external"].get("kind")
+        and execution["external"].get("consumer") == "external-installed-public-client-subprocess"
+        and execution["external"].get("source_checkout_dependency") is False
         else "generated-contract-divergence"
     )
     return {
@@ -555,7 +556,7 @@ console.log(JSON.stringify(payload));
 
 
 def _run_external_public_consumer(*, target: Path) -> dict[str, object]:
-    """Invoke the public operation client from outside the source-checkout cwd."""
+    """Invoke the public operation client from an isolated installed consumer."""
 
     script = """
 from __future__ import annotations
@@ -580,20 +581,21 @@ print(json.dumps({
     'consumer': 'external-public-client-subprocess',
 }, sort_keys=True))
 """
-    env = dict(os.environ)
-    python_path = str(REPO_ROOT / "src")
-    env["PYTHONPATH"] = python_path if not env.get("PYTHONPATH") else python_path + os.pathsep + env["PYTHONPATH"]
-    completed = subprocess.run(
-        [sys.executable, "-c", script, str(target)],
-        cwd=target,
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    with tempfile.TemporaryDirectory(prefix="aw-composed-installed-consumer-") as consumer_dir:
+        completed = subprocess.run(
+            ["uv", "run", "--with", str(REPO_ROOT), "python", "-c", script, str(target)],
+            cwd=consumer_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
     if completed.returncode != 0:
-        raise RuntimeError(f"external public consumer failed: {(completed.stdout or completed.stderr)[:300]}")
-    return json.loads(completed.stdout)
+        raise RuntimeError(f"external installed consumer failed: {(completed.stdout or completed.stderr)[:300]}")
+    payload = json.loads(completed.stdout)
+    if isinstance(payload, dict):
+        payload["consumer"] = "external-installed-public-client-subprocess"
+        payload["source_checkout_dependency"] = False
+    return payload
 
 
 def _packet_semantic_summary(packet: dict[str, object]) -> dict[str, object]:
@@ -726,6 +728,13 @@ def _authority_packet_is_contract_authoritative(authority_packet: dict[str, obje
     owner_packet = authority_packet.get("owner_packet")
     if not isinstance(owner_packet, dict) or not owner_packet.get("kind"):
         return False
+    if owner_packet.get("producer_module") == "agentic_workspace.composed_operation_scenarios":
+        return False
+    if owner_packet.get("producer_module") != "agentic_workspace.operation_authority_admissions":
+        return False
+    producer_observation = owner_packet.get("producer_observation")
+    if not isinstance(producer_observation, dict) or not producer_observation.get("kind"):
+        return False
     evidence_sources = authority_packet.get("evidence_sources")
     if not isinstance(evidence_sources, list) or not evidence_sources:
         return False
@@ -751,6 +760,8 @@ def _authority_packet_is_contract_authoritative(authority_packet: dict[str, obje
         if repair_revalidation.get("status") != "valid-terminal-after-repair":
             return False
         if repair_revalidation.get("stale_prior_rejected") is not True:
+            return False
+        if repair_revalidation.get("operation_specific") is not True:
             return False
     if str(decision.get("mutation_precondition") or "").endswith("-rejected"):
         return protected_action.get("attempted") is True and protected_action.get("accepted") is False
