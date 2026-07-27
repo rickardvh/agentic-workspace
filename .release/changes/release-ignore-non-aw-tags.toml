@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Ignore non-AW package-domain tags when computing the coordinated release floor."
