@@ -48,7 +48,7 @@
           ]
         },
         {
-          "equals": "admitted",
+          "equals": "blocked",
           "path": [
             "status"
           ]

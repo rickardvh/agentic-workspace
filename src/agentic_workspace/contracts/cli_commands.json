@@ -5618,7 +5618,8 @@
       ],
       "options": [],
       "role": "reusable_host_repo_diagnostics",
-      "audience": "ordinary_host_repo"
+      "audience": "ordinary_host_repo",
+      "classification_note": "local correction-event lifecycle and bounded storage diagnostic front door"
     }
   ]
 }

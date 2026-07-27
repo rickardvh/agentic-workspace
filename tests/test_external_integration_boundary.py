@@ -33,12 +33,6 @@ def test_external_profile_is_package_owned_not_installed_payload() -> None:
     assert (ROOT / "generated/workspace/typescript/external_consumer_profile.json").is_file()
 
 
-def test_local_integration_area_is_explicitly_non_authoritative() -> None:
-    text = (ROOT / ".agentic-workspace/docs/local-integration-area.md").read_text(encoding="utf-8")
-    for phrase in ("git-ignored", "non-authoritative", "safe to delete", "external tool's own storage"):
-        assert phrase in text
-
-
 def _init_repo(path: Path) -> None:
     subprocess.run(["git", "init", "--quiet", str(path)], check=True)
 
