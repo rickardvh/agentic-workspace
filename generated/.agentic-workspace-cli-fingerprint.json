@@ -1657,10 +1657,10 @@
     "scripts/check/check_recurring_friction_ledger.py": "1142a9a14f7c396bb900e518a12169874c02b995",
     "scripts/check/check_source_payload_operational_install.py": "eed66c1138bed1ba043b4ffb83608d6f51991c66",
     "scripts/check/check_structured_file_inventory.py": "3b1365b42f8bab14c695af18bb17f147825c37fd",
-    "scripts/check/check_validation_runtime_plan.py": "20710d4c9ded088f06f6ac5ed2c8f22f3ada1f03",
+    "scripts/check/check_validation_runtime_plan.py": "3dbde6d63f0d619ba9b84bad6ca1c0dd77c98802",
     "scripts/check/measure_lazy_discovery.py": "834c506b024f575f6938f725d33a1c3b9dae9cae",
     "scripts/check/prove_command_generation_artifact_consumption.py": "9b4218d9adf4d1434152745be1417243000e95cd",
-    "scripts/check/run_compact_command.py": "d75ee5362acb0bd8d135b905eaa0a00127bf8299",
+    "scripts/check/run_compact_command.py": "8a4641a4b2f75bc9c8c3f7978f9f2b3ab143eb9b",
     "scripts/check/run_generated_command_package_proof.py": "fb942f999b82a24bee6b4b7df5710f6f630bb70a",
     "scripts/check/run_operation_conformance_tests.py": "c23c5142c004c4a4790d9098069ef7e8fa8aac7a",
     "scripts/generate/generate_command_adapters.py": "034c36957eee7c75b313feb76a5cda78688ef794",
@@ -2061,7 +2061,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "9bde999d556cf28c7905ab02535006a02e8aea2f4274cfdfa2dbc501f3bdd053",
+  "git_index_identity": "9a71a16e050e64fc66a4da81590f7418e005718f0129258eac1adee4efc79904",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
