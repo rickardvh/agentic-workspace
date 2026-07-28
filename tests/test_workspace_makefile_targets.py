@@ -57,12 +57,29 @@ def test_workspace_split_targets_preserve_serial_pytest_contract() -> None:
     ) in text
 
     for target, variable in SPLIT_TARGETS.items():
+        parallel_variable = "WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS" if target == "test-workspace-proof" else "WORKSPACE_PYTEST_PARALLEL_ARGS"
         pattern = re.compile(
             rf"^{re.escape(target)}:\n\t@\$\(COMPACT_RUN\) --label .+ -- uv run pytest "
-            rf"\$\(PYTEST_PARALLEL_ARGS\) \$\({re.escape(variable)}\)$",
+            rf"\$\({parallel_variable}\) \$\({re.escape(variable)}\)$",
             re.MULTILINE,
         )
-        assert pattern.search(text), f"{target} must run pytest through $(PYTEST_PARALLEL_ARGS) and $({variable})"
+        assert pattern.search(text), f"{target} must run pytest through $({parallel_variable}) and $({variable})"
+    assert "WORKSPACE_PYTEST_PARALLEL_ARGS ?= $(PYTEST_PARALLEL_ARGS)" in text
+    assert "WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS ?= $(PYTEST_PARALLEL_ARGS)" in text
+    assert "PACKAGE_PYTEST_PARALLEL_ARGS ?= $(PYTEST_PARALLEL_ARGS)" in text
+    assert "MEMORY_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)" in text
+    assert "PLANNING_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)" in text
+    assert "VERIFICATION_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)" in text
+    assert "check-bounded-parallel:" in text
+    assert "$(MAKE) test-workspace-cli WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16'" in text
+    assert (
+        "$(MAKE) -j 4 test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release "
+        "test-workspace-integration test-memory test-planning test-verification lint-nosync typecheck-nosync format-check-nosync "
+        "verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory "
+        "package-artifact-duplicates agent-aids absolute-paths WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16' "
+        "WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS='-n 8' MEMORY_PYTEST_PARALLEL_ARGS='-n 8' PLANNING_PYTEST_PARALLEL_ARGS='' "
+        "VERIFICATION_PYTEST_PARALLEL_ARGS='-n 8'"
+    ) in text
 
 
 def test_workspace_broad_suite_exposes_split_target_matrix() -> None:
@@ -70,3 +87,43 @@ def test_workspace_broad_suite_exposes_split_target_matrix() -> None:
     commands = config["assurance"]["domain_proof_lanes"]["workspace_broad_suite"]["commands"]
 
     assert commands == [f"make {target}" for target in SPLIT_TARGETS] + ["make lint-workspace"]
+
+
+def test_makefile_exposes_setup_free_aggregate_targets() -> None:
+    text = _makefile_text()
+
+    assert "test-nosync: test-workspace test-memory test-planning test-verification" in text
+    assert "test: sync-all test-nosync" in text
+    assert "lint-nosync: lint-workspace lint-memory lint-planning lint-verification" in text
+    assert "lint: sync-all lint-nosync" in text
+    assert "typecheck-nosync: typecheck-workspace typecheck-memory typecheck-planning typecheck-verification" in text
+    assert "typecheck: sync-all typecheck-nosync" in text
+    assert "verify-nosync: verify-workspace verify-memory verify-planning verify-verification" in text
+    assert "verify: sync-all verify-nosync" in text
+    assert "check: sync-all check-nosync" in text
+
+
+def test_root_check_does_not_expand_nested_sync_aggregates() -> None:
+    text = _makefile_text()
+    check_line = next(line for line in text.splitlines() if line.startswith("check-nosync:"))
+
+    assert " test " not in f" {check_line} "
+    assert " lint " not in f" {check_line} "
+    assert " typecheck " not in f" {check_line} "
+    assert " format-check " not in f" {check_line} "
+    assert " verify " not in f" {check_line} "
+    assert "test-nosync" in check_line
+    assert "lint-nosync" in check_line
+    assert "typecheck-nosync" in check_line
+    assert "format-check-nosync" in check_line
+    assert "verify-nosync" in check_line
+
+
+def test_ci_uses_setup_free_targets_after_explicit_sync() -> None:
+    workflow = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    assert "run: make sync-all" in workflow
+    assert "run: make typecheck-nosync" in workflow
+    assert "run: make check-${{ matrix.package }}-nosync" in workflow
+    assert "run: make typecheck\n" not in workflow
+    assert "run: make check-${{ matrix.package }}\n" not in workflow
