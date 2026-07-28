@@ -1,5 +1,5 @@
 {
-  "file_count": 1027,
+  "file_count": 1028,
   "file_paths": [
     "generated/memory/python/__init__.py",
     "generated/memory/python/_contracts/operations/memory.adopt.lifecycle.json",
@@ -626,6 +626,7 @@
     "scripts/check/check_recurring_friction_ledger.py",
     "scripts/check/check_source_payload_operational_install.py",
     "scripts/check/check_structured_file_inventory.py",
+    "scripts/check/check_validation_runtime_plan.py",
     "scripts/check/measure_lazy_discovery.py",
     "scripts/check/prove_command_generation_artifact_consumption.py",
     "scripts/check/run_compact_command.py",
@@ -1655,10 +1656,11 @@
     "scripts/check/check_prompt_semantic_markers.py": "89125fd44df78235f158234d2f7f8ce167c971f8",
     "scripts/check/check_recurring_friction_ledger.py": "1142a9a14f7c396bb900e518a12169874c02b995",
     "scripts/check/check_source_payload_operational_install.py": "eed66c1138bed1ba043b4ffb83608d6f51991c66",
-    "scripts/check/check_structured_file_inventory.py": "1f7a2d48bd668e32cf3c913a84d705456795be15",
+    "scripts/check/check_structured_file_inventory.py": "3b1365b42f8bab14c695af18bb17f147825c37fd",
+    "scripts/check/check_validation_runtime_plan.py": "3c3195b81774ea336793f4dcc0ad99ce36f9c004",
     "scripts/check/measure_lazy_discovery.py": "834c506b024f575f6938f725d33a1c3b9dae9cae",
     "scripts/check/prove_command_generation_artifact_consumption.py": "9b4218d9adf4d1434152745be1417243000e95cd",
-    "scripts/check/run_compact_command.py": "ca64d1c81934c96fce496602f107dc6d64d82fe6",
+    "scripts/check/run_compact_command.py": "11cdb8569ec6e6779f28448062d2d56f82ecec76",
     "scripts/check/run_generated_command_package_proof.py": "fb942f999b82a24bee6b4b7df5710f6f630bb70a",
     "scripts/check/run_operation_conformance_tests.py": "c23c5142c004c4a4790d9098069ef7e8fa8aac7a",
     "scripts/generate/generate_command_adapters.py": "034c36957eee7c75b313feb76a5cda78688ef794",
@@ -2020,7 +2022,7 @@
     "src/agentic_workspace/contracts/schemas/workspace_surfaces_manifest.schema.json": "b597b7a22c06b9f1d1bf8c0006109d9b4c16d987",
     "src/agentic_workspace/contracts/setup_findings_policy.json": "b7ea3382248db34f5f9571bb3ccf26e796cfe031",
     "src/agentic_workspace/contracts/skill_specs.json": "24a5e624d1e826914f56b418919a55a2958da899",
-    "src/agentic_workspace/contracts/structured_file_inventory.json": "b88da978d96482b2d58fc9e19cde91f19c7ac5d8",
+    "src/agentic_workspace/contracts/structured_file_inventory.json": "9a17037015e678b0a00e88caac6946a125d6efe8",
     "src/agentic_workspace/contracts/target_support.json": "464d0f8f818c9e1d59b838b9d9b709048726d35f",
     "src/agentic_workspace/contracts/typescript_primitive_support.mjs": "49de77ddcb3a9664816229e3136d01d37a64812c",
     "src/agentic_workspace/contracts/view_specs/memory.report.tiny.json": "7f802fdd8e528c39fdb12b06e7ba05b87487816a",
@@ -2034,7 +2036,7 @@
     "src/agentic_workspace/doctor.py": "eed6e60a72fb1c306688f6438d87a64afdcc5522",
     "src/agentic_workspace/evaluation.py": "533a55cd6ffff18c1bcd453236e92607f9c44210",
     "src/agentic_workspace/generated_operations.py": "add071271394e2471bf3477be2bf3594e4f238e5",
-    "src/agentic_workspace/improvement_consequence.py": "e0e5c9ae4e504872cee1200c6806c865aa9d8059",
+    "src/agentic_workspace/improvement_consequence.py": "4074369a158a07703ac4475a670a29982384b925",
     "src/agentic_workspace/operating_decision.py": "aaac358b85f0cb3ed06b28dde802dbbd86a469e3",
     "src/agentic_workspace/projection_reuse.py": "a74099ac3579c3e449a7cc98c2284edbbf907839",
     "src/agentic_workspace/proof_receipt_admission.py": "60893fff9ce2710f63fa7c2bf66b114d080a2d94",
@@ -2059,7 +2061,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "96406fc5492f9eac12637d2a8e6559cb6a041e41c9a08788f96893a7669173d0",
+  "git_index_identity": "4c5bd07ad4e1cbd31c624845eff8692eeb01ad823d4e188303eedc7af96620d6",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }

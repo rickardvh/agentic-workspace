@@ -1,0 +1,398 @@
+{
+  "kind": "agentic-workspace/validation-runtime-plan/v1",
+  "schema_version": "validation-runtime-plan/v1",
+  "issue": 2435,
+  "default_execution_posture": "serial",
+  "parallel_modes": [
+    {
+      "id": "pytest-xdist-opt-in",
+      "activation": "PYTEST_PARALLEL_ARGS='-n <count>'",
+      "bounded_by": "caller-provided worker count",
+      "aggregation": "pytest result aggregation; Make target order remains deterministic"
+    }
+  ],
+  "top_level_invocations": [
+    {
+      "id": "local.check",
+      "command": "make check",
+      "dependencies": [
+        "sync.all",
+        "local.check-nosync"
+      ],
+      "sync_policy": "sync-all exactly once before setup-free constituents"
+    },
+    {
+      "id": "ci.workspace-checks",
+      "command": ".github/workflows/ci.yml jobs.workspace-checks",
+      "dependencies": [
+        "sync.all",
+        "lint.workspace",
+        "typecheck.all-nosync",
+        "verify.workspace",
+        "generated-command-packages.check"
+      ],
+      "sync_policy": "make sync-all exactly once"
+    },
+    {
+      "id": "ci.package-checks",
+      "command": ".github/workflows/ci.yml jobs.package-checks",
+      "dependencies": [
+        "sync.package",
+        "package.check-nosync"
+      ],
+      "sync_policy": "make sync-${{ matrix.package }} exactly once; package check stays setup-free"
+    }
+  ],
+  "constituents": [
+    {
+      "id": "sync.all",
+      "make_target": "sync-all",
+      "command": "make sync-all",
+      "dependencies": [],
+      "proof_purpose": "prepare the shared root environment once for a local or CI run",
+      "execution_posture": "serial setup",
+      "owner_boundary": "root environment"
+    },
+    {
+      "id": "sync.package",
+      "command": "make sync-${{ matrix.package }}",
+      "dependencies": [],
+      "proof_purpose": "prepare one package-scoped CI environment without broad root check escalation",
+      "execution_posture": "serial setup",
+      "owner_boundary": "package environment"
+    },
+    {
+      "id": "test.workspace-cli",
+      "make_target": "test-workspace-cli",
+      "command": "make test-workspace-cli",
+      "dependencies": [],
+      "proof_purpose": "workspace CLI behavior partition",
+      "execution_posture": "serial by default; pytest-xdist opt-in only",
+      "owner_boundary": "workspace tests"
+    },
+    {
+      "id": "test.workspace-proof",
+      "make_target": "test-workspace-proof",
+      "command": "make test-workspace-proof",
+      "dependencies": [],
+      "proof_purpose": "proof-router and generated proof-package behavior partition",
+      "execution_posture": "serial by default; pytest-xdist opt-in only",
+      "owner_boundary": "workspace tests"
+    },
+    {
+      "id": "test.workspace-session-review",
+      "make_target": "test-workspace-session-review",
+      "command": "make test-workspace-session-review",
+      "dependencies": [],
+      "proof_purpose": "session logging and review-loop behavior partition",
+      "execution_posture": "serial by default; pytest-xdist opt-in only",
+      "owner_boundary": "workspace tests"
+    },
+    {
+      "id": "test.workspace-contracts",
+      "make_target": "test-workspace-contracts",
+      "command": "make test-workspace-contracts",
+      "dependencies": [],
+      "proof_purpose": "contract, schema, inventory, and guardrail behavior partition",
+      "execution_posture": "serial by default; pytest-xdist opt-in only",
+      "owner_boundary": "workspace tests"
+    },
+    {
+      "id": "test.workspace-generated-release",
+      "make_target": "test-workspace-generated-release",
+      "command": "make test-workspace-generated-release",
+      "dependencies": [],
+      "proof_purpose": "generated-command and release workflow behavior partition",
+      "execution_posture": "serial by default; pytest-xdist opt-in only",
+      "owner_boundary": "workspace tests"
+    },
+    {
+      "id": "test.workspace-integration",
+      "make_target": "test-workspace-integration",
+      "command": "make test-workspace-integration",
+      "dependencies": [],
+      "proof_purpose": "external, lifecycle, launcher, and cost behavior partition",
+      "execution_posture": "serial by default; pytest-xdist opt-in only",
+      "owner_boundary": "workspace tests"
+    },
+    {
+      "id": "test.memory",
+      "make_target": "test-memory",
+      "command": "make test-memory",
+      "dependencies": [],
+      "proof_purpose": "Memory package behavior tests",
+      "execution_posture": "serial by default; pytest-xdist opt-in only",
+      "owner_boundary": "memory package"
+    },
+    {
+      "id": "test.planning",
+      "make_target": "test-planning",
+      "command": "make test-planning",
+      "dependencies": [],
+      "proof_purpose": "Planning package behavior tests",
+      "execution_posture": "serial by default; pytest-xdist opt-in only",
+      "owner_boundary": "planning package"
+    },
+    {
+      "id": "test.verification",
+      "make_target": "test-verification",
+      "command": "make test-verification",
+      "dependencies": [],
+      "proof_purpose": "Verification package behavior tests",
+      "execution_posture": "serial by default; pytest-xdist opt-in only",
+      "owner_boundary": "verification package"
+    },
+    {
+      "id": "test.all-nosync",
+      "make_target": "test-nosync",
+      "command": "make test-nosync",
+      "dependencies": [
+        "test.workspace-cli",
+        "test.workspace-proof",
+        "test.workspace-session-review",
+        "test.workspace-contracts",
+        "test.workspace-generated-release",
+        "test.workspace-integration",
+        "test.memory",
+        "test.planning",
+        "test.verification"
+      ],
+      "proof_purpose": "all test partitions after caller-provided setup",
+      "execution_posture": "serial aggregate",
+      "owner_boundary": "root and packages"
+    },
+    {
+      "id": "lint.workspace",
+      "make_target": "lint-workspace",
+      "command": "make lint-workspace",
+      "dependencies": [],
+      "proof_purpose": "workspace lint and prompt-marker checks",
+      "execution_posture": "serial",
+      "owner_boundary": "workspace source"
+    },
+    {
+      "id": "lint.all-nosync",
+      "make_target": "lint-nosync",
+      "command": "make lint-nosync",
+      "dependencies": [
+        "lint.workspace"
+      ],
+      "proof_purpose": "all lint partitions after caller-provided setup",
+      "execution_posture": "serial aggregate",
+      "owner_boundary": "root and packages"
+    },
+    {
+      "id": "typecheck.all-nosync",
+      "make_target": "typecheck-nosync",
+      "command": "make typecheck-nosync",
+      "dependencies": [],
+      "proof_purpose": "root and package type checks after caller-provided setup",
+      "execution_posture": "serial aggregate",
+      "owner_boundary": "root and packages"
+    },
+    {
+      "id": "format-check.all-nosync",
+      "make_target": "format-check-nosync",
+      "command": "make format-check-nosync",
+      "dependencies": [],
+      "proof_purpose": "root and package format checks after caller-provided setup",
+      "execution_posture": "serial aggregate",
+      "owner_boundary": "root and packages"
+    },
+    {
+      "id": "verify.workspace",
+      "make_target": "verify-workspace",
+      "command": "make verify-workspace",
+      "dependencies": [],
+      "proof_purpose": "workspace CLI module verification",
+      "execution_posture": "serial",
+      "owner_boundary": "workspace CLI"
+    },
+    {
+      "id": "verify.all-nosync",
+      "make_target": "verify-nosync",
+      "command": "make verify-nosync",
+      "dependencies": [
+        "verify.workspace"
+      ],
+      "proof_purpose": "root and package verification after caller-provided setup",
+      "execution_posture": "serial aggregate",
+      "owner_boundary": "root and packages"
+    },
+    {
+      "id": "validation-runtime.plan",
+      "make_target": "validation-runtime-plan",
+      "command": "make validation-runtime-plan",
+      "dependencies": [],
+      "proof_purpose": "validation graph, trace, CI/local drift, duplicate, and runtime evidence contract",
+      "execution_posture": "serial structural gate",
+      "owner_boundary": "maintainer validation runtime"
+    },
+    {
+      "id": "structured-file-inventory.full",
+      "make_target": "structured-file-inventory",
+      "command": "make structured-file-inventory",
+      "dependencies": [],
+      "proof_purpose": "complete structured-file inventory no-prune audit",
+      "execution_posture": "serial structural gate",
+      "owner_boundary": "structured inventory authority"
+    },
+    {
+      "id": "structured-file-inventory.changed",
+      "make_target": "structured-file-inventory-changed",
+      "command": "make structured-file-inventory-changed CHANGED_PATHS='<paths>'",
+      "dependencies": [],
+      "proof_purpose": "focused changed-path inventory audit with full escalation on authority changes",
+      "execution_posture": "serial focused gate",
+      "owner_boundary": "structured inventory authority"
+    },
+    {
+      "id": "local.check-nosync",
+      "make_target": "check-nosync",
+      "command": "make check-nosync",
+      "dependencies": [
+        "test.all-nosync",
+        "lint.all-nosync",
+        "typecheck.all-nosync",
+        "format-check.all-nosync",
+        "verify.all-nosync",
+        "validation-runtime.plan",
+        "structured-file-inventory.full"
+      ],
+      "proof_purpose": "explicit broad validation without setup repetition",
+      "execution_posture": "serial aggregate",
+      "owner_boundary": "root validation"
+    },
+    {
+      "id": "package.check-nosync",
+      "command": "make check-${{ matrix.package }}-nosync",
+      "dependencies": [],
+      "proof_purpose": "package-local checks after package-scoped setup",
+      "execution_posture": "serial aggregate",
+      "owner_boundary": "package validation"
+    },
+    {
+      "id": "generated-command-packages.check",
+      "make_target": "generated-command-packages",
+      "command": "make generated-command-packages",
+      "dependencies": [],
+      "proof_purpose": "generated Python/TypeScript command-package conformance",
+      "execution_posture": "serial generated/IR no-prune gate",
+      "owner_boundary": "generated command package authority"
+    }
+  ],
+  "duplicate_dispositions": [
+    {
+      "id": "composed-operation-scenarios",
+      "surfaces": [
+        "tests/test_composed_operation_scenarios.py",
+        "make composed-operation-scenarios"
+      ],
+      "command": "composed operation scenario execution",
+      "distinct_proof_claims": true,
+      "disposition": "pytest coverage proves host routing/checker integration; the standalone gate proves generated fingerprint/release-gate consumption and external generated-consumer parity when that gate is present. The two must not both rerun the same expensive black-box evidence unless these distinct claims are retained."
+    }
+  ],
+  "trace_fixtures": [
+    {
+      "id": "local-check-serial",
+      "command": "make check-bounded-parallel",
+      "critical_path_seconds": 484.633,
+      "summed_work_seconds": 918.0,
+      "events": [
+        {
+          "constituent_id": "sync.all",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "test.workspace-cli",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "test.workspace-proof",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "test.workspace-session-review",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "test.workspace-contracts",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "test.workspace-generated-release",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "test.workspace-integration",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "test.memory",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "test.planning",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "test.verification",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "test.all-nosync",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "lint.workspace",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "lint.all-nosync",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "typecheck.all-nosync",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "format-check.all-nosync",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "verify.workspace",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "verify.all-nosync",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "validation-runtime.plan",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "structured-file-inventory.full",
+          "outcome": "passed"
+        }
+      ]
+    },
+    {
+      "id": "package-ci-serial",
+      "command": "make sync-${{ matrix.package }} && make check-${{ matrix.package }}-nosync",
+      "critical_path_seconds": 0.0,
+      "summed_work_seconds": 0.0,
+      "events": [
+        {
+          "constituent_id": "sync.package",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "package.check-nosync",
+          "outcome": "passed"
+        }
+      ]
+    }
+  ]
+}

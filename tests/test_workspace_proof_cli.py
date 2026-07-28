@@ -1052,6 +1052,36 @@ def test_proof_route_consequence_store_writer_lock_fails_closed_for_readers(tmp_
     assert gate["blocked_finding_ids"] == ["consequence-store-unavailable"]
 
 
+def test_proof_route_consequence_store_writer_waits_for_transient_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import improvement_consequence
+
+    _write_repo_local_proof_target(tmp_path)
+    lock_path = tmp_path / ".agentic-workspace" / "local" / "improvement-pressure" / "consequence-history.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path.write_text('{"pid":1}\n', encoding="utf-8")
+    monkeypatch.setattr(improvement_consequence, "CONSEQUENCE_LOCK_WAIT_SECONDS", 1.0)
+    sleep_calls = 0
+    real_sleep = improvement_consequence.time.sleep
+
+    def release_lock_after_first_poll(duration: float) -> None:
+        nonlocal sleep_calls
+        sleep_calls += 1
+        lock_path.unlink()
+        real_sleep(0)
+
+    monkeypatch.setattr(improvement_consequence.time, "sleep", release_lock_after_first_poll)
+
+    record = improvement_consequence.record_consequence_event(
+        target_root=tmp_path,
+        event={"source": "test", "event": "observed", "finding_id": "finding-alpha"},
+    )
+
+    assert sleep_calls == 1
+    assert record["finding_id"] == "finding-alpha"
+    assert not lock_path.exists()
+    assert improvement_consequence.read_consequence_history(target_root=tmp_path)[0]["finding_id"] == "finding-alpha"
+
+
 def test_proof_route_transition_gate_blocks_only_matching_scoped_findings(tmp_path: Path) -> None:
     from agentic_workspace.workspace_runtime_proof import _improvement_consequence_record_event, _proof_route_transition_gate_payload
 
