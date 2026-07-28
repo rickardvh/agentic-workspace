@@ -92,6 +92,56 @@ def test_unstructured_files_are_ignored() -> None:
     assert findings == []
 
 
+def test_changed_path_inventory_escalates_when_inventory_authority_changes(monkeypatch) -> None:
+    calls: list[str] = []
+
+    def fake_full_inventory_findings():
+        calls.append("full")
+        return []
+
+    monkeypatch.setattr(check_structured_file_inventory, "inventory_findings", fake_full_inventory_findings)
+
+    assert check_structured_file_inventory.changed_path_inventory_findings(["scripts/check/check_structured_file_inventory.py"]) == []
+    assert calls == ["full"]
+
+
+def test_changed_path_inventory_checks_narrow_structured_paths(monkeypatch) -> None:
+    inventory = {
+        "entries": [
+            {
+                "pattern": "known.json",
+                "format": "json",
+                "owner": "test",
+                "status": "typed-validator-backed",
+                "schema_or_validator": "scripts/check/demo_validator.py",
+                "storage_class": "source-of-truth",
+                "checked_in_justification": "test",
+                "editable_by_agents": True,
+                "generated": False,
+                "notes": "Test entry.",
+            }
+        ],
+        "generated_mirrors": [],
+    }
+    monkeypatch.setattr(check_structured_file_inventory, "load_inventory", lambda: inventory)
+    monkeypatch.setattr(check_structured_file_inventory, "validate_inventory_shape", lambda payload: [])
+    monkeypatch.setattr(
+        check_structured_file_inventory, "_tracked_files", lambda root=check_structured_file_inventory.REPO_ROOT: ["known.json"]
+    )
+
+    findings = check_structured_file_inventory.changed_path_inventory_findings(["README.md", "docs/new-machine-state.json"])
+
+    assert len(findings) == 1
+    assert findings[0].path == "docs/new-machine-state.json"
+    assert "not classified" in findings[0].message
+
+
+def test_path_pattern_matching_preserves_segment_glob_semantics() -> None:
+    assert check_structured_file_inventory._match_path_pattern("a/b/c.json", "a/**/*.json")
+    assert check_structured_file_inventory._match_path_pattern("a/c.json", "a/**/*.json")
+    assert not check_structured_file_inventory._match_path_pattern("a/b/c.json", "a/*.json")
+
+
 def test_inventory_routes_known_schema_gaps() -> None:
     inventory = check_structured_file_inventory.load_inventory()
     gap_entries = [entry for entry in inventory["entries"] if entry["status"] == "freeform-prohibited-gap"]
