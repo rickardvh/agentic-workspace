@@ -1082,6 +1082,39 @@ def test_proof_route_consequence_store_writer_waits_for_transient_lock(tmp_path:
     assert improvement_consequence.read_consequence_history(target_root=tmp_path)[0]["finding_id"] == "finding-alpha"
 
 
+def test_proof_route_consequence_store_writer_waits_for_windows_permission_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import improvement_consequence
+
+    _write_repo_local_proof_target(tmp_path)
+    lock_path = tmp_path / ".agentic-workspace" / "local" / "improvement-pressure" / "consequence-history.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    real_open = improvement_consequence.os.open
+    real_sleep = improvement_consequence.time.sleep
+    open_calls = 0
+
+    def transient_permission_error_once(path: str, flags: int, mode: int = 0o777, *, dir_fd: int | None = None) -> int:
+        nonlocal open_calls
+        open_calls += 1
+        if open_calls == 1 and Path(path) == lock_path:
+            raise PermissionError("simulated Windows lock contention")
+        if dir_fd is None:
+            return real_open(path, flags, mode)
+        return real_open(path, flags, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(improvement_consequence.os, "open", transient_permission_error_once)
+    monkeypatch.setattr(improvement_consequence.time, "sleep", lambda _duration: real_sleep(0))
+
+    record = improvement_consequence.record_consequence_event(
+        target_root=tmp_path,
+        event={"source": "test", "event": "observed", "finding_id": "finding-permission-lock"},
+    )
+
+    assert open_calls == 2
+    assert record["finding_id"] == "finding-permission-lock"
+    assert not lock_path.exists()
+    assert improvement_consequence.read_consequence_history(target_root=tmp_path)[0]["finding_id"] == "finding-permission-lock"
+
+
 def test_proof_route_transition_gate_blocks_only_matching_scoped_findings(tmp_path: Path) -> None:
     from agentic_workspace.workspace_runtime_proof import _improvement_consequence_record_event, _proof_route_transition_gate_payload
 

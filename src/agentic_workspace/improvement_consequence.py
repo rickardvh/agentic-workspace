@@ -68,7 +68,7 @@ def _acquire_writer_lock(lock_path: Path) -> int:
     while True:
         try:
             return os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError as exc:
+        except (FileExistsError, PermissionError) as exc:
             if time.monotonic() >= deadline:
                 raise ConsequenceStoreUnavailable(
                     "consequence store write is already in progress; retry after the active writer exits."
