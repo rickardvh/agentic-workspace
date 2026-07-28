@@ -166,6 +166,7 @@
         "16",
         "tests/test_agentic_workspace_launcher.py",
         "tests/test_compact_command_runner.py",
+        "tests/test_composed_operation_scenarios.py",
         "tests/test_completion_cost_json_corpus.py",
         "tests/test_completion_cost_lane_evidence.py",
         "tests/test_completion_cost_live_behavior_proof.py",
