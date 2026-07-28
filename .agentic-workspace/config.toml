@@ -362,3 +362,19 @@ commands = [
   "uv run agentic-workspace system-intent --target . --sync --format json",
 ]
 review_hint = "Treat system intent as directional input and keep the compiled declaration aligned without turning it into active task state."
+
+[assurance.domain_proof_lanes.validation_runtime_2435]
+allowed_composition = ["maintenance", "evidence"]
+applies_to_paths = ["docs/maintainer/validation-runtime-2435/*.json", "scripts/check/check_validation_runtime_plan.py", "scripts/check/run_compact_command.py", "tests/test_compact_command_runner.py", "tests/test_validation_runtime_plan.py"]
+authority_refs = ["docs/maintainer/testing-strategy.md", "docs/maintainer/validation-runtime-2435/validation-plan.json", "docs/maintainer/validation-runtime-2435/runtime-evidence.json"]
+claim_boundary = "focused-validation-runtime-proof-required-before-closeout"
+commands = ["uv run pytest tests/test_compact_command_runner.py tests/test_validation_runtime_plan.py -q", "uv run python scripts/check/check_validation_runtime_plan.py --quiet-success"]
+escalation = ["broad validation command composition changes", "generated or release proof authority changes", "cross-package validation behavior changes"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "focused-route-insufficient"]
+evidence_concepts = ["validation-runtime-plan", "runtime-evidence", "proof-route-maintenance"]
+owner = "workspace-maintainer-checks"
+precedence = "70"
+proof_profiles = ["workspace_behavior"]
+purpose = "Focused validation-runtime plan, evidence, manifest, compact-runner, and checker proof."
+review_aids = ["Confirm compact result records carry canonical constituent ids, dependencies, and proof purposes.", "Confirm checked-in runtime evidence references an exact passing manifest for the broad validation run."]
+route_role = "evidence"

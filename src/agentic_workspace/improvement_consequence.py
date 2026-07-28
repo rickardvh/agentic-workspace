@@ -5,11 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "improvement-pressure" / "consequence-history.jsonl"
+CONSEQUENCE_LOCK_WAIT_SECONDS = 5.0
+CONSEQUENCE_LOCK_POLL_SECONDS = 0.05
 
 
 class ConsequenceStoreUnavailable(RuntimeError):
@@ -60,6 +63,19 @@ def append_consequence_record(*, target_root: Path, record: dict[str, Any]) -> N
         stream.write(json.dumps(record, sort_keys=True, ensure_ascii=True) + "\n")
 
 
+def _acquire_writer_lock(lock_path: Path) -> int:
+    deadline = time.monotonic() + CONSEQUENCE_LOCK_WAIT_SECONDS
+    while True:
+        try:
+            return os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except (FileExistsError, PermissionError) as exc:
+            if time.monotonic() >= deadline:
+                raise ConsequenceStoreUnavailable(
+                    "consequence store write is already in progress; retry after the active writer exits."
+                ) from exc
+            time.sleep(CONSEQUENCE_LOCK_POLL_SECONDS)
+
+
 def record_consequence_event(*, target_root: Path | None, event: dict[str, Any]) -> dict[str, Any]:
     normalized_event = {
         "owner_kind": "workspace-improvement-pressure/v1",
@@ -76,12 +92,7 @@ def record_consequence_event(*, target_root: Path | None, event: dict[str, Any])
     if target_root is not None:
         lock_path = _lock_path(target_root)
         lock_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError as exc:
-            raise ConsequenceStoreUnavailable(
-                "consequence store write is already in progress; retry after the active writer exits."
-            ) from exc
+        fd = _acquire_writer_lock(lock_path)
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
                 stream.write(json.dumps({"pid": os.getpid(), "recorded_at": record["recorded_at"]}, sort_keys=True))
