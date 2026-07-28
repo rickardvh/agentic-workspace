@@ -77,6 +77,12 @@ def test_composed_operation_contract_is_not_derived_from_parallel_oracle() -> No
     assert "_repair_revalidation" not in producer_source
     assert "uv run pytest README.md" not in producer_source
     assert 'valid-terminal-after-repair" if transition' not in producer_source
+    assert "def admission_packet(" not in (
+        Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "operation_authority_admissions.py"
+    ).read_text(encoding="utf-8")
+    assert "_write_and_repair" not in (
+        Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "operation_authority_admissions.py"
+    ).read_text(encoding="utf-8")
     assert "agentic_workspace.operation_authority_admissions" in producer_source
     assert "producer_observation" in (
         Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "operation_authority_admissions.py"
@@ -128,7 +134,9 @@ def test_composed_operation_checker_consumes_producer_authority_packet() -> None
             assert contract[field] == scenario[field]
     assert authority_packet["producer_module"] == "agentic_workspace.composed_operation_scenarios"
     owner_packet = authority_packet["owner_packet"]
-    assert owner_packet["producer_module"] == "agentic_workspace.operation_authority_admissions"
+    assert owner_packet["producer_module"] == "agentic_workspace.workspace_runtime_implement"
+    assert owner_packet["normalizer_module"] == "agentic_workspace.operation_authority_admissions"
+    assert owner_packet["owner_decision_authority"]["normalizer_supplied_decision"] is False
     assert "producer_observation" in owner_packet
     assert owner_packet["admission"]["stable_reason"] == scenario["mutation_precondition"]
     assert owner_packet["owner"] == scenario["owner"]
@@ -192,6 +200,32 @@ def test_composed_operation_contract_rejects_scenario_authored_owner_packet() ->
             closeout={},
         )
     authority_packet["owner_packet"]["producer_module"] = "agentic_workspace.composed_operation_scenarios"
+    contract = module._derive_contract_from_authority(
+        fault_observation={"status": "observed", "authority_packet": authority_packet},
+        packets={"implement": {"operating_loop": {"safe_claim": "blocked"}}},
+    )
+    assert contract == {}
+
+
+def test_composed_operation_contract_rejects_adapter_authored_owner_packet() -> None:
+    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
+    spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    with tempfile.TemporaryDirectory(prefix="aw-composed-adapter-authored-") as directory:
+        target = Path(directory)
+        authority_packet = observe_composed_operation_authority(
+            target=target,
+            scenario_id="fresh-direct-work",
+            active_planning=False,
+            start={},
+            implement={"context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}}},
+            summary={},
+            closeout={},
+        )
+    authority_packet["owner_packet"]["producer_module"] = "agentic_workspace.operation_authority_admissions"
+    authority_packet["owner_packet"]["owner_decision_authority"]["normalizer_supplied_decision"] = True
     contract = module._derive_contract_from_authority(
         fault_observation={"status": "observed", "authority_packet": authority_packet},
         packets={"implement": {"operating_loop": {"safe_claim": "blocked"}}},

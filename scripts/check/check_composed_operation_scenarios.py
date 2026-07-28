@@ -728,9 +728,32 @@ def _authority_packet_is_contract_authoritative(authority_packet: dict[str, obje
     owner_packet = authority_packet.get("owner_packet")
     if not isinstance(owner_packet, dict) or not owner_packet.get("kind"):
         return False
-    if owner_packet.get("producer_module") == "agentic_workspace.composed_operation_scenarios":
+    if owner_packet.get("producer_module") in {
+        "agentic_workspace.composed_operation_scenarios",
+        "agentic_workspace.operation_authority_admissions",
+    }:
         return False
-    if owner_packet.get("producer_module") != "agentic_workspace.operation_authority_admissions":
+    if owner_packet.get("normalizer_module") != "agentic_workspace.operation_authority_admissions":
+        return False
+    owner_authority = owner_packet.get("owner_decision_authority")
+    if not isinstance(owner_authority, dict):
+        return False
+    if owner_authority.get("status") != "owner-produced":
+        return False
+    if owner_authority.get("normalizer_supplied_decision") is not False:
+        return False
+    if owner_authority.get("producer_module") != owner_packet.get("producer_module"):
+        return False
+    decision_fields = owner_authority.get("decision_fields")
+    if not isinstance(decision_fields, list) or not {
+        "owner",
+        "terminal_state",
+        "typed_operation.action",
+        "effect_scope",
+        "admission.stable_reason",
+        "proof_claim_boundary",
+        "repair_operation.id",
+    }.issubset(set(str(item) for item in decision_fields)):
         return False
     producer_observation = owner_packet.get("producer_observation")
     if not isinstance(producer_observation, dict) or not producer_observation.get("kind"):
@@ -762,6 +785,25 @@ def _authority_packet_is_contract_authoritative(authority_packet: dict[str, obje
         if repair_revalidation.get("stale_prior_rejected") is not True:
             return False
         if repair_revalidation.get("operation_specific") is not True:
+            return False
+        repair_execution = repair_revalidation.get("repair_execution")
+        if not isinstance(repair_execution, dict):
+            return False
+        if repair_execution.get("owner_operation") != repair_operation.get("id"):
+            return False
+        if repair_execution.get("operation_specific") is not True:
+            return False
+        if repair_execution.get("stale_prior_rejected") is not True:
+            return False
+        if not str(repair_execution.get("prior_admission_fingerprint") or "").startswith("sha256:"):
+            return False
+        if not str(repair_execution.get("post_repair_owner_packet_fingerprint") or "").startswith("sha256:"):
+            return False
+        repair_admission = repair_revalidation.get("repair_admission")
+        if isinstance(repair_admission, dict) and repair_admission.get("producer_module") in {
+            "agentic_workspace.composed_operation_scenarios",
+            "agentic_workspace.operation_authority_admissions",
+        }:
             return False
     if str(decision.get("mutation_precondition") or "").endswith("-rejected"):
         return protected_action.get("attempted") is True and protected_action.get("accepted") is False

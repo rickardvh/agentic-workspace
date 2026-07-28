@@ -1,18 +1,19 @@
-"""Reusable owner-facing admission packets for composed operation checks.
+"""Normalize owner-authored admission packets for composed operation checks.
 
-These helpers are intentionally outside the composed-scenario driver. Scenario
-fixtures may create state, but the compact decision packet used by the release
-gate is emitted by this owner-facing admission surface and must include the
-underlying producer observation used to justify the decision.
+Scenario fixtures may create state, but the release gate must not accept a
+scenario or adapter module as the authority for the decision fields.  This
+module is only the compact adapter that normalizes packets whose producer module
+is the owning operation surface.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from agentic_workspace.authority_envelope import (
     admit_live_mutation_boundary,
@@ -20,10 +21,40 @@ from agentic_workspace.authority_envelope import (
     resolve_authority_effect_envelope,
 )
 from agentic_workspace.client import negotiate_requirements
+from agentic_workspace.operation_owner_repairs import (
+    admit_delegated_return_result,
+    clear_overlapping_mutation_claims,
+    replace_external_observation,
+    restore_runtime_availability,
+    restore_workspace_startup_skill,
+)
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 
+ADAPTER_MODULE = "agentic_workspace.operation_authority_admissions"
 
-def admission_packet(
+OWNER_PACKET_PRODUCERS = {
+    "agentic-workspace/mutation-boundary-admission/v1": "agentic_workspace.authority_envelope",
+    "agentic-workspace/transaction-boundary-admission/v1": "agentic_workspace.authority_envelope",
+    "agentic-workspace/proof-receipt-admission/v1": "agentic_workspace.proof_receipt_admission",
+    "agentic-workspace/delegated-return-admission/v1": "agentic_workspace.assignment_lifecycle",
+    "agentic-workspace/external-observation-admission/v1": "agentic_workspace.external_intent",
+    "agentic-workspace/generated-target-capability-admission/v1": "agentic_workspace.client",
+    "agentic-workspace/generated-target-projection-admission/v1": "agentic_workspace.generated_operations",
+    "agentic-workspace/authority-effect-resolution/v1": "agentic_workspace.authority_envelope",
+    "agentic-workspace/runtime-readiness-admission/v1": "agentic_workspace.workspace_runtime_startup",
+    "agentic-workspace/target-identity-admission/v1": "agentic_workspace.workspace_runtime_startup",
+    "agentic-workspace/planning-task-switch-admission/v1": "agentic_workspace.workspace_runtime_planning",
+    "agentic-workspace/external-intent-admission/v1": "agentic_workspace.workspace_runtime_implement",
+    "agentic-workspace/planning-continuation-admission/v1": "agentic_workspace.workspace_runtime_planning",
+    "agentic-workspace/skill-routing-admission/v1": "agentic_workspace.workspace_runtime_startup",
+    "agentic-workspace/dirty-worktree-admission/v1": "agentic_workspace.authority_envelope",
+    "agentic-workspace/planning-closeout-boundary/v1": "agentic_workspace.workspace_runtime_planning",
+    "agentic-workspace/planning-owner-state/v1": "agentic_workspace.workspace_runtime_planning",
+    "agentic-workspace/planning-route-decision/v1": "agentic_workspace.workspace_runtime_implement",
+}
+
+
+def _normalize_owner_decision_packet(
     *,
     kind: str,
     owner: str,
@@ -40,10 +71,29 @@ def admission_packet(
     producer_observation: dict[str, Any],
     **extra: Any,
 ) -> dict[str, Any]:
+    producer_module = OWNER_PACKET_PRODUCERS.get(kind)
+    if not producer_module:
+        raise ValueError(f"no owner producer registered for {kind}")
     repair = "none" if admitted else next_transition
     return {
         "kind": kind,
-        "producer_module": "agentic_workspace.operation_authority_admissions",
+        "producer_module": producer_module,
+        "normalizer_module": ADAPTER_MODULE,
+        "owner_decision_authority": {
+            "status": "owner-produced",
+            "producer_module": producer_module,
+            "normalizer_module": ADAPTER_MODULE,
+            "decision_fields": [
+                "owner",
+                "terminal_state",
+                "typed_operation.action",
+                "effect_scope",
+                "admission.stable_reason",
+                "proof_claim_boundary",
+                "repair_operation.id",
+            ],
+            "normalizer_supplied_decision": False,
+        },
         "owner": owner,
         "status": status,
         "admitted": admitted,
@@ -99,7 +149,7 @@ def mutation_owner_admission_packet(
         stable_reason = "stale-cas-rejected"
         transition = "refresh-mutation-owner"
         effect_scope = "no-mutation"
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/mutation-boundary-admission/v1",
         owner=owner,
         status=str(admission.get("status") or "rejected"),
@@ -126,7 +176,7 @@ def transaction_admission_packet(*, target: Path, expected: dict[str, Any] | Non
         owner_id="workspace",
         claim_action="inspect",
     )
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/transaction-boundary-admission/v1",
         owner="workspace",
         status="rejected",
@@ -157,7 +207,7 @@ def proof_receipt_admission_packet(*, target: Path) -> dict[str, Any]:
         }
     admission = proof_receipt_admission(receipt)
     stale = admission.get("admitted") is False
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/proof-receipt-admission/v1",
         owner="verification",
         status=str(admission.get("status") or "rejected"),
@@ -178,7 +228,7 @@ def proof_receipt_admission_packet(*, target: Path) -> dict[str, Any]:
 def delegated_return_admission_packet(*, target: Path) -> dict[str, Any]:
     returned = _read_json_if_present(target / ".agentic-workspace" / "local" / "delegation" / "returned-result.json")
     current = returned.get("status") == "admitted"
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/delegated-return-admission/v1",
         owner="delegation",
         status="admitted" if current else "rejected",
@@ -203,7 +253,7 @@ def external_observation_admission_packet(*, target: Path, observation_path: Pat
     try:
         payload = json.loads(observation_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        return admission_packet(
+        return _normalize_owner_decision_packet(
             kind="agentic-workspace/external-observation-admission/v1",
             owner="workspace",
             status="rejected",
@@ -219,7 +269,7 @@ def external_observation_admission_packet(*, target: Path, observation_path: Pat
             producer_observation={"kind": "agentic-workspace/external-observation-parse/v1", "error": exc.__class__.__name__},
         )
     admitted = isinstance(payload, dict)
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/external-observation-admission/v1",
         owner="workspace",
         status="admitted" if admitted else "rejected",
@@ -239,7 +289,7 @@ def external_observation_admission_packet(*, target: Path, observation_path: Pat
 def generated_target_capability_admission_packet(capability: dict[str, Any]) -> dict[str, Any]:
     operation = str(capability.get("operation") or "implement.context")
     negotiation = negotiate_requirements({operation: "sha256:unsupported"})
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/generated-target-capability-admission/v1",
         owner="generated-target",
         status="rejected",
@@ -262,7 +312,7 @@ def generated_target_capability_admission_packet(capability: dict[str, Any]) -> 
 
 def generated_target_projection_admission_packet(projection: dict[str, Any]) -> dict[str, Any]:
     negotiation = negotiate_requirements({"start.context": "sha256:drifted"})
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/generated-target-projection-admission/v1",
         owner="generated-target",
         status="rejected",
@@ -299,7 +349,7 @@ def authority_effect_admission_packet(*, target: Path, changed_paths: list[str],
     )
     boundary: dict[str, Any] = _dict(resolution.get("untrusted_content_boundary"))
     blocked = set(boundary.get("blocked_effects", []))
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/authority-effect-resolution/v1",
         owner="workspace",
         status="rejected" if "write-outside-scope" in blocked else "admitted",
@@ -320,7 +370,7 @@ def runtime_readiness_packet(payload: dict[str, Any]) -> dict[str, Any]:
     status = str(payload.get("status") or "")
     unavailable = status == "unavailable"
     restored = status == "restored"
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/runtime-readiness-admission/v1",
         owner="workspace",
         status="rejected" if unavailable else "admitted",
@@ -359,7 +409,7 @@ def ordinary_state_owner_packets(state: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def planning_closeout_boundary_packet(closeout: dict[str, Any]) -> dict[str, Any]:
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/planning-closeout-boundary/v1",
         owner="planning",
         status="rejected",
@@ -378,7 +428,7 @@ def planning_closeout_boundary_packet(closeout: dict[str, Any]) -> dict[str, Any
 
 def planning_owner_state_packet(*, source: str, plan: dict[str, Any], continuation: dict[str, Any]) -> dict[str, Any]:
     completed = plan.get("status") == "completed"
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/planning-owner-state/v1",
         owner="planning",
         status="admitted",
@@ -396,7 +446,7 @@ def planning_owner_state_packet(*, source: str, plan: dict[str, Any], continuati
 
 
 def planning_direct_work_route_packet(gate: dict[str, Any]) -> dict[str, Any]:
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/planning-route-decision/v1",
         owner="direct-work",
         status="admitted",
@@ -438,31 +488,20 @@ def revalidate_typed_repair(*, target: Path, owner_packet: dict[str, Any], chang
             not _dict(resolution.get("untrusted_content_boundary")).get("blocked_effects"), transition, resolution, admission
         )
     if operation_kind == "agentic-workspace/delegated-return-admission/v1":
-        path = target / ".agentic-workspace" / "local" / "delegation" / "returned-result.json"
-        return _write_and_repair(
-            path,
-            {"status": "admitted", "revision": "repair"},
-            lambda: delegated_return_admission_packet(target=target),
-            transition,
-            admission,
-        )
+        repair_execution = admit_delegated_return_result(target=target)
+        repaired = delegated_return_admission_packet(target=target)
+        return _repair_result(repaired.get("admitted") is True, transition, repaired, admission, repair_execution)
     if operation_kind == "agentic-workspace/runtime-readiness-admission/v1":
-        path = target / ".agentic-workspace" / "local" / "runtime" / "availability.json"
-        return _write_and_repair(
-            path, {"status": "restored"}, lambda: runtime_readiness_packet({"status": "restored"}), transition, admission
-        )
+        repair_execution = restore_runtime_availability(target=target)
+        repaired = runtime_readiness_packet({"status": "restored"})
+        return _repair_result(repaired.get("admitted") is True, transition, repaired, admission, repair_execution)
     if operation_kind == "agentic-workspace/external-observation-admission/v1":
         source = str(owner_packet.get("source") or ".agentic-workspace/local/external-observations/malformed.json")
-        path = target / source
-        return _write_and_repair(
-            path,
-            {"status": "current", "observation": "valid"},
-            lambda: external_observation_admission_packet(target=target, observation_path=path),
-            transition,
-            admission,
-        )
+        repair_execution = replace_external_observation(target=target, source=source)
+        repaired = external_observation_admission_packet(target=target, observation_path=target / source)
+        return _repair_result(repaired.get("admitted") is True, transition, repaired, admission, repair_execution)
     if operation_kind == "agentic-workspace/generated-target-capability-admission/v1":
-        repaired = admission_packet(
+        repaired = _normalize_owner_decision_packet(
             kind=operation_kind,
             owner="generated-target",
             status="admitted",
@@ -479,7 +518,7 @@ def revalidate_typed_repair(*, target: Path, owner_packet: dict[str, Any], chang
         )
         return _repair_result(True, transition, repaired, admission)
     if operation_kind == "agentic-workspace/generated-target-projection-admission/v1":
-        repaired = admission_packet(
+        repaired = _normalize_owner_decision_packet(
             kind=operation_kind,
             owner="generated-target",
             status="admitted",
@@ -496,14 +535,11 @@ def revalidate_typed_repair(*, target: Path, owner_packet: dict[str, Any], chang
         )
         return _repair_result(True, transition, repaired, admission)
     if operation_kind == "agentic-workspace/skill-routing-admission/v1":
-        missing = target / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.missing"
-        restored = missing.with_suffix(".md")
-        if missing.exists():
-            missing.rename(restored)
-        repaired = _skill_routing_packet(admitted=restored.exists())
-        return _repair_result(repaired.get("admitted") is True, transition, repaired, admission)
+        repair_execution = restore_workspace_startup_skill(target=target)
+        repaired = _skill_routing_packet(admitted=repair_execution.get("status") == "applied")
+        return _repair_result(repaired.get("admitted") is True, transition, repaired, admission, repair_execution)
     if operation_kind == "agentic-workspace/planning-closeout-boundary/v1":
-        repaired = admission_packet(
+        repaired = _normalize_owner_decision_packet(
             kind=operation_kind,
             owner="planning",
             status="admitted",
@@ -523,7 +559,7 @@ def revalidate_typed_repair(*, target: Path, owner_packet: dict[str, Any], chang
 
 
 def _workspace_target_identity_packet(payload: dict[str, Any]) -> dict[str, Any]:
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/target-identity-admission/v1",
         owner="workspace",
         status="admitted",
@@ -541,7 +577,7 @@ def _workspace_target_identity_packet(payload: dict[str, Any]) -> dict[str, Any]
 
 
 def _planning_task_switch_packet(payload: dict[str, Any]) -> dict[str, Any]:
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/planning-task-switch-admission/v1",
         owner="planning",
         status="admitted",
@@ -559,7 +595,7 @@ def _planning_task_switch_packet(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _external_intent_packet(payload: dict[str, Any]) -> dict[str, Any]:
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/external-intent-admission/v1",
         owner="issue-scope",
         status="admitted",
@@ -577,7 +613,7 @@ def _external_intent_packet(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _planning_continuation_packet(payload: dict[str, Any]) -> dict[str, Any]:
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/planning-continuation-admission/v1",
         owner="planning",
         status="admitted",
@@ -595,7 +631,7 @@ def _planning_continuation_packet(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _skill_routing_packet(*, admitted: bool = False) -> dict[str, Any]:
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/skill-routing-admission/v1",
         owner="workspace",
         status="admitted" if admitted else "rejected",
@@ -613,7 +649,7 @@ def _skill_routing_packet(*, admitted: bool = False) -> dict[str, Any]:
 
 
 def _dirty_worktree_packet() -> dict[str, Any]:
-    return admission_packet(
+    return _normalize_owner_decision_packet(
         kind="agentic-workspace/dirty-worktree-admission/v1",
         owner="workspace",
         status="admitted",
@@ -631,19 +667,9 @@ def _dirty_worktree_packet() -> dict[str, Any]:
 
 
 def _revalidate_mutation_repair(*, target: Path, owner_packet: dict[str, Any], changed_paths: list[str], transition: str) -> dict[str, Any]:
+    repair_execution: dict[str, Any] = {"kind": "agentic-workspace/mutation-repair/v1", "status": "not-needed", "operation": transition}
     if transition == "inspect-overlap-owner":
-        claims_path = target / ".agentic-workspace" / "local" / "mutation-claims.json"
-        if claims_path.exists():
-            claims_path.write_text(
-                json.dumps(
-                    {"kind": "agentic-workspace/mutation-claims/v1", "checked_in_repo_effect": "none", "claims": []},
-                    indent=2,
-                    sort_keys=True,
-                )
-                + "\n",
-                encoding="utf-8",
-                newline="\n",
-            )
+        repair_execution = clear_overlapping_mutation_claims(target=target)
     repaired_expected = mutation_baseline_payload(target_root=target, changed_paths=changed_paths)
     repair_admission = admit_live_mutation_boundary(
         boundary_id="destructive-mutation",
@@ -653,7 +679,13 @@ def _revalidate_mutation_repair(*, target: Path, owner_packet: dict[str, Any], c
         owner_id=str(owner_packet.get("owner") or "workspace"),
         claim_action="inspect",
     )
-    return _repair_result(repair_admission.get("admitted") is True, transition, repair_admission, _dict(owner_packet.get("admission")))
+    return _repair_result(
+        repair_admission.get("admitted") is True,
+        transition,
+        repair_admission,
+        _dict(owner_packet.get("admission")),
+        repair_execution,
+    )
 
 
 def _revalidate_proof_repair(*, target: Path, changed_paths: list[str], transition: str, prior_admission: dict[str, Any]) -> dict[str, Any]:
@@ -667,32 +699,40 @@ def _revalidate_proof_repair(*, target: Path, changed_paths: list[str], transiti
         "changed_paths": changed_paths,
     }
     repair_admission = proof_receipt_admission(receipt)
-    return _repair_result(repair_admission.get("proof_sufficient") is True, transition, repair_admission, prior_admission)
-
-
-def _write_and_repair(
-    path: Path,
-    payload: dict[str, Any],
-    producer: Callable[[], dict[str, Any]],
-    transition: str,
-    prior_admission: dict[str, Any],
-) -> dict[str, Any]:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    repaired = producer()
-    return _repair_result(repaired.get("admitted") is True, transition, repaired, prior_admission)
+    repair_execution = {
+        "kind": "agentic-workspace/proof-rerun-repair/v1",
+        "status": "applied" if completed.returncode == 0 else "blocked",
+        "operation": transition,
+        "command": receipt["command"],
+    }
+    return _repair_result(repair_admission.get("proof_sufficient") is True, transition, repair_admission, prior_admission, repair_execution)
 
 
 def _repair_result(
-    valid_terminal: bool, transition: str, repair_admission: dict[str, Any], prior_admission: dict[str, Any]
+    valid_terminal: bool,
+    transition: str,
+    repair_admission: dict[str, Any],
+    prior_admission: dict[str, Any],
+    repair_execution: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    stale_prior_rejected = prior_admission.get("admitted") is False
+    repair_operation_matched = bool(transition and repair_admission.get("kind"))
+    execution = repair_execution if isinstance(repair_execution, dict) else {}
     return {
         "status": "valid-terminal-after-repair" if valid_terminal else "repair-still-blocked",
         "operation": transition,
         "repair_admission": repair_admission,
-        "stale_prior_rejected": prior_admission.get("admitted") is False,
+        "repair_execution": {
+            **execution,
+            "owner_operation": transition,
+            "operation_specific": repair_operation_matched,
+            "stale_prior_rejected": stale_prior_rejected,
+            "prior_admission_fingerprint": _stable_fingerprint(prior_admission),
+            "post_repair_owner_packet_fingerprint": _stable_fingerprint(repair_admission),
+        },
+        "stale_prior_rejected": stale_prior_rejected,
         "stable_reason": str(prior_admission.get("stable_reason") or prior_admission.get("reason") or ""),
-        "operation_specific": True,
+        "operation_specific": repair_operation_matched,
     }
 
 
@@ -713,3 +753,8 @@ def _read_json_if_present(path: Path) -> dict[str, Any]:
 
 def _dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _stable_fingerprint(payload: dict[str, Any]) -> str:
+    encoded = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
