@@ -58,6 +58,46 @@ These budgets are advisory until a maintainer chooses enforcement. Use them as c
 | Memory package tests | 246 | 200-250 | Near target; avoid adding one-off migration regressions unless they cannot be represented as scenario rows. |
 | Verification package tests | 11 | 40-80 | Expected to grow as Verification takes on evidence surfaces, but new cases should cover report contracts rather than host policy decisions. |
 
+## Validation Runtime Composition
+
+Use setup-bearing public targets for ordinary local entrypoints and setup-free
+`*-nosync` targets when a caller has already synchronized the environment.
+This keeps validation observable without silently repeating dependency setup:
+
+- `make check` performs root synchronization once, then delegates to
+  `check-nosync`.
+- `make test`, `make lint`, `make typecheck`, `make format-check`, and
+  `make verify` keep their public setup-bearing behavior while exposing
+  corresponding `*-nosync` constituents for CI and composed validation.
+- CI jobs should run the narrow explicit sync step once, then call setup-free
+  targets such as `make typecheck-nosync` or `make check-memory-nosync`.
+- The compact command runner writes one versioned JSON result per constituent
+  under `scratch/validation-results/<run-id>/` and prints the current
+  constituent before waiting. Timeouts and failures must name the constituent
+  and durable log/result locations.
+
+Use `scripts/check/check_structured_file_inventory.py --changed <paths...>`
+for focused changed-path proof. It escalates to the full inventory audit when
+the inventory, schema, or matching implementation changes. The full
+`make structured-file-inventory` audit remains the broad no-prune proof for
+inventory coverage, schema validation, guardrails, generated mirror policy, and
+staged-deletion safety.
+
+`make validation-runtime-plan` is the closeout gate for repository validation
+composition. It checks the versioned plan and evidence under
+`docs/maintainer/validation-runtime-2435/`, including setup-bearing versus
+setup-free target boundaries, CI/local drift, duplicate constituent execution,
+runtime budget evidence, and the composed-operation duplicate-proof disposition.
+This is not a proof-selection authority; it verifies what happens after a route
+or explicit broad command has already been selected.
+
+Use `make check-bounded-parallel` for explicit full broad validation when the
+runtime budget matters. It runs the same broad constituents as `check-nosync`
+after one sync, but uses a named bounded resource posture: the long workspace
+CLI partition runs first, then independent remaining constituents run under
+Make `-j 4` with partition-specific pytest worker limits. Ordinary `make check`
+remains serial and resource-conservative by default.
+
 Before adding a permanent ordinary test, PR closeout should answer whether the evidence is behavior-class coverage, temporary characterization, conformance evidence, or historical regression residue. If it is historical residue, preserve the failure mode in `test-knowledge-inventory.md`, Memory, Verification evidence, or an issue/PR note before deleting the executable test.
 
 Use this compact inventory when changing these clusters:

@@ -37,7 +37,7 @@ jobs:
         run: make lint-workspace
 
       - name: Run typecheck
-        run: make typecheck
+        run: make typecheck-nosync
 
       - name: Verify root generated CLI
         run: make verify-workspace
@@ -104,4 +104,4 @@ jobs:
         run: make sync-${{ matrix.package }}
 
       - name: Run package checks
-        run: make check-${{ matrix.package }}
+        run: make check-${{ matrix.package }}-nosync
