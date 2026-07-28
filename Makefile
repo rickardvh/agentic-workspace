@@ -3,9 +3,17 @@
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache-root
 REVIEW_MAX_CYCLES ?= 3
 export UV_CACHE_DIR
+VALIDATION_RUN_ID ?= local-$(shell python -c "from datetime import datetime, timezone; print(datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ'))")
+export VALIDATION_RUN_ID
 # Serial execution is the safe local default.  Callers that have measured
 # capacity may explicitly opt in, for example: PYTEST_PARALLEL_ARGS='-n 4'.
 PYTEST_PARALLEL_ARGS ?=
+WORKSPACE_PYTEST_PARALLEL_ARGS ?= $(PYTEST_PARALLEL_ARGS)
+WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS ?= $(PYTEST_PARALLEL_ARGS)
+PACKAGE_PYTEST_PARALLEL_ARGS ?= $(PYTEST_PARALLEL_ARGS)
+MEMORY_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)
+PLANNING_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)
+VERIFICATION_PYTEST_PARALLEL_ARGS ?= $(PACKAGE_PYTEST_PARALLEL_ARGS)
 COMPACT_RUN = uv run python scripts/check/run_compact_command.py
 
 WORKSPACE_TEST_CLI = \
@@ -50,6 +58,7 @@ WORKSPACE_TEST_CONTRACTS = \
 	tests/test_prompt_semantic_markers.py \
 	tests/test_schema_reference_docs.py \
 	tests/test_structured_file_inventory.py \
+	tests/test_validation_runtime_plan.py \
 	tests/test_workspace_makefile_targets.py
 
 WORKSPACE_TEST_GENERATED_RELEASE = \
@@ -83,15 +92,15 @@ WORKSPACE_TEST_INTEGRATION = \
 
 .PHONY: help sync-all sync-memory sync-planning sync-verification \
 	setup install-hooks \
-	test test-workspace test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification \
-	lint lint-workspace lint-memory lint-planning lint-verification markdownlint markdownlint-memory \
-	typecheck typecheck-workspace typecheck-memory typecheck-planning typecheck-verification \
-	format format-workspace format-memory format-planning format-verification \
-	format-check format-check-workspace format-check-memory format-check-planning format-check-verification \
-	verify verify-workspace verify-memory verify-planning verify-verification composed-operation-scenarios \
-	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict structured-file-inventory package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
+	test test-nosync test-workspace test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification \
+	lint lint-nosync lint-workspace lint-memory lint-planning lint-verification markdownlint markdownlint-memory \
+	typecheck typecheck-nosync typecheck-workspace typecheck-memory typecheck-planning typecheck-verification \
+	format format-nosync format-workspace format-memory format-planning format-verification \
+	format-check format-check-nosync format-check-workspace format-check-memory format-check-planning format-check-verification \
+	verify verify-nosync verify-workspace verify-memory verify-planning verify-verification composed-operation-scenarios \
+	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict validation-runtime-plan structured-file-inventory structured-file-inventory-changed package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
 	generated-command-packages generated-command-packages-docker \
-	check check-memory check-planning check-verification check-all start-review-poller
+	check check-nosync check-bounded-parallel check-memory check-memory-nosync check-planning check-planning-nosync check-verification check-verification-nosync check-all start-review-poller
 
 help:
 	@echo "Available targets:"
@@ -103,6 +112,7 @@ help:
 	@echo "  sync-planning        Sync consolidated root dev environment for planning package checks."
 	@echo "  sync-verification    Sync consolidated root dev environment for verification package checks."
 	@echo "  test                 Run workspace and package test suites serially by default."
+	@echo "  test-nosync          Run tests after caller-provided dependency sync."
 	@echo "                       Opt into pytest-xdist only with PYTEST_PARALLEL_ARGS='-n <count>'."
 	@echo "  test-workspace       Run all focused workspace test targets serially."
 	@echo "  test-workspace-cli   Run workspace CLI, config, summary, and projection tests."
@@ -112,15 +122,21 @@ help:
 	@echo "  test-workspace-generated-release  Run generated-command and release workflow tests."
 	@echo "  test-workspace-integration  Run external, lifecycle, launcher, and cost tests."
 	@echo "  lint                 Run non-mutating lint checks across workspace and packages."
+	@echo "  lint-nosync          Run lint checks after caller-provided dependency sync."
 	@echo "  markdownlint         Run Markdown lint checks for the memory package surfaces."
 	@echo "  typecheck            Run ty type checks across workspace and packages."
+	@echo "  typecheck-nosync     Run type checks after caller-provided dependency sync."
 	@echo "  format               Apply Ruff formatting across workspace and packages."
 	@echo "  format-check         Run formatting checks across workspace and packages."
+	@echo "  format-check-nosync  Run formatting checks after caller-provided dependency sync."
 	@echo "  verify               Verify workspace CLI wiring and both packaged payload contracts."
+	@echo "  verify-nosync        Run verification checks after caller-provided dependency sync."
 	@echo "  memory-freshness     Run the root memory freshness audit."
 	@echo "  recurring-friction-ledger  Run the root recurring-friction ledger audit."
 	@echo "  planning-surfaces    Run the root planning surface audit."
+	@echo "  validation-runtime-plan  Check validation graph, evidence, CI/local parity, and duplicate-execution policy."
 	@echo "  structured-file-inventory  Check tracked JSON/TOML/YAML/YML files against the inventory."
+	@echo "  structured-file-inventory-changed  Check CHANGED_PATHS with full escalation on inventory authority changes."
 	@echo "  package-artifact-duplicates  Check built package artifacts for duplicate archive members."
 	@echo "  agent-aids           Check checked-in agent aid manifests and coverage."
 	@echo "  source-payload-operational-install  Run source/payload/root-install boundary checks."
@@ -132,6 +148,8 @@ help:
 	@echo "  generated-command-packages  Run generated command package proof with compact output."
 	@echo "  generated-command-packages-docker  Run generated command package Docker proof with compact output."
 	@echo "  check                Run the full root validation lane."
+	@echo "  check-nosync         Run the full root validation lane after caller-provided dependency sync."
+	@echo "  check-bounded-parallel  Run full validation with explicit bounded pytest-xdist workers."
 	@echo "  check-memory         Run package-local checks for packages/memory."
 	@echo "  check-planning       Run package-local checks for packages/planning."
 	@echo "  check-verification   Run package-local checks for packages/verification."
@@ -163,33 +181,35 @@ sync-verification:
 test-workspace: test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration
 
 test-workspace-cli:
-	@$(COMPACT_RUN) --label "workspace CLI tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_CLI)
+	@$(COMPACT_RUN) --label "workspace CLI tests" -- uv run pytest $(WORKSPACE_PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_CLI)
 
 test-workspace-proof:
-	@$(COMPACT_RUN) --label "workspace proof tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_PROOF)
+	@$(COMPACT_RUN) --label "workspace proof tests" -- uv run pytest $(WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_PROOF)
 
 test-workspace-session-review:
-	@$(COMPACT_RUN) --label "workspace session and review tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_SESSION_REVIEW)
+	@$(COMPACT_RUN) --label "workspace session and review tests" -- uv run pytest $(WORKSPACE_PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_SESSION_REVIEW)
 
 test-workspace-contracts:
-	@$(COMPACT_RUN) --label "workspace contract tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_CONTRACTS)
+	@$(COMPACT_RUN) --label "workspace contract tests" -- uv run pytest $(WORKSPACE_PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_CONTRACTS)
 
 test-workspace-generated-release:
-	@$(COMPACT_RUN) --label "workspace generated and release tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_GENERATED_RELEASE)
+	@$(COMPACT_RUN) --label "workspace generated and release tests" -- uv run pytest $(WORKSPACE_PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_GENERATED_RELEASE)
 
 test-workspace-integration:
-	@$(COMPACT_RUN) --label "workspace integration tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_INTEGRATION)
+	@$(COMPACT_RUN) --label "workspace integration tests" -- uv run pytest $(WORKSPACE_PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_INTEGRATION)
 
 test-memory:
-	@$(COMPACT_RUN) --label "memory tests" --cwd packages/memory -- uv run pytest $(PYTEST_PARALLEL_ARGS)
+	@$(COMPACT_RUN) --label "memory tests" --cwd packages/memory -- uv run pytest $(MEMORY_PYTEST_PARALLEL_ARGS)
 
 test-planning:
-	@$(COMPACT_RUN) --label "planning tests" --cwd packages/planning -- uv run pytest $(PYTEST_PARALLEL_ARGS)
+	@$(COMPACT_RUN) --label "planning tests" --cwd packages/planning -- uv run pytest $(PLANNING_PYTEST_PARALLEL_ARGS)
 
 test-verification:
-	@$(COMPACT_RUN) --label "verification tests" --cwd packages/verification -- uv run pytest $(PYTEST_PARALLEL_ARGS)
+	@$(COMPACT_RUN) --label "verification tests" --cwd packages/verification -- uv run pytest $(VERIFICATION_PYTEST_PARALLEL_ARGS)
 
-test: sync-all test-workspace test-memory test-planning test-verification
+test-nosync: test-workspace test-memory test-planning test-verification
+
+test: sync-all test-nosync
 
 lint-workspace:
 	@$(COMPACT_RUN) --label "workspace lint" -- uv run ruff check src tests
@@ -205,7 +225,9 @@ lint-planning:
 lint-verification:
 	@$(COMPACT_RUN) --label "verification lint" --cwd packages/verification -- uv run ruff check .
 
-lint: sync-all lint-workspace lint-memory lint-planning lint-verification
+lint-nosync: lint-workspace lint-memory lint-planning lint-verification
+
+lint: sync-all lint-nosync
 
 markdownlint-memory:
 	@$(COMPACT_RUN) --label "memory markdownlint" --cwd packages/memory -- uv run pymarkdown -d md013,md024 scan AGENTS.md README.md bootstrap skills
@@ -224,7 +246,9 @@ typecheck-planning:
 typecheck-verification:
 	@$(COMPACT_RUN) --label "verification typecheck" --cwd packages/verification -- uv run ty check src
 
-typecheck: sync-all typecheck-workspace typecheck-memory typecheck-planning typecheck-verification
+typecheck-nosync: typecheck-workspace typecheck-memory typecheck-planning typecheck-verification
+
+typecheck: sync-all typecheck-nosync
 
 format-workspace:
 	@$(COMPACT_RUN) --label "workspace format" -- uv run ruff format src tests
@@ -238,7 +262,9 @@ format-planning:
 format-verification:
 	@$(COMPACT_RUN) --label "verification format" --cwd packages/verification -- uv run ruff format .
 
-format: sync-all format-workspace format-memory format-planning format-verification
+format-nosync: format-workspace format-memory format-planning format-verification
+
+format: sync-all format-nosync
 
 format-check-workspace:
 	@$(COMPACT_RUN) --label "workspace format-check" -- uv run ruff format --check src tests
@@ -252,7 +278,9 @@ format-check-planning:
 format-check-verification:
 	@$(COMPACT_RUN) --label "verification format-check" --cwd packages/verification -- uv run ruff format --check .
 
-format-check: sync-all format-check-workspace format-check-memory format-check-planning format-check-verification
+format-check-nosync: format-check-workspace format-check-memory format-check-planning format-check-verification
+
+format-check: sync-all format-check-nosync
 
 verify-workspace:
 	@$(COMPACT_RUN) --label "workspace verify" -- uv run agentic-workspace modules --format json
@@ -266,7 +294,9 @@ verify-planning:
 verify-verification:
 	@$(COMPACT_RUN) --label "verification report" --cwd packages/verification -- uv run agentic-verification report --target . --format json
 
-verify: sync-all verify-workspace verify-memory verify-planning verify-verification
+verify-nosync: verify-workspace verify-memory verify-planning verify-verification
+
+verify: sync-all verify-nosync
 
 memory-freshness:
 	@$(COMPACT_RUN) --label "memory doctor" -- uv run agentic-workspace doctor --target . --format json
@@ -275,7 +305,7 @@ memory-freshness-strict:
 	@$(COMPACT_RUN) --label "memory report" -- uv run agentic-workspace report --target . --format json
 
 recurring-friction-ledger:
-	@$(COMPACT_RUN) --label "memory report" -- uv run agentic-workspace report --target . --format json
+	@$(COMPACT_RUN) --label "recurring friction ledger" -- uv run agentic-workspace report --target . --format json
 
 planning-surfaces:
 	@$(COMPACT_RUN) --label "planning surfaces" -- uv run python scripts/check/check_planning_surfaces.py
@@ -283,8 +313,14 @@ planning-surfaces:
 planning-surfaces-strict:
 	@$(COMPACT_RUN) --label "planning surfaces strict" -- uv run python scripts/check/check_planning_surfaces.py --strict
 
+validation-runtime-plan:
+	@$(COMPACT_RUN) --label "validation runtime plan" -- uv run python scripts/check/check_validation_runtime_plan.py
+
 structured-file-inventory:
 	@$(COMPACT_RUN) --label "structured file inventory" -- uv run python scripts/check/check_structured_file_inventory.py
+
+structured-file-inventory-changed:
+	@$(COMPACT_RUN) --label "structured file inventory changed" -- uv run python scripts/check/check_structured_file_inventory.py --changed $(CHANGED_PATHS)
 
 package-artifact-duplicates:
 	@$(COMPACT_RUN) --label "package artifact duplicates" -- uv run python scripts/check/check_package_artifact_duplicates.py
@@ -328,13 +364,26 @@ generated-command-packages:
 generated-command-packages-docker:
 	@uv run python scripts/check/run_generated_command_package_proof.py
 
-check-memory: sync-all test-memory lint-memory typecheck-memory verify-memory memory-freshness-strict recurring-friction-ledger
+check-memory-nosync: test-memory lint-memory typecheck-memory verify-memory memory-freshness-strict recurring-friction-ledger
 
-check-planning: sync-all test-planning lint-planning typecheck-planning maintainer-surfaces memory-freshness
+check-memory: sync-all check-memory-nosync
 
-check-verification: sync-all test-verification lint-verification typecheck-verification verify-verification
+check-planning-nosync: test-planning lint-planning typecheck-planning maintainer-surfaces memory-freshness
+
+check-planning: sync-all check-planning-nosync
+
+check-verification-nosync: test-verification lint-verification typecheck-verification verify-verification
 	@$(COMPACT_RUN) --label "generated command packages" -- uv run python scripts/check/check_generated_command_packages.py
 
-check: sync-all test lint typecheck format-check verify memory-freshness-strict maintainer-surfaces structured-file-inventory package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios
+check-verification: sync-all check-verification-nosync
+
+check-nosync: test-nosync lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios
+
+check: sync-all check-nosync
+
+check-bounded-parallel:
+	@$(MAKE) sync-all
+	@$(MAKE) test-workspace-cli WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16'
+	@$(MAKE) -j 4 test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16' WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS='-n 8' MEMORY_PYTEST_PARALLEL_ARGS='-n 8' PLANNING_PYTEST_PARALLEL_ARGS='' VERIFICATION_PYTEST_PARALLEL_ARGS='-n 8'
 
 check-all: check-memory check-planning check-verification
