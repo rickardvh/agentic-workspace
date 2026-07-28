@@ -1490,9 +1490,18 @@ def _tiny_operation_authority_payload(
         if write_requested.get("decision") == "allow" and write_outside.get("decision") == "requires-explicit-authority"
         else "missing-or-conflicting",
         "resolver_owner": resolution.get("resolver_owner"),
-        "write_requested_paths": write_requested,
-        "write_outside_scope": write_outside,
-        "requested_effects": resolution.get("requested_effects", []),
+        "write_requested_paths": {
+            "decision": write_requested.get("decision"),
+            "reason_code": write_requested.get("reason_code"),
+        },
+        "write_outside_scope": {
+            "decision": write_outside.get("decision"),
+            "reason_code": write_outside.get("reason_code"),
+        },
+        "requested_effect_count": len(resolution.get("requested_effects", []))
+        if isinstance(resolution.get("requested_effects"), list)
+        else 0,
+        "detail_selector": "context.operation_authority.effect_authority",
     }
     mutation_authority = {
         "status": "clean-baseline"
@@ -1506,11 +1515,12 @@ def _tiny_operation_authority_payload(
         "kind": baseline.get("kind"),
         "baseline_id": baseline.get("baseline_id"),
         "head": baseline.get("head"),
-        "allowed_paths": allowed_paths,
-        "changed_paths": changed_paths,
+        "allowed_path_count": len(allowed_paths),
+        "changed_path_count": len(changed_paths),
         "owner": ownership.get("owner"),
         "enforcement_fingerprint": observed_state.get("enforcement_fingerprint"),
         "stale_revalidation": _as_dict(baseline.get("stale_revalidation")).get("status"),
+        "detail_selector": "context.operation_authority.mutation_authority",
     }
     proof_authority = {
         "status": "required-before-claim"
@@ -1523,7 +1533,9 @@ def _tiny_operation_authority_payload(
         "safe_claim": operating_loop.get("safe_claim"),
         "closeout_state": operating_loop.get("closeout_state"),
         "verification_state": verification.get("state"),
-        "required_before_full_closure": operating_loop.get("required_before_full_closure", []),
+        "required_before_full_closure_count": len(operating_loop.get("required_before_full_closure", []))
+        if isinstance(operating_loop.get("required_before_full_closure"), list)
+        else 0,
     }
     decision = {
         "owner": "direct-work" if direct_route else "",
@@ -1959,7 +1971,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "operating_loop": payload.get("operating_loop", {}),
         "context": {
             "workflow_sufficiency": workflow_sufficiency,
-            "operation_authority": operation_authority,
+            **({"operation_authority": operation_authority} if operation_authority.get("status") == "admitted" else {}),
             "adaptive_routing": _tiny_adaptive_routing_payload(
                 surface="implement",
                 current_need="changed-path-next-action" if payload.get("changed_paths") else "unknown-scope-routing",
