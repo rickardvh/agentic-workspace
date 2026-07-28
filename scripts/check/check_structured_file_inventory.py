@@ -6,6 +6,7 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -42,6 +43,13 @@ REVIEW_AUDIT_RETENTION_FIELDS = (
     "reconstructable refs",
     "fields intentionally omitted",
 )
+FULL_INVENTORY_AUTHORITY_PATHS = frozenset(
+    {
+        "scripts/check/check_structured_file_inventory.py",
+        "src/agentic_workspace/contracts/structured_file_inventory.json",
+        "src/agentic_workspace/contracts/schemas/structured_file_inventory.schema.json",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -56,6 +64,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--quiet-success",
         action="store_true",
         help="Emit a compact success message when the inventory covers every tracked structured file.",
+    )
+    parser.add_argument(
+        "--changed",
+        nargs="*",
+        default=None,
+        help=(
+            "Validate only the listed changed paths unless an inventory authority path changed, in which case "
+            "the checker escalates to the full audit."
+        ),
     )
     return parser.parse_args(argv)
 
@@ -150,12 +167,13 @@ def _entry_matches(path: str, entry: dict[str, Any]) -> bool:
 
 
 def _match_path_pattern(path: str, pattern: str) -> bool:
-    path_parts = _as_posix(path).split("/")
-    pattern_parts = _as_posix(pattern).split("/")
+    path_parts = tuple(_as_posix(path).split("/"))
+    pattern_parts = tuple(_as_posix(pattern).split("/"))
     return _match_parts(path_parts, pattern_parts)
 
 
-def _match_parts(path_parts: list[str], pattern_parts: list[str]) -> bool:
+@lru_cache(maxsize=262_144)
+def _match_parts(path_parts: tuple[str, ...], pattern_parts: tuple[str, ...]) -> bool:
     if not pattern_parts:
         return not path_parts
     pattern = pattern_parts[0]
@@ -282,6 +300,18 @@ def _load_json_file(path: Path) -> tuple[Any | None, str | None]:
         return None, f"invalid JSON: {exc.msg}"
 
 
+@lru_cache(maxsize=None)
+def _load_schema_validator(schema_path: str) -> tuple[Draft202012Validator | None, str | None, str | None]:
+    schema_payload, schema_error = _load_json_file(REPO_ROOT / schema_path)
+    if schema_error is not None:
+        return None, schema_error, None
+    try:
+        Draft202012Validator.check_schema(schema_payload)
+    except jsonschema_exceptions.SchemaError as exc:
+        return None, None, _schema_error_message(exc)
+    return Draft202012Validator(schema_payload), None, None
+
+
 def _schema_error_message(error: jsonschema_exceptions.ValidationError | jsonschema_exceptions.SchemaError) -> str:
     location = ".".join(str(part) for part in error.path) or "<root>"
     return f"{location}: {error.message}"
@@ -317,18 +347,26 @@ def _known_delegated_validator_claim(claim: str) -> bool:
 
 
 def _validate_against_schema(path: str, schema_path: str, root: Path) -> list[Finding]:
-    schema_payload, schema_error = _load_json_file(root / schema_path)
-    if schema_error is not None:
-        return [Finding(path=path, message=f"schema claim is not executable; cannot load {schema_path}: {schema_error}")]
-    try:
-        Draft202012Validator.check_schema(schema_payload)
-    except jsonschema_exceptions.SchemaError as exc:
-        return [Finding(path=schema_path, message=f"declared schema is invalid: {_schema_error_message(exc)}")]
+    if root != REPO_ROOT:
+        schema_payload, schema_error = _load_json_file(root / schema_path)
+        if schema_error is not None:
+            return [Finding(path=path, message=f"schema claim is not executable; cannot load {schema_path}: {schema_error}")]
+        try:
+            Draft202012Validator.check_schema(schema_payload)
+        except jsonschema_exceptions.SchemaError as exc:
+            return [Finding(path=schema_path, message=f"declared schema is invalid: {_schema_error_message(exc)}")]
+        validator = Draft202012Validator(schema_payload)
+    else:
+        validator, load_error, schema_error = _load_schema_validator(schema_path)
+        if load_error is not None:
+            return [Finding(path=path, message=f"schema claim is not executable; cannot load {schema_path}: {load_error}")]
+        if schema_error is not None or validator is None:
+            return [Finding(path=schema_path, message=f"declared schema is invalid: {schema_error}")]
 
     payload, payload_error = _load_json_file(root / path)
     if payload_error is not None:
         return [Finding(path=path, message=f"schema-backed file cannot be loaded for validation: {payload_error}")]
-    errors = sorted(Draft202012Validator(schema_payload).iter_errors(payload), key=lambda error: list(error.path))
+    errors = sorted(validator.iter_errors(payload), key=lambda error: list(error.path))
     if errors:
         return [
             Finding(
@@ -339,7 +377,7 @@ def _validate_against_schema(path: str, schema_path: str, root: Path) -> list[Fi
     return []
 
 
-def _validate_draft_schema_file(path: str, root: Path) -> list[Finding]:
+def _validate_schema_payload(path: str, root: Path) -> list[Finding]:
     payload, payload_error = _load_json_file(root / path)
     if payload_error is not None:
         return [Finding(path=path, message=f"schema-backed draft schema cannot be loaded: {payload_error}")]
@@ -347,6 +385,17 @@ def _validate_draft_schema_file(path: str, root: Path) -> list[Finding]:
         Draft202012Validator.check_schema(payload)
     except jsonschema_exceptions.SchemaError as exc:
         return [Finding(path=path, message=f"declared draft schema is invalid: {_schema_error_message(exc)}")]
+    return []
+
+
+def _validate_draft_schema_file(path: str, root: Path) -> list[Finding]:
+    if root != REPO_ROOT:
+        return _validate_schema_payload(path, root)
+    validator, load_error, schema_error = _load_schema_validator(path)
+    if load_error is not None:
+        return [Finding(path=path, message=f"schema-backed draft schema cannot be loaded: {load_error}")]
+    if schema_error is not None or validator is None:
+        return [Finding(path=path, message=f"declared draft schema is invalid: {schema_error}")]
     return []
 
 
@@ -414,14 +463,18 @@ def storage_policy_findings(paths: list[str], inventory: dict[str, Any]) -> list
             if not entry["generated"]:
                 findings.append(Finding(path=location, message="generated-required-adapter entries must set generated=true"))
             if entry["status"] not in {"generated-derived", "typed-validator-backed", "schema-backed"}:
-                findings.append(Finding(path=location, message="generated-required-adapter entries must be generated-derived or validator-backed"))
+                findings.append(
+                    Finding(path=location, message="generated-required-adapter entries must be generated-derived or validator-backed")
+                )
         routes = _entry_routes(entry)
         if storage_class == "local-cache" and not routes:
             findings.append(Finding(path=location, message="checked-in local-cache entries must be routed to a cleanup issue"))
         if storage_class in {"reconstructable-external-snapshot", "removable-duplicate"} and not routes:
             findings.append(Finding(path=location, message=f"{storage_class} entries must be routed to a cleanup issue"))
         if storage_class == "historical-audit-distillation" and not routes:
-            findings.append(Finding(path=location, message="historical-audit-distillation entries must route oversized audit compression work"))
+            findings.append(
+                Finding(path=location, message="historical-audit-distillation entries must route oversized audit compression work")
+            )
         if storage_class in SOURCE_CLASSES and entry["generated"]:
             findings.append(Finding(path=location, message=f"{storage_class} entries must not be marked generated"))
         findings.extend(_guardrail_findings(paths, entry))
@@ -467,7 +520,9 @@ def generated_mirror_policy_findings(paths: list[str], inventory: dict[str, Any]
         if entry["storage_class"] != "generated-required-adapter":
             continue
         structured_generated_paths.update(_matched_files(paths, entry))
-    missing_structured = sorted(path for path in structured_generated_paths if path not in covered_paths and path not in tracked_required_paths)
+    missing_structured = sorted(
+        path for path in structured_generated_paths if path not in covered_paths and path not in tracked_required_paths
+    )
     findings.extend(
         Finding(path=path, message="generated-required-adapter inventory entry needs matching generated_mirrors metadata")
         for path in missing_structured
@@ -475,23 +530,54 @@ def generated_mirror_policy_findings(paths: list[str], inventory: dict[str, Any]
     return findings
 
 
-def inventory_findings(paths: list[str] | None = None) -> list[Finding]:
+def _normalize_changed_paths(paths: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for path in paths:
+        value = _as_posix(str(path).strip())
+        if not value:
+            continue
+        if value not in normalized:
+            normalized.append(value)
+    return normalized
+
+
+def _requires_full_inventory_audit(paths: list[str]) -> bool:
+    changed = set(_normalize_changed_paths(paths))
+    return bool(changed.intersection(FULL_INVENTORY_AUTHORITY_PATHS))
+
+
+def inventory_findings(
+    paths: list[str] | None = None,
+    *,
+    all_paths: list[str] | None = None,
+    enforce_staged_precondition: bool = True,
+) -> list[Finding]:
     inventory = load_inventory()
     findings = validate_inventory_shape(inventory)
     if findings:
         return findings
-    if paths is None:
+    if paths is None and enforce_staged_precondition:
         precondition_findings = staged_index_precondition_findings()
         if precondition_findings:
             return precondition_findings
     checked_paths = tracked_structured_files() if paths is None else paths
-    checked_all_paths = _tracked_files() if paths is None else checked_paths
+    checked_all_paths = _tracked_files() if all_paths is None and paths is None else all_paths if all_paths is not None else checked_paths
     return (
         unmatched_structured_files(checked_paths, inventory)
         + claim_validation_findings(checked_paths, inventory)
         + storage_policy_findings(checked_paths, inventory)
         + generated_mirror_policy_findings(checked_all_paths, inventory)
     )
+
+
+def changed_path_inventory_findings(paths: list[str]) -> list[Finding]:
+    changed_paths = _normalize_changed_paths(paths)
+    if _requires_full_inventory_audit(changed_paths):
+        return inventory_findings()
+    changed_structured = [path for path in changed_paths if _structured_format(path) is not None]
+    tracked_paths = _tracked_files()
+    all_paths = sorted(set(tracked_paths).union(changed_structured))
+    return inventory_findings(paths=changed_structured, all_paths=all_paths, enforce_staged_precondition=False)
 
 
 def routed_storage_cleanup_issues(inventory: dict[str, Any]) -> set[str]:
@@ -503,7 +589,7 @@ def routed_storage_cleanup_issues(inventory: dict[str, Any]) -> set[str]:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    findings = inventory_findings()
+    findings = changed_path_inventory_findings(args.changed) if args.changed is not None else inventory_findings()
     if findings:
         print("Structured file inventory check failed:", file=sys.stderr)
         for finding in findings:
