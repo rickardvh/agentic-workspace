@@ -82,6 +82,7 @@ def observe_composed_operation_authority(
             "operation_authority_kind": str(operation_authority.get("kind") or ""),
             "operation_authority_status": str(operation_authority.get("status") or ""),
             "field_authority": operation_authority.get("field_authority", {}),
+            "operating_decision": operation_authority.get("operating_decision", {}),
             "typed_invocation": operation_authority.get("typed_invocation", {}),
             "effect_authority": operation_authority.get("effect_authority", {}),
             "mutation_authority": operation_authority.get("mutation_authority", {}),
@@ -144,16 +145,71 @@ def _operation_authority_supports_contract(authority: dict[str, Any]) -> bool:
     decision = authority.get("decision")
     if not isinstance(decision, dict) or not all(isinstance(decision.get(field), str) and decision.get(field) for field in CONTRACT_FIELDS):
         return False
-    if _as_dict(authority.get("typed_invocation")).get("status") != "observed":
+    operating_decision = _as_dict(authority.get("operating_decision"))
+    if not _compiled_decision_supports_contract(operating_decision):
+        return False
+    typed_invocation = _as_dict(authority.get("typed_invocation"))
+    if not _typed_invocation_supports_contract(typed_invocation, operating_decision):
+        return False
+    compiled_primary = _as_dict(operating_decision.get("primary_action"))
+    compiled_owner = _as_dict(operating_decision.get("selected_owner"))
+    if decision.get("owner") != compiled_owner.get("id"):
+        return False
+    if decision.get("terminal_state") != operating_decision.get("terminal_state"):
+        return False
+    if decision.get("typed_action") != compiled_primary.get("action"):
+        return False
+    if decision.get("next_transition") != compiled_primary.get("expected_transition"):
         return False
     if _as_dict(authority.get("effect_authority")).get("status") != "admitted":
         return False
-    if _as_dict(authority.get("mutation_authority")).get("status") != "clean-baseline":
+    mutation_authority = _as_dict(authority.get("mutation_authority"))
+    if mutation_authority.get("status") != "clean-baseline":
+        return False
+    if mutation_authority.get("allowed_path_count") != mutation_authority.get("changed_path_count"):
+        return False
+    if mutation_authority.get("allowed_scope_fingerprint") != mutation_authority.get("changed_scope_fingerprint"):
+        return False
+    if not str(mutation_authority.get("changed_scope_fingerprint") or "").startswith("sha256:"):
         return False
     if _as_dict(authority.get("proof_authority")).get("status") != "required-before-claim":
         return False
     field_authority = authority.get("field_authority")
     return isinstance(field_authority, dict) and set(CONTRACT_FIELDS).issubset(field_authority)
+
+
+def _compiled_decision_supports_contract(decision: dict[str, Any]) -> bool:
+    primary = _as_dict(decision.get("primary_action"))
+    selected_owner = _as_dict(decision.get("selected_owner"))
+    return (
+        decision.get("status") == "actionable"
+        and str(decision.get("decision_id") or "").startswith("operating-decision:")
+        and str(decision.get("canonical_decision_input_revision") or "").startswith("sha256:")
+        and selected_owner.get("id") == "direct-work"
+        and decision.get("terminal_state") == "continue"
+        and primary.get("action") == "implement"
+        and primary.get("operation_id") == "implement.context"
+        and primary.get("expected_transition") == "run-focused-proof"
+    )
+
+
+def _typed_invocation_supports_contract(invocation: dict[str, Any], operating_decision: dict[str, Any]) -> bool:
+    arguments = _as_dict(invocation.get("arguments"))
+    changed = arguments.get("changed")
+    return (
+        invocation.get("status") == "observed"
+        and invocation.get("operation_id") == "implement.context"
+        and invocation.get("contract_version") == "agentic-workspace/operation/v1"
+        and invocation.get("action") == "implement"
+        and invocation.get("expected_transition") == "run-focused-proof"
+        and invocation.get("source") == "operating_decision.primary_action.operation_invocation"
+        and str(invocation.get("expected_input_revision") or "").startswith("sha256:")
+        and invocation.get("expected_input_revision") == operating_decision.get("canonical_decision_input_revision")
+        and bool(invocation.get("idempotency_key"))
+        and arguments.get("target") == "."
+        and isinstance(changed, list)
+        and all(isinstance(path, str) and path for path in changed)
+    )
 
 
 def _as_dict(value: Any) -> dict[str, Any]:

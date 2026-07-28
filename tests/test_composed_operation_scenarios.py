@@ -39,7 +39,29 @@ def _ordinary_direct_implement_packet() -> dict[str, object]:
                     "proof_claim_boundary": "proof-before-completion-claim",
                     "next_transition": "run-focused-proof",
                 },
-                "typed_invocation": {"status": "observed", "surface": "implement"},
+                "operating_decision": {
+                    "status": "actionable",
+                    "decision_id": "operating-decision:abc",
+                    "canonical_decision_input_revision": "sha256:decision",
+                    "selected_owner": {"id": "direct-work", "source": "planning_safety_gate"},
+                    "terminal_state": "continue",
+                    "primary_action": {
+                        "action": "implement",
+                        "operation_id": "implement.context",
+                        "expected_transition": "run-focused-proof",
+                    },
+                },
+                "typed_invocation": {
+                    "status": "observed",
+                    "operation_id": "implement.context",
+                    "contract_version": "agentic-workspace/operation/v1",
+                    "arguments": {"target": ".", "changed": ["README.md"], "task_present": True},
+                    "expected_input_revision": "sha256:decision",
+                    "expected_transition": "run-focused-proof",
+                    "idempotency_key": "abc123",
+                    "action": "implement",
+                    "source": "operating_decision.primary_action.operation_invocation",
+                },
                 "effect_authority": {
                     "status": "admitted",
                     "write_requested_paths": {"class": "write-requested-paths", "decision": "allow"},
@@ -51,6 +73,10 @@ def _ordinary_direct_implement_packet() -> dict[str, object]:
                     "head": "abc123",
                     "allowed_paths": ["README.md"],
                     "changed_paths": ["README.md"],
+                    "allowed_path_count": 1,
+                    "changed_path_count": 1,
+                    "allowed_scope_fingerprint": "sha256:scope",
+                    "changed_scope_fingerprint": "sha256:scope",
                     "enforcement_fingerprint": "sha256:abc",
                 },
                 "proof_authority": {
@@ -61,13 +87,13 @@ def _ordinary_direct_implement_packet() -> dict[str, object]:
                     "required_before_full_closure": ["run_or_refresh_proof"],
                 },
                 "field_authority": {
-                    "owner": "planning_safety_gate",
-                    "terminal_state": "planning_safety_gate+operating_loop",
-                    "typed_action": "decision_packet.surface",
+                    "owner": "operating_decision.selected_owner",
+                    "terminal_state": "operating_decision.terminal_state",
+                    "typed_action": "operating_decision.primary_action.action",
                     "effect_scope": "authority_envelope.side_effect_decisions",
                     "mutation_precondition": "authority_envelope.mutation_baseline",
                     "proof_claim_boundary": "operating_loop+proof.detail_route",
-                    "next_transition": "operating_loop.required_before_full_closure+proof.detail_route",
+                    "next_transition": "operating_decision.primary_action.operation_invocation.expected_transition",
                 },
             },
         },
@@ -97,6 +123,16 @@ def test_composed_operation_scenario_contract_rejects_divergence() -> None:
         module._commit_fixture_baseline(target)
         module._run_cli("init", "--target", str(target))
         packets, metrics = module._execute_composed_workspace_path(target=target, scenario=scenario)
+        operation_authority = packets["implement"]["context"]["operation_authority"]
+        typed_invocation = operation_authority["typed_invocation"]
+        operating_decision = operation_authority["operating_decision"]
+        mutation_authority = operation_authority["mutation_authority"]
+        assert typed_invocation["operation_id"] == "implement.context"
+        assert typed_invocation["arguments"]["changed"] == ["README.md"]
+        assert typed_invocation["expected_input_revision"] == operating_decision["canonical_decision_input_revision"]
+        assert operating_decision["status"] == "actionable"
+        assert operating_decision["selected_owner"]["id"] == "direct-work"
+        assert mutation_authority["changed_scope_fingerprint"] == mutation_authority["allowed_scope_fingerprint"]
         divergent = {**scenario, "owner": "wrong-owner", "terminal_state": "blocked"}
         errors = module._assert_scenario_contract(
             scenario=divergent,
@@ -169,6 +205,11 @@ def test_composed_operation_checker_accepts_ordinary_direct_work_packet() -> Non
             assert contract[field] == scenario[field]
     assert authority_packet["ordinary_packet_ref"]["producer_module"] == "agentic_workspace.workspace_runtime_implement"
     assert authority_packet["ordinary_packet_ref"]["mutation_authority"]["baseline_id"] == "baseline-1"
+    assert authority_packet["ordinary_packet_ref"]["typed_invocation"]["operation_id"] == "implement.context"
+    assert (
+        authority_packet["ordinary_packet_ref"]["operating_decision"]["canonical_decision_input_revision"]
+        == authority_packet["ordinary_packet_ref"]["typed_invocation"]["expected_input_revision"]
+    )
     assert "owner_packet" not in authority_packet
 
 
@@ -264,8 +305,46 @@ def test_composed_operation_contract_rejects_widened_effect_authority() -> None:
 def test_composed_operation_contract_rejects_missing_typed_invocation() -> None:
     implement = _ordinary_direct_implement_packet()
     implement["context"]["operation_authority"]["typed_invocation"]["status"] = "missing"
+    implement["context"]["operation_authority"]["typed_invocation"]["operation_id"] = ""
     implement["context"]["operation_authority"]["decision"]["typed_action"] = ""
     implement["context"]["operation_authority"]["status"] = "incomplete"
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="fresh-direct-work",
+        active_planning=False,
+        start={},
+        implement=implement,
+        summary={},
+        closeout={},
+    )
+    assert authority_packet == {}
+
+
+def test_composed_operation_contract_rejects_missing_compiled_operating_decision() -> None:
+    implement = _ordinary_direct_implement_packet()
+    implement["context"]["operation_authority"]["operating_decision"] = {
+        "status": "blocked",
+        "decision_id": "",
+        "canonical_decision_input_revision": "",
+        "selected_owner": {"id": "direct-work"},
+        "terminal_state": "continue",
+        "primary_action": {"action": "implement", "operation_id": "implement.context"},
+    }
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="fresh-direct-work",
+        active_planning=False,
+        start={},
+        implement=implement,
+        summary={},
+        closeout={},
+    )
+    assert authority_packet == {}
+
+
+def test_composed_operation_contract_rejects_scope_fingerprint_mismatch() -> None:
+    implement = _ordinary_direct_implement_packet()
+    implement["context"]["operation_authority"]["mutation_authority"]["changed_scope_fingerprint"] = "sha256:other"
     authority_packet = observe_composed_operation_authority(
         target=Path("."),
         scenario_id="fresh-direct-work",

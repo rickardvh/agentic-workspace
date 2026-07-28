@@ -13,12 +13,14 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+from agentic_workspace.actionability import operation_invocation
 from agentic_workspace.authority_envelope import (
     authority_envelope_payload,
     mutation_baseline_payload_cache_scope,
 )
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
+from agentic_workspace.operating_decision import bind_operation_invocation_to_authorities, compile_operating_decision
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -1448,6 +1450,128 @@ def _tiny_proof_route_maintenance_payload(value: dict[str, Any]) -> dict[str, An
     }
 
 
+def _scope_fingerprint(paths: list[str]) -> str:
+    return "sha256:" + hashlib.sha256(json.dumps(sorted(paths), separators=(",", ":"), ensure_ascii=True).encode()).hexdigest()
+
+
+def _compiled_direct_work_operation_decision(
+    *,
+    payload: dict[str, Any],
+    planning_gate: dict[str, Any],
+    authority_envelope: dict[str, Any],
+    mutation_baseline: dict[str, Any],
+    operating_loop: dict[str, Any],
+    verification: dict[str, Any],
+    proof_detail_route: str,
+    changed_paths: list[str],
+    allowed_paths: list[str],
+) -> dict[str, Any]:
+    """Compile the direct-work action from existing operation owners.
+
+    This helper does not infer the composed-operation scenario contract.  It
+    binds the implement-context operation invocation to the same Planning,
+    mutation, proof, and executor authority fronts already assembled for the
+    ordinary implement packet, then asks the operating-decision compiler for the
+    current action decision.
+    """
+
+    direct_route = (
+        planning_gate.get("gate_result") == "direct-work-allowed"
+        and planning_gate.get("implementation_allowed") is True
+        and planning_gate.get("required_next_action") == "continue-direct"
+    )
+    if not direct_route:
+        return {}
+    scope_fingerprint = _scope_fingerprint(changed_paths)
+    proof_required = (
+        "proof" in proof_detail_route
+        and operating_loop.get("safe_claim") == "blocked"
+        and "run_or_refresh_proof" in [str(item) for item in operating_loop.get("required_before_full_closure", [])]
+        and verification.get("state") == "proof_missing"
+    )
+    authorities = {
+        "target": {
+            "selected_target": "workspace",
+            "revision": str(payload.get("target") or ""),
+            "status": "current",
+        },
+        "planning_owner": {
+            "owner_id": "direct-work",
+            "owner_ref": "planning_safety_gate",
+            "owner_revision": _as_dict(planning_gate.get("planning_revision")).get("state_revision")
+            or _as_dict(planning_gate.get("route_decision")).get("decision_id")
+            or str(planning_gate.get("gate_result") or ""),
+            "status": "current",
+        },
+        "mutation_baseline": {
+            "baseline_id": mutation_baseline.get("baseline_id"),
+            "head": mutation_baseline.get("head"),
+            "scope": {
+                "changed_path_count": len(changed_paths),
+                "allowed_path_count": len(allowed_paths),
+                "changed_scope_fingerprint": scope_fingerprint,
+                "allowed_scope_fingerprint": _scope_fingerprint(allowed_paths),
+            },
+            "revalidation_status": "current" if mutation_baseline.get("status") == "clean-scope" else mutation_baseline.get("status"),
+            "mutation_revision": _as_dict(mutation_baseline.get("observed_state")).get("enforcement_fingerprint"),
+        },
+        "proof": {
+            "proof_obligation_id": proof_detail_route,
+            "status": "required-before-claim" if proof_required else "not-required",
+            "receipt_status": "pending" if proof_required else "not-required",
+        },
+        "executor": {
+            "binding_fingerprint": _as_dict(authority_envelope.get("authority_resolution")).get("resolution_fingerprint")
+            or _as_dict(mutation_baseline.get("observed_state")).get("enforcement_fingerprint"),
+            "availability_status": "available",
+            "invocation_revision": "implement.context",
+            "status": "available",
+        },
+    }
+    invocation = operation_invocation(
+        operation_id="implement.context",
+        arguments={
+            "target": ".",
+            "changed": changed_paths,
+            "task_present": bool(_as_dict(payload.get("task_intent")).get("status") == "present"),
+        },
+        effect_class="derived-output",
+        authority_class="implement-context-owned",
+        expected_transition="run-focused-proof" if proof_required else "inspect-changed-paths",
+        preconditions={
+            "planning_gate_result": str(planning_gate.get("gate_result") or ""),
+            "scope_fingerprint": scope_fingerprint,
+        },
+        command_rendering="agentic-workspace implement --changed <paths> --format json",
+    )
+    bound_invocation = bind_operation_invocation_to_authorities(invocation=invocation, authorities=authorities)
+    return compile_operating_decision(
+        inputs={
+            "revisions": {
+                "planning_gate": authorities["planning_owner"]["owner_revision"],
+                "mutation": authorities["mutation_baseline"]["mutation_revision"],
+                "proof": proof_detail_route,
+            },
+            "authorities": authorities,
+            "current_work": {"id": "direct-work", "changed_scope_fingerprint": scope_fingerprint},
+            "selected_owner": {"id": "direct-work", "source": "planning_safety_gate"},
+            "terminal_state": "continue",
+            "actionability": {"next_action": {"action": "implement", "operation_invocation": bound_invocation}},
+            "blocked_claim_classes": ["full_completion_until_proof"],
+            "provenance": {
+                "typed_invocation": "actionability.operation_invocation",
+                "decision_compiler": "operating_decision.compile_operating_decision",
+                "authority_sources": [
+                    "planning_safety_gate",
+                    "authority_envelope",
+                    "authority_envelope.mutation_baseline",
+                    "operating_loop.verification",
+                ],
+            },
+        }
+    )
+
+
 def _tiny_operation_authority_payload(
     *,
     payload: dict[str, Any],
@@ -1474,16 +1598,31 @@ def _tiny_operation_authority_payload(
     }
     write_requested = _as_dict(side_effects.get("write-requested-paths"))
     write_outside = _as_dict(side_effects.get("write-outside-scope"))
-    direct_route = (
-        gate.get("gate_result") == "direct-work-allowed"
-        and gate.get("implementation_allowed") is True
-        and gate.get("required_next_action") == "continue-direct"
+    compiled_decision = _compiled_direct_work_operation_decision(
+        payload=payload,
+        planning_gate=gate,
+        authority_envelope=envelope,
+        mutation_baseline=baseline,
+        operating_loop=operating_loop,
+        verification=verification,
+        proof_detail_route=proof_detail_route,
+        changed_paths=changed_paths,
+        allowed_paths=allowed_paths,
     )
+    compiled_primary_action = _as_dict(compiled_decision.get("primary_action"))
+    compiled_invocation = _as_dict(compiled_primary_action.get("operation_invocation"))
+    compiled_selected_owner = _as_dict(compiled_decision.get("selected_owner"))
+    compiled_actionable = compiled_decision.get("status") == "actionable" and bool(compiled_invocation)
     typed_invocation = {
-        "status": "observed" if decision_packet.get("surface") == "implement" else "missing",
-        "surface": decision_packet.get("surface"),
-        "kind": decision_packet.get("kind"),
-        "shown_because": decision_packet.get("shown_because", []),
+        "status": "observed" if compiled_actionable else "missing",
+        "operation_id": compiled_invocation.get("operation_id"),
+        "contract_version": compiled_invocation.get("contract_version"),
+        "arguments": compiled_invocation.get("arguments", {}),
+        "expected_input_revision": compiled_invocation.get("expected_input_revision"),
+        "expected_transition": compiled_invocation.get("expected_transition"),
+        "idempotency_key": compiled_invocation.get("idempotency_key"),
+        "action": compiled_primary_action.get("action"),
+        "source": "operating_decision.primary_action.operation_invocation",
     }
     effect_authority = {
         "status": "admitted"
@@ -1517,6 +1656,8 @@ def _tiny_operation_authority_payload(
         "head": baseline.get("head"),
         "allowed_path_count": len(allowed_paths),
         "changed_path_count": len(changed_paths),
+        "allowed_scope_fingerprint": _scope_fingerprint(allowed_paths),
+        "changed_scope_fingerprint": _scope_fingerprint(changed_paths),
         "owner": ownership.get("owner"),
         "enforcement_fingerprint": observed_state.get("enforcement_fingerprint"),
         "stale_revalidation": _as_dict(baseline.get("stale_revalidation")).get("status"),
@@ -1538,13 +1679,13 @@ def _tiny_operation_authority_payload(
         else 0,
     }
     decision = {
-        "owner": "direct-work" if direct_route else "",
-        "terminal_state": "continue" if direct_route and operating_loop.get("closeout_state") == "blocked_missing_proof" else "",
-        "typed_action": "implement" if typed_invocation["status"] == "observed" else "",
+        "owner": str(compiled_selected_owner.get("id") or "") if compiled_actionable else "",
+        "terminal_state": str(compiled_decision.get("terminal_state") or "") if compiled_actionable else "",
+        "typed_action": str(compiled_primary_action.get("action") or "") if compiled_actionable else "",
         "effect_scope": "changed-paths-only" if effect_authority["status"] == "admitted" else "",
         "mutation_precondition": "clean-baseline" if mutation_authority["status"] == "clean-baseline" else "",
         "proof_claim_boundary": "proof-before-completion-claim" if proof_authority["status"] == "required-before-claim" else "",
-        "next_transition": "run-focused-proof" if proof_authority["status"] == "required-before-claim" else "",
+        "next_transition": str(compiled_invocation.get("expected_transition") or "") if compiled_actionable else "",
     }
     complete = all(decision.values())
     return {
@@ -1553,18 +1694,30 @@ def _tiny_operation_authority_payload(
         "surface": "implement",
         "status": "admitted" if complete else "incomplete",
         "decision": decision,
+        "operating_decision": {
+            "status": compiled_decision.get("status"),
+            "decision_id": compiled_decision.get("decision_id"),
+            "canonical_decision_input_revision": compiled_decision.get("canonical_decision_input_revision"),
+            "selected_owner": compiled_selected_owner,
+            "terminal_state": compiled_decision.get("terminal_state"),
+            "primary_action": {
+                "action": compiled_primary_action.get("action"),
+                "operation_id": compiled_invocation.get("operation_id"),
+                "expected_transition": compiled_invocation.get("expected_transition"),
+            },
+        },
         "typed_invocation": typed_invocation,
         "effect_authority": effect_authority,
         "mutation_authority": mutation_authority,
         "proof_authority": proof_authority,
         "field_authority": {
-            "owner": "planning_safety_gate",
-            "terminal_state": "planning_safety_gate+operating_loop",
-            "typed_action": "decision_packet.surface",
+            "owner": "operating_decision.selected_owner",
+            "terminal_state": "operating_decision.terminal_state",
+            "typed_action": "operating_decision.primary_action.action",
             "effect_scope": "authority_envelope.side_effect_decisions",
             "mutation_precondition": "authority_envelope.mutation_baseline",
             "proof_claim_boundary": "operating_loop+proof.detail_route",
-            "next_transition": "operating_loop.required_before_full_closure+proof.detail_route",
+            "next_transition": "operating_decision.primary_action.operation_invocation.expected_transition",
         },
         "rule": "External checkers may certify only fields backed by the listed ordinary implement authority fronts.",
     }

@@ -856,8 +856,46 @@ def _ordinary_packet_ref_is_contract_authoritative(authority_packet: dict[str, o
         field_authority
     ):
         return False
+    operating_decision = ordinary_packet_ref.get("operating_decision")
+    if not isinstance(operating_decision, dict):
+        return False
+    primary_action = operating_decision.get("primary_action")
+    selected_owner = operating_decision.get("selected_owner")
+    if not isinstance(primary_action, dict) or not isinstance(selected_owner, dict):
+        return False
+    if operating_decision.get("status") != "actionable":
+        return False
+    if not str(operating_decision.get("decision_id") or "").startswith("operating-decision:"):
+        return False
+    if not str(operating_decision.get("canonical_decision_input_revision") or "").startswith("sha256:"):
+        return False
+    if selected_owner.get("id") != "direct-work" or operating_decision.get("terminal_state") != "continue":
+        return False
+    if primary_action.get("action") != "implement" or primary_action.get("operation_id") != "implement.context":
+        return False
+    if primary_action.get("expected_transition") != "run-focused-proof":
+        return False
     typed_invocation = ordinary_packet_ref.get("typed_invocation")
     if not isinstance(typed_invocation, dict) or typed_invocation.get("status") != "observed":
+        return False
+    typed_arguments = typed_invocation.get("arguments")
+    if not isinstance(typed_arguments, dict):
+        return False
+    if typed_invocation.get("operation_id") != "implement.context":
+        return False
+    if typed_invocation.get("contract_version") != "agentic-workspace/operation/v1":
+        return False
+    if typed_invocation.get("action") != "implement":
+        return False
+    if typed_invocation.get("source") != "operating_decision.primary_action.operation_invocation":
+        return False
+    if typed_invocation.get("expected_transition") != "run-focused-proof":
+        return False
+    if typed_invocation.get("expected_input_revision") != operating_decision.get("canonical_decision_input_revision"):
+        return False
+    if typed_arguments.get("target") != ".":
+        return False
+    if not isinstance(typed_arguments.get("changed"), list) or not typed_arguments["changed"]:
         return False
     effect_authority = ordinary_packet_ref.get("effect_authority")
     if not isinstance(effect_authority, dict) or effect_authority.get("status") != "admitted":
@@ -868,6 +906,10 @@ def _ordinary_packet_ref_is_contract_authoritative(authority_packet: dict[str, o
     if not mutation_authority.get("baseline_id") or not mutation_authority.get("head"):
         return False
     if mutation_authority.get("allowed_paths") != mutation_authority.get("changed_paths"):
+        return False
+    if mutation_authority.get("allowed_scope_fingerprint") != mutation_authority.get("changed_scope_fingerprint"):
+        return False
+    if not str(mutation_authority.get("changed_scope_fingerprint") or "").startswith("sha256:"):
         return False
     if not mutation_authority.get("enforcement_fingerprint"):
         return False
