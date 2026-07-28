@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 from agentic_workspace.composed_operation_scenarios import observe_composed_operation_authority
+from agentic_workspace.workspace_runtime_implement import composed_planning_direct_work_route_packet
 
 
 def test_composed_operation_scenario_matrix_is_release_gate_ready() -> None:
@@ -75,6 +76,9 @@ def test_composed_operation_contract_is_not_derived_from_parallel_oracle() -> No
     assert "_producer_admission_packet" not in producer_source
     assert "_ordinary_state_owner_packets" not in producer_source
     assert "_repair_revalidation" not in producer_source
+    assert "_ordinary_route_owner_packets" not in producer_source
+    assert "_attempt_owner_boundaries(" in producer_source
+    assert 'get("composed_operation_owner_packets")' in producer_source
     assert "uv run pytest README.md" not in producer_source
     assert 'valid-terminal-after-repair" if transition' not in producer_source
     assert "def admission_packet(" not in (
@@ -124,7 +128,10 @@ def test_composed_operation_checker_consumes_producer_authority_packet() -> None
             scenario_id=str(scenario["id"]),
             active_planning=False,
             start={},
-            implement={"context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}}},
+            implement={
+                "context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}},
+                "composed_operation_owner_packets": [composed_planning_direct_work_route_packet({"gate_result": "direct-work-allowed"})],
+            },
             summary={},
             closeout={},
         )
@@ -163,7 +170,10 @@ def test_composed_operation_contract_rejects_accepted_stale_or_rejected_shortcut
             scenario_id=str(scenario["id"]),
             active_planning=False,
             start={},
-            implement={"context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}}},
+            implement={
+                "context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}},
+                "composed_operation_owner_packets": [composed_planning_direct_work_route_packet({"gate_result": "direct-work-allowed"})],
+            },
             summary={},
             closeout={},
         )
@@ -198,7 +208,10 @@ def test_composed_operation_contract_rejects_scenario_authored_owner_packet() ->
             scenario_id="fresh-direct-work",
             active_planning=False,
             start={},
-            implement={"context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}}},
+            implement={
+                "context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}},
+                "composed_operation_owner_packets": [composed_planning_direct_work_route_packet({"gate_result": "direct-work-allowed"})],
+            },
             summary={},
             closeout={},
         )
@@ -223,7 +236,10 @@ def test_composed_operation_contract_rejects_adapter_authored_owner_packet() -> 
             scenario_id="fresh-direct-work",
             active_planning=False,
             start={},
-            implement={"context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}}},
+            implement={
+                "context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}},
+                "composed_operation_owner_packets": [composed_planning_direct_work_route_packet({"gate_result": "direct-work-allowed"})],
+            },
             summary={},
             closeout={},
         )

@@ -12,22 +12,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from agentic_workspace.operation_authority_admissions import (
-    authority_effect_admission_packet,
-    delegated_return_admission_packet,
-    external_observation_admission_packet,
-    generated_target_capability_admission_packet,
-    generated_target_projection_admission_packet,
-    mutation_owner_admission_packet,
-    ordinary_state_owner_packets,
-    planning_closeout_boundary_packet,
-    planning_direct_work_route_packet,
-    planning_owner_state_packet,
-    proof_receipt_admission_packet,
-    revalidate_typed_repair,
-    runtime_readiness_packet,
-    transaction_admission_packet,
-)
+from agentic_workspace.operation_authority_admissions import normalize_owner_decision_packet, revalidate_typed_repair
 
 CONTRACT_FIELDS = (
     "owner",
@@ -105,115 +90,14 @@ def _attempt_owner_boundaries(
     summary: dict[str, Any],
     closeout: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    expected = owner_receipt.get("mutation_baseline") if isinstance(owner_receipt.get("mutation_baseline"), dict) else None
     packets: list[dict[str, Any]] = []
-    if (target / ".agentic-workspace" / "local" / "planning" / "owner-selection.json").exists():
-        packets.append(
-            mutation_owner_admission_packet(
-                target=target,
-                expected=expected,
-                changed_paths=changed_paths,
-                owner="planning",
-                owner_source=".agentic-workspace/local/planning/owner-selection.json",
-            )
-        )
-    if (target / ".agentic-workspace" / "local" / "planning" / "mutation-owner.json").exists():
-        packets.append(
-            mutation_owner_admission_packet(
-                target=target,
-                expected=expected,
-                changed_paths=changed_paths,
-                owner="planning",
-                owner_source=".agentic-workspace/local/planning/mutation-owner.json",
-            )
-        )
-    stale_scope = _read_json_if_present(target / ".agentic-workspace" / "local" / "actions" / "stale-scope.json")
-    if stale_scope:
-        requested_paths = [str(path) for path in stale_scope.get("requested_paths", []) if isinstance(path, str)]
-        packets.append(
-            mutation_owner_admission_packet(
-                target=target,
-                expected=expected,
-                changed_paths=requested_paths or changed_paths,
-                owner="workspace",
-                owner_source=".agentic-workspace/local/actions/stale-scope.json",
-            )
-        )
-    if (target / ".agentic-workspace" / "local" / "transactions" / "partial-write.json").exists():
-        packets.append(
-            transaction_admission_packet(
-                target=target,
-                expected=expected,
-                changed_paths=changed_paths,
-            )
-        )
-    if (target / ".agentic-workspace" / "local" / "proof" / "last.json").exists():
-        packets.append(proof_receipt_admission_packet(target=target))
-    if (target / ".agentic-workspace" / "local" / "delegation" / "returned-result.json").exists():
-        packets.append(delegated_return_admission_packet(target=target))
-    malformed = target / ".agentic-workspace" / "local" / "external-observations" / "malformed.json"
-    if malformed.exists():
-        packets.append(external_observation_admission_packet(target=target, observation_path=malformed))
-    capability = _read_json_if_present(target / ".agentic-workspace" / "local" / "adapters" / "capability.json")
-    if capability:
-        packets.append(generated_target_capability_admission_packet(capability))
-    projection = _read_json_if_present(target / "generated" / ".agentic-workspace-cli-fingerprint.json")
-    if projection.get("status") == "drifted":
-        packets.append(generated_target_projection_admission_packet(projection))
-    if (target / "incoming" / "untrusted.txt").exists():
-        packets.append(authority_effect_admission_packet(target=target, changed_paths=changed_paths, task=task))
-    runtime = _read_json_if_present(target / ".agentic-workspace" / "local" / "runtime" / "availability.json")
-    if runtime:
-        packets.append(runtime_readiness_packet(runtime))
-    packets.extend(
-        _ordinary_route_owner_packets(
-            target=target,
-            scenario_id=scenario_id,
-            start=start,
-            implement=implement,
-            summary=summary,
-            closeout=closeout,
-        )
-    )
-    return packets
-
-
-def _ordinary_route_owner_packets(
-    *,
-    target: Path,
-    scenario_id: str,
-    start: dict[str, Any],
-    implement: dict[str, Any],
-    summary: dict[str, Any],
-    closeout: dict[str, Any],
-) -> list[dict[str, Any]]:
-    packets: list[dict[str, Any]] = []
-    local_state = {
-        "task_switch": _read_json_if_present(target / ".agentic-workspace" / "local" / "planning" / "task-switch.json"),
-        "target_identity": _read_json_if_present(target / ".agentic-workspace" / "local" / "workspace" / "target-identity.json"),
-        "external_intent": _read_json_if_present(target / ".agentic-workspace" / "local" / "external-intent" / "issue-2300.json"),
-        "continuation": _read_json_if_present(target / ".agentic-workspace" / "local" / "continuation" / "compacted.json"),
-        "missing_skill": (target / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.missing").exists(),
-        "dirty_user_edit": (target / "notes" / "user-owned.md").exists(),
-    }
-    packets.extend(ordinary_state_owner_packets(local_state))
-    if _read_json_if_present(target / ".agentic-workspace" / "local" / "closeout" / "premature.json") and _closeout_blocks_completion(
-        closeout
-    ):
-        packets.append(planning_closeout_boundary_packet(closeout))
-    continuation_payload = summary.get("continuation_view")
-    continuation: dict[str, Any] = continuation_payload if isinstance(continuation_payload, dict) else {}
-    plan_path = target / ".agentic-workspace" / "planning" / "execplans" / f"{scenario_id}.plan.json"
-    plan = _read_json_if_present(plan_path)
-    if plan:
-        source = plan_path.relative_to(target).as_posix() if plan_path.exists() else "summary.continuation_view"
-        if plan.get("status") == "completed":
-            packets.append(planning_owner_state_packet(source=source, plan=plan, continuation=continuation))
-        else:
-            packets.append(planning_owner_state_packet(source=source, plan=plan, continuation=continuation))
-    gate = _planning_gate(implement)
-    if gate.get("gate_result") == "direct-work-allowed":
-        packets.append(planning_direct_work_route_packet(gate))
+    for source_packet in (start, implement, summary, closeout):
+        emitted = source_packet.get("composed_operation_owner_packets") if isinstance(source_packet, dict) else None
+        if not isinstance(emitted, list):
+            continue
+        for owner_packet in emitted:
+            if isinstance(owner_packet, dict):
+                packets.append(normalize_owner_decision_packet(owner_packet))
     return packets
 
 

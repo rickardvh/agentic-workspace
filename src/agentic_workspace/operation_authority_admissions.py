@@ -131,6 +131,12 @@ def _normalize_owner_decision_packet(owner_packet: dict[str, Any]) -> dict[str, 
     }
 
 
+def normalize_owner_decision_packet(owner_packet: dict[str, Any]) -> dict[str, Any]:
+    """Normalize one raw packet emitted by its canonical owner operation."""
+
+    return _normalize_owner_decision_packet(owner_packet)
+
+
 def mutation_owner_admission_packet(
     *,
     target: Path,
