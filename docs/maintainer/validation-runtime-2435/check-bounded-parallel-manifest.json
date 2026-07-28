@@ -1,5 +1,5 @@
 {
-  "critical_path_seconds": 466.202311,
+  "critical_path_seconds": 470.052145,
   "kind": "agentic-workspace/validation-run-manifest/v1",
   "outcomes": {
     "passed": 39
@@ -13,10 +13,10 @@
     "schema_version": "validation-runtime-plan/v1"
   },
   "repository": {
-    "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+    "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
     "kind": "agentic-workspace/validation-repository-identity/v1",
     "tracked_dirty": false,
-    "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+    "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
   },
   "result_count": 39,
   "results": [
@@ -30,8 +30,8 @@
       "constituent_id": "sync.all",
       "cwd": ".",
       "dependencies": [],
-      "duration_seconds": 0.035043,
-      "ended_at": "2026-07-28T19:01:28.409247+00:00",
+      "duration_seconds": 0.037493,
+      "ended_at": "2026-07-28T21:23:03.108852+00:00",
       "execution_posture": "serial setup",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -49,14 +49,14 @@
       },
       "proof_purpose": "prepare the shared root environment once for a local or CI run",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/sync.all.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:01:28.374163+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/sync.all.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:23:03.071309+00:00",
       "timed_out": false
     },
     {
@@ -88,8 +88,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 244.411671,
-      "ended_at": "2026-07-28T19:05:33.006967+00:00",
+      "duration_seconds": 246.494588,
+      "ended_at": "2026-07-28T21:27:09.943800+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -107,14 +107,14 @@
       },
       "proof_purpose": "workspace CLI behavior partition",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-cli.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:01:28.600334+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-cli.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:23:03.454232+00:00",
       "timed_out": false
     },
     {
@@ -134,8 +134,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 107.604209,
-      "ended_at": "2026-07-28T19:07:20.797162+00:00",
+      "duration_seconds": 108.310987,
+      "ended_at": "2026-07-28T21:28:58.669555+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -153,14 +153,63 @@
       },
       "proof_purpose": "proof-router and generated proof-package behavior partition",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-proof.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:05:33.195138+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-proof.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:27:10.360746+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_command_generation_integration.py",
+        "tests/test_command_generation_release_promotion.py",
+        "tests/test_coordinated_release.py",
+        "tests/test_generated_tool_conformance.py",
+        "tests/test_release_recovery_status.py",
+        "tests/test_release_workflows.py",
+        "tests/test_workspace_packaging.py"
+      ],
+      "constituent_id": "test.workspace-generated-release",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 96.328593,
+      "ended_at": "2026-07-28T21:28:46.703476+00:00",
+      "execution_posture": "serial by default; pytest-xdist opt-in only",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace generated and release tests",
+      "log_path": null,
+      "outcome": "passed",
+      "owner_boundary": "workspace tests",
+      "plan_identity": {
+        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
+        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "issue": 2435,
+        "kind": "agentic-workspace/validation-plan-identity/v1",
+        "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
+        "schema_version": "validation-runtime-plan/v1"
+      },
+      "proof_purpose": "generated-command and release workflow behavior partition",
+      "repository": {
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "kind": "agentic-workspace/validation-repository-identity/v1",
+        "tracked_dirty": false,
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+      },
+      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-generated-release.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:27:10.376812+00:00",
       "timed_out": false
     },
     {
@@ -182,8 +231,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 113.225257,
-      "ended_at": "2026-07-28T19:07:26.423527+00:00",
+      "duration_seconds": 109.581423,
+      "ended_at": "2026-07-28T21:28:59.956216+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -201,14 +250,14 @@
       },
       "proof_purpose": "session logging and review-loop behavior partition",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-session-review.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:05:33.200568+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-session-review.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:27:10.377006+00:00",
       "timed_out": false
     },
     {
@@ -235,8 +284,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 46.408023,
-      "ended_at": "2026-07-28T19:06:19.613163+00:00",
+      "duration_seconds": 49.598737,
+      "ended_at": "2026-07-28T21:27:59.979098+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -254,63 +303,14 @@
       },
       "proof_purpose": "contract, schema, inventory, and guardrail behavior partition",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-contracts.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:05:33.206062+00:00",
-      "timed_out": false
-    },
-    {
-      "command": [
-        "uv",
-        "run",
-        "pytest",
-        "-n",
-        "16",
-        "tests/test_command_generation_integration.py",
-        "tests/test_command_generation_release_promotion.py",
-        "tests/test_coordinated_release.py",
-        "tests/test_generated_tool_conformance.py",
-        "tests/test_release_recovery_status.py",
-        "tests/test_release_workflows.py",
-        "tests/test_workspace_packaging.py"
-      ],
-      "constituent_id": "test.workspace-generated-release",
-      "cwd": ".",
-      "dependencies": [
-        "sync.all"
-      ],
-      "duration_seconds": 96.893484,
-      "ended_at": "2026-07-28T19:07:10.115985+00:00",
-      "execution_posture": "serial by default; pytest-xdist opt-in only",
-      "exit_code": 0,
-      "kind": "agentic-workspace/validation-constituent-result/v1",
-      "label": "workspace generated and release tests",
-      "log_path": null,
-      "outcome": "passed",
-      "owner_boundary": "workspace tests",
-      "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
-        "issue": 2435,
-        "kind": "agentic-workspace/validation-plan-identity/v1",
-        "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
-        "schema_version": "validation-runtime-plan/v1"
-      },
-      "proof_purpose": "generated-command and release workflow behavior partition",
-      "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
-        "kind": "agentic-workspace/validation-repository-identity/v1",
-        "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
-      },
-      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-generated-release.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:05:33.224453+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-contracts.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:27:10.381327+00:00",
       "timed_out": false
     },
     {
@@ -343,8 +343,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 63.455354,
-      "ended_at": "2026-07-28T19:07:24.456770+00:00",
+      "duration_seconds": 61.88378,
+      "ended_at": "2026-07-28T21:29:02.391311+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -362,14 +362,14 @@
       },
       "proof_purpose": "external, lifecycle, launcher, and cost behavior partition",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-integration.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:06:21.002674+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-integration.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:28:00.508746+00:00",
       "timed_out": false
     },
     {
@@ -385,8 +385,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 10.418758,
-      "ended_at": "2026-07-28T19:07:20.748751+00:00",
+      "duration_seconds": 11.763384,
+      "ended_at": "2026-07-28T21:28:58.895020+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -404,14 +404,14 @@
       },
       "proof_purpose": "Memory package behavior tests",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/test.memory.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:10.330132+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/test.memory.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:28:47.131821+00:00",
       "timed_out": false
     },
     {
@@ -425,8 +425,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 113.385596,
-      "ended_at": "2026-07-28T19:09:14.576474+00:00",
+      "duration_seconds": 114.071777,
+      "ended_at": "2026-07-28T21:30:53.123454+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -444,14 +444,14 @@
       },
       "proof_purpose": "Planning package behavior tests",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/test.planning.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:21.193146+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/test.planning.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:28:59.053942+00:00",
       "timed_out": false
     },
     {
@@ -467,8 +467,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 8.682652,
-      "ended_at": "2026-07-28T19:07:29.887401+00:00",
+      "duration_seconds": 8.917391,
+      "ended_at": "2026-07-28T21:29:08.215137+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -486,14 +486,14 @@
       },
       "proof_purpose": "Verification package behavior tests",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/test.verification.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:21.204877+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/test.verification.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:28:59.297876+00:00",
       "timed_out": false
     },
     {
@@ -510,8 +510,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.062232,
-      "ended_at": "2026-07-28T19:07:24.733939+00:00",
+      "duration_seconds": 0.10021,
+      "ended_at": "2026-07-28T21:29:00.405156+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -529,14 +529,14 @@
       },
       "proof_purpose": "workspace lint checks",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/lint.workspace.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:24.671656+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/lint.workspace.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:00.304891+00:00",
       "timed_out": false
     },
     {
@@ -551,8 +551,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 2.056471,
-      "ended_at": "2026-07-28T19:07:26.996000+00:00",
+      "duration_seconds": 2.293939,
+      "ended_at": "2026-07-28T21:29:03.072509+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -570,14 +570,14 @@
       },
       "proof_purpose": "prompt semantic marker lint checks",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/lint.prompt-semantic-markers.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:24.939518+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/lint.prompt-semantic-markers.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:00.778549+00:00",
       "timed_out": false
     },
     {
@@ -593,8 +593,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.057794,
-      "ended_at": "2026-07-28T19:07:26.681734+00:00",
+      "duration_seconds": 0.077286,
+      "ended_at": "2026-07-28T21:29:02.839819+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -612,14 +612,14 @@
       },
       "proof_purpose": "Memory package lint checks",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/lint.memory.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:26.623888+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/lint.memory.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:02.762480+00:00",
       "timed_out": false
     },
     {
@@ -640,8 +640,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.661301,
-      "ended_at": "2026-07-28T19:07:27.500202+00:00",
+      "duration_seconds": 0.945963,
+      "ended_at": "2026-07-28T21:29:04.067336+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -659,14 +659,14 @@
       },
       "proof_purpose": "Memory package Markdown lint checks",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/lint.memory-markdown.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:26.838864+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/lint.memory-markdown.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:03.121343+00:00",
       "timed_out": false
     },
     {
@@ -682,8 +682,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.064826,
-      "ended_at": "2026-07-28T19:07:27.214440+00:00",
+      "duration_seconds": 0.058352,
+      "ended_at": "2026-07-28T21:29:03.416261+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -701,14 +701,14 @@
       },
       "proof_purpose": "Planning package lint checks",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/lint.planning.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:27.149560+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/lint.planning.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:03.357865+00:00",
       "timed_out": false
     },
     {
@@ -724,8 +724,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.060347,
-      "ended_at": "2026-07-28T19:07:27.452887+00:00",
+      "duration_seconds": 0.062662,
+      "ended_at": "2026-07-28T21:29:03.762647+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -743,14 +743,14 @@
       },
       "proof_purpose": "Verification package lint checks",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/lint.verification.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:27.392485+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/lint.verification.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:03.699937+00:00",
       "timed_out": false
     },
     {
@@ -766,8 +766,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 1.959848,
-      "ended_at": "2026-07-28T19:07:29.560642+00:00",
+      "duration_seconds": 1.965143,
+      "ended_at": "2026-07-28T21:29:06.019583+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -785,14 +785,14 @@
       },
       "proof_purpose": "workspace type checks",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/typecheck.workspace.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:27.600783+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/typecheck.workspace.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:04.054430+00:00",
       "timed_out": false
     },
     {
@@ -808,8 +808,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.279677,
-      "ended_at": "2026-07-28T19:07:27.943234+00:00",
+      "duration_seconds": 0.2275,
+      "ended_at": "2026-07-28T21:29:04.669210+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -827,14 +827,14 @@
       },
       "proof_purpose": "Memory package type checks",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/typecheck.memory.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:27.663510+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/typecheck.memory.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:04.441661+00:00",
       "timed_out": false
     },
     {
@@ -850,8 +850,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 1.044178,
-      "ended_at": "2026-07-28T19:07:29.197479+00:00",
+      "duration_seconds": 1.04165,
+      "ended_at": "2026-07-28T21:29:06.030356+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -869,14 +869,14 @@
       },
       "proof_purpose": "Planning package type checks",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/typecheck.planning.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:28.153265+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/typecheck.planning.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:04.988674+00:00",
       "timed_out": false
     },
     {
@@ -892,8 +892,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.187468,
-      "ended_at": "2026-07-28T19:07:29.564765+00:00",
+      "duration_seconds": 0.182098,
+      "ended_at": "2026-07-28T21:29:06.466430+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -911,14 +911,14 @@
       },
       "proof_purpose": "Verification package type checks",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/typecheck.verification.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:29.377248+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/typecheck.verification.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:06.284280+00:00",
       "timed_out": false
     },
     {
@@ -936,8 +936,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.063797,
-      "ended_at": "2026-07-28T19:07:29.799104+00:00",
+      "duration_seconds": 0.066165,
+      "ended_at": "2026-07-28T21:29:06.420530+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -955,14 +955,14 @@
       },
       "proof_purpose": "workspace formatting check",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/format-check.workspace.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:29.735261+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/format-check.workspace.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:06.354313+00:00",
       "timed_out": false
     },
     {
@@ -979,8 +979,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.059497,
-      "ended_at": "2026-07-28T19:07:29.840130+00:00",
+      "duration_seconds": 0.061473,
+      "ended_at": "2026-07-28T21:29:06.765764+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -998,14 +998,14 @@
       },
       "proof_purpose": "Memory package formatting check",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/format-check.memory.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:29.780580+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/format-check.memory.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:06.704238+00:00",
       "timed_out": false
     },
     {
@@ -1022,8 +1022,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.057263,
-      "ended_at": "2026-07-28T19:07:30.005906+00:00",
+      "duration_seconds": 0.055097,
+      "ended_at": "2026-07-28T21:29:06.797889+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1041,14 +1041,14 @@
       },
       "proof_purpose": "Planning package formatting check",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/format-check.planning.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:29.948600+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/format-check.planning.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:06.742744+00:00",
       "timed_out": false
     },
     {
@@ -1065,8 +1065,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.057597,
-      "ended_at": "2026-07-28T19:07:30.052044+00:00",
+      "duration_seconds": 0.051622,
+      "ended_at": "2026-07-28T21:29:07.107690+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1084,14 +1084,14 @@
       },
       "proof_purpose": "Verification package formatting check",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/format-check.verification.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:29.994393+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/format-check.verification.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:07.056020+00:00",
       "timed_out": false
     },
     {
@@ -1108,8 +1108,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.517344,
-      "ended_at": "2026-07-28T19:07:30.602891+00:00",
+      "duration_seconds": 0.497176,
+      "ended_at": "2026-07-28T21:29:07.579180+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1127,14 +1127,14 @@
       },
       "proof_purpose": "workspace CLI module verification",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/verify.workspace.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:30.085511+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/verify.workspace.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:07.081970+00:00",
       "timed_out": false
     },
     {
@@ -1151,8 +1151,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.227234,
-      "ended_at": "2026-07-28T19:07:30.401350+00:00",
+      "duration_seconds": 0.208916,
+      "ended_at": "2026-07-28T21:29:07.695523+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1170,14 +1170,14 @@
       },
       "proof_purpose": "Memory package payload verification",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/verify.memory.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:30.174060+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/verify.memory.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:07.486552+00:00",
       "timed_out": false
     },
     {
@@ -1192,8 +1192,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.297343,
-      "ended_at": "2026-07-28T19:07:30.513301+00:00",
+      "duration_seconds": 0.291117,
+      "ended_at": "2026-07-28T21:29:08.136240+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1211,14 +1211,14 @@
       },
       "proof_purpose": "Planning package payload verification",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/verify.planning.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:30.215912+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/verify.planning.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:07.845081+00:00",
       "timed_out": false
     },
     {
@@ -1237,8 +1237,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.204789,
-      "ended_at": "2026-07-28T19:07:30.779280+00:00",
+      "duration_seconds": 0.204652,
+      "ended_at": "2026-07-28T21:29:08.171387+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1256,14 +1256,14 @@
       },
       "proof_purpose": "Verification package report verification",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/verify.verification.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:30.574442+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/verify.verification.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:07.966684+00:00",
       "timed_out": false
     },
     {
@@ -1282,8 +1282,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 1.580612,
-      "ended_at": "2026-07-28T19:07:32.255799+00:00",
+      "duration_seconds": 1.830168,
+      "ended_at": "2026-07-28T21:29:10.238041+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1301,14 +1301,14 @@
       },
       "proof_purpose": "root Memory report freshness gate",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/memory-freshness.strict.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:30.675170+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/memory-freshness.strict.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:08.407858+00:00",
       "timed_out": false
     },
     {
@@ -1323,8 +1323,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.107279,
-      "ended_at": "2026-07-28T19:07:30.876146+00:00",
+      "duration_seconds": 0.107296,
+      "ended_at": "2026-07-28T21:29:08.561218+00:00",
       "execution_posture": "serial generated-surface check",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1342,14 +1342,14 @@
       },
       "proof_purpose": "regenerate root planning documentation from the managed manifest",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/render-agent-docs.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:30.768819+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/render-agent-docs.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:08.453866+00:00",
       "timed_out": false
     },
     {
@@ -1366,8 +1366,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.204916,
-      "ended_at": "2026-07-28T19:07:31.153130+00:00",
+      "duration_seconds": 0.19804,
+      "ended_at": "2026-07-28T21:29:08.761467+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1385,14 +1385,14 @@
       },
       "proof_purpose": "check generated JSON Schema reference documentation and annotations",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/schema-reference-docs.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:30.948165+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/schema-reference-docs.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:08.563381+00:00",
       "timed_out": false
     },
     {
@@ -1407,8 +1407,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 1.764415,
-      "ended_at": "2026-07-28T19:07:32.816406+00:00",
+      "duration_seconds": 1.773972,
+      "ended_at": "2026-07-28T21:29:10.636867+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1426,14 +1426,14 @@
       },
       "proof_purpose": "root Planning generated surface freshness gate",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/planning-surfaces.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:31.051975+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/planning-surfaces.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:08.862879+00:00",
       "timed_out": false
     },
     {
@@ -1448,8 +1448,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.357235,
-      "ended_at": "2026-07-28T19:07:31.686386+00:00",
+      "duration_seconds": 0.369635,
+      "ended_at": "2026-07-28T21:29:09.420752+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1467,14 +1467,14 @@
       },
       "proof_purpose": "source, payload, and root-install boundary check",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/source-payload-boundary.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:31.329111+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/source-payload-boundary.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:09.051035+00:00",
       "timed_out": false
     },
     {
@@ -1489,8 +1489,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.14867,
-      "ended_at": "2026-07-28T19:07:32.017031+00:00",
+      "duration_seconds": 0.203761,
+      "ended_at": "2026-07-28T21:29:09.947069+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1508,14 +1508,14 @@
       },
       "proof_purpose": "validation graph, trace, CI/local drift, duplicate, and runtime evidence contract",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/validation-runtime.plan.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:31.868313+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/validation-runtime.plan.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:09.743257+00:00",
       "timed_out": false
     },
     {
@@ -1530,8 +1530,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 13.855552,
-      "ended_at": "2026-07-28T19:07:46.056500+00:00",
+      "duration_seconds": 14.169941,
+      "ended_at": "2026-07-28T21:29:24.416366+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1549,14 +1549,14 @@
       },
       "proof_purpose": "complete structured-file inventory no-prune audit",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/structured-file-inventory.full.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:32.201172+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/structured-file-inventory.full.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:10.246646+00:00",
       "timed_out": false
     },
     {
@@ -1571,8 +1571,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.154396,
-      "ended_at": "2026-07-28T19:07:32.590056+00:00",
+      "duration_seconds": 0.136711,
+      "ended_at": "2026-07-28T21:29:10.685885+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1590,14 +1590,14 @@
       },
       "proof_purpose": "built package archive duplicate-member guardrail",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/package-artifact-duplicates.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:32.435612+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/package-artifact-duplicates.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:10.549120+00:00",
       "timed_out": false
     },
     {
@@ -1612,8 +1612,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.300327,
-      "ended_at": "2026-07-28T19:07:33.085415+00:00",
+      "duration_seconds": 0.304452,
+      "ended_at": "2026-07-28T21:29:11.252247+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1631,14 +1631,14 @@
       },
       "proof_purpose": "checked-in agent aid manifest and coverage guardrail",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/agent-aids.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:32.785043+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/agent-aids.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:10.947746+00:00",
       "timed_out": false
     },
     {
@@ -1653,8 +1653,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 1.489426,
-      "ended_at": "2026-07-28T19:07:34.480719+00:00",
+      "duration_seconds": 1.494253,
+      "ended_at": "2026-07-28T21:29:12.496362+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1672,14 +1672,14 @@
       },
       "proof_purpose": "tracked-file absolute filesystem path guardrail",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/absolute-paths.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:32.991275+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/absolute-paths.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:11.002091+00:00",
       "timed_out": false
     },
     {
@@ -1700,8 +1700,8 @@
         "verify.memory",
         "verify.planning"
       ],
-      "duration_seconds": 3.332622,
-      "ended_at": "2026-07-28T19:07:36.596734+00:00",
+      "duration_seconds": 3.072822,
+      "ended_at": "2026-07-28T21:29:14.636671+00:00",
       "execution_posture": "serial aggregate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1719,18 +1719,18 @@
       },
       "proof_purpose": "maintainer generated/doc/source-payload surfaces remain fresh",
       "repository": {
-        "head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d"
+        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
       },
-      "result_path": "scratch/validation-results/local-20260728t190128z/maintainer-surfaces.json",
-      "run_id": "local-20260728T190128Z",
-      "started_at": "2026-07-28T19:07:33.264120+00:00",
+      "result_path": "scratch/validation-results/local-20260728t212302z/maintainer-surfaces.json",
+      "run_id": "local-20260728T212302Z",
+      "started_at": "2026-07-28T21:29:11.563853+00:00",
       "timed_out": false
     }
   ],
-  "run_id": "local-20260728T190128Z",
-  "summed_work_seconds": 835.734503,
-  "updated_at": "2026-07-28T19:09:14.646500+00:00"
+  "run_id": "local-20260728T212302Z",
+  "summed_work_seconds": 839.040225,
+  "updated_at": "2026-07-28T21:30:53.184540+00:00"
 }
