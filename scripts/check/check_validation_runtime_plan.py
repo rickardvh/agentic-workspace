@@ -12,6 +12,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PLAN_PATH = REPO_ROOT / "docs" / "maintainer" / "validation-runtime-2435" / "validation-plan.json"
 EVIDENCE_PATH = REPO_ROOT / "docs" / "maintainer" / "validation-runtime-2435" / "runtime-evidence.json"
+MANIFEST_PATH = REPO_ROOT / "docs" / "maintainer" / "validation-runtime-2435" / "check-bounded-parallel-manifest.json"
 MAKEFILE_PATH = REPO_ROOT / "Makefile"
 CI_PATH = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 
@@ -147,6 +148,40 @@ def _validate_constituents(plan: dict[str, Any]) -> list[Finding]:
                     message=f"command appears in multiple constituents without a distinct-proof disposition: {command}",
                 )
             )
+    return findings
+
+
+def _compact_makefile_labels(makefile_text: str) -> set[str]:
+    return set(re.findall(r'--label\s+"([^"]+)"', makefile_text))
+
+
+def _validate_compact_label_map(plan: dict[str, Any], makefile_text: str) -> list[Finding]:
+    findings: list[Finding] = []
+    label_map = plan.get("compact_label_map")
+    if not isinstance(label_map, dict) or not label_map:
+        return [Finding(path=PLAN_PATH.as_posix(), message="compact_label_map must be a non-empty object")]
+    makefile_labels = _compact_makefile_labels(makefile_text)
+    missing_labels = sorted(makefile_labels.difference(label_map))
+    findings.extend(Finding(path="Makefile", message=f"compact label missing from validation plan: {label}") for label in missing_labels)
+
+    constituent_ids = {str(item.get("id")) for item in plan.get("constituents", []) if isinstance(item, dict)}
+    for label, metadata in label_map.items():
+        location = f"{PLAN_PATH.as_posix()}#compact_label_map.{label}"
+        if not isinstance(metadata, dict):
+            findings.append(Finding(path=location, message="label metadata must be an object"))
+            continue
+        constituent_id = str(metadata.get("id", ""))
+        if constituent_id not in constituent_ids:
+            findings.append(Finding(path=location, message=f"unknown constituent id: {constituent_id}"))
+        dependencies = metadata.get("dependencies")
+        if not isinstance(dependencies, list):
+            findings.append(Finding(path=location, message="dependencies must be a list"))
+            continue
+        for dependency in dependencies:
+            if str(dependency) not in constituent_ids:
+                findings.append(Finding(path=location, message=f"unknown mapped dependency: {dependency}"))
+        if not metadata.get("proof_purpose"):
+            findings.append(Finding(path=location, message="proof_purpose must be non-empty"))
     return findings
 
 
@@ -298,6 +333,94 @@ def _validate_evidence(evidence: dict[str, Any]) -> list[Finding]:
         findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation evidence must be a passing measured run"))
     if broad_after and "placeholder" in str(broad_after.get("source", "")).lower():
         findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation evidence must not be a placeholder"))
+    series = evidence.get("measurement_series", [])
+    if not isinstance(series, list):
+        findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="measurement_series must be a list"))
+        return findings
+    required_series = {
+        "structured_file_inventory.full": (3, 30.0),
+        "structured_file_inventory.changed_path_narrow": (3, 5.0),
+        "broad_validation.full": (2, 600.0),
+    }
+    series_by_metric = {
+        str(record.get("metric")): record for record in series if isinstance(record, dict) and record.get("phase") == "after"
+    }
+    for metric, (minimum_count, budget_seconds) in required_series.items():
+        record = series_by_metric.get(metric)
+        if record is None:
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message=f"missing measurement series: {metric}"))
+            continue
+        durations = record.get("durations_seconds")
+        if not isinstance(durations, list) or len(durations) < minimum_count:
+            findings.append(
+                Finding(path=EVIDENCE_PATH.as_posix(), message=f"{metric} measurement series must contain at least {minimum_count} runs")
+            )
+            continue
+        for duration in durations:
+            if float(duration) > budget_seconds:
+                findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message=f"{metric} measurement exceeds budget"))
+        if record.get("outcome") != "passed":
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message=f"{metric} measurement series must pass"))
+    return findings
+
+
+def _validate_manifest(plan: dict[str, Any], evidence: dict[str, Any]) -> list[Finding]:
+    manifest, manifest_error = _load_json(MANIFEST_PATH)
+    if manifest_error is not None:
+        return [Finding(path=MANIFEST_PATH.as_posix(), message=manifest_error)]
+    if manifest is None:
+        return [Finding(path=MANIFEST_PATH.as_posix(), message="manifest must be a JSON object")]
+    findings: list[Finding] = []
+    if manifest.get("kind") != "agentic-workspace/validation-run-manifest/v1":
+        findings.append(Finding(path=MANIFEST_PATH.as_posix(), message="unexpected manifest kind"))
+    results = manifest.get("results")
+    if not isinstance(results, list) or not results:
+        return [Finding(path=MANIFEST_PATH.as_posix(), message="results must be a non-empty list")]
+
+    constituent_ids = {str(item.get("id")) for item in plan.get("constituents", []) if isinstance(item, dict)}
+    seen: set[str] = set()
+    outcomes = Counter()
+    for index, result in enumerate(results):
+        location = f"{MANIFEST_PATH.as_posix()}#results[{index}]"
+        if not isinstance(result, dict):
+            findings.append(Finding(path=location, message="result must be an object"))
+            continue
+        constituent_id = str(result.get("constituent_id", ""))
+        if constituent_id not in constituent_ids:
+            findings.append(Finding(path=location, message=f"unknown constituent id: {constituent_id}"))
+        if constituent_id in seen:
+            findings.append(Finding(path=location, message=f"duplicate constituent result: {constituent_id}"))
+        seen.add(constituent_id)
+        dependencies = result.get("dependencies")
+        if not isinstance(dependencies, list):
+            findings.append(Finding(path=location, message="dependencies must be a list"))
+        else:
+            for dependency in dependencies:
+                if str(dependency) not in constituent_ids:
+                    findings.append(Finding(path=location, message=f"unknown dependency: {dependency}"))
+        if not result.get("proof_purpose"):
+            findings.append(Finding(path=location, message="proof_purpose must be non-empty"))
+        if result.get("kind") != "agentic-workspace/validation-constituent-result/v1":
+            findings.append(Finding(path=location, message="unexpected result kind"))
+        outcomes[str(result.get("outcome") or "unknown")] += 1
+
+    if int(manifest.get("result_count", -1)) != len(results):
+        findings.append(Finding(path=MANIFEST_PATH.as_posix(), message="result_count must match results length"))
+    if dict(outcomes) != manifest.get("outcomes"):
+        findings.append(Finding(path=MANIFEST_PATH.as_posix(), message="outcomes must match result records"))
+    if outcomes and set(outcomes) != {"passed"}:
+        findings.append(Finding(path=MANIFEST_PATH.as_posix(), message="closeout manifest must contain only passing results"))
+
+    broad_after = _record_by_metric(evidence, "after", "broad_validation.full")
+    if broad_after:
+        manifest_ref = broad_after.get("manifest")
+        expected_ref = MANIFEST_PATH.relative_to(REPO_ROOT).as_posix()
+        if manifest_ref != expected_ref:
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message=f"broad validation must reference {expected_ref}"))
+        if round(float(broad_after.get("duration_seconds") or 0.0), 3) != round(float(manifest.get("critical_path_seconds") or 0.0), 3):
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation duration must match manifest critical path"))
+    if float(manifest.get("critical_path_seconds") or 0.0) > 600:
+        findings.append(Finding(path=MANIFEST_PATH.as_posix(), message="manifest critical path must complete within 10 minutes"))
     return findings
 
 
@@ -314,10 +437,13 @@ def validation_findings() -> list[Finding]:
     if plan.get("kind") != "agentic-workspace/validation-runtime-plan/v1":
         findings.append(Finding(path=PLAN_PATH.as_posix(), message="unexpected plan kind"))
     findings.extend(_validate_constituents(plan))
-    findings.extend(_validate_makefile(plan, MAKEFILE_PATH.read_text(encoding="utf-8")))
+    makefile_text = MAKEFILE_PATH.read_text(encoding="utf-8")
+    findings.extend(_validate_compact_label_map(plan, makefile_text))
+    findings.extend(_validate_makefile(plan, makefile_text))
     findings.extend(_validate_ci(CI_PATH.read_text(encoding="utf-8")))
     findings.extend(_validate_traces(plan))
     findings.extend(_validate_evidence(evidence))
+    findings.extend(_validate_manifest(plan, evidence))
     return findings
 
 

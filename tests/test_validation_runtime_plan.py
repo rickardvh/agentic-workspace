@@ -39,3 +39,21 @@ def test_validation_runtime_plan_rejects_duplicate_trace_execution(tmp_path: Pat
     findings = checker.validation_findings()
 
     assert any("duplicate constituent execution: sync.all" in finding.message for finding in findings)
+
+
+def test_validation_runtime_plan_rejects_missing_compact_label_map_entry(tmp_path: Path) -> None:
+    checker = _load_checker()
+    plan = json.loads(checker.PLAN_PATH.read_text(encoding="utf-8"))
+    evidence = json.loads(checker.EVIDENCE_PATH.read_text(encoding="utf-8"))
+    plan["compact_label_map"].pop("workspace lint")
+    plan_path = tmp_path / "validation-plan.json"
+    evidence_path = tmp_path / "runtime-evidence.json"
+    plan_path.write_text(json.dumps(plan), encoding="utf-8")
+    evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
+
+    checker.PLAN_PATH = plan_path
+    checker.EVIDENCE_PATH = evidence_path
+
+    findings = checker.validation_findings()
+
+    assert any("compact label missing from validation plan: workspace lint" in finding.message for finding in findings)

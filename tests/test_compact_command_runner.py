@@ -91,6 +91,13 @@ def test_compact_runner_success_writes_machine_readable_result(tmp_path, capsys)
     assert result["dependencies"] == ["sync.root"]
     assert result["proof_purpose"] == "workspace lint proof"
     assert result["log_path"] is None
+    manifest = json.loads((tmp_path / "scratch" / "validation-results" / "run-1" / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["kind"] == "agentic-workspace/validation-run-manifest/v1"
+    assert manifest["result_count"] == 1
+    assert manifest["outcomes"] == {"passed": 1}
+    assert manifest["results"][0]["constituent_id"] == "lint.workspace"
+    assert manifest["critical_path_seconds"] >= 0
+    assert abs(manifest["summed_work_seconds"] - manifest["critical_path_seconds"]) < 0.01
 
 
 def test_compact_runner_rejects_duplicate_constituent_in_same_run(tmp_path, capsys) -> None:
@@ -117,3 +124,53 @@ def test_compact_runner_rejects_duplicate_constituent_in_same_run(tmp_path, caps
     captured = capsys.readouterr()
     assert "[duplicate] workspace lint (lint.workspace)" in captured.err
     assert "scratch/validation-results/same-run/lint.workspace.json" in captured.err
+
+
+def test_compact_runner_uses_plan_metadata_and_keeps_repeat_attempts(tmp_path, capsys) -> None:
+    runner = _load_runner()
+    runner.REPO_ROOT = tmp_path
+    runner.LOG_ROOT = tmp_path / "scratch" / "command-logs"
+    runner.RESULT_ROOT = tmp_path / "scratch" / "validation-results"
+    runner.PLAN_PATH = tmp_path / "docs" / "maintainer" / "validation-runtime-2435" / "validation-plan.json"
+    runner.PLAN_PATH.parent.mkdir(parents=True)
+    runner.PLAN_PATH.write_text(
+        json.dumps(
+            {
+                "compact_label_map": {
+                    "workspace lint": {
+                        "id": "lint.workspace",
+                        "dependencies": ["sync.all"],
+                        "proof_purpose": "workspace lint proof from plan",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    args = [
+        "--label",
+        "workspace lint",
+        "--run-id",
+        "same-run",
+        "--allow-repeat",
+        "--",
+        sys.executable,
+        "-c",
+        "print('ok')",
+    ]
+
+    assert runner.main(args) == 0
+    assert runner.main(args) == 0
+    captured = capsys.readouterr()
+    assert "[run] workspace lint (lint.workspace)" in captured.out
+    first = json.loads((tmp_path / "scratch" / "validation-results" / "same-run" / "lint.workspace.json").read_text(encoding="utf-8"))
+    second = json.loads(
+        (tmp_path / "scratch" / "validation-results" / "same-run" / "attempts" / "lint.workspace.attempt-2.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    manifest = json.loads((tmp_path / "scratch" / "validation-results" / "same-run" / "manifest.json").read_text(encoding="utf-8"))
+    assert first["dependencies"] == ["sync.all"]
+    assert second["proof_purpose"] == "workspace lint proof from plan"
+    assert manifest["result_count"] == 2

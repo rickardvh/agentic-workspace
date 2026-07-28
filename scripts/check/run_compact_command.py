@@ -14,9 +14,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LOG_ROOT = REPO_ROOT / "scratch" / "command-logs"
 RESULT_ROOT = REPO_ROOT / "scratch" / "validation-results"
+PLAN_PATH = REPO_ROOT / "docs" / "maintainer" / "validation-runtime-2435" / "validation-plan.json"
 DEFAULT_FAILURE_TAIL_LINES = 80
 TIMEOUT_EXIT_CODE = 124
 DUPLICATE_EXIT_CODE = 125
+MANIFEST_LOCK_WAIT_SECONDS = 10.0
+MANIFEST_LOCK_POLL_SECONDS = 0.05
 
 
 def _slugify(value: str) -> str:
@@ -36,16 +39,131 @@ def _log_path(*, label: str) -> Path:
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _result_path(*, result_root: Path, run_id: str, constituent_id: str) -> Path:
     return result_root / _slugify(run_id) / f"{_slugify(constituent_id)}.json"
 
 
+def _attempt_result_path(*, result_root: Path, run_id: str, constituent_id: str) -> Path:
+    attempt_root = result_root / _slugify(run_id) / "attempts"
+    attempt_root.mkdir(parents=True, exist_ok=True)
+    attempt_index = 2
+    while True:
+        candidate = attempt_root / f"{_slugify(constituent_id)}.attempt-{attempt_index}.json"
+        if not candidate.exists():
+            return candidate
+        attempt_index += 1
+
+
+def _atomic_write_json(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    temp_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temp_path.replace(path)
+
+
+def _acquire_lock(lock_path: Path, *, wait_seconds: float = MANIFEST_LOCK_WAIT_SECONDS) -> int:
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + wait_seconds
+    while True:
+        try:
+            return os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError as exc:
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f"timed out waiting for validation result lock: {lock_path.relative_to(REPO_ROOT).as_posix()}") from exc
+            time.sleep(MANIFEST_LOCK_POLL_SECONDS)
+
+
+def _release_lock(lock_path: Path, fd: int) -> None:
+    try:
+        os.close(fd)
+    except OSError:
+        pass
+    try:
+        lock_path.unlink()
+    except OSError:
+        pass
+
+
+def _load_plan_metadata(label: str) -> dict[str, object]:
+    if not PLAN_PATH.is_file():
+        return {}
+    try:
+        plan = json.loads(PLAN_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    label_map = plan.get("compact_label_map")
+    if not isinstance(label_map, dict):
+        return {}
+    metadata = label_map.get(label)
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _record_paths_for_run(run_root: Path) -> list[Path]:
+    paths = [path for path in run_root.glob("*.json") if path.name != "manifest.json"]
+    attempts_root = run_root / "attempts"
+    if attempts_root.is_dir():
+        paths.extend(attempts_root.glob("*.json"))
+    return sorted(paths)
+
+
+def _update_manifest(*, result_root: Path, run_id: str) -> None:
+    run_root = result_root / _slugify(run_id)
+    manifest_path = run_root / "manifest.json"
+    lock_path = run_root / "manifest.lock"
+    fd = _acquire_lock(lock_path)
+    try:
+        records: list[dict[str, object]] = []
+        for path in _record_paths_for_run(run_root):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if isinstance(payload, dict) and payload.get("kind") == "agentic-workspace/validation-constituent-result/v1":
+                payload["result_path"] = path.relative_to(REPO_ROOT).as_posix()
+                records.append(payload)
+        records.sort(key=lambda item: (str(item.get("started_at", "")), str(item.get("constituent_id", ""))))
+        outcomes = {}
+        for record in records:
+            outcome = str(record.get("outcome") or "unknown")
+            outcomes[outcome] = int(outcomes.get(outcome, 0)) + 1
+        started_values: list[datetime] = []
+        ended_values: list[datetime] = []
+        summed_work_seconds = 0.0
+        for record in records:
+            summed_work_seconds += float(record.get("duration_seconds") or 0.0)
+            for field, target in (("started_at", started_values), ("ended_at", ended_values)):
+                value = record.get(field)
+                if not isinstance(value, str):
+                    continue
+                try:
+                    target.append(datetime.fromisoformat(value))
+                except ValueError:
+                    continue
+        if started_values and ended_values:
+            critical_path_seconds = max((max(ended_values) - min(started_values)).total_seconds(), 0.0)
+        else:
+            critical_path_seconds = summed_work_seconds
+        payload = {
+            "kind": "agentic-workspace/validation-run-manifest/v1",
+            "run_id": run_id,
+            "updated_at": _utc_now(),
+            "result_count": len(records),
+            "outcomes": outcomes,
+            "critical_path_seconds": round(critical_path_seconds, 6),
+            "summed_work_seconds": round(summed_work_seconds, 6),
+            "results": records,
+        }
+        _atomic_write_json(manifest_path, payload)
+    finally:
+        _release_lock(lock_path, fd)
+
+
 def _write_result(
     *,
-    result_root: Path,
+    result_path: Path,
     run_id: str,
     constituent_id: str,
     label: str,
@@ -61,8 +179,6 @@ def _write_result(
     timed_out: bool,
     log_path: Path | None,
 ) -> Path:
-    result_path = _result_path(result_root=result_root, run_id=run_id, constituent_id=constituent_id)
-    result_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "kind": "agentic-workspace/validation-constituent-result/v1",
         "constituent_id": constituent_id,
@@ -80,7 +196,7 @@ def _write_result(
         "timed_out": timed_out,
         "log_path": log_path.relative_to(REPO_ROOT).as_posix() if log_path is not None else None,
     }
-    result_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _atomic_write_json(result_path, payload)
     return result_path
 
 
@@ -222,9 +338,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     working_directory = (REPO_ROOT / args.cwd).resolve()
-    constituent_id = args.id or _slugify(args.label)
+    plan_metadata = _load_plan_metadata(str(args.label))
+    constituent_id = args.id or str(plan_metadata.get("id") or _slugify(args.label))
+    dependencies = [str(item) for item in args.depends_on] or [str(item) for item in plan_metadata.get("dependencies", [])]
+    proof_purpose = str(args.proof_purpose or plan_metadata.get("proof_purpose") or args.label)
     result_root = (REPO_ROOT / args.result_dir).resolve()
     pending_result_path = _result_path(result_root=result_root, run_id=args.run_id, constituent_id=constituent_id)
+    result_lock_path = pending_result_path.with_suffix(".lock")
+    result_lock_fd: int | None = None
     if pending_result_path.exists() and not args.allow_repeat:
         print(
             f"[duplicate] {args.label} ({constituent_id}) already has a result for run {args.run_id}: "
@@ -232,6 +353,19 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return DUPLICATE_EXIT_CODE
+    if args.allow_repeat and pending_result_path.exists():
+        result_path = _attempt_result_path(result_root=result_root, run_id=args.run_id, constituent_id=constituent_id)
+    else:
+        try:
+            result_lock_fd = _acquire_lock(result_lock_path, wait_seconds=0.0)
+        except RuntimeError:
+            print(
+                f"[duplicate] {args.label} ({constituent_id}) is already running for run {args.run_id}: "
+                f"{result_lock_path.relative_to(REPO_ROOT).as_posix()}",
+                file=sys.stderr,
+            )
+            return DUPLICATE_EXIT_CODE
+        result_path = pending_result_path
     started_at = _utc_now()
     print(f"[run] {args.label} ({constituent_id})", flush=True)
     started = time.perf_counter()
@@ -244,23 +378,28 @@ def main(argv: list[str] | None = None) -> int:
     duration = _format_duration(duration_seconds)
     ended_at = _utc_now()
     if returncode == 0:
-        _write_result(
-            result_root=result_root,
-            run_id=args.run_id,
-            constituent_id=constituent_id,
-            label=args.label,
-            command=args.command,
-            cwd=working_directory,
-            dependencies=[str(item) for item in args.depends_on],
-            proof_purpose=str(args.proof_purpose or args.label),
-            started_at=started_at,
-            ended_at=ended_at,
-            duration_seconds=duration_seconds,
-            outcome="passed",
-            exit_code=returncode,
-            timed_out=False,
-            log_path=None,
-        )
+        try:
+            _write_result(
+                result_path=result_path,
+                run_id=args.run_id,
+                constituent_id=constituent_id,
+                label=args.label,
+                command=args.command,
+                cwd=working_directory,
+                dependencies=dependencies,
+                proof_purpose=proof_purpose,
+                started_at=started_at,
+                ended_at=ended_at,
+                duration_seconds=duration_seconds,
+                outcome="passed",
+                exit_code=returncode,
+                timed_out=False,
+                log_path=None,
+            )
+            _update_manifest(result_root=result_root, run_id=args.run_id)
+        finally:
+            if result_lock_fd is not None:
+                _release_lock(result_lock_path, result_lock_fd)
         print(f"[ok] {args.label} ({duration})")
         return 0
 
@@ -273,23 +412,28 @@ def main(argv: list[str] | None = None) -> int:
             combined_output += "\n"
         combined_output += timeout_line + "\n"
     log_path.write_text(combined_output, encoding="utf-8")
-    result_path = _write_result(
-        result_root=result_root,
-        run_id=args.run_id,
-        constituent_id=constituent_id,
-        label=args.label,
-        command=args.command,
-        cwd=working_directory,
-        dependencies=[str(item) for item in args.depends_on],
-        proof_purpose=str(args.proof_purpose or args.label),
-        started_at=started_at,
-        ended_at=ended_at,
-        duration_seconds=duration_seconds,
-        outcome="timeout" if timed_out else "failed",
-        exit_code=None if timed_out else int(returncode),
-        timed_out=timed_out,
-        log_path=log_path,
-    )
+    try:
+        result_path = _write_result(
+            result_path=result_path,
+            run_id=args.run_id,
+            constituent_id=constituent_id,
+            label=args.label,
+            command=args.command,
+            cwd=working_directory,
+            dependencies=dependencies,
+            proof_purpose=proof_purpose,
+            started_at=started_at,
+            ended_at=ended_at,
+            duration_seconds=duration_seconds,
+            outcome="timeout" if timed_out else "failed",
+            exit_code=None if timed_out else int(returncode),
+            timed_out=timed_out,
+            log_path=log_path,
+        )
+        _update_manifest(result_root=result_root, run_id=args.run_id)
+    finally:
+        if result_lock_fd is not None:
+            _release_lock(result_lock_path, result_lock_fd)
 
     if timed_out:
         print(f"[timeout] {args.label} ({duration}, after {args.timeout_seconds:g}s)", file=sys.stderr)

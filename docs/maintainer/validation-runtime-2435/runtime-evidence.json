@@ -17,7 +17,8 @@
     "after_reference": {
       "ref": "PR #2436 branch agent/validation-runtime-2435",
       "tree_identity": "containing PR commit after this evidence file is committed",
-      "source": "local validation run in the PR #2436 worktree"
+      "source": "local validation run in the PR #2436 worktree",
+      "manifest": "docs/maintainer/validation-runtime-2435/check-bounded-parallel-manifest.json"
     }
   },
   "runtime_records": [
@@ -121,9 +122,50 @@
       ],
       "proof_purpose": "explicit full broad-validation command after setup deduplication and runtime observability",
       "posture": "explicit bounded parallel local Make target",
-      "duration_seconds": 484.633,
+      "duration_seconds": 466.202311,
       "outcome": "passed",
-      "source": "local `make check-bounded-parallel` measurement on PR #2436 branch"
+      "source": "local `make check-bounded-parallel` measurement on PR #2436 branch",
+      "manifest": "docs/maintainer/validation-runtime-2435/check-bounded-parallel-manifest.json"
+    }
+  ],
+  "measurement_series": [
+    {
+      "phase": "after",
+      "metric": "structured_file_inventory.full",
+      "command": "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+      "durations_seconds": [
+        10.247,
+        10.535795,
+        9.892533
+      ],
+      "outcome": "passed",
+      "source": "local repeated direct measurements on PR #2436 branch"
+    },
+    {
+      "phase": "after",
+      "metric": "structured_file_inventory.changed_path_narrow",
+      "command": "uv run python scripts/check/check_structured_file_inventory.py --changed <path> --quiet-success",
+      "durations_seconds": [
+        0.899,
+        0.763753,
+        0.755331,
+        0.759542
+      ],
+      "outcome": "passed",
+      "source": "local repeated direct measurements on PR #2436 branch"
+    },
+    {
+      "phase": "after",
+      "metric": "broad_validation.full",
+      "command": "make check-bounded-parallel",
+      "durations_seconds": [
+        486.0,
+        468.654615,
+        466.202311
+      ],
+      "outcome": "passed",
+      "source": "local exact broad-target measurements on PR #2436 branch",
+      "manifest": "docs/maintainer/validation-runtime-2435/check-bounded-parallel-manifest.json"
     }
   ],
   "critical_path_reports": [
@@ -148,23 +190,24 @@
     {
       "phase": "after",
       "command": "make check-bounded-parallel",
-      "summed_work_seconds": 918.0,
-      "critical_path_seconds": 484.633,
+      "summed_work_seconds": 835.734503,
+      "critical_path_seconds": 466.202311,
+      "manifest": "docs/maintainer/validation-runtime-2435/check-bounded-parallel-manifest.json",
       "top_contributors": [
         {
           "constituent_id": "test.workspace-cli",
-          "duration_seconds": 248.08,
+          "duration_seconds": 244.411671,
           "reason": "dominant workspace partition; run first to isolate the critical path"
         },
         {
           "constituent_id": "test.planning",
-          "duration_seconds": 121.15,
+          "duration_seconds": 113.385596,
           "reason": "package partition kept serial because its budget tests are load-sensitive"
         },
         {
-          "constituent_id": "structured-file-inventory.full",
-          "duration_seconds": 13.83,
-          "reason": "full no-prune structural gate after repair"
+          "constituent_id": "test.workspace-session-review",
+          "duration_seconds": 113.225257,
+          "reason": "largest second-phase bounded workspace partition in the final run"
         }
       ]
     }

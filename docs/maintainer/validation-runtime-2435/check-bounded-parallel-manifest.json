@@ -1,0 +1,1098 @@
+{
+  "critical_path_seconds": 466.202311,
+  "kind": "agentic-workspace/validation-run-manifest/v1",
+  "outcomes": {
+    "passed": 39
+  },
+  "result_count": 39,
+  "results": [
+    {
+      "command": [
+        "uv",
+        "sync",
+        "--all-packages",
+        "--all-groups"
+      ],
+      "constituent_id": "sync.all",
+      "cwd": ".",
+      "dependencies": [],
+      "duration_seconds": 0.035043,
+      "ended_at": "2026-07-28T19:01:28.409247+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "sync-all",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "prepare the shared root environment once for a local or CI run",
+      "result_path": "scratch/validation-results/local-20260728t190128z/sync.all.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:01:28.374163+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_cli_blackbox.py",
+        "tests/test_workspace_config_cli.py",
+        "tests/test_workspace_defaults_cli.py",
+        "tests/test_workspace_doctor_status_cli.py",
+        "tests/test_workspace_evaluation.py",
+        "tests/test_workspace_implement_cli.py",
+        "tests/test_workspace_intent_cli.py",
+        "tests/test_workspace_modules_cli.py",
+        "tests/test_operating_decision.py",
+        "tests/test_workspace_ownership_cli.py",
+        "tests/test_workspace_planning_help_cli.py",
+        "tests/test_workspace_projection_reuse.py",
+        "tests/test_workspace_runtime_projection.py",
+        "tests/test_workspace_skills_cli.py",
+        "tests/test_workspace_summary_cli.py"
+      ],
+      "constituent_id": "test.workspace-cli",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 244.411671,
+      "ended_at": "2026-07-28T19:05:33.006967+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace CLI tests",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "workspace CLI behavior partition",
+      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-cli.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:01:28.600334+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "8",
+        "tests/test_generated_command_package_proof_runner.py",
+        "tests/test_proof_subject.py",
+        "tests/test_workspace_proof_cli.py",
+        "tests/test_workspace_proof_generated_packages_cli.py"
+      ],
+      "constituent_id": "test.workspace-proof",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 107.604209,
+      "ended_at": "2026-07-28T19:07:20.797162+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace proof tests",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "proof-router and generated proof-package behavior partition",
+      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-proof.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:05:33.195138+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_chatgpt_review_loop.py",
+        "tests/test_codex_session_identity_agent_aid.py",
+        "tests/test_github_check_inspection.py",
+        "tests/test_pr_comment_delta.py",
+        "tests/test_start_chatgpt_review_poller.py",
+        "tests/test_workspace_session_logging.py"
+      ],
+      "constituent_id": "test.workspace-session-review",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 113.225257,
+      "ended_at": "2026-07-28T19:07:26.423527+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace session and review tests",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "session logging and review-loop behavior partition",
+      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-session-review.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:05:33.200568+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_agent_aids.py",
+        "tests/test_command_surface_bundle_check.py",
+        "tests/test_contract_tooling_surfaces.py",
+        "tests/test_github_issue_body_agent_aid.py",
+        "tests/test_no_absolute_paths.py",
+        "tests/test_package_artifact_duplicates.py",
+        "tests/test_prompt_semantic_markers.py",
+        "tests/test_schema_reference_docs.py",
+        "tests/test_structured_file_inventory.py",
+        "tests/test_validation_runtime_plan.py",
+        "tests/test_workspace_makefile_targets.py"
+      ],
+      "constituent_id": "test.workspace-contracts",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 46.408023,
+      "ended_at": "2026-07-28T19:06:19.613163+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace contract tests",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "contract, schema, inventory, and guardrail behavior partition",
+      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-contracts.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:05:33.206062+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_command_generation_integration.py",
+        "tests/test_command_generation_release_promotion.py",
+        "tests/test_coordinated_release.py",
+        "tests/test_generated_tool_conformance.py",
+        "tests/test_release_recovery_status.py",
+        "tests/test_release_workflows.py",
+        "tests/test_workspace_packaging.py"
+      ],
+      "constituent_id": "test.workspace-generated-release",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 96.893484,
+      "ended_at": "2026-07-28T19:07:10.115985+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace generated and release tests",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "generated-command and release workflow behavior partition",
+      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-generated-release.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:05:33.224453+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_agentic_workspace_launcher.py",
+        "tests/test_compact_command_runner.py",
+        "tests/test_completion_cost_json_corpus.py",
+        "tests/test_completion_cost_lane_evidence.py",
+        "tests/test_completion_cost_live_behavior_proof.py",
+        "tests/test_completion_cost_schema_analysis.py",
+        "tests/test_external_agent_evaluation_lane.py",
+        "tests/test_external_consumer_profile.py",
+        "tests/test_external_integration_boundary.py",
+        "tests/test_external_operation_clients.py",
+        "tests/test_git_hooks.py",
+        "tests/test_lazy_discovery_measurements.py",
+        "tests/test_lifecycle_smoke.py",
+        "tests/test_long_horizon_episode.py",
+        "tests/test_maintainer_surfaces.py",
+        "tests/test_repository_scanning.py",
+        "tests/test_source_payload_operational_install.py"
+      ],
+      "constituent_id": "test.workspace-integration",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 63.455354,
+      "ended_at": "2026-07-28T19:07:24.456770+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace integration tests",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "external, lifecycle, launcher, and cost behavior partition",
+      "result_path": "scratch/validation-results/local-20260728t190128z/test.workspace-integration.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:06:21.002674+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "8"
+      ],
+      "constituent_id": "test.memory",
+      "cwd": "packages/memory",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 10.418758,
+      "ended_at": "2026-07-28T19:07:20.748751+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "memory tests",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Memory package behavior tests",
+      "result_path": "scratch/validation-results/local-20260728t190128z/test.memory.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:10.330132+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest"
+      ],
+      "constituent_id": "test.planning",
+      "cwd": "packages/planning",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 113.385596,
+      "ended_at": "2026-07-28T19:09:14.576474+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "planning tests",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Planning package behavior tests",
+      "result_path": "scratch/validation-results/local-20260728t190128z/test.planning.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:21.193146+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "8"
+      ],
+      "constituent_id": "test.verification",
+      "cwd": "packages/verification",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 8.682652,
+      "ended_at": "2026-07-28T19:07:29.887401+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "verification tests",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Verification package behavior tests",
+      "result_path": "scratch/validation-results/local-20260728t190128z/test.verification.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:21.204877+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "src",
+        "tests"
+      ],
+      "constituent_id": "lint.workspace",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.062232,
+      "ended_at": "2026-07-28T19:07:24.733939+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace lint",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "workspace lint checks",
+      "result_path": "scratch/validation-results/local-20260728t190128z/lint.workspace.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:24.671656+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_prompt_semantic_markers.py"
+      ],
+      "constituent_id": "lint.prompt-semantic-markers",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 2.056471,
+      "ended_at": "2026-07-28T19:07:26.996000+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "prompt semantic markers",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "prompt semantic marker lint checks",
+      "result_path": "scratch/validation-results/local-20260728t190128z/lint.prompt-semantic-markers.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:24.939518+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "."
+      ],
+      "constituent_id": "lint.memory",
+      "cwd": "packages/memory",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.057794,
+      "ended_at": "2026-07-28T19:07:26.681734+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "memory lint",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Memory package lint checks",
+      "result_path": "scratch/validation-results/local-20260728t190128z/lint.memory.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:26.623888+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pymarkdown",
+        "-d",
+        "md013,md024",
+        "scan",
+        "AGENTS.md",
+        "README.md",
+        "bootstrap",
+        "skills"
+      ],
+      "constituent_id": "lint.memory-markdown",
+      "cwd": "packages/memory",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.661301,
+      "ended_at": "2026-07-28T19:07:27.500202+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "memory markdownlint",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Memory package Markdown lint checks",
+      "result_path": "scratch/validation-results/local-20260728t190128z/lint.memory-markdown.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:26.838864+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "."
+      ],
+      "constituent_id": "lint.planning",
+      "cwd": "packages/planning",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.064826,
+      "ended_at": "2026-07-28T19:07:27.214440+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "planning lint",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Planning package lint checks",
+      "result_path": "scratch/validation-results/local-20260728t190128z/lint.planning.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:27.149560+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "."
+      ],
+      "constituent_id": "lint.verification",
+      "cwd": "packages/verification",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.060347,
+      "ended_at": "2026-07-28T19:07:27.452887+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "verification lint",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Verification package lint checks",
+      "result_path": "scratch/validation-results/local-20260728t190128z/lint.verification.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:27.392485+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ty",
+        "check",
+        "src"
+      ],
+      "constituent_id": "typecheck.workspace",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 1.959848,
+      "ended_at": "2026-07-28T19:07:29.560642+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace typecheck",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "workspace type checks",
+      "result_path": "scratch/validation-results/local-20260728t190128z/typecheck.workspace.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:27.600783+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ty",
+        "check",
+        "src"
+      ],
+      "constituent_id": "typecheck.memory",
+      "cwd": "packages/memory",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.279677,
+      "ended_at": "2026-07-28T19:07:27.943234+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "memory typecheck",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Memory package type checks",
+      "result_path": "scratch/validation-results/local-20260728t190128z/typecheck.memory.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:27.663510+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ty",
+        "check",
+        "src"
+      ],
+      "constituent_id": "typecheck.planning",
+      "cwd": "packages/planning",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 1.044178,
+      "ended_at": "2026-07-28T19:07:29.197479+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "planning typecheck",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Planning package type checks",
+      "result_path": "scratch/validation-results/local-20260728t190128z/typecheck.planning.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:28.153265+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ty",
+        "check",
+        "src"
+      ],
+      "constituent_id": "typecheck.verification",
+      "cwd": "packages/verification",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.187468,
+      "ended_at": "2026-07-28T19:07:29.564765+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "verification typecheck",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Verification package type checks",
+      "result_path": "scratch/validation-results/local-20260728t190128z/typecheck.verification.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:29.377248+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "format",
+        "--check",
+        "src",
+        "tests"
+      ],
+      "constituent_id": "format-check.workspace",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.063797,
+      "ended_at": "2026-07-28T19:07:29.799104+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace format-check",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "workspace formatting check",
+      "result_path": "scratch/validation-results/local-20260728t190128z/format-check.workspace.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:29.735261+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "format",
+        "--check",
+        "."
+      ],
+      "constituent_id": "format-check.memory",
+      "cwd": "packages/memory",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.059497,
+      "ended_at": "2026-07-28T19:07:29.840130+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "memory format-check",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Memory package formatting check",
+      "result_path": "scratch/validation-results/local-20260728t190128z/format-check.memory.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:29.780580+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "format",
+        "--check",
+        "."
+      ],
+      "constituent_id": "format-check.planning",
+      "cwd": "packages/planning",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.057263,
+      "ended_at": "2026-07-28T19:07:30.005906+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "planning format-check",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Planning package formatting check",
+      "result_path": "scratch/validation-results/local-20260728t190128z/format-check.planning.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:29.948600+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "format",
+        "--check",
+        "."
+      ],
+      "constituent_id": "format-check.verification",
+      "cwd": "packages/verification",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.057597,
+      "ended_at": "2026-07-28T19:07:30.052044+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "verification format-check",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Verification package formatting check",
+      "result_path": "scratch/validation-results/local-20260728t190128z/format-check.verification.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:29.994393+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "agentic-workspace",
+        "modules",
+        "--format",
+        "json"
+      ],
+      "constituent_id": "verify.workspace",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.517344,
+      "ended_at": "2026-07-28T19:07:30.602891+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace verify",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "workspace CLI module verification",
+      "result_path": "scratch/validation-results/local-20260728t190128z/verify.workspace.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:30.085511+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "agentic-memory",
+        "verify-payload",
+        "--target",
+        "."
+      ],
+      "constituent_id": "verify.memory",
+      "cwd": "packages/memory",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.227234,
+      "ended_at": "2026-07-28T19:07:30.401350+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "memory verify-payload",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Memory package payload verification",
+      "result_path": "scratch/validation-results/local-20260728t190128z/verify.memory.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:30.174060+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "agentic-planning",
+        "verify-payload"
+      ],
+      "constituent_id": "verify.planning",
+      "cwd": "packages/planning",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.297343,
+      "ended_at": "2026-07-28T19:07:30.513301+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "planning verify-payload",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Planning package payload verification",
+      "result_path": "scratch/validation-results/local-20260728t190128z/verify.planning.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:30.215912+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "agentic-verification",
+        "report",
+        "--target",
+        ".",
+        "--format",
+        "json"
+      ],
+      "constituent_id": "verify.verification",
+      "cwd": "packages/verification",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.204789,
+      "ended_at": "2026-07-28T19:07:30.779280+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "verification report",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "Verification package report verification",
+      "result_path": "scratch/validation-results/local-20260728t190128z/verify.verification.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:30.574442+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "agentic-workspace",
+        "report",
+        "--target",
+        ".",
+        "--format",
+        "json"
+      ],
+      "constituent_id": "memory-freshness.strict",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 1.580612,
+      "ended_at": "2026-07-28T19:07:32.255799+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "memory report",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "root Memory report freshness gate",
+      "result_path": "scratch/validation-results/local-20260728t190128z/memory-freshness.strict.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:30.675170+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/render_agent_docs.py"
+      ],
+      "constituent_id": "render-agent-docs",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.107279,
+      "ended_at": "2026-07-28T19:07:30.876146+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "render agent docs",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "regenerate root planning documentation from the managed manifest",
+      "result_path": "scratch/validation-results/local-20260728t190128z/render-agent-docs.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:30.768819+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/generate/generate_schema_reference.py",
+        "--check",
+        "--check-annotations"
+      ],
+      "constituent_id": "schema-reference-docs",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.204916,
+      "ended_at": "2026-07-28T19:07:31.153130+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "schema reference docs",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "check generated JSON Schema reference documentation and annotations",
+      "result_path": "scratch/validation-results/local-20260728t190128z/schema-reference-docs.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:30.948165+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_planning_surfaces.py"
+      ],
+      "constituent_id": "planning-surfaces",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 1.764415,
+      "ended_at": "2026-07-28T19:07:32.816406+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "planning surfaces",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "root Planning generated surface freshness gate",
+      "result_path": "scratch/validation-results/local-20260728t190128z/planning-surfaces.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:31.051975+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_source_payload_operational_install.py"
+      ],
+      "constituent_id": "source-payload-boundary",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.357235,
+      "ended_at": "2026-07-28T19:07:31.686386+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "source-payload boundary",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "source, payload, and root-install boundary check",
+      "result_path": "scratch/validation-results/local-20260728t190128z/source-payload-boundary.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:31.329111+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_validation_runtime_plan.py"
+      ],
+      "constituent_id": "validation-runtime.plan",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.14867,
+      "ended_at": "2026-07-28T19:07:32.017031+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "validation runtime plan",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "validation graph, trace, CI/local drift, duplicate, and runtime evidence contract",
+      "result_path": "scratch/validation-results/local-20260728t190128z/validation-runtime.plan.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:31.868313+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_structured_file_inventory.py"
+      ],
+      "constituent_id": "structured-file-inventory.full",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 13.855552,
+      "ended_at": "2026-07-28T19:07:46.056500+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "structured file inventory",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "complete structured-file inventory no-prune audit",
+      "result_path": "scratch/validation-results/local-20260728t190128z/structured-file-inventory.full.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:32.201172+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_package_artifact_duplicates.py"
+      ],
+      "constituent_id": "package-artifact-duplicates",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.154396,
+      "ended_at": "2026-07-28T19:07:32.590056+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "package artifact duplicates",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "built package archive duplicate-member guardrail",
+      "result_path": "scratch/validation-results/local-20260728t190128z/package-artifact-duplicates.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:32.435612+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_agent_aids.py"
+      ],
+      "constituent_id": "agent-aids",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 0.300327,
+      "ended_at": "2026-07-28T19:07:33.085415+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "agent aid manifests",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "checked-in agent aid manifest and coverage guardrail",
+      "result_path": "scratch/validation-results/local-20260728t190128z/agent-aids.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:32.785043+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_no_absolute_paths.py"
+      ],
+      "constituent_id": "absolute-paths",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 1.489426,
+      "ended_at": "2026-07-28T19:07:34.480719+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "absolute paths",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "tracked-file absolute filesystem path guardrail",
+      "result_path": "scratch/validation-results/local-20260728t190128z/absolute-paths.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:32.991275+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_maintainer_surfaces.py"
+      ],
+      "constituent_id": "maintainer-surfaces",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all",
+        "render-agent-docs",
+        "schema-reference-docs",
+        "planning-surfaces",
+        "source-payload-boundary",
+        "verify.memory",
+        "verify.planning"
+      ],
+      "duration_seconds": 3.332622,
+      "ended_at": "2026-07-28T19:07:36.596734+00:00",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "maintainer surfaces",
+      "log_path": null,
+      "outcome": "passed",
+      "proof_purpose": "maintainer generated/doc/source-payload surfaces remain fresh",
+      "result_path": "scratch/validation-results/local-20260728t190128z/maintainer-surfaces.json",
+      "run_id": "local-20260728T190128Z",
+      "started_at": "2026-07-28T19:07:33.264120+00:00",
+      "timed_out": false
+    }
+  ],
+  "run_id": "local-20260728T190128Z",
+  "summed_work_seconds": 835.734503,
+  "updated_at": "2026-07-28T19:09:14.646500+00:00"
+}
