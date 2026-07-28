@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from agentic_workspace.config import WorkspaceConfig
+from agentic_workspace.operation_owner_packet_contract import owner_decision_packet
 from agentic_workspace.workspace_runtime_core import (
     _active_plan_delegation_requirement,
     _active_plan_parent_decomposition_requirement,
@@ -2288,3 +2289,99 @@ def _active_planning_record(*, module_reports: list[dict[str, Any]]) -> dict[str
     if not isinstance(planning_record, dict) or planning_record.get("status") != "present":
         return None
     return planning_record
+
+
+def composed_planning_task_switch_packet(payload: dict[str, Any]) -> dict[str, Any]:
+    return owner_decision_packet(
+        kind="agentic-workspace/planning-task-switch-admission/v1",
+        producer_module=__name__,
+        owner="planning",
+        status="admitted",
+        admitted=True,
+        source=".agentic-workspace/local/planning/task-switch.json",
+        typed_action="reconcile",
+        effect_scope="new-task-only",
+        stable_reason="active-owner-preserved",
+        proof_claim_boundary="no-active-owner-completion-claim",
+        next_transition="acknowledge-task-switch",
+        terminal_state="continue",
+        operation_id="planning.task-switch.reconcile",
+        producer_observation={"kind": "agentic-workspace/planning-task-switch-observation/v1", "payload": payload},
+    )
+
+
+def composed_planning_continuation_packet(payload: dict[str, Any]) -> dict[str, Any]:
+    return owner_decision_packet(
+        kind="agentic-workspace/planning-continuation-admission/v1",
+        producer_module=__name__,
+        owner="planning",
+        status="admitted",
+        admitted=True,
+        source=".agentic-workspace/local/continuation/compacted.json",
+        typed_action="continue",
+        effect_scope="continuation-state-only",
+        stable_reason="continuation-revision-current",
+        proof_claim_boundary="continuation-proof-before-claim",
+        next_transition="resume-after-compaction",
+        terminal_state="continue",
+        operation_id="planning.continuation.resume",
+        producer_observation={"kind": "agentic-workspace/planning-continuation-observation/v1", "payload": payload},
+    )
+
+
+def composed_planning_closeout_boundary_packet(closeout: dict[str, Any]) -> dict[str, Any]:
+    return owner_decision_packet(
+        kind="agentic-workspace/planning-closeout-boundary/v1",
+        producer_module=__name__,
+        owner="planning",
+        status="rejected",
+        admitted=False,
+        source="report.closeout_trust",
+        typed_action="continue",
+        effect_scope="claim-boundary-only",
+        stable_reason="acceptance-incomplete",
+        proof_claim_boundary="partial-claim-only",
+        next_transition="continue-unresolved-work",
+        terminal_state="partial",
+        operation_id="planning.closeout.admit",
+        producer_observation={"kind": "agentic-workspace/planning-closeout-observation/v1", "closeout": closeout},
+    )
+
+
+def composed_planning_closeout_current_packet() -> dict[str, Any]:
+    return owner_decision_packet(
+        kind="agentic-workspace/planning-closeout-boundary/v1",
+        producer_module=__name__,
+        owner="planning",
+        status="admitted",
+        admitted=True,
+        source="report.closeout_trust",
+        typed_action="continue",
+        effect_scope="claim-boundary-only",
+        stable_reason="acceptance-current-after-repair",
+        proof_claim_boundary="proof-before-completion-claim",
+        next_transition="continue-safe-route",
+        terminal_state="continue",
+        operation_id="planning.closeout.admit",
+        producer_observation={"kind": "agentic-workspace/planning-closeout-observation/v1", "status": "repaired"},
+    )
+
+
+def composed_planning_owner_state_packet(*, source: str, plan: dict[str, Any], continuation: dict[str, Any]) -> dict[str, Any]:
+    completed = plan.get("status") == "completed"
+    return owner_decision_packet(
+        kind="agentic-workspace/planning-owner-state/v1",
+        producer_module=__name__,
+        owner="planning",
+        status="admitted",
+        admitted=True,
+        source=source,
+        typed_action="route-residue" if completed else "continue",
+        effect_scope="residue-record-only" if completed else "selected-owner-only",
+        stable_reason="completed-owner-current" if completed else "owner-revision-current",
+        proof_claim_boundary="partial-claim-only" if completed else "owner-proof-before-completion",
+        next_transition="open-residue-owner" if completed else "resume-current-slice",
+        terminal_state="partial" if completed else "continue",
+        operation_id="planning.owner-state.admit",
+        producer_observation={"kind": "agentic-workspace/planning-owner-state-observation/v1", "plan": plan, "continuation": continuation},
+    )

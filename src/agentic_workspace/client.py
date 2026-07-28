@@ -12,6 +12,8 @@ from typing import Any, Mapping, Sequence, cast
 
 from jsonschema import Draft202012Validator
 
+from agentic_workspace.operation_owner_packet_contract import owner_decision_packet
+
 FAILURE_KINDS = {"absent", "disabled", "incompatible", "unsupported", "rejected", "failed", "malformed", "invocation-unavailable"}
 
 
@@ -151,6 +153,98 @@ def negotiate_requirements(
         else:
             results.append({"operation": operation_id, "status": "compatible", "reason": "requirement satisfied"})
     return {"compatible": all(item["status"] == "compatible" for item in results), "requirements": results}
+
+
+def composed_generated_target_capability_packet(capability: dict[str, Any]) -> dict[str, Any]:
+    operation = str(capability.get("operation") or "implement.context")
+    negotiation = negotiate_requirements({operation: "sha256:unsupported"})
+    return owner_decision_packet(
+        kind="agentic-workspace/generated-target-capability-admission/v1",
+        producer_module=__name__,
+        owner="generated-target",
+        status="rejected",
+        admitted=False,
+        source=".agentic-workspace/local/adapters/capability.json",
+        typed_action="recover",
+        effect_scope="adapter-capability-only",
+        stable_reason="adapter-capability-rejected",
+        proof_claim_boundary="no-completion-claim",
+        next_transition="select-compatible-adapter",
+        terminal_state="blocked",
+        operation_id=operation,
+        producer_observation={
+            "kind": "agentic-workspace/generated-target-capability-observation/v1",
+            "capability": capability,
+            "negotiation": negotiation,
+        },
+    )
+
+
+def composed_generated_target_projection_packet(projection: dict[str, Any]) -> dict[str, Any]:
+    negotiation = negotiate_requirements({"start.context": "sha256:drifted"})
+    return owner_decision_packet(
+        kind="agentic-workspace/generated-target-projection-admission/v1",
+        producer_module=__name__,
+        owner="generated-target",
+        status="rejected",
+        admitted=False,
+        source="generated/.agentic-workspace-cli-fingerprint.json",
+        typed_action="recover",
+        effect_scope="generated-target-only",
+        stable_reason="projection-drift-rejected",
+        proof_claim_boundary="no-completion-claim",
+        next_transition="regenerate-projection",
+        terminal_state="blocked",
+        operation_id="generated.projection.admit",
+        producer_observation={
+            "kind": "agentic-workspace/generated-projection-observation/v1",
+            "projection": projection,
+            "negotiation": negotiation,
+        },
+    )
+
+
+def composed_generated_target_capability_current_packet(operation: str) -> dict[str, Any]:
+    negotiation = negotiate_requirements({"implement.context": None})
+    return owner_decision_packet(
+        kind="agentic-workspace/generated-target-capability-admission/v1",
+        producer_module=__name__,
+        owner="generated-target",
+        status="admitted",
+        admitted=True,
+        source=".agentic-workspace/local/adapters/capability.json",
+        typed_action="recover",
+        effect_scope="adapter-capability-only",
+        stable_reason="adapter-capability-current",
+        proof_claim_boundary="proof-before-completion-claim",
+        next_transition="continue-safe-route",
+        terminal_state="continue",
+        operation_id=operation,
+        producer_observation={
+            "kind": "agentic-workspace/generated-target-capability-observation/v1",
+            "status": "current",
+            "negotiation": negotiation,
+        },
+    )
+
+
+def composed_generated_target_projection_current_packet() -> dict[str, Any]:
+    return owner_decision_packet(
+        kind="agentic-workspace/generated-target-projection-admission/v1",
+        producer_module=__name__,
+        owner="generated-target",
+        status="admitted",
+        admitted=True,
+        source="generated/.agentic-workspace-cli-fingerprint.json",
+        typed_action="recover",
+        effect_scope="generated-target-only",
+        stable_reason="projection-current",
+        proof_claim_boundary="proof-before-completion-claim",
+        next_transition="continue-safe-route",
+        terminal_state="continue",
+        operation_id="generated.projection.admit",
+        producer_observation={"kind": "agentic-workspace/generated-projection-observation/v1", "status": "current"},
+    )
 
 
 def detect_workspace(target: str | Path) -> dict[str, Any]:

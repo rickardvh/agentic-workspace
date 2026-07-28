@@ -80,9 +80,12 @@ def test_composed_operation_contract_is_not_derived_from_parallel_oracle() -> No
     assert "def admission_packet(" not in (
         Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "operation_authority_admissions.py"
     ).read_text(encoding="utf-8")
-    assert "_write_and_repair" not in (
-        Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "operation_authority_admissions.py"
-    ).read_text(encoding="utf-8")
+    admission_source = (Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "operation_authority_admissions.py").read_text(
+        encoding="utf-8"
+    )
+    assert "_write_and_repair" not in admission_source
+    assert "operation_owner_repairs" not in admission_source
+    assert "def _normalize_owner_decision_packet(owner_packet: dict[str, Any])" in admission_source
     assert "agentic_workspace.operation_authority_admissions" in producer_source
     assert "producer_observation" in (
         Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "operation_authority_admissions.py"

@@ -16,6 +16,7 @@ from typing import Any, cast
 from agentic_workspace.authority_envelope import authority_envelope_payload, mutation_baseline_payload_cache_scope
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
+from agentic_workspace.operation_owner_packet_contract import owner_decision_packet
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -2255,3 +2256,41 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if isinstance(plan_delegation, dict) and plan_delegation.get("status") == "unavailable":
             tiny_context.pop("plan_delegation_packet", None)
     return projected
+
+
+def composed_external_intent_packet(payload: dict[str, Any]) -> dict[str, Any]:
+    return owner_decision_packet(
+        kind="agentic-workspace/external-intent-admission/v1",
+        producer_module=__name__,
+        owner="issue-scope",
+        status="admitted",
+        admitted=True,
+        source=".agentic-workspace/local/external-intent/issue-2300.json",
+        typed_action="implement",
+        effect_scope="issue-bounded-paths",
+        stable_reason="clean-baseline",
+        proof_claim_boundary="proof-before-completion-claim",
+        next_transition="run-focused-proof",
+        terminal_state="continue",
+        operation_id="external-intent.admit",
+        producer_observation={"kind": "agentic-workspace/external-intent-observation/v1", "payload": payload},
+    )
+
+
+def composed_planning_direct_work_route_packet(gate: dict[str, Any]) -> dict[str, Any]:
+    return owner_decision_packet(
+        kind="agentic-workspace/planning-route-decision/v1",
+        producer_module=__name__,
+        owner="direct-work",
+        status="admitted",
+        admitted=True,
+        source="implement.context.planning_safety_gate",
+        typed_action="implement",
+        effect_scope="changed-paths-only",
+        stable_reason="clean-baseline",
+        proof_claim_boundary="proof-before-completion-claim",
+        next_transition="run-focused-proof",
+        terminal_state="continue",
+        operation_id="planning.route-decision.admit",
+        producer_observation={"kind": "agentic-workspace/planning-route-gate-observation/v1", "planning_gate": gate},
+    )

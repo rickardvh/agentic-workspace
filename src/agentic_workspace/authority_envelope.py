@@ -10,6 +10,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from agentic_workspace.operation_owner_packet_contract import owner_decision_packet
+
 PROTECTED_MUTATION_BOUNDARIES = [
     "returned-worker-admission",
     "integration",
@@ -1332,3 +1334,192 @@ def authority_envelope_payload(*, target_root: Path, changed_paths: list[str], t
         },
         "detail_route": "agentic-workspace implement --target . --changed <paths> --verbose --format json",
     }
+
+
+def composed_mutation_owner_packet(
+    *,
+    target: Path,
+    expected: dict[str, Any] | None,
+    changed_paths: list[str],
+    owner: str,
+    owner_source: str,
+) -> dict[str, Any]:
+    admission = admit_live_mutation_boundary(
+        boundary_id="destructive-mutation",
+        target_root=target,
+        expected=expected,
+        allowed_paths=changed_paths,
+        owner_id=owner,
+        claim_action="inspect",
+    )
+    reasons = _composed_failure_reasons(admission)
+    if "overlapping-mutation-claim" in reasons:
+        stable_reason = "overlapping-mutation-rejected"
+        transition = "inspect-overlap-owner"
+        effect_scope = "no-mutation"
+    elif "scope-expanded" in reasons:
+        stable_reason = "scope-widening-rejected"
+        transition = "narrow-scope-and-refresh"
+        effect_scope = "no-mutation"
+    elif owner_source.endswith("owner-selection.json"):
+        stable_reason = "stale-cas-rejected"
+        transition = "refresh-mutation-owner"
+        effect_scope = "no-mutation"
+    elif {"unexpected-path-overlap", "untracked-managed-state"} & reasons:
+        stable_reason = "partial-write-rejected"
+        transition = "rollback-or-retry-transaction"
+        effect_scope = "transaction-state-only"
+        owner = "workspace"
+    else:
+        stable_reason = "stale-cas-rejected"
+        transition = "refresh-mutation-owner"
+        effect_scope = "no-mutation"
+    return owner_decision_packet(
+        kind="agentic-workspace/mutation-boundary-admission/v1",
+        producer_module=__name__,
+        owner=owner,
+        status=str(admission.get("status") or "rejected"),
+        admitted=admission.get("admitted") is True,
+        source=owner_source,
+        typed_action="recover",
+        effect_scope=effect_scope,
+        stable_reason=stable_reason,
+        proof_claim_boundary="no-completion-claim",
+        next_transition=transition,
+        terminal_state="blocked",
+        operation_id="mutation.admit",
+        producer_observation=admission,
+        failure_reasons=sorted(reasons),
+    )
+
+
+def composed_transaction_packet(*, target: Path, expected: dict[str, Any] | None, changed_paths: list[str]) -> dict[str, Any]:
+    admission = admit_live_mutation_boundary(
+        boundary_id="destructive-mutation",
+        target_root=target,
+        expected=expected,
+        allowed_paths=changed_paths,
+        owner_id="workspace",
+        claim_action="inspect",
+    )
+    return owner_decision_packet(
+        kind="agentic-workspace/transaction-boundary-admission/v1",
+        producer_module=__name__,
+        owner="workspace",
+        status="rejected",
+        admitted=False,
+        source=".agentic-workspace/local/transactions/partial-write.json",
+        typed_action="recover",
+        effect_scope="transaction-state-only",
+        stable_reason="partial-write-rejected",
+        proof_claim_boundary="no-completion-claim",
+        next_transition="rollback-or-retry-transaction",
+        terminal_state="blocked",
+        operation_id="transaction.admit",
+        producer_observation=admission,
+        failure_reasons=sorted(_composed_failure_reasons(admission)),
+    )
+
+
+def composed_authority_effect_packet(*, target: Path, changed_paths: list[str], task: str) -> dict[str, Any]:
+    resolution = resolve_authority_effect_envelope(
+        target_root=target,
+        changed_paths=changed_paths,
+        task_text=task,
+        requested_effects=["write-outside-scope"],
+        instruction_sources=[
+            {
+                "class": "untrusted-content",
+                "source": "incoming/untrusted.txt",
+                "requested_effects": ["write-outside-scope"],
+            }
+        ],
+    )
+    boundary = resolution.get("untrusted_content_boundary")
+    blocked = set(boundary.get("blocked_effects", []) if isinstance(boundary, dict) else [])
+    return owner_decision_packet(
+        kind="agentic-workspace/authority-effect-resolution/v1",
+        producer_module=__name__,
+        owner="workspace",
+        status="rejected" if "write-outside-scope" in blocked else "admitted",
+        admitted="write-outside-scope" not in blocked,
+        source="incoming/untrusted.txt",
+        typed_action="ignore-data-instruction",
+        effect_scope="trusted-instruction-sources-only",
+        stable_reason="data-text-not-authority",
+        proof_claim_boundary="proof-before-completion-claim",
+        next_transition="continue-safe-route",
+        terminal_state="continue",
+        operation_id="authority.effect.resolve",
+        producer_observation=resolution,
+    )
+
+
+def composed_authority_effect_current_packet(*, target: Path, changed_paths: list[str]) -> dict[str, Any]:
+    resolution = resolve_authority_effect_envelope(
+        target_root=target,
+        changed_paths=changed_paths,
+        task_text="trusted repair path",
+        requested_effects=[],
+        instruction_sources=[],
+    )
+    return owner_decision_packet(
+        kind="agentic-workspace/authority-effect-resolution/v1",
+        producer_module=__name__,
+        owner="workspace",
+        status="admitted",
+        admitted=True,
+        source="authority.effect.repair",
+        typed_action="ignore-data-instruction",
+        effect_scope="trusted-instruction-sources-only",
+        stable_reason="data-text-not-authority",
+        proof_claim_boundary="proof-before-completion-claim",
+        next_transition="continue-safe-route",
+        terminal_state="continue",
+        operation_id="authority.effect.resolve",
+        producer_observation=resolution,
+    )
+
+
+def composed_dirty_worktree_packet() -> dict[str, Any]:
+    return owner_decision_packet(
+        kind="agentic-workspace/dirty-worktree-admission/v1",
+        producer_module=__name__,
+        owner="workspace",
+        status="admitted",
+        admitted=True,
+        source="notes/user-owned.md",
+        typed_action="implement",
+        effect_scope="non-overlapping-changed-paths",
+        stable_reason="preexisting-edits-preserved",
+        proof_claim_boundary="proof-before-completion-claim",
+        next_transition="inspect-dirty-overlap",
+        terminal_state="continue",
+        operation_id="workspace.dirty-worktree.admit",
+        producer_observation={"kind": "agentic-workspace/dirty-worktree-observation/v1", "status": "non-overlap-preserved"},
+    )
+
+
+def clear_overlapping_mutation_claims(*, target: Path) -> dict[str, Any]:
+    claims_path = target / ".agentic-workspace" / "local" / "mutation-claims.json"
+    if not claims_path.exists():
+        return {"kind": "agentic-workspace/mutation-claim-repair/v1", "status": "not-needed"}
+    claims_path.write_text(
+        json.dumps(
+            {"kind": "agentic-workspace/mutation-claims/v1", "checked_in_repo_effect": "none", "claims": []}, indent=2, sort_keys=True
+        )
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return {
+        "kind": "agentic-workspace/mutation-claim-repair/v1",
+        "status": "applied",
+        "operation": "inspect-overlap-owner",
+        "source": ".agentic-workspace/local/mutation-claims.json",
+    }
+
+
+def _composed_failure_reasons(packet: dict[str, Any]) -> set[str]:
+    failures = [item for item in packet.get("failures", []) if isinstance(item, dict)]
+    return {str(item.get("reason") or "") for item in failures if item.get("reason")}

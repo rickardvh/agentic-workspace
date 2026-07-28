@@ -6,6 +6,8 @@ import re
 from datetime import datetime
 from typing import Any
 
+from agentic_workspace.operation_owner_packet_contract import owner_decision_packet
+
 _UNRESOLVED_TEMPLATE = re.compile(r"<[^<>\r\n]+>|\{\{[^{}\r\n]+\}\}|\$\{[^{}\r\n]+\}")
 _RESULT_ALIASES = {
     "passed": "passed",
@@ -107,3 +109,25 @@ def proof_receipt_admission(receipt: dict[str, Any]) -> dict[str, Any]:
         "safe_recovery": "none" if admitted else failures[0]["recovery"],
         "rule": "Only admitted receipts may be persisted, selected, or counted as trusted proof state.",
     }
+
+
+def composed_proof_receipt_packet(*, receipt: dict[str, Any], source: str) -> dict[str, Any]:
+    admission = proof_receipt_admission(receipt)
+    stale = admission.get("admitted") is False
+    return owner_decision_packet(
+        kind="agentic-workspace/proof-receipt-admission/v1",
+        producer_module=__name__,
+        owner="verification",
+        status=str(admission.get("status") or "rejected"),
+        admitted=admission.get("admitted") is True and admission.get("proof_sufficient") is True,
+        source=source,
+        typed_action="run-proof",
+        effect_scope="proof-selection-only",
+        stable_reason="stale-proof-rejected" if stale else "proof-current",
+        proof_claim_boundary="fresh-proof-required",
+        next_transition="rerun-selected-proof",
+        terminal_state="continue",
+        operation_id="proof.receipt.admit",
+        producer_observation=admission,
+        current_receipt=receipt,
+    )
