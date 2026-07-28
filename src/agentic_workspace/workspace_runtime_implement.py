@@ -13,22 +13,12 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
-from agentic_workspace.assignment_lifecycle import composed_delegated_return_packet
 from agentic_workspace.authority_envelope import (
     authority_envelope_payload,
-    composed_authority_effect_packet,
-    composed_dirty_worktree_packet,
-    composed_mutation_owner_packet,
-    composed_transaction_packet,
-    mutation_baseline_payload,
     mutation_baseline_payload_cache_scope,
 )
-from agentic_workspace.client import composed_generated_target_capability_packet, composed_generated_target_projection_packet
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
-from agentic_workspace.external_intent import composed_external_observation_packet
-from agentic_workspace.operation_owner_packet_contract import owner_decision_packet
-from agentic_workspace.proof_receipt_admission import composed_proof_receipt_packet
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -153,21 +143,12 @@ from agentic_workspace.workspace_runtime_generated_surface import (
 from agentic_workspace.workspace_runtime_planning import (
     _active_planning_record_for_report_section,
     _planning_safety_gate_payload,
-    composed_planning_closeout_boundary_packet,
-    composed_planning_continuation_packet,
-    composed_planning_owner_state_packet,
-    composed_planning_task_switch_packet,
 )
 from agentic_workspace.workspace_runtime_proof import (
     _include_tiny_proof_narrowness,
     _proof_selection_for_changed_paths,
     _tiny_proof_obligations_payload,
     _verification_report_payload,
-)
-from agentic_workspace.workspace_runtime_startup import (
-    composed_runtime_readiness_packet,
-    composed_skill_routing_packet,
-    composed_target_identity_packet,
 )
 from agentic_workspace.workspace_selector_validation import (
     _selected_payload_for_values,
@@ -1437,14 +1418,6 @@ def _implement_payload(
             task_text=task_text,
             compact=False,
         )
-    owner_packets = _composed_operation_owner_packets(
-        target_root=target_root,
-        changed_paths=normalized_paths,
-        task_text=task_text or "",
-        planning_safety_gate=planning_safety_gate,
-    )
-    if owner_packets:
-        payload["composed_operation_owner_packets"] = owner_packets
     return payload
 
 
@@ -1868,7 +1841,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         ),
         "memory_decision_packet": _compact_memory_decision_packet(payload.get("memory_decision_packet", {})),
         "operating_loop": payload.get("operating_loop", {}),
-        "composed_operation_owner_packets": payload.get("composed_operation_owner_packets", []),
         "context": {
             "workflow_sufficiency": workflow_sufficiency,
             "adaptive_routing": _tiny_adaptive_routing_payload(
@@ -2286,178 +2258,3 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if isinstance(plan_delegation, dict) and plan_delegation.get("status") == "unavailable":
             tiny_context.pop("plan_delegation_packet", None)
     return projected
-
-
-def composed_external_intent_packet(payload: dict[str, Any]) -> dict[str, Any]:
-    return owner_decision_packet(
-        kind="agentic-workspace/external-intent-admission/v1",
-        producer_module=__name__,
-        owner="issue-scope",
-        status="admitted",
-        admitted=True,
-        source=".agentic-workspace/local/external-intent/issue-2300.json",
-        typed_action="implement",
-        effect_scope="issue-bounded-paths",
-        stable_reason="clean-baseline",
-        proof_claim_boundary="proof-before-completion-claim",
-        next_transition="run-focused-proof",
-        terminal_state="continue",
-        operation_id="external-intent.admit",
-        producer_observation={"kind": "agentic-workspace/external-intent-observation/v1", "payload": payload},
-    )
-
-
-def composed_planning_direct_work_route_packet(gate: dict[str, Any]) -> dict[str, Any]:
-    return owner_decision_packet(
-        kind="agentic-workspace/planning-route-decision/v1",
-        producer_module=__name__,
-        owner="direct-work",
-        status="admitted",
-        admitted=True,
-        source="implement.context.planning_safety_gate",
-        typed_action="implement",
-        effect_scope="changed-paths-only",
-        stable_reason="clean-baseline",
-        proof_claim_boundary="proof-before-completion-claim",
-        next_transition="run-focused-proof",
-        terminal_state="continue",
-        operation_id="planning.route-decision.admit",
-        producer_observation={"kind": "agentic-workspace/planning-route-gate-observation/v1", "planning_gate": gate},
-    )
-
-
-def _composed_operation_owner_packets(
-    *,
-    target_root: Path,
-    changed_paths: list[str],
-    task_text: str,
-    planning_safety_gate: dict[str, Any],
-) -> list[dict[str, Any]]:
-    expected = _composed_owner_receipt_baseline(target_root=target_root)
-    packets: list[dict[str, Any]] = []
-    if (target_root / ".agentic-workspace" / "local" / "planning" / "owner-selection.json").exists():
-        packets.append(
-            composed_mutation_owner_packet(
-                target=target_root,
-                expected=expected,
-                changed_paths=changed_paths,
-                owner="planning",
-                owner_source=".agentic-workspace/local/planning/owner-selection.json",
-            )
-        )
-    if (target_root / ".agentic-workspace" / "local" / "planning" / "mutation-owner.json").exists():
-        packets.append(
-            composed_mutation_owner_packet(
-                target=target_root,
-                expected=expected,
-                changed_paths=changed_paths,
-                owner="planning",
-                owner_source=".agentic-workspace/local/planning/mutation-owner.json",
-            )
-        )
-    stale_scope = _read_json_if_present(target_root / ".agentic-workspace" / "local" / "actions" / "stale-scope.json")
-    if stale_scope:
-        requested_paths = [str(path) for path in stale_scope.get("requested_paths", []) if isinstance(path, str)]
-        packets.append(
-            composed_mutation_owner_packet(
-                target=target_root,
-                expected=expected,
-                changed_paths=requested_paths or changed_paths,
-                owner="workspace",
-                owner_source=".agentic-workspace/local/actions/stale-scope.json",
-            )
-        )
-    if (target_root / ".agentic-workspace" / "local" / "transactions" / "partial-write.json").exists():
-        packets.append(composed_transaction_packet(target=target_root, expected=expected, changed_paths=changed_paths))
-    proof_receipt = _read_json_if_present(target_root / ".agentic-workspace" / "local" / "proof" / "last.json")
-    if proof_receipt:
-        if proof_receipt.get("status") == "stale":
-            proof_receipt = {
-                "kind": "agentic-workspace/proof-receipt/v1",
-                "command": "<stale proof command>",
-                "result": "passed",
-                "recorded_at": "2026-07-27T00:00:00+00:00",
-                "changed_paths": ["README.md"],
-                "source_status": "stale",
-            }
-        packets.append(composed_proof_receipt_packet(receipt=proof_receipt, source=".agentic-workspace/local/proof/last.json"))
-    if (target_root / ".agentic-workspace" / "local" / "delegation" / "returned-result.json").exists():
-        packets.append(composed_delegated_return_packet(target=target_root))
-    malformed = target_root / ".agentic-workspace" / "local" / "external-observations" / "malformed.json"
-    if malformed.exists():
-        packets.append(composed_external_observation_packet(target=target_root, observation_path=malformed))
-    capability = _read_json_if_present(target_root / ".agentic-workspace" / "local" / "adapters" / "capability.json")
-    if capability:
-        packets.append(composed_generated_target_capability_packet(capability))
-    projection = _read_json_if_present(target_root / "generated" / ".agentic-workspace-cli-fingerprint.json")
-    if projection.get("status") == "drifted":
-        packets.append(composed_generated_target_projection_packet(projection))
-    if (target_root / "incoming" / "untrusted.txt").exists():
-        packets.append(composed_authority_effect_packet(target=target_root, changed_paths=changed_paths, task=task_text))
-    runtime = _read_json_if_present(target_root / ".agentic-workspace" / "local" / "runtime" / "availability.json")
-    if runtime:
-        packets.append(composed_runtime_readiness_packet(runtime))
-    target_identity = _read_json_if_present(target_root / ".agentic-workspace" / "local" / "workspace" / "target-identity.json")
-    if target_identity.get("status") == "rebound":
-        packets.append(composed_target_identity_packet(target_identity))
-    task_switch = _read_json_if_present(target_root / ".agentic-workspace" / "local" / "planning" / "task-switch.json")
-    if task_switch.get("status") == "new-task-only":
-        packets.append(composed_planning_task_switch_packet(task_switch))
-    external_intent = _read_json_if_present(target_root / ".agentic-workspace" / "local" / "external-intent" / "issue-2300.json")
-    if external_intent.get("status") == "current":
-        packets.append(composed_external_intent_packet(external_intent))
-    continuation = _read_json_if_present(target_root / ".agentic-workspace" / "local" / "continuation" / "compacted.json")
-    if continuation.get("status") == "compacted":
-        packets.append(composed_planning_continuation_packet(continuation))
-    if (target_root / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.missing").exists():
-        packets.append(composed_skill_routing_packet())
-    if (target_root / "notes" / "user-owned.md").exists():
-        packets.append(composed_dirty_worktree_packet())
-    if (target_root / ".agentic-workspace" / "local" / "closeout" / "premature.json").exists():
-        packets.append(
-            composed_planning_closeout_boundary_packet({"completion_options": [{"id": "claim-work-complete", "allowed": False}]})
-        )
-    plan = _composed_active_plan(target_root=target_root)
-    if plan:
-        packets.append(
-            composed_planning_owner_state_packet(
-                source=str(plan.get("_source") or ".agentic-workspace/planning/execplans"),
-                plan=plan,
-                continuation={},
-            )
-        )
-    if planning_safety_gate.get("gate_result") == "direct-work-allowed":
-        packets.append(composed_planning_direct_work_route_packet(planning_safety_gate))
-    return packets
-
-
-def _composed_owner_receipt_baseline(*, target_root: Path) -> dict[str, Any] | None:
-    receipt_root = target_root / ".agentic-workspace" / "local" / "composed-operation-scenarios"
-    for receipt_path in sorted(receipt_root.glob("*.json")) if receipt_root.is_dir() else []:
-        receipt = _read_json_if_present(receipt_path)
-        baseline = receipt.get("mutation_baseline")
-        if isinstance(baseline, dict):
-            return baseline
-    return mutation_baseline_payload(target_root=target_root, changed_paths=["README.md"])
-
-
-def _composed_active_plan(*, target_root: Path) -> dict[str, Any]:
-    plans_root = target_root / ".agentic-workspace" / "planning" / "execplans"
-    if not plans_root.is_dir():
-        return {}
-    for plan_path in sorted(plans_root.glob("*.plan.json")):
-        plan = _read_json_if_present(plan_path)
-        if plan:
-            plan["_source"] = plan_path.relative_to(target_root).as_posix()
-            return plan
-    return {}
-
-
-def _read_json_if_present(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {"status": "invalid-json"}
-    return payload if isinstance(payload, dict) else {"status": "not-object"}

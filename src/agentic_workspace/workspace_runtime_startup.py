@@ -17,7 +17,6 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
-from agentic_workspace.operation_owner_packet_contract import owner_decision_packet
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -201,91 +200,6 @@ def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path,
         else "transition-required"
         if provisional
         else "current-identity-observed",
-    }
-
-
-def composed_runtime_readiness_packet(payload: dict[str, Any]) -> dict[str, Any]:
-    status = str(payload.get("status") or "")
-    unavailable = status == "unavailable"
-    restored = status == "restored"
-    return owner_decision_packet(
-        kind="agentic-workspace/runtime-readiness-admission/v1",
-        producer_module=__name__,
-        owner="workspace",
-        status="rejected" if unavailable else "admitted",
-        admitted=not unavailable,
-        source=".agentic-workspace/local/runtime/availability.json",
-        typed_action="recover" if unavailable else "start",
-        effect_scope="runtime-state-only" if unavailable else "startup-reentry-only",
-        stable_reason="runtime-incompatible" if unavailable else "runtime-restored",
-        proof_claim_boundary="no-completion-claim" if unavailable else "proof-before-completion-claim",
-        next_transition="restore-runtime" if unavailable else "restart-ordinary-route" if restored else "continue-safe-route",
-        terminal_state="blocked" if unavailable else "continue",
-        operation_id="runtime.readiness.admit",
-        producer_observation={"kind": "agentic-workspace/runtime-readiness-observation/v1", "runtime": payload},
-    )
-
-
-def composed_target_identity_packet(payload: dict[str, Any]) -> dict[str, Any]:
-    return owner_decision_packet(
-        kind="agentic-workspace/target-identity-admission/v1",
-        producer_module=__name__,
-        owner="workspace",
-        status="admitted",
-        admitted=True,
-        source=".agentic-workspace/local/workspace/target-identity.json",
-        typed_action="recover",
-        effect_scope="workspace-routing-state",
-        stable_reason="target-identity-rebound",
-        proof_claim_boundary="proof-after-recovery",
-        next_transition="refresh-startup-context",
-        terminal_state="continue",
-        operation_id="workspace.target-identity.rebind",
-        producer_observation={"kind": "agentic-workspace/target-identity-observation/v1", "payload": payload},
-    )
-
-
-def composed_skill_routing_packet(*, admitted: bool = False) -> dict[str, Any]:
-    return owner_decision_packet(
-        kind="agentic-workspace/skill-routing-admission/v1",
-        producer_module=__name__,
-        owner="workspace",
-        status="admitted" if admitted else "rejected",
-        admitted=admitted,
-        source=".agentic-workspace/skills/workspace-startup/SKILL.missing",
-        typed_action="recover",
-        effect_scope="skill-routing-only",
-        stable_reason="skill-dependency-current" if admitted else "skill-dependency-unavailable",
-        proof_claim_boundary="proof-before-completion-claim" if admitted else "no-completion-claim",
-        next_transition="continue-safe-route" if admitted else "install-or-select-supported-skill",
-        terminal_state="continue" if admitted else "blocked",
-        operation_id="workspace.skill-route.admit",
-        producer_observation={"kind": "agentic-workspace/skill-routing-observation/v1", "admitted": admitted},
-    )
-
-
-def restore_runtime_availability(*, target: Path) -> dict[str, Any]:
-    path = target / ".agentic-workspace" / "local" / "runtime" / "availability.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"status": "restored"}, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
-    return {
-        "kind": "agentic-workspace/runtime-readiness-repair/v1",
-        "status": "applied",
-        "operation": "restore-runtime",
-        "source": ".agentic-workspace/local/runtime/availability.json",
-    }
-
-
-def restore_workspace_startup_skill(*, target: Path) -> dict[str, Any]:
-    missing = target / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.missing"
-    restored = missing.with_suffix(".md")
-    if missing.exists():
-        missing.rename(restored)
-    return {
-        "kind": "agentic-workspace/skill-routing-repair/v1",
-        "status": "applied" if restored.exists() else "blocked",
-        "operation": "install-or-select-supported-skill",
-        "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
     }
 
 

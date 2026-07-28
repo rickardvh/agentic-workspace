@@ -2,31 +2,45 @@ from __future__ import annotations
 
 import copy
 import importlib.util
-import json
 import subprocess
 import tempfile
 from pathlib import Path
 
-from agentic_workspace.composed_operation_scenarios import observe_composed_operation_authority
-from agentic_workspace.workspace_runtime_implement import composed_planning_direct_work_route_packet
+from agentic_workspace.composed_operation_scenarios import (
+    ACTIVE_RELEASE_GATE_SCENARIOS,
+    observe_composed_operation_authority,
+)
 
 
-def test_composed_operation_scenario_matrix_is_release_gate_ready() -> None:
+def _checker_module():
     path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
     spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    return module
+
+
+def _ordinary_direct_implement_packet() -> dict[str, object]:
+    return {
+        "context": {"planning_safety_gate": {"gate_result": "direct-work-allowed", "implementation_allowed": True}},
+        "decision_packet": {
+            "kind": "agentic-workspace/ordinary-decision-packet/v1",
+            "surface": "implement",
+            "required_commands": [],
+            "detail_routes": {"proof_detail": "agentic-workspace proof --target . --changed <paths> --format json"},
+        },
+    }
+
+
+def test_composed_operation_scenario_matrix_is_release_gate_ready() -> None:
+    module = _checker_module()
     assert module.validate_matrix(module.load_matrix()) == []
     assert module.execute_matrix(module.load_matrix()) == []
 
 
 def test_composed_operation_scenario_contract_rejects_divergence() -> None:
-    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
-    spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = _checker_module()
     matrix = module.load_matrix()
     scenario = copy.deepcopy(matrix["scenarios"][0])
     with tempfile.TemporaryDirectory(prefix="aw-composed-negative-") as directory:
@@ -47,61 +61,34 @@ def test_composed_operation_scenario_contract_rejects_divergence() -> None:
     assert any("terminal_state mismatch" in error for error in errors)
 
 
-def test_composed_operation_contract_is_not_derived_from_parallel_oracle() -> None:
-    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
-    source = path.read_text(encoding="utf-8")
-    producer_source = (Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "composed_operation_scenarios.py").read_text(
-        encoding="utf-8"
-    )
-    assert "FIXTURE_CONTRACT_ORACLE" not in source
-    assert "def _authority(" not in source
-    assert "_fixture_admission_inputs" not in source
-    assert "owner-admission" not in source
-    assert "_from_fact" not in source
-    assert "OWNER_RESULT_NORMALIZATION" not in source
-    assert "result_type" not in source
-    assert "_record_owner_result" not in source
-    assert "_observe_owner_result" not in source
-    assert "_owner_contract_packet" not in producer_source
-    assert "contract_observation" not in producer_source
-    assert "producer_receipt" not in producer_source
-    assert "recovery_sequence" not in producer_source
-    assert "composed-operation-owner-results" not in source
-    assert "scenario_fault_ref" not in source
-    assert "_with_fault_ref" not in source
-    assert "_decision_from_mutation_admission" not in source
-    assert "_decision_from_ordinary_state" not in source
-    assert "_decision_from_route_packet" not in source
-    assert "_decision_from_runtime" not in source
-    assert "_producer_admission_packet" not in producer_source
-    assert "_ordinary_state_owner_packets" not in producer_source
-    assert "_repair_revalidation" not in producer_source
-    assert "_ordinary_route_owner_packets" not in producer_source
-    assert "_attempt_owner_boundaries(" in producer_source
-    assert 'get("composed_operation_owner_packets")' in producer_source
-    assert "uv run pytest README.md" not in producer_source
-    assert 'valid-terminal-after-repair" if transition' not in producer_source
-    assert "def admission_packet(" not in (
-        Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "operation_authority_admissions.py"
-    ).read_text(encoding="utf-8")
-    admission_source = (Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "operation_authority_admissions.py").read_text(
-        encoding="utf-8"
-    )
-    assert "_write_and_repair" not in admission_source
+def test_composed_operation_contract_is_not_derived_from_fixture_oracles() -> None:
+    repo = Path(__file__).resolve().parents[1]
+    checker_source = (repo / "scripts" / "check" / "check_composed_operation_scenarios.py").read_text(encoding="utf-8")
+    observer_source = (repo / "src" / "agentic_workspace" / "composed_operation_scenarios.py").read_text(encoding="utf-8")
+    implement_source = (repo / "src" / "agentic_workspace" / "workspace_runtime_implement.py").read_text(encoding="utf-8")
+    admission_source = (repo / "src" / "agentic_workspace" / "operation_authority_admissions.py").read_text(encoding="utf-8")
+
+    assert "FIXTURE_CONTRACT_ORACLE" not in checker_source
+    assert "owner-admission" not in checker_source
+    assert "_owner_contract_packet" not in observer_source
+    assert "contract_observation" not in observer_source
+    assert "producer_receipt" not in observer_source
+    assert "recovery_sequence" not in observer_source
+    assert "composed-operation-owner-results" not in checker_source
+    assert "scenario_fault_ref" not in checker_source
+    assert "_ordinary_route_owner_packets" not in observer_source
+    assert 'get("composed_operation_owner_packets")' not in observer_source
+    assert "_composed_operation_owner_packets" not in implement_source
+    assert '"composed_operation_owner_packets"' not in implement_source
+    assert "external-intent/issue-2300.json" not in implement_source
+    assert "<stale proof command>" not in implement_source
+    assert "def admission_packet(" not in admission_source
     assert "operation_owner_repairs" not in admission_source
     assert "def _normalize_owner_decision_packet(owner_packet: dict[str, Any])" in admission_source
-    assert "agentic_workspace.operation_authority_admissions" in producer_source
-    assert "producer_observation" in (
-        Path(__file__).resolve().parents[1] / "src" / "agentic_workspace" / "operation_authority_admissions.py"
-    ).read_text(encoding="utf-8")
 
 
 def test_composed_operation_owner_receipt_does_not_smuggle_contract_fields() -> None:
-    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
-    spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = _checker_module()
     matrix = module.load_matrix()
     scenario = copy.deepcopy(matrix["scenarios"][0])
     with tempfile.TemporaryDirectory(prefix="aw-composed-receipt-") as directory:
@@ -113,109 +100,61 @@ def test_composed_operation_owner_receipt_does_not_smuggle_contract_fields() -> 
     assert receipt["fixture"] == scenario["fixture"]
 
 
-def test_composed_operation_checker_consumes_producer_authority_packet() -> None:
-    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
-    spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+def test_composed_operation_checker_accepts_ordinary_direct_work_packet() -> None:
+    module = _checker_module()
     matrix = module.load_matrix()
     scenario = copy.deepcopy(matrix["scenarios"][0])
-    with tempfile.TemporaryDirectory(prefix="aw-composed-authority-") as directory:
-        target = Path(directory)
-        authority_packet = observe_composed_operation_authority(
-            target=target,
-            scenario_id=str(scenario["id"]),
-            active_planning=False,
-            start={},
-            implement={
-                "context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}},
-                "composed_operation_owner_packets": [composed_planning_direct_work_route_packet({"gate_result": "direct-work-allowed"})],
-            },
-            summary={},
-            closeout={},
-        )
-        observation = {"status": "observed", "authority_packet": authority_packet}
-        contract = module._derive_contract_from_authority(fault_observation=observation, packets={"implement": {}})
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id=str(scenario["id"]),
+        active_planning=False,
+        start={},
+        implement=_ordinary_direct_implement_packet(),
+        summary={},
+        closeout={},
+    )
+    observation = {"status": "observed", "authority_packet": authority_packet}
+    contract = module._derive_contract_from_authority(fault_observation=observation, packets={"implement": {}})
     for field in module.CONTRACT_FIELDS:
         if field == "semantic_parity":
             assert field not in authority_packet
         else:
             assert contract[field] == scenario[field]
-    assert authority_packet["producer_module"] == "agentic_workspace.composed_operation_scenarios"
-    owner_packet = authority_packet["owner_packet"]
-    assert owner_packet["producer_module"] == "agentic_workspace.workspace_runtime_implement"
-    assert owner_packet["normalizer_module"] == "agentic_workspace.operation_authority_admissions"
-    assert owner_packet["owner_decision_authority"]["normalizer_supplied_decision"] is False
-    assert "producer_observation" in owner_packet
-    assert owner_packet["admission"]["stable_reason"] == scenario["mutation_precondition"]
-    assert owner_packet["owner"] == scenario["owner"]
-    assert "contract_observation" not in owner_packet
-    assert "producer_receipt" not in owner_packet
-    assert not (target / ".agentic-workspace" / "local" / "composed-operation-owner-results").exists()
+    assert authority_packet["ordinary_packet_ref"]["producer_module"] == "agentic_workspace.workspace_runtime_implement"
+    assert "owner_packet" not in authority_packet
 
 
-def test_composed_operation_contract_rejects_accepted_stale_or_rejected_shortcut() -> None:
-    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
-    spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+def test_composed_operation_checker_does_not_certify_inactive_rows() -> None:
+    module = _checker_module()
     matrix = module.load_matrix()
-    scenario = copy.deepcopy(matrix["scenarios"][0])
-    with tempfile.TemporaryDirectory(prefix="aw-composed-authority-shortcut-") as directory:
-        target = Path(directory)
-        authority_packet = observe_composed_operation_authority(
-            target=target,
-            scenario_id=str(scenario["id"]),
-            active_planning=False,
-            start={},
-            implement={
-                "context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}},
-                "composed_operation_owner_packets": [composed_planning_direct_work_route_packet({"gate_result": "direct-work-allowed"})],
-            },
-            summary={},
-            closeout={},
-        )
-
-    shortcut = json.loads(json.dumps(authority_packet))
-    shortcut["decision"]["mutation_precondition"] = "stale-cas-rejected"
-    shortcut["owner_packet"]["admission"]["stable_reason"] = "stale-cas-rejected"
-    shortcut["owner_packet"]["admission"]["admitted"] = True
-    shortcut["owner_packet"]["status"] = "admitted"
-    shortcut["owner_packet"]["admitted"] = True
-    shortcut["protected_action"]["accepted"] = True
-    shortcut["repair_revalidation"] = {"status": "valid-terminal-after-repair", "stale_prior_rejected": True}
-
-    contract = module._derive_contract_from_authority(
-        fault_observation={"status": "observed", "authority_packet": shortcut},
-        packets={"implement": {"operating_loop": {"safe_claim": "blocked"}}},
+    scenarios = [scenario for scenario in matrix["scenarios"] if isinstance(scenario, dict)]
+    active = module._active_release_gate_scenarios(scenarios)
+    assert {scenario["id"] for scenario in active} == ACTIVE_RELEASE_GATE_SCENARIOS
+    assert len(active) < len(scenarios)
+    inactive_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="stale-mutation-owner",
+        active_planning=True,
+        start={},
+        implement=_ordinary_direct_implement_packet(),
+        summary={},
+        closeout={},
     )
+    assert inactive_packet == {}
 
-    assert contract == {}
 
-
-def test_composed_operation_contract_rejects_scenario_authored_owner_packet() -> None:
-    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
-    spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    with tempfile.TemporaryDirectory(prefix="aw-composed-scenario-authored-") as directory:
-        target = Path(directory)
-        authority_packet = observe_composed_operation_authority(
-            target=target,
-            scenario_id="fresh-direct-work",
-            active_planning=False,
-            start={},
-            implement={
-                "context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}},
-                "composed_operation_owner_packets": [composed_planning_direct_work_route_packet({"gate_result": "direct-work-allowed"})],
-            },
-            summary={},
-            closeout={},
-        )
-    authority_packet["owner_packet"]["producer_module"] = "agentic_workspace.composed_operation_scenarios"
+def test_composed_operation_contract_rejects_scenario_authored_ordinary_ref() -> None:
+    module = _checker_module()
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="fresh-direct-work",
+        active_planning=False,
+        start={},
+        implement=_ordinary_direct_implement_packet(),
+        summary={},
+        closeout={},
+    )
+    authority_packet["ordinary_packet_ref"]["producer_module"] = "agentic_workspace.composed_operation_scenarios"
     contract = module._derive_contract_from_authority(
         fault_observation={"status": "observed", "authority_packet": authority_packet},
         packets={"implement": {"operating_loop": {"safe_claim": "blocked"}}},
@@ -223,60 +162,16 @@ def test_composed_operation_contract_rejects_scenario_authored_owner_packet() ->
     assert contract == {}
 
 
-def test_composed_operation_contract_rejects_adapter_authored_owner_packet() -> None:
-    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
-    spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    with tempfile.TemporaryDirectory(prefix="aw-composed-adapter-authored-") as directory:
-        target = Path(directory)
-        authority_packet = observe_composed_operation_authority(
-            target=target,
-            scenario_id="fresh-direct-work",
-            active_planning=False,
-            start={},
-            implement={
-                "context": {"planning_safety_gate": {"gate_result": "direct-work-allowed"}},
-                "composed_operation_owner_packets": [composed_planning_direct_work_route_packet({"gate_result": "direct-work-allowed"})],
-            },
-            summary={},
-            closeout={},
-        )
-    authority_packet["owner_packet"]["producer_module"] = "agentic_workspace.operation_authority_admissions"
-    authority_packet["owner_packet"]["owner_decision_authority"]["normalizer_supplied_decision"] = True
-    contract = module._derive_contract_from_authority(
-        fault_observation={"status": "observed", "authority_packet": authority_packet},
-        packets={"implement": {"operating_loop": {"safe_claim": "blocked"}}},
+def test_composed_operation_contract_rejects_missing_proof_route() -> None:
+    implement = _ordinary_direct_implement_packet()
+    implement["decision_packet"]["detail_routes"] = {}
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="fresh-direct-work",
+        active_planning=False,
+        start={},
+        implement=implement,
+        summary={},
+        closeout={},
     )
-    assert contract == {}
-
-
-def test_composed_operation_contract_requires_repair_revalidation_for_rejected_paths() -> None:
-    path = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_composed_operation_scenarios.py"
-    spec = importlib.util.spec_from_file_location("composed_operation_scenarios", path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    with tempfile.TemporaryDirectory(prefix="aw-composed-repair-required-") as directory:
-        target = Path(directory)
-        subprocess.run(["git", "init", "--quiet", str(target)], check=True, capture_output=True, text=True)
-        (target / "README.md").write_text("scenario fixture\nchanged after baseline\n", encoding="utf-8")
-        module._commit_fixture_baseline(target)
-        module._run_cli("init", "--target", str(target))
-        authority_packet = observe_composed_operation_authority(
-            target=target,
-            scenario_id="stale-mutation-owner",
-            active_planning=True,
-            start={},
-            implement={},
-            summary={},
-            closeout={},
-            changed_paths=["README.md"],
-        )
-    authority_packet["repair_revalidation"] = {"status": "typed-repair-required", "stale_prior_rejected": True}
-    contract = module._derive_contract_from_authority(
-        fault_observation={"status": "observed", "authority_packet": authority_packet},
-        packets={"implement": {"operating_loop": {"safe_claim": "blocked"}}},
-    )
-    assert contract == {}
+    assert authority_packet == {}

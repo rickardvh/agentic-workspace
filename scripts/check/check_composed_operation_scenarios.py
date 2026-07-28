@@ -15,7 +15,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from agentic_workspace.authority_envelope import mutation_baseline_payload  # noqa: E402
-from agentic_workspace.composed_operation_scenarios import observe_composed_operation_authority  # noqa: E402
+from agentic_workspace.composed_operation_scenarios import (  # noqa: E402
+    ACTIVE_RELEASE_GATE_SCENARIOS,
+    observe_composed_operation_authority,
+)
 
 MATRIX_PATH = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation" / "composed-operation-scenario-matrix.json"
 REQUIRED_SCENARIOS = {
@@ -87,6 +90,13 @@ SUPPORTED_CONSUMER_OPERATIONS = {
 }
 
 
+def _active_release_gate_scenarios(scenarios: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Rows whose evidence is strong enough to certify the release gate."""
+
+    by_id = {str(scenario.get("id") or ""): scenario for scenario in scenarios}
+    return [by_id[scenario_id] for scenario_id in sorted(ACTIVE_RELEASE_GATE_SCENARIOS) if scenario_id in by_id]
+
+
 def load_matrix() -> dict[str, object]:
     return json.loads(MATRIX_PATH.read_text(encoding="utf-8"))
 
@@ -104,6 +114,9 @@ def validate_matrix(matrix: dict[str, object]) -> list[str]:
     missing = REQUIRED_SCENARIOS.difference(ids)
     if missing:
         errors.append(f"missing scenarios: {', '.join(sorted(missing))}")
+    missing_active = set(ACTIVE_RELEASE_GATE_SCENARIOS).difference(str(item) for item in ids)
+    if missing_active:
+        errors.append(f"missing active release-gate scenarios: {', '.join(sorted(missing_active))}")
     for scenario in scenarios:
         if not isinstance(scenario, dict) or not all(
             scenario.get(key) for key in ("id", "fixture", "task", "changed_paths", "fault", *CONTRACT_FIELDS)
@@ -286,7 +299,7 @@ def _prepare_scenario_fixture(*, target: Path, scenario: dict[str, object]) -> d
     elif fixture == "completed_owner":
         setup_commands += _prepare_active_plan(target, scenario_id=scenario_id, status="completed")
     if fixture == "issue_scope":
-        _write_json(target / ".agentic-workspace" / "local" / "external-intent" / "issue-2300.json", {"status": "current"})
+        _write_json(target / ".agentic-workspace" / "local" / "external-intent" / f"{scenario_id}.json", {"status": "current"})
     elif fixture == "unrelated_active_owner":
         _write_json(
             target / ".agentic-workspace" / "local" / "planning" / "task-switch.json",
@@ -725,6 +738,9 @@ def _authority_packet_is_contract_authoritative(authority_packet: dict[str, obje
         return False
     if not all(isinstance(decision.get(field), str) and decision.get(field) for field in CONTRACT_FIELDS if field != "semantic_parity"):
         return False
+    ordinary_packet_ref = authority_packet.get("ordinary_packet_ref")
+    if isinstance(ordinary_packet_ref, dict):
+        return _ordinary_packet_ref_is_contract_authoritative(authority_packet, ordinary_packet_ref)
     owner_packet = authority_packet.get("owner_packet")
     if not isinstance(owner_packet, dict) or not owner_packet.get("kind"):
         return False
@@ -808,6 +824,40 @@ def _authority_packet_is_contract_authoritative(authority_packet: dict[str, obje
     if str(decision.get("mutation_precondition") or "").endswith("-rejected"):
         return protected_action.get("attempted") is True and protected_action.get("accepted") is False
     return True
+
+
+def _ordinary_packet_ref_is_contract_authoritative(
+    authority_packet: dict[str, object], ordinary_packet_ref: dict[str, object]
+) -> bool:
+    """Accept only the direct-work row derived from ordinary implement output."""
+
+    if authority_packet.get("scenario_id") not in ACTIVE_RELEASE_GATE_SCENARIOS:
+        return False
+    if authority_packet.get("source") != "implement.context.planning_safety_gate":
+        return False
+    if ordinary_packet_ref.get("producer_module") != "agentic_workspace.workspace_runtime_implement":
+        return False
+    if ordinary_packet_ref.get("surface") != "implement":
+        return False
+    if ordinary_packet_ref.get("gate_result") != "direct-work-allowed":
+        return False
+    if ordinary_packet_ref.get("implementation_allowed") is not True:
+        return False
+    if ordinary_packet_ref.get("decision_packet_kind") != "agentic-workspace/ordinary-decision-packet/v1":
+        return False
+    if ordinary_packet_ref.get("decision_packet_surface") != "implement":
+        return False
+    if "proof" not in str(ordinary_packet_ref.get("proof_detail_route") or ""):
+        return False
+    if "owner_packet" in authority_packet:
+        return False
+    if authority_packet.get("rejection_observed") is True:
+        return False
+    repair_revalidation = authority_packet.get("repair_revalidation")
+    if not isinstance(repair_revalidation, dict) or repair_revalidation.get("status") != "not-required":
+        return False
+    protected_action = authority_packet.get("protected_action")
+    return isinstance(protected_action, dict) and protected_action.get("attempted") is True and protected_action.get("accepted") is True
 
 
 def _planning_gate(packet: dict[str, object]) -> dict[str, object]:
@@ -1092,16 +1142,19 @@ def _execute_one_scenario(scenario: dict[str, object], budget: dict[str, object]
 
 
 def execute_matrix(matrix: dict[str, object]) -> list[str]:
-    """Execute each row through ordinary CLI paths and the typed decision contract."""
+    """Execute rows that currently have canonical release-gating evidence."""
 
     budget = matrix.get("execution_budget", {})
     if not isinstance(budget, dict):
         return ["execution budget is missing or invalid"]
     scenarios = [scenario for scenario in matrix.get("scenarios", []) if isinstance(scenario, dict)]
-    max_workers = min(4, max(1, len(scenarios)))
+    active_scenarios = _active_release_gate_scenarios(scenarios)
+    if not active_scenarios:
+        return ["no active release-gate scenarios have canonical evidence"]
+    max_workers = min(4, max(1, len(active_scenarios)))
     errors: list[str] = []
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(_execute_one_scenario, scenario, budget) for scenario in scenarios]
+        futures = [executor.submit(_execute_one_scenario, scenario, budget) for scenario in active_scenarios]
         for future in as_completed(futures):
             errors.extend(future.result())
     return errors
