@@ -15,7 +15,13 @@
     "sync-all": {
       "id": "sync.all",
       "dependencies": [],
-      "proof_purpose": "prepare the shared root environment once for a local or CI run"
+      "proof_purpose": "prepare the shared root environment once for a local or CI run",
+      "command": [
+        "uv",
+        "sync",
+        "--all-packages",
+        "--all-groups"
+      ]
     },
     "sync-memory": {
       "id": "sync.memory",
@@ -34,243 +40,661 @@
     },
     "workspace CLI tests": {
       "id": "test.workspace-cli",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "workspace CLI behavior partition"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "workspace CLI behavior partition",
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_cli_blackbox.py",
+        "tests/test_workspace_config_cli.py",
+        "tests/test_workspace_defaults_cli.py",
+        "tests/test_workspace_doctor_status_cli.py",
+        "tests/test_workspace_evaluation.py",
+        "tests/test_workspace_implement_cli.py",
+        "tests/test_workspace_intent_cli.py",
+        "tests/test_workspace_modules_cli.py",
+        "tests/test_operating_decision.py",
+        "tests/test_workspace_ownership_cli.py",
+        "tests/test_workspace_planning_help_cli.py",
+        "tests/test_workspace_projection_reuse.py",
+        "tests/test_workspace_runtime_projection.py",
+        "tests/test_workspace_skills_cli.py",
+        "tests/test_workspace_summary_cli.py"
+      ]
     },
     "workspace proof tests": {
       "id": "test.workspace-proof",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "proof-router and generated proof-package behavior partition"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "proof-router and generated proof-package behavior partition",
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "8",
+        "tests/test_generated_command_package_proof_runner.py",
+        "tests/test_proof_subject.py",
+        "tests/test_workspace_proof_cli.py",
+        "tests/test_workspace_proof_generated_packages_cli.py"
+      ]
     },
     "workspace session and review tests": {
       "id": "test.workspace-session-review",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "session logging and review-loop behavior partition"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "session logging and review-loop behavior partition",
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_chatgpt_review_loop.py",
+        "tests/test_codex_session_identity_agent_aid.py",
+        "tests/test_github_check_inspection.py",
+        "tests/test_pr_comment_delta.py",
+        "tests/test_start_chatgpt_review_poller.py",
+        "tests/test_workspace_session_logging.py"
+      ]
     },
     "workspace contract tests": {
       "id": "test.workspace-contracts",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "contract, schema, inventory, and guardrail behavior partition"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "contract, schema, inventory, and guardrail behavior partition",
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_agent_aids.py",
+        "tests/test_command_surface_bundle_check.py",
+        "tests/test_contract_tooling_surfaces.py",
+        "tests/test_github_issue_body_agent_aid.py",
+        "tests/test_no_absolute_paths.py",
+        "tests/test_package_artifact_duplicates.py",
+        "tests/test_prompt_semantic_markers.py",
+        "tests/test_schema_reference_docs.py",
+        "tests/test_structured_file_inventory.py",
+        "tests/test_validation_runtime_plan.py",
+        "tests/test_workspace_makefile_targets.py"
+      ]
     },
     "workspace generated and release tests": {
       "id": "test.workspace-generated-release",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "generated-command and release workflow behavior partition"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "generated-command and release workflow behavior partition",
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_command_generation_integration.py",
+        "tests/test_command_generation_release_promotion.py",
+        "tests/test_coordinated_release.py",
+        "tests/test_generated_tool_conformance.py",
+        "tests/test_release_recovery_status.py",
+        "tests/test_release_workflows.py",
+        "tests/test_workspace_packaging.py"
+      ]
     },
     "workspace integration tests": {
       "id": "test.workspace-integration",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "external, lifecycle, launcher, and cost behavior partition"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "external, lifecycle, launcher, and cost behavior partition",
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_agentic_workspace_launcher.py",
+        "tests/test_compact_command_runner.py",
+        "tests/test_completion_cost_json_corpus.py",
+        "tests/test_completion_cost_lane_evidence.py",
+        "tests/test_completion_cost_live_behavior_proof.py",
+        "tests/test_completion_cost_schema_analysis.py",
+        "tests/test_external_agent_evaluation_lane.py",
+        "tests/test_external_consumer_profile.py",
+        "tests/test_external_integration_boundary.py",
+        "tests/test_external_operation_clients.py",
+        "tests/test_git_hooks.py",
+        "tests/test_lazy_discovery_measurements.py",
+        "tests/test_lifecycle_smoke.py",
+        "tests/test_long_horizon_episode.py",
+        "tests/test_maintainer_surfaces.py",
+        "tests/test_repository_scanning.py",
+        "tests/test_source_payload_operational_install.py"
+      ]
     },
     "memory tests": {
       "id": "test.memory",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Memory package behavior tests"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Memory package behavior tests",
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "8"
+      ]
     },
     "planning tests": {
       "id": "test.planning",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Planning package behavior tests"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Planning package behavior tests",
+      "command": [
+        "uv",
+        "run",
+        "pytest"
+      ]
     },
     "verification tests": {
       "id": "test.verification",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Verification package behavior tests"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Verification package behavior tests",
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "8"
+      ]
     },
     "workspace lint": {
       "id": "lint.workspace",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "workspace lint checks"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "workspace lint checks",
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "src",
+        "tests"
+      ]
     },
     "prompt semantic markers": {
       "id": "lint.prompt-semantic-markers",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "prompt semantic marker lint checks"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "prompt semantic marker lint checks",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_prompt_semantic_markers.py"
+      ]
     },
     "memory lint": {
       "id": "lint.memory",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Memory package lint checks"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Memory package lint checks",
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "."
+      ]
     },
     "memory markdownlint": {
       "id": "lint.memory-markdown",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Memory package Markdown lint checks"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Memory package Markdown lint checks",
+      "command": [
+        "uv",
+        "run",
+        "pymarkdown",
+        "-d",
+        "md013,md024",
+        "scan",
+        "AGENTS.md",
+        "README.md",
+        "bootstrap",
+        "skills"
+      ]
     },
     "planning lint": {
       "id": "lint.planning",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Planning package lint checks"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Planning package lint checks",
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "."
+      ]
     },
     "verification lint": {
       "id": "lint.verification",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Verification package lint checks"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Verification package lint checks",
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "."
+      ]
     },
     "workspace typecheck": {
       "id": "typecheck.workspace",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "workspace type checks"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "workspace type checks",
+      "command": [
+        "uv",
+        "run",
+        "ty",
+        "check",
+        "src"
+      ]
     },
     "memory typecheck": {
       "id": "typecheck.memory",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Memory package type checks"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Memory package type checks",
+      "command": [
+        "uv",
+        "run",
+        "ty",
+        "check",
+        "src"
+      ]
     },
     "planning typecheck": {
       "id": "typecheck.planning",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Planning package type checks"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Planning package type checks",
+      "command": [
+        "uv",
+        "run",
+        "ty",
+        "check",
+        "src"
+      ]
     },
     "verification typecheck": {
       "id": "typecheck.verification",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Verification package type checks"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Verification package type checks",
+      "command": [
+        "uv",
+        "run",
+        "ty",
+        "check",
+        "src"
+      ]
     },
     "workspace format-check": {
       "id": "format-check.workspace",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "workspace formatting check"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "workspace formatting check",
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "format",
+        "--check",
+        "src",
+        "tests"
+      ]
     },
     "memory format-check": {
       "id": "format-check.memory",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Memory package formatting check"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Memory package formatting check",
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "format",
+        "--check",
+        "."
+      ]
     },
     "planning format-check": {
       "id": "format-check.planning",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Planning package formatting check"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Planning package formatting check",
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "format",
+        "--check",
+        "."
+      ]
     },
     "verification format-check": {
       "id": "format-check.verification",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Verification package formatting check"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Verification package formatting check",
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "format",
+        "--check",
+        "."
+      ]
     },
     "workspace verify": {
       "id": "verify.workspace",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "workspace CLI module verification"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "workspace CLI module verification",
+      "command": [
+        "uv",
+        "run",
+        "agentic-workspace",
+        "modules",
+        "--format",
+        "json"
+      ]
     },
     "memory verify-payload": {
       "id": "verify.memory",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Memory package payload verification"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Memory package payload verification",
+      "command": [
+        "uv",
+        "run",
+        "agentic-memory",
+        "verify-payload",
+        "--target",
+        "."
+      ]
     },
     "planning verify-payload": {
       "id": "verify.planning",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Planning package payload verification"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Planning package payload verification",
+      "command": [
+        "uv",
+        "run",
+        "agentic-planning",
+        "verify-payload"
+      ]
     },
     "verification report": {
       "id": "verify.verification",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "Verification package report verification"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "Verification package report verification",
+      "command": [
+        "uv",
+        "run",
+        "agentic-verification",
+        "report",
+        "--target",
+        ".",
+        "--format",
+        "json"
+      ]
     },
     "memory report": {
       "id": "memory-freshness.strict",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "root Memory report freshness gate"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "root Memory report freshness gate",
+      "command": [
+        "uv",
+        "run",
+        "agentic-workspace",
+        "report",
+        "--target",
+        ".",
+        "--format",
+        "json"
+      ]
     },
     "recurring friction ledger": {
       "id": "memory.recurring-friction-ledger",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "recurring friction ledger report gate"
     },
     "review poller": {
       "id": "review-poller",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "global PR-review poller startup command"
     },
     "workspace format": {
       "id": "format.workspace",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "workspace formatting application command"
     },
     "memory format": {
       "id": "format.memory",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Memory package formatting application command"
     },
     "planning format": {
       "id": "format.planning",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Planning package formatting application command"
     },
     "verification format": {
       "id": "format.verification",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Verification package formatting application command"
     },
     "memory doctor": {
       "id": "memory-freshness.doctor",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "root Memory doctor freshness report"
     },
     "planning surfaces": {
       "id": "planning-surfaces",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "root Planning generated surface freshness gate"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "root Planning generated surface freshness gate",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_planning_surfaces.py"
+      ]
     },
     "planning surfaces strict": {
       "id": "planning-surfaces.strict",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "strict root Planning generated surface freshness gate"
     },
     "source-payload boundary": {
       "id": "source-payload-boundary",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "source, payload, and root-install boundary check"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "source, payload, and root-install boundary check",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_source_payload_operational_install.py"
+      ]
     },
     "source-payload boundary strict": {
       "id": "source-payload-boundary.strict",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "strict source, payload, and root-install boundary check"
     },
     "render agent docs": {
       "id": "render-agent-docs",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "regenerate root planning documentation from the managed manifest"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "regenerate root planning documentation from the managed manifest",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/render_agent_docs.py"
+      ]
     },
     "render schema reference": {
       "id": "render-schema-reference",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "regenerate generated JSON Schema reference documentation"
     },
     "render command packages": {
       "id": "render-command-packages",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "regenerate generated command package CLIs"
     },
     "schema reference docs": {
       "id": "schema-reference-docs",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "check generated JSON Schema reference documentation and annotations"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "check generated JSON Schema reference documentation and annotations",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/generate/generate_schema_reference.py",
+        "--check",
+        "--check-annotations"
+      ]
     },
     "validation runtime plan": {
       "id": "validation-runtime.plan",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "validation graph, trace, CI/local drift, duplicate, and runtime evidence contract"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "validation graph, trace, CI/local drift, duplicate, and runtime evidence contract",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_validation_runtime_plan.py"
+      ]
     },
     "structured file inventory": {
       "id": "structured-file-inventory.full",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "complete structured-file inventory no-prune audit"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "complete structured-file inventory no-prune audit",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_structured_file_inventory.py"
+      ]
     },
     "structured file inventory changed": {
       "id": "structured-file-inventory.changed",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "focused changed-path inventory audit with authority escalation"
     },
     "package artifact duplicates": {
       "id": "package-artifact-duplicates",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "built package archive duplicate-member guardrail"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "built package archive duplicate-member guardrail",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_package_artifact_duplicates.py"
+      ]
     },
     "agent aid manifests": {
       "id": "agent-aids",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "checked-in agent aid manifest and coverage guardrail"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "checked-in agent aid manifest and coverage guardrail",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_agent_aids.py"
+      ]
     },
     "maintainer surfaces": {
       "id": "maintainer-surfaces",
@@ -283,7 +707,13 @@
         "verify.memory",
         "verify.planning"
       ],
-      "proof_purpose": "maintainer generated/doc/source-payload surfaces remain fresh"
+      "proof_purpose": "maintainer generated/doc/source-payload surfaces remain fresh",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_maintainer_surfaces.py"
+      ]
     },
     "maintainer surfaces strict": {
       "id": "maintainer-surfaces.strict",
@@ -300,12 +730,22 @@
     },
     "absolute paths": {
       "id": "absolute-paths",
-      "dependencies": ["sync.all"],
-      "proof_purpose": "tracked-file absolute filesystem path guardrail"
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "tracked-file absolute filesystem path guardrail",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_no_absolute_paths.py"
+      ]
     },
     "generated command packages": {
       "id": "generated-command-packages.check",
-      "dependencies": ["sync.all"],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "generated Python/TypeScript command-package conformance"
     }
   },
@@ -390,7 +830,9 @@
       "id": "test.workspace-cli",
       "make_target": "test-workspace-cli",
       "command": "make test-workspace-cli",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "workspace CLI behavior partition",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "owner_boundary": "workspace tests"
@@ -399,7 +841,9 @@
       "id": "test.workspace-proof",
       "make_target": "test-workspace-proof",
       "command": "make test-workspace-proof",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "proof-router and generated proof-package behavior partition",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "owner_boundary": "workspace tests"
@@ -408,7 +852,9 @@
       "id": "test.workspace-session-review",
       "make_target": "test-workspace-session-review",
       "command": "make test-workspace-session-review",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "session logging and review-loop behavior partition",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "owner_boundary": "workspace tests"
@@ -417,7 +863,9 @@
       "id": "test.workspace-contracts",
       "make_target": "test-workspace-contracts",
       "command": "make test-workspace-contracts",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "contract, schema, inventory, and guardrail behavior partition",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "owner_boundary": "workspace tests"
@@ -426,7 +874,9 @@
       "id": "test.workspace-generated-release",
       "make_target": "test-workspace-generated-release",
       "command": "make test-workspace-generated-release",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "generated-command and release workflow behavior partition",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "owner_boundary": "workspace tests"
@@ -435,7 +885,9 @@
       "id": "test.workspace-integration",
       "make_target": "test-workspace-integration",
       "command": "make test-workspace-integration",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "external, lifecycle, launcher, and cost behavior partition",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "owner_boundary": "workspace tests"
@@ -444,7 +896,9 @@
       "id": "test.memory",
       "make_target": "test-memory",
       "command": "make test-memory",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Memory package behavior tests",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "owner_boundary": "memory package"
@@ -453,7 +907,9 @@
       "id": "test.planning",
       "make_target": "test-planning",
       "command": "make test-planning",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Planning package behavior tests",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "owner_boundary": "planning package"
@@ -462,7 +918,9 @@
       "id": "test.verification",
       "make_target": "test-verification",
       "command": "make test-verification",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Verification package behavior tests",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "owner_boundary": "verification package"
@@ -490,15 +948,19 @@
       "id": "lint.workspace",
       "make_target": "lint-workspace",
       "command": "make lint-workspace",
-      "dependencies": [],
-      "proof_purpose": "workspace lint and prompt-marker checks",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "workspace lint checks",
       "execution_posture": "serial",
       "owner_boundary": "workspace source"
     },
     {
       "id": "lint.prompt-semantic-markers",
       "command": "uv run python scripts/check/check_prompt_semantic_markers.py",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "prompt semantic marker lint checks",
       "execution_posture": "serial",
       "owner_boundary": "workspace prompts"
@@ -507,7 +969,9 @@
       "id": "lint.memory",
       "make_target": "lint-memory",
       "command": "make lint-memory",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Memory package lint checks",
       "execution_posture": "serial",
       "owner_boundary": "memory package"
@@ -516,7 +980,9 @@
       "id": "lint.memory-markdown",
       "make_target": "markdownlint-memory",
       "command": "make markdownlint-memory",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Memory package Markdown lint checks",
       "execution_posture": "serial",
       "owner_boundary": "memory package docs"
@@ -525,7 +991,9 @@
       "id": "lint.planning",
       "make_target": "lint-planning",
       "command": "make lint-planning",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Planning package lint checks",
       "execution_posture": "serial",
       "owner_boundary": "planning package"
@@ -534,7 +1002,9 @@
       "id": "lint.verification",
       "make_target": "lint-verification",
       "command": "make lint-verification",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Verification package lint checks",
       "execution_posture": "serial",
       "owner_boundary": "verification package"
@@ -559,7 +1029,9 @@
       "id": "typecheck.workspace",
       "make_target": "typecheck-workspace",
       "command": "make typecheck-workspace",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "workspace type checks",
       "execution_posture": "serial",
       "owner_boundary": "workspace source"
@@ -568,7 +1040,9 @@
       "id": "typecheck.memory",
       "make_target": "typecheck-memory",
       "command": "make typecheck-memory",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Memory package type checks",
       "execution_posture": "serial",
       "owner_boundary": "memory package"
@@ -577,7 +1051,9 @@
       "id": "typecheck.planning",
       "make_target": "typecheck-planning",
       "command": "make typecheck-planning",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Planning package type checks",
       "execution_posture": "serial",
       "owner_boundary": "planning package"
@@ -586,7 +1062,9 @@
       "id": "typecheck.verification",
       "make_target": "typecheck-verification",
       "command": "make typecheck-verification",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Verification package type checks",
       "execution_posture": "serial",
       "owner_boundary": "verification package"
@@ -609,7 +1087,9 @@
       "id": "format.workspace",
       "make_target": "format-workspace",
       "command": "make format-workspace",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "workspace formatting application command",
       "execution_posture": "serial mutation",
       "owner_boundary": "workspace source"
@@ -618,7 +1098,9 @@
       "id": "format.memory",
       "make_target": "format-memory",
       "command": "make format-memory",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Memory package formatting application command",
       "execution_posture": "serial mutation",
       "owner_boundary": "memory package"
@@ -627,7 +1109,9 @@
       "id": "format.planning",
       "make_target": "format-planning",
       "command": "make format-planning",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Planning package formatting application command",
       "execution_posture": "serial mutation",
       "owner_boundary": "planning package"
@@ -636,7 +1120,9 @@
       "id": "format.verification",
       "make_target": "format-verification",
       "command": "make format-verification",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Verification package formatting application command",
       "execution_posture": "serial mutation",
       "owner_boundary": "verification package"
@@ -645,7 +1131,9 @@
       "id": "format-check.workspace",
       "make_target": "format-check-workspace",
       "command": "make format-check-workspace",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "workspace formatting check",
       "execution_posture": "serial",
       "owner_boundary": "workspace source"
@@ -654,7 +1142,9 @@
       "id": "format-check.memory",
       "make_target": "format-check-memory",
       "command": "make format-check-memory",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Memory package formatting check",
       "execution_posture": "serial",
       "owner_boundary": "memory package"
@@ -663,7 +1153,9 @@
       "id": "format-check.planning",
       "make_target": "format-check-planning",
       "command": "make format-check-planning",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Planning package formatting check",
       "execution_posture": "serial",
       "owner_boundary": "planning package"
@@ -672,7 +1164,9 @@
       "id": "format-check.verification",
       "make_target": "format-check-verification",
       "command": "make format-check-verification",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Verification package formatting check",
       "execution_posture": "serial",
       "owner_boundary": "verification package"
@@ -695,7 +1189,9 @@
       "id": "verify.workspace",
       "make_target": "verify-workspace",
       "command": "make verify-workspace",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "workspace CLI module verification",
       "execution_posture": "serial",
       "owner_boundary": "workspace CLI"
@@ -704,7 +1200,9 @@
       "id": "verify.memory",
       "make_target": "verify-memory",
       "command": "make verify-memory",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Memory package payload verification",
       "execution_posture": "serial",
       "owner_boundary": "memory package payload"
@@ -713,7 +1211,9 @@
       "id": "verify.planning",
       "make_target": "verify-planning",
       "command": "make verify-planning",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Planning package payload verification",
       "execution_posture": "serial",
       "owner_boundary": "planning package payload"
@@ -722,7 +1222,9 @@
       "id": "verify.verification",
       "make_target": "verify-verification",
       "command": "make verify-verification",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "Verification package report verification",
       "execution_posture": "serial",
       "owner_boundary": "verification package report"
@@ -745,7 +1247,9 @@
       "id": "memory-freshness.doctor",
       "make_target": "memory-freshness",
       "command": "make memory-freshness",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "root Memory doctor freshness report",
       "execution_posture": "serial structural gate",
       "owner_boundary": "root memory authority"
@@ -754,7 +1258,9 @@
       "id": "memory-freshness.strict",
       "make_target": "memory-freshness-strict",
       "command": "make memory-freshness-strict",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "root Memory report freshness gate",
       "execution_posture": "serial structural gate",
       "owner_boundary": "root memory authority"
@@ -763,7 +1269,9 @@
       "id": "memory.recurring-friction-ledger",
       "make_target": "recurring-friction-ledger",
       "command": "make recurring-friction-ledger",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "recurring friction ledger report gate",
       "execution_posture": "serial structural gate",
       "owner_boundary": "root memory authority"
@@ -772,7 +1280,9 @@
       "id": "planning-surfaces",
       "make_target": "planning-surfaces",
       "command": "make planning-surfaces",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "root Planning generated surface freshness gate",
       "execution_posture": "serial structural gate",
       "owner_boundary": "planning surface authority"
@@ -781,7 +1291,9 @@
       "id": "planning-surfaces.strict",
       "make_target": "planning-surfaces-strict",
       "command": "make planning-surfaces-strict",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "strict root Planning generated surface freshness gate",
       "execution_posture": "serial structural gate",
       "owner_boundary": "planning surface authority"
@@ -790,7 +1302,9 @@
       "id": "render-agent-docs",
       "make_target": "render-agent-docs",
       "command": "make render-agent-docs",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "regenerate root planning documentation from the managed manifest",
       "execution_posture": "serial generated-surface check",
       "owner_boundary": "maintainer generated docs"
@@ -799,7 +1313,9 @@
       "id": "render-schema-reference",
       "make_target": "render-schema-reference",
       "command": "make render-schema-reference",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "regenerate generated JSON Schema reference documentation",
       "execution_posture": "serial generated-surface check",
       "owner_boundary": "maintainer generated docs"
@@ -808,7 +1324,9 @@
       "id": "render-command-packages",
       "make_target": "render-command-packages",
       "command": "make render-command-packages",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "regenerate generated command package CLIs",
       "execution_posture": "serial generated-surface check",
       "owner_boundary": "generated command package authority"
@@ -817,7 +1335,9 @@
       "id": "schema-reference-docs",
       "make_target": "schema-reference-docs",
       "command": "make schema-reference-docs",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "check generated JSON Schema reference documentation and annotations",
       "execution_posture": "serial structural gate",
       "owner_boundary": "maintainer generated docs"
@@ -826,7 +1346,9 @@
       "id": "source-payload-boundary",
       "make_target": "source-payload-operational-install",
       "command": "make source-payload-operational-install",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "source, payload, and root-install boundary check",
       "execution_posture": "serial structural gate",
       "owner_boundary": "source/payload boundary"
@@ -835,7 +1357,9 @@
       "id": "source-payload-boundary.strict",
       "make_target": "source-payload-operational-install-strict",
       "command": "make source-payload-operational-install-strict",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "strict source, payload, and root-install boundary check",
       "execution_posture": "serial structural gate",
       "owner_boundary": "source/payload boundary"
@@ -844,7 +1368,9 @@
       "id": "validation-runtime.plan",
       "make_target": "validation-runtime-plan",
       "command": "make validation-runtime-plan",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "validation graph, trace, CI/local drift, duplicate, and runtime evidence contract",
       "execution_posture": "serial structural gate",
       "owner_boundary": "maintainer validation runtime"
@@ -853,7 +1379,9 @@
       "id": "structured-file-inventory.full",
       "make_target": "structured-file-inventory",
       "command": "make structured-file-inventory",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "complete structured-file inventory no-prune audit",
       "execution_posture": "serial structural gate",
       "owner_boundary": "structured inventory authority"
@@ -862,8 +1390,10 @@
       "id": "structured-file-inventory.changed",
       "make_target": "structured-file-inventory-changed",
       "command": "make structured-file-inventory-changed CHANGED_PATHS='<paths>'",
-      "dependencies": [],
-      "proof_purpose": "focused changed-path inventory audit with full escalation on authority changes",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "focused changed-path inventory audit with authority escalation",
       "execution_posture": "serial focused gate",
       "owner_boundary": "structured inventory authority"
     },
@@ -871,7 +1401,9 @@
       "id": "package-artifact-duplicates",
       "make_target": "package-artifact-duplicates",
       "command": "make package-artifact-duplicates",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "built package archive duplicate-member guardrail",
       "execution_posture": "serial structural gate",
       "owner_boundary": "package artifact authority"
@@ -880,7 +1412,9 @@
       "id": "agent-aids",
       "make_target": "agent-aids",
       "command": "make agent-aids",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "checked-in agent aid manifest and coverage guardrail",
       "execution_posture": "serial structural gate",
       "owner_boundary": "agent aid authority"
@@ -890,6 +1424,7 @@
       "make_target": "maintainer-surfaces",
       "command": "make maintainer-surfaces",
       "dependencies": [
+        "sync.all",
         "render-agent-docs",
         "schema-reference-docs",
         "planning-surfaces",
@@ -906,6 +1441,7 @@
       "make_target": "maintainer-surfaces-strict",
       "command": "make maintainer-surfaces-strict",
       "dependencies": [
+        "sync.all",
         "render-agent-docs",
         "schema-reference-docs",
         "planning-surfaces.strict",
@@ -921,7 +1457,9 @@
       "id": "absolute-paths",
       "make_target": "absolute-paths",
       "command": "make absolute-paths",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "tracked-file absolute filesystem path guardrail",
       "execution_posture": "serial structural gate",
       "owner_boundary": "repository hygiene"
@@ -930,7 +1468,9 @@
       "id": "review-poller",
       "make_target": "start-review-poller",
       "command": "make start-review-poller",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "global PR-review poller startup command",
       "execution_posture": "detached daemon startup",
       "owner_boundary": "review automation"
@@ -964,7 +1504,9 @@
       "id": "generated-command-packages.check",
       "make_target": "generated-command-packages",
       "command": "make generated-command-packages",
-      "dependencies": [],
+      "dependencies": [
+        "sync.all"
+      ],
       "proof_purpose": "generated Python/TypeScript command-package conformance",
       "execution_posture": "serial generated/IR no-prune gate",
       "owner_boundary": "generated command package authority"

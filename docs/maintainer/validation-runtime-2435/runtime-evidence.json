@@ -15,9 +15,12 @@
       "source": "GitHub issue #2435 problem statement"
     },
     "after_reference": {
-      "ref": "PR #2436 branch agent/validation-runtime-2435",
-      "tree_identity": "containing PR commit after this evidence file is committed",
-      "source": "local validation run in the PR #2436 worktree",
+      "ref": "checked-in broad validation manifest for PR #2436",
+      "measured_head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+      "measured_tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d",
+      "plan_graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+      "tree_identity": "518510e567a763cf33c2c50fe4935b2306512ebd^{tree}",
+      "source": "local `make check-bounded-parallel` measurement on PR #2436 branch",
       "manifest": "docs/maintainer/validation-runtime-2435/check-bounded-parallel-manifest.json"
     }
   },
@@ -125,7 +128,10 @@
       "duration_seconds": 466.202311,
       "outcome": "passed",
       "source": "local `make check-bounded-parallel` measurement on PR #2436 branch",
-      "manifest": "docs/maintainer/validation-runtime-2435/check-bounded-parallel-manifest.json"
+      "manifest": "docs/maintainer/validation-runtime-2435/check-bounded-parallel-manifest.json",
+      "measured_head": "518510e567a763cf33c2c50fe4935b2306512ebd",
+      "measured_tree": "3417ddcd20a11bcfc5e0da31c4e44a26cb626e2d",
+      "plan_graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223"
     }
   ],
   "measurement_series": [
@@ -196,18 +202,15 @@
       "top_contributors": [
         {
           "constituent_id": "test.workspace-cli",
-          "duration_seconds": 244.411671,
-          "reason": "dominant workspace partition; run first to isolate the critical path"
+          "duration_seconds": 244.411671
         },
         {
           "constituent_id": "test.planning",
-          "duration_seconds": 113.385596,
-          "reason": "package partition kept serial because its budget tests are load-sensitive"
+          "duration_seconds": 113.385596
         },
         {
           "constituent_id": "test.workspace-session-review",
-          "duration_seconds": 113.225257,
-          "reason": "largest second-phase bounded workspace partition in the final run"
+          "duration_seconds": 113.225257
         }
       ]
     }

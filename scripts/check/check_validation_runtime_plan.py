@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
+import subprocess
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -30,6 +32,7 @@ SETUP_BEARING_TARGETS = {
     "check-verification": ("sync-all", "check-verification-nosync"),
 }
 NOSYNC_TARGETS = {nosync for _, nosync in SETUP_BEARING_TARGETS.values()}
+BROAD_TRACE_COMMAND = "make check-bounded-parallel"
 
 
 @dataclass(frozen=True)
@@ -54,6 +57,112 @@ def _load_json(path: Path) -> tuple[dict[str, Any] | None, str | None]:
     if not isinstance(payload, dict):
         return None, "root must be a JSON object"
     return payload, None
+
+
+def _repo_relative(path: Path) -> str:
+    try:
+        return path.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _plan_graph_payload(plan: dict[str, Any]) -> dict[str, Any]:
+    trace_fixtures = []
+    for trace in plan.get("trace_fixtures", []):
+        if not isinstance(trace, dict):
+            continue
+        events = [
+            {
+                "constituent_id": str(event.get("constituent_id", "")),
+                "outcome": str(event.get("outcome", "")),
+                **({"repeat_allowed": True} if event.get("repeat_allowed") else {}),
+            }
+            for event in trace.get("events", [])
+            if isinstance(event, dict)
+        ]
+        trace_fixtures.append({"id": trace.get("id"), "command": trace.get("command"), "events": events})
+    return {
+        "kind": plan.get("kind"),
+        "schema_version": plan.get("schema_version"),
+        "issue": plan.get("issue"),
+        "parallel_modes": plan.get("parallel_modes", []),
+        "compact_label_map": plan.get("compact_label_map", {}),
+        "constituents": plan.get("constituents", []),
+        "duplicate_dispositions": plan.get("duplicate_dispositions", []),
+        "trace_fixtures": trace_fixtures,
+    }
+
+
+def _sha256_json(payload: object) -> str:
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _plan_identity(plan: dict[str, Any]) -> dict[str, Any]:
+    raw = PLAN_PATH.read_bytes() if PLAN_PATH.is_file() else b""
+    return {
+        "kind": "agentic-workspace/validation-plan-identity/v1",
+        "path": _repo_relative(PLAN_PATH),
+        "schema_version": plan.get("schema_version"),
+        "issue": plan.get("issue"),
+        "file_sha256": hashlib.sha256(raw).hexdigest(),
+        "graph_sha256": _sha256_json(_plan_graph_payload(plan)),
+    }
+
+
+def _git_value(*args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def _git_success(*args: str) -> bool:
+    return (
+        subprocess.run(
+            ["git", *args],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        ).returncode
+        == 0
+    )
+
+
+def _expected_broad_constituents(plan: dict[str, Any]) -> list[str]:
+    for trace in plan.get("trace_fixtures", []):
+        if not isinstance(trace, dict) or trace.get("command") != BROAD_TRACE_COMMAND:
+            continue
+        events = trace.get("events")
+        if isinstance(events, list):
+            return [str(event.get("constituent_id")) for event in events if isinstance(event, dict)]
+    return []
+
+
+def _constituents_by_id(plan: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {str(item.get("id")): item for item in plan.get("constituents", []) if isinstance(item, dict) and item.get("id")}
+
+
+def _label_metadata_by_id(plan: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    metadata_by_id: dict[str, dict[str, Any]] = {}
+    label_map = plan.get("compact_label_map", {})
+    if not isinstance(label_map, dict):
+        return metadata_by_id
+    for label, metadata in label_map.items():
+        if not isinstance(metadata, dict):
+            continue
+        constituent_id = str(metadata.get("id") or "")
+        if constituent_id:
+            metadata_by_id[constituent_id] = {"label": label, **metadata}
+    return metadata_by_id
 
 
 def _target_map(makefile_text: str) -> dict[str, list[str]]:
@@ -180,6 +289,11 @@ def _validate_compact_label_map(plan: dict[str, Any], makefile_text: str) -> lis
         for dependency in dependencies:
             if str(dependency) not in constituent_ids:
                 findings.append(Finding(path=location, message=f"unknown mapped dependency: {dependency}"))
+        command = metadata.get("command")
+        if command is not None and (
+            not isinstance(command, list) or not command or not all(isinstance(item, str) and item.strip() for item in command)
+        ):
+            findings.append(Finding(path=location, message="command must be a non-empty string list when present"))
         if not metadata.get("proof_purpose"):
             findings.append(Finding(path=location, message="proof_purpose must be non-empty"))
     return findings
@@ -377,7 +491,38 @@ def _validate_manifest(plan: dict[str, Any], evidence: dict[str, Any]) -> list[F
     if not isinstance(results, list) or not results:
         return [Finding(path=MANIFEST_PATH.as_posix(), message="results must be a non-empty list")]
 
-    constituent_ids = {str(item.get("id")) for item in plan.get("constituents", []) if isinstance(item, dict)}
+    expected_plan_identity = _plan_identity(plan)
+    manifest_plan_identity = manifest.get("plan_identity")
+    if not isinstance(manifest_plan_identity, dict):
+        findings.append(Finding(path=MANIFEST_PATH.as_posix(), message="manifest must include plan_identity"))
+    elif manifest_plan_identity.get("graph_sha256") != expected_plan_identity["graph_sha256"]:
+        findings.append(Finding(path=MANIFEST_PATH.as_posix(), message="manifest plan_identity graph_sha256 is stale"))
+
+    repository = manifest.get("repository")
+    if not isinstance(repository, dict):
+        findings.append(Finding(path=MANIFEST_PATH.as_posix(), message="manifest must include repository identity"))
+        repository = {}
+    for field in ("head", "tree"):
+        if not isinstance(repository.get(field), str) or not repository.get(field):
+            findings.append(Finding(path=MANIFEST_PATH.as_posix(), message=f"manifest repository.{field} must be non-empty"))
+    if repository.get("tracked_dirty") is True:
+        findings.append(Finding(path=MANIFEST_PATH.as_posix(), message="manifest measured repository must not have tracked dirty state"))
+
+    constituent_map = _constituents_by_id(plan)
+    label_metadata = _label_metadata_by_id(plan)
+    constituent_ids = set(constituent_map)
+    expected_broad = _expected_broad_constituents(plan)
+    if not expected_broad:
+        findings.append(Finding(path=PLAN_PATH.as_posix(), message=f"missing trace fixture for {BROAD_TRACE_COMMAND}"))
+    result_ids = [str(result.get("constituent_id", "")) for result in results if isinstance(result, dict)]
+    if Counter(result_ids) != Counter(expected_broad):
+        missing = sorted((Counter(expected_broad) - Counter(result_ids)).elements())
+        extra = sorted((Counter(result_ids) - Counter(expected_broad)).elements())
+        if missing:
+            findings.append(Finding(path=MANIFEST_PATH.as_posix(), message=f"manifest missing broad constituents: {', '.join(missing)}"))
+        if extra:
+            findings.append(Finding(path=MANIFEST_PATH.as_posix(), message=f"manifest has extra broad constituents: {', '.join(extra)}"))
+
     seen: set[str] = set()
     outcomes = Counter()
     for index, result in enumerate(results):
@@ -388,6 +533,10 @@ def _validate_manifest(plan: dict[str, Any], evidence: dict[str, Any]) -> list[F
         constituent_id = str(result.get("constituent_id", ""))
         if constituent_id not in constituent_ids:
             findings.append(Finding(path=location, message=f"unknown constituent id: {constituent_id}"))
+            plan_constituent = {}
+        else:
+            plan_constituent = constituent_map[constituent_id]
+        metadata = label_metadata.get(constituent_id, {})
         if constituent_id in seen:
             findings.append(Finding(path=location, message=f"duplicate constituent result: {constituent_id}"))
         seen.add(constituent_id)
@@ -398,8 +547,29 @@ def _validate_manifest(plan: dict[str, Any], evidence: dict[str, Any]) -> list[F
             for dependency in dependencies:
                 if str(dependency) not in constituent_ids:
                     findings.append(Finding(path=location, message=f"unknown dependency: {dependency}"))
+            if plan_constituent and dependencies != plan_constituent.get("dependencies"):
+                findings.append(Finding(path=location, message="dependencies do not match validation plan"))
+        expected_command = metadata.get("command")
+        if constituent_id in expected_broad:
+            if not isinstance(expected_command, list):
+                findings.append(Finding(path=PLAN_PATH.as_posix(), message=f"missing expected command for broad constituent: {constituent_id}"))
+            elif result.get("command") != expected_command:
+                findings.append(Finding(path=location, message="command does not match validation plan"))
         if not result.get("proof_purpose"):
             findings.append(Finding(path=location, message="proof_purpose must be non-empty"))
+        elif plan_constituent and result.get("proof_purpose") != plan_constituent.get("proof_purpose"):
+            findings.append(Finding(path=location, message="proof_purpose does not match validation plan"))
+        for field in ("execution_posture", "owner_boundary"):
+            if not result.get(field):
+                findings.append(Finding(path=location, message=f"{field} must be non-empty"))
+            elif plan_constituent and result.get(field) != plan_constituent.get(field):
+                findings.append(Finding(path=location, message=f"{field} does not match validation plan"))
+        result_plan_identity = result.get("plan_identity")
+        if not isinstance(result_plan_identity, dict) or result_plan_identity.get("graph_sha256") != expected_plan_identity["graph_sha256"]:
+            findings.append(Finding(path=location, message="result plan_identity graph_sha256 is stale"))
+        result_repository = result.get("repository")
+        if not isinstance(result_repository, dict) or result_repository != repository:
+            findings.append(Finding(path=location, message="result repository identity must match manifest repository"))
         if result.get("kind") != "agentic-workspace/validation-constituent-result/v1":
             findings.append(Finding(path=location, message="unexpected result kind"))
         outcomes[str(result.get("outcome") or "unknown")] += 1
@@ -414,13 +584,60 @@ def _validate_manifest(plan: dict[str, Any], evidence: dict[str, Any]) -> list[F
     broad_after = _record_by_metric(evidence, "after", "broad_validation.full")
     if broad_after:
         manifest_ref = broad_after.get("manifest")
-        expected_ref = MANIFEST_PATH.relative_to(REPO_ROOT).as_posix()
+        expected_ref = _repo_relative(MANIFEST_PATH)
         if manifest_ref != expected_ref:
             findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message=f"broad validation must reference {expected_ref}"))
         if round(float(broad_after.get("duration_seconds") or 0.0), 3) != round(float(manifest.get("critical_path_seconds") or 0.0), 3):
             findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation duration must match manifest critical path"))
+        for field in ("measured_head", "measured_tree", "plan_graph_sha256"):
+            if not isinstance(broad_after.get(field), str) or not broad_after.get(field):
+                findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message=f"broad validation must include {field}"))
+        if broad_after.get("measured_head") != repository.get("head"):
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation measured_head must match manifest repository head"))
+        if broad_after.get("measured_tree") != repository.get("tree"):
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation measured_tree must match manifest repository tree"))
+        if broad_after.get("plan_graph_sha256") != expected_plan_identity["graph_sha256"]:
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="broad validation plan_graph_sha256 must match current plan graph"))
+    after_reference = evidence.get("pinned_revisions", {}).get("after_reference", {}) if isinstance(evidence.get("pinned_revisions"), dict) else {}
+    if isinstance(after_reference, dict):
+        if after_reference.get("measured_head") != repository.get("head"):
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="after_reference measured_head must match manifest repository head"))
+        if after_reference.get("measured_tree") != repository.get("tree"):
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="after_reference measured_tree must match manifest repository tree"))
+        if after_reference.get("plan_graph_sha256") != expected_plan_identity["graph_sha256"]:
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="after_reference plan_graph_sha256 must match current plan graph"))
+        if "after this evidence file is committed" in str(after_reference.get("tree_identity", "")):
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="after_reference must not use a future/self-referential revision placeholder"))
+    after_reports = [
+        report
+        for report in evidence.get("critical_path_reports", [])
+        if isinstance(report, dict) and report.get("phase") == "after" and report.get("command") == BROAD_TRACE_COMMAND
+    ]
+    if not after_reports:
+        findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="missing after critical path report for broad validation"))
+    else:
+        report = after_reports[0]
+        if round(float(report.get("critical_path_seconds") or 0.0), 3) != round(float(manifest.get("critical_path_seconds") or 0.0), 3):
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="critical path report must match manifest critical path"))
+        if round(float(report.get("summed_work_seconds") or 0.0), 3) != round(float(manifest.get("summed_work_seconds") or 0.0), 3):
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="critical path report must match manifest summed work"))
+        dict_results = [item for item in results if isinstance(item, dict)]
+        expected_top = [
+            {"constituent_id": item.get("constituent_id"), "duration_seconds": item.get("duration_seconds")}
+            for item in sorted(dict_results, key=lambda item: float(item.get("duration_seconds") or 0.0), reverse=True)[:3]
+        ]
+        actual_top = [
+            {"constituent_id": item.get("constituent_id"), "duration_seconds": item.get("duration_seconds")}
+            for item in report.get("top_contributors", [])
+            if isinstance(item, dict)
+        ][:3]
+        if actual_top != expected_top:
+            findings.append(Finding(path=EVIDENCE_PATH.as_posix(), message="top contributors must be derived from manifest durations"))
     if float(manifest.get("critical_path_seconds") or 0.0) > 600:
         findings.append(Finding(path=MANIFEST_PATH.as_posix(), message="manifest critical path must complete within 10 minutes"))
+    head = str(repository.get("head") or "")
+    if head and not _git_success("merge-base", "--is-ancestor", head, "HEAD"):
+        findings.append(Finding(path=MANIFEST_PATH.as_posix(), message="manifest measured head must be an ancestor of current HEAD"))
     return findings
 
 
