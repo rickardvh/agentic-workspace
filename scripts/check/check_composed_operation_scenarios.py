@@ -826,14 +826,12 @@ def _authority_packet_is_contract_authoritative(authority_packet: dict[str, obje
     return True
 
 
-def _ordinary_packet_ref_is_contract_authoritative(
-    authority_packet: dict[str, object], ordinary_packet_ref: dict[str, object]
-) -> bool:
+def _ordinary_packet_ref_is_contract_authoritative(authority_packet: dict[str, object], ordinary_packet_ref: dict[str, object]) -> bool:
     """Accept only the direct-work row derived from ordinary implement output."""
 
     if authority_packet.get("scenario_id") not in ACTIVE_RELEASE_GATE_SCENARIOS:
         return False
-    if authority_packet.get("source") != "implement.context.planning_safety_gate":
+    if authority_packet.get("source") != "implement.context.operation_authority":
         return False
     if ordinary_packet_ref.get("producer_module") != "agentic_workspace.workspace_runtime_implement":
         return False
@@ -848,6 +846,35 @@ def _ordinary_packet_ref_is_contract_authoritative(
     if ordinary_packet_ref.get("decision_packet_surface") != "implement":
         return False
     if "proof" not in str(ordinary_packet_ref.get("proof_detail_route") or ""):
+        return False
+    if ordinary_packet_ref.get("operation_authority_kind") != "agentic-workspace/operation-authority-projection/v1":
+        return False
+    if ordinary_packet_ref.get("operation_authority_status") != "admitted":
+        return False
+    field_authority = ordinary_packet_ref.get("field_authority")
+    if not isinstance(field_authority, dict) or not {field for field in CONTRACT_FIELDS if field != "semantic_parity"}.issubset(
+        field_authority
+    ):
+        return False
+    typed_invocation = ordinary_packet_ref.get("typed_invocation")
+    if not isinstance(typed_invocation, dict) or typed_invocation.get("status") != "observed":
+        return False
+    effect_authority = ordinary_packet_ref.get("effect_authority")
+    if not isinstance(effect_authority, dict) or effect_authority.get("status") != "admitted":
+        return False
+    mutation_authority = ordinary_packet_ref.get("mutation_authority")
+    if not isinstance(mutation_authority, dict) or mutation_authority.get("status") != "clean-baseline":
+        return False
+    if not mutation_authority.get("baseline_id") or not mutation_authority.get("head"):
+        return False
+    if mutation_authority.get("allowed_paths") != mutation_authority.get("changed_paths"):
+        return False
+    if not mutation_authority.get("enforcement_fingerprint"):
+        return False
+    proof_authority = ordinary_packet_ref.get("proof_authority")
+    if not isinstance(proof_authority, dict) or proof_authority.get("status") != "required-before-claim":
+        return False
+    if proof_authority.get("safe_claim") != "blocked" or proof_authority.get("verification_state") != "proof_missing":
         return False
     if "owner_packet" in authority_packet:
         return False

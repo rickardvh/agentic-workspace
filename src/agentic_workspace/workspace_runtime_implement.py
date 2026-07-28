@@ -1448,6 +1448,116 @@ def _tiny_proof_route_maintenance_payload(value: dict[str, Any]) -> dict[str, An
     }
 
 
+def _tiny_operation_authority_payload(
+    *,
+    payload: dict[str, Any],
+    decision_packet: dict[str, Any],
+    proof_detail_route: str,
+) -> dict[str, Any]:
+    """Project ordinary implement authority needed by external checkers."""
+
+    gate = _as_dict(payload.get("planning_safety_gate"))
+    envelope = _as_dict(payload.get("authority_envelope"))
+    resolution = _as_dict(envelope.get("authority_resolution"))
+    baseline = _as_dict(envelope.get("mutation_baseline"))
+    scope = _as_dict(baseline.get("scope"))
+    observed_state = _as_dict(baseline.get("observed_state"))
+    ownership = _as_dict(baseline.get("ownership"))
+    operating_loop = _as_dict(payload.get("operating_loop"))
+    verification = _as_dict(operating_loop.get("verification"))
+    changed_paths = [str(path) for path in payload.get("changed_paths", []) if isinstance(path, str) and path.strip()]
+    allowed_paths = [str(path) for path in scope.get("allowed_paths", []) if isinstance(path, str) and path.strip()]
+    side_effects = {
+        str(item.get("class") or ""): item
+        for item in resolution.get("side_effect_decisions", [])
+        if isinstance(item, dict) and str(item.get("class") or "")
+    }
+    write_requested = _as_dict(side_effects.get("write-requested-paths"))
+    write_outside = _as_dict(side_effects.get("write-outside-scope"))
+    direct_route = (
+        gate.get("gate_result") == "direct-work-allowed"
+        and gate.get("implementation_allowed") is True
+        and gate.get("required_next_action") == "continue-direct"
+    )
+    typed_invocation = {
+        "status": "observed" if decision_packet.get("surface") == "implement" else "missing",
+        "surface": decision_packet.get("surface"),
+        "kind": decision_packet.get("kind"),
+        "shown_because": decision_packet.get("shown_because", []),
+    }
+    effect_authority = {
+        "status": "admitted"
+        if write_requested.get("decision") == "allow" and write_outside.get("decision") == "requires-explicit-authority"
+        else "missing-or-conflicting",
+        "resolver_owner": resolution.get("resolver_owner"),
+        "write_requested_paths": write_requested,
+        "write_outside_scope": write_outside,
+        "requested_effects": resolution.get("requested_effects", []),
+    }
+    mutation_authority = {
+        "status": "clean-baseline"
+        if baseline.get("status") == "clean-scope"
+        and _as_dict(baseline.get("observation")).get("ok") is True
+        and changed_paths == allowed_paths
+        and baseline.get("baseline_id")
+        and baseline.get("head")
+        and observed_state.get("enforcement_fingerprint")
+        else "missing-or-stale",
+        "kind": baseline.get("kind"),
+        "baseline_id": baseline.get("baseline_id"),
+        "head": baseline.get("head"),
+        "allowed_paths": allowed_paths,
+        "changed_paths": changed_paths,
+        "owner": ownership.get("owner"),
+        "enforcement_fingerprint": observed_state.get("enforcement_fingerprint"),
+        "stale_revalidation": _as_dict(baseline.get("stale_revalidation")).get("status"),
+    }
+    proof_authority = {
+        "status": "required-before-claim"
+        if "proof" in proof_detail_route
+        and operating_loop.get("safe_claim") == "blocked"
+        and "run_or_refresh_proof" in [str(item) for item in operating_loop.get("required_before_full_closure", [])]
+        and verification.get("state") == "proof_missing"
+        else "missing-or-conflicting",
+        "detail_route": proof_detail_route,
+        "safe_claim": operating_loop.get("safe_claim"),
+        "closeout_state": operating_loop.get("closeout_state"),
+        "verification_state": verification.get("state"),
+        "required_before_full_closure": operating_loop.get("required_before_full_closure", []),
+    }
+    decision = {
+        "owner": "direct-work" if direct_route else "",
+        "terminal_state": "continue" if direct_route and operating_loop.get("closeout_state") == "blocked_missing_proof" else "",
+        "typed_action": "implement" if typed_invocation["status"] == "observed" else "",
+        "effect_scope": "changed-paths-only" if effect_authority["status"] == "admitted" else "",
+        "mutation_precondition": "clean-baseline" if mutation_authority["status"] == "clean-baseline" else "",
+        "proof_claim_boundary": "proof-before-completion-claim" if proof_authority["status"] == "required-before-claim" else "",
+        "next_transition": "run-focused-proof" if proof_authority["status"] == "required-before-claim" else "",
+    }
+    complete = all(decision.values())
+    return {
+        "kind": "agentic-workspace/operation-authority-projection/v1",
+        "producer_module": __name__,
+        "surface": "implement",
+        "status": "admitted" if complete else "incomplete",
+        "decision": decision,
+        "typed_invocation": typed_invocation,
+        "effect_authority": effect_authority,
+        "mutation_authority": mutation_authority,
+        "proof_authority": proof_authority,
+        "field_authority": {
+            "owner": "planning_safety_gate",
+            "terminal_state": "planning_safety_gate+operating_loop",
+            "typed_action": "decision_packet.surface",
+            "effect_scope": "authority_envelope.side_effect_decisions",
+            "mutation_precondition": "authority_envelope.mutation_baseline",
+            "proof_claim_boundary": "operating_loop+proof.detail_route",
+            "next_transition": "operating_loop.required_before_full_closure+proof.detail_route",
+        },
+        "rule": "External checkers may certify only fields backed by the listed ordinary implement authority fronts.",
+    }
+
+
 def _tiny_proof_command_tiers_payload(value: Any, *, required_commands: list[str]) -> dict[str, Any]:
     packet = value if isinstance(value, dict) else {}
     raw_tiers = packet.get("tiers", [])
@@ -1665,6 +1775,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         decision_packet=decision_packet,
         state_delta_core=state_delta_core,
     )
+    proof_detail_route = str(_as_dict(decision_packet.get("detail_routes")).get("proof_detail") or "")
+    operation_authority = _tiny_operation_authority_payload(
+        payload=payload,
+        decision_packet=decision_packet,
+        proof_detail_route=proof_detail_route,
+    )
     projected = {
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
@@ -1843,6 +1959,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "operating_loop": payload.get("operating_loop", {}),
         "context": {
             "workflow_sufficiency": workflow_sufficiency,
+            "operation_authority": operation_authority,
             "adaptive_routing": _tiny_adaptive_routing_payload(
                 surface="implement",
                 current_need="changed-path-next-action" if payload.get("changed_paths") else "unknown-scope-routing",

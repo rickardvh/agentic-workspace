@@ -23,7 +23,54 @@ def _checker_module():
 
 def _ordinary_direct_implement_packet() -> dict[str, object]:
     return {
-        "context": {"planning_safety_gate": {"gate_result": "direct-work-allowed", "implementation_allowed": True}},
+        "context": {
+            "planning_safety_gate": {"gate_result": "direct-work-allowed", "implementation_allowed": True},
+            "operation_authority": {
+                "kind": "agentic-workspace/operation-authority-projection/v1",
+                "producer_module": "agentic_workspace.workspace_runtime_implement",
+                "surface": "implement",
+                "status": "admitted",
+                "decision": {
+                    "owner": "direct-work",
+                    "terminal_state": "continue",
+                    "typed_action": "implement",
+                    "effect_scope": "changed-paths-only",
+                    "mutation_precondition": "clean-baseline",
+                    "proof_claim_boundary": "proof-before-completion-claim",
+                    "next_transition": "run-focused-proof",
+                },
+                "typed_invocation": {"status": "observed", "surface": "implement"},
+                "effect_authority": {
+                    "status": "admitted",
+                    "write_requested_paths": {"class": "write-requested-paths", "decision": "allow"},
+                    "write_outside_scope": {"class": "write-outside-scope", "decision": "requires-explicit-authority"},
+                },
+                "mutation_authority": {
+                    "status": "clean-baseline",
+                    "baseline_id": "baseline-1",
+                    "head": "abc123",
+                    "allowed_paths": ["README.md"],
+                    "changed_paths": ["README.md"],
+                    "enforcement_fingerprint": "sha256:abc",
+                },
+                "proof_authority": {
+                    "status": "required-before-claim",
+                    "detail_route": "agentic-workspace proof --target . --changed <paths> --format json",
+                    "safe_claim": "blocked",
+                    "verification_state": "proof_missing",
+                    "required_before_full_closure": ["run_or_refresh_proof"],
+                },
+                "field_authority": {
+                    "owner": "planning_safety_gate",
+                    "terminal_state": "planning_safety_gate+operating_loop",
+                    "typed_action": "decision_packet.surface",
+                    "effect_scope": "authority_envelope.side_effect_decisions",
+                    "mutation_precondition": "authority_envelope.mutation_baseline",
+                    "proof_claim_boundary": "operating_loop+proof.detail_route",
+                    "next_transition": "operating_loop.required_before_full_closure+proof.detail_route",
+                },
+            },
+        },
         "decision_packet": {
             "kind": "agentic-workspace/ordinary-decision-packet/v1",
             "surface": "implement",
@@ -121,6 +168,7 @@ def test_composed_operation_checker_accepts_ordinary_direct_work_packet() -> Non
         else:
             assert contract[field] == scenario[field]
     assert authority_packet["ordinary_packet_ref"]["producer_module"] == "agentic_workspace.workspace_runtime_implement"
+    assert authority_packet["ordinary_packet_ref"]["mutation_authority"]["baseline_id"] == "baseline-1"
     assert "owner_packet" not in authority_packet
 
 
@@ -165,6 +213,78 @@ def test_composed_operation_contract_rejects_scenario_authored_ordinary_ref() ->
 def test_composed_operation_contract_rejects_missing_proof_route() -> None:
     implement = _ordinary_direct_implement_packet()
     implement["decision_packet"]["detail_routes"] = {}
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="fresh-direct-work",
+        active_planning=False,
+        start={},
+        implement=implement,
+        summary={},
+        closeout={},
+    )
+    assert authority_packet == {}
+
+
+def test_composed_operation_contract_rejects_missing_baseline_authority() -> None:
+    implement = _ordinary_direct_implement_packet()
+    implement["context"]["operation_authority"]["mutation_authority"]["status"] = "missing-or-stale"
+    implement["context"]["operation_authority"]["mutation_authority"]["baseline_id"] = ""
+    implement["context"]["operation_authority"]["decision"]["mutation_precondition"] = ""
+    implement["context"]["operation_authority"]["status"] = "incomplete"
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="fresh-direct-work",
+        active_planning=False,
+        start={},
+        implement=implement,
+        summary={},
+        closeout={},
+    )
+    assert authority_packet == {}
+
+
+def test_composed_operation_contract_rejects_widened_effect_authority() -> None:
+    implement = _ordinary_direct_implement_packet()
+    implement["context"]["operation_authority"]["effect_authority"]["status"] = "missing-or-conflicting"
+    implement["context"]["operation_authority"]["effect_authority"]["write_outside_scope"]["decision"] = "allow"
+    implement["context"]["operation_authority"]["decision"]["effect_scope"] = ""
+    implement["context"]["operation_authority"]["status"] = "incomplete"
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="fresh-direct-work",
+        active_planning=False,
+        start={},
+        implement=implement,
+        summary={},
+        closeout={},
+    )
+    assert authority_packet == {}
+
+
+def test_composed_operation_contract_rejects_missing_typed_invocation() -> None:
+    implement = _ordinary_direct_implement_packet()
+    implement["context"]["operation_authority"]["typed_invocation"]["status"] = "missing"
+    implement["context"]["operation_authority"]["decision"]["typed_action"] = ""
+    implement["context"]["operation_authority"]["status"] = "incomplete"
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="fresh-direct-work",
+        active_planning=False,
+        start={},
+        implement=implement,
+        summary={},
+        closeout={},
+    )
+    assert authority_packet == {}
+
+
+def test_composed_operation_contract_rejects_conflicting_proof_transition_authority() -> None:
+    implement = _ordinary_direct_implement_packet()
+    implement["context"]["operation_authority"]["proof_authority"]["status"] = "missing-or-conflicting"
+    implement["context"]["operation_authority"]["proof_authority"]["safe_claim"] = "allowed"
+    implement["context"]["operation_authority"]["decision"]["proof_claim_boundary"] = ""
+    implement["context"]["operation_authority"]["decision"]["next_transition"] = ""
+    implement["context"]["operation_authority"]["status"] = "incomplete"
     authority_packet = observe_composed_operation_authority(
         target=Path("."),
         scenario_id="fresh-direct-work",
