@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -19,7 +19,7 @@ from agentic_workspace.evaluation import (
     EVALUATION_PENDING_COLLECTIONS_DIR,
     EVALUATION_SUMMARY_KIND,
     EVALUATIONS_KIND,
-    EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV,
+    EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEY_ID,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND,
     EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
@@ -27,7 +27,8 @@ from agentic_workspace.evaluation import (
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
     WORKSPACE_LOCAL_EVALUATIONS_DIR,
-    _external_delivery_adapter_host_result_digest,
+    _evaluation_json_bytes,
+    _external_delivery_adapter_host_admission_payload,
     _write_indexed_owner_receipt,
     append_observation,
     closure_authority,
@@ -78,6 +79,53 @@ def _write_external_evaluation_adapter_host_result(target_root: Path, **values: 
     result_id = hashlib.sha256(json.dumps(result, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
     result["result_id"] = result_id
     result["result_ref"] = f"external-evaluation-adapter-host-result:{result_id}"
+    signed_payload = _external_delivery_adapter_host_admission_payload(str(result["result_ref"]), result)
+    private_key = """-----BEGIN PRIVATE KEY-----
+MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDeRnuGSKyZ1DK0
+IeOFMmnoUPLeGXafks5pL+MTSKhqL9M4hoVfRdQG/sh5hYYPKmn+DkShGFRarFVK
+p8qEskZ+a4H6swiSiQVRaEKZrKJn9PViHbDFg6w+UxKOzUEjn35a0mi3c3VIwqCf
+vKS2GqZ0mVfHmQ5LPm/dG69SS1g3E0/GBd9hd4flb2Kf+icIpCfbuDvXm2qMMHnI
+BNCzigMma/zyDLe4+/YfKRc0j/vhzLvS55LI4cYbyJ03VLssRap+kAJwpp7B9JJU
+0o9mOpXAWxdtlXKx4yZEvHcMHe8a54OxgnJd+nAty06BPFPXjaYgEzRk8xNSqFMB
+rQ/Sc0W5AgMBAAECggEAFUQIyimOkuabhcKmxA31Vj/VZqSoxd5br3Jgjy4gx80E
+0DgFj16MyTEL4N2CnJWWH7OBgyii3Gx3ug1o2a59Qlfajw/dMnjXyIi5M37x6FCG
+QBF/YbxF6M4VnNI8KNJ3+iw+jsul9VTCnZnEp/QPiCEKJgtpk88Y0H6XNOBGw7kA
+dwU/6DOQrEGFCLSWpoXB+YKBF80savEMqYuPikquXMA1XIYZNQK2hUAVovfjMqhR
+6+aSERYm72zpxVWxXA37hd75qPw/8ui1W4fx42gVrjhMclyoYFKVU8tvbDJ9y38D
+vl2ksmXHMLbkA6no6PbPhlR+4ZFQg3uFs1obL584UQKBgQD4Kd3WauVDAaIf4w0W
+fF9hZPtrJimSrOs00hrp0iVyuOOL5kuw0JOTj6rAvj2hNPS6CdgaLSck57LZj0S3
+XXT3dtAH2IkwWFMC+0vkmHCHBWRkmizBL2/r+UGsWrXdQL0RWK90m5YdyBYLDqXp
+wcxfRV7Xnq6Gmeig0h40xusdEQKBgQDlS1Z3EcuAIl5njRCcnFvdKJ49mygg6361
+/ETK/DqCdQMM2StKA+oE+QqK3QuYv33RkW6P5lGksjxuXFUMSPXRy6KUwQ84diDf
+c1uwMbaO8Jz7MrLQHx78uvtbZ4FaZmD2oEda6HCjZsLdhvQxzDv07mStSSfzeuWw
+kWa616m+KQKBgQCoKeazt7gn0eGE7h0eUaVooD9m+nNNe3PfVUj7jXXm6bb4RFSi
+OpTmd4JkHgYxSWtU7frMsjBGZ+PgXZ9ZCjGKx65swqUkZ5XI/XUOMOZ/+H1xVrBh
+ML4ND9ka7FU02vvD1279+7ib8cxOLdzsLHFLVfzQ7Cyj9YOYBwqFBQ6poQKBgQDX
+elkjRGHNZH77KSH3Syk5SLaMhobLiQNm2k97wlTpzDS1mlCIGe2OBsvVe60uOqZu
+jxErwfHvqGAKBlMWXGpGYevDhzpagQibdLkxd0ZsRcoAdsB7vQNN1hno5/gzkAqH
+OlBUKiPQKv3tWKmbMqcVogKSpjEZKuE3cSztYUZvIQKBgQCSl9lwbyoBl0uHkpfr
+73b5i4wyd4ati2SXUS8oDYVtFkcbqNJcktmnQ5Q0D6L9QQKA2FJQekWqRfIq+Pcv
+ioaPTHa3ePxgbiKav/N4iu04Ce9khx/xeXsgslrNgGU6HrySn4FiG10HGYbrOV57
+ptscLbLtU7mXdb4Tfrw9Z0Rpag==
+-----END PRIVATE KEY-----
+"""
+    key_path = target_root / ".agentic-workspace" / "local" / "external-evaluation-test-provider-key.pem"
+    key_path.parent.mkdir(parents=True, exist_ok=True)
+    key_path.write_text(private_key, encoding="utf-8")
+    completed = subprocess.run(
+        ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
+        input=_evaluation_json_bytes(signed_payload),
+        capture_output=True,
+        check=True,
+    )
+    result["host_admission"] = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
+        "status": "current",
+        "algorithm": "RS256",
+        "key_id": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEY_ID,
+        "signed_payload": signed_payload,
+        "signature": base64.b64encode(completed.stdout).decode("ascii"),
+    }
     root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR
     path = root / f"{result_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -100,16 +148,6 @@ def _write_external_evaluation_adapter_host_result(target_root: Path, **values: 
         },
     }
     index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    admissions = json.loads(os.environ.get(EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV, "{}"))
-    admissions[result["result_ref"]] = {
-        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
-        "status": "current",
-        "result_ref": result["result_ref"],
-        "result_digest": _external_delivery_adapter_host_result_digest(result),
-        "issuer": "provider-webhook",
-        "producer": result["custody"]["producer"],
-    }
-    os.environ[EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV] = json.dumps(admissions, sort_keys=True)
     return {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-record/v1",
         "status": "stored",
@@ -308,7 +346,27 @@ def test_external_adapter_receipt_rejects_jointly_forged_local_host_result(tmp_p
         "status": "delivered",
     }
     host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
-    monkeypatch.delenv(EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV, raising=False)
+    monkeypatch.setenv(
+        "AW_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS",
+        json.dumps(
+            {
+                host["result_ref"]: {
+                    "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
+                    "status": "current",
+                    "issuer": "provider-webhook",
+                    "producer": "evaluation-provider-adapter",
+                }
+            }
+        ),
+    )
+    result_path = tmp_path / host["path"]
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    result["host_admission"]["signature"] = "caller-forged-signature"
+    result_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    index_path = tmp_path / host["index_ref"]
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    index["results"][host["result_id"]]["result_digest"] = hashlib.sha256(result_path.read_bytes()).hexdigest()
+    index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     with pytest.raises(WorkspaceUsageError, match="host boundary"):
         record_external_evaluation_adapter_receipt(

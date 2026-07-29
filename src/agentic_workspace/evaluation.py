@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
@@ -25,7 +26,24 @@ EVALUATION_FINDING_FOLLOWUPS_PATH = Path(".agentic-workspace/planning/evaluation
 EVALUATION_OWNER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-owner-receipt-index/v1"
 EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-external-delivery-adapter-receipt-index/v1"
 EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND = "agentic-workspace/evaluation-external-delivery-adapter-host-result-index/v1"
-EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV = "AW_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS"
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEY_ID = "external-evaluation-provider-rsa-2026-07-30"
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_PUBLIC_KEYS = {
+    EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEY_ID: {
+        "algorithm": "RS256",
+        "e": 65537,
+        "n": (
+            "de467b8648ac99d432b421e3853269e850f2de19769f92ce692fe31348a86a2f"
+            "d33886855f45d406fec87985860f2a69fe0e44a118545aac554aa7ca84b2467e"
+            "6b81fab30892890551684299aca267f4f5621db0c583ac3e53128ecd41239f7e"
+            "5ad268b7737548c2a09fbca4b61aa6749957c7990e4b3e6fdd1baf524b5837"
+            "134fc605df617787e56f629ffa2708a427dbb83bd79b6a8c3079c804d0b38a"
+            "03266bfcf20cb7b8fbf61f2917348ffbe1ccbbd2e792c8e1c61bc89d3754"
+            "bb2c45aa7e900270a69ec1f49254d28f663a95c05b176d9572b1e32644bc"
+            "770c1def1ae783b182725dfa702dcb4e813c53d78da620133464f31352a8"
+            "5301ad0fd27345b9"
+        ),
+    }
+}
 EVALUATION_FINDING_FOLLOWUPS_KIND = "agentic-workspace/evaluation-finding-followups/v1"
 OBSERVATION_RETENTION_CAP = 100
 OBSERVATION_BYTE_CAP = 256_000
@@ -402,27 +420,73 @@ def _external_delivery_adapter_host_result_digest(result: dict[str, Any]) -> str
     return _stable_json_digest({key: value for key, value in result.items() if key != "host_admission"})
 
 
-def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, Any]) -> bool:
+def _external_delivery_adapter_host_admission_payload(ref: str, result: dict[str, Any]) -> dict[str, Any]:
+    raw_custody = result.get("custody")
+    custody: dict[str, Any] = raw_custody if isinstance(raw_custody, dict) else {}
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-payload/v1",
+        "result_ref": ref,
+        "result_digest": _external_delivery_adapter_host_result_digest(result),
+        "delivery_id": str(result.get("delivery_id") or ""),
+        "sink_id": str(result.get("sink_id") or ""),
+        "attempt_revision": str(result.get("attempt_revision") or ""),
+        "receipt_revision": str(result.get("receipt_revision") or ""),
+        "capability_revision": str(result.get("capability_revision") or ""),
+        "producer": str(custody.get("producer") or ""),
+        "trusted_channel": str(custody.get("trusted_channel") or ""),
+    }
+
+
+def _evaluation_json_bytes(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
+
+
+def _rsa_sha256_verify(*, message: bytes, signature_b64: str, modulus_hex: str, exponent: int) -> bool:
     try:
-        admissions = json.loads(os.environ.get(EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV, "{}"))
-    except json.JSONDecodeError:
+        signature = base64.b64decode(signature_b64, validate=True)
+        modulus = int(modulus_hex, 16)
+    except (TypeError, ValueError):
         return False
-    if not isinstance(admissions, dict):
+    key_size = (modulus.bit_length() + 7) // 8
+    if len(signature) != key_size:
         return False
-    admission = admissions.get(ref)
+    encoded = pow(int.from_bytes(signature, "big"), exponent, modulus).to_bytes(key_size, "big")
+    digest_info = bytes.fromhex("3031300d060960864801650304020105000420") + hashlib.sha256(message).digest()
+    separator = encoded.find(b"\x00", 2)
+    if not encoded.startswith(b"\x00\x01") or separator < 10:
+        return False
+    if encoded[2:separator] != b"\xff" * (separator - 2):
+        return False
+    return encoded[separator + 1 :] == digest_info
+
+
+def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, Any]) -> bool:
+    admission = result.get("host_admission")
     if not isinstance(admission, dict):
+        return False
+    signed_payload = admission.get("signed_payload")
+    if not isinstance(signed_payload, dict) or signed_payload != _external_delivery_adapter_host_admission_payload(ref, result):
+        return False
+    key = EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_PUBLIC_KEYS.get(str(admission.get("key_id") or ""))
+    if not isinstance(key, dict):
         return False
     raw_custody = result.get("custody")
     custody: dict[str, Any] = raw_custody if isinstance(raw_custody, dict) else {}
-    return (
-        admission.get("kind") == "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1"
-        and admission.get("status") == "current"
-        and admission.get("result_ref") == ref
-        and admission.get("result_digest") == _external_delivery_adapter_host_result_digest(result)
-        and admission.get("issuer") in {"provider-webhook", "external-operation-adapter", "delivery-provider-receipt"}
-        and str(admission.get("producer") or "") == str(custody.get("producer") or "")
-        and not admission.get("revoked_at")
-        and not admission.get("superseded_by")
+    if (
+        admission.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1"
+        or admission.get("status") != "current"
+        or admission.get("algorithm") != key.get("algorithm")
+        or signed_payload.get("trusted_channel") not in {"provider-webhook", "external-operation-adapter", "delivery-provider-receipt"}
+        or signed_payload.get("producer") != str(custody.get("producer") or "")
+        or admission.get("revoked_at")
+        or admission.get("superseded_by")
+    ):
+        return False
+    return _rsa_sha256_verify(
+        message=_evaluation_json_bytes(signed_payload),
+        signature_b64=str(admission.get("signature") or ""),
+        modulus_hex=str(key.get("n") or ""),
+        exponent=int(key.get("e") or 0),
     )
 
 
