@@ -1,0 +1,29 @@
+{
+  "kind": "agentic-workspace/evaluation-issue-disposition/v1",
+  "issue_ref": "#1969",
+  "evaluation_id": "state-delta-operating-loop-1969",
+  "status": "migrated-to-longitudinal-evaluation",
+  "implementation_disposition": {
+    "present_tense_status": "implemented-in-archived-closeout",
+    "evidence_ref": ".agentic-workspace/planning/execplans/archive/issue-1969-state-delta-operating-loop-closeout.plan.json",
+    "closure_boundary": "The implementation closeout is archived; ongoing effectiveness is evaluated longitudinally instead of treated as present-tense implementation proof."
+  },
+  "evaluation_disposition": {
+    "definition_ref": ".agentic-workspace/evaluations.json#state-delta-operating-loop-1969",
+    "report_sinks": [
+      "#1969",
+      "#2273"
+    ],
+    "ordinary_match_required": true,
+    "current_observation_required": true,
+    "material_negative_followup": "create-or-reopen-bounded-follow-up"
+  },
+  "future_evidence_audit": {
+    "status": "bounded-audit-recorded",
+    "audited_refs": [
+      "#1969",
+      "#2273"
+    ],
+    "classification_rule": "Present implementation proof remains in closeout records; recurring or delayed effectiveness evidence is collected through the Evaluation lifecycle and must not be used as a closure shortcut."
+  }
+}

@@ -422,6 +422,109 @@ def test_targeted_execplan_writer_rejects_unsupported_parent_projection(tmp_path
     assert json.loads(plan_path.read_text(encoding="utf-8"))["revision"] == 1
 
 
+def test_targeted_execplan_writer_migrates_supported_fields_and_preserves_unrelated_bytes(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    unrelated_path = tmp_path / ".agentic-workspace/planning/execplans/unrelated.plan.json"
+    template_path = tmp_path / ".agentic-workspace/planning/execplans/TEMPLATE.md"
+    history_path = tmp_path / ".agentic-workspace/planning/archive/completed-history.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="active-plan")
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    _write_execplan_record(unrelated_path, item_id="unrelated", status="queued")
+    _write_execplan_record(history_path, item_id="completed-history", status="completed")
+    template_path.write_text("# template\n\nleave this byte-identical\n", encoding="utf-8", newline="\n")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    record["relationships"] = {"external": {"issue": "#2283"}}
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    unrelated_before = unrelated_path.read_bytes()
+    template_before = template_path.read_bytes()
+    history_before = history_path.read_bytes()
+    revision = planning_revision(tmp_path)["revision_id"]
+    patch = {
+        "intent": {"outcome": "Tightened outcome", "non_goals": ["Do not widen scope."]},
+        "scope": {"owned": ["packages/planning"], "effects": ["bounded targeted writer migration"]},
+        "blockers": ["proof cleared"],
+        "next_action": "run targeted writer proof",
+        "proof": {"claims": ["Writer preserves unspecified fields."], "requirements": ["make test-planning"], "refs": []},
+        "continuation": {"owner": "none", "residual_intent": "none"},
+    }
+
+    applied = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch=patch,
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+    )
+
+    assert applied["status"] == "applied"
+    updated = json.loads(plan_path.read_text(encoding="utf-8"))
+    for key, value in patch.items():
+        assert updated[key] == value
+    assert updated["relationships"] == {"external": {"issue": "#2283"}}
+    assert unrelated_path.read_bytes() == unrelated_before
+    assert template_path.read_bytes() == template_before
+    assert history_path.read_bytes() == history_before
+    noop = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch=patch,
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+        expected_owner_revision=updated["revision"],
+        apply=True,
+    )
+    assert noop["status"] == "no-op"
+    assert json.loads(plan_path.read_text(encoding="utf-8"))["revision"] == updated["revision"]
+
+
+def test_targeted_execplan_writer_rolls_back_late_lane_write_failure(tmp_path: Path, monkeypatch) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/lane-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="lane-plan")
+    _write_execplan_record(plan_path, item_id="lane-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    lane_path = next((tmp_path / ".agentic-workspace/planning/lanes").glob("*.lane.json"))
+    lane_record = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane_record["current_slice"] = "lane-plan"
+    lane_record["slice_sequence"][0]["status"] = "active"
+    lane_record["slice_sequence"][0]["execplan_ref"] = ".agentic-workspace/planning/execplans/lane-plan.plan.json"
+    installer_mod._write_lane_record(record_path=lane_path, record=lane_record)
+    lane_revision = installer_mod._record_revision(json.loads(lane_path.read_text(encoding="utf-8")))
+    revision = planning_revision(tmp_path)["revision_id"]
+    owner_before = plan_path.read_bytes()
+    state_before = (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes()
+    lane_before = lane_path.read_bytes()
+
+    original_write_lane = installer_mod._write_lane_record
+
+    def fail_lane_write(*, record_path: Path, record: dict) -> None:
+        if record_path == lane_path:
+            raise OSError("injected lane write failure")
+        original_write_lane(record_path=record_path, record=record)
+
+    monkeypatch.setattr(installer_mod, "_write_lane_record", fail_lane_write)
+
+    result = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="lane-plan",
+        patch={"lifecycle": "archived", "phase": "complete"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        expected_lane_revision=lane_revision,
+        apply=True,
+    )
+
+    assert result["status"] == "rolled-back"
+    assert plan_path.read_bytes() == owner_before
+    assert (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes() == state_before
+    assert lane_path.read_bytes() == lane_before
+    assert not list((tmp_path / ".agentic-workspace/local/planning/targeted-execplan-receipts").glob("*.json"))
+
+
 def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     _write(
