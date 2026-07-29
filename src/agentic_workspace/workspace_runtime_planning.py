@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import re
 import tomllib
@@ -55,6 +56,10 @@ from agentic_workspace.workspace_runtime_generated_surface import (
     _as_dict,
     _command_with_cli_invoke,
 )
+
+
+def _stable_revision(value: Any) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
 
 
 def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
@@ -1312,6 +1317,7 @@ def _planning_route_decision_payload(
         required_transition=transition,
         planning_revision=planning_revision,
     )
+    action_identity = _as_dict(next_packet.get("operation_invocation")).get("input_identity", {})
     allowed_claims = ["bounded-task-progress"] if bounded else ["active-plan-progress"] if continuing else []
     blocked_claims = _route_decision_blocked_claims(task_relation=task_relation, owner_posture=owner_posture, transition=transition)
     decision = {
@@ -1359,6 +1365,14 @@ def _planning_route_decision_payload(
         else "read-only"
         if transition == "none"
         else "explicit-transition-required",
+        "action_identity": action_identity,
+        "legacy_consumer_replacement_map": {
+            "task_switch_reconciliation.status": "route_decision.task_relation + route_decision.owner_posture + route_decision.required_transition",
+            "task_switch_reconciliation.recommended_next_action": "route_decision.next_safe_action.action",
+            "task_switch_reconciliation.blocked_claims": "route_decision.blocked_claims",
+            "task_switch_reconciliation.route_acknowledgement": "route_decision.next_safe_action.operation_invocation.input_identity",
+            "task_switch_reconciliation.permission": "route_decision.implementation_allowed + route_decision.mutation_authority",
+        },
         "next_safe_action": next_packet,
     }
     owner_admission_source = str(_as_dict(owner_admission.get("selected_owner")).get("source") or "")
@@ -1441,6 +1455,21 @@ def _route_decision_next_action_packet(
     proof = "refresh the Planning route decision and consume its typed action contract"
     required_inputs = ["route decision", "selected owner identity", "Planning revision"]
     risk = "route-authority-incomplete"
+    route_inputs = _as_dict(route_evidence.get("route_inputs"))
+    task_binding = _as_dict(route_inputs.get("task_binding"))
+    owner_facts = _as_dict(route_inputs.get("owner"))
+    owner_admission = _as_dict(route_evidence.get("owner_admission"))
+    selected_owner = _as_dict(owner_admission.get("selected_owner"))
+    selected_owner_ref = str(route_evidence.get("active_execplan") or owner_facts.get("ref") or selected_owner.get("ref") or "")
+    selected_owner_revision = str(
+        owner_facts.get("revision")
+        or selected_owner.get("revision")
+        or _as_dict(owner_admission.get("selected_owner_identity")).get("revision")
+        or ""
+    )
+    mutation_baseline = _as_dict(route_inputs.get("mutation_baseline"))
+    mutation_scope = _as_dict(mutation_baseline.get("scope"))
+    route_proposal = _as_dict(route_inputs.get("reconciliation_proposal"))
     if owner_posture == "completed-residue":
         completed_plan = _as_dict(route_evidence.get("completed_active_plan"))
         action = "archive-or-retire-completed-plan"
@@ -1473,18 +1502,36 @@ def _route_decision_next_action_packet(
         proof = "record the explicit task-route decision before implementation or active-plan claims"
         required_inputs = ["current task", "selected owner", "explicit route decision"]
         risk = "ambiguous-active-plan-route"
-    proposal = _as_dict(
-        route_evidence.get("route_inputs", {}).get("reconciliation_proposal")
-        if isinstance(route_evidence.get("route_inputs"), dict)
-        else {}
-    )
-    if required_transition == "reconcile" and proposal.get("status") == "current":
+    if required_transition == "reconcile" and route_proposal.get("status") == "current":
         action = "apply-planning-reconciliation-proposal"
         summary = "Apply the current Planning reconciliation proposal after its compare-and-swap check."
         command = str(_as_dict(route_evidence.get("reconciliation_proposal")).get("apply_command") or "")
         proof = "apply the current reconciliation proposal and retain its mutation receipt"
         required_inputs = ["current proposal identity", "Planning revision", "compare-and-swap receipt"]
         risk = "planning-reconciliation-required"
+    action_contract = {
+        "kind": "agentic-planning/route-action-input/v1",
+        "route_action": action,
+        "task_relation": task_relation,
+        "owner_posture": owner_posture,
+        "expected_transition": required_transition,
+        "planning_revision": revision,
+        "selected_owner_ref": selected_owner_ref,
+        "selected_owner_revision": selected_owner_revision,
+        "task_binding_identity": str(task_binding.get("identity") or task_binding.get("task_digest") or ""),
+        "task_binding_mode": str(task_binding.get("mode") or ""),
+        "mutation_baseline_id": str(mutation_baseline.get("baseline_id") or ""),
+        "mutation_scope_digest": _stable_revision(mutation_scope) if mutation_scope else "",
+        "reconciliation_proposal_id": str(route_proposal.get("proposal_id") or route_proposal.get("identity") or ""),
+        "reconciliation_proposal_revision": str(route_proposal.get("revision") or route_proposal.get("proposal_revision") or ""),
+        "expected_claim_effect": {
+            "proof": proof,
+            "risk": risk,
+            "required_inputs": required_inputs,
+        },
+    }
+    action_contract["idempotency_key"] = "planning-route:" + _stable_revision(action_contract)[:24]
+    input_revision = "sha256:" + _stable_revision(action_contract)
     return {
         "action": action,
         "summary": summary,
@@ -1495,9 +1542,25 @@ def _route_decision_next_action_packet(
         "next_proof": proof,
         "read_first": [],
         "operation_invocation": {
-            "operation_id": f"planning.route.{action}",
+            "operation_id": "planning.front-door",
+            "operation_action": "route-decision-next-action",
+            "operation_path": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+            "adapter_id": "planning.front-door.cli",
             "authority": "agentic-planning/route-decision/v1",
-            "input_revision": revision,
+            "input_revision": input_revision,
+            "input_identity": action_contract,
+            "stale_action_rejection": {
+                "status": "reject-on-input-revision-mismatch",
+                "reject_when_changed": [
+                    "planning_revision",
+                    "selected_owner_revision",
+                    "task_binding_identity",
+                    "mutation_baseline_id",
+                    "mutation_scope_digest",
+                    "reconciliation_proposal_id",
+                    "reconciliation_proposal_revision",
+                ],
+            },
             "preconditions": required_inputs,
             "expected_transition": required_transition,
         },

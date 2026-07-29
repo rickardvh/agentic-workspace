@@ -2350,6 +2350,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     "mutation_authority",
                     "proof_expectation",
                     "state_update_policy",
+                    "action_identity",
+                    "legacy_consumer_replacement_map",
                     "next_safe_action",
                 )
                 if authoritative_route.get(key) not in (None, "", [], {})
