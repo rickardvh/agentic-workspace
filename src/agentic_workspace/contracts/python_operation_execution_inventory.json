@@ -321,6 +321,160 @@
       ]
     },
     {
+      "operation_id": "evaluation.report-preview",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.report-preview.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.report.preview",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns evaluation report selection, quiet non-match policy, and compatibility output.",
+      "what_would_make_portable_later": "Represent evaluation report preview as schema-backed generated operation steps once evaluation matching, quiet projection, and explicit-report policy are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific report preview semantics.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.report-preview"
+      ]
+    },
+    {
+      "operation_id": "evaluation.local-delivery",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.local-delivery.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.report.local_delivery",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns local delivery admission, delivery ledger updates, and compatibility output.",
+      "what_would_make_portable_later": "Represent local evaluation report delivery as schema-backed generated operation steps once delivery ledger semantics and owner/sink policy are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific local delivery semantics.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.local-delivery"
+      ]
+    },
+    {
+      "operation_id": "evaluation.external-request",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.external-request.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.report.external_request",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns external delivery request construction, owner/sink selection, and compatibility output.",
+      "what_would_make_portable_later": "Represent external evaluation request creation as schema-backed generated operation steps once delivery request identity and sink policy are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific external request semantics.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.external-request"
+      ]
+    },
+    {
+      "operation_id": "evaluation.external-adapter-receipt",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.external-adapter-receipt.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.report.external_adapter_receipt",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns provider-owned adapter receipt admission and host-result authority checks.",
+      "what_would_make_portable_later": "Represent external adapter receipt admission as schema-backed generated operation steps once host-result custody and provider admission are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific provider receipt semantics.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.external-adapter-receipt"
+      ]
+    },
+    {
+      "operation_id": "evaluation.external-delivery",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.external-delivery.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.report.external_delivery",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns external delivery admission, adapter receipt matching, and delivery state updates.",
+      "what_would_make_portable_later": "Represent external delivery admission as schema-backed generated operation steps once adapter receipt matching and delivery-state policy are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific external delivery semantics.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.external-delivery"
+      ]
+    },
+    {
+      "operation_id": "evaluation.delivery-status",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.delivery-status.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.report.delivery_status",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns report sink delivery status projection and compatibility output.",
+      "what_would_make_portable_later": "Represent delivery status as schema-backed generated operation steps once sink status projection and retry policy are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific delivery-status semantics.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.delivery-status"
+      ]
+    },
+    {
+      "operation_id": "evaluation.retry",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.retry.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.report.delivery_retry",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns failed-delivery retry request policy and compatibility output.",
+      "what_would_make_portable_later": "Represent retry request construction as schema-backed generated operation steps once failed-delivery identity and sink retry policy are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific retry semantics.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.retry"
+      ]
+    },
+    {
       "operation_id": "defaults.report",
       "program": "agentic-workspace",
       "command": "defaults",

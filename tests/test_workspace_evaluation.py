@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +19,7 @@ from agentic_workspace.evaluation import (
     EVALUATION_PENDING_COLLECTIONS_DIR,
     EVALUATION_SUMMARY_KIND,
     EVALUATIONS_KIND,
+    EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND,
     EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
@@ -25,6 +27,7 @@ from agentic_workspace.evaluation import (
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
     WORKSPACE_LOCAL_EVALUATIONS_DIR,
+    _external_delivery_adapter_host_result_digest,
     _write_indexed_owner_receipt,
     append_observation,
     closure_authority,
@@ -97,6 +100,16 @@ def _write_external_evaluation_adapter_host_result(target_root: Path, **values: 
         },
     }
     index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    admissions = json.loads(os.environ.get(EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV, "{}"))
+    admissions[result["result_ref"]] = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
+        "status": "current",
+        "result_ref": result["result_ref"],
+        "result_digest": _external_delivery_adapter_host_result_digest(result),
+        "issuer": "provider-webhook",
+        "producer": result["custody"]["producer"],
+    }
+    os.environ[EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV] = json.dumps(admissions, sort_keys=True)
     return {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-record/v1",
         "status": "stored",
@@ -282,6 +295,27 @@ def test_external_adapter_receipt_requires_matching_host_result(tmp_path: Path) 
     recorded = record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
     assert recorded["status"] == "recorded"
     assert recorded["host_result_ref"] == host["result_ref"]
+
+
+def test_external_adapter_receipt_rejects_jointly_forged_local_host_result(tmp_path: Path, monkeypatch) -> None:
+    receipt = {
+        "delivery_id": "delivery-1",
+        "sink_id": "#1969",
+        "producer": "github-issues-adapter",
+        "attempt_revision": "attempt-1",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "status": "delivered",
+    }
+    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
+    monkeypatch.delenv(EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV, raising=False)
+
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_external_evaluation_adapter_receipt(
+            target_root=tmp_path,
+            **receipt,
+            host_result_ref=host["result_ref"],
+        )
 
 
 def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(tmp_path: Path) -> None:

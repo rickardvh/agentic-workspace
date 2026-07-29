@@ -25,6 +25,7 @@ EVALUATION_FINDING_FOLLOWUPS_PATH = Path(".agentic-workspace/planning/evaluation
 EVALUATION_OWNER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-owner-receipt-index/v1"
 EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-external-delivery-adapter-receipt-index/v1"
 EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND = "agentic-workspace/evaluation-external-delivery-adapter-host-result-index/v1"
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV = "AW_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS"
 EVALUATION_FINDING_FOLLOWUPS_KIND = "agentic-workspace/evaluation-finding-followups/v1"
 OBSERVATION_RETENTION_CAP = 100
 OBSERVATION_BYTE_CAP = 256_000
@@ -397,6 +398,34 @@ def record_external_evaluation_adapter_host_result(
     )
 
 
+def _external_delivery_adapter_host_result_digest(result: dict[str, Any]) -> str:
+    return _stable_json_digest({key: value for key, value in result.items() if key != "host_admission"})
+
+
+def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, Any]) -> bool:
+    try:
+        admissions = json.loads(os.environ.get(EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_ENV, "{}"))
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(admissions, dict):
+        return False
+    admission = admissions.get(ref)
+    if not isinstance(admission, dict):
+        return False
+    raw_custody = result.get("custody")
+    custody: dict[str, Any] = raw_custody if isinstance(raw_custody, dict) else {}
+    return (
+        admission.get("kind") == "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1"
+        and admission.get("status") == "current"
+        and admission.get("result_ref") == ref
+        and admission.get("result_digest") == _external_delivery_adapter_host_result_digest(result)
+        and admission.get("issuer") in {"provider-webhook", "external-operation-adapter", "delivery-provider-receipt"}
+        and str(admission.get("producer") or "") == str(custody.get("producer") or "")
+        and not admission.get("revoked_at")
+        and not admission.get("superseded_by")
+    )
+
+
 def _load_external_delivery_adapter_host_result(*, target_root: Path, result_ref: str) -> dict[str, Any]:
     ref = str(result_ref or "").strip()
     if not ref.startswith("external-evaluation-adapter-host-result:") or "/" in ref or "\\" in ref:
@@ -432,6 +461,8 @@ def _load_external_delivery_adapter_host_result(*, target_root: Path, result_ref
         raise WorkspaceUsageError("external adapter host result is stale or superseded.")
     if entry.get("result_digest") != hashlib.sha256(raw).hexdigest():
         raise WorkspaceUsageError("external adapter host result digest does not match the host index.")
+    if not _host_admits_external_delivery_adapter_host_result(ref, result):
+        raise WorkspaceUsageError("external adapter host result was not admitted by the host boundary.")
     return result
 
 
