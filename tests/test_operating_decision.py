@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -713,10 +714,39 @@ def _write_context_authority_sources(root: Path) -> None:
     (root / ".agentic-workspace/memory/repo").mkdir(parents=True)
     (root / ".agentic-workspace/skills/workspace-startup").mkdir(parents=True)
     (root / ".agentic-workspace").mkdir(exist_ok=True)
-    (root / "SYSTEM_INTENT.md").write_text("Intent\n", encoding="utf-8")
-    (root / "AGENTS.md").write_text("Instructions\n", encoding="utf-8")
-    (root / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
-    (root / ".agentic-workspace/OWNERSHIP.toml").write_text("[paths]\n", encoding="utf-8")
+    (root / "SYSTEM_INTENT.md").write_text(
+        "# System Intent\n\n## Purpose\n\nRuntime contract.\n\n## Governing intents\n\nGenerated runtime contract shape.\n",
+        encoding="utf-8",
+    )
+    (root / "AGENTS.md").write_text(
+        "Authority marker:\n\n<!-- agentic-workspace:workflow:start -->\nOrdinary route:\n<!-- agentic-workspace:workflow:end -->\n",
+        encoding="utf-8",
+    )
+    (root / ".agentic-workspace/config.toml").write_text(
+        """
+schema_version = 1
+
+[modules]
+enabled = ["planning", "memory", "verification"]
+
+[workspace]
+cli_invoke = "agentic-workspace"
+""",
+        encoding="utf-8",
+    )
+    (root / ".agentic-workspace/OWNERSHIP.toml").write_text(
+        """
+schema_version = 1
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/OWNERSHIP.toml"
+
+[[authority_surfaces]]
+concern = "startup-instructions"
+""",
+        encoding="utf-8",
+    )
     (root / ".agentic-workspace/planning/state.toml").write_text("schema_version = 1\n", encoding="utf-8")
     (root / ".agentic-workspace/memory/repo/index.md").write_text("# Memory\n", encoding="utf-8")
     (root / ".agentic-workspace/memory/repo/manifest.toml").write_text(
@@ -1017,12 +1047,100 @@ def test_context_authority_projection_rejects_forged_owner_result_identity(tmp_p
     assert skills["reason"] == "owner-result-identity-mismatch"
 
 
-def test_context_authority_owner_results_are_adapter_dispatched_not_generic_factory() -> None:
+def test_context_authority_owner_result_revisions_bind_selection_and_schema_backing(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    base = resolve_context_authority_projection(
+        consumer="start",
+        task="shape authority routing ownership skill guidance memory",
+        target_root=tmp_path,
+    )
+    with_path = resolve_context_authority_projection(
+        consumer="start",
+        task="shape authority routing ownership skill guidance memory",
+        changed_paths=["AGENTS.md"],
+        target_root=tmp_path,
+    )
+
+    base_scoped = next(item for item in base["authorities"] if item["surface"] == "scoped-instructions")
+    path_scoped = next(item for item in with_path["authorities"] if item["surface"] == "scoped-instructions")
+    assert base_scoped["source"]["admission"]["owner_result"]["revision"] != path_scoped["source"]["admission"]["owner_result"]["revision"]
+
+    (tmp_path / "AGENTS.md").write_text(
+        "Authority marker:\n\n<!-- agentic-workspace:workflow:start -->\nmissing route marker\n",
+        encoding="utf-8",
+    )
+    invalid = resolve_context_authority_projection(
+        consumer="start",
+        task="shape authority routing ownership skill guidance memory",
+        target_root=tmp_path,
+    )
+    scoped = next(item for item in invalid["excluded_authorities"] if item["surface"] == "scoped-instructions")
+    assert scoped["reason"] == "owner-source-contract-marker-missing"
+
+
+def test_context_authority_rejects_parseable_file_without_owner_boundary(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="fix target guidance",
+        target_root=tmp_path,
+    )
+
+    target_guidance = next(item for item in projection["excluded_authorities"] if item["surface"] == "target-guidance")
+    assert target_guidance["reason"] == "owner-source-required-key-missing"
+
+
+def test_context_authority_rejects_unknown_planning_and_mutation_statuses(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_context_authority_sources(tmp_path)
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "fixture"], cwd=tmp_path, check=True, capture_output=True)
+
+    from agentic_workspace import operating_decision
+
+    def unknown_planning(*, target_root, state_data):
+        return {"kind": "agentic-workspace/planning-owner-admission/v1", "status": "blocked", "state_data": state_data}
+
+    def unknown_baseline(*, target_root, changed_paths):
+        return {"kind": "agentic-workspace/mutation-baseline/v1", "status": "superseded", "scope": {"allowed_paths": changed_paths}}
+
+    monkeypatch.setattr("agentic_workspace.workspace_runtime_core._planning_owner_admission_payload", unknown_planning)
+    monkeypatch.setattr(operating_decision, "mutation_baseline_payload", unknown_baseline)
+
+    planning_projection = resolve_context_authority_projection(
+        consumer="start",
+        task="planning owner route",
+        target_root=tmp_path,
+    )
+    planning = next(item for item in planning_projection["excluded_authorities"] if item["surface"] == "planning")
+    assert planning["reason"] == "planning-owner-admission-blocked"
+
+    mutation_projection = resolve_context_authority_projection(
+        consumer="implement",
+        task="implement mutation baseline",
+        changed_paths=["src/app.py"],
+        target_root=tmp_path,
+    )
+    mutation = next(item for item in mutation_projection["excluded_authorities"] if item["surface"] == "mutation-baseline")
+    assert mutation["reason"] == "mutation-baseline-admission-superseded"
+
+
+def test_context_authority_owner_results_are_semantic_adapter_dispatched() -> None:
     source = Path("src/agentic_workspace/operating_decision.py").read_text(encoding="utf-8")
 
     assert "def _context_owner_result(" not in source
+    assert "def _file_backed_owner_result(" not in source
     assert "CONTEXT_OWNER_RESULT_ADAPTERS" in source
-    assert "owner-source-parse-failed" not in source.partition("def _resolve_context_authority_source(")[2]
+    assert (
+        'CONTEXT_OWNER_RESULT_ADAPTERS: dict[str, ContextOwnerResultAdapter] = {\n    "system-intent": _system_intent_owner_result'
+        in source
+    )
+    assert "parseability alone" not in source
 
 
 def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path: Path) -> None:

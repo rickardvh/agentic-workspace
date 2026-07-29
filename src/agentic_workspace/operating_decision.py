@@ -462,13 +462,7 @@ def _finalize_owner_result(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         **payload,
         "revision": "sha256:"
-        + _digest(
-            {
-                key: value
-                for key, value in payload.items()
-                if key not in {"revision", "schema_backing", "selection"} and not str(key).endswith("_debug")
-            }
-        ),
+        + _digest({key: value for key, value in payload.items() if key != "revision" and not str(key).endswith("_debug")}),
     }
 
 
@@ -526,7 +520,129 @@ def _owner_result_base(
     return _finalize_owner_result(payload)
 
 
-def _file_backed_owner_result(
+def _schema_backing_status(path: Path) -> dict[str, Any]:
+    schema_backing, parsed = _load_schema_backed_source(path)
+    if schema_backing.get("parse_status") == "invalid":
+        return {"status": "invalid", "reason": "owner-source-schema-invalid", "schema_backing": schema_backing}
+    if isinstance(parsed, dict):
+        schema_backing = {
+            **schema_backing,
+            "population": {"top_level_key_count": len(parsed), "top_level_keys": schema_backing.get("top_level_keys", [])},
+        }
+    return {"status": "current", "schema_backing": schema_backing}
+
+
+def _text_contains_markers(path: Path, markers: list[str]) -> dict[str, Any]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return {"status": "unavailable", "reason": "owner-source-unreadable", "error": str(exc)}
+    lowered = text.lower()
+    missing = [marker for marker in markers if marker.lower() not in lowered]
+    return {
+        "status": "current" if not missing else "invalid",
+        "reason": "" if not missing else "owner-source-contract-marker-missing",
+        "matched_markers": sorted(set(markers) - set(missing)),
+        "missing_markers": missing,
+        "line_count": len(text.splitlines()),
+    }
+
+
+def _module_source_contains_symbols(path: Path, symbols: list[str]) -> dict[str, Any]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return {"status": "unavailable", "reason": "owner-source-unreadable", "error": str(exc)}
+    missing = [symbol for symbol in symbols if symbol not in text]
+    return {
+        "status": "current" if not missing else "invalid",
+        "reason": "" if not missing else "owner-module-symbol-missing",
+        "matched_symbols": sorted(set(symbols) - set(missing)),
+        "missing_symbols": missing,
+    }
+
+
+def _contracted_text_owner_result(
+    *,
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    adapter_id: str,
+    markers: list[str],
+    boundary: str,
+) -> dict[str, Any]:
+    contract = _text_contains_markers(chosen, markers)
+    status = str(contract.get("status") or "")
+    return _owner_result_base(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id=adapter_id,
+        status="current" if status == "current" else status or "invalid",
+        reason=str(contract.get("reason") or ""),
+        extra={
+            "owner_boundary": boundary,
+            "schema_backing": {
+                "source_format": chosen.suffix.lower().lstrip(".") or "text",
+                "contract_markers": markers,
+                "matched_markers": contract.get("matched_markers", []),
+                "line_count": contract.get("line_count", 0),
+            },
+            "population": {"status": "present" if status == "current" else "invalid"},
+        },
+    )
+
+
+def _contracted_toml_owner_result(
+    *,
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    adapter_id: str,
+    required_keys: list[str],
+    boundary: str,
+) -> dict[str, Any]:
+    backing = _schema_backing_status(chosen)
+    payload = _load_toml_dict(chosen)
+    missing_keys = [key for key in required_keys if key not in payload]
+    status = "current" if backing["status"] == "current" and not missing_keys else "invalid"
+    reason = str(backing.get("reason") or ("owner-source-required-key-missing" if missing_keys else ""))
+    return _owner_result_base(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id=adapter_id,
+        status=status,
+        reason=reason,
+        extra={
+            "owner_boundary": boundary,
+            "schema_backing": {
+                **_as_dict(backing.get("schema_backing")),
+                "required_keys": required_keys,
+                "missing_required_keys": missing_keys,
+            },
+            "population": {"status": "present" if status == "current" else "invalid"},
+        },
+    )
+
+
+def _system_intent_owner_result(
     surface: str,
     item: dict[str, Any],
     root: Path,
@@ -536,21 +652,252 @@ def _file_backed_owner_result(
     selection: dict[str, Any],
     _source_specific: dict[str, Any],
 ) -> dict[str, Any]:
-    schema_backing, parsed = _load_schema_backed_source(chosen)
-    if schema_backing.get("parse_status") == "invalid":
-        return _owner_result_base(
-            surface=surface,
-            item=item,
-            root=root,
-            chosen=chosen,
-            revision=revision,
-            git_head=git_head,
-            selection=selection,
-            adapter_id=f"{surface}.owner-result",
-            status="invalid",
-            reason="owner-source-parse-failed",
-            extra={"schema_backing": schema_backing},
-        )
+    return _contracted_text_owner_result(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id="system-intent.owner-result",
+        markers=["# System Intent", "## Purpose", "## Governing intents"],
+        boundary="system-intent durable-purpose contract",
+    )
+
+
+def _architecture_principles_owner_result(
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    _source_specific: dict[str, Any],
+) -> dict[str, Any]:
+    return _contracted_text_owner_result(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id="architecture-principles.owner-result",
+        markers=["## Governing intents", "generated", "runtime", "contract"],
+        boundary="system-intent architecture-principles section",
+    )
+
+
+def _scoped_instructions_owner_result(
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    _source_specific: dict[str, Any],
+) -> dict[str, Any]:
+    return _contracted_text_owner_result(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id="scoped-instructions.owner-result",
+        markers=["Authority marker:", "agentic-workspace:workflow:start", "Ordinary route:"],
+        boundary="AGENTS scoped-instruction managed fence",
+    )
+
+
+def _ownership_owner_result(
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    _source_specific: dict[str, Any],
+) -> dict[str, Any]:
+    return _contracted_toml_owner_result(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id="ownership.owner-result",
+        required_keys=["schema_version", "managed_surfaces", "authority_surfaces"],
+        boundary="ownership manifest schema and authority surfaces",
+    )
+
+
+def _assignment_owner_result(
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    _source_specific: dict[str, Any],
+) -> dict[str, Any]:
+    return _contracted_toml_owner_result(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id="assignment.owner-result",
+        required_keys=["schema_version", "workspace"],
+        boundary="workspace assignment/target routing config",
+    )
+
+
+def _evaluation_owner_result(
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    _source_specific: dict[str, Any],
+) -> dict[str, Any]:
+    symbols = ["evaluation_collection_match", "record_evaluation_report_delivery_operation"]
+    return _module_owner_result(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id="evaluation.owner-result",
+        symbols=symbols,
+        boundary="evaluation runtime operation module",
+    )
+
+
+def _proof_owner_result(
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    _source_specific: dict[str, Any],
+) -> dict[str, Any]:
+    return _contracted_toml_owner_result(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id="proof.owner-result",
+        required_keys=["schema_version", "scenarios"],
+        boundary="Verification manifest proof-route contract",
+    )
+
+
+def _autopilot_executor_owner_result(
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    _source_specific: dict[str, Any],
+) -> dict[str, Any]:
+    return _module_owner_result(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id="autopilot-executor.owner-result",
+        symbols=["delegated_worker_kernel", "assignment_lifecycle"],
+        boundary="workspace runtime primitive delegated-run kernel",
+    )
+
+
+def _target_guidance_owner_result(
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    _source_specific: dict[str, Any],
+) -> dict[str, Any]:
+    return _contracted_toml_owner_result(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id="target-guidance.owner-result",
+        required_keys=["schema_version", "workspace", "modules"],
+        boundary="workspace target guidance config",
+    )
+
+
+def _terminal_outcome_owner_result(
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    _source_specific: dict[str, Any],
+) -> dict[str, Any]:
+    return _module_owner_result(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id="terminal-outcome.owner-result",
+        symbols=["final_response", "terminal"],
+        boundary="workspace runtime primitive terminal outcome admission",
+    )
+
+
+def _module_owner_result(
+    *,
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    adapter_id: str,
+    symbols: list[str],
+    boundary: str,
+) -> dict[str, Any]:
+    symbol_status = _module_source_contains_symbols(chosen, symbols)
+    status = str(symbol_status.get("status") or "")
     return _owner_result_base(
         surface=surface,
         item=item,
@@ -559,14 +906,18 @@ def _file_backed_owner_result(
         revision=revision,
         git_head=git_head,
         selection=selection,
-        adapter_id=f"{surface}.owner-result",
+        adapter_id=adapter_id,
+        status="current" if status == "current" else status or "invalid",
+        reason=str(symbol_status.get("reason") or ""),
         extra={
-            "schema_backing": schema_backing,
-            "population": {
-                "status": "present",
-                "top_level_key_count": len(parsed) if isinstance(parsed, dict) else None,
-                "rule": "This adapter is a named owner boundary for file-backed canonical context; parseability alone is not accepted through the generic composer.",
+            "owner_boundary": boundary,
+            "schema_backing": {
+                "source_format": "python-module",
+                "required_symbols": symbols,
+                "matched_symbols": symbol_status.get("matched_symbols", []),
+                "missing_symbols": symbol_status.get("missing_symbols", []),
             },
+            "population": {"status": "present" if status == "current" else "invalid"},
         },
     )
 
@@ -601,7 +952,8 @@ def _planning_owner_result(
             extra={"error": str(exc)},
         )
     admission_status = str(admission.get("status") or "")
-    status = "current" if admission_status != "rejected" else "stale"
+    accepted_statuses = {"accepted", "admitted", "current", "none"}
+    status = "current" if admission_status in accepted_statuses else "stale"
     return _owner_result_base(
         surface=surface,
         item=item,
@@ -612,8 +964,12 @@ def _planning_owner_result(
         selection=selection,
         adapter_id="planning.owner-result",
         status=status,
-        reason="" if status == "current" else "planning-owner-admission-rejected",
-        extra={"planning_owner_admission": admission},
+        reason="" if status == "current" else f"planning-owner-admission-{admission_status or 'missing'}",
+        extra={
+            "planning_owner_admission": admission,
+            "accepted_statuses": sorted(accepted_statuses),
+            "owner_boundary": "Planning current-work admission contract",
+        },
     )
 
 
@@ -668,7 +1024,8 @@ def _mutation_baseline_owner_result(
 ) -> dict[str, Any]:
     admission = _as_dict(source_specific.get("mutation_baseline_admission"))
     status = str(admission.get("status") or "")
-    current = bool(status) and status != "baseline-observation-failed"
+    accepted_statuses = {"clean", "clean-scope", "dirty-accounted", "scoped-status-current", "current"}
+    current = status in accepted_statuses
     return _owner_result_base(
         surface=surface,
         item=item,
@@ -679,8 +1036,12 @@ def _mutation_baseline_owner_result(
         selection=selection,
         adapter_id="mutation-baseline.owner-result",
         status="current" if current else "stale",
-        reason="" if current else "mutation-baseline-admission-unavailable",
-        extra={"mutation_baseline_admission": admission},
+        reason="" if current else f"mutation-baseline-admission-{status or 'missing'}",
+        extra={
+            "mutation_baseline_admission": admission,
+            "accepted_statuses": sorted(accepted_statuses),
+            "owner_boundary": "authority-envelope mutation baseline contract",
+        },
     )
 
 
@@ -754,20 +1115,20 @@ def _generated_references_owner_result(
 
 
 CONTEXT_OWNER_RESULT_ADAPTERS: dict[str, ContextOwnerResultAdapter] = {
-    "system-intent": _file_backed_owner_result,
-    "architecture-principles": _file_backed_owner_result,
-    "scoped-instructions": _file_backed_owner_result,
-    "ownership": _file_backed_owner_result,
+    "system-intent": _system_intent_owner_result,
+    "architecture-principles": _architecture_principles_owner_result,
+    "scoped-instructions": _scoped_instructions_owner_result,
+    "ownership": _ownership_owner_result,
     "planning": _planning_owner_result,
     "memory": _memory_owner_result,
-    "assignment": _file_backed_owner_result,
-    "evaluation": _file_backed_owner_result,
-    "proof": _file_backed_owner_result,
+    "assignment": _assignment_owner_result,
+    "evaluation": _evaluation_owner_result,
+    "proof": _proof_owner_result,
     "mutation-baseline": _mutation_baseline_owner_result,
-    "autopilot-executor": _file_backed_owner_result,
+    "autopilot-executor": _autopilot_executor_owner_result,
     "skills": _skills_owner_result,
-    "target-guidance": _file_backed_owner_result,
-    "terminal-outcome": _file_backed_owner_result,
+    "target-guidance": _target_guidance_owner_result,
+    "terminal-outcome": _terminal_outcome_owner_result,
     "generated-references": _generated_references_owner_result,
 }
 
