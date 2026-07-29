@@ -39,6 +39,16 @@
       "name": "apply",
       "source": "cli-option",
       "required": false
+    },
+    {
+      "name": "preflight_token",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "preflight_max_age_seconds",
+      "source": "cli-option",
+      "required": false
     }
   ],
   "effects": {
@@ -46,7 +56,7 @@
     "destructive": false,
     "idempotent": true,
     "writes_repo_state": true,
-    "requires_preflight_gate": false
+    "requires_preflight_gate": true
   },
   "locality": {
     "requires_repo": true,
@@ -110,12 +120,13 @@
   "guards": [
     "one exact canonical owner selected by id/path",
     "preview returns owner/state/lane revisions and changed fields without writes",
-    "apply writes owner/projection updates and local receipt atomically after revision guards",
+    "apply writes owner/projection updates and local receipt atomically after revision guards and a fresh preflight token",
     "replay is idempotent"
   ],
   "proof": [
     "targeted writer CLI preview/apply/replay tests preserve unrelated records and templates",
     "generated command conformance",
+    "apply without preflight token refuses before owner lookup or writes",
     "Planning package mutation rollback tests",
     "title-based owner selection",
     "delete and recreate an execplan",

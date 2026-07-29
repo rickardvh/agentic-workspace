@@ -531,13 +531,14 @@
         "name": "targeted-write"
       },
       "conformance_refs": [
-        "planning.targeted-write.lifecycle.preview.process"
+        "planning.targeted-write.lifecycle.preview.process",
+        "planning.targeted-write.lifecycle.apply-preflight-refusal.process"
       ],
       "effect_hints": {
         "destructive": false,
         "idempotent": true,
         "read_only": false,
-        "requires_preflight_gate": false,
+        "requires_preflight_gate": true,
         "writes_repo_state": true
       },
       "interface": {
@@ -596,6 +597,23 @@
             ],
             "help": "Apply the patch. Omit for preview.",
             "name": "apply"
+          },
+          {
+            "default": "",
+            "flags": [
+              "--preflight-token"
+            ],
+            "help": "Fresh token from agentic-workspace preflight --format json; required when --apply is set.",
+            "name": "preflight_token"
+          },
+          {
+            "default": 900,
+            "flags": [
+              "--preflight-max-age-seconds"
+            ],
+            "help": "Maximum preflight token age for --apply.",
+            "name": "preflight_max_age_seconds",
+            "type": "integer"
           },
           {
             "choices": [

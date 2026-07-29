@@ -138,6 +138,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'quality_concern': getattr(args, 'quality_concern', ''),
                 'decomposition_adjustment': getattr(args, 'decomposition_adjustment', ''),
                 'expect_planning_revision': getattr(args, 'expect_planning_revision', ''),
+                'preflight_token': getattr(args, 'preflight_token', ''),
+                'preflight_max_age_seconds': getattr(args, 'preflight_max_age_seconds', 900),
                 'paths': getattr(args, 'paths', []),
         },
     )
@@ -257,6 +259,8 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'quality_concern': values.get('quality_concern', ''),
                 'decomposition_adjustment': values.get('decomposition_adjustment', ''),
                 'expect_planning_revision': values.get('expect_planning_revision', ''),
+                'preflight_token': values.get('preflight_token', ''),
+                'preflight_max_age_seconds': values.get('preflight_max_age_seconds', 900),
                 'paths': values.get('paths', []),
             },
         ).get('result')
@@ -545,7 +549,7 @@ def _handle_planning_upgrade_apply(values: dict[str, Any], _arguments: dict[str,
 def _handle_planning_targeted_write_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
     from .planning_installer import targeted_execplan_write
 
-    return targeted_execplan_write(apply=values.get('apply'), expected_lane_revision=values.get('expect_lane_revision'), expected_owner_revision=values.get('expect_owner_revision'), expected_planning_revision=values.get('expect_planning_revision'), patch=values.get('patch'), plan=values.get('plan'), target=values.get('target'))
+    return targeted_execplan_write(apply=values.get('apply'), expected_lane_revision=values.get('expect_lane_revision'), expected_owner_revision=values.get('expect_owner_revision'), expected_planning_revision=values.get('expect_planning_revision'), patch=values.get('patch'), plan=values.get('plan'), preflight_max_age_seconds=values.get('preflight_max_age_seconds'), preflight_token=values.get('preflight_token'), target=values.get('target'))
 
 
 def _handle_planning_verify_payload_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

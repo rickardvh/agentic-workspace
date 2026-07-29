@@ -16595,6 +16595,8 @@ def targeted_execplan_write(
     expected_owner_revision: int | str,
     expected_lane_revision: int | str = "",
     apply: bool = False,
+    preflight_token: str = "",
+    preflight_max_age_seconds: int = 900,
 ) -> dict[str, Any]:
     """Preview or apply a bounded patch to exactly one live canonical execplan.
 
@@ -16612,6 +16614,17 @@ def targeted_execplan_write(
         if not isinstance(parsed_patch, dict):
             return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch-json"}
         patch = parsed_patch
+    if apply:
+        preflight_admission = _planning_targeted_write_preflight_admission(
+            preflight_token=preflight_token,
+            preflight_max_age_seconds=preflight_max_age_seconds,
+        )
+        if preflight_admission["status"] != "admitted":
+            return {
+                "kind": "agentic-planning/targeted-execplan-write/v1",
+                "status": preflight_admission["status"],
+                "preflight_admission": preflight_admission,
+            }
     if not str(expected_planning_revision or "").strip() or not str(expected_owner_revision or "").strip():
         return {
             "kind": "agentic-planning/targeted-execplan-write/v1",
@@ -16813,6 +16826,60 @@ def targeted_execplan_write(
         payload = final_payload or payload
         payload["receipt_path"] = _planning_surface_relative(target_root, receipt_path)
     return payload
+
+
+def _planning_targeted_write_preflight_admission(*, preflight_token: str, preflight_max_age_seconds: int) -> dict[str, Any]:
+    token = str(preflight_token or "").strip()
+    if not token:
+        return {
+            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
+            "status": "missing-preflight-token",
+            "repair": "Run agentic-workspace preflight --format json and pass its preflight_token to --preflight-token.",
+        }
+    prefix = "preflight-v1:"
+    if not token.startswith(prefix):
+        return {
+            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
+            "status": "invalid-preflight-token",
+            "repair": "Pass an unmodified preflight_token from agentic-workspace preflight --format json.",
+        }
+    issued_text = token[len(prefix) :]
+    if not issued_text.isdigit():
+        return {
+            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
+            "status": "invalid-preflight-token",
+            "repair": "Pass an unmodified preflight_token from agentic-workspace preflight --format json.",
+        }
+    max_age = int(preflight_max_age_seconds or 0)
+    if max_age <= 0:
+        return {
+            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
+            "status": "invalid-preflight-max-age",
+            "repair": "Use a positive preflight max age.",
+        }
+    issued_at_epoch = int(issued_text)
+    now_epoch = int(time.time())
+    age_seconds = now_epoch - issued_at_epoch
+    if age_seconds < 0:
+        return {
+            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
+            "status": "future-preflight-token",
+            "repair": "Regenerate the preflight token in the current host session.",
+        }
+    if age_seconds > max_age:
+        return {
+            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
+            "status": "stale-preflight-token",
+            "age_seconds": age_seconds,
+            "max_age_seconds": max_age,
+            "repair": "Regenerate the preflight token with agentic-workspace preflight --format json.",
+        }
+    return {
+        "kind": "agentic-planning/targeted-write-preflight-admission/v1",
+        "status": "admitted",
+        "age_seconds": age_seconds,
+        "max_age_seconds": max_age,
+    }
 
 
 def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys as _sys
+import time as _time
 
 # ruff: noqa: F403,F405
 from pathlib import Path as _Path
@@ -8,6 +9,10 @@ from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from planning_test_support import *
 from repo_planning_bootstrap import cli as planning_cli
+
+
+def _fresh_preflight_token() -> str:
+    return f"preflight-v1:{int(_time.time())}"
 
 
 def _write_live_execplan_state(tmp_path: Path, *, item_id: str, surface: str | None = None) -> None:
@@ -210,6 +215,7 @@ def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_p
         expected_owner_revision=record["revision"],
         expected_lane_revision=lane_revision,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
     assert applied["status"] == "applied"
     assert applied["projection_effects"]["state"]["todo.active_items.active-plan"]["after"]["next_action"] == "run the focused proof"
@@ -228,6 +234,7 @@ def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_p
         expected_owner_revision=record["revision"],
         expected_lane_revision=lane_revision,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
     assert replay["status"] == "already-applied"
     assert replay["receipt"]["result"]["state_revision_after"] == applied["state_revision_after"]
@@ -241,6 +248,7 @@ def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_p
         expected_owner_revision=record["revision"],
         expected_lane_revision=lane_revision,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
     assert stale["status"] == "stale-owner-revision"
     assert json.loads(plan_path.read_text(encoding="utf-8"))["next_action"] == "run the focused proof"
@@ -256,6 +264,7 @@ def test_targeted_execplan_writer_requires_both_revision_guards(tmp_path: Path) 
         expected_planning_revision="",
         expected_owner_revision="",
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
 
     assert result == {
@@ -263,6 +272,23 @@ def test_targeted_execplan_writer_requires_both_revision_guards(tmp_path: Path) 
         "status": "missing-revision-guard",
         "required": ["expected_planning_revision", "expected_owner_revision"],
     }
+
+
+def test_targeted_execplan_writer_apply_requires_preflight_token(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    result = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={"next_action": "must not write"},
+        expected_planning_revision="fixture-planning-revision",
+        expected_owner_revision=1,
+        apply=True,
+    )
+
+    assert result["status"] == "missing-preflight-token"
+    assert result["preflight_admission"]["status"] == "missing-preflight-token"
+    assert not (tmp_path / ".agentic-workspace/local/planning/targeted-execplan-receipts").exists()
 
 
 def test_targeted_execplan_writer_rejects_missing_or_stale_lane_guard(tmp_path: Path) -> None:
@@ -286,6 +312,7 @@ def test_targeted_execplan_writer_rejects_missing_or_stale_lane_guard(tmp_path: 
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
     stale = installer_mod.targeted_execplan_write(
         target=tmp_path,
@@ -295,6 +322,7 @@ def test_targeted_execplan_writer_rejects_missing_or_stale_lane_guard(tmp_path: 
         expected_owner_revision=1,
         expected_lane_revision=f"stale-{lane_revision}",
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
 
     assert missing["status"] == "missing-lane-revision-guard"
@@ -362,6 +390,8 @@ def test_targeted_execplan_writer_cli_preview_apply_and_projection_effects(tmp_p
                 "--expect-owner-revision",
                 "1",
                 "--apply",
+                "--preflight-token",
+                _fresh_preflight_token(),
                 "--format",
                 "json",
             ]
@@ -391,6 +421,8 @@ def test_targeted_execplan_writer_cli_preview_apply_and_projection_effects(tmp_p
                 "--expect-owner-revision",
                 "2",
                 "--apply",
+                "--preflight-token",
+                _fresh_preflight_token(),
                 "--format",
                 "json",
             ]
@@ -428,6 +460,7 @@ def test_targeted_execplan_writer_lifecycle_updates_lane_projection(tmp_path: Pa
         expected_owner_revision=1,
         expected_lane_revision=lane_revision,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
 
     assert applied["status"] == "applied"
@@ -439,6 +472,41 @@ def test_targeted_execplan_writer_lifecycle_updates_lane_projection(tmp_path: Pa
     assert state["todo"]["active_items"] == []
     receipt = json.loads((tmp_path / applied["receipt_path"]).read_text(encoding="utf-8"))
     assert receipt["result"]["postcondition"]["terminal_owner_absent_from_active_state"] is True
+
+
+def test_targeted_execplan_writer_rejects_phase_only_terminal_projection(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/lane-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="lane-plan")
+    _write_execplan_record(plan_path, item_id="lane-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    lane_path = next((tmp_path / ".agentic-workspace/planning/lanes").glob("*.lane.json"))
+    lane_record = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane_record["current_slice"] = "lane-plan"
+    lane_record["slice_sequence"][0]["status"] = "active"
+    lane_record["slice_sequence"][0]["execplan_ref"] = ".agentic-workspace/planning/execplans/lane-plan.plan.json"
+    installer_mod._write_lane_record(record_path=lane_path, record=lane_record)
+    lane_revision = installer_mod._record_revision(json.loads(lane_path.read_text(encoding="utf-8")))
+
+    result = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="lane-plan",
+        patch={"phase": "complete"},
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+        expected_owner_revision=1,
+        expected_lane_revision=lane_revision,
+        apply=True,
+        preflight_token=_fresh_preflight_token(),
+    )
+
+    assert result["status"] == "unsupported-projection-patch"
+    assert result["unsupported_fields"] == ["phase"]
+    assert installer_mod._execplan_lifecycle(json.loads(plan_path.read_text(encoding="utf-8"))) == "live"
+    assert json.loads(lane_path.read_text(encoding="utf-8"))["current_slice"] == "lane-plan"
+    state = installer_mod._read_state_from_toml(tmp_path)
+    assert state["todo"]["active_items"][0]["id"] == "lane-plan"
 
 
 def test_targeted_execplan_writer_rejects_unsupported_parent_projection(tmp_path: Path) -> None:
@@ -457,6 +525,7 @@ def test_targeted_execplan_writer_rejects_unsupported_parent_projection(tmp_path
         expected_planning_revision=planning_revision(tmp_path)["revision_id"],
         expected_owner_revision=1,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
 
     assert result["status"] == "unsupported-projection-patch"
@@ -499,6 +568,7 @@ def test_targeted_execplan_writer_migrates_supported_fields_and_preserves_unrela
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
 
     assert applied["status"] == "applied"
@@ -516,6 +586,7 @@ def test_targeted_execplan_writer_migrates_supported_fields_and_preserves_unrela
         expected_planning_revision=planning_revision(tmp_path)["revision_id"],
         expected_owner_revision=updated["revision"],
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
     assert noop["status"] == "no-op"
     assert json.loads(plan_path.read_text(encoding="utf-8"))["revision"] == updated["revision"]
@@ -526,6 +597,7 @@ def test_targeted_execplan_writer_migrates_supported_fields_and_preserves_unrela
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
     assert replay["status"] == "already-applied"
     assert replay["receipt"]["request"]["owner_revision"] == 1
@@ -557,6 +629,7 @@ def test_targeted_execplan_writer_preview_delta_matches_apply_delta(tmp_path: Pa
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
 
     assert preview["status"] == "preview"
@@ -574,6 +647,7 @@ def test_targeted_execplan_writer_handles_missing_ambiguous_and_unbound_owners(t
         expected_planning_revision="rev",
         expected_owner_revision=1,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
     assert missing["status"] == "ambiguous-or-missing-owner"
 
@@ -590,6 +664,7 @@ def test_targeted_execplan_writer_handles_missing_ambiguous_and_unbound_owners(t
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
     assert unbound["status"] == "applied"
     assert unbound["lane_revision"] is None
@@ -609,6 +684,7 @@ def test_targeted_execplan_writer_handles_missing_ambiguous_and_unbound_owners(t
         expected_planning_revision=planning_revision(tmp_path)["revision_id"],
         expected_owner_revision=2,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
     assert ambiguous["status"] == "ambiguous-lane-relation"
 
@@ -650,6 +726,7 @@ def test_targeted_execplan_writer_rolls_back_late_lane_write_failure(tmp_path: P
         expected_owner_revision=1,
         expected_lane_revision=lane_revision,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
 
     assert result["status"] == "rolled-back"
@@ -710,6 +787,7 @@ def test_targeted_execplan_writer_rolls_back_each_write_boundary(
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
+        preflight_token=_fresh_preflight_token(),
     )
 
     assert result["status"] == "rolled-back"

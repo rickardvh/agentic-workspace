@@ -2948,7 +2948,7 @@
         "destructive": false,
         "idempotent": true,
         "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "requires_preflight_gate": true
       },
       "projection_hints": {
         "universal_fields": [
@@ -2994,7 +2994,8 @@
         ]
       },
       "conformance_refs": [
-        "planning.targeted-write.lifecycle.preview.process"
+        "planning.targeted-write.lifecycle.preview.process",
+        "planning.targeted-write.lifecycle.apply-preflight-refusal.process"
       ]
     },
     {

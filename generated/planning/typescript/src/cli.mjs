@@ -456,6 +456,23 @@ const commandDefinitions = [
           "name": "apply"
         },
         {
+          "default": "",
+          "flags": [
+            "--preflight-token"
+          ],
+          "help": "Fresh token from agentic-workspace preflight --format json; required when --apply is set.",
+          "name": "preflight_token"
+        },
+        {
+          "default": 900,
+          "flags": [
+            "--preflight-max-age-seconds"
+          ],
+          "help": "Maximum preflight token age for --apply.",
+          "name": "preflight_max_age_seconds",
+          "type": "integer"
+        },
+        {
           "choices": [
             "text",
             "json"

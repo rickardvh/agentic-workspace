@@ -947,13 +947,14 @@
         "program": "agentic-planning"
       },
       "conformance_refs": [
-        "planning.targeted-write.lifecycle.preview.process"
+        "planning.targeted-write.lifecycle.preview.process",
+        "planning.targeted-write.lifecycle.apply-preflight-refusal.process"
       ],
       "effect_hints": {
         "destructive": false,
         "idempotent": true,
         "read_only": false,
-        "requires_preflight_gate": false,
+        "requires_preflight_gate": true,
         "writes_repo_state": true
       },
       "id": "planning.targeted-write.cli",
