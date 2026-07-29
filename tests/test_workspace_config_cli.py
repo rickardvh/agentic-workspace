@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 # ruff: noqa: F403,F405
 from tests.workspace_cli_support import *
 
@@ -15,7 +17,12 @@ def _trusted_guidance_host_event(
     target_revision: str = "",
     event_id: str = "",
 ) -> dict[str, object]:
-    from agentic_workspace.agent_guidance import TRUSTED_AUTHORITY_EVENT_STORE_PATH, _json_digest
+    from agentic_workspace.agent_guidance import (
+        TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV,
+        TRUSTED_AUTHORITY_EVENT_STORE_PATH,
+        _json_digest,
+        _trusted_authority_event_digest,
+    )
 
     event = {
         "kind": "agentic-workspace/trusted-authority-host-event/v1",
@@ -38,6 +45,15 @@ def _trusted_guidance_host_event(
     event["event_ref"] = event_ref
     path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
+    admissions = json.loads(os.environ.get(TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV, "{}"))
+    admissions[event_ref] = {
+        "kind": "agentic-workspace/trusted-authority-host-admission/v1",
+        "status": "current",
+        "event_ref": event_ref,
+        "event_digest": _trusted_authority_event_digest(event),
+        "issuer": "github-review-webhook",
+    }
+    os.environ[TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV] = json.dumps(admissions, sort_keys=True)
     return {"event_ref": event_ref, "event": event}
 
 
@@ -1786,6 +1802,50 @@ def test_guidance_receipts_require_trusted_host_event_before_authority_storage(t
             producer_class="human-reviewer",
             producer_id="reviewer-1",
             source_ref="remember-1",
+        )
+
+
+def test_guidance_receipts_reject_jointly_forged_local_host_event(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace.agent_guidance import (
+        TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV,
+        TRUSTED_AUTHORITY_EVENT_STORE_PATH,
+        _json_digest,
+        record_trusted_authority_receipt,
+    )
+    from agentic_workspace.config import WorkspaceUsageError
+
+    monkeypatch.delenv(TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV, raising=False)
+    event = {
+        "kind": "agentic-workspace/trusted-authority-host-event/v1",
+        "status": "current",
+        "authority": "pr-review",
+        "producer_class": "human-reviewer",
+        "producer_id": "reviewer-1",
+        "source": "github-review",
+        "source_ref": "review-1",
+        "target_revision": "rev-1",
+        "event_id": "",
+        "recorded_at": "2026-07-29T00:00:00Z",
+        "custody": {
+            "producer": "github-review-adapter",
+            "trusted_channel": "github-review-webhook",
+        },
+    }
+    event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
+    event["event_ref"] = event_ref
+    path = tmp_path / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
+    _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
+
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_trusted_authority_receipt(
+            target_root=tmp_path,
+            authority="pr-review",
+            producer_class="human-reviewer",
+            producer_id="reviewer-1",
+            source="github-review",
+            source_ref="review-1",
+            target_revision="rev-1",
+            host_event_ref=event_ref,
         )
 
 

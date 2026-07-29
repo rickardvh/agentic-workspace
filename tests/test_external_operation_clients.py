@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -50,7 +51,12 @@ def _trusted_guidance_host_event(
     target_revision: str = "",
     event_id: str = "",
 ) -> dict[str, object]:
-    from agentic_workspace.agent_guidance import TRUSTED_AUTHORITY_EVENT_STORE_PATH, _json_digest
+    from agentic_workspace.agent_guidance import (
+        TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV,
+        TRUSTED_AUTHORITY_EVENT_STORE_PATH,
+        _json_digest,
+        _trusted_authority_event_digest,
+    )
 
     event = {
         "kind": "agentic-workspace/trusted-authority-host-event/v1",
@@ -74,6 +80,15 @@ def _trusted_guidance_host_event(
     path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(event, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    admissions = json.loads(os.environ.get(TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV, "{}"))
+    admissions[event_ref] = {
+        "kind": "agentic-workspace/trusted-authority-host-admission/v1",
+        "status": "current",
+        "event_ref": event_ref,
+        "event_digest": _trusted_authority_event_digest(event),
+        "issuer": "github-review-webhook",
+    }
+    os.environ[TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV] = json.dumps(admissions, sort_keys=True)
     return {"event_ref": event_ref, "event": event}
 
 

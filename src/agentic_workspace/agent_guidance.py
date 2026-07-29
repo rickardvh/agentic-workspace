@@ -20,6 +20,7 @@ from agentic_workspace.config import (
 CORRECTION_EVENT_RETENTION_CAP = 20
 GUIDANCE_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/guidance-receipts.json")
 TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-events")
+TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV = "AW_TRUSTED_AUTHORITY_EVENT_ADMISSIONS"
 
 
 def _guidance_now() -> str:
@@ -721,6 +722,32 @@ def record_trusted_authority_host_event(
     )
 
 
+def _trusted_authority_event_digest(event: dict[str, Any]) -> str:
+    return _json_digest({key: value for key, value in event.items() if key != "host_admission"})
+
+
+def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any]) -> bool:
+    raw = os.environ.get(TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV, "")
+    try:
+        admissions = json.loads(raw) if raw.strip() else {}
+    except json.JSONDecodeError:
+        admissions = {}
+    if not isinstance(admissions, dict):
+        return False
+    admitted = admissions.get(ref)
+    if not isinstance(admitted, dict):
+        return False
+    return (
+        admitted.get("kind") == "agentic-workspace/trusted-authority-host-admission/v1"
+        and admitted.get("status") == "current"
+        and admitted.get("event_ref") == ref
+        and admitted.get("event_digest") == _trusted_authority_event_digest(event)
+        and admitted.get("issuer") in {"github-review-webhook", "human-instruction-host", "evaluation-result-adapter"}
+        and not admitted.get("revoked_at")
+        and not admitted.get("superseded_by")
+    )
+
+
 def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[str, Any]:
     ref = str(event_ref or "").strip()
     if not ref.startswith("trusted-authority-event:") or "/" in ref or "\\" in ref:
@@ -734,6 +761,8 @@ def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[
         raise WorkspaceUsageError("trusted authority host event has the wrong contract.")
     if event.get("status") != "current":
         raise WorkspaceUsageError("trusted authority host event is not current.")
+    if not _host_admits_trusted_authority_event(ref=ref, event=event):
+        raise WorkspaceUsageError("trusted authority host event was not admitted by the host boundary.")
     custody = event.get("custody") if isinstance(event.get("custody"), dict) else {}
     if custody.get("producer") in {"", "agentic-workspace.trusted-authority-host-event", "caller", "implementer"}:
         raise WorkspaceUsageError("trusted authority host event is not producer-owned.")
