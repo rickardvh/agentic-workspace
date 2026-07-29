@@ -52,6 +52,7 @@ from agentic_workspace.contract_tooling import (
     workspace_runtime_primitive_families_manifest,
     workspace_surfaces_manifest,
 )
+from agentic_workspace.operating_decision import resolve_context_authority_projection
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -2696,6 +2697,61 @@ def _validate_workspace_runtime_core_boundary(payload: dict[str, object]) -> lis
     return errors
 
 
+def _validate_context_authority_changed_path_enforcement() -> list[str]:
+    errors: list[str] = []
+    generated = resolve_context_authority_projection(
+        consumer="contract-checks",
+        task="check generated contract surfaces",
+        changed_paths=["generated/memory/python/cli.py"],
+        target_root=REPO_ROOT,
+    )
+    generated_surfaces = {str(item.get("surface") or ""): item for item in generated.get("authorities", []) if isinstance(item, dict)}
+    generated_authority = generated_surfaces.get("generated-references")
+    if generated.get("status") != "admitted" or not generated_authority:
+        errors.append("contract-checks must admit generated-references for changed generated paths")
+    else:
+        owner_admission = (
+            generated_authority.get("source", {})
+            .get("admission", {})
+            .get("owner_admission", {})
+        )
+        if owner_admission.get("producer") != "agentic_workspace.contract_tooling.generated_references":
+            errors.append("generated-references must be admitted by its registered contract-tooling owner")
+        if generated_authority.get("source", {}).get("freshness_enforcement", {}).get("status") != "active":
+            errors.append("generated-references must carry active freshness enforcement")
+
+    direct = resolve_context_authority_projection(
+        consumer="start",
+        task="fix typo",
+        changed_paths=["README.md"],
+        target_root=REPO_ROOT,
+    )
+    direct_surfaces = {str(item.get("surface") or "") for item in direct.get("authorities", []) if isinstance(item, dict)}
+    if "memory" in direct_surfaces:
+        errors.append("unrelated direct README work must not admit Memory context")
+    for excluded in direct.get("excluded_authorities", []):
+        if isinstance(excluded, dict) and excluded.get("surface") == "memory" and excluded.get("selected_required") is not False:
+            errors.append("irrelevant Memory absence must be excluded as optional, not selected-required")
+
+    skills = resolve_context_authority_projection(
+        consumer="skills",
+        task="route startup skill",
+        target_root=REPO_ROOT,
+    )
+    skill_authority = next((item for item in skills.get("authorities", []) if isinstance(item, dict) and item.get("surface") == "skills"), None)
+    if skills.get("status") != "admitted" or not skill_authority:
+        errors.append("skills consumer must admit the routed skill dependency closure")
+    elif (
+        skill_authority.get("source", {})
+        .get("admission", {})
+        .get("owner_admission", {})
+        .get("producer")
+        != "agentic_workspace.workspace_runtime_core.skill_dependency_resolver"
+    ):
+        errors.append("skills authority must be admitted by the registered skill dependency resolver")
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     profile_script = REPO_ROOT / "scripts/generate/generate_external_consumer_profile.py"
@@ -2725,6 +2781,7 @@ def main(argv: list[str] | None = None) -> int:
         ("product-managed enclave", _validate_product_managed_enclave()),
         ("documented proof command inventory", _validate_documented_proof_command_inventory()),
         ("non-enum keyword routing audit", _validate_non_enum_keyword_routing_audit()),
+        ("context authority changed-path enforcement", _validate_context_authority_changed_path_enforcement()),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
         ("workspace report sample", _validate(_sample_report_payload(), "workspace_report.schema.json")),
         ("workspace config sample", _validate(_sample_workspace_config_payload(), "workspace_config.schema.json")),

@@ -60,7 +60,19 @@
           "stale_when": {"type": "string", "minLength": 1},
           "proof_route": {"type": "string", "minLength": 1},
           "disposition": {"type": "string", "minLength": 1},
-          "revision_fields": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true}
+          "revision_fields": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+          "source_owner_contract": {
+            "type": "object",
+            "required": ["owner_module", "owner_result_kind", "repair_operation_id"],
+            "properties": {
+              "owner_module": {"type": "string", "minLength": 1},
+              "owner_result_kind": {"type": "string", "minLength": 1},
+              "repair_operation_id": {"type": "string", "minLength": 1},
+              "activation_terms": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+              "baseline_for": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+            },
+            "additionalProperties": false
+          }
         },
         "additionalProperties": false
       }

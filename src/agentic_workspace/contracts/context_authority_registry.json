@@ -2,13 +2,26 @@
   "kind": "agentic-workspace/context-authority-registry/v1",
   "schema_version": 1,
   "rule": "Operating decisions derive authority coverage from this versioned contract surface; runtime code loads this registry and must not maintain a parallel Python-only owner table.",
-  "ordinary_decision_consumers": ["autopilot", "closeout", "implement", "next", "proof", "start", "status", "summary"],
+  "ordinary_decision_consumers": [
+    "autopilot",
+    "closeout",
+    "contract-checks",
+    "implement",
+    "next",
+    "proof",
+    "skills",
+    "start",
+    "status",
+    "summary"
+  ],
   "consumer_requirements": {
     "autopilot": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "autopilot-executor"],
     "closeout": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "terminal-outcome"],
+    "contract-checks": ["generated-references"],
     "implement": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "skills", "target-guidance"],
     "next": ["planning", "assignment", "skills", "target-guidance"],
     "proof": ["planning", "proof", "mutation-baseline", "evaluation"],
+    "skills": ["scoped-instructions", "skills"],
     "start": ["system-intent", "architecture-principles", "scoped-instructions", "ownership", "planning", "memory", "skills", "target-guidance"],
     "status": ["planning", "assignment", "proof", "evaluation", "terminal-outcome"],
     "summary": ["planning", "memory", "terminal-outcome"]
@@ -24,7 +37,14 @@
       "stale_when": "mirror revision differs from source declaration",
       "proof_route": "system-intent sync and contract tooling checks",
       "disposition": "retain as durable shaping authority",
-      "revision_fields": ["system_intent_revision", "mirror_revision"]
+      "revision_fields": ["system_intent_revision", "mirror_revision"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.workspace_runtime_core.system_intent",
+        "owner_result_kind": "agentic-workspace/system-intent-mirror/v1",
+        "repair_operation_id": "system-intent.sync",
+        "activation_terms": ["intent", "system", "architecture", "principle", "shape", "product"],
+        "baseline_for": ["start"]
+      }
     },
     {
       "surface": "architecture-principles",
@@ -36,7 +56,13 @@
       "stale_when": "system-intent revision or matched-principle identity changes",
       "proof_route": "architecture-principle route and closeout tests",
       "disposition": "retain as selective durable validation authority",
-      "revision_fields": ["system_intent_revision", "principle_id", "principle_revision"]
+      "revision_fields": ["system_intent_revision", "principle_id", "principle_revision"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.workspace_runtime_core.architecture_principles",
+        "owner_result_kind": "agentic-workspace/architecture-principles-status/v1",
+        "repair_operation_id": "architecture-principles.route",
+        "activation_terms": ["architecture", "principle", "boundary", "generated", "runtime", "contract", "shape", "product"]
+      }
     },
     {
       "surface": "scoped-instructions",
@@ -48,7 +74,14 @@
       "stale_when": "instruction source, scope match, or configured registry revision changes",
       "proof_route": "startup skill-routing and scoped-instruction selection tests",
       "disposition": "retain as routed instruction authority; historical guidance remains excluded",
-      "revision_fields": ["instruction_source", "scope_match", "registry_revision"]
+      "revision_fields": ["instruction_source", "scope_match", "registry_revision"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.workspace_runtime_core.scoped_instruction_routing",
+        "owner_result_kind": "agentic-workspace/scoped-instruction-selection/v1",
+        "repair_operation_id": "workspace.instructions.route",
+        "activation_terms": ["instruction", "skill", "workflow", "startup", "agent"],
+        "baseline_for": ["start"]
+      }
     },
     {
       "surface": "ownership",
@@ -60,7 +93,13 @@
       "stale_when": "ownership declaration or changed-path classification changes",
       "proof_route": "ownership and changed-path proof-routing tests",
       "disposition": "retain as source/generated and mutation-boundary authority",
-      "revision_fields": ["ownership_source", "path_classification", "ownership_revision"]
+      "revision_fields": ["ownership_source", "path_classification", "ownership_revision"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.workspace_runtime_core.ownership",
+        "owner_result_kind": "agentic-workspace/ownership-selection/v1",
+        "repair_operation_id": "ownership.classify-paths",
+        "activation_terms": ["ownership", "boundary", "generated", "package", "contract", "source"]
+      }
     },
     {
       "surface": "planning",
@@ -72,7 +111,14 @@
       "stale_when": "planning revision or selected owner revision changes",
       "proof_route": "planning package tests and lane health checks",
       "disposition": "retain as current-work authority",
-      "revision_fields": ["owner_ref", "owner_revision", "slice_revision"]
+      "revision_fields": ["owner_ref", "owner_revision", "slice_revision"],
+      "source_owner_contract": {
+        "owner_module": "agentic_planning.state",
+        "owner_result_kind": "agentic-planning/current-work-selection/v1",
+        "repair_operation_id": "planning.summary.report",
+        "activation_terms": ["plan", "planning", "lane", "issue", "owner", "current"],
+        "baseline_for": ["start", "summary", "next", "status"]
+      }
     },
     {
       "surface": "memory",
@@ -84,7 +130,13 @@
       "stale_when": "manifest route no longer selects or finding is superseded",
       "proof_route": "memory doctor and freshness checks",
       "disposition": "retain as routed evidence, not current-task authority",
-      "revision_fields": ["memory_route_revision", "finding_revision"]
+      "revision_fields": ["memory_route_revision", "finding_revision"],
+      "source_owner_contract": {
+        "owner_module": "agentic_memory.manifest",
+        "owner_result_kind": "agentic-workspace/memory-route-curation/v1",
+        "repair_operation_id": "memory.route.report",
+        "activation_terms": ["memory", "knowledge", "note", "context", "rediscovery", "trap"]
+      }
     },
     {
       "surface": "assignment",
@@ -96,7 +148,13 @@
       "stale_when": "target identity, assignment revision, or transport policy changes",
       "proof_route": "implementation assignment-gate and delegated-return tests",
       "disposition": "retain as execution authority",
-      "revision_fields": ["target_identity_ref", "assignment_revision", "manual_transport_policy"]
+      "revision_fields": ["target_identity_ref", "assignment_revision", "manual_transport_policy"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.assignment_gate",
+        "owner_result_kind": "agentic-workspace/assignment-gate/v1",
+        "repair_operation_id": "assignment.resolve-target",
+        "activation_terms": ["assignment", "target", "handoff", "delegate", "implement"]
+      }
     },
     {
       "surface": "evaluation",
@@ -108,7 +166,13 @@
       "stale_when": "definition revision or bound result identity changes",
       "proof_route": "evaluation lifecycle tests",
       "disposition": "retain as longitudinal authority when registered",
-      "revision_fields": ["evaluation_id", "definition_revision", "current_result_identity"]
+      "revision_fields": ["evaluation_id", "definition_revision", "current_result_identity"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.evaluation",
+        "owner_result_kind": "agentic-workspace/evaluation-definition/v1",
+        "repair_operation_id": "evaluation.status.report",
+        "activation_terms": ["evaluation", "report", "longitudinal", "dogfood"]
+      }
     },
     {
       "surface": "proof",
@@ -120,7 +184,13 @@
       "stale_when": "proof subject, selected command, or changed-path fingerprint changes",
       "proof_route": "proof report and receipt reconciliation tests",
       "disposition": "retain as claim authority",
-      "revision_fields": ["proof_obligation_id", "proof_subject_fingerprint", "receipt_revision"]
+      "revision_fields": ["proof_obligation_id", "proof_subject_fingerprint", "receipt_revision"],
+      "source_owner_contract": {
+        "owner_module": "agentic_verification.proof",
+        "owner_result_kind": "agentic-workspace/proof-selection/v1",
+        "repair_operation_id": "proof.select",
+        "activation_terms": ["proof", "validate", "test", "check", "ci", "claim"]
+      }
     },
     {
       "surface": "mutation-baseline",
@@ -132,7 +202,13 @@
       "stale_when": "head, scope, target, or managed state changes",
       "proof_route": "mutation baseline admission tests",
       "disposition": "retain as mutation authority",
-      "revision_fields": ["baseline_id", "head", "scope", "assignment"]
+      "revision_fields": ["baseline_id", "head", "scope", "assignment"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.authority_envelope",
+        "owner_result_kind": "agentic-workspace/mutation-baseline/v1",
+        "repair_operation_id": "authority-envelope.mutation-baseline",
+        "activation_terms": ["mutation", "baseline", "change", "edit", "write", "implement"]
+      }
     },
     {
       "surface": "autopilot-executor",
@@ -144,19 +220,32 @@
       "stale_when": "executor binding fingerprint changes",
       "proof_route": "autopilot executor-binding tests",
       "disposition": "retain as executor authority",
-      "revision_fields": ["binding_fingerprint", "availability", "validity"]
+      "revision_fields": ["binding_fingerprint", "availability", "validity"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.autopilot_executor",
+        "owner_result_kind": "agentic-workspace/autopilot-executor-binding/v1",
+        "repair_operation_id": "autopilot.executor.bind",
+        "activation_terms": ["autopilot", "worker", "executor", "delegate"]
+      }
     },
     {
       "surface": "skills",
       "owner": "workspace skill registry",
       "authority_class": "canonical",
-      "consumers": ["start", "next", "implement"],
+      "consumers": ["start", "next", "implement", "skills"],
       "activation": "task-routed skill viability and dependency checks",
       "editable_by": "skill registry and installed skill metadata",
       "stale_when": "skill registry, dependency status, or routed task shape changes",
       "proof_route": "skill registry and workspace startup tests",
       "disposition": "retain as routed operating guidance",
-      "revision_fields": ["skill_id", "registry_revision", "dependency_status"]
+      "revision_fields": ["skill_id", "registry_revision", "dependency_status"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.workspace_runtime_core.skill_dependency_resolver",
+        "owner_result_kind": "agentic-workspace/skill-dependency-closure/v1",
+        "repair_operation_id": "workspace.skills.resolve-dependencies",
+        "activation_terms": ["skill", "skills", "review", "proof", "planning", "memory", "implement", "route"],
+        "baseline_for": ["start"]
+      }
     },
     {
       "surface": "target-guidance",
@@ -168,7 +257,14 @@
       "stale_when": "target identity, guidance overlay, or execution posture changes",
       "proof_route": "target guidance identity and assignment tests",
       "disposition": "retain as target-specific operating context",
-      "revision_fields": ["target_identity_ref", "guidance_revision", "execution_posture_revision"]
+      "revision_fields": ["target_identity_ref", "guidance_revision", "execution_posture_revision"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.target_guidance",
+        "owner_result_kind": "agentic-workspace/target-guidance/v1",
+        "repair_operation_id": "target-guidance.resolve",
+        "activation_terms": ["target", "guidance", "host", "adapter", "execution"],
+        "baseline_for": ["start", "next"]
+      }
     },
     {
       "surface": "terminal-outcome",
@@ -180,7 +276,13 @@
       "stale_when": "terminal outcome, custody, or continuation state changes",
       "proof_route": "final-response and autopilot continuation tests",
       "disposition": "retain as final-claim and continuation authority",
-      "revision_fields": ["terminal_state", "custody_owner", "continuation_revision"]
+      "revision_fields": ["terminal_state", "custody_owner", "continuation_revision"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.final_response_admission",
+        "owner_result_kind": "agentic-workspace/terminal-outcome/v1",
+        "repair_operation_id": "terminal-outcome.inspect",
+        "activation_terms": ["terminal", "final", "closeout", "complete", "status"]
+      }
     },
     {
       "surface": "generated-references",
@@ -192,7 +294,13 @@
       "stale_when": "source contract revision differs from generated projection",
       "proof_route": "generated command package checks",
       "disposition": "regenerate rather than hand edit",
-      "revision_fields": ["command_package_fingerprint", "adapter_fingerprint"]
+      "revision_fields": ["command_package_fingerprint", "adapter_fingerprint"],
+      "source_owner_contract": {
+        "owner_module": "agentic_workspace.contract_tooling.generated_references",
+        "owner_result_kind": "generated-cli-source-manifest/v1",
+        "repair_operation_id": "generated-command-packages.refresh",
+        "activation_terms": ["generated", "contract", "schema", "operation", "adapter", "package"]
+      }
     }
   ]
 }

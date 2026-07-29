@@ -12,6 +12,8 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Derived internal decision composed from admitted AW authority surfaces. It emits exactly one primary action or one typed blocker. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `kind` | const `"agentic-workspace/operating-decision/v1"` | yes |  | Schema discriminator for the composed operating decision. |  |  |
+| `producer_module` | string | no |  | Canonical module that produced the operating decision. |  |  |
+| `producer_function` | string | no |  | Canonical function that produced the operating decision. |  |  |
 | `decision_id` | string | yes |  | Stable identity derived from input revisions, action, blocker, and terminal state. |  |  |
 | `status` | enum `"actionable"`, `"blocked"`, `"terminal"` | yes |  | Whether the composed decision exposes an action, a blocker, or no immediate action. |  |  |
 | `input_revisions` | object | yes |  | Revision or freshness identifiers supplied by specialist authority inputs. |  |  |
