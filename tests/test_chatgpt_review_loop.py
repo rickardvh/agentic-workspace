@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -1240,10 +1239,12 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
     remote = tmp_path / "origin.git"
     branch = "agent/pr-12"
     worktree_root = tmp_path / "worktrees"
-    aw_log = tmp_path / "aw-commands.jsonl"
     session_id = "fresh-session"
+    aw_script = Path(__file__).resolve().parents[1] / "scripts" / "run_agentic_workspace.py"
+    aw_command = f"{sys.executable} {aw_script.as_posix()}"
     launches: list[tuple[str, Path, str]] = []
     proof_sequences: list[list[str]] = []
+    aw_packets: list[dict[str, str]] = []
     failed_stop_results: list[int] = []
     failed_stop_statuses: list[str] = []
 
@@ -1264,34 +1265,15 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
     git(["remote", "add", "origin", remote.as_posix()])
     git(["push", "-u", "origin", branch])
     start_head = git(["rev-parse", "HEAD"])
-
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    shim_py = bin_dir / "agentic-workspace.py"
-    shim_py.write_text(
-        "\n".join(
-            [
-                "import json, os, pathlib, sys",
-                f"log = pathlib.Path({aw_log.as_posix()!r})",
-                "args = sys.argv[1:]",
-                "if not args or args[0] not in {'start', 'implement'}:",
-                "    raise SystemExit(2)",
-                "if '--target' not in args or '--task' not in args or '--format' not in args or 'json' not in args:",
-                "    raise SystemExit(3)",
-                "if args[0] == 'implement' and '--changed' not in args:",
-                "    raise SystemExit(4)",
-                "with log.open('a', encoding='utf-8') as handle:",
-                "    handle.write(json.dumps({'argv': args, 'cwd': os.getcwd()}, sort_keys=True) + '\\n')",
-                "print(json.dumps({'kind': args[0], 'next_safe_action': 'continue'}))",
-            ]
-        )
-        + "\n",
+    (owner / ".agentic-workspace").mkdir()
+    (owner / ".agentic-workspace" / "config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
         encoding="utf-8",
     )
-    (bin_dir / "agentic-workspace").write_text(f"#!{sys.executable}\n" + shim_py.read_text(encoding="utf-8"), encoding="utf-8")
-    (bin_dir / "agentic-workspace").chmod(0o755)
-    (bin_dir / "agentic-workspace.cmd").write_text(f'@echo off\r\n"{sys.executable}" "{shim_py}" %*\r\n', encoding="utf-8")
-    monkeypatch.setenv("PATH", bin_dir.as_posix() + os.pathsep + os.environ.get("PATH", ""))
+    (owner / "AGENTS.md").write_text(
+        "Authority marker:\n\n<!-- agentic-workspace:workflow:start -->\nOrdinary route:\n<!-- agentic-workspace:workflow:end -->\n",
+        encoding="utf-8",
+    )
     monkeypatch.setenv("VIRTUAL_ENV", (owner / ".venv-owner").as_posix())
     monkeypatch.setenv("UV_ACTIVE", "1")
     monkeypatch.setenv(loop.OWNER_ROOT_ENV, owner.as_posix())
@@ -1331,7 +1313,26 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
                 return subprocess.CompletedProcess(command, 0, json.dumps(self.pr_payload()), "")
             if command[:3] == ["gh", "pr", "list"]:
                 return subprocess.CompletedProcess(command, 0, json.dumps([self.pr_payload()]), "")
-            return super().run(command, cwd=cwd, env=env)
+            completed = super().run(command, cwd=cwd, env=env)
+            if len(command) >= 2 and command[1].endswith("scripts/run_agentic_workspace.py"):
+                payload = json.loads(completed.stdout)
+                aw_packets.append(
+                    {
+                        "kind": str(payload.get("kind") or ""),
+                        "command": command[2],
+                        "cwd": cwd.as_posix(),
+                    }
+                )
+                assert completed.returncode == 0
+                if command[2] == "start":
+                    assert payload["kind"] == "startup-context/v1"
+                    assert payload["workflow_participation"]["status"] == "mandatory"
+                    assert payload["action_signals"]["read_only_allowed"] is True
+                if command[2] == "implement":
+                    assert payload["kind"].startswith("implementer-context")
+                    assert payload["action_signals"]["implementation_allowed"] is True
+                    assert "src/app.py" in command
+            return completed
 
         def run_interactive(self, command, *, cwd, env=None, input_text=""):
             command = list(command)
@@ -1350,8 +1351,8 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
                 git(["commit", "-m", "fresh repair"], cwd=cwd)
                 git(["push", "origin", f"HEAD:{branch}"], cwd=cwd)
                 proof_commands = [
-                    "agentic-workspace start --target . --task spawned-worktree-proof --format json",
-                    "agentic-workspace implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
+                    f"{aw_command} start --target . --task spawned-worktree-proof --format json",
+                    f"{aw_command} implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
                     "git rev-parse --verify HEAD",
                 ]
                 push_status = "passed"
@@ -1360,8 +1361,8 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
                 git(["add", "src/app.py"], cwd=cwd)
                 git(["commit", "-m", "failed local repair"], cwd=cwd)
                 proof_commands = [
-                    "agentic-workspace start --target . --task spawned-worktree-proof --format json",
-                    "agentic-workspace implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
+                    f"{aw_command} start --target . --task spawned-worktree-proof --format json",
+                    f"{aw_command} implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
                     "git rev-parse --verify refs/heads/definitely-missing-proof-ref",
                 ]
                 push_status = "failed"
@@ -1371,8 +1372,8 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
                 git(["commit", "-m", "final proof repair"], cwd=cwd)
                 git(["push", "origin", f"HEAD:{branch}"], cwd=cwd)
                 proof_commands = [
-                    "agentic-workspace start --target . --task spawned-worktree-proof --format json",
-                    "agentic-workspace implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
+                    f"{aw_command} start --target . --task spawned-worktree-proof --format json",
+                    f"{aw_command} implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
                     "git rev-parse --verify HEAD",
                 ]
                 push_status = "passed"
@@ -1441,8 +1442,12 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
     assert saved["terminal_result"]["proof_attempt_result"]["producer"] == "chatgpt-review-loop.focused-proof-executor"
     assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["new_environment_created"] is False
     assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["environment_reuse"] == "configured-active-environment"
-    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["output_bytes"] < 4096
-    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["elapsed_ms"] < 1000
+    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["output_bytes"] < 32768
+    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["elapsed_ms"] < 3000
+    aw_command_results = saved["terminal_result"]["proof_attempt_result"]["command_results"][:2]
+    assert [result["status"] for result in aw_command_results] == ["passed", "passed"]
+    assert [result["output_bytes"] < 20000 for result in aw_command_results] == [True, True]
+    assert [result["elapsed_ms"] < 1200 for result in aw_command_results] == [True, True]
     assert saved["terminal_result"]["repair"]["action"] == "repair the failed focused proof, rerun it, then report the exact job result"
     assert saved["terminal_result"]["repair"]["attempt_revision"] == saved["terminal_result"]["proof_attempt_result"]["attempt_revision"]
     assert saved["terminal_result"]["repair"]["blocked_claims"] == ["handoff-recorded", "merge-ready", "proof-passed"]
@@ -1477,9 +1482,17 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
     assert "Repair the changed path" in launches[1][2]
     assert "Rerun the exact failed proof" in launches[2][2]
     assert len([command for command in runner.commands if command[:3] == ["git", "worktree", "add"]]) == 1
+    assert [packet["kind"] for packet in aw_packets] == [
+        "startup-context/v1",
+        "implementer-context-tiny/v1",
+        "startup-context/v1",
+        "implementer-context-tiny/v1",
+        "startup-context/v1",
+        "implementer-context-tiny/v1",
+    ]
+    assert {packet["cwd"] for packet in aw_packets} == {(worktree_root / "pr-12").as_posix()}
     assert not (worktree_root / "pr-12" / ".venv").exists()
-    aw_invocations = [json.loads(line) for line in aw_log.read_text(encoding="utf-8").splitlines()]
-    assert [item["argv"][0] for item in aw_invocations] == ["start", "implement", "start", "implement", "start", "implement"]
+    assert [packet["command"] for packet in aw_packets] == ["start", "implement", "start", "implement", "start", "implement"]
 
 
 def test_terminal_repair_names_the_later_failed_proof_not_the_first_command(tmp_path: Path) -> None:
