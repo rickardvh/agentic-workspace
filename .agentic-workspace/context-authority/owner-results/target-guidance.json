@@ -1,0 +1,11 @@
+{
+  "adapter_id": "target-guidance.owner-result",
+  "git_head": "",
+  "kind": "agentic-workspace/target-guidance/v1",
+  "owner": "target guidance runtime",
+  "producer": "agentic_workspace.target_guidance",
+  "source_id": ".agentic-workspace/config.toml",
+  "source_revision": "sha256:1141863eb049219c86f3eb87b6c51aaea683e3b572e0aa79c201d3db73397b79",
+  "status": "current",
+  "surface": "target-guidance"
+}

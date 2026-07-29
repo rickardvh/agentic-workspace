@@ -520,6 +520,135 @@ def _owner_result_base(
     return _finalize_owner_result(payload)
 
 
+CONTEXT_OWNER_RESULT_RECEIPT_DIR = Path(".agentic-workspace/context-authority/owner-results")
+
+
+def _missing_owner_receipt_result(
+    *,
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    adapter_id: str,
+    reason: str,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return _owner_result_base(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id=adapter_id,
+        status="missing",
+        reason=reason,
+        extra={
+            "owner_receipt_required": True,
+            "owner_receipt_ref": (CONTEXT_OWNER_RESULT_RECEIPT_DIR / f"{surface}.json").as_posix(),
+            **(extra or {}),
+        },
+    )
+
+
+def _load_owner_result_receipt(
+    *,
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    adapter_id: str,
+    boundary: str,
+    structural_backing: dict[str, Any],
+) -> dict[str, Any]:
+    receipt_ref = CONTEXT_OWNER_RESULT_RECEIPT_DIR / f"{surface}.json"
+    receipt_path = root / receipt_ref
+    try:
+        payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return _missing_owner_receipt_result(
+            surface=surface,
+            item=item,
+            root=root,
+            chosen=chosen,
+            revision=revision,
+            git_head=git_head,
+            selection=selection,
+            adapter_id=adapter_id,
+            reason="owner-result-receipt-missing",
+            extra={"owner_boundary": boundary, "schema_backing": structural_backing, "error": str(exc)},
+        )
+    if not isinstance(payload, dict):
+        return _missing_owner_receipt_result(
+            surface=surface,
+            item=item,
+            root=root,
+            chosen=chosen,
+            revision=revision,
+            git_head=git_head,
+            selection=selection,
+            adapter_id=adapter_id,
+            reason="owner-result-receipt-invalid",
+            extra={"owner_boundary": boundary, "schema_backing": structural_backing},
+        )
+    producer, result_kind, repair_operation_id = _owner_contract_result_identity(surface)
+    expected_source = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
+    expected_source_revision = "sha256:" + revision
+    failures = [
+        field
+        for field, expected, actual in [
+            ("kind", result_kind, payload.get("kind")),
+            ("producer", producer, payload.get("producer")),
+            ("status", "current", payload.get("status")),
+            ("surface", surface, payload.get("surface")),
+            ("owner", item.get("owner"), payload.get("owner")),
+            ("source_id", expected_source, payload.get("source_id")),
+            ("source_revision", expected_source_revision, payload.get("source_revision")),
+            ("git_head", git_head, payload.get("git_head")),
+            ("adapter_id", adapter_id, payload.get("adapter_id")),
+        ]
+        if str(actual or "") != str(expected or "")
+    ]
+    if payload.get("superseded_by") or payload.get("revoked_at"):
+        failures.append("lifecycle")
+    if failures:
+        return _missing_owner_receipt_result(
+            surface=surface,
+            item=item,
+            root=root,
+            chosen=chosen,
+            revision=revision,
+            git_head=git_head,
+            selection=selection,
+            adapter_id=adapter_id,
+            reason="owner-result-receipt-mismatch",
+            extra={
+                "owner_boundary": boundary,
+                "schema_backing": structural_backing,
+                "receipt_failures": failures,
+                "receipt_ref": receipt_ref.as_posix(),
+            },
+        )
+    return _finalize_owner_result(
+        {
+            **payload,
+            "selection": selection,
+            "repair_operation_id": str(payload.get("repair_operation_id") or repair_operation_id),
+            "owner_boundary": str(payload.get("owner_boundary") or boundary),
+            "schema_backing": _as_dict(payload.get("schema_backing")) or structural_backing,
+            "owner_receipt_ref": receipt_ref.as_posix(),
+            "owner_receipt_required": True,
+        }
+    )
+
+
 def _schema_backing_status(path: Path) -> dict[str, Any]:
     schema_backing, parsed = _load_schema_backed_source(path)
     if schema_backing.get("parse_status") == "invalid":
@@ -577,7 +706,31 @@ def _contracted_text_owner_result(
 ) -> dict[str, Any]:
     contract = _text_contains_markers(chosen, markers)
     status = str(contract.get("status") or "")
-    return _owner_result_base(
+    structural_backing = {
+        "source_format": chosen.suffix.lower().lstrip(".") or "text",
+        "contract_markers": markers,
+        "matched_markers": contract.get("matched_markers", []),
+        "line_count": contract.get("line_count", 0),
+    }
+    if status != "current":
+        return _owner_result_base(
+            surface=surface,
+            item=item,
+            root=root,
+            chosen=chosen,
+            revision=revision,
+            git_head=git_head,
+            selection=selection,
+            adapter_id=adapter_id,
+            status=status or "invalid",
+            reason=str(contract.get("reason") or ""),
+            extra={
+                "owner_boundary": boundary,
+                "schema_backing": structural_backing,
+                "population": {"status": "invalid"},
+            },
+        )
+    return _load_owner_result_receipt(
         surface=surface,
         item=item,
         root=root,
@@ -586,18 +739,8 @@ def _contracted_text_owner_result(
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
-        status="current" if status == "current" else status or "invalid",
-        reason=str(contract.get("reason") or ""),
-        extra={
-            "owner_boundary": boundary,
-            "schema_backing": {
-                "source_format": chosen.suffix.lower().lstrip(".") or "text",
-                "contract_markers": markers,
-                "matched_markers": contract.get("matched_markers", []),
-                "line_count": contract.get("line_count", 0),
-            },
-            "population": {"status": "present" if status == "current" else "invalid"},
-        },
+        boundary=boundary,
+        structural_backing={**structural_backing, "population": {"status": "present"}},
     )
 
 
@@ -619,7 +762,30 @@ def _contracted_toml_owner_result(
     missing_keys = [key for key in required_keys if key not in payload]
     status = "current" if backing["status"] == "current" and not missing_keys else "invalid"
     reason = str(backing.get("reason") or ("owner-source-required-key-missing" if missing_keys else ""))
-    return _owner_result_base(
+    structural_backing = {
+        **_as_dict(backing.get("schema_backing")),
+        "required_keys": required_keys,
+        "missing_required_keys": missing_keys,
+    }
+    if status != "current":
+        return _owner_result_base(
+            surface=surface,
+            item=item,
+            root=root,
+            chosen=chosen,
+            revision=revision,
+            git_head=git_head,
+            selection=selection,
+            adapter_id=adapter_id,
+            status=status,
+            reason=reason,
+            extra={
+                "owner_boundary": boundary,
+                "schema_backing": structural_backing,
+                "population": {"status": "invalid"},
+            },
+        )
+    return _load_owner_result_receipt(
         surface=surface,
         item=item,
         root=root,
@@ -628,17 +794,8 @@ def _contracted_toml_owner_result(
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
-        status=status,
-        reason=reason,
-        extra={
-            "owner_boundary": boundary,
-            "schema_backing": {
-                **_as_dict(backing.get("schema_backing")),
-                "required_keys": required_keys,
-                "missing_required_keys": missing_keys,
-            },
-            "population": {"status": "present" if status == "current" else "invalid"},
-        },
+        boundary=boundary,
+        structural_backing={**structural_backing, "population": {"status": "present"}},
     )
 
 
@@ -898,7 +1055,31 @@ def _module_owner_result(
 ) -> dict[str, Any]:
     symbol_status = _module_source_contains_symbols(chosen, symbols)
     status = str(symbol_status.get("status") or "")
-    return _owner_result_base(
+    structural_backing = {
+        "source_format": "python-module",
+        "required_symbols": symbols,
+        "matched_symbols": symbol_status.get("matched_symbols", []),
+        "missing_symbols": symbol_status.get("missing_symbols", []),
+    }
+    if status != "current":
+        return _owner_result_base(
+            surface=surface,
+            item=item,
+            root=root,
+            chosen=chosen,
+            revision=revision,
+            git_head=git_head,
+            selection=selection,
+            adapter_id=adapter_id,
+            status=status or "invalid",
+            reason=str(symbol_status.get("reason") or ""),
+            extra={
+                "owner_boundary": boundary,
+                "schema_backing": structural_backing,
+                "population": {"status": "invalid"},
+            },
+        )
+    return _load_owner_result_receipt(
         surface=surface,
         item=item,
         root=root,
@@ -907,18 +1088,8 @@ def _module_owner_result(
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
-        status="current" if status == "current" else status or "invalid",
-        reason=str(symbol_status.get("reason") or ""),
-        extra={
-            "owner_boundary": boundary,
-            "schema_backing": {
-                "source_format": "python-module",
-                "required_symbols": symbols,
-                "matched_symbols": symbol_status.get("matched_symbols", []),
-                "missing_symbols": symbol_status.get("missing_symbols", []),
-            },
-            "population": {"status": "present" if status == "current" else "invalid"},
-        },
+        boundary=boundary,
+        structural_backing={**structural_backing, "population": {"status": "present"}},
     )
 
 
