@@ -1454,7 +1454,7 @@ def _scope_fingerprint(paths: list[str]) -> str:
     return "sha256:" + hashlib.sha256(json.dumps(sorted(paths), separators=(",", ":"), ensure_ascii=True).encode()).hexdigest()
 
 
-def _compiled_direct_work_operation_decision(
+def _ordinary_direct_work_operation_sources(
     *,
     payload: dict[str, Any],
     planning_gate: dict[str, Any],
@@ -1466,13 +1466,11 @@ def _compiled_direct_work_operation_decision(
     changed_paths: list[str],
     allowed_paths: list[str],
 ) -> dict[str, Any]:
-    """Compile the direct-work action from existing operation owners.
+    """Return ordinary-route action sources for direct changed-path work.
 
-    This helper does not infer the composed-operation scenario contract.  It
-    binds the implement-context operation invocation to the same Planning,
-    mutation, proof, and executor authority fronts already assembled for the
-    ordinary implement packet, then asks the operating-decision compiler for the
-    current action decision.
+    The returned records are producer-stamped so later projections can verify
+    that action identity came from ``actionability`` and the composed decision
+    came from ``operating_decision`` instead of a scenario or projection helper.
     """
 
     direct_route = (
@@ -1545,7 +1543,12 @@ def _compiled_direct_work_operation_decision(
         command_rendering="agentic-workspace implement --changed <paths> --format json",
     )
     bound_invocation = bind_operation_invocation_to_authorities(invocation=invocation, authorities=authorities)
-    return compile_operating_decision(
+    bound_invocation = {
+        **bound_invocation,
+        "producer_module": "agentic_workspace.actionability",
+        "producer_function": "operation_invocation",
+    }
+    decision = compile_operating_decision(
         inputs={
             "revisions": {
                 "planning_gate": authorities["planning_owner"]["owner_revision"],
@@ -1570,6 +1573,17 @@ def _compiled_direct_work_operation_decision(
             },
         }
     )
+    return {
+        "kind": "agentic-workspace/ordinary-operation-sources/v1",
+        "producer_module": "agentic_workspace.workspace_runtime_implement",
+        "source_role": "ordinary-route-source-assembly",
+        "typed_invocation": bound_invocation,
+        "operating_decision": {
+            **decision,
+            "producer_module": "agentic_workspace.operating_decision",
+            "producer_function": "compile_operating_decision",
+        },
+    }
 
 
 def _tiny_operation_authority_payload(
@@ -1577,10 +1591,10 @@ def _tiny_operation_authority_payload(
     payload: dict[str, Any],
     decision_packet: dict[str, Any],
     proof_detail_route: str,
+    operation_sources: dict[str, Any],
 ) -> dict[str, Any]:
     """Project ordinary implement authority needed by external checkers."""
 
-    gate = _as_dict(payload.get("planning_safety_gate"))
     envelope = _as_dict(payload.get("authority_envelope"))
     resolution = _as_dict(envelope.get("authority_resolution"))
     baseline = _as_dict(envelope.get("mutation_baseline"))
@@ -1598,29 +1612,29 @@ def _tiny_operation_authority_payload(
     }
     write_requested = _as_dict(side_effects.get("write-requested-paths"))
     write_outside = _as_dict(side_effects.get("write-outside-scope"))
-    compiled_decision = _compiled_direct_work_operation_decision(
-        payload=payload,
-        planning_gate=gate,
-        authority_envelope=envelope,
-        mutation_baseline=baseline,
-        operating_loop=operating_loop,
-        verification=verification,
-        proof_detail_route=proof_detail_route,
-        changed_paths=changed_paths,
-        allowed_paths=allowed_paths,
-    )
+    compiled_decision = _as_dict(operation_sources.get("operating_decision"))
     compiled_primary_action = _as_dict(compiled_decision.get("primary_action"))
     compiled_invocation = _as_dict(compiled_primary_action.get("operation_invocation"))
     compiled_selected_owner = _as_dict(compiled_decision.get("selected_owner"))
-    compiled_actionable = compiled_decision.get("status") == "actionable" and bool(compiled_invocation)
+    source_invocation = _as_dict(operation_sources.get("typed_invocation"))
+    compiled_actionable = (
+        compiled_decision.get("status") == "actionable"
+        and compiled_decision.get("producer_module") == "agentic_workspace.operating_decision"
+        and source_invocation.get("producer_module") == "agentic_workspace.actionability"
+        and bool(compiled_invocation)
+        and compiled_invocation.get("expected_input_revision") == compiled_decision.get("canonical_decision_input_revision")
+        and source_invocation.get("expected_input_revision") == compiled_invocation.get("expected_input_revision")
+    )
     typed_invocation = {
         "status": "observed" if compiled_actionable else "missing",
-        "operation_id": compiled_invocation.get("operation_id"),
-        "contract_version": compiled_invocation.get("contract_version"),
-        "arguments": compiled_invocation.get("arguments", {}),
-        "expected_input_revision": compiled_invocation.get("expected_input_revision"),
-        "expected_transition": compiled_invocation.get("expected_transition"),
-        "idempotency_key": compiled_invocation.get("idempotency_key"),
+        "producer_module": source_invocation.get("producer_module"),
+        "producer_function": source_invocation.get("producer_function"),
+        "operation_id": source_invocation.get("operation_id"),
+        "contract_version": source_invocation.get("contract_version"),
+        "arguments": source_invocation.get("arguments", {}),
+        "expected_input_revision": source_invocation.get("expected_input_revision"),
+        "expected_transition": source_invocation.get("expected_transition"),
+        "idempotency_key": source_invocation.get("idempotency_key"),
         "action": compiled_primary_action.get("action"),
         "source": "operating_decision.primary_action.operation_invocation",
     }
@@ -1696,6 +1710,8 @@ def _tiny_operation_authority_payload(
         "decision": decision,
         "operating_decision": {
             "status": compiled_decision.get("status"),
+            "producer_module": compiled_decision.get("producer_module"),
+            "producer_function": compiled_decision.get("producer_function"),
             "decision_id": compiled_decision.get("decision_id"),
             "canonical_decision_input_revision": compiled_decision.get("canonical_decision_input_revision"),
             "selected_owner": compiled_selected_owner,
@@ -1941,10 +1957,28 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         state_delta_core=state_delta_core,
     )
     proof_detail_route = str(_as_dict(decision_packet.get("detail_routes")).get("proof_detail") or "")
+    operation_sources = _ordinary_direct_work_operation_sources(
+        payload=payload,
+        planning_gate=_as_dict(payload.get("planning_safety_gate")),
+        authority_envelope=_as_dict(payload.get("authority_envelope")),
+        mutation_baseline=_as_dict(_as_dict(payload.get("authority_envelope")).get("mutation_baseline")),
+        operating_loop=_as_dict(payload.get("operating_loop")),
+        verification=_as_dict(_as_dict(payload.get("operating_loop")).get("verification")),
+        proof_detail_route=proof_detail_route,
+        changed_paths=[str(path) for path in payload.get("changed_paths", []) if isinstance(path, str) and path.strip()],
+        allowed_paths=[
+            str(path)
+            for path in _as_dict(_as_dict(_as_dict(payload.get("authority_envelope")).get("mutation_baseline")).get("scope")).get(
+                "allowed_paths", []
+            )
+            if isinstance(path, str) and path.strip()
+        ],
+    )
     operation_authority = _tiny_operation_authority_payload(
         payload=payload,
         decision_packet=decision_packet,
         proof_detail_route=proof_detail_route,
+        operation_sources=operation_sources,
     )
     projected = {
         "kind": "implementer-context-tiny/v1",

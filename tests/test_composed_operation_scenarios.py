@@ -41,6 +41,8 @@ def _ordinary_direct_implement_packet() -> dict[str, object]:
                 },
                 "operating_decision": {
                     "status": "actionable",
+                    "producer_module": "agentic_workspace.operating_decision",
+                    "producer_function": "compile_operating_decision",
                     "decision_id": "operating-decision:abc",
                     "canonical_decision_input_revision": "sha256:decision",
                     "selected_owner": {"id": "direct-work", "source": "planning_safety_gate"},
@@ -53,6 +55,8 @@ def _ordinary_direct_implement_packet() -> dict[str, object]:
                 },
                 "typed_invocation": {
                     "status": "observed",
+                    "producer_module": "agentic_workspace.actionability",
+                    "producer_function": "operation_invocation",
                     "operation_id": "implement.context",
                     "contract_version": "agentic-workspace/operation/v1",
                     "arguments": {"target": ".", "changed": ["README.md"], "task_present": True},
@@ -128,9 +132,11 @@ def test_composed_operation_scenario_contract_rejects_divergence() -> None:
         operating_decision = operation_authority["operating_decision"]
         mutation_authority = operation_authority["mutation_authority"]
         assert typed_invocation["operation_id"] == "implement.context"
+        assert typed_invocation["producer_module"] == "agentic_workspace.actionability"
         assert typed_invocation["arguments"]["changed"] == ["README.md"]
         assert typed_invocation["expected_input_revision"] == operating_decision["canonical_decision_input_revision"]
         assert operating_decision["status"] == "actionable"
+        assert operating_decision["producer_module"] == "agentic_workspace.operating_decision"
         assert operating_decision["selected_owner"]["id"] == "direct-work"
         assert mutation_authority["changed_scope_fingerprint"] == mutation_authority["allowed_scope_fingerprint"]
         divergent = {**scenario, "owner": "wrong-owner", "terminal_state": "blocked"}
@@ -162,6 +168,7 @@ def test_composed_operation_contract_is_not_derived_from_fixture_oracles() -> No
     assert "_ordinary_route_owner_packets" not in observer_source
     assert 'get("composed_operation_owner_packets")' not in observer_source
     assert "_composed_operation_owner_packets" not in implement_source
+    assert "_compiled_direct_work_operation_decision" not in implement_source
     assert '"composed_operation_owner_packets"' not in implement_source
     assert "external-intent/issue-2300.json" not in implement_source
     assert "<stale proof command>" not in implement_source
@@ -330,6 +337,22 @@ def test_composed_operation_contract_rejects_missing_compiled_operating_decision
         "terminal_state": "continue",
         "primary_action": {"action": "implement", "operation_id": "implement.context"},
     }
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="fresh-direct-work",
+        active_planning=False,
+        start={},
+        implement=implement,
+        summary={},
+        closeout={},
+    )
+    assert authority_packet == {}
+
+
+def test_composed_operation_contract_rejects_implement_authored_invocation_and_decision() -> None:
+    implement = _ordinary_direct_implement_packet()
+    implement["context"]["operation_authority"]["typed_invocation"]["producer_module"] = "agentic_workspace.workspace_runtime_implement"
+    implement["context"]["operation_authority"]["operating_decision"]["producer_module"] = "agentic_workspace.workspace_runtime_implement"
     authority_packet = observe_composed_operation_authority(
         target=Path("."),
         scenario_id="fresh-direct-work",

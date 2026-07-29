@@ -183,6 +183,8 @@ def _compiled_decision_supports_contract(decision: dict[str, Any]) -> bool:
     selected_owner = _as_dict(decision.get("selected_owner"))
     return (
         decision.get("status") == "actionable"
+        and decision.get("producer_module") == "agentic_workspace.operating_decision"
+        and decision.get("producer_function") == "compile_operating_decision"
         and str(decision.get("decision_id") or "").startswith("operating-decision:")
         and str(decision.get("canonical_decision_input_revision") or "").startswith("sha256:")
         and selected_owner.get("id") == "direct-work"
@@ -198,6 +200,8 @@ def _typed_invocation_supports_contract(invocation: dict[str, Any], operating_de
     changed = arguments.get("changed")
     return (
         invocation.get("status") == "observed"
+        and invocation.get("producer_module") == "agentic_workspace.actionability"
+        and invocation.get("producer_function") == "operation_invocation"
         and invocation.get("operation_id") == "implement.context"
         and invocation.get("contract_version") == "agentic-workspace/operation/v1"
         and invocation.get("action") == "implement"

@@ -865,6 +865,10 @@ def _ordinary_packet_ref_is_contract_authoritative(authority_packet: dict[str, o
         return False
     if operating_decision.get("status") != "actionable":
         return False
+    if operating_decision.get("producer_module") != "agentic_workspace.operating_decision":
+        return False
+    if operating_decision.get("producer_function") != "compile_operating_decision":
+        return False
     if not str(operating_decision.get("decision_id") or "").startswith("operating-decision:"):
         return False
     if not str(operating_decision.get("canonical_decision_input_revision") or "").startswith("sha256:"):
@@ -877,6 +881,10 @@ def _ordinary_packet_ref_is_contract_authoritative(authority_packet: dict[str, o
         return False
     typed_invocation = ordinary_packet_ref.get("typed_invocation")
     if not isinstance(typed_invocation, dict) or typed_invocation.get("status") != "observed":
+        return False
+    if typed_invocation.get("producer_module") != "agentic_workspace.actionability":
+        return False
+    if typed_invocation.get("producer_function") != "operation_invocation":
         return False
     typed_arguments = typed_invocation.get("arguments")
     if not isinstance(typed_arguments, dict):
