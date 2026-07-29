@@ -59,6 +59,7 @@ CONFORMANCE_RECEIPT_EXPIRES_AT = "2026-12-31T00:00:00Z"
 def build_external_operation_conformance_receipts(
     profile: Mapping[str, object],
     *,
+    conformance_result: Mapping[str, object] | None = None,
     executed_at: str = "2026-07-29T00:00:00Z",
     expires_at: str = CONFORMANCE_RECEIPT_EXPIRES_AT,
 ) -> dict[str, object]:
@@ -70,10 +71,35 @@ def build_external_operation_conformance_receipts(
     expired receipts fail closed at runtime.
     """
 
+    if conformance_result is None:
+        return {
+            "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
+            "receipts": [],
+            "producer": "scripts/check/run_operation_conformance_tests.py",
+            "expires_at": expires_at,
+            "status": "not-run",
+            "rule": "No packaged conformance receipts are synthesized from profile declarations; run conformance and pass its result set to build receipts.",
+        }
+
     receipts: list[dict[str, object]] = []
     profile_fingerprint = (
         str((profile.get("compatibility") or {}).get("fingerprint", "")) if isinstance(profile.get("compatibility"), Mapping) else ""
     )
+    all_results = [dict(result) for result in conformance_result.get("cases", []) if isinstance(result, Mapping)]
+    result_digest = hashlib.sha256(json.dumps(conformance_result, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
+
+    def _state_for_results(results: list[dict[str, object]]) -> str:
+        states = {str(result.get("state") or "not-run") for result in results}
+        if not results:
+            return "not-run"
+        if "fail" in states:
+            return "failed"
+        if "unavailable" in states:
+            return "unavailable"
+        if "skipped" in states:
+            return "skipped"
+        return "passed" if states == {"pass"} else "failed"
+
     for entry in profile.get("operations", []):
         if not isinstance(entry, Mapping):
             continue
@@ -84,11 +110,46 @@ def build_external_operation_conformance_receipts(
         operation_compatibility = entry.get("operation_compatibility", {})
         operation_fingerprint = str(operation_compatibility.get("fingerprint", "")) if isinstance(operation_compatibility, Mapping) else ""
         conformance_refs = [str(ref) for ref in entry.get("conformance", []) if isinstance(ref, str)]
+        operation_results = [result for result in all_results if str(result.get("operation_id") or "") == operation_id]
+        if not operation_results:
+            continue
+        readiness_transports = conformance_result.get("readiness_transports", {})
+        transports: dict[str, dict[str, object]] = {}
+        for transport in READINESS_TRANSPORTS:
+            if isinstance(readiness_transports, Mapping) and isinstance(readiness_transports.get(transport), Mapping):
+                transports[transport] = dict(readiness_transports[transport])
+                continue
+            if transport == "python":
+                selected = [result for result in operation_results if result.get("target") == "python"]
+            elif transport == "typescript":
+                selected = [result for result in operation_results if result.get("target") == "typescript"]
+            elif transport == "vendor-neutral":
+                selected = [result for result in operation_results if result.get("target") == "parity"]
+            else:
+                selected = [result for result in operation_results if result.get("target") in {"cli-json", "process"}]
+            transports[transport] = {"status": _state_for_results(selected)}
+        readiness_cases = conformance_result.get("readiness_cases", {})
+        cases: dict[str, dict[str, object]] = {}
+        for case in READINESS_CASES:
+            if isinstance(readiness_cases, Mapping) and isinstance(readiness_cases.get(case), Mapping):
+                cases[case] = dict(readiness_cases[case])
+                continue
+            selected = [
+                result
+                for result in operation_results
+                if result.get("case_id") == case or result.get("behavioral_class") == case or result.get("case_class") == case
+            ]
+            cases[case] = {"status": _state_for_results(selected)}
+        receipt_status = "passed" if all(item["status"] == "passed" for item in [*transports.values(), *cases.values()]) else "failed"
         receipt_basis = {
             "operation_id": operation_id,
             "operation_fingerprint": operation_fingerprint,
             "profile_fingerprint": profile_fingerprint,
             "conformance_refs": conformance_refs,
+            "conformance_result_digest": result_digest,
+            "operation_results": operation_results,
+            "transports": transports,
+            "cases": cases,
             "producer": "scripts/check/run_operation_conformance_tests.py",
         }
         digest = hashlib.sha256(json.dumps(receipt_basis, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:24]
@@ -99,18 +160,20 @@ def build_external_operation_conformance_receipts(
                 "operation_id": operation_id,
                 "operation_fingerprint": operation_fingerprint,
                 "profile_fingerprint": profile_fingerprint,
-                "status": "passed",
+                "status": receipt_status,
                 "executed_at": executed_at,
                 "expires_at": expires_at,
                 "runtime_exception_revision": "#2044@accepted",
+                "conformance_result_digest": result_digest,
                 "conformance_refs": conformance_refs,
-                "transports": {transport: {"status": "passed"} for transport in READINESS_TRANSPORTS},
-                "cases": {case: {"status": "passed"} for case in READINESS_CASES},
+                "transports": transports,
+                "cases": cases,
                 "custody": {
                     "operation_id": "external-operation-conformance.run",
                     "producer": "agentic-workspace.operation-conformance-runner",
                     "trusted_channel": "packaged-conformance-receipt",
                     "source": "scripts/check/run_operation_conformance_tests.py",
+                    "result_kind": conformance_result.get("kind", ""),
                 },
             }
         )
@@ -119,6 +182,7 @@ def build_external_operation_conformance_receipts(
         "receipts": receipts,
         "producer": "scripts/check/run_operation_conformance_tests.py",
         "expires_at": expires_at,
+        "status": "recorded" if receipts else "no-operation-results",
         "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored.",
     }
 

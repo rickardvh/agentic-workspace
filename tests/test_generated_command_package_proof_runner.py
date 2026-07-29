@@ -611,6 +611,81 @@ def test_operation_conformance_runner_reports_missing_python_function_symbol() -
     assert result["message"] == "python.function artifact has no importable symbol"
 
 
+def test_external_conformance_receipts_require_executed_results() -> None:
+    runner = _load_test_ir_runner()
+    profile = {
+        "compatibility": {"fingerprint": "profile-1"},
+        "operations": [
+            {
+                "id": "assignment.export",
+                "external_consumption": {"status": "runtime-backed"},
+                "operation_compatibility": {"fingerprint": "op-1"},
+                "conformance": ["assignment.export.process"],
+            }
+        ],
+    }
+
+    empty = runner.build_external_operation_conformance_receipts(profile)
+    assert empty["status"] == "not-run"
+    assert empty["receipts"] == []
+
+    failed = runner.build_external_operation_conformance_receipts(
+        profile,
+        conformance_result={
+            "kind": "operation-conformance-proof/v1",
+            "cases": [
+                {
+                    "case_id": "assignment.export.process",
+                    "behavioral_class": "absent",
+                    "operation_id": "assignment.export",
+                    "target": "python",
+                    "state": "fail",
+                }
+            ],
+        },
+    )
+    receipt = failed["receipts"][0]
+    assert receipt["status"] == "failed"
+    assert receipt["transports"]["python"]["status"] == "failed"
+    assert receipt["transports"]["typescript"]["status"] == "not-run"
+    assert receipt["cases"]["absent"]["status"] == "failed"
+
+
+def test_external_conformance_receipts_pass_only_from_complete_result_vectors() -> None:
+    runner = _load_test_ir_runner()
+    profile = {
+        "compatibility": {"fingerprint": "profile-1"},
+        "operations": [
+            {
+                "id": "assignment.export",
+                "external_consumption": {"status": "supported"},
+                "operation_compatibility": {"fingerprint": "op-1"},
+                "conformance": ["assignment.export.process"],
+            }
+        ],
+    }
+    conformance_result = {
+        "kind": "operation-conformance-proof/v1",
+        "readiness_transports": {transport: {"status": "passed"} for transport in runner.READINESS_TRANSPORTS},
+        "readiness_cases": {case: {"status": "passed"} for case in runner.READINESS_CASES},
+        "cases": [
+            {
+                "case_id": "assignment.export.process",
+                "behavioral_class": "absent",
+                "operation_id": "assignment.export",
+                "target": "python",
+                "state": "pass",
+            }
+        ],
+    }
+
+    store = runner.build_external_operation_conformance_receipts(profile, conformance_result=conformance_result)
+    receipt = store["receipts"][0]
+    assert receipt["status"] == "passed"
+    assert receipt["conformance_result_digest"]
+    assert receipt["custody"]["producer"] == "agentic-workspace.operation-conformance-runner"
+
+
 def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -> None:
     checker = _load_checker()
 
