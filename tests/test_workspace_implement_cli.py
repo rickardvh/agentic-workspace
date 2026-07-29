@@ -1026,24 +1026,44 @@ candidates = []
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "enough-for-bounded-implementation"
+    assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "mutation-baseline-required"
     gate = payload["context"]["planning_safety_gate"]
-    assert gate["gate_result"] == "current-task-route-acknowledged"
+    assert gate["status"] == "blocked"
+    assert gate["gate_result"] == "mutation-baseline-required"
+    assert gate["workflow_sufficient"] is False
+    assert gate["implementation_allowed"] is False
+    assert gate["required_next_action"] == "refresh-mutation-baseline"
     route = gate["route_decision"]
     assert route["task_relation"] == "bounded-independent"
     assert route["required_transition"] == "none"
     assert route["next_safe_action"]["action"] == "prove-current-task"
+    assert route["next_safe_action"]["operation_invocation"]["operation_id"] == "planning.route.prove-current-task"
+    assert route["next_safe_action"]["operation_invocation"]["authority"] == "agentic-planning/route-decision/v1"
     assert "claim-active-plan-progress" in route["blocked_claims"]
     assert route["allowed_claims"] == ["bounded-task-progress"]
     assert route["proof_expectation"] == "run implement/proof-selected commands for the changed paths; do not claim active-plan progress"
-    assert route["state_update_policy"] == "read-only"
+    assert route["state_update_policy"] == "pre-write-revalidation-required"
+    compatibility = gate["task_switch_reconciliation"]
+    assert compatibility["authority"] == "diagnostic-facts-only"
+    assert compatibility["derive_action_from"] == "planning_safety_gate.route_decision"
+    for legacy_decision_field in (
+        "recommended_next_action",
+        "next_action_packet",
+        "safe_routes",
+        "safe_route_ids",
+        "implementation_allowed",
+        "active_plan_protection",
+        "blocked_claims",
+        "claim_boundary",
+    ):
+        assert legacy_decision_field not in compatibility
     packet = payload["operating_loop"]
     assert packet["verification"]["state"] == "proof_missing"
     assert packet["closeout_state"] == "blocked_missing_proof"
     assert packet["residue_owner"] == "verification"
-    assert packet["planning"]["state"] == "unrelated_active_plan"
+    assert packet["planning"]["state"] == "active"
     assert packet["planning"]["plan_ref"] == ".agentic-workspace/planning/execplans/active-plan.plan.json"
-    assert packet["planning"]["blocks_full_closure"] is False
+    assert packet["planning"]["blocks_full_closure"] is True
     assert packet["required_before_full_closure"] == ["run_or_refresh_proof"]
 
 
@@ -1095,6 +1115,25 @@ candidates = []
     assert gate["gate_result"] == "current-task-scope-inspection-required"
     assert gate["task_switch_reconciliation"]["status"] == "scope-inspection-required"
     assert "route_acknowledgement" not in gate["task_switch_reconciliation"]
+
+
+def test_planning_task_switch_compatibility_packet_has_no_decision_authority() -> None:
+    planning_source = Path("src/agentic_workspace/workspace_runtime_planning.py").read_text(encoding="utf-8")
+    core_source = Path("src/agentic_workspace/workspace_runtime_core.py").read_text(encoding="utf-8")
+    assert '"task_switch_reconciliation": _task_switch_fact_payload(route_evidence)' in planning_source
+    assert '"derive_action_from": task_switch.get("derive_action_from") or "planning_safety_gate.route_decision"' in core_source
+    compact_region = core_source.split('if isinstance(task_switch, dict) and task_switch.get("status") in {', 1)[1].split(
+        "custody_planning = gate.get", 1
+    )[0]
+    for legacy_decision_field in (
+        '"recommended_next_action"',
+        '"safe_route_ids"',
+        '"blocked_claims"',
+        '"claim_boundary"',
+        '"safe_routes"',
+        '"active_plan_protection"',
+    ):
+        assert legacy_decision_field not in compact_region
 
 
 def test_implement_does_not_require_stale_deleted_test_inventory_sweep(tmp_path: Path, capsys) -> None:
