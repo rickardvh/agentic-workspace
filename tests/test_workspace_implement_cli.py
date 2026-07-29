@@ -1037,8 +1037,19 @@ candidates = []
     assert route["task_relation"] == "bounded-independent"
     assert route["required_transition"] == "none"
     assert route["next_safe_action"]["action"] == "prove-current-task"
-    assert route["next_safe_action"]["operation_invocation"]["operation_id"] == "planning.route.prove-current-task"
-    assert route["next_safe_action"]["operation_invocation"]["authority"] == "agentic-planning/route-decision/v1"
+    invocation = route["next_safe_action"]["operation_invocation"]
+    assert invocation["operation_id"] == "planning.front-door"
+    assert invocation["operation_action"] == "route-decision-next-action"
+    assert invocation["authority"] == "agentic-planning/route-decision/v1"
+    assert invocation["input_revision"].startswith("sha256:")
+    assert invocation["input_identity"]["route_action"] == "prove-current-task"
+    assert invocation["input_identity"]["mutation_baseline_id"]
+    assert invocation["input_identity"]["idempotency_key"].startswith("planning-route:")
+    assert invocation["stale_action_rejection"]["status"] == "reject-on-input-revision-mismatch"
+    assert route["action_identity"] == invocation["input_identity"]
+    assert route["legacy_consumer_replacement_map"]["task_switch_reconciliation.recommended_next_action"] == (
+        "route_decision.next_safe_action.action"
+    )
     assert "claim-active-plan-progress" in route["blocked_claims"]
     assert route["allowed_claims"] == ["bounded-task-progress"]
     assert route["proof_expectation"] == "run implement/proof-selected commands for the changed paths; do not claim active-plan progress"
@@ -1122,6 +1133,9 @@ def test_planning_task_switch_compatibility_packet_has_no_decision_authority() -
     core_source = Path("src/agentic_workspace/workspace_runtime_core.py").read_text(encoding="utf-8")
     assert '"task_switch_reconciliation": _task_switch_fact_payload(route_evidence)' in planning_source
     assert '"derive_action_from": task_switch.get("derive_action_from") or "planning_safety_gate.route_decision"' in core_source
+    assert 'operation_id": f"planning.route.{action}"' not in planning_source
+    assert '"operation_id": "planning.front-door"' in planning_source
+    assert '"legacy_consumer_replacement_map"' in planning_source
     compact_region = core_source.split('if isinstance(task_switch, dict) and task_switch.get("status") in {', 1)[1].split(
         "custody_planning = gate.get", 1
     )[0]

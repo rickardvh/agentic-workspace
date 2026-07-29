@@ -223,6 +223,8 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
             "mutation_authority",
             "proof_expectation",
             "state_update_policy",
+            "action_identity",
+            "legacy_consumer_replacement_map",
             "reconciliation_proposal",
             "next_safe_action",
             "binding",
