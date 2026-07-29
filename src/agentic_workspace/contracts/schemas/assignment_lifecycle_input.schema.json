@@ -64,6 +64,38 @@
       "description": "Serialized worker return payload awaiting admission.",
       "type": "string"
     },
+    "review_result_json": {
+      "description": "Serialized producer-owned independent-review result envelope to admit through assignment.admit.",
+      "type": "string"
+    },
+    "review_result_ref": {
+      "description": "Repo-relative path to a producer-owned independent-review result envelope.",
+      "type": "string"
+    },
+    "required_mode": {
+      "description": "Required separation mode for independent-review admission.",
+      "enum": [
+        "fresh-context",
+        "separate-actor",
+        "distinct-provider",
+        "human"
+      ],
+      "type": "string"
+    },
+    "changed": {
+      "description": "Changed paths whose independent-review scope must match the admitted result.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "changed_paths": {
+      "description": "Changed paths whose independent-review scope must match the admitted result.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "run_id": {
       "description": "Stable assignment run identifier used for local lifecycle artifact storage.",
       "minLength": 1,

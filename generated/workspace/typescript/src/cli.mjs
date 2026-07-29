@@ -6534,6 +6534,43 @@ const commandDefinitions = [
               ],
               "help": "Serialized current assignment run state authority.",
               "name": "run_state_json"
+            },
+            {
+              "flags": [
+                "--review-result-json"
+              ],
+              "help": "Serialized producer-owned independent-review result envelope.",
+              "name": "review_result_json"
+            },
+            {
+              "flags": [
+                "--review-result-ref"
+              ],
+              "help": "Repo-relative independent-review result envelope to admit.",
+              "name": "review_result_ref"
+            },
+            {
+              "choices": [
+                "fresh-context",
+                "separate-actor",
+                "distinct-provider",
+                "human"
+              ],
+              "flags": [
+                "--required-mode"
+              ],
+              "help": "Required independent-review separation mode.",
+              "name": "required_mode"
+            },
+            {
+              "action": "extend",
+              "default": [],
+              "flags": [
+                "--changed"
+              ],
+              "help": "Changed paths whose review scope must match the admitted result.",
+              "name": "changed",
+              "nargs": "*"
             }
           ]
         },

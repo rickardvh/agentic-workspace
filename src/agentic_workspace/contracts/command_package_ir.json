@@ -10060,6 +10060,43 @@
                       "--run-state-json"
                     ],
                     "help": "Serialized current assignment run state authority."
+                  },
+                  {
+                    "name": "review_result_json",
+                    "flags": [
+                      "--review-result-json"
+                    ],
+                    "help": "Serialized producer-owned independent-review result envelope."
+                  },
+                  {
+                    "name": "review_result_ref",
+                    "flags": [
+                      "--review-result-ref"
+                    ],
+                    "help": "Repo-relative independent-review result envelope to admit."
+                  },
+                  {
+                    "name": "required_mode",
+                    "flags": [
+                      "--required-mode"
+                    ],
+                    "choices": [
+                      "fresh-context",
+                      "separate-actor",
+                      "distinct-provider",
+                      "human"
+                    ],
+                    "help": "Required independent-review separation mode."
+                  },
+                  {
+                    "name": "changed",
+                    "flags": [
+                      "--changed"
+                    ],
+                    "action": "extend",
+                    "nargs": "*",
+                    "default": [],
+                    "help": "Changed paths whose review scope must match the admitted result."
                   }
                 ]
               },

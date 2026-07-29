@@ -18,7 +18,7 @@ import tomllib
 from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from repo_verification_bootstrap.runtime_primitives import (
     VerificationUsageError,
@@ -6739,28 +6739,83 @@ def _write_independent_review_receipt_index(path: Path, payload: dict[str, Any],
             pass
 
 
+def _parse_review_timestamp(value: str) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _independent_review_result_failures(
+    *,
+    result: Mapping[str, Any],
+    required_mode: str,
+    changed_paths: list[str] | None,
+    now: datetime | None = None,
+) -> list[dict[str, str]]:
+    failures: list[dict[str, str]] = []
+    if result.get("kind") != "agentic-workspace/independent-review-result/v1":
+        failures.append({"reason": "invalid-review-result-kind", "field": "kind"})
+    if str(result.get("status") or "").strip() not in {"accepted", "admitted", "satisfied"}:
+        failures.append({"reason": "review-result-not-accepted", "field": "status"})
+    if str(result.get("required_mode") or "").strip() != required_mode:
+        failures.append({"reason": "required-mode-mismatch", "field": "required_mode"})
+    custody = _as_dict(result.get("custody"))
+    if custody.get("producer") in {"", None, "caller", "implementer", "agent-implementer"}:
+        failures.append({"reason": "missing-producer-owned-custody", "field": "custody.producer"})
+    if not str(custody.get("authority_ref") or "").strip():
+        failures.append({"reason": "missing-review-authority-ref", "field": "custody.authority_ref"})
+    implementer = _as_dict(result.get("implementer"))
+    reviewer = _as_dict(result.get("reviewer"))
+    if not implementer.get("actor_id"):
+        failures.append({"reason": "missing-implementer-actor", "field": "implementer.actor_id"})
+    if not reviewer.get("actor_id"):
+        failures.append({"reason": "missing-reviewer-actor", "field": "reviewer.actor_id"})
+    if implementer.get("actor_id") and implementer.get("actor_id") == reviewer.get("actor_id"):
+        failures.append({"reason": "same-actor-review", "field": "reviewer.actor_id"})
+    if required_mode == "human" and reviewer.get("role") != "human-approver":
+        failures.append({"reason": "human-reviewer-required", "field": "reviewer.role"})
+    expected_scope_digest = _independent_review_scope_digest(changed_paths)
+    if expected_scope_digest and str(result.get("scope_digest") or "").strip() != expected_scope_digest:
+        failures.append({"reason": "review-scope-mismatch", "field": "scope_digest"})
+    if not str(result.get("assignment_id") or "").strip():
+        failures.append({"reason": "missing-assignment-id", "field": "assignment_id"})
+    if not str(result.get("assignment_revision") or result.get("review_revision") or "").strip():
+        failures.append({"reason": "missing-current-revision", "field": "assignment_revision"})
+    expires_at = _parse_review_timestamp(str(result.get("expires_at") or ""))
+    if expires_at and (now or datetime.now(timezone.utc)) >= expires_at:
+        failures.append({"reason": "review-result-expired", "field": "expires_at"})
+    if str(result.get("revoked_at") or result.get("superseded_by") or "").strip():
+        failures.append({"reason": "review-result-revoked-or-superseded", "field": "revoked_at"})
+    return failures
+
+
 def record_admitted_independent_review_receipt(
     *,
     target_root: Path,
-    required_mode: str,
-    implementer: dict[str, Any],
-    reviewer: dict[str, Any],
-    assignment_id: str,
-    review_revision: str,
+    review_result: Mapping[str, Any],
+    required_mode: str = "",
     changed_paths: list[str] | None = None,
-    reviewed_at: str = "",
-    result: str = "accepted",
-    expires_at: str = "",
 ) -> dict[str, Any]:
+    required_mode = required_mode or str(review_result.get("required_mode") or "").strip()
     if required_mode in {"", "none", "not-applicable"}:
         raise WorkspaceUsageError("independent review receipts require a concrete required_mode.")
-    if result not in {"accepted", "admitted", "satisfied"}:
-        raise WorkspaceUsageError("independent review receipts require an accepted/admitted/satisfied result.")
-    if not implementer.get("actor_id") or not reviewer.get("actor_id"):
-        raise WorkspaceUsageError("independent review receipts require implementer and reviewer actor ids.")
-    if required_mode == "human" and reviewer.get("role") != "human-approver":
-        raise WorkspaceUsageError("human review receipts require reviewer.role=human-approver.")
+    failures = _independent_review_result_failures(result=review_result, required_mode=required_mode, changed_paths=changed_paths)
+    if failures:
+        raise WorkspaceUsageError("independent review result is not admissible: " + ", ".join(item["reason"] for item in failures))
     index_path, index = _read_independent_review_receipt_index(target_root)
+    implementer = _as_dict(review_result.get("implementer"))
+    reviewer = _as_dict(review_result.get("reviewer"))
+    assignment_id = str(review_result.get("assignment_id") or "").strip()
+    review_revision = str(review_result.get("review_revision") or review_result.get("assignment_revision") or "").strip()
     receipt_basis = {
         "required_mode": required_mode,
         "assignment_id": assignment_id,
@@ -6768,7 +6823,8 @@ def record_admitted_independent_review_receipt(
         "scope_digest": _independent_review_scope_digest(changed_paths),
         "implementer": implementer,
         "reviewer": reviewer,
-        "result": result,
+        "result": str(review_result.get("status") or "").strip(),
+        "review_result_ref": str(review_result.get("result_ref") or "").strip(),
     }
     receipt = {
         "kind": "agentic-workspace/admitted-independent-review-receipt/v1",
@@ -6781,9 +6837,15 @@ def record_admitted_independent_review_receipt(
         "scope_digest": receipt_basis["scope_digest"],
         "implementer": implementer,
         "reviewer": reviewer,
-        "result": result,
-        "reviewed_at": reviewed_at or datetime.now(timezone.utc).isoformat(),
-        "expires_at": expires_at,
+        "result": str(review_result.get("status") or "").strip(),
+        "reviewed_at": str(review_result.get("reviewed_at") or datetime.now(timezone.utc).isoformat()),
+        "expires_at": str(review_result.get("expires_at") or ""),
+        "review_result": {
+            "result_ref": str(review_result.get("result_ref") or ""),
+            "assignment_revision": str(review_result.get("assignment_revision") or ""),
+            "custody": _as_dict(review_result.get("custody")),
+            "digest": _stable_review_json_digest(dict(review_result)),
+        },
         "custody": {
             "operation_id": "independent-review.admit",
             "producer": "agentic-workspace.independent-review-admission",
@@ -6812,6 +6874,81 @@ def record_admitted_independent_review_receipt(
     }
 
 
+def admit_independent_review_result_operation(
+    *, target_root: Path, values: Mapping[str, Any], changed_paths: list[str] | None = None
+) -> dict[str, Any]:
+    raw_result = values.get("review_result") or values.get("review_result_json")
+    if isinstance(raw_result, str):
+        try:
+            review_result = json.loads(raw_result)
+        except json.JSONDecodeError:
+            review_result = {}
+    elif isinstance(raw_result, Mapping):
+        review_result = dict(raw_result)
+    else:
+        result_ref = str(values.get("review_result_ref") or "").strip()
+        if result_ref:
+            candidate = (target_root / result_ref).resolve()
+            try:
+                candidate.relative_to(target_root.resolve())
+                review_result = json.loads(candidate.read_text(encoding="utf-8"))
+                review_result.setdefault("result_ref", result_ref.replace("\\", "/"))
+            except (ValueError, OSError, json.JSONDecodeError):
+                review_result = {}
+        else:
+            review_result = {}
+    explicit_changed = [
+        str(path).replace("\\", "/").strip()
+        for path in _list_payload(values.get("changed_paths") or values.get("changed"))
+        if str(path).strip()
+    ]
+    effective_changed = (
+        explicit_changed
+        or changed_paths
+        or [
+            str(path).replace("\\", "/").strip()
+            for path in _list_payload(review_result.get("changed_paths") if isinstance(review_result, Mapping) else [])
+            if str(path).strip()
+        ]
+    )
+    required_mode = str(
+        values.get("required_mode") or (review_result.get("required_mode") if isinstance(review_result, Mapping) else "") or ""
+    ).strip()
+    failures = (
+        _independent_review_result_failures(result=review_result, required_mode=required_mode, changed_paths=effective_changed)
+        if isinstance(review_result, Mapping)
+        else [{"reason": "missing-review-result", "field": "review_result"}]
+    )
+    if failures:
+        return {
+            "kind": "agentic-workspace/independent-review-admission-result/v1",
+            "operation_id": "independent-review.admit",
+            "status": "rejected",
+            "admitted": False,
+            "failures": failures,
+            "repair_operation": {
+                "id": "independent-review.repair",
+                "summary": "Provide a current producer-owned independent review result for the changed scope.",
+            },
+        }
+    stored = record_admitted_independent_review_receipt(
+        target_root=target_root,
+        review_result=review_result,
+        required_mode=required_mode,
+        changed_paths=effective_changed,
+    )
+    return {
+        "kind": "agentic-workspace/independent-review-admission-result/v1",
+        "operation_id": "independent-review.admit",
+        "status": "admitted",
+        "admitted": True,
+        "receipt_ref": stored["receipt_ref"],
+        "receipt": stored["receipt"],
+        "store": stored["store"],
+        "rule": "Review separation is admitted only from a producer-owned review result bound to the current changed scope.",
+    }
+
+
 def _load_admitted_independent_review_receipt(
     *, target_root: Path | None, required_mode: str, changed_paths: list[str] | None = None
 ) -> dict[str, Any]:
@@ -6835,6 +6972,9 @@ def _load_admitted_independent_review_receipt(
         if str(payload.get("required_mode") or "").strip() != required_mode:
             continue
         if str(payload.get("revoked_at") or payload.get("superseded_by") or "").strip():
+            continue
+        expires_at = _parse_review_timestamp(str(payload.get("expires_at") or ""))
+        if expires_at and datetime.now(timezone.utc) >= expires_at:
             continue
         if expected_scope_digest and str(payload.get("scope_digest") or "").strip() != expected_scope_digest:
             continue

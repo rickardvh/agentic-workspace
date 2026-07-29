@@ -3,6 +3,8 @@ from __future__ import annotations
 # ruff: noqa: F403,F405
 from tests.workspace_cli_support import *
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def _write_repo_local_proof_target(target: Path) -> None:
     _init_git_repo(target)
@@ -7375,7 +7377,7 @@ certification_limits = ["does not certify production authorization safety"]
 
 
 def test_high_assurance_closeout_posture_accepts_admitted_independent_review_receipt(tmp_path: Path, capsys) -> None:
-    from agentic_workspace.workspace_runtime_proof import record_admitted_independent_review_receipt
+    from agentic_workspace.workspace_runtime_proof import _independent_review_scope_digest, admit_independent_review_result_operation
 
     _init_git_repo(tmp_path)
     _write_empty_proof_planning_state(tmp_path)
@@ -7398,16 +7400,29 @@ certification_limits = ["does not certify production authorization safety"]
 """,
     )
     _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
-    receipt = record_admitted_independent_review_receipt(
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "human",
+        "assignment_id": "critical-access-review",
+        "assignment_revision": "assignment-rev-1",
+        "review_revision": "review-rev-1",
+        "reviewed_at": "2026-07-26T13:22:00Z",
+        "changed_paths": ["services/auth/policy.py"],
+        "scope_digest": _independent_review_scope_digest(["services/auth/policy.py"]),
+        "implementer": {"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
+        "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+        "custody": {
+            "producer": "github-review-adapter",
+            "authority_ref": "SECURITY.md#critical-access",
+            "source_ref": "pull-request-review:1",
+        },
+    }
+    receipt = admit_independent_review_result_operation(
         target_root=tmp_path,
-        required_mode="human",
-        assignment_id="critical-access-review",
-        review_revision="review-rev-1",
-        reviewed_at="2026-07-26T13:22:00Z",
-        changed_paths=["services/auth/policy.py"],
-        implementer={"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
-        reviewer={"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+        values={"review_result": review_result, "required_mode": "human", "changed": ["services/auth/policy.py"]},
     )
+    assert receipt["status"] == "admitted"
 
     assert (
         cli.main(
@@ -7433,6 +7448,61 @@ certification_limits = ["does not certify production authorization safety"]
     assert packet["separation_of_duty"]["receipt"]["receipt_ref"] == receipt["receipt_ref"]
     assert "high-assurance review separation is required" not in packet["missing_or_unresolved"]["blockers"]
     assert "high-assurance closeout posture evidence is missing" in packet["missing_or_unresolved"]["blockers"]
+
+
+def test_high_assurance_closeout_posture_rejects_expired_independent_review_receipt(tmp_path: Path, capsys) -> None:
+    from agentic_workspace.workspace_runtime_proof import _independent_review_scope_digest, admit_independent_review_result_operation
+
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.closeout_postures.critical_access]
+purpose = "Critical access changes need explicit closeout evidence."
+applies_to_paths = ["services/auth/**"]
+required_evidence = ["domain_review_recorded"]
+review_owner = "security"
+claim_boundary = "critical-access-closeout"
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "human",
+        "assignment_id": "critical-access-review",
+        "assignment_revision": "assignment-rev-1",
+        "review_revision": "review-rev-1",
+        "reviewed_at": "2026-07-26T13:22:00Z",
+        "expires_at": "2026-07-26T14:00:00Z",
+        "changed_paths": ["services/auth/policy.py"],
+        "scope_digest": _independent_review_scope_digest(["services/auth/policy.py"]),
+        "implementer": {"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
+        "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+        "custody": {"producer": "github-review-adapter", "authority_ref": "SECURITY.md#critical-access"},
+    }
+    admission = admit_independent_review_result_operation(
+        target_root=tmp_path,
+        values={"review_result": review_result, "required_mode": "human", "changed": ["services/auth/policy.py"]},
+    )
+    assert admission["status"] == "rejected"
+    assert admission["failures"][0]["reason"] == "review-result-expired"
+
+
+def test_assignment_admit_exposes_independent_review_admission_contract() -> None:
+    source = json.loads((ROOT / "src/agentic_workspace/contracts/operations/assignment.admit.json").read_text(encoding="utf-8"))
+    generated = json.loads((ROOT / "generated/workspace/python/operations/assignment.admit.json").read_text(encoding="utf-8"))
+    for payload in (source, generated):
+        input_names = {item["name"] for item in payload["inputs"]}
+        assert {"review_result_json", "review_result_ref", "required_mode", "changed"}.issubset(input_names)
+        assert any("producer-owned review result" in guard for guard in payload["guards"])
+        assert any("assignment.admit admits independent-review results" in proof for proof in payload["proof"])
 
 
 def test_high_assurance_closeout_posture_rejects_hand_written_independent_review_receipt(tmp_path: Path, capsys) -> None:

@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:b0b88d1540253077122d66012434103605f4f89b390ac40cb9ef7deb6b11b043",
+  "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -20,8 +20,8 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:38d727203f6116bc1117c4f920d73e3a67b467bcbcd3fa00663e2b6602a53641",
-      "compatibility_fingerprint": "sha256:10d2a81de3d085c33c9dec6956da9590df7f513ccb74100a97705015e9798d19",
+      "fingerprint": "sha256:be2c740f1aaa8f861f76ab9fac0e5994b1a5bab12593cb37c4190da933f4aecd",
+      "compatibility_fingerprint": "sha256:5c5e5f1a0eb43b53a6497da5bbc1ce5d381c87bdba96af799a5802256d69b55b",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -40,7 +40,9 @@
           "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
           "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
-          "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
+          "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
+          "Independent-review admission accepts only producer-owned review result envelopes and rejects caller-authored identity packets.",
+          "Independent-review receipts are bound to changed scope and expire, revoke, or supersede fail closed at proof admission."
         ],
         "id": "assignment.admit",
         "inputs": [
@@ -118,6 +120,26 @@
             "name": "dry_run",
             "required": false,
             "source": "cli-option"
+          },
+          {
+            "name": "review_result_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "review_result_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "required_mode",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "changed",
+            "required": false,
+            "source": "cli-option"
           }
         ],
         "intent": "Provide the public adapter-neutral assignment/run lifecycle boundary for delegated execution, return admission, integration, cleanup, and scoped override.",
@@ -164,7 +186,9 @@
           "assignment lifecycle tests prove export/import/admit/integrate/override fail-closed behavior and local artifact placement",
           "assignment.admit.process",
           "generated external clients expose and negotiate the operation family as runtime-backed",
-          "operation contract validates against operation.schema.json"
+          "operation contract validates against operation.schema.json",
+          "assignment.admit admits independent-review results through the same generated public operation used by external clients",
+          "proof decision rejects expired, revoked, superseded, wrong-scope, same-actor, or caller-shaped independent-review evidence"
         ],
         "reads": [
           {
@@ -411,6 +435,26 @@
               "name": "dry_run",
               "required": false,
               "source": "cli-option"
+            },
+            {
+              "name": "review_result_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "review_result_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "required_mode",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "changed",
+              "required": false,
+              "source": "cli-option"
             }
           ],
           "output": {
@@ -428,7 +472,9 @@
             "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
             "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
-            "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
+            "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
+            "Independent-review admission accepts only producer-owned review result envelopes and rejects caller-authored identity packets.",
+            "Independent-review receipts are bound to changed scope and expire, revoke, or supersede fail closed at proof admission."
           ]
         },
         "schemas": {
@@ -484,6 +530,33 @@
                 },
                 "return_json": {
                   "type": "string"
+                },
+                "review_result_json": {
+                  "type": "string"
+                },
+                "review_result_ref": {
+                  "type": "string"
+                },
+                "required_mode": {
+                  "enum": [
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ],
+                  "type": "string"
+                },
+                "changed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "changed_paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 },
                 "run_id": {
                   "minLength": 1,
@@ -622,8 +695,8 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:46735e318a4d1a062f37bcc95dfbe7bb085b427a74fbfc8fb10dd6298444a39d",
-      "compatibility_fingerprint": "sha256:b4a5fe533f6e147fe711c5abd063929bbbba4cba68bdbcc24cc83f834409570d",
+      "fingerprint": "sha256:23450481de0960b93d796b83d0b95275017c9283757db07a1ec72dcc0eaf2be2",
+      "compatibility_fingerprint": "sha256:939ea1f25fe4c7a4f638844971601a955b2280bdf7c8c816dcecfeaa012a7790",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -1087,6 +1160,33 @@
                 "return_json": {
                   "type": "string"
                 },
+                "review_result_json": {
+                  "type": "string"
+                },
+                "review_result_ref": {
+                  "type": "string"
+                },
+                "required_mode": {
+                  "enum": [
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ],
+                  "type": "string"
+                },
+                "changed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "changed_paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
                 "run_id": {
                   "minLength": 1,
                   "type": "string"
@@ -1224,8 +1324,8 @@
     "assignment.close": {
       "identity": "assignment.close",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:a3e0f3c728cccf211ae9b8273e138a6263a5c3ba7800a2ef2af3fb0a9131054a",
-      "compatibility_fingerprint": "sha256:c38d23506c8e890afe0a68509590dbba88e5fb21475455b19144102b03e9e62d",
+      "fingerprint": "sha256:4604ca3484b9aff0431730e5be40c393f168f3188b1250ff47cea226ad312df1",
+      "compatibility_fingerprint": "sha256:ad8347cf095f7f87d17483f931a983455cbb98fd755658e43543440023529d09",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -1689,6 +1789,33 @@
                 "return_json": {
                   "type": "string"
                 },
+                "review_result_json": {
+                  "type": "string"
+                },
+                "review_result_ref": {
+                  "type": "string"
+                },
+                "required_mode": {
+                  "enum": [
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ],
+                  "type": "string"
+                },
+                "changed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "changed_paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
                 "run_id": {
                   "minLength": 1,
                   "type": "string"
@@ -1826,8 +1953,8 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3e7e156bd41a03e8846bb2298c4e329f4ab08e805d76c1aaff9d77c0a7b2b414",
-      "compatibility_fingerprint": "sha256:907fa1a9afad26da83426f78e898630f7b2e681d289d3df40a220e5054fb771b",
+      "fingerprint": "sha256:4b24b60b61bf1ea9a68f4cb3ee757f1700bba9cdb739b749f2dbc416625bbb91",
+      "compatibility_fingerprint": "sha256:d17e784431546c3809506f17bb33bdeaebf6d3fa8b350ab02e222f2b7dde7b55",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -2291,6 +2418,33 @@
                 "return_json": {
                   "type": "string"
                 },
+                "review_result_json": {
+                  "type": "string"
+                },
+                "review_result_ref": {
+                  "type": "string"
+                },
+                "required_mode": {
+                  "enum": [
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ],
+                  "type": "string"
+                },
+                "changed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "changed_paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
                 "run_id": {
                   "minLength": 1,
                   "type": "string"
@@ -2428,8 +2582,8 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:654c4f46e6b436a39016592e321753a6fe1ae9e30bb0423334a40ce1dfcde82e",
-      "compatibility_fingerprint": "sha256:3b749896a6b6d5096bfda821573681080485cd49b1f2f49f1db979199841a3cb",
+      "fingerprint": "sha256:fb97bf2b1774b2e34482a1e05334c3d8740e95dd913cdb8b7a5c90e4ee743340",
+      "compatibility_fingerprint": "sha256:d5763401432d391b822a20614f783d1cf07bc8730fad84c5d60b730bb0a7c736",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -2893,6 +3047,33 @@
                 "return_json": {
                   "type": "string"
                 },
+                "review_result_json": {
+                  "type": "string"
+                },
+                "review_result_ref": {
+                  "type": "string"
+                },
+                "required_mode": {
+                  "enum": [
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ],
+                  "type": "string"
+                },
+                "changed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "changed_paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
                 "run_id": {
                   "minLength": 1,
                   "type": "string"
@@ -3030,8 +3211,8 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:16609afda96520f4b96787ea0d30a5c7581bff2fc8cd4571aa054934aebb1670",
-      "compatibility_fingerprint": "sha256:238f67cb3d2c053618418a13b3aed590afd9e78ef63e54e91daaef82fb8ec7e4",
+      "fingerprint": "sha256:78b8d5322a8e74bdaf0060db3268c6d2aa45a29781caf4bb83a03bc8e4e8855c",
+      "compatibility_fingerprint": "sha256:f31e6ba7dfb63646d20f42a6cf07fda44fe6d3c8bfe80a9b950581e2570c8a80",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -3495,6 +3676,33 @@
                 "return_json": {
                   "type": "string"
                 },
+                "review_result_json": {
+                  "type": "string"
+                },
+                "review_result_ref": {
+                  "type": "string"
+                },
+                "required_mode": {
+                  "enum": [
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ],
+                  "type": "string"
+                },
+                "changed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "changed_paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
                 "run_id": {
                   "minLength": 1,
                   "type": "string"
@@ -3632,8 +3840,8 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:7fe668c01ef29bd32575cec92cfff501c3deacfc4fcb3ae93084dd7eab55bb2a",
-      "compatibility_fingerprint": "sha256:80a502f421f83765b10616ef4878b94abb9d95bf470e91af34d3c7666cae1f34",
+      "fingerprint": "sha256:e6e72ca531e1befc5304db2ac3fb5a31244e3d98d7c8ffcf9838f2bdd7f22613",
+      "compatibility_fingerprint": "sha256:f542ab073aa155c9063b286bd5013260913b73b47e2438fb18e2fdd2cda1513c",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -4097,6 +4305,33 @@
                 "return_json": {
                   "type": "string"
                 },
+                "review_result_json": {
+                  "type": "string"
+                },
+                "review_result_ref": {
+                  "type": "string"
+                },
+                "required_mode": {
+                  "enum": [
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ],
+                  "type": "string"
+                },
+                "changed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "changed_paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
                 "run_id": {
                   "minLength": 1,
                   "type": "string"
@@ -4234,8 +4469,8 @@
     "assignment.reassign": {
       "identity": "assignment.reassign",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:5cb21799a35a99a5ed3e92a87e775b4c2d9889cc060ad3c88f5ce941b85b48b6",
-      "compatibility_fingerprint": "sha256:8c15a0cea3ea6776a3c54a081fd841796d0c2635819111b609077eda1fe16b45",
+      "fingerprint": "sha256:bb86dd3c28ea3dbb8ef04bb2bb7fd9fb9148a315997983084314552d97847b75",
+      "compatibility_fingerprint": "sha256:463ebac8202e813486ddf08975e66f0b6f1588e07a6a5facdf2ec26449bebfe5",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -4699,6 +4934,33 @@
                 "return_json": {
                   "type": "string"
                 },
+                "review_result_json": {
+                  "type": "string"
+                },
+                "review_result_ref": {
+                  "type": "string"
+                },
+                "required_mode": {
+                  "enum": [
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ],
+                  "type": "string"
+                },
+                "changed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "changed_paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
                 "run_id": {
                   "minLength": 1,
                   "type": "string"
@@ -4836,8 +5098,8 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:9f829a841ac993b068c343aaaf9db54c83575b30eaca2254f25d4e5007fd464a",
-      "compatibility_fingerprint": "sha256:6c7d125779cbb3af5f013fc4ad517728b9d103481b7103e91f38049df8e10bad",
+      "fingerprint": "sha256:4fa6db054ae2b5ea0e03778fbe24138677d639c18c7b3f7acebc4efad69f8b10",
+      "compatibility_fingerprint": "sha256:748c6adcb73a2a8d5ffc45df2ce630717d8d44cdc047ad28b779c4887b4e17d9",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5301,6 +5563,33 @@
                 "return_json": {
                   "type": "string"
                 },
+                "review_result_json": {
+                  "type": "string"
+                },
+                "review_result_ref": {
+                  "type": "string"
+                },
+                "required_mode": {
+                  "enum": [
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ],
+                  "type": "string"
+                },
+                "changed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "changed_paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
                 "run_id": {
                   "minLength": 1,
                   "type": "string"
@@ -5438,8 +5727,8 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ba84eb7be8a02645e903fed367255acb8c296ae82c588bab8d9a4277b0797090",
-      "compatibility_fingerprint": "sha256:1f8301083fe14ca18d876f1d827690a7d3c8664cf63420dcd4b35a98d7cb1261",
+      "fingerprint": "sha256:d55d86ed46597b95f4579d0a62f1ba73be7d206440a5360a2d26621b4d35959b",
+      "compatibility_fingerprint": "sha256:6abf330a51b4f1f1ad7b6b1aea5c307520c8bd53db600f0660d42b14e976e6f6",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5902,6 +6191,33 @@
                 },
                 "return_json": {
                   "type": "string"
+                },
+                "review_result_json": {
+                  "type": "string"
+                },
+                "review_result_ref": {
+                  "type": "string"
+                },
+                "required_mode": {
+                  "enum": [
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ],
+                  "type": "string"
+                },
+                "changed": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "changed_paths": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
                 },
                 "run_id": {
                   "minLength": 1,
@@ -10639,6 +10955,38 @@
           "return_json": {
             "description": "Serialized worker return payload awaiting admission.",
             "type": "string"
+          },
+          "review_result_json": {
+            "description": "Serialized producer-owned independent-review result envelope to admit through assignment.admit.",
+            "type": "string"
+          },
+          "review_result_ref": {
+            "description": "Repo-relative path to a producer-owned independent-review result envelope.",
+            "type": "string"
+          },
+          "required_mode": {
+            "description": "Required separation mode for independent-review admission.",
+            "enum": [
+              "fresh-context",
+              "separate-actor",
+              "distinct-provider",
+              "human"
+            ],
+            "type": "string"
+          },
+          "changed": {
+            "description": "Changed paths whose independent-review scope must match the admitted result.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "changed_paths": {
+            "description": "Changed paths whose independent-review scope must match the admitted result.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "run_id": {
             "description": "Stable assignment run identifier used for local lifecycle artifact storage.",
