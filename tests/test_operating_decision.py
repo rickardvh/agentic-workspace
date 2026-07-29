@@ -293,10 +293,12 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
     assert coverage["registry_source"] == "src/agentic_workspace/contracts/context_authority_registry.json"
 
     assert set(coverage["ordinary_consumers"]) == set(registry["ordinary_decision_consumers"])
+    assert {"contract-checks", "skills"}.issubset(set(coverage["ordinary_consumers"]))
     assert coverage["missing_required_sources"] == {}
     for consumer in coverage["ordinary_consumers"]:
         assert set(coverage["consumer_requirements"][consumer]).issubset(set(coverage["consumer_to_surfaces"][consumer]))
     assert {"architecture-principles", "scoped-instructions", "ownership"}.issubset(set(coverage["consumer_requirements"]["start"]))
+    assert all("source_owner_contract" in surface for surface in registry["surfaces"])
     gaps = derive_context_gaps(
         declarations=declarations,
         selected_surfaces=[
@@ -661,7 +663,7 @@ def test_repo_mutation_rejects_planning_derived_placeholder_baseline() -> None:
 
 
 def test_context_authority_projection_requires_live_records_for_start() -> None:
-    projection = resolve_context_authority_projection(consumer="start", task="shape authority routing")
+    projection = resolve_context_authority_projection(consumer="start", task="shape authority routing ownership skill guidance memory")
 
     assert projection["status"] == "repair-required"
     assert projection["registry_revision"].startswith("sha256:")
@@ -670,8 +672,8 @@ def test_context_authority_projection_requires_live_records_for_start() -> None:
         "scoped-instructions",
         "ownership",
         "planning",
-        "memory",
         "skills",
+        "target-guidance",
     }
     repair = projection["repair_operation"]
     assert repair["status"] == "required"
@@ -680,7 +682,9 @@ def test_context_authority_projection_requires_live_records_for_start() -> None:
     assert planning["owner"] == "planning package"
     assert planning["reason_code"] == "missing-target-root"
     assert planning["action"] == "context-authority.planning.refresh-source"
-    assert planning["repair_owner"] == "context-authority-source-adapter"
+    assert planning["operation_id"] == "planning.summary.report"
+    assert planning["repair_owner"] == "planning package"
+    assert "source-owner admission result" in planning["required_record"]
 
 
 def test_operating_decision_blocks_action_when_required_context_is_unadmitted() -> None:
@@ -716,7 +720,20 @@ def _write_context_authority_sources(root: Path) -> None:
     (root / ".agentic-workspace/planning/state.toml").write_text("schema_version = 1\n", encoding="utf-8")
     (root / ".agentic-workspace/memory/repo/index.md").write_text("# Memory\n", encoding="utf-8")
     (root / ".agentic-workspace/memory/repo/manifest.toml").write_text(
-        '[[routes]]\nid = "default"\nroutes_from = ["src/**"]\n', encoding="utf-8"
+        """
+[[routes]]
+id = "default"
+routes_from = ["src/**"]
+
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+task_relevance = "required"
+routes_from = ["src/**", ".agentic-workspace/memory/repo/**"]
+routing_only = true
+""",
+        encoding="utf-8",
     )
     (root / ".agentic-workspace/skills/workspace-startup/SKILL.md").write_text("# Startup\n", encoding="utf-8")
 
@@ -740,7 +757,7 @@ def test_context_authority_projection_selects_repository_sources_and_ignores_for
     }
     projection = resolve_context_authority_projection(
         consumer="start",
-        task="shape authority routing",
+        task="shape authority routing ownership skill guidance memory",
         target_root=tmp_path,
         source_records=forged_records,
     )
@@ -751,6 +768,10 @@ def test_context_authority_projection_selects_repository_sources_and_ignores_for
     assert skills["source"]["id"] == ".agentic-workspace/skills/workspace-startup/SKILL.md"
     assert skills["source"]["revision"].startswith("sha256:")
     assert skills["source"]["admission"]["producer"] == "skill-registry-source-adapter"
+    assert skills["source"]["admission"]["owner_admission"]["producer"] == (
+        "agentic_workspace.workspace_runtime_core.skill_dependency_resolver"
+    )
+    assert skills["source"]["admission"]["owner_admission"]["result_kind"] == "agentic-workspace/skill-dependency-closure/v1"
     assert skills["source"]["source_adapter"] == "skill-registry-source-adapter"
     assert skills["source"]["freshness_enforcement"]["status"] == "active"
     assert skills["caller_record_status"] == "ignored"
@@ -783,7 +804,7 @@ task_relevance = "conditional"
 subsystems = ["workspace-runtime"]
 surfaces = ["runtime"]
 routes_from = ["src/agentic_workspace/**"]
-stale_when = ["src/agentic_workspace/**"]
+stale_when = ["docs/runtime-source.md"]
 
 [notes.".agentic-workspace/memory/repo/domains/unrelated.md"]
 note_type = "domain"
@@ -793,6 +814,15 @@ task_relevance = "conditional"
 subsystems = ["other"]
 surfaces = ["other"]
 routes_from = ["docs/private/**"]
+
+[notes.".agentic-workspace/memory/repo/domains/review-only.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/review-only.md"
+authority = "advisory"
+task_relevance = "review-only"
+subsystems = ["workspace-runtime"]
+surfaces = ["runtime"]
+routes_from = ["src/agentic_workspace/**"]
 """,
         encoding="utf-8",
     )
@@ -811,8 +841,56 @@ routes_from = ["docs/private/**"]
     assert ".agentic-workspace/memory/repo/index.md" in selected_paths
     assert ".agentic-workspace/memory/repo/domains/runtime.md" in selected_paths
     assert ".agentic-workspace/memory/repo/domains/unrelated.md" not in selected_paths
+    assert ".agentic-workspace/memory/repo/domains/review-only.md" not in selected_paths
+    assert curation["review_only_excluded_count"] == 1
+    assert curation["context_budget"] == {"max_selected_notes": 12, "actual_selected_notes": 2}
     runtime_note = next(item for item in curation["selected_notes"] if item["path"].endswith("runtime.md"))
-    assert runtime_note["stale_when_matched_paths"] == ["src/agentic_workspace/workspace_runtime.py"]
+    assert runtime_note["stale_when_matched_paths"] == []
+    owner_result = memory["source"]["admission"]["owner_result"]
+    assert owner_result["kind"] == "agentic-workspace/memory-route-curation/v1"
+    assert owner_result["producer"] == "agentic_memory.manifest"
+    assert owner_result["status"] == "current"
+
+
+def test_context_authority_projection_rejects_stale_memory_note_matches(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+    (tmp_path / ".agentic-workspace/memory/repo/domains").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".agentic-workspace/memory/repo/domains/runtime.md").write_text("Runtime note\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/memory/repo/manifest.toml").write_text(
+        """
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+task_relevance = "required"
+routes_from = [".agentic-workspace/memory/repo/**/*.md"]
+routing_only = true
+
+[notes.".agentic-workspace/memory/repo/domains/runtime.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/runtime.md"
+authority = "advisory"
+task_relevance = "conditional"
+subsystems = ["workspace-runtime"]
+surfaces = ["runtime"]
+routes_from = ["src/agentic_workspace/**"]
+stale_when = ["src/agentic_workspace/**"]
+""",
+        encoding="utf-8",
+    )
+
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="fix runtime context",
+        changed_paths=["src/agentic_workspace/workspace_runtime.py"],
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    memory = next(item for item in projection["excluded_authorities"] if item["surface"] == "memory")
+    assert memory["reason"] == "memory-stale-review-required"
+    repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "memory")
+    assert repair["operation_id"] == "memory.route.report"
 
 
 def test_context_authority_projection_rejects_configured_empty_and_missing_required_sources(tmp_path: Path) -> None:
@@ -820,7 +898,7 @@ def test_context_authority_projection_rejects_configured_empty_and_missing_requi
     (tmp_path / ".agentic-workspace/memory/repo/manifest.toml").unlink()
     projection = resolve_context_authority_projection(
         consumer="start",
-        task="shape authority routing",
+        task="shape authority routing memory context",
         target_root=tmp_path,
     )
 
@@ -829,7 +907,122 @@ def test_context_authority_projection_rejects_configured_empty_and_missing_requi
     assert memory["reason"] == "canonical-source-missing"
     repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "memory")
     assert repair["action"] == "context-authority.memory.refresh-source"
+    assert repair["operation_id"] == "memory.route.report"
+    assert repair["repair_owner"] == "memory package"
     assert "source-specific schema/population check" in repair["required_record"]
+
+
+def test_context_authority_projection_excludes_irrelevant_memory_without_repair(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="fix typo",
+        changed_paths=["README.md"],
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "admitted"
+    assert "memory" not in {item["surface"] for item in projection["authorities"]}
+    memory = next(item for item in projection["excluded_authorities"] if item["surface"] == "memory")
+    assert memory["reason"] == "not-selected-by-task-or-path"
+    assert memory["selected_required"] is False
+    assert projection["missing_required_surfaces"] == []
+    assert projection["repair_operation"]["status"] == "not-required"
+
+
+def test_context_authority_projection_rejects_skill_dependency_owner_diagnostics(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    from agentic_workspace import workspace_runtime_core as runtime_core
+
+    monkeypatch.setattr(
+        runtime_core,
+        "_skill_dependency_diagnostics",
+        lambda *, target_root: [{"skill": "workspace-startup", "reason_code": "missing-dependency"}],
+    )
+
+    projection = resolve_context_authority_projection(
+        consumer="skills",
+        task="route workspace skill",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    skills = next(item for item in projection["excluded_authorities"] if item["surface"] == "skills")
+    assert skills["reason"] == "skill-dependency-unavailable"
+    repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "skills")
+    assert repair["operation_id"] == "workspace.skills.resolve-dependencies"
+    assert repair["repair_owner"] == "workspace skill registry"
+
+
+def test_context_authority_projection_propagates_non_current_owner_result(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    from agentic_workspace import operating_decision
+
+    def stale_skill_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+        return {
+            "kind": "agentic-workspace/skill-dependency-closure/v1",
+            "producer": "agentic_workspace.workspace_runtime_core.skill_dependency_resolver",
+            "status": "stale",
+            "surface": surface,
+            "owner": item["owner"],
+            "source_id": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+            "revision": "sha256:stale-skill-owner",
+            "adapter_id": "skills.owner-result",
+            "reason": "fixture-owner-stale",
+        }
+
+    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "skills", stale_skill_adapter)
+
+    projection = resolve_context_authority_projection(
+        consumer="skills",
+        task="route workspace skill",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    skills = next(item for item in projection["excluded_authorities"] if item["surface"] == "skills")
+    assert skills["reason"] == "fixture-owner-stale"
+
+
+def test_context_authority_projection_rejects_forged_owner_result_identity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    from agentic_workspace import operating_decision
+
+    def forged_skill_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+        return {
+            "kind": "agentic-workspace/skill-dependency-closure/v1",
+            "producer": "forged.producer",
+            "status": "current",
+            "surface": surface,
+            "owner": item["owner"],
+            "source_id": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+            "revision": "sha256:forged-skill-owner",
+            "adapter_id": "skills.owner-result",
+        }
+
+    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "skills", forged_skill_adapter)
+
+    projection = resolve_context_authority_projection(
+        consumer="skills",
+        task="route workspace skill",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    skills = next(item for item in projection["excluded_authorities"] if item["surface"] == "skills")
+    assert skills["reason"] == "owner-result-identity-mismatch"
+
+
+def test_context_authority_owner_results_are_adapter_dispatched_not_generic_factory() -> None:
+    source = Path("src/agentic_workspace/operating_decision.py").read_text(encoding="utf-8")
+
+    assert "def _context_owner_result(" not in source
+    assert "CONTEXT_OWNER_RESULT_ADAPTERS" in source
+    assert "owner-source-parse-failed" not in source.partition("def _resolve_context_authority_source(")[2]
 
 
 def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path: Path) -> None:

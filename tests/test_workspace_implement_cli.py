@@ -9913,7 +9913,7 @@ version = 1
 
 [notes.".agentic-workspace/memory/repo/reviews/stale-route.md"]
 note_type = "review"
-review_only = true
+task_relevance = "review-only"
 routes_from = ["src/sample_app/*.py"]
 """,
     )
