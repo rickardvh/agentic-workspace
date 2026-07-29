@@ -7377,7 +7377,11 @@ certification_limits = ["does not certify production authorization safety"]
 
 
 def test_high_assurance_closeout_posture_accepts_admitted_independent_review_receipt(tmp_path: Path, capsys) -> None:
-    from agentic_workspace.workspace_runtime_proof import _independent_review_scope_digest, admit_independent_review_result_operation
+    from agentic_workspace.workspace_runtime_proof import (
+        _independent_review_scope_digest,
+        admit_independent_review_result_operation,
+        record_trusted_independent_review_result,
+    )
 
     _init_git_repo(tmp_path)
     _write_empty_proof_planning_state(tmp_path)
@@ -7418,9 +7422,16 @@ certification_limits = ["does not certify production authorization safety"]
             "source_ref": "pull-request-review:1",
         },
     }
-    receipt = admit_independent_review_result_operation(
+    trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result=review_result)
+    inline = admit_independent_review_result_operation(
         target_root=tmp_path,
         values={"review_result": review_result, "required_mode": "human", "changed": ["services/auth/policy.py"]},
+    )
+    assert inline["status"] == "rejected"
+    assert inline["failures"][0]["reason"] == "caller-authored-review-result-rejected"
+    receipt = admit_independent_review_result_operation(
+        target_root=tmp_path,
+        values={"review_result_ref": trusted["result_ref"], "required_mode": "human", "changed": ["services/auth/policy.py"]},
     )
     assert receipt["status"] == "admitted"
 
@@ -7451,7 +7462,11 @@ certification_limits = ["does not certify production authorization safety"]
 
 
 def test_high_assurance_closeout_posture_rejects_expired_independent_review_receipt(tmp_path: Path, capsys) -> None:
-    from agentic_workspace.workspace_runtime_proof import _independent_review_scope_digest, admit_independent_review_result_operation
+    from agentic_workspace.workspace_runtime_proof import (
+        _independent_review_scope_digest,
+        admit_independent_review_result_operation,
+        record_trusted_independent_review_result,
+    )
 
     _init_git_repo(tmp_path)
     _write_empty_proof_planning_state(tmp_path)
@@ -7487,9 +7502,10 @@ claim_boundary = "critical-access-closeout"
         "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
         "custody": {"producer": "github-review-adapter", "authority_ref": "SECURITY.md#critical-access"},
     }
+    trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result=review_result)
     admission = admit_independent_review_result_operation(
         target_root=tmp_path,
-        values={"review_result": review_result, "required_mode": "human", "changed": ["services/auth/policy.py"]},
+        values={"review_result_ref": trusted["result_ref"], "required_mode": "human", "changed": ["services/auth/policy.py"]},
     )
     assert admission["status"] == "rejected"
     assert admission["failures"][0]["reason"] == "review-result-expired"

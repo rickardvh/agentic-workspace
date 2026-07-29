@@ -147,6 +147,8 @@ from agentic_workspace.workspace_runtime_generated_surface import (
 )
 from agentic_workspace.workspace_runtime_planning import _active_planning_record_for_report_section
 
+INDEPENDENT_REVIEW_RESULT_DIR = Path(".agentic-workspace/local/independent-review-results")
+INDEPENDENT_REVIEW_RESULT_INDEX_KIND = "agentic-workspace/independent-review-result-index/v1"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 
 
@@ -6739,6 +6741,103 @@ def _write_independent_review_receipt_index(path: Path, payload: dict[str, Any],
             pass
 
 
+def record_trusted_independent_review_result(*, target_root: Path, review_result: Mapping[str, Any]) -> dict[str, Any]:
+    """Store a producer-owned independent-review result for later admission by reference."""
+    result = dict(review_result)
+    if result.get("kind") != "agentic-workspace/independent-review-result/v1":
+        raise WorkspaceUsageError("trusted independent review result has the wrong kind.")
+    custody = _as_dict(result.get("custody"))
+    if custody.get("producer") in {"", None, "caller", "implementer", "agent-implementer"}:
+        raise WorkspaceUsageError("trusted independent review result requires producer-owned custody.")
+    custody.setdefault("trusted_channel", "independent-review-host-result")
+    custody.setdefault(
+        "rule",
+        "assignment.admit consumes indexed review-result references; caller-authored inline review packets are not authority.",
+    )
+    result["custody"] = custody
+    result["store_status"] = "current"
+    result_id = _stable_review_json_digest(result)[:24]
+    root = target_root / INDEPENDENT_REVIEW_RESULT_DIR
+    path = root / f"{result_id}.json"
+    result["result_ref"] = path.relative_to(target_root).as_posix()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+    index_path = root / "index.json"
+    if index_path.exists():
+        try:
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise WorkspaceUsageError("independent review result index is unreadable; repair it before admission.") from exc
+    else:
+        index = {"kind": INDEPENDENT_REVIEW_RESULT_INDEX_KIND, "results": {}}
+    raw_results = index.get("results") if isinstance(index, dict) else None
+    if index.get("kind") != INDEPENDENT_REVIEW_RESULT_INDEX_KIND or not isinstance(raw_results, dict):
+        raise WorkspaceUsageError("independent review result index is malformed; repair it before admission.")
+    results: dict[str, Any] = raw_results
+    results[result_id] = {
+        "path": path.relative_to(root).as_posix(),
+        "status": "current",
+        "producer": str(custody.get("producer") or ""),
+        "authority_ref": str(custody.get("authority_ref") or ""),
+        "result_digest": _stable_review_json_digest(result),
+        "assignment_id": str(result.get("assignment_id") or ""),
+        "review_revision": str(result.get("review_revision") or result.get("assignment_revision") or ""),
+        "scope_digest": str(result.get("scope_digest") or ""),
+    }
+    index["results"] = results
+    index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+    return {
+        "kind": "agentic-workspace/trusted-independent-review-result-record/v1",
+        "status": "stored",
+        "result_ref": result["result_ref"],
+        "result": result,
+        "index_ref": index_path.relative_to(target_root).as_posix(),
+    }
+
+
+def _load_trusted_independent_review_result(*, target_root: Path, result_ref: str) -> dict[str, Any]:
+    ref = str(result_ref or "").strip()
+    if not ref:
+        raise WorkspaceUsageError("independent review admission requires review_result_ref.")
+    if "://" in ref:
+        raise WorkspaceUsageError("independent review result ref must be a repo-relative indexed file.")
+    candidate = (target_root / ref).resolve()
+    root = (target_root / INDEPENDENT_REVIEW_RESULT_DIR).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise WorkspaceUsageError("independent review result ref must resolve inside the trusted result store.") from exc
+    try:
+        raw = candidate.read_text(encoding="utf-8")
+        result = json.loads(raw)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("independent review result ref is missing or unreadable.") from exc
+    if not isinstance(result, dict):
+        raise WorkspaceUsageError("independent review result ref must contain a JSON object.")
+    result_id = candidate.stem
+    index_path = root / "index.json"
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("independent review result index is missing or unreadable.") from exc
+    entries = index.get("results") if index.get("kind") == INDEPENDENT_REVIEW_RESULT_INDEX_KIND else {}
+    entry = entries.get(result_id) if isinstance(entries, dict) else None
+    if not isinstance(entry, dict):
+        raise WorkspaceUsageError("independent review result is not registered in the trusted result index.")
+    indexed_path = (root / str(entry.get("path") or "")).resolve()
+    if indexed_path != candidate:
+        raise WorkspaceUsageError("independent review result index path does not match.")
+    if entry.get("status") != "current" or result.get("store_status") != "current":
+        raise WorkspaceUsageError("independent review result is stale or superseded.")
+    if entry.get("result_digest") != _stable_review_json_digest(result):
+        raise WorkspaceUsageError("independent review result digest does not match the trusted index.")
+    custody = _as_dict(result.get("custody"))
+    if custody.get("producer") in {"", None, "caller", "implementer", "agent-implementer"}:
+        raise WorkspaceUsageError("independent review result lacks producer-owned custody.")
+    result.setdefault("result_ref", ref.replace("\\", "/"))
+    return result
+
+
 def _parse_review_timestamp(value: str) -> datetime | None:
     text = str(value or "").strip()
     if not text:
@@ -6878,25 +6977,17 @@ def admit_independent_review_result_operation(
     *, target_root: Path, values: Mapping[str, Any], changed_paths: list[str] | None = None
 ) -> dict[str, Any]:
     raw_result = values.get("review_result") or values.get("review_result_json")
-    if isinstance(raw_result, str):
-        try:
-            review_result = json.loads(raw_result)
-        except json.JSONDecodeError:
-            review_result = {}
-    elif isinstance(raw_result, Mapping):
-        review_result = dict(raw_result)
+    if raw_result:
+        review_result: dict[str, Any] = {}
+        direct_failures = [{"reason": "caller-authored-review-result-rejected", "field": "review_result"}]
     else:
+        direct_failures = []
         result_ref = str(values.get("review_result_ref") or "").strip()
-        if result_ref:
-            candidate = (target_root / result_ref).resolve()
-            try:
-                candidate.relative_to(target_root.resolve())
-                review_result = json.loads(candidate.read_text(encoding="utf-8"))
-                review_result.setdefault("result_ref", result_ref.replace("\\", "/"))
-            except (ValueError, OSError, json.JSONDecodeError):
-                review_result = {}
-        else:
+        try:
+            review_result = _load_trusted_independent_review_result(target_root=target_root, result_ref=result_ref) if result_ref else {}
+        except WorkspaceUsageError as exc:
             review_result = {}
+            direct_failures = [{"reason": "untrusted-review-result-ref", "field": "review_result_ref", "detail": str(exc)}]
     explicit_changed = [
         str(path).replace("\\", "/").strip()
         for path in _list_payload(values.get("changed_paths") or values.get("changed"))
@@ -6914,10 +7005,10 @@ def admit_independent_review_result_operation(
     required_mode = str(
         values.get("required_mode") or (review_result.get("required_mode") if isinstance(review_result, Mapping) else "") or ""
     ).strip()
-    failures = (
+    failures = direct_failures or (
         _independent_review_result_failures(result=review_result, required_mode=required_mode, changed_paths=effective_changed)
-        if isinstance(review_result, Mapping)
-        else [{"reason": "missing-review-result", "field": "review_result"}]
+        if isinstance(review_result, Mapping) and review_result
+        else [{"reason": "missing-review-result", "field": "review_result_ref"}]
     )
     if failures:
         return {
