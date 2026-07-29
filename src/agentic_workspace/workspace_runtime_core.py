@@ -28442,20 +28442,13 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "completed-active-plan-route",
         "scope-inspection-required",
     }:
-        safe_routes = [
-            {key: route.get(key) for key in ("id", "command") if isinstance(route, dict) and route.get(key) not in (None, "", [], {})}
-            for route in _list_payload(task_switch.get("safe_routes"))[:3]
-            if isinstance(route, dict)
-        ]
-        active_plan_protection = _as_dict(task_switch.get("active_plan_protection"))
         compact_switch = {
             "kind": task_switch.get("kind"),
             "status": task_switch.get("status"),
             "summary": _task_excerpt(str(task_switch.get("summary") or ""), limit=180),
             "current_task_class": task_switch.get("current_task_class"),
-            "recommended_next_action": task_switch.get("recommended_next_action"),
-            "safe_route_ids": [route.get("id") for route in safe_routes if route.get("id")],
-            "blocked_claims": active_plan_protection.get("blocked_claims", []),
+            "authority": task_switch.get("authority") or "diagnostic-facts-only",
+            "derive_action_from": task_switch.get("derive_action_from") or "planning_safety_gate.route_decision",
             "detail_selector": "planning_safety_gate.task_switch_reconciliation",
         }
         route_acknowledgement = _as_dict(task_switch.get("route_acknowledgement"))
@@ -28465,16 +28458,12 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 for key in (
                     "status",
                     "route",
+                    "acknowledged_by",
                     "changed_path_count",
-                    "claim_boundary",
                     "proof_rule",
-                    "return_to_active_plan",
-                    "stale_thread_cleanup",
                 )
                 if route_acknowledgement.get(key) not in (None, "", [], {})
             }
-        if active_plan_protection.get("claim_boundary"):
-            compact_switch["claim_boundary"] = _task_excerpt(str(active_plan_protection.get("claim_boundary") or ""), limit=180)
         completed_plan = _as_dict(task_switch.get("completed_active_plan"))
         if completed_plan:
             compact_switch["completed_active_plan"] = {
@@ -28484,10 +28473,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                     "active_execplan",
                     "plan_id",
                     "evidence_fields",
-                    "archive_command",
-                    "recheck_command",
                     "parent_lane_boundary",
-                    "claim_boundary",
                 )
                 if completed_plan.get(key) not in (None, "", [], {})
             }
