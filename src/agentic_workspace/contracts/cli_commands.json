@@ -2378,6 +2378,13 @@
                 "--supersedes"
               ],
               "default": ""
+            },
+            {
+              "name": "host_result_ref",
+              "flags": [
+                "--host-result-ref"
+              ],
+              "required": true
             }
           ],
           "role": "core_lifecycle",

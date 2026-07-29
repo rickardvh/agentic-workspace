@@ -81,6 +81,11 @@
       "source": "cli-option"
     },
     {
+      "name": "host_result_ref",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
       "name": "format",
       "required": false,
       "source": "cli-option"

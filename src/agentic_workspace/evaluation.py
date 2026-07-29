@@ -16,6 +16,7 @@ EVALUATION_OBSERVATION_KIND = "agentic-workspace/evaluation-observation/v1"
 EVALUATION_CLOSURE_AUTHORITY_KIND = "agentic-workspace/evaluation-closure-authority/v1"
 WORKSPACE_EVALUATIONS_PATH = Path(".agentic-workspace/evaluations.json")
 WORKSPACE_LOCAL_EVALUATIONS_DIR = Path(".agentic-workspace/local/evaluations")
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-host-results"
 EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-receipts"
 EVALUATION_PENDING_COLLECTIONS_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "pending-collections"
 ASSIGNMENT_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/planning/assignment-receipts")
@@ -23,6 +24,7 @@ PROOF_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/proof/receipts")
 EVALUATION_FINDING_FOLLOWUPS_PATH = Path(".agentic-workspace/planning/evaluation-finding-followups.json")
 EVALUATION_OWNER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-owner-receipt-index/v1"
 EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-external-delivery-adapter-receipt-index/v1"
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND = "agentic-workspace/evaluation-external-delivery-adapter-host-result-index/v1"
 EVALUATION_FINDING_FOLLOWUPS_KIND = "agentic-workspace/evaluation-finding-followups/v1"
 OBSERVATION_RETENTION_CAP = 100
 OBSERVATION_BYTE_CAP = 256_000
@@ -57,6 +59,10 @@ LOG_OWNER_CLASSES = {"log", "transcript", "event-stream", "metric-stream"}
 
 def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _stable_json_digest(payload: dict[str, Any]) -> str:
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
 
 
 def _load_json(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
@@ -368,6 +374,122 @@ def _load_external_delivery_adapter_receipt(*, target_root: Path, receipt_ref: s
     return receipt
 
 
+def record_external_evaluation_adapter_host_result(
+    *,
+    target_root: Path,
+    delivery_id: str,
+    sink_id: str,
+    producer: str,
+    attempt_revision: str,
+    receipt_revision: str,
+    capability_revision: str,
+    status: str,
+    detail: str = "",
+    capability_status: str = "current",
+    status_owner: str = "provider-adapter",
+    supersedes: str = "",
+    request_revision: str = "",
+    trusted_channel: str = "external-evaluation-adapter-host",
+) -> dict[str, Any]:
+    """Store the host/adapter-produced result consumed by AW receipt admission."""
+    normalized_status = _require_non_empty(status, "status")
+    if normalized_status not in {"delivered", "failed"}:
+        raise WorkspaceUsageError("status must be delivered or failed.")
+    if status_owner not in {"provider-adapter", "external-operation-adapter"}:
+        raise WorkspaceUsageError("status_owner must identify the provider adapter.")
+    if capability_status not in {"current", "fresh", "accepted"}:
+        raise WorkspaceUsageError("capability_status must be current, fresh, or accepted.")
+    result = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1",
+        "status": "current",
+        "delivery_id": _require_non_empty(delivery_id, "delivery_id"),
+        "sink_id": _require_non_empty(sink_id, "sink_id"),
+        "producer": _require_non_empty(producer, "producer"),
+        "status_owner": status_owner,
+        "attempt_revision": _require_non_empty(attempt_revision, "attempt_revision"),
+        "receipt_revision": _require_non_empty(receipt_revision, "receipt_revision"),
+        "capability_revision": _require_non_empty(capability_revision, "capability_revision"),
+        "capability_status": capability_status,
+        "delivery_status": normalized_status,
+        "detail": detail,
+        "supersedes": supersedes,
+        "request_revision": request_revision,
+        "recorded_at": _now(),
+        "custody": {
+            "producer": "evaluation.external-adapter-host-result",
+            "trusted_channel": trusted_channel,
+            "rule": "AW delivery receipts consume this host result by reference; caller-supplied transport fields alone are not delivery authority.",
+        },
+    }
+    result_id = hashlib.sha256(json.dumps(result, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
+    result["result_id"] = result_id
+    result["result_ref"] = f"external-evaluation-adapter-host-result:{result_id}"
+    root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR
+    path = root / f"{result_id}.json"
+    _write_json(path, result)
+    index_path = root / "index.json"
+    index = _load_json(index_path, default={"kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND, "results": {}})
+    raw_entries = index.get("results")
+    entries: dict[str, Any] = raw_entries if isinstance(raw_entries, dict) else {}
+    entries[result_id] = {
+        "path": path.relative_to(root).as_posix(),
+        "status": "current",
+        "producer": result["producer"],
+        "receipt_revision": result["receipt_revision"],
+        "capability_revision": result["capability_revision"],
+        "delivery_id": result["delivery_id"],
+        "sink_id": result["sink_id"],
+        "attempt_revision": result["attempt_revision"],
+        "result_digest": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+    _write_json(index_path, {"kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND, "results": entries})
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-record/v1",
+        "status": "stored",
+        "result_id": result_id,
+        "result_ref": result["result_ref"],
+        "path": path.relative_to(target_root).as_posix(),
+        "index_ref": index_path.relative_to(target_root).as_posix(),
+        "result": result,
+    }
+
+
+def _load_external_delivery_adapter_host_result(*, target_root: Path, result_ref: str) -> dict[str, Any]:
+    ref = str(result_ref or "").strip()
+    if not ref.startswith("external-evaluation-adapter-host-result:") or "/" in ref or "\\" in ref:
+        raise WorkspaceUsageError("external adapter receipt requires an indexed host result reference.")
+    result_id = ref.removeprefix("external-evaluation-adapter-host-result:")
+    path = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR / f"{result_id}.json"
+    try:
+        raw = path.read_bytes()
+        result = json.loads(raw.decode("utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("external adapter host result is missing or unreadable.") from exc
+    if result.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1":
+        raise WorkspaceUsageError("external adapter host result has the wrong contract.")
+    if result.get("result_ref") != ref or result.get("result_id") != result_id:
+        raise WorkspaceUsageError("external adapter host result identity does not match its reference.")
+    if result.get("status") != "current":
+        raise WorkspaceUsageError("external adapter host result is not current.")
+    custody = result.get("custody") if isinstance(result.get("custody"), dict) else {}
+    if custody.get("producer") != "evaluation.external-adapter-host-result":
+        raise WorkspaceUsageError("external adapter host result is not producer-owned.")
+    index_path = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR / "index.json"
+    index = _load_json(index_path, default={})
+    entries = index.get("results") if index.get("kind") == EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND else {}
+    entry = entries.get(result_id) if isinstance(entries, dict) else None
+    if not isinstance(entry, dict):
+        raise WorkspaceUsageError("external adapter host result is not registered in its host index.")
+    indexed_path = (target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR / str(entry.get("path") or "")).resolve()
+    if indexed_path != path.resolve():
+        raise WorkspaceUsageError("external adapter host result index path does not match.")
+    if entry.get("status") != "current":
+        raise WorkspaceUsageError("external adapter host result is stale or superseded.")
+    if entry.get("result_digest") != hashlib.sha256(raw).hexdigest():
+        raise WorkspaceUsageError("external adapter host result digest does not match the host index.")
+    return result
+
+
 def record_external_evaluation_adapter_receipt(
     *,
     target_root: Path,
@@ -382,8 +504,10 @@ def record_external_evaluation_adapter_receipt(
     capability_status: str = "current",
     status_owner: str = "provider-adapter",
     supersedes: str = "",
+    host_result_ref: str = "",
 ) -> dict[str, Any]:
     """Record the producer-owned receipt consumed by external delivery admission."""
+    host_result = _load_external_delivery_adapter_host_result(target_root=target_root, result_ref=host_result_ref)
     normalized_status = _require_non_empty(status, "status")
     if normalized_status not in {"delivered", "failed"}:
         raise WorkspaceUsageError("status must be delivered or failed.")
@@ -397,6 +521,20 @@ def record_external_evaluation_adapter_receipt(
     receipt_identity = _require_non_empty(receipt_revision, "receipt_revision")
     producer_identity = _require_non_empty(producer, "producer")
     capability_identity = _require_non_empty(capability_revision, "capability_revision")
+    expected_fields = {
+        "delivery_id": delivery_identity,
+        "sink_id": sink_identity,
+        "producer": producer_identity,
+        "status_owner": status_owner,
+        "attempt_revision": attempt_identity,
+        "receipt_revision": receipt_identity,
+        "capability_revision": capability_identity,
+        "capability_status": capability_status,
+        "delivery_status": normalized_status,
+        "supersedes": supersedes,
+    }
+    if any(str(host_result.get(key) or "") != expected for key, expected in expected_fields.items() if expected):
+        raise WorkspaceUsageError("external adapter receipt inputs do not match the trusted host result.")
     receipt_id = hashlib.sha256(
         json.dumps(
             {
@@ -426,6 +564,8 @@ def record_external_evaluation_adapter_receipt(
         "status": normalized_status,
         "detail": detail,
         "supersedes": supersedes,
+        "host_result_ref": host_result_ref,
+        "host_result_digest": _stable_json_digest(host_result),
         "recorded_at": _now(),
     }
     path = root / f"{receipt_id}.json"
@@ -446,6 +586,7 @@ def record_external_evaluation_adapter_receipt(
         "delivery_id": delivery_identity,
         "sink_id": sink_identity,
         "attempt_revision": attempt_identity,
+        "host_result_ref": host_result_ref,
     }
     _write_json(index_path, {"kind": EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND, "receipts": entries})
     return {
@@ -460,6 +601,7 @@ def record_external_evaluation_adapter_receipt(
         "attempt_revision": attempt_identity,
         "receipt_revision": receipt_identity,
         "capability_revision": capability_identity,
+        "host_result_ref": host_result_ref,
         "retryable": normalized_status != "delivered",
     }
 
@@ -2341,6 +2483,7 @@ def _evaluation_adapter_payload(args: Any, *, target_root: Path) -> dict[str, An
             status_owner=str(getattr(args, "status_owner", "provider-adapter") or "provider-adapter"),
             detail=str(getattr(args, "detail", "") or ""),
             supersedes=str(getattr(args, "supersedes", "") or ""),
+            host_result_ref=_require_non_empty(getattr(args, "host_result_ref", ""), "host_result_ref"),
         )
     if command == "external-delivery":
         request = external_evaluation_report_delivery_request(

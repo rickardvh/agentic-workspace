@@ -71,6 +71,11 @@
       "required": false
     },
     {
+      "name": "host_result_ref",
+      "source": "cli-option",
+      "required": true
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false

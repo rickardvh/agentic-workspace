@@ -3293,6 +3293,13 @@ const commandDefinitions = [
                 "--supersedes"
               ],
               "name": "supersedes"
+            },
+            {
+              "flags": [
+                "--host-result-ref"
+              ],
+              "name": "host_result_ref",
+              "required": true
             }
           ]
         },

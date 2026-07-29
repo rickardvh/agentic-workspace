@@ -33,6 +33,7 @@ from agentic_workspace.evaluation import (
     execute_evaluation_collection_action,
     external_evaluation_report_delivery_request,
     prune_observations,
+    record_external_evaluation_adapter_host_result,
     record_external_evaluation_adapter_receipt,
     record_external_evaluation_report_delivery,
     record_local_evaluation_report_delivery,
@@ -164,7 +165,7 @@ def _definition_kwargs() -> dict:
 
 
 def _adapter_receipt_file(tmp_path: Path, receipt: dict) -> str:
-    result = record_external_evaluation_adapter_receipt(
+    host = record_external_evaluation_adapter_host_result(
         target_root=tmp_path,
         delivery_id=receipt["delivery_id"],
         sink_id=receipt["sink_id"],
@@ -178,7 +179,45 @@ def _adapter_receipt_file(tmp_path: Path, receipt: dict) -> str:
         detail=receipt.get("detail", ""),
         supersedes=receipt.get("supersedes", ""),
     )
+    result = record_external_evaluation_adapter_receipt(
+        target_root=tmp_path,
+        delivery_id=receipt["delivery_id"],
+        sink_id=receipt["sink_id"],
+        producer=receipt["producer"],
+        attempt_revision=receipt["attempt_revision"],
+        receipt_revision=receipt["receipt_revision"],
+        capability_revision=receipt["capability_revision"],
+        capability_status=receipt.get("capability_status", "current"),
+        status=receipt["status"],
+        status_owner=receipt.get("status_owner", "provider-adapter"),
+        detail=receipt.get("detail", ""),
+        supersedes=receipt.get("supersedes", ""),
+        host_result_ref=host["result_ref"],
+    )
     return result["receipt_ref"]
+
+
+def test_external_adapter_receipt_requires_matching_host_result(tmp_path: Path) -> None:
+    receipt = {
+        "delivery_id": "delivery-1",
+        "sink_id": "#1969",
+        "producer": "github-issues-adapter",
+        "attempt_revision": "attempt-1",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "status": "delivered",
+    }
+    with pytest.raises(WorkspaceUsageError, match="host result reference"):
+        record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt)
+    host = record_external_evaluation_adapter_host_result(target_root=tmp_path, **receipt)
+    with pytest.raises(WorkspaceUsageError, match="do not match"):
+        record_external_evaluation_adapter_receipt(
+            target_root=tmp_path,
+            **{**receipt, "sink_id": "#wrong", "host_result_ref": host["result_ref"]},
+        )
+    recorded = record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
+    assert recorded["status"] == "recorded"
+    assert recorded["host_result_ref"] == host["result_ref"]
 
 
 def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(tmp_path: Path) -> None:
@@ -1083,6 +1122,16 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
         invocation=invocation,
     )
     assert pending["status"] == "pending"
+    host = record_external_evaluation_adapter_host_result(
+        target_root=tmp_path,
+        delivery_id=request["delivery_id"],
+        sink_id="#1969",
+        producer="github-issues-adapter",
+        attempt_revision="attempt-public-1",
+        receipt_revision="receipt-public-1",
+        capability_revision="github-issues-adapter:v1",
+        status="failed",
+    )
     adapter = evaluation_external_adapter_receipt(
         {
             "delivery_id": request["delivery_id"],
@@ -1092,6 +1141,7 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
             "receipt_revision": "receipt-public-1",
             "capability_revision": "github-issues-adapter:v1",
             "status": "failed",
+            "host_result_ref": host["result_ref"],
         },
         target=tmp_path,
         invocation=invocation,

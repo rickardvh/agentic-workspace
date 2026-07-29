@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:bd7f60b37ec69bfb6373674f531492fcf387777740fb62c66c56d6909e3e4189",
+  "profile_fingerprint": "sha256:c6fc2299fef9276e4cedddfd09121ef1c66930c5b51dbbd5ba1f18b5b2c740a6",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -10855,8 +10855,8 @@
     "evaluation.external-adapter-receipt": {
       "identity": "evaluation.external-adapter-receipt",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:70d20f935157c8b553aaa03b4bcba4b18884314d28e8a16f36fe5a65d22ecfec",
-      "compatibility_fingerprint": "sha256:9607ee806f77677ab71179ca4351d81e572ea53b7bc33b4085e746ac2455e503",
+      "fingerprint": "sha256:1118a95a08cf5ec2f357b9d1e2df56c7d8513de97b837ffa49550d21b41164a3",
+      "compatibility_fingerprint": "sha256:41ad0cbfd06a0dd41fd97fbcd23a54fe0f43ae3b2a636186c7f1d5e8b781afd8",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.external-adapter-receipt",
@@ -10928,6 +10928,11 @@
             "name": "supersedes",
             "source": "cli-option",
             "required": false
+          },
+          {
+            "name": "host_result_ref",
+            "source": "cli-option",
+            "required": true
           },
           {
             "name": "format",
@@ -11146,6 +11151,11 @@
               "name": "supersedes",
               "source": "cli-option",
               "required": false
+            },
+            {
+              "name": "host_result_ref",
+              "source": "cli-option",
+              "required": true
             },
             {
               "name": "format",
