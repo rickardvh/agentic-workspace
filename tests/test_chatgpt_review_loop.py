@@ -1227,20 +1227,22 @@ def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
     assert terminal["proof_attempt_result"]["failed_command_index"] == 0
 
 
-def test_spawned_worktree_resume_records_failed_proof_and_exact_repair(tmp_path: Path, monkeypatch) -> None:
-    """The dispatched worktree keeps one failed proof attached to its exact resume.
+def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tmp_path: Path, monkeypatch) -> None:
+    """The dispatched worktree keeps failed proof and repair custody on the ordinary route.
 
     This covers the executable #2323 failure route: a fresh session is oriented
     in its owned worktree, a later changed-path review resumes that same session,
-    its focused proof fails, and the owning state exposes only the precise repair
-    action.  In particular, a pushed head must not turn the failed proof into a
-    handoff or merge-ready claim.
+    the selected proof executor fails on a later command, and a recovered resume
+    must repair with a new producer-owned attempt before recording the final
+    pushed head.  A failed proof never becomes a handoff or merge-ready claim.
     """
+    head_c = "c" * 40
     first_review = {"id": "fresh", "body": f"Orient\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[first_review])
     worktree_root = tmp_path / "worktrees"
     original_run = runner.run
     launches: list[tuple[str, Path, str]] = []
+    proof_sequences: list[list[str]] = []
 
     def run(command, *, cwd, env=None):
         command = list(command)
@@ -1266,6 +1268,20 @@ def test_spawned_worktree_resume_records_failed_proof_and_exact_repair(tmp_path:
             runner.commands.append(command)
             Path(command[-2]).mkdir(parents=True)
             return subprocess.CompletedProcess(command, 0, "", "")
+        if command[:2] == ["agentic-workspace", "start"]:
+            runner.commands.append(command)
+            assert "--format" in command and "json" in command
+            return subprocess.CompletedProcess(command, 0, '{"kind":"startup","profile":"compact"}\n', "")
+        if command[:2] == ["agentic-workspace", "implement"]:
+            runner.commands.append(command)
+            assert "--changed" in command
+            return subprocess.CompletedProcess(command, 0, '{"kind":"implement","route":"changed-path"}\n', "")
+        if command == ["pytest", "proof-pass"]:
+            runner.commands.append(command)
+            return subprocess.CompletedProcess(command, 0, "ok", "")
+        if command == ["pytest", "proof-fail"]:
+            runner.commands.append(command)
+            return subprocess.CompletedProcess(command, 1, "", "failed")
         return original_run(command, cwd=cwd, env=env)
 
     def stop_hook(worktree: Path) -> None:
@@ -1286,26 +1302,52 @@ def test_spawned_worktree_resume_records_failed_proof_and_exact_repair(tmp_path:
             runner.head = HEAD_B
             runner.pr_head = HEAD_B
             runner.pr_heads = [HEAD_A, HEAD_B]
-            loop.report_job_result(
+            proof_commands = [
+                "agentic-workspace start --target . --format json",
+                "agentic-workspace implement --changed src/app.py --format json",
+                "pytest proof-pass",
+            ]
+            proof_sequences.append(proof_commands)
+            loop.run_proof_and_report_job_result(
                 cwd=cwd,
                 session_id="fresh-session",
-                proof_status="passed",
-                proof_command="pytest -q",
-                proof_exit_code=0,
+                proof_commands=proof_commands,
                 push_status="passed",
                 runner=runner,
             )
             stop_hook(cwd)
-        else:
-            runner.head = HEAD_B.replace("b", "c")
-            runner.pr_head = runner.head
-            runner.pr_heads = [HEAD_B, runner.head]
-            loop.report_job_result(
+        elif len(launches) == 2:
+            runner.head = HEAD_B
+            runner.pr_head = HEAD_B
+            runner.pr_heads = [HEAD_B]
+            proof_commands = [
+                "agentic-workspace start --target . --format json",
+                "agentic-workspace implement --changed src/app.py --format json",
+                "pytest proof-fail",
+            ]
+            proof_sequences.append(proof_commands)
+            loop.run_proof_and_report_job_result(
                 cwd=cwd,
                 session_id="fresh-session",
-                proof_status="failed",
-                proof_command="pytest tests/test_chatgpt_review_loop.py -q",
-                proof_exit_code=1,
+                proof_commands=proof_commands,
+                push_status="failed",
+                runner=runner,
+            )
+            stop_hook(cwd)
+        else:
+            runner.head = head_c
+            runner.pr_head = runner.head
+            runner.pr_heads = [HEAD_B, head_c]
+            proof_commands = [
+                "agentic-workspace start --target . --format json",
+                "agentic-workspace implement --changed src/app.py --format json",
+                "pytest proof-pass",
+            ]
+            proof_sequences.append(proof_commands)
+            loop.run_proof_and_report_job_result(
+                cwd=cwd,
+                session_id="fresh-session",
+                proof_commands=proof_commands,
                 push_status="passed",
                 runner=runner,
             )
@@ -1330,17 +1372,49 @@ def test_spawned_worktree_resume_records_failed_proof_and_exact_repair(tmp_path:
     saved = loop._load_state(tmp_path, 12)
     assert saved["status"] == "recovery-required"
     assert saved["terminal_result"]["proof_status"] == "failed"
-    assert saved["terminal_result"]["failed_command"] == "pytest tests/test_chatgpt_review_loop.py -q"
+    assert saved["terminal_result"]["failed_command"] == "pytest proof-fail"
+    assert saved["terminal_result"]["proof_commands"] == proof_sequences[1]
+    assert saved["terminal_result"]["proof_attempt_result"]["failed_command_index"] == 2
+    assert saved["terminal_result"]["proof_attempt_result"]["producer"] == "chatgpt-review-loop.focused-proof-executor"
+    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["new_environment_created"] is False
+    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["environment_reuse"] == "configured-active-environment"
+    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["output_bytes"] < 4096
+    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["elapsed_ms"] < 1000
     assert saved["terminal_result"]["repair"]["action"] == "repair the failed focused proof, rerun it, then report the exact job result"
     assert saved["terminal_result"]["repair"]["attempt_revision"] == saved["terminal_result"]["proof_attempt_result"]["attempt_revision"]
     assert saved["terminal_result"]["repair"]["blocked_claims"] == ["handoff-recorded", "merge-ready", "proof-passed"]
+    failed_attempt_revision = saved["terminal_result"]["proof_attempt_result"]["attempt_revision"]
+    assert loop.main(["recover", "--target", tmp_path.as_posix(), "--pr", "12", "--action", "continue-waiting"], runner=runner) == 0
+    recovered = loop._load_state(tmp_path, 12)
+    assert recovered["status"] == "awaiting-review"
+    runner.comments = [{"id": "repair", "body": f"Rerun the exact failed proof\n{marker(head=HEAD_B)}", "url": "u"}]
+
+    repaired = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
+    )
+
+    assert repaired["status"] == "dispatched"
+    assert repaired["result"]["status"] == "resumed"
+    final = loop._load_state(tmp_path, 12)
+    assert final["status"] == "awaiting-review"
+    assert final["terminal_result"]["proof_status"] == "passed"
+    assert final["terminal_result"]["failed_command"] == ""
+    assert final["terminal_result"]["proof_commands"] == proof_sequences[2]
+    assert final["terminal_result"]["ending_head"] == head_c
+    assert final["handoff_head"] == head_c
+    assert final["terminal_result"]["proof_attempt_result"]["attempt_revision"] != failed_attempt_revision
+    assert final["terminal_result"]["proof_attempt_result"]["producer"] == "chatgpt-review-loop.focused-proof-executor"
+    assert loop._validated_attempt_result(final, worktree=worktree_root / "pr-12", start_head=HEAD_B)
     assert [(mode, worktree) for mode, worktree, _ in launches] == [
         ("fresh", worktree_root / "pr-12"),
+        ("resume", worktree_root / "pr-12"),
         ("resume", worktree_root / "pr-12"),
     ]
     assert "Orient" in launches[0][2]
     assert "Repair the changed path" in launches[1][2]
+    assert "Rerun the exact failed proof" in launches[2][2]
     assert len([command for command in runner.commands if command[:3] == ["git", "worktree", "add"]]) == 1
+    assert not (worktree_root / "pr-12" / ".venv").exists()
 
 
 def test_terminal_repair_names_the_later_failed_proof_not_the_first_command(tmp_path: Path) -> None:
