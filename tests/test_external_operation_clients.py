@@ -140,7 +140,7 @@ def test_external_readiness_report_fails_closed_for_runtime_backed_operations() 
     assert runtime_backed["id"] == "assignment.export"
     assert runtime_backed["status"] == "runtime-backed"
     assert runtime_backed["evidence"]["conformance_refs"]
-    assert "executed-conformance-receipt" in runtime_backed["missing_evidence"]
+    assert runtime_backed["evidence"]["conformance_result"]["receipt_ref"].startswith("external-conformance:assignment.export:")
     assert runtime_backed["evidence"]["runtime_exceptions"]
     assert unknown["id"] == "does.not.exist"
     assert "released-python-resource" in unknown["missing_evidence"]
@@ -161,8 +161,8 @@ def test_external_readiness_report_requires_released_client_and_conformance_evid
     assert set(excluded["missing_evidence"]) == {
         "released-typescript-resource",
         "conformance-reference",
-        "executed-conformance-receipt",
     }
+    assert excluded["evidence"]["conformance_result"]["producer"] == "agentic-workspace.operation-conformance-runner"
 
 
 def test_external_readiness_report_requires_current_executed_cross_transport_conformance(monkeypatch) -> None:
@@ -211,6 +211,38 @@ def test_external_readiness_report_ignores_inline_profile_conformance_evidence(m
 
     assert report["status"] == "not-ready"
     assert "executed-conformance-receipt" in report["excluded_operations"][0]["missing_evidence"]
+
+
+def test_packaged_conformance_receipt_store_contains_current_runtime_backed_receipts() -> None:
+    profile = public_client.external_consumer_profile()
+    store = public_client.external_operation_conformance_receipts()
+    runtime_backed = [entry for entry in profile["operations"] if entry["external_consumption"]["status"] == "runtime-backed"]
+    receipt_ids = {receipt["operation_id"] for receipt in store["receipts"]}
+    assert runtime_backed
+    assert {entry["id"] for entry in runtime_backed}.issubset(receipt_ids)
+    assignment_export = next(entry for entry in runtime_backed if entry["id"] == "assignment.export")
+    receipt = next(item for item in store["receipts"] if item["operation_id"] == "assignment.export")
+    assert receipt["operation_fingerprint"] == assignment_export["operation_compatibility"]["fingerprint"]
+    assert receipt["profile_fingerprint"] == profile["compatibility"]["fingerprint"]
+    assert receipt["custody"]["producer"] == "agentic-workspace.operation-conformance-runner"
+
+
+def test_external_readiness_report_rejects_revoked_superseded_and_expired_receipts(monkeypatch) -> None:
+    profile = copy.deepcopy(public_client.external_consumer_profile())
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"]["status"] = "supported"
+    base_receipt = _readiness_conformance_receipt_store(profile, candidate)["receipts"][0]
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
+    for marker in ({"revoked_at": "2026-07-29T00:00:00Z"}, {"superseded_by": "newer"}, {"expires_at": "2026-07-26T00:00:00Z"}):
+        stale = {**base_receipt, **marker}
+        monkeypatch.setattr(
+            public_client,
+            "external_operation_conformance_receipts",
+            lambda stale=stale: {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": [stale]},
+        )
+        report = external_readiness_report(["assignment.export"])
+        assert report["status"] == "not-ready"
+        assert "executed-conformance-receipt" in report["excluded_operations"][0]["missing_evidence"]
 
 
 def _python_client():

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from datetime import datetime, timezone
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Sequence
@@ -36,6 +37,13 @@ def _conformance_receipt(entry: dict[str, Any], profile: dict[str, Any], receipt
         if receipt.get("operation_fingerprint") != operation_fingerprint: continue
         if receipt.get("profile_fingerprint") != profile_fingerprint: continue
         if receipt.get("status") in {"revoked", "superseded", "stale"}: continue
+        if receipt.get("revoked_at") or receipt.get("superseded_by"): continue
+        expires_at = str(receipt.get("expires_at") or "")
+        if expires_at:
+            try: parsed_expires_at = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+            except ValueError: continue
+            if parsed_expires_at.tzinfo is None: parsed_expires_at = parsed_expires_at.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) >= parsed_expires_at: continue
         candidates.append(receipt)
     return sorted(candidates, key=lambda item: str(item.get("executed_at") or item.get("receipt_ref") or ""))[-1] if candidates else None
 

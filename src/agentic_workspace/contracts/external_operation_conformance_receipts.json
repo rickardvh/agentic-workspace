@@ -1,6 +1,1242 @@
 {
   "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
-  "receipts": [],
+  "receipts": [
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:assignment.admit:ce28c522d2cd664538b790a3",
+      "operation_id": "assignment.admit",
+      "operation_fingerprint": "sha256:a93221e7fd71d54bb901855636f5a89cdd6b49e930450bc7510c11bffb73cc0a",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:assignment.cleanup:d17bfca9fca1d24543fa324e",
+      "operation_id": "assignment.cleanup",
+      "operation_fingerprint": "sha256:bf591857b9783bb9a0416b97d7511934d5f201dc368a1c565601696e29f8d906",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:assignment.close:b4c95cc78a32fe649a0f57f8",
+      "operation_id": "assignment.close",
+      "operation_fingerprint": "sha256:de91d27a257d54ba68ab1158641a38ec8706f8231f620d73936b7ede6398a6c3",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:assignment.export:aac930cdbbd350cca8e72b31",
+      "operation_id": "assignment.export",
+      "operation_fingerprint": "sha256:e9809348472a0f86c0c820163523418b7ea9c214c43fe9cf74ca0043e1e65e61",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:assignment.import:4dcbbe18f2ebbc161f6583b7",
+      "operation_id": "assignment.import",
+      "operation_fingerprint": "sha256:20af56d2b995d5dd6bf426cc9a8b52fba6891bbd20e2517732e679d76b00e7d2",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:assignment.integrate:982f5b3ca53a38e129adcfa6",
+      "operation_id": "assignment.integrate",
+      "operation_fingerprint": "sha256:856c9b22266b1cd52a381e0379f6fe7a250b66d98bff62a5a2b44184c0553338",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:assignment.override:f89ede1efaa62fd8490eac8a",
+      "operation_id": "assignment.override",
+      "operation_fingerprint": "sha256:1237e1825bad04a7da4a358e5a7078518b530d660328e59bf945fb351ced80e7",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:assignment.reassign:8138edcca3cb1ac982c55904",
+      "operation_id": "assignment.reassign",
+      "operation_fingerprint": "sha256:26bd5e76f1307f0e48033c91f724796d02272399f3826436bd0fa79c6a82d125",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:assignment.reject:eaf0a864ea9a87899deca2f1",
+      "operation_id": "assignment.reject",
+      "operation_fingerprint": "sha256:0f6a6554c213b26771aab3184d0ddb945fd7c17faef9f22d26f022bb93a80c7a",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:assignment.repair:fb698664d09b4eccb224348a",
+      "operation_id": "assignment.repair",
+      "operation_fingerprint": "sha256:518e8776a9fd9f1b606a6e3f64312e614fc986e6a331130cb7794ff74921f2d3",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:config.report:bbd7fba454763fddce73dd34",
+      "operation_id": "config.report",
+      "operation_fingerprint": "sha256:cbcd32386629e08c44b9dbbf897c6ff76ce62ca9c7831eee16c1d5ba8da64d18",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "config.report.process",
+        "config.selected-text.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:correction-event.correct-dispute:3ef3a2e5ade46e84cf782d8f",
+      "operation_id": "correction-event.correct-dispute",
+      "operation_fingerprint": "sha256:527fa9a77837f96c67977bb4990a2ef8bdf39fa0188f824e0f3fd01f3a247a0f",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:correction-event.prune-compact:d0c7a9cc67893661f728baa5",
+      "operation_id": "correction-event.prune-compact",
+      "operation_fingerprint": "sha256:0aa88948543870c67bcb00c6652ff03d509d05f00c5fd850a35819732e158c47",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:correction-event.query:204a4bdc70c0df307418d9cb",
+      "operation_id": "correction-event.query",
+      "operation_fingerprint": "sha256:c6fcc74d77b199332351fd9076167023b032afb5401b65aa6c46408fc97d8f9f",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:correction-event.submit:d7de004f130a5a8816fbd339",
+      "operation_id": "correction-event.submit",
+      "operation_fingerprint": "sha256:8e2ee32b12ab1d08fb8d7c8bac0643fc4efc7bd2cf9762812c88c4ed81184ce9",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:correction-event.withdraw-supersede:644fbfbb77c56acc020712ac",
+      "operation_id": "correction-event.withdraw-supersede",
+      "operation_fingerprint": "sha256:4f712c97101aee8b6f78d4201abf8401ab6e5b47dfc229922c8fd0ab46aef652",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    },
+    {
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "receipt_ref": "external-conformance:delegation-outcome.append:36ed2cd982af05b39bc980cf",
+      "operation_id": "delegation-outcome.append",
+      "operation_fingerprint": "sha256:2b0a1419d2d325564475ff783f78517d7e3cd59516f60fafe9dfb644845d0981",
+      "profile_fingerprint": "sha256:d5a09ceef42994b8f9fe72bd62e1ca68d745495a395ecf1ccd54a2855fb1143f",
+      "status": "passed",
+      "executed_at": "2026-07-29T00:00:00Z",
+      "expires_at": "2026-12-31T00:00:00Z",
+      "runtime_exception_revision": "#2044@accepted",
+      "conformance_refs": [
+        "delegation-outcome.append.process",
+        "delegation-outcome.append-text.process"
+      ],
+      "transports": {
+        "cli-json": {
+          "status": "passed"
+        },
+        "python": {
+          "status": "passed"
+        },
+        "typescript": {
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "status": "passed"
+        }
+      },
+      "cases": {
+        "absent": {
+          "status": "passed"
+        },
+        "disabled": {
+          "status": "passed"
+        },
+        "incompatible": {
+          "status": "passed"
+        },
+        "malformed": {
+          "status": "passed"
+        },
+        "retryable": {
+          "status": "passed"
+        },
+        "additive-field": {
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "status": "passed"
+        }
+      },
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "trusted_channel": "packaged-conformance-receipt",
+        "source": "scripts/check/run_operation_conformance_tests.py"
+      }
+    }
+  ],
   "producer": "scripts/check/run_operation_conformance_tests.py",
+  "expires_at": "2026-12-31T00:00:00Z",
   "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored."
 }

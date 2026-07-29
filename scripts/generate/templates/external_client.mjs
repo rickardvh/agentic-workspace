@@ -29,7 +29,10 @@ function conformanceReceipt(entry, profile, receiptStore) {
       && receipt.operation_id === entry.id
       && receipt.operation_fingerprint === entry.operation_compatibility?.fingerprint
       && receipt.profile_fingerprint === profile.compatibility?.fingerprint
-      && !['revoked', 'superseded', 'stale'].includes(receipt.status);
+      && !['revoked', 'superseded', 'stale'].includes(receipt.status)
+      && !receipt.revoked_at
+      && !receipt.superseded_by
+      && (!receipt.expires_at || Date.now() < Date.parse(receipt.expires_at));
   });
   return candidates.sort((left, right) => String(left.executed_at ?? left.receipt_ref ?? '').localeCompare(String(right.executed_at ?? right.receipt_ref ?? ''))).at(-1);
 }

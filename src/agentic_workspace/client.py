@@ -6,6 +6,7 @@ import shlex
 import subprocess
 import tomllib
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Mapping, Sequence, cast
@@ -96,6 +97,18 @@ def _external_conformance_receipt(
             continue
         if str(receipt.get("status") or "") in {"revoked", "superseded", "stale"}:
             continue
+        if str(receipt.get("revoked_at") or receipt.get("superseded_by") or "").strip():
+            continue
+        expires_at = str(receipt.get("expires_at") or "").strip()
+        if expires_at:
+            try:
+                parsed = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+            except ValueError:
+                continue
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) >= parsed:
+                continue
         candidates.append(receipt)
     return sorted(candidates, key=lambda item: str(item.get("executed_at") or item.get("receipt_ref") or ""))[-1] if candidates else None
 
