@@ -477,6 +477,98 @@ def test_targeted_execplan_writer_migrates_supported_fields_and_preserves_unrela
     )
     assert noop["status"] == "no-op"
     assert json.loads(plan_path.read_text(encoding="utf-8"))["revision"] == updated["revision"]
+    replay = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch=patch,
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+    )
+    assert replay["status"] == "already-applied"
+    assert replay["receipt"]["request"]["owner_revision"] == 1
+
+
+def test_targeted_execplan_writer_preview_delta_matches_apply_delta(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="active-plan")
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    revision = planning_revision(tmp_path)["revision_id"]
+    patch = {"next_action": "prove preview/apply equivalence"}
+
+    preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch=patch,
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=False,
+    )
+    applied = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch=patch,
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+    )
+
+    assert preview["status"] == "preview"
+    assert applied["status"] == "applied"
+    assert applied["changes"] == preview["changes"]
+    assert applied["projection_effects"] == preview["projection_effects"]
+
+
+def test_targeted_execplan_writer_handles_missing_ambiguous_and_unbound_owners(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    missing = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="missing-plan",
+        patch={"next_action": "x"},
+        expected_planning_revision="rev",
+        expected_owner_revision=1,
+        apply=True,
+    )
+    assert missing["status"] == "ambiguous-or-missing-owner"
+
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/unbound.plan.json"
+    _write_execplan_record(plan_path, item_id="unbound", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    revision = planning_revision(tmp_path)["revision_id"]
+    unbound = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="unbound",
+        patch={"next_action": "supported without a lane relation"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+    )
+    assert unbound["status"] == "applied"
+    assert unbound["lane_revision"] is None
+
+    lane_dir = tmp_path / ".agentic-workspace/planning/lanes"
+    lane_paths = sorted(lane_dir.glob("*.lane.json"))
+    first = json.loads(lane_paths[0].read_text(encoding="utf-8"))
+    first["current_slice"] = "unbound"
+    installer_mod._write_lane_record(record_path=lane_paths[0], record=first)
+    second = {**first, "id": "duplicate-lane", "current_slice": "unbound"}
+    duplicate_path = lane_dir / "duplicate-lane.lane.json"
+    installer_mod._write_lane_record(record_path=duplicate_path, record=second)
+    ambiguous = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="unbound",
+        patch={"next_action": "must not apply"},
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+        expected_owner_revision=2,
+        apply=True,
+    )
+    assert ambiguous["status"] == "ambiguous-lane-relation"
 
 
 def test_targeted_execplan_writer_rolls_back_late_lane_write_failure(tmp_path: Path, monkeypatch) -> None:
@@ -523,6 +615,65 @@ def test_targeted_execplan_writer_rolls_back_late_lane_write_failure(tmp_path: P
     assert (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes() == state_before
     assert lane_path.read_bytes() == lane_before
     assert not list((tmp_path / ".agentic-workspace/local/planning/targeted-execplan-receipts").glob("*.json"))
+
+
+@pytest.mark.parametrize("failure_boundary", ["owner", "state", "receipt"])
+def test_targeted_execplan_writer_rolls_back_each_write_boundary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_boundary: str
+) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="active-plan")
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    owner_before = plan_path.read_bytes()
+    state_before = state_path.read_bytes()
+    revision = planning_revision(tmp_path)["revision_id"]
+    receipt_dir = tmp_path / ".agentic-workspace/local/planning/targeted-execplan-receipts"
+
+    if failure_boundary == "owner":
+        original_write_execplan = installer_mod._write_execplan_record
+
+        def fail_owner_write(*, record_path: Path, record: dict, render_markdown: bool = False) -> None:
+            if record_path == plan_path:
+                raise OSError("injected owner write failure")
+            original_write_execplan(record_path=record_path, record=record, render_markdown=render_markdown)
+
+        monkeypatch.setattr(installer_mod, "_write_execplan_record", fail_owner_write)
+    elif failure_boundary == "state":
+        original_write_state = installer_mod._write_state_to_toml
+
+        def fail_state_write(target_root: Path, state: dict) -> None:
+            raise OSError("injected state write failure")
+
+        monkeypatch.setattr(installer_mod, "_write_state_to_toml", fail_state_write)
+        assert original_write_state
+    else:
+        original_write_text = Path.write_text
+
+        def fail_receipt_write(self: Path, data: str, *args, **kwargs) -> int:
+            if self.parent == receipt_dir:
+                raise OSError("injected receipt write failure")
+            return original_write_text(self, data, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "write_text", fail_receipt_write)
+
+    result = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={"next_action": f"would fail at {failure_boundary}"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+    )
+
+    assert result["status"] == "rolled-back"
+    assert plan_path.read_bytes() == owner_before
+    assert state_path.read_bytes() == state_before
+    assert not list(receipt_dir.glob("*.json"))
 
 
 def test_planning_summary_and_handoff_expose_structured_execplan_references(tmp_path: Path) -> None:
