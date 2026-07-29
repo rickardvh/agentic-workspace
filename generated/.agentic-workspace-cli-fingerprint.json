@@ -1608,7 +1608,7 @@
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.delegation-decision.lifecycle.json": "d0cd9e6bcbddf33e8561b324c6efef7d0d0df131",
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.doctor.report.json": "8d4dde93cbe4c958982216eb7222e4e9a8a4b98e",
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.front-door-report.report.json": "fbd8d58d044f48486f18dd24b30cca6a87127562",
-    "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.front-door.json": "996a2e6545ef73de6d5e98a7ce2921836bb981b4",
+    "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.front-door.json": "7dbf08768e812d14361d489c31d44b778e9cb26c",
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.handoff.report.json": "fa2eedf19684d2386a255b2ba7fa7251de10e339",
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.help.json": "b15882054ccbaa78e09eea83157bd8e94f3b3605",
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.init.lifecycle.json": "9f908ddea9019e8131da163bdf22c9cacefe2de5",
@@ -1840,7 +1840,7 @@
     "src/agentic_workspace/contracts/module_registry.json": "9c5ce29cc6e4352fc95f5609cec787396104a2e4",
     "src/agentic_workspace/contracts/operation_artifact_registry.json": "747222663ca3a90dd5d787e31d77c70c5047e897",
     "src/agentic_workspace/contracts/operation_conformance_test_ir.json": "4ed6be861696d904b5b4018066752cfb220e03b5",
-    "src/agentic_workspace/contracts/operation_contracts.json": "921c7cb46c50426c71535bd74134049e58420bc7",
+    "src/agentic_workspace/contracts/operation_contracts.json": "7d8242033bb8fb024a42ae22d02d6f2d7344029a",
     "src/agentic_workspace/contracts/operation_primitives.json": "bd09873ed239f4bb227948c4edfcf9531af179fd",
     "src/agentic_workspace/contracts/operational_affordance_roles.json": "5b90fc06eacefb0178e2b9cbf66cbe5f146e9696",
     "src/agentic_workspace/contracts/operations/assignment.admit.json": "9592efd5fc8860d7b9aa171f6af3ffef55f06bf8",
@@ -2059,7 +2059,7 @@
     "src/agentic_workspace/workspace_runtime_core.py": "a8dda686f19de3317fb103530058cf6fda289243",
     "src/agentic_workspace/workspace_runtime_generated_surface.py": "82203eefe65eab1653eaa36ae574ac07a9f96864",
     "src/agentic_workspace/workspace_runtime_implement.py": "a88f729ee60ff05a1a51882b6d8251bf1012f493",
-    "src/agentic_workspace/workspace_runtime_planning.py": "3100cc456e06d4711239c4adf1fa994848bbf5fa",
+    "src/agentic_workspace/workspace_runtime_planning.py": "9aaec469a274be88e44c6dbbbd1d58828d12a502",
     "src/agentic_workspace/workspace_runtime_primitives.py": "d8e56f6296f455bd14f0d6947d2d7c83e51b0f6b",
     "src/agentic_workspace/workspace_runtime_projection.py": "8db623c90efe888f5a6bba8a75bb96d253d1f707",
     "src/agentic_workspace/workspace_runtime_proof.py": "02fc8632052e88e0bbdf480a011f46f8a1bed17a",
@@ -2067,7 +2067,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "894885ef70b5817ad8ff8697991dfa558146f25af514ed7ee213e43beb630b93",
+  "git_index_identity": "7372c4ac7053903cf294e9e1bbff904f368b7507c35db092dc37a5142120f248",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
