@@ -352,7 +352,7 @@ def _memory_route_curation(root: Path, *, task: str, paths: list[str]) -> dict[s
     selected = sorted(selected, key=lambda item: (not bool(item.get("routing_only")), str(item.get("path") or "")))[:12]
     return {
         "kind": "agentic-workspace/memory-route-curation/v1",
-        "status": "selected" if selected else "empty",
+        "status": "stale-review-required" if stale_match_count else "selected" if selected else "empty",
         "manifest": ".agentic-workspace/memory/repo/manifest.toml",
         "total_note_count": len(notes),
         "selected_note_count": len(selected),
@@ -360,7 +360,11 @@ def _memory_route_curation(root: Path, *, task: str, paths: list[str]) -> dict[s
         "stale_when_match_count": stale_match_count,
         "review_only_excluded_count": review_only_excluded_count,
         "context_budget": {"max_selected_notes": 12, "actual_selected_notes": len(selected)},
-        "rule": "Memory authority is admitted as a compact manifest-routed note set; callers must not bulk-read or treat all memory as current context.",
+        "repair_operation_id": "memory.route.report",
+        "rule": (
+            "Memory authority is admitted as a compact manifest-routed note set. A selected note with stale_when matches is "
+            "review-required and must not be admitted as current context until the Memory owner refreshes or excludes it."
+        ),
     }
 
 
@@ -437,6 +441,80 @@ def _generated_fingerprint_is_current(root: Path) -> bool:
     if worktree_entries != {path: str(expected_entries[path]) for path in normalized_paths}:
         return False
     return _git_index_identity(normalized_paths, {path: str(expected_entries[path]) for path in normalized_paths}) == expected_identity
+
+
+def _context_owner_result(
+    *,
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    source_specific: dict[str, Any],
+) -> dict[str, Any]:
+    owner_contract = _surface_owner_contract(surface)
+    producer = str(owner_contract.get("owner_module") or "")
+    result_kind = str(owner_contract.get("owner_result_kind") or "")
+    result: dict[str, Any] = {
+        "kind": result_kind,
+        "producer": producer,
+        "status": "current",
+        "surface": surface,
+        "owner": item.get("owner"),
+        "source_id": chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix(),
+        "source_revision": "sha256:" + revision,
+        "git_head": git_head,
+        "selection": selection,
+    }
+    suffix = chosen.suffix.lower()
+    if chosen.is_file() and suffix in {".toml", ".json"}:
+        try:
+            payload: Any = (
+                tomllib.loads(chosen.read_text(encoding="utf-8")) if suffix == ".toml" else json.loads(chosen.read_text(encoding="utf-8"))
+            )
+        except (OSError, tomllib.TOMLDecodeError, json.JSONDecodeError) as exc:
+            return {**result, "status": "invalid", "reason": "owner-source-parse-failed", "error": str(exc)}
+        result["schema_backing"] = {
+            "source_format": suffix.lstrip("."),
+            "top_level_keys": sorted(str(key) for key in payload.keys())[:20] if isinstance(payload, dict) else [],
+        }
+    else:
+        result["schema_backing"] = {"source_format": "filesystem", "content_digest": "sha256:" + revision}
+    if surface == "planning":
+        try:
+            from agentic_workspace import workspace_runtime_core as runtime_core
+
+            result["planning_owner_admission"] = runtime_core._planning_owner_admission_payload(  # type: ignore[attr-defined]
+                target_root=root,
+                state_data=_load_toml_dict(chosen),
+            )
+        except Exception as exc:  # pragma: no cover - defensive, owner adapter availability is environment-specific.
+            return {**result, "status": "unavailable", "reason": "planning-owner-admission-unavailable", "error": str(exc)}
+    if surface == "mutation-baseline":
+        result["mutation_baseline_admission"] = _as_dict(source_specific.get("mutation_baseline_admission"))
+    if surface == "skills":
+        result["skill_dependency_closure"] = _as_dict(source_specific.get("skill_dependency_closure"))
+    if surface == "memory":
+        result["memory_curation"] = _as_dict(source_specific.get("memory_curation"))
+    if surface == "generated-references":
+        try:
+            result["generated_source_manifest"] = json.loads(chosen.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            return {**result, "status": "invalid", "reason": "generated-source-manifest-invalid", "error": str(exc)}
+    result["revision"] = "sha256:" + _digest(
+        {
+            "kind": result_kind,
+            "producer": producer,
+            "surface": surface,
+            "source_revision": revision,
+            "git_head": git_head,
+            "selection": selection,
+            "source_specific": source_specific,
+        }
+    )
+    return result
 
 
 def _resolve_context_authority_source(
@@ -545,6 +623,16 @@ def _resolve_context_authority_source(
                 "reason": "no-route-selected-memory",
                 "selection": {**selection, "memory_curation": memory_curation},
             }
+        if memory_curation["status"] == "stale-review-required":
+            return {
+                "status": "stale",
+                "applicable": True,
+                "selected_required": True,
+                "reason": "memory-stale-review-required",
+                "source_id": chosen.relative_to(root).as_posix(),
+                "repair_operation_id": "memory.route.report",
+                "selection": {**selection, "memory_curation": memory_curation},
+            }
         else:
             selection = {**selection, "applicable": True, "selected_required": True}
         source_specific["memory_curation"] = memory_curation
@@ -591,6 +679,26 @@ def _resolve_context_authority_source(
             "diagnostic_count": 0,
             "resolver": "agentic_workspace.workspace_runtime_core._skill_dependency_diagnostics",
         }
+    owner_result = _context_owner_result(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        source_specific=source_specific,
+    )
+    if owner_result.get("status") != "current":
+        return {
+            "status": "stale",
+            "applicable": True,
+            "selected_required": True,
+            "reason": str(owner_result.get("reason") or "owner-result-unavailable"),
+            "source_id": chosen.relative_to(root).as_posix(),
+            "selection": selection,
+            "owner_result": owner_result,
+        }
     freshness_enforcement = {
         "kind": "agentic-workspace/context-authority-freshness-enforcement/v1",
         "status": "active",
@@ -612,20 +720,13 @@ def _resolve_context_authority_source(
     }
     owner_admission = {
         "kind": "agentic-workspace/context-authority-owner-admission/v1",
-        "producer": str(owner_contract.get("owner_module") or source_adapter),
-        "result_kind": str(owner_contract.get("owner_result_kind") or ""),
+        "producer": str(owner_result.get("producer") or owner_contract.get("owner_module") or source_adapter),
+        "result_kind": str(owner_result.get("kind") or owner_contract.get("owner_result_kind") or ""),
         "surface": surface,
         "owner": item.get("owner"),
-        "revision": "sha256:"
-        + _digest(
-            {
-                "surface": surface,
-                "source": revision,
-                "git_head": git_head,
-                "selection": selection,
-                "source_specific": source_specific,
-            }
-        ),
+        "revision": str(owner_result.get("revision") or ""),
+        "status": "admitted",
+        "owner_result_status": str(owner_result.get("status") or ""),
     }
     return {
         "status": "current",
@@ -652,6 +753,7 @@ def _resolve_context_authority_source(
             "kind": "agentic-workspace/context-authority-source-receipt/v1",
             "producer": source_adapter,
             "owner_admission": owner_admission,
+            "owner_result": owner_result,
             "registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
             "surface": surface,
             "owner": item.get("owner"),

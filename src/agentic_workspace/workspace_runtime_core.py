@@ -18796,7 +18796,10 @@ def _memory_manifest_notes(target_root: Path | None) -> dict[str, dict[str, Any]
     return {
         str(path): note
         for path, note in notes.items()
-        if isinstance(note, dict) and note.get("review_only") is not True and str(note.get("routing_status") or "routable") != "review-only"
+        if isinstance(note, dict)
+        and note.get("review_only") is not True
+        and str(note.get("routing_status") or "routable") != "review-only"
+        and str(note.get("task_relevance") or "") != "review-only"
     }
 
 
@@ -35808,7 +35811,11 @@ def _reuse_pressure_memory_signals(
     for note_path, raw_note in notes.items():
         if not isinstance(note_path, str) or not isinstance(raw_note, dict):
             continue
-        if raw_note.get("review_only") is True or str(raw_note.get("routing_status") or "routable") == "review-only":
+        if (
+            raw_note.get("review_only") is True
+            or str(raw_note.get("routing_status") or "routable") == "review-only"
+            or str(raw_note.get("task_relevance") or "") == "review-only"
+        ):
             continue
         reason = _reuse_pressure_memory_match_reason(changed_paths=changed_paths, note_path=note_path, note=raw_note)
         if reason is None:

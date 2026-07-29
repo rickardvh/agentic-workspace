@@ -2715,8 +2715,11 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
             .get("admission", {})
             .get("owner_admission", {})
         )
+        owner_result = generated_authority.get("source", {}).get("admission", {}).get("owner_result", {})
         if owner_admission.get("producer") != "agentic_workspace.contract_tooling.generated_references":
             errors.append("generated-references must be admitted by its registered contract-tooling owner")
+        if owner_result.get("kind") != "generated-cli-source-manifest/v1" or owner_result.get("status") != "current":
+            errors.append("generated-references must admit a current generated-source owner result")
         if generated_authority.get("source", {}).get("freshness_enforcement", {}).get("status") != "active":
             errors.append("generated-references must carry active freshness enforcement")
 
@@ -2749,6 +2752,74 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
         != "agentic_workspace.workspace_runtime_core.skill_dependency_resolver"
     ):
         errors.append("skills authority must be admitted by the registered skill dependency resolver")
+    elif skill_authority.get("source", {}).get("admission", {}).get("owner_result", {}).get("skill_dependency_closure", {}).get(
+        "status"
+    ) != "satisfied":
+        errors.append("skills authority must carry the concrete dependency closure owner result")
+
+    for consumer in ["start", "implement", "skills", "proof"]:
+        projection = resolve_context_authority_projection(
+            consumer=consumer,
+            task="direct proof and skill route",
+            changed_paths=["README.md"],
+            target_root=REPO_ROOT,
+        )
+        if projection.get("status") != "admitted":
+            errors.append(f"{consumer} context authority projection must admit compact unrelated direct work")
+            continue
+        for authority in projection.get("authorities", []):
+            if not isinstance(authority, dict):
+                continue
+            owner_result = authority.get("source", {}).get("admission", {}).get("owner_result", {})
+            if not isinstance(owner_result, dict) or owner_result.get("status") != "current":
+                errors.append(f"{consumer} authority {authority.get('surface')} must carry a current owner result")
+        if any(isinstance(authority, dict) and authority.get("surface") == "memory" for authority in projection.get("authorities", [])):
+            errors.append(f"{consumer} unrelated direct work must not admit Memory context")
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        target = Path(tmp_dir)
+        (target / ".agentic-workspace/memory/repo/domains").mkdir(parents=True)
+        (target / ".agentic-workspace/planning").mkdir(parents=True)
+        (target / ".agentic-workspace/skills/workspace-startup").mkdir(parents=True)
+        (target / ".agentic-workspace").mkdir(exist_ok=True)
+        (target / "SYSTEM_INTENT.md").write_text("Intent\n", encoding="utf-8")
+        (target / "AGENTS.md").write_text("Instructions\n", encoding="utf-8")
+        (target / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+        (target / ".agentic-workspace/OWNERSHIP.toml").write_text("[paths]\n", encoding="utf-8")
+        (target / ".agentic-workspace/planning/state.toml").write_text("schema_version = 1\n", encoding="utf-8")
+        (target / ".agentic-workspace/skills/workspace-startup/SKILL.md").write_text("# Startup\n", encoding="utf-8")
+        (target / ".agentic-workspace/memory/repo/index.md").write_text("# Memory\n", encoding="utf-8")
+        (target / ".agentic-workspace/memory/repo/domains/runtime.md").write_text("Runtime note\n", encoding="utf-8")
+        (target / ".agentic-workspace/memory/repo/manifest.toml").write_text(
+            """
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+task_relevance = "required"
+routes_from = [".agentic-workspace/memory/repo/**/*.md"]
+routing_only = true
+
+[notes.".agentic-workspace/memory/repo/domains/runtime.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/runtime.md"
+authority = "advisory"
+task_relevance = "conditional"
+subsystems = ["workspace-runtime"]
+surfaces = ["runtime"]
+routes_from = ["src/agentic_workspace/**"]
+stale_when = ["src/agentic_workspace/**"]
+""",
+            encoding="utf-8",
+        )
+        stale_memory = resolve_context_authority_projection(
+            consumer="start",
+            task="fix runtime context",
+            changed_paths=["src/agentic_workspace/workspace_runtime.py"],
+            target_root=target,
+        )
+        if stale_memory.get("status") != "repair-required" or "memory" not in set(stale_memory.get("missing_required_surfaces", [])):
+            errors.append("selected Memory notes with stale_when matches must fail closed through Memory repair")
     return errors
 
 
