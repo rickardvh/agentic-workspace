@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -17,6 +18,8 @@ from agentic_workspace.evaluation import (
     EVALUATION_PENDING_COLLECTIONS_DIR,
     EVALUATION_SUMMARY_KIND,
     EVALUATIONS_KIND,
+    EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR,
+    EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND,
     EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
     OBSERVATION_RETENTION_CAP,
     PROOF_AUTHORITY_RECEIPT_DIR,
@@ -44,6 +47,65 @@ from agentic_workspace.evaluation import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _write_external_evaluation_adapter_host_result(target_root: Path, **values: object) -> dict[str, object]:
+    result = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1",
+        "status": "current",
+        "delivery_id": str(values["delivery_id"]),
+        "sink_id": str(values["sink_id"]),
+        "producer": str(values["producer"]),
+        "status_owner": str(values.get("status_owner") or "provider-adapter"),
+        "attempt_revision": str(values["attempt_revision"]),
+        "receipt_revision": str(values["receipt_revision"]),
+        "capability_revision": str(values["capability_revision"]),
+        "capability_status": str(values.get("capability_status") or "current"),
+        "delivery_status": str(values["status"]),
+        "detail": str(values.get("detail") or ""),
+        "supersedes": str(values.get("supersedes") or ""),
+        "request_revision": str(values.get("request_revision") or ""),
+        "recorded_at": "2026-07-29T00:00:00Z",
+        "custody": {
+            "producer": "evaluation-provider-adapter",
+            "trusted_channel": "provider-webhook",
+            "rule": "Fixture for provider-owned delivery evidence; AW only imports this host result.",
+        },
+    }
+    result_id = hashlib.sha256(json.dumps(result, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
+    result["result_id"] = result_id
+    result["result_ref"] = f"external-evaluation-adapter-host-result:{result_id}"
+    root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR
+    path = root / f"{result_id}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    index_path = root / "index.json"
+    index = {
+        "kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND,
+        "results": {
+            result_id: {
+                "path": path.relative_to(root).as_posix(),
+                "status": "current",
+                "producer": result["producer"],
+                "receipt_revision": result["receipt_revision"],
+                "capability_revision": result["capability_revision"],
+                "delivery_id": result["delivery_id"],
+                "sink_id": result["sink_id"],
+                "attempt_revision": result["attempt_revision"],
+                "result_digest": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+        },
+    }
+    index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-record/v1",
+        "status": "stored",
+        "result_id": result_id,
+        "result_ref": result["result_ref"],
+        "path": path.relative_to(target_root).as_posix(),
+        "index_ref": index_path.relative_to(target_root).as_posix(),
+        "result": result,
+    }
 
 
 def _init_git_repo(target_root: Path) -> None:
@@ -165,8 +227,8 @@ def _definition_kwargs() -> dict:
 
 
 def _adapter_receipt_file(tmp_path: Path, receipt: dict) -> str:
-    host = record_external_evaluation_adapter_host_result(
-        target_root=tmp_path,
+    host = _write_external_evaluation_adapter_host_result(
+        tmp_path,
         delivery_id=receipt["delivery_id"],
         sink_id=receipt["sink_id"],
         producer=receipt["producer"],
@@ -209,7 +271,9 @@ def test_external_adapter_receipt_requires_matching_host_result(tmp_path: Path) 
     }
     with pytest.raises(WorkspaceUsageError, match="host result reference"):
         record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt)
-    host = record_external_evaluation_adapter_host_result(target_root=tmp_path, **receipt)
+    with pytest.raises(WorkspaceUsageError, match="provider-owned evidence"):
+        record_external_evaluation_adapter_host_result(target_root=tmp_path, **receipt)
+    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
     with pytest.raises(WorkspaceUsageError, match="do not match"):
         record_external_evaluation_adapter_receipt(
             target_root=tmp_path,
@@ -1122,8 +1186,8 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
         invocation=invocation,
     )
     assert pending["status"] == "pending"
-    host = record_external_evaluation_adapter_host_result(
-        target_root=tmp_path,
+    host = _write_external_evaluation_adapter_host_result(
+        tmp_path,
         delivery_id=request["delivery_id"],
         sink_id="#1969",
         producer="github-issues-adapter",

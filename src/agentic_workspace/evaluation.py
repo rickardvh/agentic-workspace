@@ -391,67 +391,10 @@ def record_external_evaluation_adapter_host_result(
     request_revision: str = "",
     trusted_channel: str = "external-evaluation-adapter-host",
 ) -> dict[str, Any]:
-    """Store the host/adapter-produced result consumed by AW receipt admission."""
-    normalized_status = _require_non_empty(status, "status")
-    if normalized_status not in {"delivered", "failed"}:
-        raise WorkspaceUsageError("status must be delivered or failed.")
-    if status_owner not in {"provider-adapter", "external-operation-adapter"}:
-        raise WorkspaceUsageError("status_owner must identify the provider adapter.")
-    if capability_status not in {"current", "fresh", "accepted"}:
-        raise WorkspaceUsageError("capability_status must be current, fresh, or accepted.")
-    result = {
-        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1",
-        "status": "current",
-        "delivery_id": _require_non_empty(delivery_id, "delivery_id"),
-        "sink_id": _require_non_empty(sink_id, "sink_id"),
-        "producer": _require_non_empty(producer, "producer"),
-        "status_owner": status_owner,
-        "attempt_revision": _require_non_empty(attempt_revision, "attempt_revision"),
-        "receipt_revision": _require_non_empty(receipt_revision, "receipt_revision"),
-        "capability_revision": _require_non_empty(capability_revision, "capability_revision"),
-        "capability_status": capability_status,
-        "delivery_status": normalized_status,
-        "detail": detail,
-        "supersedes": supersedes,
-        "request_revision": request_revision,
-        "recorded_at": _now(),
-        "custody": {
-            "producer": "evaluation.external-adapter-host-result",
-            "trusted_channel": trusted_channel,
-            "rule": "AW delivery receipts consume this host result by reference; caller-supplied transport fields alone are not delivery authority.",
-        },
-    }
-    result_id = hashlib.sha256(json.dumps(result, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
-    result["result_id"] = result_id
-    result["result_ref"] = f"external-evaluation-adapter-host-result:{result_id}"
-    root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR
-    path = root / f"{result_id}.json"
-    _write_json(path, result)
-    index_path = root / "index.json"
-    index = _load_json(index_path, default={"kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND, "results": {}})
-    raw_entries = index.get("results")
-    entries: dict[str, Any] = raw_entries if isinstance(raw_entries, dict) else {}
-    entries[result_id] = {
-        "path": path.relative_to(root).as_posix(),
-        "status": "current",
-        "producer": result["producer"],
-        "receipt_revision": result["receipt_revision"],
-        "capability_revision": result["capability_revision"],
-        "delivery_id": result["delivery_id"],
-        "sink_id": result["sink_id"],
-        "attempt_revision": result["attempt_revision"],
-        "result_digest": hashlib.sha256(path.read_bytes()).hexdigest(),
-    }
-    _write_json(index_path, {"kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND, "results": entries})
-    return {
-        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-record/v1",
-        "status": "stored",
-        "result_id": result_id,
-        "result_ref": result["result_ref"],
-        "path": path.relative_to(target_root).as_posix(),
-        "index_ref": index_path.relative_to(target_root).as_posix(),
-        "result": result,
-    }
+    raise WorkspaceUsageError(
+        "external evaluation adapter host results are provider-owned evidence and cannot be minted by AW; "
+        "import a current host-result file under the indexed external-adapter-host-results store and pass host_result_ref."
+    )
 
 
 def _load_external_delivery_adapter_host_result(*, target_root: Path, result_ref: str) -> dict[str, Any]:
@@ -472,8 +415,10 @@ def _load_external_delivery_adapter_host_result(*, target_root: Path, result_ref
     if result.get("status") != "current":
         raise WorkspaceUsageError("external adapter host result is not current.")
     custody = result.get("custody") if isinstance(result.get("custody"), dict) else {}
-    if custody.get("producer") != "evaluation.external-adapter-host-result":
+    if custody.get("producer") in {"", "evaluation.external-adapter-host-result", "caller", "agentic-workspace"}:
         raise WorkspaceUsageError("external adapter host result is not producer-owned.")
+    if custody.get("trusted_channel") not in {"provider-webhook", "external-operation-adapter", "delivery-provider-receipt"}:
+        raise WorkspaceUsageError("external adapter host result does not come from an admitted provider channel.")
     index_path = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR / "index.json"
     index = _load_json(index_path, default={})
     entries = index.get("results") if index.get("kind") == EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND else {}
