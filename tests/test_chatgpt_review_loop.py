@@ -1524,6 +1524,83 @@ def test_job_result_executor_records_full_selected_proof_command_set_and_failed_
     assert result["proof_attempt_result"]["ending_head"] == HEAD_A
 
 
+def test_real_disposable_worktree_failed_proof_repair_and_final_head(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise the failed-proof repair receipt through real git and subprocess boundaries."""
+
+    owner = tmp_path / "owner"
+    worktree = tmp_path / "worktrees" / "pr-12"
+    owner.mkdir()
+    subprocess.run(["git", "init"], cwd=owner, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=owner, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=owner, check=True)
+    (owner / "proof_target.txt").write_text("bad\n", encoding="utf-8")
+    (owner / "proof_check.py").write_text(
+        "from pathlib import Path\nimport sys\nsys.exit(0 if Path('proof_target.txt').read_text().strip() == 'good' else 1)\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "add", "."], cwd=owner, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "initial"], cwd=owner, check=True, capture_output=True)
+    start_head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=owner, check=True, text=True, capture_output=True).stdout.strip()
+    subprocess.run(["git", "worktree", "add", "--detach", worktree.as_posix(), start_head], cwd=owner, check=True, capture_output=True)
+    assert (worktree / ".git").exists()
+
+    runner = loop.CommandRunner()
+    monkeypatch.setenv(loop.OWNER_ROOT_ENV, owner.as_posix())
+    saved = state(
+        owner,
+        status="resume-in-progress",
+        handoff_head=start_head,
+        session_id=SESSION,
+        repo_root=owner.as_posix(),
+    )
+    loop._begin_job_attempt(saved, mode="resume", worktree=worktree, start_head=start_head)
+    loop._save_state(owner, saved)
+    proof_command = f"{sys.executable} proof_check.py"
+
+    failed = loop.run_proof_and_report_job_result(
+        cwd=worktree,
+        session_id=SESSION,
+        proof_commands=[proof_command],
+        push_status="not-attempted",
+        runner=runner,
+    )
+
+    assert failed["proof_status"] == "failed"
+    assert failed["failed_command"] == proof_command
+    assert failed["proof_attempt_result"]["producer"] == "chatgpt-review-loop.focused-proof-executor"
+    assert failed["proof_attempt_result"]["failed_command_index"] == 0
+    blocked_state = loop._load_state(owner, 12)
+    assert blocked_state["terminal_result"]["repair"]["blocked_claims"] == ["handoff-recorded", "merge-ready", "proof-passed"]
+    assert loop._validated_attempt_result(blocked_state, worktree=worktree, start_head=start_head) is False
+
+    (worktree / "proof_target.txt").write_text("good\n", encoding="utf-8")
+    subprocess.run(["git", "add", "proof_target.txt"], cwd=worktree, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "repair proof"], cwd=worktree, check=True, capture_output=True)
+    final_head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=worktree, check=True, text=True, capture_output=True).stdout.strip()
+    saved = loop._load_state(owner, 12)
+    saved["status"] = "resume-in-progress"
+    saved["handoff_head"] = final_head
+    loop._begin_job_attempt(saved, mode="resume", worktree=worktree, start_head=start_head)
+    loop._save_state(owner, saved)
+
+    repaired = loop.run_proof_and_report_job_result(
+        cwd=worktree,
+        session_id=SESSION,
+        proof_commands=[proof_command],
+        push_status="passed",
+        runner=runner,
+    )
+
+    final = loop._load_state(owner, 12)
+    assert repaired["proof_status"] == "passed"
+    assert repaired["ending_head"] == final_head
+    assert repaired["proof_attempt_result"]["starting_head"] == start_head
+    assert repaired["proof_attempt_result"]["ending_head"] == final_head
+    assert repaired["proof_attempt_result"]["metrics"]["new_environment_created"] is False
+    assert repaired["proof_attempt_result"]["metrics"]["environment_reuse"] == "configured-active-environment"
+    assert loop._validated_attempt_result(final, worktree=worktree, start_head=start_head)
+
+
 def test_terminal_repair_rejects_stale_failed_proof_attempt_identity(tmp_path: Path) -> None:
     saved = state(tmp_path, status="resume-in-progress")
     attempt = loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
