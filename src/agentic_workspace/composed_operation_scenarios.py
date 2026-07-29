@@ -187,11 +187,11 @@ def _compiled_decision_supports_contract(decision: dict[str, Any]) -> bool:
         and decision.get("producer_function") == "compile_operating_decision"
         and str(decision.get("decision_id") or "").startswith("operating-decision:")
         and str(decision.get("canonical_decision_input_revision") or "").startswith("sha256:")
-        and selected_owner.get("id") == "direct-work"
-        and decision.get("terminal_state") == "continue"
-        and primary.get("action") == "implement"
-        and primary.get("operation_id") == "implement.context"
-        and primary.get("expected_transition") == "run-focused-proof"
+        and bool(selected_owner.get("id"))
+        and bool(decision.get("terminal_state"))
+        and bool(primary.get("action"))
+        and bool(primary.get("operation_id"))
+        and bool(primary.get("expected_transition"))
     )
 
 
@@ -202,12 +202,13 @@ def _typed_invocation_supports_contract(invocation: dict[str, Any], operating_de
         invocation.get("status") == "observed"
         and invocation.get("producer_module") == "agentic_workspace.actionability"
         and invocation.get("producer_function") == "operation_invocation"
-        and invocation.get("operation_id") == "implement.context"
         and invocation.get("contract_version") == "agentic-workspace/operation/v1"
-        and invocation.get("action") == "implement"
-        and invocation.get("expected_transition") == "run-focused-proof"
+        and invocation.get("operation_id") == _as_dict(operating_decision.get("primary_action")).get("operation_id")
+        and invocation.get("action") == _as_dict(operating_decision.get("primary_action")).get("action")
+        and invocation.get("expected_transition") == _as_dict(operating_decision.get("primary_action")).get("expected_transition")
         and invocation.get("source") == "operating_decision.primary_action.operation_invocation"
         and str(invocation.get("expected_input_revision") or "").startswith("sha256:")
+        and invocation.get("producer_revision") == invocation.get("expected_input_revision")
         and invocation.get("expected_input_revision") == operating_decision.get("canonical_decision_input_revision")
         and bool(invocation.get("idempotency_key"))
         and arguments.get("target") == "."

@@ -57,6 +57,7 @@ def _ordinary_direct_implement_packet() -> dict[str, object]:
                     "status": "observed",
                     "producer_module": "agentic_workspace.actionability",
                     "producer_function": "operation_invocation",
+                    "producer_revision": "sha256:decision",
                     "operation_id": "implement.context",
                     "contract_version": "agentic-workspace/operation/v1",
                     "arguments": {"target": ".", "changed": ["README.md"], "task_present": True},
@@ -169,6 +170,7 @@ def test_composed_operation_contract_is_not_derived_from_fixture_oracles() -> No
     assert 'get("composed_operation_owner_packets")' not in observer_source
     assert "_composed_operation_owner_packets" not in implement_source
     assert "_compiled_direct_work_operation_decision" not in implement_source
+    assert "_ordinary_direct_work_operation_sources" not in implement_source
     assert '"composed_operation_owner_packets"' not in implement_source
     assert "external-intent/issue-2300.json" not in implement_source
     assert "<stale proof command>" not in implement_source
@@ -353,6 +355,37 @@ def test_composed_operation_contract_rejects_implement_authored_invocation_and_d
     implement = _ordinary_direct_implement_packet()
     implement["context"]["operation_authority"]["typed_invocation"]["producer_module"] = "agentic_workspace.workspace_runtime_implement"
     implement["context"]["operation_authority"]["operating_decision"]["producer_module"] = "agentic_workspace.workspace_runtime_implement"
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="fresh-direct-work",
+        active_planning=False,
+        start={},
+        implement=implement,
+        summary={},
+        closeout={},
+    )
+    assert authority_packet == {}
+
+
+def test_composed_operation_contract_rejects_stale_invocation_producer_revision() -> None:
+    implement = _ordinary_direct_implement_packet()
+    implement["context"]["operation_authority"]["typed_invocation"]["producer_revision"] = "sha256:pre-bound"
+    authority_packet = observe_composed_operation_authority(
+        target=Path("."),
+        scenario_id="fresh-direct-work",
+        active_planning=False,
+        start={},
+        implement=implement,
+        summary={},
+        closeout={},
+    )
+    assert authority_packet == {}
+
+
+def test_composed_operation_contract_rejects_plausibly_stamped_reconstruction() -> None:
+    implement = _ordinary_direct_implement_packet()
+    implement["context"]["operation_authority"]["decision"]["owner"] = "direct-work"
+    implement["context"]["operation_authority"]["operating_decision"]["selected_owner"] = {"id": "different-owner"}
     authority_packet = observe_composed_operation_authority(
         target=Path("."),
         scenario_id="fresh-direct-work",

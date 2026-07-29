@@ -873,11 +873,18 @@ def _ordinary_packet_ref_is_contract_authoritative(authority_packet: dict[str, o
         return False
     if not str(operating_decision.get("canonical_decision_input_revision") or "").startswith("sha256:"):
         return False
-    if selected_owner.get("id") != "direct-work" or operating_decision.get("terminal_state") != "continue":
+    decision = authority_packet.get("decision")
+    if not isinstance(decision, dict):
         return False
-    if primary_action.get("action") != "implement" or primary_action.get("operation_id") != "implement.context":
+    if selected_owner.get("id") != decision.get("owner"):
         return False
-    if primary_action.get("expected_transition") != "run-focused-proof":
+    if operating_decision.get("terminal_state") != decision.get("terminal_state"):
+        return False
+    if primary_action.get("action") != decision.get("typed_action"):
+        return False
+    if primary_action.get("expected_transition") != decision.get("next_transition"):
+        return False
+    if not primary_action.get("operation_id"):
         return False
     typed_invocation = ordinary_packet_ref.get("typed_invocation")
     if not isinstance(typed_invocation, dict) or typed_invocation.get("status") != "observed":
@@ -889,15 +896,17 @@ def _ordinary_packet_ref_is_contract_authoritative(authority_packet: dict[str, o
     typed_arguments = typed_invocation.get("arguments")
     if not isinstance(typed_arguments, dict):
         return False
-    if typed_invocation.get("operation_id") != "implement.context":
+    if typed_invocation.get("operation_id") != primary_action.get("operation_id"):
         return False
     if typed_invocation.get("contract_version") != "agentic-workspace/operation/v1":
         return False
-    if typed_invocation.get("action") != "implement":
+    if typed_invocation.get("action") != primary_action.get("action"):
         return False
     if typed_invocation.get("source") != "operating_decision.primary_action.operation_invocation":
         return False
-    if typed_invocation.get("expected_transition") != "run-focused-proof":
+    if typed_invocation.get("expected_transition") != primary_action.get("expected_transition"):
+        return False
+    if typed_invocation.get("producer_revision") != typed_invocation.get("expected_input_revision"):
         return False
     if typed_invocation.get("expected_input_revision") != operating_decision.get("canonical_decision_input_revision"):
         return False

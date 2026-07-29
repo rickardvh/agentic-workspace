@@ -13,14 +13,13 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
-from agentic_workspace.actionability import operation_invocation
 from agentic_workspace.authority_envelope import (
     authority_envelope_payload,
     mutation_baseline_payload_cache_scope,
 )
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
-from agentic_workspace.operating_decision import bind_operation_invocation_to_authorities, compile_operating_decision
+from agentic_workspace.operating_decision import compile_implement_context_operating_decision
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -1450,140 +1449,8 @@ def _tiny_proof_route_maintenance_payload(value: dict[str, Any]) -> dict[str, An
     }
 
 
-def _scope_fingerprint(paths: list[str]) -> str:
+def _projection_scope_fingerprint(paths: list[str]) -> str:
     return "sha256:" + hashlib.sha256(json.dumps(sorted(paths), separators=(",", ":"), ensure_ascii=True).encode()).hexdigest()
-
-
-def _ordinary_direct_work_operation_sources(
-    *,
-    payload: dict[str, Any],
-    planning_gate: dict[str, Any],
-    authority_envelope: dict[str, Any],
-    mutation_baseline: dict[str, Any],
-    operating_loop: dict[str, Any],
-    verification: dict[str, Any],
-    proof_detail_route: str,
-    changed_paths: list[str],
-    allowed_paths: list[str],
-) -> dict[str, Any]:
-    """Return ordinary-route action sources for direct changed-path work.
-
-    The returned records are producer-stamped so later projections can verify
-    that action identity came from ``actionability`` and the composed decision
-    came from ``operating_decision`` instead of a scenario or projection helper.
-    """
-
-    direct_route = (
-        planning_gate.get("gate_result") == "direct-work-allowed"
-        and planning_gate.get("implementation_allowed") is True
-        and planning_gate.get("required_next_action") == "continue-direct"
-    )
-    if not direct_route:
-        return {}
-    scope_fingerprint = _scope_fingerprint(changed_paths)
-    proof_required = (
-        "proof" in proof_detail_route
-        and operating_loop.get("safe_claim") == "blocked"
-        and "run_or_refresh_proof" in [str(item) for item in operating_loop.get("required_before_full_closure", [])]
-        and verification.get("state") == "proof_missing"
-    )
-    authorities = {
-        "target": {
-            "selected_target": "workspace",
-            "revision": str(payload.get("target") or ""),
-            "status": "current",
-        },
-        "planning_owner": {
-            "owner_id": "direct-work",
-            "owner_ref": "planning_safety_gate",
-            "owner_revision": _as_dict(planning_gate.get("planning_revision")).get("state_revision")
-            or _as_dict(planning_gate.get("route_decision")).get("decision_id")
-            or str(planning_gate.get("gate_result") or ""),
-            "status": "current",
-        },
-        "mutation_baseline": {
-            "baseline_id": mutation_baseline.get("baseline_id"),
-            "head": mutation_baseline.get("head"),
-            "scope": {
-                "changed_path_count": len(changed_paths),
-                "allowed_path_count": len(allowed_paths),
-                "changed_scope_fingerprint": scope_fingerprint,
-                "allowed_scope_fingerprint": _scope_fingerprint(allowed_paths),
-            },
-            "revalidation_status": "current" if mutation_baseline.get("status") == "clean-scope" else mutation_baseline.get("status"),
-            "mutation_revision": _as_dict(mutation_baseline.get("observed_state")).get("enforcement_fingerprint"),
-        },
-        "proof": {
-            "proof_obligation_id": proof_detail_route,
-            "status": "required-before-claim" if proof_required else "not-required",
-            "receipt_status": "pending" if proof_required else "not-required",
-        },
-        "executor": {
-            "binding_fingerprint": _as_dict(authority_envelope.get("authority_resolution")).get("resolution_fingerprint")
-            or _as_dict(mutation_baseline.get("observed_state")).get("enforcement_fingerprint"),
-            "availability_status": "available",
-            "invocation_revision": "implement.context",
-            "status": "available",
-        },
-    }
-    invocation = operation_invocation(
-        operation_id="implement.context",
-        arguments={
-            "target": ".",
-            "changed": changed_paths,
-            "task_present": bool(_as_dict(payload.get("task_intent")).get("status") == "present"),
-        },
-        effect_class="derived-output",
-        authority_class="implement-context-owned",
-        expected_transition="run-focused-proof" if proof_required else "inspect-changed-paths",
-        preconditions={
-            "planning_gate_result": str(planning_gate.get("gate_result") or ""),
-            "scope_fingerprint": scope_fingerprint,
-        },
-        command_rendering="agentic-workspace implement --changed <paths> --format json",
-    )
-    bound_invocation = bind_operation_invocation_to_authorities(invocation=invocation, authorities=authorities)
-    bound_invocation = {
-        **bound_invocation,
-        "producer_module": "agentic_workspace.actionability",
-        "producer_function": "operation_invocation",
-    }
-    decision = compile_operating_decision(
-        inputs={
-            "revisions": {
-                "planning_gate": authorities["planning_owner"]["owner_revision"],
-                "mutation": authorities["mutation_baseline"]["mutation_revision"],
-                "proof": proof_detail_route,
-            },
-            "authorities": authorities,
-            "current_work": {"id": "direct-work", "changed_scope_fingerprint": scope_fingerprint},
-            "selected_owner": {"id": "direct-work", "source": "planning_safety_gate"},
-            "terminal_state": "continue",
-            "actionability": {"next_action": {"action": "implement", "operation_invocation": bound_invocation}},
-            "blocked_claim_classes": ["full_completion_until_proof"],
-            "provenance": {
-                "typed_invocation": "actionability.operation_invocation",
-                "decision_compiler": "operating_decision.compile_operating_decision",
-                "authority_sources": [
-                    "planning_safety_gate",
-                    "authority_envelope",
-                    "authority_envelope.mutation_baseline",
-                    "operating_loop.verification",
-                ],
-            },
-        }
-    )
-    return {
-        "kind": "agentic-workspace/ordinary-operation-sources/v1",
-        "producer_module": "agentic_workspace.workspace_runtime_implement",
-        "source_role": "ordinary-route-source-assembly",
-        "typed_invocation": bound_invocation,
-        "operating_decision": {
-            **decision,
-            "producer_module": "agentic_workspace.operating_decision",
-            "producer_function": "compile_operating_decision",
-        },
-    }
 
 
 def _tiny_operation_authority_payload(
@@ -1624,11 +1491,13 @@ def _tiny_operation_authority_payload(
         and bool(compiled_invocation)
         and compiled_invocation.get("expected_input_revision") == compiled_decision.get("canonical_decision_input_revision")
         and source_invocation.get("expected_input_revision") == compiled_invocation.get("expected_input_revision")
+        and source_invocation.get("producer_revision") == source_invocation.get("expected_input_revision")
     )
     typed_invocation = {
         "status": "observed" if compiled_actionable else "missing",
         "producer_module": source_invocation.get("producer_module"),
         "producer_function": source_invocation.get("producer_function"),
+        "producer_revision": source_invocation.get("producer_revision"),
         "operation_id": source_invocation.get("operation_id"),
         "contract_version": source_invocation.get("contract_version"),
         "arguments": source_invocation.get("arguments", {}),
@@ -1670,8 +1539,8 @@ def _tiny_operation_authority_payload(
         "head": baseline.get("head"),
         "allowed_path_count": len(allowed_paths),
         "changed_path_count": len(changed_paths),
-        "allowed_scope_fingerprint": _scope_fingerprint(allowed_paths),
-        "changed_scope_fingerprint": _scope_fingerprint(changed_paths),
+        "allowed_scope_fingerprint": _projection_scope_fingerprint(allowed_paths),
+        "changed_scope_fingerprint": _projection_scope_fingerprint(changed_paths),
         "owner": ownership.get("owner"),
         "enforcement_fingerprint": observed_state.get("enforcement_fingerprint"),
         "stale_revalidation": _as_dict(baseline.get("stale_revalidation")).get("status"),
@@ -1957,8 +1826,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         state_delta_core=state_delta_core,
     )
     proof_detail_route = str(_as_dict(decision_packet.get("detail_routes")).get("proof_detail") or "")
-    operation_sources = _ordinary_direct_work_operation_sources(
-        payload=payload,
+    operation_sources = compile_implement_context_operating_decision(
+        target=str(payload.get("target") or ""),
+        task_present=bool(_as_dict(payload.get("task_intent")).get("status") == "present"),
         planning_gate=_as_dict(payload.get("planning_safety_gate")),
         authority_envelope=_as_dict(payload.get("authority_envelope")),
         mutation_baseline=_as_dict(_as_dict(payload.get("authority_envelope")).get("mutation_baseline")),
