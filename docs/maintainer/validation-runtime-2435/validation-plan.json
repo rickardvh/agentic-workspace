@@ -166,6 +166,7 @@
         "16",
         "tests/test_agentic_workspace_launcher.py",
         "tests/test_compact_command_runner.py",
+        "tests/test_composed_operation_scenarios.py",
         "tests/test_completion_cost_json_corpus.py",
         "tests/test_completion_cost_lane_evidence.py",
         "tests/test_completion_cost_live_behavior_proof.py",
@@ -747,6 +748,19 @@
         "sync.all"
       ],
       "proof_purpose": "generated Python/TypeScript command-package conformance"
+    },
+    "composed operation scenarios": {
+      "id": "composed-operation-scenarios",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "versioned composed-operation scenario contract, checker, fixtures, generated fingerprint, and release fragment gate",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_composed_operation_scenarios.py"
+      ]
     }
   },
   "top_level_invocations": [
@@ -1465,6 +1479,17 @@
       "owner_boundary": "repository hygiene"
     },
     {
+      "id": "composed-operation-scenarios",
+      "make_target": "composed-operation-scenarios",
+      "command": "make composed-operation-scenarios",
+      "dependencies": [
+        "sync.all"
+      ],
+      "proof_purpose": "versioned composed-operation scenario contract, checker, fixtures, generated fingerprint, and release fragment gate",
+      "execution_posture": "serial scenario gate",
+      "owner_boundary": "composed-operation scenario contract authority"
+    },
+    {
       "id": "review-poller",
       "make_target": "start-review-poller",
       "command": "make start-review-poller",
@@ -1685,6 +1710,10 @@
         },
         {
           "constituent_id": "absolute-paths",
+          "outcome": "passed"
+        },
+        {
+          "constituent_id": "composed-operation-scenarios",
           "outcome": "passed"
         }
       ]
