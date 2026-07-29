@@ -73,6 +73,7 @@ WORKSPACE_TEST_GENERATED_RELEASE = \
 WORKSPACE_TEST_INTEGRATION = \
 	tests/test_agentic_workspace_launcher.py \
 	tests/test_compact_command_runner.py \
+	tests/test_composed_operation_scenarios.py \
 	tests/test_completion_cost_json_corpus.py \
 	tests/test_completion_cost_lane_evidence.py \
 	tests/test_completion_cost_live_behavior_proof.py \
@@ -96,7 +97,7 @@ WORKSPACE_TEST_INTEGRATION = \
 	typecheck typecheck-nosync typecheck-workspace typecheck-memory typecheck-planning typecheck-verification \
 	format format-nosync format-workspace format-memory format-planning format-verification \
 	format-check format-check-nosync format-check-workspace format-check-memory format-check-planning format-check-verification \
-	verify verify-nosync verify-workspace verify-memory verify-planning verify-verification \
+	verify verify-nosync verify-workspace verify-memory verify-planning verify-verification composed-operation-scenarios \
 	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict validation-runtime-plan structured-file-inventory structured-file-inventory-changed package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
 	generated-command-packages generated-command-packages-docker \
 	check check-nosync check-bounded-parallel check-memory check-memory-nosync check-planning check-planning-nosync check-verification check-verification-nosync check-all start-review-poller
@@ -354,6 +355,9 @@ schema-reference-docs:
 absolute-paths:
 	@$(COMPACT_RUN) --label "absolute paths" -- uv run python scripts/check/check_no_absolute_paths.py
 
+composed-operation-scenarios:
+	@$(COMPACT_RUN) --label "composed operation scenarios" -- uv run python scripts/check/check_composed_operation_scenarios.py
+
 generated-command-packages:
 	@uv run python scripts/check/run_generated_command_package_proof.py --all
 
@@ -373,13 +377,13 @@ check-verification-nosync: test-verification lint-verification typecheck-verific
 
 check-verification: sync-all check-verification-nosync
 
-check-nosync: test-nosync lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory package-artifact-duplicates agent-aids absolute-paths
+check-nosync: test-nosync lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios
 
 check: sync-all check-nosync
 
 check-bounded-parallel:
 	@$(MAKE) sync-all
 	@$(MAKE) test-workspace-cli WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16'
-	@$(MAKE) -j 4 test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory package-artifact-duplicates agent-aids absolute-paths WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16' WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS='-n 8' MEMORY_PYTEST_PARALLEL_ARGS='-n 8' PLANNING_PYTEST_PARALLEL_ARGS='' VERIFICATION_PYTEST_PARALLEL_ARGS='-n 8'
+	@$(MAKE) -j 4 test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16' WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS='-n 8' MEMORY_PYTEST_PARALLEL_ARGS='-n 8' PLANNING_PYTEST_PARALLEL_ARGS='' VERIFICATION_PYTEST_PARALLEL_ARGS='-n 8'
 
 check-all: check-memory check-planning check-verification

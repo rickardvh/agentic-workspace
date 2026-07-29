@@ -7,6 +7,8 @@
   "required": ["kind", "decision_id", "status", "input_revisions", "primary_action", "external_blocker", "replacement_map", "rule"],
   "properties": {
     "kind": {"const": "agentic-workspace/operating-decision/v1", "description": "Schema discriminator for the composed operating decision."},
+    "producer_module": {"type": "string", "description": "Canonical module that produced the operating decision."},
+    "producer_function": {"type": "string", "description": "Canonical function that produced the operating decision."},
     "decision_id": {"type": "string", "pattern": "^operating-decision:[0-9a-f]{16}$", "description": "Stable identity derived from input revisions, action, blocker, and terminal state."},
     "status": {"type": "string", "enum": ["actionable", "blocked", "terminal"], "description": "Whether the composed decision exposes an action, a blocker, or no immediate action."},
     "input_revisions": {"type": "object", "description": "Revision or freshness identifiers supplied by specialist authority inputs."},
