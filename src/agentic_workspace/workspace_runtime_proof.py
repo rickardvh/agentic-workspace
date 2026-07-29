@@ -151,6 +151,7 @@ INDEPENDENT_REVIEW_RESULT_DIR = Path(".agentic-workspace/local/independent-revie
 INDEPENDENT_REVIEW_RESULT_INDEX_KIND = "agentic-workspace/independent-review-result-index/v1"
 INDEPENDENT_REVIEW_HOST_RESULT_DIR = Path(".agentic-workspace/local/independent-review-host-results")
 INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-review-host-result-index/v1"
+INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_ENV = "AW_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 
 
@@ -6794,11 +6795,36 @@ def _load_independent_review_host_result(*, target_root: Path, host_result_ref: 
         raise WorkspaceUsageError("independent review host result digest does not match the host index.")
     if entry.get("review_result_digest") != _stable_review_json_digest(result):
         raise WorkspaceUsageError("independent review result digest does not match the host index.")
+    if not _host_admits_independent_review_host_result(ref.replace("\\", "/"), host_result):
+        raise WorkspaceUsageError("independent review host result was not admitted by the host boundary.")
     imported = dict(result)
     imported["host_result_ref"] = ref.replace("\\", "/")
     imported["host_result_digest"] = _stable_review_json_digest(host_result)
     imported["host_custody"] = custody
     return imported
+
+
+def _host_admits_independent_review_host_result(host_result_ref: str, host_result: dict[str, Any]) -> bool:
+    try:
+        admissions = json.loads(os.environ.get(INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_ENV, "{}"))
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(admissions, dict):
+        return False
+    admission = admissions.get(host_result_ref)
+    if not isinstance(admission, dict):
+        return False
+    custody = _as_dict(host_result.get("custody"))
+    return (
+        admission.get("kind") == "agentic-workspace/independent-review-host-result-admission/v1"
+        and admission.get("status") == "current"
+        and admission.get("host_result_ref") == host_result_ref
+        and admission.get("host_result_digest") == _stable_review_json_digest(host_result)
+        and admission.get("issuer") in {"github-review-webhook", "human-review-host", "external-review-adapter"}
+        and str(admission.get("producer") or "") == str(custody.get("producer") or "")
+        and not admission.get("revoked_at")
+        and not admission.get("superseded_by")
+    )
 
 
 def record_trusted_independent_review_result(*, target_root: Path, review_result: Mapping[str, Any]) -> dict[str, Any]:
