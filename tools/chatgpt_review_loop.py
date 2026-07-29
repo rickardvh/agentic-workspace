@@ -1018,6 +1018,18 @@ def handoff(
                 recovery="inspect status and stop or clean up stale loop state",
             )
         pr = int(candidates[0]["pr_number"])
+        terminal = candidates[0].get("terminal_result") if isinstance(candidates[0].get("terminal_result"), dict) else {}
+        if terminal.get("proof_status") == "failed":
+            return {
+                "kind": STATE_KIND,
+                "status": "handoff-not-enabled",
+                "pr_number": pr,
+                "head": head,
+                "session_bound": True,
+                "opt_in_added": False,
+                "state_path": _state_path(owner_root, pr).relative_to(owner_root).as_posix(),
+                "blocked_claims": ["handoff-recorded", "merge-ready", "proof-passed"],
+            }
     payload = detached_payload or _pr_view(root, runner, pr=pr, repo=repo if pr else None)
     number = int(payload.get("number", 0))
     if payload.get("state") != "OPEN":

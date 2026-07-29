@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -1228,151 +1229,213 @@ def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
 
 
 def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tmp_path: Path, monkeypatch) -> None:
-    """The dispatched worktree keeps failed proof and repair custody on the ordinary route.
+    """The public review-loop commands preserve failed-proof repair custody.
 
-    This covers the executable #2323 failure route: a fresh session is oriented
-    in its owned worktree, a later changed-path review resumes that same session,
-    the selected proof executor fails on a later command, and a recovered resume
-    must repair with a new producer-owned attempt before recording the final
-    pushed head.  A failed proof never becomes a handoff or merge-ready claim.
+    The sequence uses a real owner repository, a bare remote, one detached
+    dispatcher-owned worktree, public poll/job-result/handoff entrypoints, and
+    the ordinary AW start/implement proof commands selected by the launched job.
     """
-    head_c = "c" * 40
-    first_review = {"id": "fresh", "body": f"Orient\n{marker()}", "url": "u"}
-    runner = FakeRunner(tmp_path, comments=[first_review])
+
+    owner = tmp_path / "owner"
+    remote = tmp_path / "origin.git"
+    branch = "agent/pr-12"
     worktree_root = tmp_path / "worktrees"
-    original_run = runner.run
+    aw_log = tmp_path / "aw-commands.jsonl"
+    session_id = "fresh-session"
     launches: list[tuple[str, Path, str]] = []
     proof_sequences: list[list[str]] = []
+    failed_stop_results: list[int] = []
+    failed_stop_statuses: list[str] = []
 
-    def run(command, *, cwd, env=None):
-        command = list(command)
-        if command[:3] == ["git", "branch", "--show-current"] and cwd != tmp_path:
-            runner.commands.append(command)
-            return subprocess.CompletedProcess(command, 0, "", "")
-        if command[:3] == ["gh", "pr", "list"]:
-            return subprocess.CompletedProcess(
-                command,
-                0,
-                json.dumps(
-                    [{"number": 12, "headRefName": runner.branch, "headRefOid": runner.pr_head, "comments": runner.comments, "url": "u"}]
-                ),
-                "",
-            )
-        if command[:3] == ["git", "fetch", "--no-tags"]:
-            runner.commands.append(command)
-            return subprocess.CompletedProcess(command, 0, "", "")
-        if command == ["git", "rev-parse", "FETCH_HEAD"]:
-            runner.commands.append(command)
-            return subprocess.CompletedProcess(command, 0, runner.pr_head, "")
-        if command[:3] == ["git", "worktree", "add"]:
-            runner.commands.append(command)
-            Path(command[-2]).mkdir(parents=True)
-            return subprocess.CompletedProcess(command, 0, "", "")
-        if command[:2] == ["agentic-workspace", "start"]:
-            runner.commands.append(command)
-            assert "--format" in command and "json" in command
-            return subprocess.CompletedProcess(command, 0, '{"kind":"startup","profile":"compact"}\n', "")
-        if command[:2] == ["agentic-workspace", "implement"]:
-            runner.commands.append(command)
-            assert "--changed" in command
-            return subprocess.CompletedProcess(command, 0, '{"kind":"implement","route":"changed-path"}\n', "")
-        if command == ["pytest", "proof-pass"]:
-            runner.commands.append(command)
-            return subprocess.CompletedProcess(command, 0, "ok", "")
-        if command == ["pytest", "proof-fail"]:
-            runner.commands.append(command)
-            return subprocess.CompletedProcess(command, 1, "", "failed")
-        return original_run(command, cwd=cwd, env=env)
+    def git(args: list[str], *, cwd: Path = owner) -> str:
+        completed = subprocess.run(["git", *args], cwd=cwd, text=True, encoding="utf-8", capture_output=True, check=True)
+        return completed.stdout.strip()
 
-    def stop_hook(worktree: Path) -> None:
-        monkeypatch.setattr(
-            sys,
-            "stdin",
-            io.StringIO(json.dumps({"hook_event_name": "Stop", "cwd": str(worktree), "session_id": "fresh-session"})),
+    subprocess.run(["git", "init", "--bare", remote.as_posix()], text=True, encoding="utf-8", capture_output=True, check=True)
+    owner.mkdir()
+    git(["init"])
+    git(["config", "user.email", "codex@example.test"])
+    git(["config", "user.name", "Codex Test"])
+    (owner / "src").mkdir()
+    (owner / "src" / "app.py").write_text("value = 'initial'\n", encoding="utf-8")
+    git(["add", "src/app.py"])
+    git(["commit", "-m", "initial"])
+    git(["branch", "-M", branch])
+    git(["remote", "add", "origin", remote.as_posix()])
+    git(["push", "-u", "origin", branch])
+    start_head = git(["rev-parse", "HEAD"])
+
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    shim_py = bin_dir / "agentic-workspace.py"
+    shim_py.write_text(
+        "\n".join(
+            [
+                "import json, os, pathlib, sys",
+                f"log = pathlib.Path({aw_log.as_posix()!r})",
+                "args = sys.argv[1:]",
+                "if not args or args[0] not in {'start', 'implement'}:",
+                "    raise SystemExit(2)",
+                "if '--target' not in args or '--task' not in args or '--format' not in args or 'json' not in args:",
+                "    raise SystemExit(3)",
+                "if args[0] == 'implement' and '--changed' not in args:",
+                "    raise SystemExit(4)",
+                "with log.open('a', encoding='utf-8') as handle:",
+                "    handle.write(json.dumps({'argv': args, 'cwd': os.getcwd()}, sort_keys=True) + '\\n')",
+                "print(json.dumps({'kind': args[0], 'next_safe_action': 'continue'}))",
+            ]
         )
-        assert loop.main(["handoff", "--hook"], runner=runner) == 0
-
-    def run_interactive(command, *, cwd, env=None, input_text=""):
-        command = list(command)
-        runner.commands.append(command)
-        mode = "resume" if "resume" in command else "fresh"
-        launches.append((mode, cwd, input_text))
-        assert env and env[loop.OWNER_ROOT_ENV] == tmp_path.as_posix()
-        if mode == "fresh":
-            runner.head = HEAD_B
-            runner.pr_head = HEAD_B
-            runner.pr_heads = [HEAD_A, HEAD_B]
-            proof_commands = [
-                "agentic-workspace start --target . --format json",
-                "agentic-workspace implement --changed src/app.py --format json",
-                "pytest proof-pass",
-            ]
-            proof_sequences.append(proof_commands)
-            loop.run_proof_and_report_job_result(
-                cwd=cwd,
-                session_id="fresh-session",
-                proof_commands=proof_commands,
-                push_status="passed",
-                runner=runner,
-            )
-            stop_hook(cwd)
-        elif len(launches) == 2:
-            runner.head = HEAD_B
-            runner.pr_head = HEAD_B
-            runner.pr_heads = [HEAD_B]
-            proof_commands = [
-                "agentic-workspace start --target . --format json",
-                "agentic-workspace implement --changed src/app.py --format json",
-                "pytest proof-fail",
-            ]
-            proof_sequences.append(proof_commands)
-            loop.run_proof_and_report_job_result(
-                cwd=cwd,
-                session_id="fresh-session",
-                proof_commands=proof_commands,
-                push_status="failed",
-                runner=runner,
-            )
-            stop_hook(cwd)
-        else:
-            runner.head = head_c
-            runner.pr_head = runner.head
-            runner.pr_heads = [HEAD_B, head_c]
-            proof_commands = [
-                "agentic-workspace start --target . --format json",
-                "agentic-workspace implement --changed src/app.py --format json",
-                "pytest proof-pass",
-            ]
-            proof_sequences.append(proof_commands)
-            loop.run_proof_and_report_job_result(
-                cwd=cwd,
-                session_id="fresh-session",
-                proof_commands=proof_commands,
-                push_status="passed",
-                runner=runner,
-            )
-            stop_hook(cwd)
-        return subprocess.CompletedProcess(command, 0, "", "")
-
-    runner.run = run
-    runner.run_interactive = run_interactive
-    monkeypatch.setenv(loop.OWNER_ROOT_ENV, tmp_path.as_posix())
-
-    first = loop.dispatch_all(
-        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
+        + "\n",
+        encoding="utf-8",
     )
-    assert first["mode"] == "fresh"
-    runner.comments = [{"id": "failed", "body": f"Repair the changed path\n{marker(head=HEAD_B)}", "url": "u"}]
-    failed = loop.dispatch_all(
-        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
-    )
+    (bin_dir / "agentic-workspace").write_text(f"#!{sys.executable}\n" + shim_py.read_text(encoding="utf-8"), encoding="utf-8")
+    (bin_dir / "agentic-workspace").chmod(0o755)
+    (bin_dir / "agentic-workspace.cmd").write_text(f'@echo off\r\n"{sys.executable}" "{shim_py}" %*\r\n', encoding="utf-8")
+    monkeypatch.setenv("PATH", bin_dir.as_posix() + os.pathsep + os.environ.get("PATH", ""))
+    monkeypatch.setenv("VIRTUAL_ENV", (owner / ".venv-owner").as_posix())
+    monkeypatch.setenv("UV_ACTIVE", "1")
+    monkeypatch.setenv(loop.OWNER_ROOT_ENV, owner.as_posix())
+    monkeypatch.setenv(loop.OWNER_BRANCH_ENV, branch)
+    monkeypatch.setattr(loop.time, "sleep", lambda _seconds: None)
 
-    assert failed["status"] == "dispatched"
-    assert failed["result"] == {"pr_number": 12, "status": "recovery-required", "event": "proof-failed"}
-    saved = loop._load_state(tmp_path, 12)
+    class RealGitReviewRunner(loop.CommandRunner):
+        def __init__(self) -> None:
+            self.comments: list[dict[str, str]] = [{"id": "fresh", "body": f"Orient\n{marker(head=start_head)}", "url": "u"}]
+            self.commands: list[list[str]] = []
+            self.interactive_inputs: list[str] = []
+
+        def remote_head(self) -> str:
+            output = super().run(["git", "ls-remote", "origin", f"refs/heads/{branch}"], cwd=owner).stdout.strip()
+            return output.split()[0]
+
+        def pr_payload(self) -> dict[str, object]:
+            return {
+                "number": 12,
+                "state": "OPEN",
+                "headRefName": branch,
+                "headRefOid": self.remote_head(),
+                "body": "",
+                "comments": self.comments,
+                "url": "https://example.test/pr/12",
+                "mergeable": "UNKNOWN",
+                "mergeStateStatus": "UNKNOWN",
+                "statusCheckRollup": [],
+            }
+
+        def run(self, command, *, cwd, env=None):
+            command = list(command)
+            self.commands.append(command)
+            if command[:3] == ["gh", "repo", "view"]:
+                return subprocess.CompletedProcess(command, 0, json.dumps({"nameWithOwner": "owner/repo"}), "")
+            if command[:3] == ["gh", "pr", "view"]:
+                return subprocess.CompletedProcess(command, 0, json.dumps(self.pr_payload()), "")
+            if command[:3] == ["gh", "pr", "list"]:
+                return subprocess.CompletedProcess(command, 0, json.dumps([self.pr_payload()]), "")
+            return super().run(command, cwd=cwd, env=env)
+
+        def run_interactive(self, command, *, cwd, env=None, input_text=""):
+            command = list(command)
+            self.commands.append(command)
+            self.interactive_inputs.append(input_text)
+            mode = "resume" if "resume" in command else "fresh"
+            launches.append((mode, cwd, input_text))
+            assert env and env[loop.OWNER_ROOT_ENV] == owner.as_posix()
+            assert env[loop.OWNER_BRANCH_ENV] == branch
+            assert env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] == "1"
+            assert not (cwd / ".venv").exists()
+
+            if mode == "fresh":
+                (cwd / "src" / "app.py").write_text("value = 'fresh'\n", encoding="utf-8")
+                git(["add", "src/app.py"], cwd=cwd)
+                git(["commit", "-m", "fresh repair"], cwd=cwd)
+                git(["push", "origin", f"HEAD:{branch}"], cwd=cwd)
+                proof_commands = [
+                    "agentic-workspace start --target . --task spawned-worktree-proof --format json",
+                    "agentic-workspace implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
+                    "git rev-parse --verify HEAD",
+                ]
+                push_status = "passed"
+            elif len(launches) == 2:
+                (cwd / "src" / "app.py").write_text("value = 'failed-local-repair'\n", encoding="utf-8")
+                git(["add", "src/app.py"], cwd=cwd)
+                git(["commit", "-m", "failed local repair"], cwd=cwd)
+                proof_commands = [
+                    "agentic-workspace start --target . --task spawned-worktree-proof --format json",
+                    "agentic-workspace implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
+                    "git rev-parse --verify refs/heads/definitely-missing-proof-ref",
+                ]
+                push_status = "failed"
+            else:
+                (cwd / "src" / "app.py").write_text("value = 'final-repair'\n", encoding="utf-8")
+                git(["add", "src/app.py"], cwd=cwd)
+                git(["commit", "-m", "final proof repair"], cwd=cwd)
+                git(["push", "origin", f"HEAD:{branch}"], cwd=cwd)
+                proof_commands = [
+                    "agentic-workspace start --target . --task spawned-worktree-proof --format json",
+                    "agentic-workspace implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
+                    "git rev-parse --verify HEAD",
+                ]
+                push_status = "passed"
+
+            proof_sequences.append(proof_commands)
+            assert (
+                loop.main(
+                    [
+                        "job-result",
+                        "--target",
+                        cwd.as_posix(),
+                        "--session-id",
+                        session_id,
+                        "--run-proof-commands-json",
+                        json.dumps(proof_commands),
+                        "--push-status",
+                        push_status,
+                    ],
+                    runner=self,
+                )
+                == 0
+            )
+            monkeypatch.setattr(
+                sys,
+                "stdin",
+                io.StringIO(json.dumps({"hook_event_name": "Stop", "cwd": cwd.as_posix(), "session_id": session_id})),
+            )
+            stop_code = loop.main(["handoff", "--hook"], runner=self)
+            if push_status == "failed":
+                failed_stop_results.append(stop_code)
+                failed_stop_statuses.append(str(loop._load_state(owner, 12)["status"]))
+            else:
+                assert stop_code == 0
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+    runner = RealGitReviewRunner()
+
+    poll_args = [
+        "poll",
+        "--target",
+        owner.as_posix(),
+        "--all-open",
+        "--worktree-root",
+        worktree_root.as_posix(),
+        "--codex-command",
+        'codex -m gpt-5.5 -c model_reasoning_effort="high"',
+        "--max-cycles",
+        "3",
+        "--max-repeated-blockers",
+        "2",
+    ]
+    assert loop.main(poll_args, runner=runner) == 0
+    first_head = runner.remote_head()
+    assert first_head != start_head
+    runner.comments = [{"id": "failed", "body": f"Repair the changed path\n{marker(head=first_head)}", "url": "u"}]
+    assert loop.main(poll_args, runner=runner) == 0
+
+    saved = loop._load_state(owner, 12)
+    assert failed_stop_results == [0]
+    assert failed_stop_statuses == ["resume-in-progress"]
     assert saved["status"] == "recovery-required"
     assert saved["terminal_result"]["proof_status"] == "failed"
-    assert saved["terminal_result"]["failed_command"] == "pytest proof-fail"
+    assert saved["terminal_result"]["failed_command"] == "git rev-parse --verify refs/heads/definitely-missing-proof-ref"
     assert saved["terminal_result"]["proof_commands"] == proof_sequences[1]
     assert saved["terminal_result"]["proof_attempt_result"]["failed_command_index"] == 2
     assert saved["terminal_result"]["proof_attempt_result"]["producer"] == "chatgpt-review-loop.focused-proof-executor"
@@ -1384,27 +1447,27 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
     assert saved["terminal_result"]["repair"]["attempt_revision"] == saved["terminal_result"]["proof_attempt_result"]["attempt_revision"]
     assert saved["terminal_result"]["repair"]["blocked_claims"] == ["handoff-recorded", "merge-ready", "proof-passed"]
     failed_attempt_revision = saved["terminal_result"]["proof_attempt_result"]["attempt_revision"]
-    assert loop.main(["recover", "--target", tmp_path.as_posix(), "--pr", "12", "--action", "continue-waiting"], runner=runner) == 0
-    recovered = loop._load_state(tmp_path, 12)
-    assert recovered["status"] == "awaiting-review"
-    runner.comments = [{"id": "repair", "body": f"Rerun the exact failed proof\n{marker(head=HEAD_B)}", "url": "u"}]
+    failed_attempt_id = saved["terminal_result"]["attempt_id"]
+    assert not loop._validated_attempt_result(saved, worktree=worktree_root / "pr-12", start_head=first_head)
+    assert loop.main(["recover", "--target", owner.as_posix(), "--pr", "12", "--action", "continue-waiting"], runner=runner) == 0
+    runner.comments = [{"id": "repair", "body": f"Rerun the exact failed proof\n{marker(head=first_head)}", "url": "u"}]
 
-    repaired = loop.dispatch_all(
-        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
-    )
+    assert loop.main(poll_args, runner=runner) == 0
 
-    assert repaired["status"] == "dispatched"
-    assert repaired["result"]["status"] == "resumed"
-    final = loop._load_state(tmp_path, 12)
+    final = loop._load_state(owner, 12)
+    pushed_head = runner.remote_head()
     assert final["status"] == "awaiting-review"
     assert final["terminal_result"]["proof_status"] == "passed"
     assert final["terminal_result"]["failed_command"] == ""
     assert final["terminal_result"]["proof_commands"] == proof_sequences[2]
-    assert final["terminal_result"]["ending_head"] == head_c
-    assert final["handoff_head"] == head_c
+    assert final["terminal_result"]["ending_head"] == pushed_head
+    assert final["handoff_head"] == pushed_head
+    assert final["terminal_result"]["attempt_id"] != failed_attempt_id
     assert final["terminal_result"]["proof_attempt_result"]["attempt_revision"] != failed_attempt_revision
     assert final["terminal_result"]["proof_attempt_result"]["producer"] == "chatgpt-review-loop.focused-proof-executor"
-    assert loop._validated_attempt_result(final, worktree=worktree_root / "pr-12", start_head=HEAD_B)
+    assert loop._validated_attempt_result(final, worktree=worktree_root / "pr-12", start_head=first_head)
+    stale_failed_state = {**final, "terminal_result": saved["terminal_result"]}
+    assert not loop._validated_attempt_result(stale_failed_state, worktree=worktree_root / "pr-12", start_head=first_head)
     assert [(mode, worktree) for mode, worktree, _ in launches] == [
         ("fresh", worktree_root / "pr-12"),
         ("resume", worktree_root / "pr-12"),
@@ -1415,6 +1478,8 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
     assert "Rerun the exact failed proof" in launches[2][2]
     assert len([command for command in runner.commands if command[:3] == ["git", "worktree", "add"]]) == 1
     assert not (worktree_root / "pr-12" / ".venv").exists()
+    aw_invocations = [json.loads(line) for line in aw_log.read_text(encoding="utf-8").splitlines()]
+    assert [item["argv"][0] for item in aw_invocations] == ["start", "implement", "start", "implement", "start", "implement"]
 
 
 def test_terminal_repair_names_the_later_failed_proof_not_the_first_command(tmp_path: Path) -> None:
