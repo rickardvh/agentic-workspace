@@ -7,12 +7,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _write_independent_review_host_result(target_root: Path, review_result: dict[str, object]) -> str:
-    import os
+    import base64
+    import subprocess
 
     from agentic_workspace.workspace_runtime_proof import (
-        INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_ENV,
+        INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEY_ID,
         INDEPENDENT_REVIEW_HOST_RESULT_DIR,
         INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
+        _host_result_body_for_admission,
+        _stable_review_json_bytes,
         _stable_review_json_digest,
     )
 
@@ -31,9 +34,64 @@ def _write_independent_review_host_result(target_root: Path, review_result: dict
         },
         "review_result": result,
     }
+    signed_payload = {
+        "kind": "agentic-workspace/independent-review-host-result-admission-payload/v1",
+        "host_result_ref": "",
+        "host_result_body_digest": _stable_review_json_digest(_host_result_body_for_admission(host_result)),
+        "issuer": "github-review-webhook",
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+    }
     host_id = _stable_review_json_digest(host_result)[:24]
     root = target_root / INDEPENDENT_REVIEW_HOST_RESULT_DIR
     path = root / f"{host_id}.json"
+    host_result_ref = path.relative_to(target_root).as_posix()
+    signed_payload["host_result_ref"] = host_result_ref
+    private_key = """-----BEGIN PRIVATE KEY-----
+MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDeRnuGSKyZ1DK0
+IeOFMmnoUPLeGXafks5pL+MTSKhqL9M4hoVfRdQG/sh5hYYPKmn+DkShGFRarFVK
+p8qEskZ+a4H6swiSiQVRaEKZrKJn9PViHbDFg6w+UxKOzUEjn35a0mi3c3VIwqCf
+vKS2GqZ0mVfHmQ5LPm/dG69SS1g3E0/GBd9hd4flb2Kf+icIpCfbuDvXm2qMMHnI
+BNCzigMma/zyDLe4+/YfKRc0j/vhzLvS55LI4cYbyJ03VLssRap+kAJwpp7B9JJU
+0o9mOpXAWxdtlXKx4yZEvHcMHe8a54OxgnJd+nAty06BPFPXjaYgEzRk8xNSqFMB
+rQ/Sc0W5AgMBAAECggEAFUQIyimOkuabhcKmxA31Vj/VZqSoxd5br3Jgjy4gx80E
+0DgFj16MyTEL4N2CnJWWH7OBgyii3Gx3ug1o2a59Qlfajw/dMnjXyIi5M37x6FCG
+QBF/YbxF6M4VnNI8KNJ3+iw+jsul9VTCnZnEp/QPiCEKJgtpk88Y0H6XNOBGw7kA
+dwU/6DOQrEGFCLSWpoXB+YKBF80savEMqYuPikquXMA1XIYZNQK2hUAVovfjMqhR
+6+aSERYm72zpxVWxXA37hd75qPw/8ui1W4fx42gVrjhMclyoYFKVU8tvbDJ9y38D
+vl2ksmXHMLbkA6no6PbPhlR+4ZFQg3uFs1obL584UQKBgQD4Kd3WauVDAaIf4w0W
+fF9hZPtrJimSrOs00hrp0iVyuOOL5kuw0JOTj6rAvj2hNPS6CdgaLSck57LZj0S3
+XXT3dtAH2IkwWFMC+0vkmHCHBWRkmizBL2/r+UGsWrXdQL0RWK90m5YdyBYLDqXp
+wcxfRV7Xnq6Gmeig0h40xusdEQKBgQDlS1Z3EcuAIl5njRCcnFvdKJ49mygg6361
+/ETK/DqCdQMM2StKA+oE+QqK3QuYv33RkW6P5lGksjxuXFUMSPXRy6KUwQ84diDf
+c1uwMbaO8Jz7MrLQHx78uvtbZ4FaZmD2oEda6HCjZsLdhvQxzDv07mStSSfzeuWw
+kWa616m+KQKBgQCoKeazt7gn0eGE7h0eUaVooD9m+nNNe3PfVUj7jXXm6bb4RFSi
+OpTmd4JkHgYxSWtU7frMsjBGZ+PgXZ9ZCjGKx65swqUkZ5XI/XUOMOZ/+H1xVrBh
+ML4ND9ka7FU02vvD1279+7ib8cxOLdzsLHFLVfzQ7Cyj9YOYBwqFBQ6poQKBgQDX
+elkjRGHNZH77KSH3Syk5SLaMhobLiQNm2k97wlTpzDS1mlCIGe2OBsvVe60uOqZu
+jxErwfHvqGAKBlMWXGpGYevDhzpagQibdLkxd0ZsRcoAdsB7vQNN1hno5/gzkAqH
+OlBUKiPQKv3tWKmbMqcVogKSpjEZKuE3cSztYUZvIQKBgQCSl9lwbyoBl0uHkpfr
+73b5i4wyd4ati2SXUS8oDYVtFkcbqNJcktmnQ5Q0D6L9QQKA2FJQekWqRfIq+Pcv
+ioaPTHa3ePxgbiKav/N4iu04Ce9khx/xeXsgslrNgGU6HrySn4FiG10HGYbrOV57
+ptscLbLtU7mXdb4Tfrw9Z0Rpag==
+-----END PRIVATE KEY-----
+"""
+    key_path = target_root / ".agentic-workspace" / "local" / "independent-review-test-host-key.pem"
+    _write(key_path, private_key)
+    completed = subprocess.run(
+        ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
+        input=_stable_review_json_bytes(signed_payload),
+        capture_output=True,
+        check=True,
+    )
+    host_result["host_admission"] = {
+        "kind": "agentic-workspace/independent-review-host-result-admission/v1",
+        "status": "current",
+        "algorithm": "RS256",
+        "key_id": INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEY_ID,
+        "signed_payload": signed_payload,
+        "signature": base64.b64encode(completed.stdout).decode("ascii"),
+    }
     _write(path, json.dumps(host_result, indent=2, sort_keys=True) + "\n")
     index = {
         "kind": INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
@@ -49,17 +107,6 @@ def _write_independent_review_host_result(target_root: Path, review_result: dict
         },
     }
     _write(root / "index.json", json.dumps(index, indent=2, sort_keys=True) + "\n")
-    host_result_ref = path.relative_to(target_root).as_posix()
-    admissions = json.loads(os.environ.get(INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_ENV, "{}"))
-    admissions[host_result_ref] = {
-        "kind": "agentic-workspace/independent-review-host-result-admission/v1",
-        "status": "current",
-        "host_result_ref": host_result_ref,
-        "host_result_digest": _stable_review_json_digest(host_result),
-        "issuer": "github-review-webhook",
-        "producer": host_result["custody"]["producer"],
-    }
-    os.environ[INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_ENV] = json.dumps(admissions, sort_keys=True)
     return host_result_ref
 
 
@@ -7525,9 +7572,10 @@ certification_limits = ["does not certify production authorization safety"]
 
 def test_trusted_independent_review_rejects_jointly_forged_local_host_result(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from agentic_workspace.workspace_runtime_proof import (
-        INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_ENV,
+        INDEPENDENT_REVIEW_HOST_RESULT_DIR,
         WorkspaceUsageError,
         _independent_review_scope_digest,
+        _stable_review_json_digest,
         record_trusted_independent_review_result,
     )
 
@@ -7550,7 +7598,28 @@ def test_trusted_independent_review_rejects_jointly_forged_local_host_result(tmp
         },
     }
     host_result_ref = _write_independent_review_host_result(tmp_path, review_result)
-    monkeypatch.delenv(INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_ENV, raising=False)
+    monkeypatch.setenv(
+        "AW_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS",
+        json.dumps(
+            {
+                host_result_ref: {
+                    "kind": "agentic-workspace/independent-review-host-result-admission/v1",
+                    "status": "current",
+                    "issuer": "github-review-webhook",
+                    "producer": "github-review-adapter",
+                }
+            }
+        ),
+    )
+    host_path = tmp_path / host_result_ref
+    host_result = json.loads(host_path.read_text(encoding="utf-8"))
+    host_result["host_admission"]["signature"] = "caller-forged-signature"
+    _write(host_path, json.dumps(host_result, indent=2, sort_keys=True) + "\n")
+    index_path = tmp_path / INDEPENDENT_REVIEW_HOST_RESULT_DIR / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    host_id = host_path.stem
+    index["results"][host_id]["host_result_digest"] = _stable_review_json_digest(host_result)
+    _write(index_path, json.dumps(index, indent=2, sort_keys=True) + "\n")
 
     with pytest.raises(WorkspaceUsageError, match="host boundary"):
         record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})

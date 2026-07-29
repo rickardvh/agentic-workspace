@@ -6,6 +6,7 @@ monolith keeps compatibility re-exports for legacy private import names.
 
 from __future__ import annotations
 
+import base64
 import copy
 import fnmatch
 import hashlib
@@ -151,7 +152,24 @@ INDEPENDENT_REVIEW_RESULT_DIR = Path(".agentic-workspace/local/independent-revie
 INDEPENDENT_REVIEW_RESULT_INDEX_KIND = "agentic-workspace/independent-review-result-index/v1"
 INDEPENDENT_REVIEW_HOST_RESULT_DIR = Path(".agentic-workspace/local/independent-review-host-results")
 INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-review-host-result-index/v1"
-INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_ENV = "AW_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS"
+INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEY_ID = "github-review-webhook-rsa-2026-07-30"
+INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_PUBLIC_KEYS = {
+    INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEY_ID: {
+        "algorithm": "RS256",
+        "e": 65537,
+        "n": (
+            "de467b8648ac99d432b421e3853269e850f2de19769f92ce692fe31348a86a2f"
+            "d33886855f45d406fec87985860f2a69fe0e44a118545aac554aa7ca84b2467e"
+            "6b81fab30892890551684299aca267f4f5621db0c583ac3e53128ecd41239f7e"
+            "5ad268b7737548c2a09fbca4b61aa6749957c7990e4b3e6fdd1baf524b5837"
+            "134fc605df617787e56f629ffa2708a427dbb83bd79b6a8c3079c804d0b38a"
+            "03266bfcf20cb7b8fbf61f2917348ffbe1ccbbd2e792c8e1c61bc89d3754"
+            "bb2c45aa7e900270a69ec1f49254d28f663a95c05b176d9572b1e32644bc"
+            "770c1def1ae783b182725dfa702dcb4e813c53d78da620133464f31352a8"
+            "5301ad0fd27345b9"
+        ),
+    }
+}
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 
 
@@ -6700,6 +6718,38 @@ def _stable_review_json_digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
+def _stable_review_json_bytes(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
+
+
+def _host_result_body_for_admission(host_result: dict[str, Any]) -> dict[str, Any]:
+    body = dict(host_result)
+    body.pop("host_admission", None)
+    return body
+
+
+def _rsa_sha256_verify(*, message: bytes, signature_b64: str, modulus_hex: str, exponent: int) -> bool:
+    try:
+        signature = base64.b64decode(signature_b64, validate=True)
+        modulus = int(modulus_hex, 16)
+    except (ValueError, TypeError):
+        return False
+    key_size = (modulus.bit_length() + 7) // 8
+    if len(signature) != key_size:
+        return False
+    encoded = pow(int.from_bytes(signature, "big"), exponent, modulus).to_bytes(key_size, "big")
+    digest_info = bytes.fromhex("3031300d060960864801650304020105000420") + hashlib.sha256(message).digest()
+    minimum_padding = 8
+    if not encoded.startswith(b"\x00\x01"):
+        return False
+    separator = encoded.find(b"\x00", 2)
+    if separator < 2 + minimum_padding:
+        return False
+    if encoded[2:separator] != b"\xff" * (separator - 2):
+        return False
+    return encoded[separator + 1 :] == digest_info
+
+
 def _independent_review_scope_digest(changed_paths: list[str] | None) -> str:
     normalized = sorted({str(path).replace("\\", "/").strip() for path in (changed_paths or []) if str(path).strip()})
     return hashlib.sha256(json.dumps(normalized, sort_keys=True).encode("utf-8")).hexdigest()[:20] if normalized else ""
@@ -6805,25 +6855,42 @@ def _load_independent_review_host_result(*, target_root: Path, host_result_ref: 
 
 
 def _host_admits_independent_review_host_result(host_result_ref: str, host_result: dict[str, Any]) -> bool:
-    try:
-        admissions = json.loads(os.environ.get(INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_ENV, "{}"))
-    except json.JSONDecodeError:
-        return False
-    if not isinstance(admissions, dict):
-        return False
-    admission = admissions.get(host_result_ref)
+    admission = host_result.get("host_admission")
     if not isinstance(admission, dict):
         return False
+    signed_payload = admission.get("signed_payload")
+    if not isinstance(signed_payload, dict):
+        return False
+    key_id = str(admission.get("key_id") or "")
+    public_key = INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_PUBLIC_KEYS.get(key_id)
+    if not isinstance(public_key, dict):
+        return False
     custody = _as_dict(host_result.get("custody"))
-    return (
-        admission.get("kind") == "agentic-workspace/independent-review-host-result-admission/v1"
-        and admission.get("status") == "current"
-        and admission.get("host_result_ref") == host_result_ref
-        and admission.get("host_result_digest") == _stable_review_json_digest(host_result)
-        and admission.get("issuer") in {"github-review-webhook", "human-review-host", "external-review-adapter"}
-        and str(admission.get("producer") or "") == str(custody.get("producer") or "")
-        and not admission.get("revoked_at")
-        and not admission.get("superseded_by")
+    expected_payload = {
+        "kind": "agentic-workspace/independent-review-host-result-admission-payload/v1",
+        "host_result_ref": host_result_ref,
+        "host_result_body_digest": _stable_review_json_digest(_host_result_body_for_admission(host_result)),
+        "issuer": str(custody.get("trusted_channel") or ""),
+        "producer": str(custody.get("producer") or ""),
+        "trusted_channel": str(custody.get("trusted_channel") or ""),
+    }
+    if signed_payload != expected_payload:
+        return False
+    if (
+        admission.get("kind") != "agentic-workspace/independent-review-host-result-admission/v1"
+        or admission.get("status") != "current"
+        or admission.get("algorithm") != public_key.get("algorithm")
+        or admission.get("revoked_at")
+        or admission.get("superseded_by")
+    ):
+        return False
+    if signed_payload["issuer"] not in {"github-review-webhook", "human-review-host", "external-review-adapter"}:
+        return False
+    return _rsa_sha256_verify(
+        message=_stable_review_json_bytes(signed_payload),
+        signature_b64=str(admission.get("signature") or ""),
+        modulus_hex=str(public_key.get("n") or ""),
+        exponent=int(public_key.get("e") or 0),
     )
 
 
