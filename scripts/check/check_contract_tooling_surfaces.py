@@ -2699,6 +2699,15 @@ def _validate_workspace_runtime_core_boundary(payload: dict[str, object]) -> lis
 
 def _validate_context_authority_changed_path_enforcement() -> list[str]:
     errors: list[str] = []
+    operating_decision_source = (REPO_ROOT / "src/agentic_workspace/operating_decision.py").read_text(encoding="utf-8")
+    resolver_body = operating_decision_source.partition("def _resolve_context_authority_source(")[2]
+    if "def _context_owner_result(" in operating_decision_source:
+        errors.append("operating decision must use explicit context owner-result adapters, not the generic owner-result factory")
+    if "owner-source-parse-failed" in resolver_body:
+        errors.append("authority resolver must not admit owner currentness from generic parseability/digest evidence")
+    if "CONTEXT_OWNER_RESULT_ADAPTERS" not in operating_decision_source:
+        errors.append("operating decision must declare explicit context owner-result adapter dispatch")
+
     generated = resolve_context_authority_projection(
         consumer="contract-checks",
         task="check generated contract surfaces",

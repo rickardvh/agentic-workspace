@@ -859,6 +859,75 @@ def test_context_authority_projection_rejects_skill_dependency_owner_diagnostics
     assert repair["repair_owner"] == "workspace skill registry"
 
 
+def test_context_authority_projection_propagates_non_current_owner_result(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    from agentic_workspace import operating_decision
+
+    def stale_skill_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+        return {
+            "kind": "agentic-workspace/skill-dependency-closure/v1",
+            "producer": "agentic_workspace.workspace_runtime_core.skill_dependency_resolver",
+            "status": "stale",
+            "surface": surface,
+            "owner": item["owner"],
+            "source_id": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+            "revision": "sha256:stale-skill-owner",
+            "adapter_id": "skills.owner-result",
+            "reason": "fixture-owner-stale",
+        }
+
+    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "skills", stale_skill_adapter)
+
+    projection = resolve_context_authority_projection(
+        consumer="skills",
+        task="route workspace skill",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    skills = next(item for item in projection["excluded_authorities"] if item["surface"] == "skills")
+    assert skills["reason"] == "fixture-owner-stale"
+
+
+def test_context_authority_projection_rejects_forged_owner_result_identity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    from agentic_workspace import operating_decision
+
+    def forged_skill_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+        return {
+            "kind": "agentic-workspace/skill-dependency-closure/v1",
+            "producer": "forged.producer",
+            "status": "current",
+            "surface": surface,
+            "owner": item["owner"],
+            "source_id": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+            "revision": "sha256:forged-skill-owner",
+            "adapter_id": "skills.owner-result",
+        }
+
+    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "skills", forged_skill_adapter)
+
+    projection = resolve_context_authority_projection(
+        consumer="skills",
+        task="route workspace skill",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    skills = next(item for item in projection["excluded_authorities"] if item["surface"] == "skills")
+    assert skills["reason"] == "owner-result-identity-mismatch"
+
+
+def test_context_authority_owner_results_are_adapter_dispatched_not_generic_factory() -> None:
+    source = Path("src/agentic_workspace/operating_decision.py").read_text(encoding="utf-8")
+
+    assert "def _context_owner_result(" not in source
+    assert "CONTEXT_OWNER_RESULT_ADAPTERS" in source
+    assert "owner-source-parse-failed" not in source.partition("def _resolve_context_authority_source(")[2]
+
+
 def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path: Path) -> None:
     (tmp_path / "generated").mkdir(parents=True)
     (tmp_path / "src/agentic_workspace/contracts").mkdir(parents=True)

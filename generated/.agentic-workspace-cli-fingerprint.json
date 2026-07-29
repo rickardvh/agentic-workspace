@@ -1649,7 +1649,7 @@
     "scripts/check/check_completion_cost_live_behavior_proof.py": "62f1626aa54f8a5ce5df465e5d9ea1266cede514",
     "scripts/check/check_completion_cost_schema_analysis.py": "f9f8175241d738e731d662c5037ff4dc0c9fd108",
     "scripts/check/check_composed_operation_scenarios.py": "8acd470d25c36f241947ea8429aa1968618c86a2",
-    "scripts/check/check_contract_tooling_surfaces.py": "1d24aad47d89c9125d9cf8f40c7b558d3357583e",
+    "scripts/check/check_contract_tooling_surfaces.py": "ce2b7a41613fa77598211c58f83c6230d3352183",
     "scripts/check/check_generated_command_packages.py": "b1483fc2c836957255f3b03e397779b6bb204ed5",
     "scripts/check/check_maintainer_surfaces.py": "a8cc22d09e7d1949f9245464b883bf610e095048",
     "scripts/check/check_master_tests.py": "1b0bd134de91073356481c08e3430ee07644970c",
@@ -2042,7 +2042,7 @@
     "src/agentic_workspace/evaluation.py": "533a55cd6ffff18c1bcd453236e92607f9c44210",
     "src/agentic_workspace/generated_operations.py": "add071271394e2471bf3477be2bf3594e4f238e5",
     "src/agentic_workspace/improvement_consequence.py": "82693a891043a25a745ab711a8a87ea2251a6134",
-    "src/agentic_workspace/operating_decision.py": "5a4f6cbd1b3588924405c6646430da3e97d26013",
+    "src/agentic_workspace/operating_decision.py": "1f9f072cffcd6398ed5fc70701f6de384217bc92",
     "src/agentic_workspace/operation_authority_admissions.py": "c6ea0788cb1bb93b91b5dc736af2d44607a531fb",
     "src/agentic_workspace/projection_reuse.py": "a74099ac3579c3e449a7cc98c2284edbbf907839",
     "src/agentic_workspace/proof_receipt_admission.py": "60893fff9ce2710f63fa7c2bf66b114d080a2d94",
@@ -2067,7 +2067,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "1e333dacc29298a34af31e298cb005ba5ebdf81d"
   },
-  "git_index_identity": "6bce5e4461074980cd7b6cdc7a5e06f3392933ce0da0967e6a0ea12b3003c4b5",
+  "git_index_identity": "569454e5e13d9e07c4a66a5079f69db3b93a15f44055cdc95e8f43db9ed90e92",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
