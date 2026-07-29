@@ -111,6 +111,8 @@ def operation_invocation(
     idempotency_key = hashlib.sha256(json.dumps(idempotency_input, sort_keys=True).encode()).hexdigest()[:16]
     invocation = {
         "kind": "agentic-workspace/operation-invocation/v1",
+        "producer_module": "agentic_workspace.actionability",
+        "producer_function": "operation_invocation",
         "operation_id": operation_id,
         "contract_version": "agentic-workspace/operation/v1",
         "arguments": normalized_arguments,
@@ -145,6 +147,7 @@ def operation_invocation(
         "renderings": {"cli": command_rendering} if command_rendering else {},
         "rule": "Operation identity and progress checks use this typed invocation; rendered commands are display or manual recovery text.",
     }
+    invocation["producer_revision"] = invocation_decision_input_revision(invocation)
     return {key: value for key, value in invocation.items() if value not in ("", {}, [], None)}
 
 
