@@ -13,7 +13,7 @@ import json
 import re
 import tomllib
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from agentic_workspace.authority_envelope import mutation_baseline_payload
 from agentic_workspace.config import WorkspaceConfig
@@ -1641,6 +1641,73 @@ def validate_planning_route_action_invocation(
         }
         if status == "rejected"
         else {},
+    }
+
+
+def execute_planning_front_door_route_action(values: Mapping[str, Any]) -> dict[str, Any]:
+    """Runtime admission boundary for the generated ``planning.front-door`` operation.
+
+    Generated clients and command adapters may carry a serialized route-action
+    packet, but this front door must not execute, claim, or mutate from that
+    packet directly.  It re-resolves the live Planning gate for the requested
+    target/task/scope, admits only the exact current invocation identity, then
+    dispatches the finite route action as an explicit no-op/applied/rejected
+    outcome.
+    """
+
+    from agentic_workspace import config as config_lib
+
+    target_root = Path(str(values.get("target") or ".")).resolve()
+    task_text = str(values.get("task") or values.get("task_text") or "")
+    raw_changed = values.get("changed_paths", values.get("changed", values.get("paths", [])))
+    if isinstance(raw_changed, str):
+        changed_paths = [raw_changed]
+    elif isinstance(raw_changed, list):
+        changed_paths = [str(path) for path in raw_changed if str(path)]
+    else:
+        changed_paths = []
+    invocation = _as_dict(values.get("operation_invocation") or values.get("invocation"))
+    config = config_lib.load_workspace_config(target_root=target_root)
+    gate = _planning_safety_gate_payload(
+        target_root=target_root,
+        config=config,
+        changed_paths=changed_paths,
+        task_text=task_text,
+        execution_posture=_as_dict(values.get("execution_posture")),
+    )
+    live_route_decision = _as_dict(gate.get("route_decision"))
+    admission = validate_planning_route_action_invocation(invocation=invocation, live_route_decision=live_route_decision)
+    live_action = _as_dict(live_route_decision.get("next_safe_action"))
+    action_identity = _as_dict(_as_dict(live_action.get("operation_invocation")).get("input_identity"))
+    route_action = str(action_identity.get("route_action") or live_action.get("action") or "")
+    dispatch_table = {
+        "refresh-planning-route-decision": "no-op",
+        "continue-active-plan": "no-op",
+        "prove-current-task": "no-op",
+        "inspect-current-task-scope": "no-op",
+        "choose-task-switch-route": "rejected",
+        "archive-or-retire-completed-plan": "rejected",
+        "apply-planning-reconciliation-proposal": "applied"
+        if _as_dict(live_route_decision.get("reconciliation_proposal")).get("status") == "current"
+        else "rejected",
+    }
+    admitted = admission["status"] == "admitted"
+    outcome = dispatch_table.get(route_action, "rejected") if admitted else "rejected"
+    return {
+        "kind": "agentic-planning/front-door-route-action-result/v1",
+        "status": "admitted" if admitted else "rejected",
+        "operation_id": "planning.front-door",
+        "operation_action": "route-decision-next-action",
+        "target": target_root.as_posix(),
+        "task_digest": _stable_revision(task_text)[:16],
+        "changed_path_count": len(changed_paths),
+        "route_action": route_action,
+        "mutation_outcome": outcome,
+        "claim_outcome": "available-after-proof" if admitted and outcome in {"no-op", "applied"} else "blocked",
+        "admission": admission,
+        "live_route_decision": live_route_decision,
+        "next_safe_action": live_action,
+        "rule": "planning.front-door recomputes and admits the live route decision before any Planning transition, mutation, proof, or claim effect.",
     }
 
 

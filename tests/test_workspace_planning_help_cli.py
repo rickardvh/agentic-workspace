@@ -4,6 +4,7 @@ import json
 
 import pytest
 from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
+from generated.workspace.python.commands import planning_front_door
 
 cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 
@@ -120,6 +121,46 @@ def test_planning_front_door_runs_package_operation(tmp_path, capsys) -> None:
     assert payload["message"] == "Create execplan scaffold 'front-door-plan'"
     assert payload["dry_run"] is True
     assert payload["lifecycle_plan"]["next_safe_command"].startswith("agentic-workspace planning new-plan")
+
+
+def test_planning_front_door_invoke_enforces_live_route_action_admission(tmp_path) -> None:
+    from agentic_workspace import config as config_lib
+    from agentic_workspace.workspace_runtime_planning import _planning_safety_gate_payload
+
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        encoding="utf-8",
+    )
+    config = config_lib.load_workspace_config(target_root=tmp_path)
+    gate = _planning_safety_gate_payload(
+        target_root=tmp_path,
+        config=config,
+        changed_paths=["README.md"],
+        task_text="fix readme",
+        execution_posture={},
+    )
+    invocation = gate["route_decision"]["next_safe_action"]["operation_invocation"]
+
+    admitted = planning_front_door.invoke(
+        {"target": str(tmp_path), "task": "fix readme", "changed_paths": ["README.md"], "operation_invocation": invocation}
+    )
+
+    assert admitted["status"] == "admitted"
+    assert admitted["operation_action"] == "route-decision-next-action"
+    assert admitted["admission"]["status"] == "admitted"
+    assert admitted["mutation_outcome"] in {"no-op", "applied"}
+
+    stale_invocation = json.loads(json.dumps(invocation))
+    stale_invocation["input_revision"] = "sha256:stale-route-action"
+    rejected = planning_front_door.invoke(
+        {"target": str(tmp_path), "task": "fix readme", "changed_paths": ["README.md"], "operation_invocation": stale_invocation}
+    )
+
+    assert rejected["status"] == "rejected"
+    assert rejected["mutation_outcome"] == "rejected"
+    assert "input_revision" in rejected["admission"]["revision_failures"]
 
 
 def test_planning_front_door_runs_lane_create_operation(tmp_path, capsys) -> None:

@@ -9,18 +9,17 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 from __future__ import annotations
 
 import argparse
-
-from typing import Any
+import contextlib
+import io
+import json
 from collections.abc import Mapping
+from typing import Any
+
+from ..cli import build_generated_parser
 
 # DO NOT EDIT DIRECTLY.
 # Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json and the referenced operation contract.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
-
-import contextlib
-import io
-import json
-from ..cli import build_generated_parser
 
 
 def run(args: argparse.Namespace) -> int:
@@ -86,4 +85,6 @@ def run(args: argparse.Namespace) -> int:
 
 
 def invoke(_values: Mapping[str, Any]) -> object:
-    raise RuntimeError('planning.front-door' + ' has no generated operation callable')
+    from agentic_workspace.workspace_runtime_planning import execute_planning_front_door_route_action
+
+    return execute_planning_front_door_route_action(_values)
