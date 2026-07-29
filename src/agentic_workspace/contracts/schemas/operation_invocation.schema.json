@@ -18,6 +18,18 @@
       "const": "agentic-workspace/operation-invocation/v1",
       "description": "Schema discriminator for typed operation invocations."
     },
+    "producer_module": {
+      "type": "string",
+      "description": "Canonical module that produced the typed invocation."
+    },
+    "producer_function": {
+      "type": "string",
+      "description": "Canonical function that produced the typed invocation."
+    },
+    "producer_revision": {
+      "type": "string",
+      "description": "Revision of the producer-owned invocation inputs."
+    },
     "operation_id": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9_.-]*$",

@@ -1,24 +1,24 @@
 {
-  "critical_path_seconds": 470.052145,
+  "critical_path_seconds": 469.826431,
   "kind": "agentic-workspace/validation-run-manifest/v1",
   "outcomes": {
-    "passed": 39
+    "passed": 40
   },
   "plan_identity": {
-    "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-    "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+    "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+    "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
     "issue": 2435,
     "kind": "agentic-workspace/validation-plan-identity/v1",
     "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
     "schema_version": "validation-runtime-plan/v1"
   },
   "repository": {
-    "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+    "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
     "kind": "agentic-workspace/validation-repository-identity/v1",
     "tracked_dirty": false,
-    "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+    "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
   },
-  "result_count": 39,
+  "result_count": 40,
   "results": [
     {
       "command": [
@@ -30,8 +30,8 @@
       "constituent_id": "sync.all",
       "cwd": ".",
       "dependencies": [],
-      "duration_seconds": 0.037493,
-      "ended_at": "2026-07-28T21:23:03.108852+00:00",
+      "duration_seconds": 0.030982,
+      "ended_at": "2026-07-28T22:49:48.165299+00:00",
       "execution_posture": "serial setup",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -40,8 +40,8 @@
       "outcome": "passed",
       "owner_boundary": "root environment",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -49,14 +49,14 @@
       },
       "proof_purpose": "prepare the shared root environment once for a local or CI run",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/sync.all.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:23:03.071309+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/sync.all.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:49:48.134266+00:00",
       "timed_out": false
     },
     {
@@ -88,8 +88,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 246.494588,
-      "ended_at": "2026-07-28T21:27:09.943800+00:00",
+      "duration_seconds": 245.423648,
+      "ended_at": "2026-07-28T22:53:53.933162+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -98,8 +98,8 @@
       "outcome": "passed",
       "owner_boundary": "workspace tests",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -107,14 +107,14 @@
       },
       "proof_purpose": "workspace CLI behavior partition",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-cli.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:23:03.454232+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/test.workspace-cli.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:49:48.518282+00:00",
       "timed_out": false
     },
     {
@@ -134,8 +134,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 108.310987,
-      "ended_at": "2026-07-28T21:28:58.669555+00:00",
+      "duration_seconds": 118.097327,
+      "ended_at": "2026-07-28T22:55:52.356102+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -144,8 +144,8 @@
       "outcome": "passed",
       "owner_boundary": "workspace tests",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -153,14 +153,62 @@
       },
       "proof_purpose": "proof-router and generated proof-package behavior partition",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-proof.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:27:10.360746+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/test.workspace-proof.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:53:54.262961+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-n",
+        "16",
+        "tests/test_chatgpt_review_loop.py",
+        "tests/test_codex_session_identity_agent_aid.py",
+        "tests/test_github_check_inspection.py",
+        "tests/test_pr_comment_delta.py",
+        "tests/test_start_chatgpt_review_poller.py",
+        "tests/test_workspace_session_logging.py"
+      ],
+      "constituent_id": "test.workspace-session-review",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 107.487936,
+      "ended_at": "2026-07-28T22:55:41.749654+00:00",
+      "execution_posture": "serial by default; pytest-xdist opt-in only",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "workspace session and review tests",
+      "log_path": null,
+      "outcome": "passed",
+      "owner_boundary": "workspace tests",
+      "plan_identity": {
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
+        "issue": 2435,
+        "kind": "agentic-workspace/validation-plan-identity/v1",
+        "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
+        "schema_version": "validation-runtime-plan/v1"
+      },
+      "proof_purpose": "session logging and review-loop behavior partition",
+      "repository": {
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
+        "kind": "agentic-workspace/validation-repository-identity/v1",
+        "tracked_dirty": false,
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
+      },
+      "result_path": "scratch/validation-results/local-20260728t224947z/test.workspace-session-review.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:53:54.265524+00:00",
       "timed_out": false
     },
     {
@@ -183,8 +231,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 96.328593,
-      "ended_at": "2026-07-28T21:28:46.703476+00:00",
+      "duration_seconds": 97.379272,
+      "ended_at": "2026-07-28T22:55:31.649351+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -193,8 +241,8 @@
       "outcome": "passed",
       "owner_boundary": "workspace tests",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -202,62 +250,14 @@
       },
       "proof_purpose": "generated-command and release workflow behavior partition",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-generated-release.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:27:10.376812+00:00",
-      "timed_out": false
-    },
-    {
-      "command": [
-        "uv",
-        "run",
-        "pytest",
-        "-n",
-        "16",
-        "tests/test_chatgpt_review_loop.py",
-        "tests/test_codex_session_identity_agent_aid.py",
-        "tests/test_github_check_inspection.py",
-        "tests/test_pr_comment_delta.py",
-        "tests/test_start_chatgpt_review_poller.py",
-        "tests/test_workspace_session_logging.py"
-      ],
-      "constituent_id": "test.workspace-session-review",
-      "cwd": ".",
-      "dependencies": [
-        "sync.all"
-      ],
-      "duration_seconds": 109.581423,
-      "ended_at": "2026-07-28T21:28:59.956216+00:00",
-      "execution_posture": "serial by default; pytest-xdist opt-in only",
-      "exit_code": 0,
-      "kind": "agentic-workspace/validation-constituent-result/v1",
-      "label": "workspace session and review tests",
-      "log_path": null,
-      "outcome": "passed",
-      "owner_boundary": "workspace tests",
-      "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
-        "issue": 2435,
-        "kind": "agentic-workspace/validation-plan-identity/v1",
-        "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
-        "schema_version": "validation-runtime-plan/v1"
-      },
-      "proof_purpose": "session logging and review-loop behavior partition",
-      "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
-        "kind": "agentic-workspace/validation-repository-identity/v1",
-        "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
-      },
-      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-session-review.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:27:10.377006+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/test.workspace-generated-release.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:53:54.273526+00:00",
       "timed_out": false
     },
     {
@@ -284,8 +284,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 49.598737,
-      "ended_at": "2026-07-28T21:27:59.979098+00:00",
+      "duration_seconds": 47.242227,
+      "ended_at": "2026-07-28T22:54:41.514164+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -294,8 +294,8 @@
       "outcome": "passed",
       "owner_boundary": "workspace tests",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -303,14 +303,14 @@
       },
       "proof_purpose": "contract, schema, inventory, and guardrail behavior partition",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-contracts.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:27:10.381327+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/test.workspace-contracts.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:53:54.273598+00:00",
       "timed_out": false
     },
     {
@@ -322,6 +322,7 @@
         "16",
         "tests/test_agentic_workspace_launcher.py",
         "tests/test_compact_command_runner.py",
+        "tests/test_composed_operation_scenarios.py",
         "tests/test_completion_cost_json_corpus.py",
         "tests/test_completion_cost_lane_evidence.py",
         "tests/test_completion_cost_live_behavior_proof.py",
@@ -343,8 +344,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 61.88378,
-      "ended_at": "2026-07-28T21:29:02.391311+00:00",
+      "duration_seconds": 65.57826,
+      "ended_at": "2026-07-28T22:55:47.503315+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -353,8 +354,8 @@
       "outcome": "passed",
       "owner_boundary": "workspace tests",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -362,14 +363,14 @@
       },
       "proof_purpose": "external, lifecycle, launcher, and cost behavior partition",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/test.workspace-integration.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:28:00.508746+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/test.workspace-integration.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:54:41.927345+00:00",
       "timed_out": false
     },
     {
@@ -385,8 +386,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 11.763384,
-      "ended_at": "2026-07-28T21:28:58.895020+00:00",
+      "duration_seconds": 11.524313,
+      "ended_at": "2026-07-28T22:55:43.672576+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -395,8 +396,8 @@
       "outcome": "passed",
       "owner_boundary": "memory package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -404,14 +405,14 @@
       },
       "proof_purpose": "Memory package behavior tests",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/test.memory.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:28:47.131821+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/test.memory.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:32.148623+00:00",
       "timed_out": false
     },
     {
@@ -425,8 +426,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 114.071777,
-      "ended_at": "2026-07-28T21:30:53.123454+00:00",
+      "duration_seconds": 115.911123,
+      "ended_at": "2026-07-28T22:57:37.960697+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -435,8 +436,8 @@
       "outcome": "passed",
       "owner_boundary": "planning package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -444,14 +445,14 @@
       },
       "proof_purpose": "Planning package behavior tests",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/test.planning.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:28:59.053942+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/test.planning.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:42.053607+00:00",
       "timed_out": false
     },
     {
@@ -467,8 +468,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 8.917391,
-      "ended_at": "2026-07-28T21:29:08.215137+00:00",
+      "duration_seconds": 4.241688,
+      "ended_at": "2026-07-28T22:55:48.247075+00:00",
       "execution_posture": "serial by default; pytest-xdist opt-in only",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -477,8 +478,8 @@
       "outcome": "passed",
       "owner_boundary": "verification package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -486,14 +487,14 @@
       },
       "proof_purpose": "Verification package behavior tests",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/test.verification.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:28:59.297876+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/test.verification.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:44.005477+00:00",
       "timed_out": false
     },
     {
@@ -510,8 +511,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.10021,
-      "ended_at": "2026-07-28T21:29:00.405156+00:00",
+      "duration_seconds": 0.133709,
+      "ended_at": "2026-07-28T22:55:48.012991+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -520,8 +521,8 @@
       "outcome": "passed",
       "owner_boundary": "workspace source",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -529,14 +530,14 @@
       },
       "proof_purpose": "workspace lint checks",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/lint.workspace.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:00.304891+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/lint.workspace.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:47.879205+00:00",
       "timed_out": false
     },
     {
@@ -551,8 +552,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 2.293939,
-      "ended_at": "2026-07-28T21:29:03.072509+00:00",
+      "duration_seconds": 2.197383,
+      "ended_at": "2026-07-28T22:55:50.570447+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -561,8 +562,8 @@
       "outcome": "passed",
       "owner_boundary": "workspace prompts",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -570,14 +571,14 @@
       },
       "proof_purpose": "prompt semantic marker lint checks",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/lint.prompt-semantic-markers.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:00.778549+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/lint.prompt-semantic-markers.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:48.373094+00:00",
       "timed_out": false
     },
     {
@@ -593,8 +594,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.077286,
-      "ended_at": "2026-07-28T21:29:02.839819+00:00",
+      "duration_seconds": 0.062362,
+      "ended_at": "2026-07-28T22:55:48.621665+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -603,8 +604,8 @@
       "outcome": "passed",
       "owner_boundary": "memory package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -612,14 +613,14 @@
       },
       "proof_purpose": "Memory package lint checks",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/lint.memory.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:02.762480+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/lint.memory.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:48.559255+00:00",
       "timed_out": false
     },
     {
@@ -640,8 +641,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.945963,
-      "ended_at": "2026-07-28T21:29:04.067336+00:00",
+      "duration_seconds": 0.738242,
+      "ended_at": "2026-07-28T22:55:49.678076+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -650,8 +651,8 @@
       "outcome": "passed",
       "owner_boundary": "memory package docs",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -659,14 +660,14 @@
       },
       "proof_purpose": "Memory package Markdown lint checks",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/lint.memory-markdown.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:03.121343+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/lint.memory-markdown.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:48.939806+00:00",
       "timed_out": false
     },
     {
@@ -682,8 +683,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.058352,
-      "ended_at": "2026-07-28T21:29:03.416261+00:00",
+      "duration_seconds": 0.06184,
+      "ended_at": "2026-07-28T22:55:50.036891+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -692,8 +693,8 @@
       "outcome": "passed",
       "owner_boundary": "planning package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -701,14 +702,14 @@
       },
       "proof_purpose": "Planning package lint checks",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/lint.planning.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:03.357865+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/lint.planning.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:49.974994+00:00",
       "timed_out": false
     },
     {
@@ -724,8 +725,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.062662,
-      "ended_at": "2026-07-28T21:29:03.762647+00:00",
+      "duration_seconds": 0.0659,
+      "ended_at": "2026-07-28T22:55:50.391947+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -734,8 +735,8 @@
       "outcome": "passed",
       "owner_boundary": "verification package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -743,14 +744,14 @@
       },
       "proof_purpose": "Verification package lint checks",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/lint.verification.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:03.699937+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/lint.verification.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:50.325996+00:00",
       "timed_out": false
     },
     {
@@ -766,8 +767,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 1.965143,
-      "ended_at": "2026-07-28T21:29:06.019583+00:00",
+      "duration_seconds": 2.181101,
+      "ended_at": "2026-07-28T22:55:52.877285+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -776,8 +777,8 @@
       "outcome": "passed",
       "owner_boundary": "workspace source",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -785,14 +786,14 @@
       },
       "proof_purpose": "workspace type checks",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/typecheck.workspace.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:04.054430+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/typecheck.workspace.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:50.696217+00:00",
       "timed_out": false
     },
     {
@@ -808,8 +809,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.2275,
-      "ended_at": "2026-07-28T21:29:04.669210+00:00",
+      "duration_seconds": 0.216195,
+      "ended_at": "2026-07-28T22:55:51.175301+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -818,8 +819,8 @@
       "outcome": "passed",
       "owner_boundary": "memory package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -827,14 +828,14 @@
       },
       "proof_purpose": "Memory package type checks",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/typecheck.memory.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:04.441661+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/typecheck.memory.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:50.959050+00:00",
       "timed_out": false
     },
     {
@@ -850,8 +851,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 1.04165,
-      "ended_at": "2026-07-28T21:29:06.030356+00:00",
+      "duration_seconds": 1.091922,
+      "ended_at": "2026-07-28T22:55:52.616661+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -860,8 +861,8 @@
       "outcome": "passed",
       "owner_boundary": "planning package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -869,14 +870,14 @@
       },
       "proof_purpose": "Planning package type checks",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/typecheck.planning.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:04.988674+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/typecheck.planning.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:51.524709+00:00",
       "timed_out": false
     },
     {
@@ -892,8 +893,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.182098,
-      "ended_at": "2026-07-28T21:29:06.466430+00:00",
+      "duration_seconds": 0.206803,
+      "ended_at": "2026-07-28T22:55:52.921451+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -902,8 +903,8 @@
       "outcome": "passed",
       "owner_boundary": "verification package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -911,14 +912,14 @@
       },
       "proof_purpose": "Verification package type checks",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/typecheck.verification.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:06.284280+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/typecheck.verification.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:52.714599+00:00",
       "timed_out": false
     },
     {
@@ -936,8 +937,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.066165,
-      "ended_at": "2026-07-28T21:29:06.420530+00:00",
+      "duration_seconds": 0.068253,
+      "ended_at": "2026-07-28T22:55:53.018446+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -946,8 +947,8 @@
       "outcome": "passed",
       "owner_boundary": "workspace source",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -955,14 +956,14 @@
       },
       "proof_purpose": "workspace formatting check",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/format-check.workspace.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:06.354313+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/format-check.workspace.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:52.950143+00:00",
       "timed_out": false
     },
     {
@@ -979,8 +980,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.061473,
-      "ended_at": "2026-07-28T21:29:06.765764+00:00",
+      "duration_seconds": 0.066068,
+      "ended_at": "2026-07-28T22:55:53.241363+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -989,8 +990,8 @@
       "outcome": "passed",
       "owner_boundary": "memory package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -998,14 +999,14 @@
       },
       "proof_purpose": "Memory package formatting check",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/format-check.memory.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:06.704238+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/format-check.memory.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:53.175243+00:00",
       "timed_out": false
     },
     {
@@ -1022,8 +1023,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.055097,
-      "ended_at": "2026-07-28T21:29:06.797889+00:00",
+      "duration_seconds": 0.069331,
+      "ended_at": "2026-07-28T22:55:53.285234+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1032,8 +1033,8 @@
       "outcome": "passed",
       "owner_boundary": "planning package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1041,14 +1042,14 @@
       },
       "proof_purpose": "Planning package formatting check",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/format-check.planning.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:06.742744+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/format-check.planning.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:53.215853+00:00",
       "timed_out": false
     },
     {
@@ -1065,8 +1066,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.051622,
-      "ended_at": "2026-07-28T21:29:07.107690+00:00",
+      "duration_seconds": 0.061214,
+      "ended_at": "2026-07-28T22:55:53.386129+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1075,8 +1076,8 @@
       "outcome": "passed",
       "owner_boundary": "verification package",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1084,14 +1085,14 @@
       },
       "proof_purpose": "Verification package formatting check",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/format-check.verification.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:07.056020+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/format-check.verification.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:53.324856+00:00",
       "timed_out": false
     },
     {
@@ -1108,8 +1109,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.497176,
-      "ended_at": "2026-07-28T21:29:07.579180+00:00",
+      "duration_seconds": 0.5591,
+      "ended_at": "2026-07-28T22:55:54.095912+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1118,8 +1119,8 @@
       "outcome": "passed",
       "owner_boundary": "workspace CLI",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1127,14 +1128,14 @@
       },
       "proof_purpose": "workspace CLI module verification",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/verify.workspace.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:07.081970+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/verify.workspace.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:53.536774+00:00",
       "timed_out": false
     },
     {
@@ -1151,8 +1152,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.208916,
-      "ended_at": "2026-07-28T21:29:07.695523+00:00",
+      "duration_seconds": 0.241731,
+      "ended_at": "2026-07-28T22:55:53.818504+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1161,8 +1162,8 @@
       "outcome": "passed",
       "owner_boundary": "memory package payload",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1170,14 +1171,14 @@
       },
       "proof_purpose": "Memory package payload verification",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/verify.memory.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:07.486552+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/verify.memory.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:53.576733+00:00",
       "timed_out": false
     },
     {
@@ -1192,8 +1193,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.291117,
-      "ended_at": "2026-07-28T21:29:08.136240+00:00",
+      "duration_seconds": 0.319411,
+      "ended_at": "2026-07-28T22:55:54.006630+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1202,8 +1203,8 @@
       "outcome": "passed",
       "owner_boundary": "planning package payload",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1211,14 +1212,14 @@
       },
       "proof_purpose": "Planning package payload verification",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/verify.planning.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:07.845081+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/verify.planning.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:53.687182+00:00",
       "timed_out": false
     },
     {
@@ -1237,8 +1238,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.204652,
-      "ended_at": "2026-07-28T21:29:08.171387+00:00",
+      "duration_seconds": 0.212254,
+      "ended_at": "2026-07-28T22:55:54.327277+00:00",
       "execution_posture": "serial",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1247,8 +1248,8 @@
       "outcome": "passed",
       "owner_boundary": "verification package report",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1256,14 +1257,14 @@
       },
       "proof_purpose": "Verification package report verification",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/verify.verification.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:07.966684+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/verify.verification.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:54.114965+00:00",
       "timed_out": false
     },
     {
@@ -1282,8 +1283,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 1.830168,
-      "ended_at": "2026-07-28T21:29:10.238041+00:00",
+      "duration_seconds": 2.02896,
+      "ended_at": "2026-07-28T22:55:56.330145+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1292,8 +1293,8 @@
       "outcome": "passed",
       "owner_boundary": "root memory authority",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1301,14 +1302,14 @@
       },
       "proof_purpose": "root Memory report freshness gate",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/memory-freshness.strict.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:08.407858+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/memory-freshness.strict.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:54.301198+00:00",
       "timed_out": false
     },
     {
@@ -1323,8 +1324,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.107296,
-      "ended_at": "2026-07-28T21:29:08.561218+00:00",
+      "duration_seconds": 0.111111,
+      "ended_at": "2026-07-28T22:55:54.512128+00:00",
       "execution_posture": "serial generated-surface check",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1333,8 +1334,8 @@
       "outcome": "passed",
       "owner_boundary": "maintainer generated docs",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1342,14 +1343,14 @@
       },
       "proof_purpose": "regenerate root planning documentation from the managed manifest",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/render-agent-docs.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:08.453866+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/render-agent-docs.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:54.400970+00:00",
       "timed_out": false
     },
     {
@@ -1366,8 +1367,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.19804,
-      "ended_at": "2026-07-28T21:29:08.761467+00:00",
+      "duration_seconds": 0.217229,
+      "ended_at": "2026-07-28T22:55:54.862894+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1376,8 +1377,8 @@
       "outcome": "passed",
       "owner_boundary": "maintainer generated docs",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1385,14 +1386,14 @@
       },
       "proof_purpose": "check generated JSON Schema reference documentation and annotations",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/schema-reference-docs.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:08.563381+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/schema-reference-docs.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:54.645621+00:00",
       "timed_out": false
     },
     {
@@ -1407,8 +1408,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 1.773972,
-      "ended_at": "2026-07-28T21:29:10.636867+00:00",
+      "duration_seconds": 1.885325,
+      "ended_at": "2026-07-28T22:55:56.716656+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1417,8 +1418,8 @@
       "outcome": "passed",
       "owner_boundary": "planning surface authority",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1426,14 +1427,14 @@
       },
       "proof_purpose": "root Planning generated surface freshness gate",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/planning-surfaces.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:08.862879+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/planning-surfaces.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:54.831345+00:00",
       "timed_out": false
     },
     {
@@ -1448,8 +1449,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.369635,
-      "ended_at": "2026-07-28T21:29:09.420752+00:00",
+      "duration_seconds": 0.377662,
+      "ended_at": "2026-07-28T22:55:55.644174+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1458,8 +1459,8 @@
       "outcome": "passed",
       "owner_boundary": "source/payload boundary",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1467,14 +1468,14 @@
       },
       "proof_purpose": "source, payload, and root-install boundary check",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/source-payload-boundary.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:09.051035+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/source-payload-boundary.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:55.266467+00:00",
       "timed_out": false
     },
     {
@@ -1489,8 +1490,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.203761,
-      "ended_at": "2026-07-28T21:29:09.947069+00:00",
+      "duration_seconds": 0.212993,
+      "ended_at": "2026-07-28T22:55:56.183429+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1499,8 +1500,8 @@
       "outcome": "passed",
       "owner_boundary": "maintainer validation runtime",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1508,14 +1509,14 @@
       },
       "proof_purpose": "validation graph, trace, CI/local drift, duplicate, and runtime evidence contract",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/validation-runtime.plan.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:09.743257+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/validation-runtime.plan.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:55.970384+00:00",
       "timed_out": false
     },
     {
@@ -1530,8 +1531,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 14.169941,
-      "ended_at": "2026-07-28T21:29:24.416366+00:00",
+      "duration_seconds": 14.9519,
+      "ended_at": "2026-07-28T22:56:11.446307+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1540,8 +1541,8 @@
       "outcome": "passed",
       "owner_boundary": "structured inventory authority",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1549,14 +1550,14 @@
       },
       "proof_purpose": "complete structured-file inventory no-prune audit",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/structured-file-inventory.full.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:10.246646+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/structured-file-inventory.full.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:56.494872+00:00",
       "timed_out": false
     },
     {
@@ -1571,8 +1572,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.136711,
-      "ended_at": "2026-07-28T21:29:10.685885+00:00",
+      "duration_seconds": 0.160059,
+      "ended_at": "2026-07-28T22:55:56.818108+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1581,8 +1582,8 @@
       "outcome": "passed",
       "owner_boundary": "package artifact authority",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1590,14 +1591,14 @@
       },
       "proof_purpose": "built package archive duplicate-member guardrail",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/package-artifact-duplicates.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:10.549120+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/package-artifact-duplicates.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:56.658002+00:00",
       "timed_out": false
     },
     {
@@ -1612,8 +1613,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 0.304452,
-      "ended_at": "2026-07-28T21:29:11.252247+00:00",
+      "duration_seconds": 0.321469,
+      "ended_at": "2026-07-28T22:55:57.355804+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1622,8 +1623,8 @@
       "outcome": "passed",
       "owner_boundary": "agent aid authority",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1631,14 +1632,14 @@
       },
       "proof_purpose": "checked-in agent aid manifest and coverage guardrail",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/agent-aids.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:10.947746+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/agent-aids.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:57.034292+00:00",
       "timed_out": false
     },
     {
@@ -1653,8 +1654,8 @@
       "dependencies": [
         "sync.all"
       ],
-      "duration_seconds": 1.494253,
-      "ended_at": "2026-07-28T21:29:12.496362+00:00",
+      "duration_seconds": 1.562634,
+      "ended_at": "2026-07-28T22:55:58.706545+00:00",
       "execution_posture": "serial structural gate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1663,8 +1664,8 @@
       "outcome": "passed",
       "owner_boundary": "repository hygiene",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1672,14 +1673,55 @@
       },
       "proof_purpose": "tracked-file absolute filesystem path guardrail",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/absolute-paths.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:11.002091+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/absolute-paths.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:57.143919+00:00",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check/check_composed_operation_scenarios.py"
+      ],
+      "constituent_id": "composed-operation-scenarios",
+      "cwd": ".",
+      "dependencies": [
+        "sync.all"
+      ],
+      "duration_seconds": 10.640416,
+      "ended_at": "2026-07-28T22:56:08.328877+00:00",
+      "execution_posture": "serial scenario gate",
+      "exit_code": 0,
+      "kind": "agentic-workspace/validation-constituent-result/v1",
+      "label": "composed operation scenarios",
+      "log_path": null,
+      "outcome": "passed",
+      "owner_boundary": "composed-operation scenario contract authority",
+      "plan_identity": {
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
+        "issue": 2435,
+        "kind": "agentic-workspace/validation-plan-identity/v1",
+        "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
+        "schema_version": "validation-runtime-plan/v1"
+      },
+      "proof_purpose": "versioned composed-operation scenario contract, checker, fixtures, generated fingerprint, and release fragment gate",
+      "repository": {
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
+        "kind": "agentic-workspace/validation-repository-identity/v1",
+        "tracked_dirty": false,
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
+      },
+      "result_path": "scratch/validation-results/local-20260728t224947z/composed-operation-scenarios.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:57.688774+00:00",
       "timed_out": false
     },
     {
@@ -1700,8 +1742,8 @@
         "verify.memory",
         "verify.planning"
       ],
-      "duration_seconds": 3.072822,
-      "ended_at": "2026-07-28T21:29:14.636671+00:00",
+      "duration_seconds": 3.787191,
+      "ended_at": "2026-07-28T22:56:02.811833+00:00",
       "execution_posture": "serial aggregate",
       "exit_code": 0,
       "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -1710,8 +1752,8 @@
       "outcome": "passed",
       "owner_boundary": "maintainer surface authority",
       "plan_identity": {
-        "file_sha256": "87f2303634de43d51a98c635b98977c467a43f424eff249e059f819c42707c78",
-        "graph_sha256": "794d8036dcf6245b68c95b71c00c4bf41be9b387af30a4cfe64d200fff692223",
+        "file_sha256": "837a28424d6af36446f1d4a3b8a0f57bc1e77fff3c11decceab04b8013decb8d",
+        "graph_sha256": "b786b86fc55989497b977dc59784bb5c9c102287c559b5e84e9294f29ef485ce",
         "issue": 2435,
         "kind": "agentic-workspace/validation-plan-identity/v1",
         "path": "docs/maintainer/validation-runtime-2435/validation-plan.json",
@@ -1719,18 +1761,18 @@
       },
       "proof_purpose": "maintainer generated/doc/source-payload surfaces remain fresh",
       "repository": {
-        "head": "ec4e2eaff401339ec7f44efc25c4e07807d0785e",
+        "head": "8969af43dba72a76af66d88bf8fbfea326cc24bd",
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "tracked_dirty": false,
-        "tree": "dd0bedd22c4d88634e721159a17d0daa0bc5f89c"
+        "tree": "b3cac48b295b816d6b41b7a036827bc7e7100f51"
       },
-      "result_path": "scratch/validation-results/local-20260728t212302z/maintainer-surfaces.json",
-      "run_id": "local-20260728T212302Z",
-      "started_at": "2026-07-28T21:29:11.563853+00:00",
+      "result_path": "scratch/validation-results/local-20260728t224947z/maintainer-surfaces.json",
+      "run_id": "local-20260728T224947Z",
+      "started_at": "2026-07-28T22:55:59.024702+00:00",
       "timed_out": false
     }
   ],
-  "run_id": "local-20260728T212302Z",
-  "summed_work_seconds": 839.040225,
-  "updated_at": "2026-07-28T21:30:53.184540+00:00"
+  "run_id": "local-20260728T224947Z",
+  "summed_work_seconds": 857.726544,
+  "updated_at": "2026-07-28T22:57:38.027778+00:00"
 }
