@@ -76,7 +76,7 @@ def test_workspace_split_targets_preserve_serial_pytest_contract() -> None:
         "$(MAKE) -j 4 test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release "
         "test-workspace-integration test-memory test-planning test-verification lint-nosync typecheck-nosync format-check-nosync "
         "verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory "
-        "package-artifact-duplicates agent-aids absolute-paths WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16' "
+        "package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios WORKSPACE_PYTEST_PARALLEL_ARGS='-n 16' "
         "WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS='-n 8' MEMORY_PYTEST_PARALLEL_ARGS='-n 8' PLANNING_PYTEST_PARALLEL_ARGS='' "
         "VERIFICATION_PYTEST_PARALLEL_ARGS='-n 8'"
     ) in text
