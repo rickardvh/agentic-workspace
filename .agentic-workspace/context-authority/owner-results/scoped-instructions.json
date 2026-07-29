@@ -1,0 +1,11 @@
+{
+  "adapter_id": "scoped-instructions.owner-result",
+  "git_head": "",
+  "kind": "agentic-workspace/scoped-instruction-selection/v1",
+  "owner": "workspace instruction routing",
+  "producer": "agentic_workspace.workspace_runtime_core.scoped_instruction_routing",
+  "source_id": "AGENTS.md",
+  "source_revision": "sha256:6d76ef724bd47076e77f231ff69da83b2381d12c8e7bebd6a7623a53eabdfdca",
+  "status": "current",
+  "surface": "scoped-instructions"
+}

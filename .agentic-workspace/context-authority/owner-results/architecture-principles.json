@@ -1,0 +1,11 @@
+{
+  "adapter_id": "architecture-principles.owner-result",
+  "git_head": "",
+  "kind": "agentic-workspace/architecture-principles-status/v1",
+  "owner": "architecture-principles resolver",
+  "producer": "agentic_workspace.workspace_runtime_core.architecture_principles",
+  "source_id": "SYSTEM_INTENT.md",
+  "source_revision": "sha256:90bc2c7698f37373adf15477e2a482ec01e29318102fb27d0fb7a0e64a7bb623",
+  "status": "current",
+  "surface": "architecture-principles"
+}
