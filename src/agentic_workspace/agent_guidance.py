@@ -19,6 +19,7 @@ from agentic_workspace.config import (
 
 CORRECTION_EVENT_RETENTION_CAP = 20
 GUIDANCE_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/guidance-receipts.json")
+TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-events")
 
 
 def _guidance_now() -> str:
@@ -702,6 +703,80 @@ def _store_guidance_receipt(*, target_root: Path, receipt: dict[str, Any], opera
     }
 
 
+def record_trusted_authority_host_event(
+    *,
+    target_root: Path,
+    authority: str,
+    producer_class: str,
+    producer_id: str,
+    source_ref: str,
+    source: str = "",
+    target_revision: str = "",
+    event_id: str = "",
+    trusted_channel: str = "host-trusted-authority-event",
+) -> dict[str, Any]:
+    if authority not in ADMITTED_CORRECTION_AUTHORITIES:
+        raise WorkspaceUsageError(f"unsupported correction authority: {authority}")
+    if producer_class not in TRUSTED_CORRECTION_PRODUCERS.get(authority, set()):
+        raise WorkspaceUsageError(f"producer class {producer_class!r} is not trusted for {authority}.")
+    if not source_ref:
+        raise WorkspaceUsageError("trusted authority host events require source_ref.")
+    event = {
+        "kind": "agentic-workspace/trusted-authority-host-event/v1",
+        "status": "current",
+        "authority": authority,
+        "producer_class": producer_class,
+        "producer_id": producer_id,
+        "source": source or authority,
+        "source_ref": source_ref,
+        "target_revision": target_revision,
+        "event_id": event_id,
+        "recorded_at": _guidance_now(),
+        "custody": {
+            "producer": "agentic-workspace.trusted-authority-host-event",
+            "trusted_channel": trusted_channel,
+            "rule": "Guidance receipts consume this host event; caller-supplied authority strings alone are not promotion authority.",
+        },
+    }
+    event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
+    event["event_ref"] = event_ref
+    path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(event, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
+    return {
+        "kind": "agentic-workspace/trusted-authority-host-event-result/v1",
+        "status": "stored",
+        "event_ref": event_ref,
+        "event": event,
+        "path": (TRUSTED_AUTHORITY_EVENT_STORE_PATH / path.name).as_posix(),
+    }
+
+
+def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[str, Any]:
+    ref = str(event_ref or "").strip()
+    if not ref.startswith("trusted-authority-event:") or "/" in ref or "\\" in ref:
+        raise WorkspaceUsageError("trusted authority receipts require a trusted host event ref.")
+    path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{ref.removeprefix('trusted-authority-event:')}.json"
+    try:
+        event = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("trusted authority host event is missing or unreadable.") from exc
+    if event.get("kind") != "agentic-workspace/trusted-authority-host-event/v1" or event.get("event_ref") != ref:
+        raise WorkspaceUsageError("trusted authority host event has the wrong contract.")
+    if event.get("status") != "current":
+        raise WorkspaceUsageError("trusted authority host event is not current.")
+    custody = event.get("custody") if isinstance(event.get("custody"), dict) else {}
+    if custody.get("producer") != "agentic-workspace.trusted-authority-host-event":
+        raise WorkspaceUsageError("trusted authority host event is not producer-owned.")
+    authority = str(event.get("authority") or "")
+    producer_class = str(event.get("producer_class") or "")
+    if authority not in ADMITTED_CORRECTION_AUTHORITIES or producer_class not in TRUSTED_CORRECTION_PRODUCERS.get(authority, set()):
+        raise WorkspaceUsageError("trusted authority host event producer is not admitted for this authority.")
+    if not str(event.get("source_ref") or ""):
+        raise WorkspaceUsageError("trusted authority host event is missing source_ref.")
+    return event
+
+
 def record_trusted_authority_receipt(
     *,
     target_root: Path,
@@ -712,13 +787,23 @@ def record_trusted_authority_receipt(
     source: str = "",
     target_revision: str = "",
     event_id: str = "",
+    host_event_ref: str = "",
 ) -> dict[str, Any]:
-    if authority not in ADMITTED_CORRECTION_AUTHORITIES:
-        raise WorkspaceUsageError(f"unsupported correction authority: {authority}")
-    if producer_class not in TRUSTED_CORRECTION_PRODUCERS.get(authority, set()):
-        raise WorkspaceUsageError(f"producer class {producer_class!r} is not trusted for {authority}.")
-    if not source_ref:
-        raise WorkspaceUsageError("trusted authority receipts require source_ref.")
+    event = _trusted_authority_host_event(target_root=target_root, event_ref=host_event_ref)
+    if any(
+        str(event.get(key) or "") != expected
+        for key, expected in {
+            "authority": authority,
+            "producer_class": producer_class,
+            "producer_id": producer_id,
+            "source_ref": source_ref,
+            "source": source or authority,
+            "target_revision": target_revision,
+            "event_id": event_id,
+        }.items()
+        if expected
+    ):
+        raise WorkspaceUsageError("trusted authority receipt inputs do not match the host event.")
     return _store_guidance_receipt(
         target_root=target_root,
         operation_id="agent-guidance.receipt.authorize-correction",
@@ -731,6 +816,7 @@ def record_trusted_authority_receipt(
             "source_ref": source_ref,
             "target_revision": target_revision,
             "event_id": event_id,
+            "host_event_ref": host_event_ref,
         },
     )
 
@@ -744,11 +830,23 @@ def record_guidance_remember_receipt(
     target_revision: str = "",
     event_id: str = "",
     instruction: str = "remember",
+    host_event_ref: str = "",
 ) -> dict[str, Any]:
-    if producer_class not in TRUSTED_CORRECTION_PRODUCERS["explicit-user-correction"]:
-        raise WorkspaceUsageError("remember receipts require a trusted explicit-user-correction producer.")
-    if not source_ref:
-        raise WorkspaceUsageError("remember receipts require source_ref.")
+    event = _trusted_authority_host_event(target_root=target_root, event_ref=host_event_ref)
+    if event.get("authority") != "explicit-user-correction":
+        raise WorkspaceUsageError("remember receipts require an explicit-user-correction host event.")
+    if any(
+        str(event.get(key) or "") != expected
+        for key, expected in {
+            "producer_class": producer_class,
+            "producer_id": producer_id,
+            "source_ref": source_ref,
+            "target_revision": target_revision,
+            "event_id": event_id,
+        }.items()
+        if expected
+    ):
+        raise WorkspaceUsageError("remember receipt inputs do not match the host event.")
     return _store_guidance_receipt(
         target_root=target_root,
         operation_id="agent-guidance.receipt.remember",
@@ -762,6 +860,7 @@ def record_guidance_remember_receipt(
             "target_revision": target_revision,
             "event_id": event_id,
             "instruction": instruction or "remember",
+            "host_event_ref": host_event_ref,
         },
     )
 

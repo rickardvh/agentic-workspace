@@ -1609,6 +1609,7 @@ def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tm
         apply_guidance_promotion,
         guidance_promotion_from_store,
         record_guidance_remember_receipt,
+        record_trusted_authority_host_event,
     )
 
     target = tmp_path / "repo"
@@ -1620,12 +1621,21 @@ def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tm
     )
     store = target / ".agentic-workspace/local/correction-events.json"
     store.parent.mkdir(parents=True, exist_ok=True)
+    host_event = record_trusted_authority_host_event(
+        target_root=target,
+        authority="explicit-user-correction",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source_ref="remember-1",
+        target_revision="rev-b",
+    )
     remember_ref = record_guidance_remember_receipt(
         target_root=target,
         producer_class="human-reviewer",
         producer_id="reviewer-1",
         source_ref="remember-1",
         target_revision="rev-b",
+        host_event_ref=host_event["event_ref"],
     )
     remember_receipt_ref = remember_ref["receipt_ref"]
     store.write_text(
@@ -1708,6 +1718,27 @@ def test_guidance_promotion_rejects_hand_authored_remember_receipt_path(tmp_path
     assert remembered["status"] == "review-required"
     assert remembered["guidance"][0]["promotion_authority"]["remember_receipt"] is None
     assert remembered["guidance"][0]["promotion_authority"]["caller_explicit_remember_ignored"] is True
+
+
+def test_guidance_receipts_require_trusted_host_event_before_authority_storage(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import record_guidance_remember_receipt, record_trusted_authority_receipt
+    from agentic_workspace.config import WorkspaceUsageError
+
+    with pytest.raises(WorkspaceUsageError, match="trusted host event ref"):
+        record_trusted_authority_receipt(
+            target_root=tmp_path,
+            authority="pr-review",
+            producer_class="human-reviewer",
+            producer_id="reviewer-1",
+            source_ref="review-1",
+        )
+    with pytest.raises(WorkspaceUsageError, match="trusted host event ref"):
+        record_guidance_remember_receipt(
+            target_root=tmp_path,
+            producer_class="human-reviewer",
+            producer_id="reviewer-1",
+            source_ref="remember-1",
+        )
 
 
 def test_guidance_promotion_ignores_caller_immediate_remember_without_receipt(tmp_path: Path) -> None:

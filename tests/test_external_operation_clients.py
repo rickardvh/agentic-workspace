@@ -371,8 +371,17 @@ def test_correction_event_generated_operations_store_query_and_preserve_low_auth
         "evidence_hash": "sha256:review-thread-1",
         "route_decisions": ["target-guidance", "target-suitability"],
     }
-    from agentic_workspace.agent_guidance import record_trusted_authority_receipt
+    from agentic_workspace.agent_guidance import record_trusted_authority_host_event, record_trusted_authority_receipt
 
+    host_event = record_trusted_authority_host_event(
+        target_root=tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref="review-thread-1",
+        target_revision="rev-1",
+    )
     receipt_ref = record_trusted_authority_receipt(
         target_root=tmp_path,
         authority="pr-review",
@@ -381,6 +390,7 @@ def test_correction_event_generated_operations_store_query_and_preserve_low_auth
         source="github-review",
         source_ref="review-thread-1",
         target_revision="rev-1",
+        host_event_ref=host_event["event_ref"],
     )["receipt_ref"]
 
     submitted = correction_event_submit(
@@ -456,8 +466,17 @@ def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(
         ),
         encoding="utf-8",
     )
-    from agentic_workspace.agent_guidance import record_trusted_authority_receipt
+    from agentic_workspace.agent_guidance import record_trusted_authority_host_event, record_trusted_authority_receipt
 
+    host_event = record_trusted_authority_host_event(
+        target_root=tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref="review-thread-1",
+        target_revision="rev-1",
+    )
     receipt_ref = record_trusted_authority_receipt(
         target_root=tmp_path,
         authority="pr-review",
@@ -466,6 +485,7 @@ def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(
         source="github-review",
         source_ref="review-thread-1",
         target_revision="rev-1",
+        host_event_ref=host_event["event_ref"],
     )["receipt_ref"]
     event = {
         "delivery_id": "delivery-ts-1",
