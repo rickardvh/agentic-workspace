@@ -19,10 +19,12 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `input_revisions` | object | yes |  | Revision or freshness identifiers supplied by specialist authority inputs. |  |  |
 | `canonical_decision_input_revision` | string | no |  | Canonical revision of the typed action's current owner, context, authority, proof, mutation, evaluation, and executor inputs. |  |  |
 | `context_authority_coverage` | object | no |  | Registry-derived coverage of context authority sources and ordinary consumers considered by the decision compiler. |  |  |
+| `context_authority_projection` | object | no |  | Consumer-specific admitted context authorities and the typed repair operation when any required source is unavailable. |  |  |
 | `current_work` | object | no |  | Current-work identity admitted into the composed decision. |  |  |
 | `selected_owner` | object | no |  | Selected owner identity admitted into the composed decision. |  |  |
 | `terminal_state` | string | no |  | Terminal outcome state used for continuation or finalization claims. |  |  |
 | `primary_action` | object | yes |  | Exactly one typed primary action when status is actionable; empty otherwise. |  |  |
+| `action_identity` | object | no |  | Typed operation identity and live input revision used for execution-safety comparison. |  |  |
 | `external_blocker` | object | yes |  | Exactly one typed blocker when status is blocked; empty otherwise. |  |  |
 | `blocked_claim_classes` | array of string | no |  | Claim classes this decision does not authorize. |  |  |
 | `provenance` | object | no |  | Specialist authority inputs and owners preserved for traceability. |  |  |

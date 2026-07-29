@@ -5749,6 +5749,52 @@ def _improvement_pressure_obligation_for_record(record: dict[str, Any]) -> dict[
     }
 
 
+def _improvement_consequence_for_record(record: dict[str, Any]) -> dict[str, Any]:
+    """Choose one operational consequence for a routed context finding."""
+    state = str(record.get("state") or "").strip()
+    record_id = str(record.get("id") or "improvement-pressure").strip()
+    if state != "active":
+        return {
+            "kind": "agentic-workspace/context-finding-consequence/v1",
+            "finding_ref": record_id,
+            "consequence": "non-applicable",
+            "owner": str(record.get("resulting_owner") or "none"),
+            "reason": f"lifecycle state is {state or 'unknown'}",
+        }
+    obligation = _as_dict(record.get("posture_obligation"))
+    validation_class = str(record.get("validation_failure_class") or "").strip()
+    lifecycle = str(record.get("state") or "unknown")
+    severity = str(record.get("severity") or "").strip()
+    confidence = str(_as_dict(record.get("cost_or_frequency")).get("confidence") or record.get("confidence") or "medium")
+    if validation_class in {"interface_design_error", "unclear_proof_contract"}:
+        consequence = "require-review-now"
+        claim_effect = "blocks"
+        safety_effect = "action-safety-blocking"
+        severity = severity or "blocking"
+        action = str(obligation.get("next_allowed_action") or "record improvement obligation adherence")
+    else:
+        consequence = "create-task-posture-obligation"
+        claim_effect = "blocks" if obligation.get("forbidden_actions") else "advises"
+        safety_effect = "claim-boundary"
+        severity = severity or "attention"
+        action = str(obligation.get("next_allowed_action") or "route active improvement pressure or record accepted-risk")
+    return {
+        "kind": "agentic-workspace/context-finding-consequence/v1",
+        "finding_ref": record_id,
+        "consequence": consequence,
+        "claim_effect": claim_effect,
+        "safety_effect": safety_effect,
+        "severity": severity,
+        "confidence": confidence,
+        "lifecycle": lifecycle,
+        "applicability_stage": str(record.get("applicability_stage") or "current-task"),
+        "owner": str(record.get("resulting_owner") or record.get("owner_surface") or "unknown"),
+        "next_allowed_action": action,
+        "blocked_claims": list(obligation.get("forbidden_actions") or []),
+        "obligation_ref": str(obligation.get("id") or record.get("posture_obligation_ref") or ""),
+    }
+
+
 def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[str, Any]:
     candidates = [item for item in _list_payload(improvement_intake.get("improvement_signal_candidates")) if isinstance(item, dict)]
     records: list[dict[str, Any]] = []
@@ -5792,6 +5838,7 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
             record["issue_ref"] = candidate["issue_ref"]
         if state == "active":
             record["posture_obligation"] = _improvement_pressure_obligation_for_record({**record, "kind": str(candidate.get("kind") or "")})
+        record["consequence"] = _improvement_consequence_for_record(record)
         records.append(record)
     active_records = [record for record in records if record.get("state") == "active"]
     obligations = [record["posture_obligation"] for record in active_records if isinstance(record.get("posture_obligation"), dict)]
@@ -5805,6 +5852,25 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
         "inactive_record_refs": [str(record.get("id")) for record in records if record.get("state") != "active"],
         "posture_obligations": obligations,
         "active_obligation_refs": [str(obligation.get("id")) for obligation in obligations],
+        "primary_consequence": next(
+            (
+                record["consequence"]
+                for record in sorted(
+                    active_records,
+                    key=lambda record: (
+                        0 if str(_as_dict(record.get("consequence")).get("claim_effect") or "") == "blocks" else 1,
+                        0
+                        if str(_as_dict(record.get("consequence")).get("severity") or record.get("severity") or "")
+                        in {"blocking", "critical"}
+                        else 1,
+                        0 if str(_as_dict(record.get("consequence")).get("safety_effect") or "") == "action-safety-blocking" else 1,
+                        str(record.get("id") or ""),
+                    ),
+                )
+                if isinstance(record.get("consequence"), dict)
+            ),
+            {"kind": "agentic-workspace/context-finding-consequence/v1", "consequence": "quiet", "owner": "none"},
+        ),
         "routing_rule": "Active pressure may compile into posture obligations; inactive pressure stays as compact audit detail.",
     }
 
@@ -17658,11 +17724,9 @@ def _operating_loop_planning_state(
             "blocks_full_closure": True,
             "custody": "recommended",
         }
-    task_switch = _as_dict(gate.get("task_switch_reconciliation"))
     if (
-        str(gate.get("gate_result") or "") in {"active-plan-task-switch", "current-task-route-acknowledged"}
+        str(gate.get("gate_result") or "") in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
         and gate.get("workflow_sufficient") is True
-        and str(task_switch.get("status") or "") in {"active", "current-task-route-acknowledged"}
     ):
         return {"state": "unrelated_active_plan", "plan_ref": plan_ref, "blocks_full_closure": False}
     if str(reliance.get("status") or "") not in {"", "no-active-plan", "not-applicable", "clear", "satisfied"}:
@@ -18793,7 +18857,14 @@ def _memory_manifest_notes(target_root: Path | None) -> dict[str, dict[str, Any]
     notes = manifest.get("notes", {})
     if not isinstance(notes, dict):
         return {}
-    return {str(path): note for path, note in notes.items() if isinstance(note, dict)}
+    return {
+        str(path): note
+        for path, note in notes.items()
+        if isinstance(note, dict)
+        and note.get("review_only") is not True
+        and str(note.get("routing_status") or "routable") != "review-only"
+        and str(note.get("task_relevance") or "") != "review-only"
+    }
 
 
 def _note_glob_matches(*, changed_paths: list[str], patterns: Any) -> list[dict[str, str]]:
@@ -21796,22 +21867,30 @@ def _report_closeout_trust_payload(
         )
         task_switch = _as_dict(planning_safety_gate.get("task_switch_reconciliation"))
         route_decision = _as_dict(planning_safety_gate.get("route_decision"))
+        scope_gate = copy.deepcopy(planning_safety_gate)
         if (
-            str(planning_safety_gate.get("gate_result") or "") not in {"active-plan-task-switch", "current-task-route-acknowledged"}
-            or planning_safety_gate.get("workflow_sufficient") is not True
-            or str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
+            str(task_switch.get("status") or "") == "current-task-route-acknowledged"
+            and str(scope_gate.get("gate_result") or "") == "mutation-baseline-required"
+        ):
+            scope_gate["gate_result"] = "current-task-route-acknowledged"
+            scope_gate["status"] = "satisfied"
+            scope_gate["required_next_action"] = "prove-current-task"
+        if planning_safety_gate.get("workflow_sufficient") is not True or (
+            str(planning_safety_gate.get("gate_result") or "")
+            not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
+            and str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
         ):
             return {
                 "kind": "agentic-workspace/current-task-closeout-scope/v1",
                 "status": "not-applicable",
-                "planning_safety_gate": _selector_first_planning_safety_gate(planning_safety_gate),
+                "planning_safety_gate": _selector_first_planning_safety_gate(scope_gate),
             }
         return {
             "kind": "agentic-workspace/current-task-closeout-scope/v1",
             "status": "active",
             "relationship": "bounded-task-switch",
             "changed_paths": normalized_changed_paths,
-            "planning_safety_gate": _selector_first_planning_safety_gate(planning_safety_gate),
+            "planning_safety_gate": _selector_first_planning_safety_gate(scope_gate),
             "route_decision": route_decision,
             "task_switch_reconciliation": task_switch,
             "rule": "The active plan remains protected repo-wide residue; this scope only classifies current bounded-task closeout blockers.",
@@ -28331,20 +28410,13 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "completed-active-plan-route",
         "scope-inspection-required",
     }:
-        safe_routes = [
-            {key: route.get(key) for key in ("id", "command") if isinstance(route, dict) and route.get(key) not in (None, "", [], {})}
-            for route in _list_payload(task_switch.get("safe_routes"))[:3]
-            if isinstance(route, dict)
-        ]
-        active_plan_protection = _as_dict(task_switch.get("active_plan_protection"))
         compact_switch = {
             "kind": task_switch.get("kind"),
             "status": task_switch.get("status"),
             "summary": _task_excerpt(str(task_switch.get("summary") or ""), limit=180),
             "current_task_class": task_switch.get("current_task_class"),
-            "recommended_next_action": task_switch.get("recommended_next_action"),
-            "safe_route_ids": [route.get("id") for route in safe_routes if route.get("id")],
-            "blocked_claims": active_plan_protection.get("blocked_claims", []),
+            "authority": task_switch.get("authority") or "diagnostic-facts-only",
+            "derive_action_from": task_switch.get("derive_action_from") or "planning_safety_gate.route_decision",
             "detail_selector": "planning_safety_gate.task_switch_reconciliation",
         }
         route_acknowledgement = _as_dict(task_switch.get("route_acknowledgement"))
@@ -28354,16 +28426,12 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 for key in (
                     "status",
                     "route",
+                    "acknowledged_by",
                     "changed_path_count",
-                    "claim_boundary",
                     "proof_rule",
-                    "return_to_active_plan",
-                    "stale_thread_cleanup",
                 )
                 if route_acknowledgement.get(key) not in (None, "", [], {})
             }
-        if active_plan_protection.get("claim_boundary"):
-            compact_switch["claim_boundary"] = _task_excerpt(str(active_plan_protection.get("claim_boundary") or ""), limit=180)
         completed_plan = _as_dict(task_switch.get("completed_active_plan"))
         if completed_plan:
             compact_switch["completed_active_plan"] = {
@@ -28373,10 +28441,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                     "active_execplan",
                     "plan_id",
                     "evidence_fields",
-                    "archive_command",
-                    "recheck_command",
                     "parent_lane_boundary",
-                    "claim_boundary",
                 )
                 if completed_plan.get(key) not in (None, "", [], {})
             }
@@ -35804,6 +35869,12 @@ def _reuse_pressure_memory_signals(
     for note_path, raw_note in notes.items():
         if not isinstance(note_path, str) or not isinstance(raw_note, dict):
             continue
+        if (
+            raw_note.get("review_only") is True
+            or str(raw_note.get("routing_status") or "routable") == "review-only"
+            or str(raw_note.get("task_relevance") or "") == "review-only"
+        ):
+            continue
         reason = _reuse_pressure_memory_match_reason(changed_paths=changed_paths, note_path=note_path, note=raw_note)
         if reason is None:
             continue
@@ -41876,6 +41947,7 @@ def _task_posture_packet_payload(
             str(item) for item in _list_payload(improvement_pressure.get("non_applicability_reasons")) if str(item).strip()
         ],
         "detail_command": str(improvement_pressure.get("detail_command") or ""),
+        "primary_consequence": _as_dict(improvement_pressure.get("primary_consequence")),
     }
     improvement_pressure_evaluation = {key: value for key, value in improvement_pressure_evaluation.items() if value not in ("", [], {})}
     relevant_obligations = [

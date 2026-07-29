@@ -41,6 +41,27 @@
       "name": "subcommand",
       "source": "derived",
       "required": false
+    },
+    {
+      "name": "operation_action",
+      "source": "derived",
+      "command_visibility": "runtime-only",
+      "required": false,
+      "description": "Runtime-only action discriminator; route-decision-next-action is admitted by agentic_workspace.workspace_runtime_planning.validate_planning_route_action_invocation."
+    },
+    {
+      "name": "input_identity",
+      "source": "derived",
+      "command_visibility": "runtime-only",
+      "required": false,
+      "description": "agentic-planning/route-action-input/v1 identity containing route_action, task_relation, owner_posture, expected_transition, planning_revision, selected_owner_ref, selected_owner_revision, task_binding_identity, task_binding_mode, mutation_baseline_id, mutation_scope_digest, reconciliation_proposal_id, reconciliation_proposal_revision, and idempotency_key."
+    },
+    {
+      "name": "input_revision",
+      "source": "derived",
+      "command_visibility": "runtime-only",
+      "required": false,
+      "description": "sha256 revision of the route action input identity; stale execution is rejected when it differs from the live route decision."
     }
   ],
   "output": {
@@ -83,12 +104,14 @@
     }
   ],
   "guards": [
-    "Generated code owns parser/help/dispatch shape; module runtime owns package policy and command effects."
+    "Generated code owns parser/help/dispatch shape; module runtime owns package policy and command effects.",
+    "The route-decision-next-action path must pass route-action admission before mutation or claim advancement."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
     "generated command package parser accepts the root front-door command",
-    "runtime adapter boundary remains thin"
+    "runtime adapter boundary remains thin",
+    "route-action admission rejects stale owner, task binding, mutation baseline, and reconciliation proposal identity"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "runtime-consumed"
 }

@@ -16325,9 +16325,9 @@ def _operating_loop_planning_state(
         }
     task_switch = _as_dict(gate.get("task_switch_reconciliation"))
     if (
-        str(gate.get("gate_result") or "") == "active-plan-task-switch"
+        str(gate.get("gate_result") or "") in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
         and gate.get("workflow_sufficient") is True
-        and str(task_switch.get("status") or "") == "active"
+        and str(task_switch.get("status") or "") in {"active", "current-task-route-acknowledged"}
     ):
         return {"state": "unrelated_active_plan", "plan_ref": plan_ref, "blocks_full_closure": False}
     if str(reliance.get("status") or "") not in {"", "no-active-plan", "not-applicable", "clear", "satisfied"}:
@@ -17458,7 +17458,14 @@ def _memory_manifest_notes(target_root: Path | None) -> dict[str, dict[str, Any]
     notes = manifest.get("notes", {})
     if not isinstance(notes, dict):
         return {}
-    return {str(path): note for path, note in notes.items() if isinstance(note, dict)}
+    return {
+        str(path): note
+        for path, note in notes.items()
+        if isinstance(note, dict)
+        and note.get("review_only") is not True
+        and str(note.get("routing_status") or "routable") != "review-only"
+        and str(note.get("task_relevance") or "") != "review-only"
+    }
 
 
 def _note_glob_matches(*, changed_paths: list[str], patterns: Any) -> list[dict[str, str]]:
@@ -19820,22 +19827,32 @@ def _report_closeout_trust_payload(
             execution_posture=execution_posture,
         )
         task_switch = _as_dict(planning_safety_gate.get("task_switch_reconciliation"))
+        route_decision = _as_dict(planning_safety_gate.get("route_decision"))
+        scope_gate = copy.deepcopy(planning_safety_gate)
         if (
-            str(planning_safety_gate.get("gate_result") or "") != "active-plan-task-switch"
-            or planning_safety_gate.get("workflow_sufficient") is not True
-            or str(task_switch.get("status") or "") != "active"
+            str(task_switch.get("status") or "") == "current-task-route-acknowledged"
+            and str(scope_gate.get("gate_result") or "") == "mutation-baseline-required"
+        ):
+            scope_gate["gate_result"] = "current-task-route-acknowledged"
+            scope_gate["status"] = "satisfied"
+            scope_gate["required_next_action"] = "prove-current-task"
+        if planning_safety_gate.get("workflow_sufficient") is not True or (
+            str(planning_safety_gate.get("gate_result") or "")
+            not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
+            and str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
         ):
             return {
                 "kind": "agentic-workspace/current-task-closeout-scope/v1",
                 "status": "not-applicable",
-                "planning_safety_gate": _selector_first_planning_safety_gate(planning_safety_gate),
+                "planning_safety_gate": _selector_first_planning_safety_gate(scope_gate),
             }
         return {
             "kind": "agentic-workspace/current-task-closeout-scope/v1",
             "status": "active",
             "relationship": "bounded-task-switch",
             "changed_paths": normalized_changed_paths,
-            "planning_safety_gate": _selector_first_planning_safety_gate(planning_safety_gate),
+            "planning_safety_gate": _selector_first_planning_safety_gate(scope_gate),
+            "route_decision": route_decision,
             "task_switch_reconciliation": task_switch,
             "rule": "The active plan remains protected repo-wide residue; this scope only classifies current bounded-task closeout blockers.",
         }
@@ -25741,6 +25758,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "mutation_authority",
                 "proof_expectation",
                 "state_update_policy",
+                "action_identity",
+                "legacy_consumer_replacement_map",
                 "reconciliation_proposal",
                 "next_safe_action",
             )
