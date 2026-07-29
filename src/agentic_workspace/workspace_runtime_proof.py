@@ -149,6 +149,8 @@ from agentic_workspace.workspace_runtime_planning import _active_planning_record
 
 INDEPENDENT_REVIEW_RESULT_DIR = Path(".agentic-workspace/local/independent-review-results")
 INDEPENDENT_REVIEW_RESULT_INDEX_KIND = "agentic-workspace/independent-review-result-index/v1"
+INDEPENDENT_REVIEW_HOST_RESULT_DIR = Path(".agentic-workspace/local/independent-review-host-results")
+INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-review-host-result-index/v1"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 
 
@@ -6741,19 +6743,81 @@ def _write_independent_review_receipt_index(path: Path, payload: dict[str, Any],
             pass
 
 
+def _load_independent_review_host_result(*, target_root: Path, host_result_ref: str) -> dict[str, Any]:
+    ref = str(host_result_ref or "").strip()
+    if not ref:
+        raise WorkspaceUsageError("trusted independent review import requires host_result_ref.")
+    if "://" in ref:
+        raise WorkspaceUsageError("independent review host result ref must be repo-relative.")
+    candidate = (target_root / ref).resolve()
+    root = (target_root / INDEPENDENT_REVIEW_HOST_RESULT_DIR).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise WorkspaceUsageError("independent review host result ref must resolve inside the host-result store.") from exc
+    try:
+        host_result = json.loads(candidate.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("independent review host result ref is missing or unreadable.") from exc
+    if not isinstance(host_result, dict) or host_result.get("kind") != "agentic-workspace/independent-review-host-result/v1":
+        raise WorkspaceUsageError("independent review host result has the wrong kind.")
+    if host_result.get("status") != "current":
+        raise WorkspaceUsageError("independent review host result is not current.")
+    custody = _as_dict(host_result.get("custody"))
+    if str(custody.get("trusted_channel") or "").strip() not in {
+        "github-review-webhook",
+        "human-review-host",
+        "external-review-adapter",
+    }:
+        raise WorkspaceUsageError("independent review host result lacks a trusted host channel.")
+    if str(custody.get("producer") or "").strip() in {"", "caller", "implementer", "agent-implementer"}:
+        raise WorkspaceUsageError("independent review host result lacks host/adapter producer custody.")
+    result = host_result.get("review_result")
+    if not isinstance(result, dict):
+        raise WorkspaceUsageError("independent review host result must contain review_result.")
+    result_id = candidate.stem
+    index_path = root / "index.json"
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("independent review host result index is missing or unreadable.") from exc
+    entries = index.get("results") if index.get("kind") == INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND else {}
+    entry = entries.get(result_id) if isinstance(entries, dict) else None
+    if not isinstance(entry, dict):
+        raise WorkspaceUsageError("independent review host result is not registered in the host-result index.")
+    indexed_path = (root / str(entry.get("path") or "")).resolve()
+    if indexed_path != candidate:
+        raise WorkspaceUsageError("independent review host result index path does not match.")
+    if entry.get("status") != "current":
+        raise WorkspaceUsageError("independent review host result index is not current.")
+    if entry.get("host_result_digest") != _stable_review_json_digest(host_result):
+        raise WorkspaceUsageError("independent review host result digest does not match the host index.")
+    if entry.get("review_result_digest") != _stable_review_json_digest(result):
+        raise WorkspaceUsageError("independent review result digest does not match the host index.")
+    imported = dict(result)
+    imported["host_result_ref"] = ref.replace("\\", "/")
+    imported["host_result_digest"] = _stable_review_json_digest(host_result)
+    imported["host_custody"] = custody
+    return imported
+
+
 def record_trusted_independent_review_result(*, target_root: Path, review_result: Mapping[str, Any]) -> dict[str, Any]:
-    """Store a producer-owned independent-review result for later admission by reference."""
-    result = dict(review_result)
+    """Import a host/adapter-produced independent-review result for later admission by reference."""
+    requested = dict(review_result)
+    requested_custody = _as_dict(requested.get("custody"))
+    host_result_ref = str(requested.get("host_result_ref") or requested_custody.get("host_result_ref") or "").strip()
+    result = _load_independent_review_host_result(target_root=target_root, host_result_ref=host_result_ref)
     if result.get("kind") != "agentic-workspace/independent-review-result/v1":
         raise WorkspaceUsageError("trusted independent review result has the wrong kind.")
     custody = _as_dict(result.get("custody"))
-    if custody.get("producer") in {"", None, "caller", "implementer", "agent-implementer"}:
-        raise WorkspaceUsageError("trusted independent review result requires producer-owned custody.")
-    custody.setdefault("trusted_channel", "independent-review-host-result")
-    custody.setdefault(
-        "rule",
-        "assignment.admit consumes indexed review-result references; caller-authored inline review packets are not authority.",
-    )
+    host_custody = _as_dict(result.get("host_custody"))
+    if custody.get("producer") != host_custody.get("producer"):
+        raise WorkspaceUsageError("trusted independent review result custody must match the host producer.")
+    if custody.get("trusted_channel") != host_custody.get("trusted_channel"):
+        raise WorkspaceUsageError("trusted independent review result channel must match the host result.")
+    custody["host_result_ref"] = result["host_result_ref"]
+    custody["host_result_digest"] = result["host_result_digest"]
+    custody["rule"] = "assignment.admit consumes indexed host-imported review-result references; caller-authored packets are not authority."
     result["custody"] = custody
     result["store_status"] = "current"
     result_id = _stable_review_json_digest(result)[:24]

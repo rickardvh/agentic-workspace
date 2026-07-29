@@ -6,6 +6,49 @@ from tests.workspace_cli_support import *
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _write_independent_review_host_result(target_root: Path, review_result: dict[str, object]) -> str:
+    from agentic_workspace.workspace_runtime_proof import (
+        INDEPENDENT_REVIEW_HOST_RESULT_DIR,
+        INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
+        _stable_review_json_digest,
+    )
+
+    result = dict(review_result)
+    custody = dict(result.get("custody") if isinstance(result.get("custody"), dict) else {})
+    custody.update({"producer": "github-review-adapter", "trusted_channel": "github-review-webhook"})
+    result["custody"] = custody
+    host_result = {
+        "kind": "agentic-workspace/independent-review-host-result/v1",
+        "status": "current",
+        "custody": {
+            "producer": "github-review-adapter",
+            "trusted_channel": "github-review-webhook",
+            "authority_ref": custody.get("authority_ref", ""),
+            "source_ref": custody.get("source_ref", ""),
+        },
+        "review_result": result,
+    }
+    host_id = _stable_review_json_digest(host_result)[:24]
+    root = target_root / INDEPENDENT_REVIEW_HOST_RESULT_DIR
+    path = root / f"{host_id}.json"
+    _write(path, json.dumps(host_result, indent=2, sort_keys=True) + "\n")
+    index = {
+        "kind": INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
+        "results": {
+            host_id: {
+                "path": path.relative_to(root).as_posix(),
+                "status": "current",
+                "producer": "github-review-adapter",
+                "trusted_channel": "github-review-webhook",
+                "host_result_digest": _stable_review_json_digest(host_result),
+                "review_result_digest": _stable_review_json_digest(result),
+            }
+        },
+    }
+    _write(root / "index.json", json.dumps(index, indent=2, sort_keys=True) + "\n")
+    return path.relative_to(target_root).as_posix()
+
+
 def _write_repo_local_proof_target(target: Path) -> None:
     _init_git_repo(target)
     _write(
@@ -7378,6 +7421,7 @@ certification_limits = ["does not certify production authorization safety"]
 
 def test_high_assurance_closeout_posture_accepts_admitted_independent_review_receipt(tmp_path: Path, capsys) -> None:
     from agentic_workspace.workspace_runtime_proof import (
+        WorkspaceUsageError,
         _independent_review_scope_digest,
         admit_independent_review_result_operation,
         record_trusted_independent_review_result,
@@ -7422,7 +7466,10 @@ certification_limits = ["does not certify production authorization safety"]
             "source_ref": "pull-request-review:1",
         },
     }
-    trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result=review_result)
+    with pytest.raises(WorkspaceUsageError, match="host_result_ref"):
+        record_trusted_independent_review_result(target_root=tmp_path, review_result=review_result)
+    host_result_ref = _write_independent_review_host_result(tmp_path, review_result)
+    trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
     inline = admit_independent_review_result_operation(
         target_root=tmp_path,
         values={"review_result": review_result, "required_mode": "human", "changed": ["services/auth/policy.py"]},
@@ -7457,6 +7504,7 @@ certification_limits = ["does not certify production authorization safety"]
     assert packet["separation_of_duty"]["authority"] == "repo-local-admitted-independent-review-receipt"
     assert packet["separation_of_duty"]["receipt"]["source_path"] == ".agentic-workspace/local/independent-review-receipts.json"
     assert packet["separation_of_duty"]["receipt"]["receipt_ref"] == receipt["receipt_ref"]
+    assert receipt["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
     assert "high-assurance review separation is required" not in packet["missing_or_unresolved"]["blockers"]
     assert "high-assurance closeout posture evidence is missing" in packet["missing_or_unresolved"]["blockers"]
 
@@ -7502,7 +7550,8 @@ claim_boundary = "critical-access-closeout"
         "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
         "custody": {"producer": "github-review-adapter", "authority_ref": "SECURITY.md#critical-access"},
     }
-    trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result=review_result)
+    host_result_ref = _write_independent_review_host_result(tmp_path, review_result)
+    trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
     admission = admit_independent_review_result_operation(
         target_root=tmp_path,
         values={"review_result_ref": trusted["result_ref"], "required_mode": "human", "changed": ["services/auth/policy.py"]},
