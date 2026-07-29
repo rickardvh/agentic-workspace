@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -51,11 +50,14 @@ def _trusted_guidance_host_event(
     target_revision: str = "",
     event_id: str = "",
 ) -> dict[str, object]:
+    import base64
+
     from agentic_workspace.agent_guidance import (
-        TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV,
+        TRUSTED_AUTHORITY_EVENT_ADMISSION_KEY_ID,
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
+        _guidance_json_bytes,
         _json_digest,
-        _trusted_authority_event_digest,
+        _trusted_authority_event_admission_payload,
     )
 
     event = {
@@ -77,18 +79,56 @@ def _trusted_guidance_host_event(
     }
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
+    signed_payload = _trusted_authority_event_admission_payload(ref=event_ref, event=event)
+    private_key = """-----BEGIN PRIVATE KEY-----
+MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDeRnuGSKyZ1DK0
+IeOFMmnoUPLeGXafks5pL+MTSKhqL9M4hoVfRdQG/sh5hYYPKmn+DkShGFRarFVK
+p8qEskZ+a4H6swiSiQVRaEKZrKJn9PViHbDFg6w+UxKOzUEjn35a0mi3c3VIwqCf
+vKS2GqZ0mVfHmQ5LPm/dG69SS1g3E0/GBd9hd4flb2Kf+icIpCfbuDvXm2qMMHnI
+BNCzigMma/zyDLe4+/YfKRc0j/vhzLvS55LI4cYbyJ03VLssRap+kAJwpp7B9JJU
+0o9mOpXAWxdtlXKx4yZEvHcMHe8a54OxgnJd+nAty06BPFPXjaYgEzRk8xNSqFMB
+rQ/Sc0W5AgMBAAECggEAFUQIyimOkuabhcKmxA31Vj/VZqSoxd5br3Jgjy4gx80E
+0DgFj16MyTEL4N2CnJWWH7OBgyii3Gx3ug1o2a59Qlfajw/dMnjXyIi5M37x6FCG
+QBF/YbxF6M4VnNI8KNJ3+iw+jsul9VTCnZnEp/QPiCEKJgtpk88Y0H6XNOBGw7kA
+dwU/6DOQrEGFCLSWpoXB+YKBF80savEMqYuPikquXMA1XIYZNQK2hUAVovfjMqhR
+6+aSERYm72zpxVWxXA37hd75qPw/8ui1W4fx42gVrjhMclyoYFKVU8tvbDJ9y38D
+vl2ksmXHMLbkA6no6PbPhlR+4ZFQg3uFs1obL584UQKBgQD4Kd3WauVDAaIf4w0W
+fF9hZPtrJimSrOs00hrp0iVyuOOL5kuw0JOTj6rAvj2hNPS6CdgaLSck57LZj0S3
+XXT3dtAH2IkwWFMC+0vkmHCHBWRkmizBL2/r+UGsWrXdQL0RWK90m5YdyBYLDqXp
+wcxfRV7Xnq6Gmeig0h40xusdEQKBgQDlS1Z3EcuAIl5njRCcnFvdKJ49mygg6361
+/ETK/DqCdQMM2StKA+oE+QqK3QuYv33RkW6P5lGksjxuXFUMSPXRy6KUwQ84diDf
+c1uwMbaO8Jz7MrLQHx78uvtbZ4FaZmD2oEda6HCjZsLdhvQxzDv07mStSSfzeuWw
+kWa616m+KQKBgQCoKeazt7gn0eGE7h0eUaVooD9m+nNNe3PfVUj7jXXm6bb4RFSi
+OpTmd4JkHgYxSWtU7frMsjBGZ+PgXZ9ZCjGKx65swqUkZ5XI/XUOMOZ/+H1xVrBh
+ML4ND9ka7FU02vvD1279+7ib8cxOLdzsLHFLVfzQ7Cyj9YOYBwqFBQ6poQKBgQDX
+elkjRGHNZH77KSH3Syk5SLaMhobLiQNm2k97wlTpzDS1mlCIGe2OBsvVe60uOqZu
+jxErwfHvqGAKBlMWXGpGYevDhzpagQibdLkxd0ZsRcoAdsB7vQNN1hno5/gzkAqH
+OlBUKiPQKv3tWKmbMqcVogKSpjEZKuE3cSztYUZvIQKBgQCSl9lwbyoBl0uHkpfr
+73b5i4wyd4ati2SXUS8oDYVtFkcbqNJcktmnQ5Q0D6L9QQKA2FJQekWqRfIq+Pcv
+ioaPTHa3ePxgbiKav/N4iu04Ce9khx/xeXsgslrNgGU6HrySn4FiG10HGYbrOV57
+ptscLbLtU7mXdb4Tfrw9Z0Rpag==
+-----END PRIVATE KEY-----
+"""
+    key_path = target_root / ".agentic-workspace" / "local" / "trusted-authority-test-host-key.pem"
+    key_path.parent.mkdir(parents=True, exist_ok=True)
+    key_path.write_text(private_key, encoding="utf-8")
+    completed = subprocess.run(
+        ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
+        input=_guidance_json_bytes(signed_payload),
+        capture_output=True,
+        check=True,
+    )
+    event["host_admission"] = {
+        "kind": "agentic-workspace/trusted-authority-host-admission/v1",
+        "status": "current",
+        "algorithm": "RS256",
+        "key_id": TRUSTED_AUTHORITY_EVENT_ADMISSION_KEY_ID,
+        "signed_payload": signed_payload,
+        "signature": base64.b64encode(completed.stdout).decode("ascii"),
+    }
     path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(event, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    admissions = json.loads(os.environ.get(TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV, "{}"))
-    admissions[event_ref] = {
-        "kind": "agentic-workspace/trusted-authority-host-admission/v1",
-        "status": "current",
-        "event_ref": event_ref,
-        "event_digest": _trusted_authority_event_digest(event),
-        "issuer": "github-review-webhook",
-    }
-    os.environ[TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV] = json.dumps(admissions, sort_keys=True)
     return {"event_ref": event_ref, "event": event}
 
 

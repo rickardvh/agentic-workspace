@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
@@ -20,7 +21,24 @@ from agentic_workspace.config import (
 CORRECTION_EVENT_RETENTION_CAP = 20
 GUIDANCE_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/guidance-receipts.json")
 TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-events")
-TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV = "AW_TRUSTED_AUTHORITY_EVENT_ADMISSIONS"
+TRUSTED_AUTHORITY_EVENT_ADMISSION_KEY_ID = "trusted-authority-host-rsa-2026-07-30"
+TRUSTED_AUTHORITY_EVENT_ADMISSION_PUBLIC_KEYS = {
+    TRUSTED_AUTHORITY_EVENT_ADMISSION_KEY_ID: {
+        "algorithm": "RS256",
+        "e": 65537,
+        "n": (
+            "de467b8648ac99d432b421e3853269e850f2de19769f92ce692fe31348a86a2f"
+            "d33886855f45d406fec87985860f2a69fe0e44a118545aac554aa7ca84b2467e"
+            "6b81fab30892890551684299aca267f4f5621db0c583ac3e53128ecd41239f7e"
+            "5ad268b7737548c2a09fbca4b61aa6749957c7990e4b3e6fdd1baf524b5837"
+            "134fc605df617787e56f629ffa2708a427dbb83bd79b6a8c3079c804d0b38a"
+            "03266bfcf20cb7b8fbf61f2917348ffbe1ccbbd2e792c8e1c61bc89d3754"
+            "bb2c45aa7e900270a69ec1f49254d28f663a95c05b176d9572b1e32644bc"
+            "770c1def1ae783b182725dfa702dcb4e813c53d78da620133464f31352a8"
+            "5301ad0fd27345b9"
+        ),
+    }
+}
 
 
 def _guidance_now() -> str:
@@ -726,25 +744,69 @@ def _trusted_authority_event_digest(event: dict[str, Any]) -> str:
     return _json_digest({key: value for key, value in event.items() if key != "host_admission"})
 
 
-def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any]) -> bool:
-    raw = os.environ.get(TRUSTED_AUTHORITY_EVENT_ADMISSION_ENV, "")
+def _trusted_authority_event_admission_payload(*, ref: str, event: dict[str, Any]) -> dict[str, Any]:
+    raw_custody = event.get("custody")
+    custody = raw_custody if isinstance(raw_custody, dict) else {}
+    return {
+        "kind": "agentic-workspace/trusted-authority-host-admission-payload/v1",
+        "event_ref": ref,
+        "event_digest": _trusted_authority_event_digest(event),
+        "authority": str(event.get("authority") or ""),
+        "producer_class": str(event.get("producer_class") or ""),
+        "producer": str(custody.get("producer") or ""),
+        "trusted_channel": str(custody.get("trusted_channel") or ""),
+        "source_ref": str(event.get("source_ref") or ""),
+        "target_revision": str(event.get("target_revision") or ""),
+    }
+
+
+def _guidance_json_bytes(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
+
+
+def _rsa_sha256_verify(*, message: bytes, signature_b64: str, modulus_hex: str, exponent: int) -> bool:
     try:
-        admissions = json.loads(raw) if raw.strip() else {}
-    except json.JSONDecodeError:
-        admissions = {}
-    if not isinstance(admissions, dict):
+        signature = base64.b64decode(signature_b64, validate=True)
+        modulus = int(modulus_hex, 16)
+    except (TypeError, ValueError):
         return False
-    admitted = admissions.get(ref)
+    key_size = (modulus.bit_length() + 7) // 8
+    if len(signature) != key_size:
+        return False
+    encoded = pow(int.from_bytes(signature, "big"), exponent, modulus).to_bytes(key_size, "big")
+    digest_info = bytes.fromhex("3031300d060960864801650304020105000420") + hashlib.sha256(message).digest()
+    separator = encoded.find(b"\x00", 2)
+    if not encoded.startswith(b"\x00\x01") or separator < 10:
+        return False
+    if encoded[2:separator] != b"\xff" * (separator - 2):
+        return False
+    return encoded[separator + 1 :] == digest_info
+
+
+def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any]) -> bool:
+    admitted = event.get("host_admission")
     if not isinstance(admitted, dict):
         return False
-    return (
-        admitted.get("kind") == "agentic-workspace/trusted-authority-host-admission/v1"
-        and admitted.get("status") == "current"
-        and admitted.get("event_ref") == ref
-        and admitted.get("event_digest") == _trusted_authority_event_digest(event)
-        and admitted.get("issuer") in {"github-review-webhook", "human-instruction-host", "evaluation-result-adapter"}
-        and not admitted.get("revoked_at")
-        and not admitted.get("superseded_by")
+    signed_payload = admitted.get("signed_payload")
+    if not isinstance(signed_payload, dict) or signed_payload != _trusted_authority_event_admission_payload(ref=ref, event=event):
+        return False
+    key = TRUSTED_AUTHORITY_EVENT_ADMISSION_PUBLIC_KEYS.get(str(admitted.get("key_id") or ""))
+    if not isinstance(key, dict):
+        return False
+    if (
+        admitted.get("kind") != "agentic-workspace/trusted-authority-host-admission/v1"
+        or admitted.get("status") != "current"
+        or admitted.get("algorithm") != key.get("algorithm")
+        or admitted.get("revoked_at")
+        or admitted.get("superseded_by")
+        or signed_payload.get("trusted_channel") not in {"github-review-webhook", "human-instruction-host", "evaluation-result-adapter"}
+    ):
+        return False
+    return _rsa_sha256_verify(
+        message=_guidance_json_bytes(signed_payload),
+        signature_b64=str(admitted.get("signature") or ""),
+        modulus_hex=str(key.get("n") or ""),
+        exponent=int(key.get("e") or 0),
     )
 
 
