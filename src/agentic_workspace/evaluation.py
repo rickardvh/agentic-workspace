@@ -368,6 +368,102 @@ def _load_external_delivery_adapter_receipt(*, target_root: Path, receipt_ref: s
     return receipt
 
 
+def record_external_evaluation_adapter_receipt(
+    *,
+    target_root: Path,
+    delivery_id: str,
+    sink_id: str,
+    producer: str,
+    attempt_revision: str,
+    receipt_revision: str,
+    capability_revision: str,
+    status: str,
+    detail: str = "",
+    capability_status: str = "current",
+    status_owner: str = "provider-adapter",
+    supersedes: str = "",
+) -> dict[str, Any]:
+    """Record the producer-owned receipt consumed by external delivery admission."""
+    normalized_status = _require_non_empty(status, "status")
+    if normalized_status not in {"delivered", "failed"}:
+        raise WorkspaceUsageError("status must be delivered or failed.")
+    if status_owner not in {"provider-adapter", "external-operation-adapter"}:
+        raise WorkspaceUsageError("status_owner must identify the provider adapter.")
+    if capability_status not in {"current", "fresh", "accepted"}:
+        raise WorkspaceUsageError("capability_status must be current, fresh, or accepted.")
+    delivery_identity = _require_non_empty(delivery_id, "delivery_id")
+    sink_identity = _require_non_empty(sink_id, "sink_id")
+    attempt_identity = _require_non_empty(attempt_revision, "attempt_revision")
+    receipt_identity = _require_non_empty(receipt_revision, "receipt_revision")
+    producer_identity = _require_non_empty(producer, "producer")
+    capability_identity = _require_non_empty(capability_revision, "capability_revision")
+    receipt_id = hashlib.sha256(
+        json.dumps(
+            {
+                "delivery_id": delivery_identity,
+                "sink_id": sink_identity,
+                "producer": producer_identity,
+                "attempt_revision": attempt_identity,
+                "receipt_revision": receipt_identity,
+                "capability_revision": capability_identity,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()[:24]
+    root = target_root / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR
+    receipt = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-receipt/v1",
+        "receipt_id": receipt_id,
+        "delivery_id": delivery_identity,
+        "sink_id": sink_identity,
+        "producer": producer_identity,
+        "status_owner": status_owner,
+        "attempt_revision": attempt_identity,
+        "receipt_revision": receipt_identity,
+        "capability_revision": capability_identity,
+        "capability_status": capability_status,
+        "status": normalized_status,
+        "detail": detail,
+        "supersedes": supersedes,
+        "recorded_at": _now(),
+    }
+    path = root / f"{receipt_id}.json"
+    _write_json(path, receipt)
+    index_path = root / "index.json"
+    index = _load_json(index_path, default={"kind": EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND, "receipts": {}})
+    raw_entries = index.get("receipts")
+    entries: dict[str, Any] = raw_entries if isinstance(raw_entries, dict) else {}
+    if supersedes and supersedes in entries and isinstance(entries[supersedes], dict):
+        entries[supersedes] = {**entries[supersedes], "status": "superseded", "superseded_by": receipt_id}
+    entries[receipt_id] = {
+        "path": path.relative_to(root).as_posix(),
+        "status": normalized_status,
+        "producer": producer_identity,
+        "receipt_revision": receipt_identity,
+        "capability_revision": capability_identity,
+        "capability_status": capability_status,
+        "delivery_id": delivery_identity,
+        "sink_id": sink_identity,
+        "attempt_revision": attempt_identity,
+    }
+    _write_json(index_path, {"kind": EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND, "receipts": entries})
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-receipt-record/v1",
+        "status": "recorded",
+        "receipt_id": receipt_id,
+        "receipt_ref": path.relative_to(target_root).as_posix(),
+        "index_ref": index_path.relative_to(target_root).as_posix(),
+        "delivery_id": delivery_identity,
+        "sink_id": sink_identity,
+        "producer": producer_identity,
+        "attempt_revision": attempt_identity,
+        "receipt_revision": receipt_identity,
+        "capability_revision": capability_identity,
+        "retryable": normalized_status != "delivered",
+    }
+
+
 def _producer_receipt(
     payload: dict[str, Any],
     *,
@@ -1933,6 +2029,90 @@ def record_external_evaluation_report_delivery(
     }
 
 
+def evaluation_report_delivery_status(*, target_root: Path, evaluation_id: str, explicit: bool = True) -> dict[str, Any]:
+    """Project delivery status from local compilation and producer-owned adapter receipts."""
+    request = external_evaluation_report_delivery_request(target_root=target_root, evaluation_id=evaluation_id, explicit=explicit)
+    if request.get("status") != "adapter-required":
+        return {
+            "kind": "agentic-workspace/evaluation-delivery-status/v1",
+            "status": "not-due",
+            "evaluation_id": evaluation_id,
+            "request": request,
+        }
+    delivery_id = str(request.get("delivery_id") or "")
+    local_payload = _load_json(
+        target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.report-deliveries.json",
+        default={"deliveries": []},
+    )
+    external_payload = _load_json(
+        target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.external-deliveries.json",
+        default={"deliveries": []},
+    )
+    local_receipts = [item for item in local_payload.get("deliveries", []) if isinstance(item, dict)]
+    external_receipts = [
+        item for item in external_payload.get("deliveries", []) if isinstance(item, dict) and str(item.get("identity") or "") == delivery_id
+    ]
+    sink_requests = request.get("sink_requests", []) if isinstance(request.get("sink_requests"), list) else []
+    sink_statuses: list[dict[str, Any]] = []
+    for sink_request in sink_requests:
+        if not isinstance(sink_request, dict):
+            continue
+        sink_id = str(sink_request.get("sink_id") or "")
+        attempts = [item for item in external_receipts if str(item.get("sink_id") or "") == sink_id]
+        latest = attempts[-1] if attempts else {}
+        sink_statuses.append(
+            {
+                "sink_id": sink_id,
+                "status": str(latest.get("status") or "pending"),
+                "attempt_count": len(attempts),
+                "latest_attempt_revision": latest.get("attempt_revision"),
+                "latest_adapter_receipt_ref": latest.get("adapter_receipt_ref"),
+                "retry": str(latest.get("status") or "") != "delivered",
+                "idempotency_key": sink_request.get("idempotency_key"),
+            }
+        )
+    delivered_count = len([item for item in sink_statuses if item.get("status") == "delivered"])
+    failed_count = len([item for item in sink_statuses if item.get("status") == "failed"])
+    pending_count = len([item for item in sink_statuses if item.get("status") == "pending"])
+    overall = "delivered" if sink_statuses and delivered_count == len(sink_statuses) else "retryable" if failed_count else "pending"
+    return {
+        "kind": "agentic-workspace/evaluation-delivery-status/v1",
+        "status": overall,
+        "evaluation_id": evaluation_id,
+        "delivery_id": delivery_id,
+        "authority_revision": request.get("authority_revision"),
+        "local_compilation_receipt_count": len(local_receipts),
+        "sink_statuses": sink_statuses,
+        "delivered_count": delivered_count,
+        "failed_count": failed_count,
+        "pending_count": pending_count,
+        "retry": overall != "delivered",
+        "request": request,
+        "authority_boundary": "Delivery status is projected from stored local compilation receipts and admitted provider-owned adapter receipts only.",
+    }
+
+
+def evaluation_report_delivery_retry_request(*, target_root: Path, evaluation_id: str, sink_id: str = "") -> dict[str, Any]:
+    """Return the current retryable delivery request without minting delivery success."""
+    status = evaluation_report_delivery_status(target_root=target_root, evaluation_id=evaluation_id, explicit=True)
+    if status.get("status") == "not-due":
+        return {"kind": "agentic-workspace/evaluation-delivery-retry/v1", "status": "not-due", "delivery_status": status}
+    retryable = [
+        item
+        for item in status.get("sink_statuses", [])
+        if isinstance(item, dict) and item.get("retry") is True and (not sink_id or str(item.get("sink_id") or "") == str(sink_id))
+    ]
+    return {
+        "kind": "agentic-workspace/evaluation-delivery-retry/v1",
+        "status": "retryable" if retryable else "nothing-to-retry",
+        "evaluation_id": evaluation_id,
+        "delivery_id": status.get("delivery_id"),
+        "sink_requests": retryable,
+        "request": status.get("request"),
+        "rule": "Retry reuses the current delivery request and waits for a fresh producer adapter receipt.",
+    }
+
+
 def evaluation_collection_actions(
     *,
     target_root: Path,
@@ -2129,6 +2309,62 @@ def _evaluation_adapter_payload(args: Any, *, target_root: Path) -> dict[str, An
         return append_observation_from_values(target_root=target_root, values=values)
     if command == "status":
         return evaluation_summary(target_root=target_root, evaluation_id=getattr(args, "evaluation_id", None))
+    if command == "report-preview":
+        return evaluation_report_payload(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            explicit=bool(getattr(args, "explicit", False)),
+        )
+    if command == "local-delivery":
+        return record_local_evaluation_report_delivery(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            explicit=bool(getattr(args, "explicit", False)),
+        )
+    if command == "external-request":
+        return external_evaluation_report_delivery_request(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            explicit=bool(getattr(args, "explicit", False)),
+        )
+    if command == "external-adapter-receipt":
+        return record_external_evaluation_adapter_receipt(
+            target_root=target_root,
+            delivery_id=_require_non_empty(getattr(args, "delivery_id", ""), "delivery_id"),
+            sink_id=_require_non_empty(getattr(args, "sink_id", ""), "sink_id"),
+            producer=_require_non_empty(getattr(args, "producer", ""), "producer"),
+            attempt_revision=_require_non_empty(getattr(args, "attempt_revision", ""), "attempt_revision"),
+            receipt_revision=_require_non_empty(getattr(args, "receipt_revision", ""), "receipt_revision"),
+            capability_revision=_require_non_empty(getattr(args, "capability_revision", ""), "capability_revision"),
+            capability_status=str(getattr(args, "capability_status", "current") or "current"),
+            status=_require_non_empty(getattr(args, "status", ""), "status"),
+            status_owner=str(getattr(args, "status_owner", "provider-adapter") or "provider-adapter"),
+            detail=str(getattr(args, "detail", "") or ""),
+            supersedes=str(getattr(args, "supersedes", "") or ""),
+        )
+    if command == "external-delivery":
+        request = external_evaluation_report_delivery_request(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            explicit=bool(getattr(args, "explicit", False)),
+        )
+        return record_external_evaluation_report_delivery(
+            target_root=target_root,
+            request=request,
+            adapter_receipt_ref=_require_non_empty(getattr(args, "adapter_receipt_ref", ""), "adapter_receipt_ref"),
+        )
+    if command == "delivery-status":
+        return evaluation_report_delivery_status(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            explicit=bool(getattr(args, "explicit", False)),
+        )
+    if command == "retry":
+        return evaluation_report_delivery_retry_request(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            sink_id=str(getattr(args, "sink_id", "") or ""),
+        )
     if command == "transition":
         return transition_evaluation(
             target_root=target_root,

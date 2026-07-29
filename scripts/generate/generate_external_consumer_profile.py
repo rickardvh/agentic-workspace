@@ -41,10 +41,19 @@ CORRECTION_OPERATION_IDS = (
     "correction-event.submit",
     "correction-event.withdraw-supersede",
 )
+EVALUATION_OPERATION_IDS = (
+    "evaluation.report-preview",
+    "evaluation.local-delivery",
+    "evaluation.external-request",
+    "evaluation.external-adapter-receipt",
+    "evaluation.external-delivery",
+    "evaluation.delivery-status",
+    "evaluation.retry",
+)
 OPERATION_RESOURCE_OUTPUTS = {
     REPO_ROOT / f"generated/workspace/python/operations/{operation_id}.json": REPO_ROOT
     / f"src/agentic_workspace/contracts/operations/{operation_id}.json"
-    for operation_id in (*ASSIGNMENT_OPERATION_IDS, *CORRECTION_OPERATION_IDS)
+    for operation_id in (*ASSIGNMENT_OPERATION_IDS, *CORRECTION_OPERATION_IDS, *EVALUATION_OPERATION_IDS)
 }
 SCHEMA_RESOURCE_OUTPUTS = {
     REPO_ROOT / "generated/workspace/python/_contracts/operation_failure.schema.json": REPO_ROOT
@@ -83,6 +92,14 @@ SCHEMA_RESOURCE_OUTPUTS = {
     / "src/agentic_workspace/contracts/schemas/evaluation_observation_input.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/evaluation_observe_result.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/evaluation_observe_result.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/evaluation_report_delivery_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_input.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/evaluation_report_delivery_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_result.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/evaluation_report_delivery_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_input.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/evaluation_report_delivery_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_result.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/delegation_outcome_append_input.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/delegation_outcome_append_input.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/delegation_outcome_append_result.schema.json": REPO_ROOT
@@ -171,16 +188,17 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
                     for item in contract_payload.get("inputs", [])
                     if isinstance(item, dict) and item.get("schema_ref")
                 ]
-                contract_output_ref = str(contract_payload.get("output", {}).get("schema_ref", "")) if isinstance(contract_payload.get("output"), dict) else ""
+                contract_output_ref = (
+                    str(contract_payload.get("output", {}).get("schema_ref", ""))
+                    if isinstance(contract_payload.get("output"), dict)
+                    else ""
+                )
                 if contract_input_refs:
                     schemas["input"] = sorted(set(contract_input_refs))
                 if contract_output_ref:
                     schemas["output"] = [Path(contract_output_ref).name]
                 schema_refs = [
-                    str(value)
-                    for values in schemas.values()
-                    for value in values
-                    if isinstance(values, list) and isinstance(value, str)
+                    str(value) for values in schemas.values() for value in values if isinstance(values, list) and isinstance(value, str)
                 ]
                 contract_fingerprint = hashlib.sha256(
                     json.dumps(contract_payload, sort_keys=True, separators=(",", ":")).encode()
@@ -243,9 +261,9 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
                     "operation_resources": {
                         target_id: {
                             "package": target["package"],
-                            "path": _operation_resource_path(target_id, target, str(ref["path"])).relative_to(
-                                Path(str(target.get("generated_root", "")))
-                            ).as_posix(),
+                            "path": _operation_resource_path(target_id, target, str(ref["path"]))
+                            .relative_to(Path(str(target.get("generated_root", ""))))
+                            .as_posix(),
                             "exists": repo_root is None
                             or (repo_root / _operation_resource_path(target_id, target, str(ref["path"]))).is_file(),
                         }
@@ -259,14 +277,14 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
                     "external_consumption": {
                         "status": maturity,
                         "runtime_exceptions": [
-                                {
-                                    "owner": package.get("id"),
-                                    "scope": scope,
-                                    "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-                                    "proof": resolved_conformance,
-                                    "migration_dependency": "#2044",
-                                }
-                                for scope in runtime_owned
+                            {
+                                "owner": package.get("id"),
+                                "scope": scope,
+                                "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+                                "proof": resolved_conformance,
+                                "migration_dependency": "#2044",
+                            }
+                            for scope in runtime_owned
                         ],
                         "dependency": "#2044" if runtime_owned else None,
                     },
@@ -353,7 +371,11 @@ def collect_schema_graph(initial: set[str], *, repo_root: Path = REPO_ROOT) -> t
     pending: list[tuple[str, Path | None, str | None]] = [(ref, None, None) for ref in sorted(initial)]
     while pending:
         reference, base_path, preferred_key = pending.pop()
-        schema_path = base_path if reference.startswith("#") and base_path is not None else resolve_schema_reference(reference, repo_root=repo_root, base_path=base_path)
+        schema_path = (
+            base_path
+            if reference.startswith("#") and base_path is not None
+            else resolve_schema_reference(reference, repo_root=repo_root, base_path=base_path)
+        )
         if reference.startswith("#"):
             resolve_schema_reference(schema_path.name + reference, repo_root=repo_root, base_path=schema_path)
         key = preferred_key or reference.split("#", 1)[0]
@@ -363,7 +385,9 @@ def collect_schema_graph(initial: set[str], *, repo_root: Path = REPO_ROOT) -> t
         graph[key] = {"source": schema_path.relative_to(repo_root).as_posix(), "schema": schema}
         closure.add(key)
         for nested in schema_references(schema):
-            nested_path = schema_path if nested.startswith("#") else resolve_schema_reference(nested, repo_root=repo_root, base_path=schema_path)
+            nested_path = (
+                schema_path if nested.startswith("#") else resolve_schema_reference(nested, repo_root=repo_root, base_path=schema_path)
+            )
             pending.append((nested, schema_path, nested_path.relative_to(repo_root).as_posix()))
     return closure, graph
 
@@ -421,15 +445,19 @@ def render_bundle(profile: dict[str, object]) -> str:
         closure = {name: schemas[name]["schema"] for name in operation["schemas"]}
         exact = {"contract": operation["contract"], "schemas": closure}
         compatible = {
-            "contract": {key: operation["contract"].get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")},
+            "contract": {
+                key: operation["contract"].get(key)
+                for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")
+            },
             "schemas": {
-                role: compatibility_schema({name: closure[name] for name in names})
-                for role, names in operation["schema_roles"].items()
+                role: compatibility_schema({name: closure[name] for name in names}) for role, names in operation["schema_roles"].items()
             },
         }
         operation["compatibility_surface"] = compatible
         operation["fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(exact, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-        operation["compatibility_fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(compatible, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        operation["compatibility_fingerprint"] = (
+            "sha256:" + hashlib.sha256(json.dumps(compatible, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        )
     payload = {
         "schema_version": "agentic-workspace/external-contract-bundle/v1",
         "protocol": profile["compatibility"]["protocol"],
@@ -439,8 +467,14 @@ def render_bundle(profile: dict[str, object]) -> str:
             "command_ir_schema": json.loads(IR_PATH.read_text(encoding="utf-8"))["schema_version"],
             "client_package": tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"],
             "runtime_protocol": profile["compatibility"]["protocol"],
-            "python_package": {"name": "agentic-workspace", "version": tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]},
-            "typescript_package": {"name": "@agentic-workspace/workspace-cli", "version": json.loads((REPO_ROOT / "generated/workspace/typescript/package.json").read_text(encoding="utf-8"))["version"]},
+            "python_package": {
+                "name": "agentic-workspace",
+                "version": tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"],
+            },
+            "typescript_package": {
+                "name": "@agentic-workspace/workspace-cli",
+                "version": json.loads((REPO_ROOT / "generated/workspace/typescript/package.json").read_text(encoding="utf-8"))["version"],
+            },
         },
         "operations": operations,
         "schemas": dict(sorted(schemas.items())),
@@ -451,14 +485,14 @@ def render_bundle(profile: dict[str, object]) -> str:
 
 
 def render_python_client() -> str:
-    return '''# Generated from command_package_ir.json. Do not edit.\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nfrom importlib.resources import files\nfrom pathlib import Path\nfrom typing import Any, Sequence\n\n\ndef external_consumer_profile() -> dict[str, Any]:\n    resource = files("agentic_workspace._generated_cli_package_impl").joinpath("external_consumer_profile.json")\n    return json.loads(resource.read_text(encoding="utf-8"))\n\n\ndef require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:\n    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}\n    failures = []\n    for operation_id in operation_ids:\n        entry = entries.get(operation_id)\n        status = entry and entry["external_consumption"]["status"]\n        if entry is None or status == "internal" or (status == "runtime-backed" and not allow_runtime_backed):\n            failures.append(f"{operation_id}: {status or 'unknown'}")\n    if failures:\n        raise ValueError("incompatible operation requirements: " + ", ".join(failures))\n\n\ndef invoke_json(argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] = ("agentic-workspace",)) -> dict[str, Any]:\n    command = [*executable, *argv]\n    if target is not None and "--target" not in command:\n        command.extend(["--target", str(target)])\n    if "--format" not in command:\n        command.extend(["--format", "json"])\n    completed = subprocess.run(command, text=True, capture_output=True, check=False)\n    stream = completed.stdout or completed.stderr\n    try:\n        payload = json.loads(stream)\n    except json.JSONDecodeError as exc:\n        raise RuntimeError(f"AW returned non-JSON output (exit {completed.returncode})") from exc\n    if completed.returncode:\n        raise RuntimeError(json.dumps({"exit_code": completed.returncode, "error": payload}))\n    return payload\n'''
+    return """# Generated from command_package_ir.json. Do not edit.\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nfrom importlib.resources import files\nfrom pathlib import Path\nfrom typing import Any, Sequence\n\n\ndef external_consumer_profile() -> dict[str, Any]:\n    resource = files("agentic_workspace._generated_cli_package_impl").joinpath("external_consumer_profile.json")\n    return json.loads(resource.read_text(encoding="utf-8"))\n\n\ndef require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:\n    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}\n    failures = []\n    for operation_id in operation_ids:\n        entry = entries.get(operation_id)\n        status = entry and entry["external_consumption"]["status"]\n        if entry is None or status == "internal" or (status == "runtime-backed" and not allow_runtime_backed):\n            failures.append(f"{operation_id}: {status or 'unknown'}")\n    if failures:\n        raise ValueError("incompatible operation requirements: " + ", ".join(failures))\n\n\ndef invoke_json(argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] = ("agentic-workspace",)) -> dict[str, Any]:\n    command = [*executable, *argv]\n    if target is not None and "--target" not in command:\n        command.extend(["--target", str(target)])\n    if "--format" not in command:\n        command.extend(["--format", "json"])\n    completed = subprocess.run(command, text=True, capture_output=True, check=False)\n    stream = completed.stdout or completed.stderr\n    try:\n        payload = json.loads(stream)\n    except json.JSONDecodeError as exc:\n        raise RuntimeError(f"AW returned non-JSON output (exit {completed.returncode})") from exc\n    if completed.returncode:\n        raise RuntimeError(json.dumps({"exit_code": completed.returncode, "error": payload}))\n    return payload\n"""
 
 
 def render_typescript_client() -> str:
     template = REPO_ROOT / "scripts/generate/templates/external_client.mjs"
     if template.is_file():
         return template.read_text(encoding="utf-8")
-    return '''// Generated from command_package_ir.json. Do not edit.\nimport { readFileSync } from 'node:fs';\nimport { spawnSync } from 'node:child_process';\n\nconst profileUrl = new URL('../external_consumer_profile.json', import.meta.url);\nexport function externalConsumerProfile() { return JSON.parse(readFileSync(profileUrl, 'utf8')); }\nexport function requireOperations(operationIds, { allowRuntimeBacked = false } = {}) {\n  const entries = new Map(externalConsumerProfile().operations.map((entry) => [entry.id, entry]));\n  const failures = operationIds.flatMap((id) => {\n    const status = entries.get(id)?.external_consumption?.status ?? 'unknown';\n    return status === 'internal' || status === 'unknown' || (status === 'runtime-backed' && !allowRuntimeBacked) ? [`${id}: ${status}`] : [];\n  });\n  if (failures.length) throw new Error(`incompatible operation requirements: ${failures.join(', ')}`);\n}\nexport function invokeJson(argv, { target, executable = 'agentic-workspace' } = {}) {\n  const args = [...argv];\n  if (target !== undefined && !args.includes('--target')) args.push('--target', String(target));\n  if (!args.includes('--format')) args.push('--format', 'json');\n  const result = spawnSync(executable, args, { encoding: 'utf8' });\n  const text = result.stdout || result.stderr;\n  let payload;\n  try { payload = JSON.parse(text); } catch (error) { throw new Error(`AW returned non-JSON output (exit ${result.status})`, { cause: error }); }\n  if (result.status !== 0) throw new Error(JSON.stringify({ exit_code: result.status, error: payload }));\n  return payload;\n}\n'''
+    return """// Generated from command_package_ir.json. Do not edit.\nimport { readFileSync } from 'node:fs';\nimport { spawnSync } from 'node:child_process';\n\nconst profileUrl = new URL('../external_consumer_profile.json', import.meta.url);\nexport function externalConsumerProfile() { return JSON.parse(readFileSync(profileUrl, 'utf8')); }\nexport function requireOperations(operationIds, { allowRuntimeBacked = false } = {}) {\n  const entries = new Map(externalConsumerProfile().operations.map((entry) => [entry.id, entry]));\n  const failures = operationIds.flatMap((id) => {\n    const status = entries.get(id)?.external_consumption?.status ?? 'unknown';\n    return status === 'internal' || status === 'unknown' || (status === 'runtime-backed' && !allowRuntimeBacked) ? [`${id}: ${status}`] : [];\n  });\n  if (failures.length) throw new Error(`incompatible operation requirements: ${failures.join(', ')}`);\n}\nexport function invokeJson(argv, { target, executable = 'agentic-workspace' } = {}) {\n  const args = [...argv];\n  if (target !== undefined && !args.includes('--target')) args.push('--target', String(target));\n  if (!args.includes('--format')) args.push('--format', 'json');\n  const result = spawnSync(executable, args, { encoding: 'utf8' });\n  const text = result.stdout || result.stderr;\n  let payload;\n  try { payload = JSON.parse(text); } catch (error) { throw new Error(`AW returned non-JSON output (exit ${result.status})`, { cause: error }); }\n  if (result.status !== 0) throw new Error(JSON.stringify({ exit_code: result.status, error: payload }));\n  return payload;\n}\n"""
 
 
 def render_python_typed_operations(profile: dict[str, object]) -> str:

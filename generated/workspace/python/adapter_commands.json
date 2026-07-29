@@ -3025,6 +3025,395 @@
           ]
         },
         {
+          "help": "Compile the current evaluation report authority without claiming external delivery.",
+          "name": "report-preview",
+          "operation_ref": {
+            "id": "evaluation.report-preview",
+            "path": "operations/evaluation.report-preview.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "default": false,
+              "flags": [
+                "--explicit"
+              ],
+              "name": "explicit"
+            }
+          ]
+        },
+        {
+          "help": "Record a local report compilation receipt without claiming external sink delivery.",
+          "name": "local-delivery",
+          "operation_ref": {
+            "id": "evaluation.local-delivery",
+            "path": "operations/evaluation.local-delivery.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "default": false,
+              "flags": [
+                "--explicit"
+              ],
+              "name": "explicit"
+            }
+          ]
+        },
+        {
+          "help": "Create the current per-sink external delivery request.",
+          "name": "external-request",
+          "operation_ref": {
+            "id": "evaluation.external-request",
+            "path": "operations/evaluation.external-request.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "default": false,
+              "flags": [
+                "--explicit"
+              ],
+              "name": "explicit"
+            }
+          ]
+        },
+        {
+          "help": "Record a producer-owned external adapter attempt/result receipt.",
+          "name": "external-adapter-receipt",
+          "operation_ref": {
+            "id": "evaluation.external-adapter-receipt",
+            "path": "operations/evaluation.external-adapter-receipt.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--delivery-id"
+              ],
+              "name": "delivery_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--sink-id"
+              ],
+              "name": "sink_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--producer"
+              ],
+              "name": "producer",
+              "required": true
+            },
+            {
+              "flags": [
+                "--attempt-revision"
+              ],
+              "name": "attempt_revision",
+              "required": true
+            },
+            {
+              "flags": [
+                "--receipt-revision"
+              ],
+              "name": "receipt_revision",
+              "required": true
+            },
+            {
+              "flags": [
+                "--capability-revision"
+              ],
+              "name": "capability_revision",
+              "required": true
+            },
+            {
+              "choices": [
+                "current",
+                "fresh",
+                "accepted"
+              ],
+              "default": "current",
+              "flags": [
+                "--capability-status"
+              ],
+              "name": "capability_status"
+            },
+            {
+              "choices": [
+                "provider-adapter",
+                "external-operation-adapter"
+              ],
+              "default": "provider-adapter",
+              "flags": [
+                "--status-owner"
+              ],
+              "name": "status_owner"
+            },
+            {
+              "choices": [
+                "delivered",
+                "failed"
+              ],
+              "flags": [
+                "--status"
+              ],
+              "name": "status",
+              "required": true
+            },
+            {
+              "default": "",
+              "flags": [
+                "--detail"
+              ],
+              "name": "detail"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--supersedes"
+              ],
+              "name": "supersedes"
+            }
+          ]
+        },
+        {
+          "help": "Admit one external delivery result from a current producer-owned adapter receipt.",
+          "name": "external-delivery",
+          "operation_ref": {
+            "id": "evaluation.external-delivery",
+            "path": "operations/evaluation.external-delivery.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--adapter-receipt-ref"
+              ],
+              "name": "adapter_receipt_ref",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "default": false,
+              "flags": [
+                "--explicit"
+              ],
+              "name": "explicit"
+            }
+          ]
+        },
+        {
+          "help": "Project per-sink report delivery status from admitted receipts.",
+          "name": "delivery-status",
+          "operation_ref": {
+            "id": "evaluation.delivery-status",
+            "path": "operations/evaluation.delivery-status.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "default": false,
+              "flags": [
+                "--explicit"
+              ],
+              "name": "explicit"
+            }
+          ]
+        },
+        {
+          "help": "Return the current retryable external delivery request for pending or failed sinks.",
+          "name": "retry",
+          "operation_ref": {
+            "id": "evaluation.retry",
+            "path": "operations/evaluation.retry.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "default": "",
+              "flags": [
+                "--sink-id"
+              ],
+              "name": "sink_id"
+            }
+          ]
+        },
+        {
           "help": "Move an evaluation through a validated lifecycle transition.",
           "name": "transition",
           "operation_ref": {

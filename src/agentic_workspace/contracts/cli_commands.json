@@ -2171,6 +2171,332 @@
           "mutates_state": false
         },
         {
+          "name": "report-preview",
+          "help": "Compile the current evaluation report authority without claiming external delivery.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "evaluation_id",
+              "flags": [
+                "--evaluation-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "explicit",
+              "flags": [
+                "--explicit"
+              ],
+              "action": "store_true",
+              "default": false
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "read-only report authority preview compiled from current admitted evaluation state",
+          "mutates_state": false
+        },
+        {
+          "name": "local-delivery",
+          "help": "Record a local report compilation receipt without claiming external sink delivery.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "evaluation_id",
+              "flags": [
+                "--evaluation-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "explicit",
+              "flags": [
+                "--explicit"
+              ],
+              "action": "store_true",
+              "default": false
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "local report compilation receipt with external delivery explicitly unattempted",
+          "mutates_state": true
+        },
+        {
+          "name": "external-request",
+          "help": "Create the current per-sink external delivery request.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "evaluation_id",
+              "flags": [
+                "--evaluation-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "explicit",
+              "flags": [
+                "--explicit"
+              ],
+              "action": "store_true",
+              "default": false
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "read-only current external delivery request requiring producer-owned adapter receipts",
+          "mutates_state": false
+        },
+        {
+          "name": "external-adapter-receipt",
+          "help": "Record a producer-owned external adapter attempt/result receipt.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "delivery_id",
+              "flags": [
+                "--delivery-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "sink_id",
+              "flags": [
+                "--sink-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "producer",
+              "flags": [
+                "--producer"
+              ],
+              "required": true
+            },
+            {
+              "name": "attempt_revision",
+              "flags": [
+                "--attempt-revision"
+              ],
+              "required": true
+            },
+            {
+              "name": "receipt_revision",
+              "flags": [
+                "--receipt-revision"
+              ],
+              "required": true
+            },
+            {
+              "name": "capability_revision",
+              "flags": [
+                "--capability-revision"
+              ],
+              "required": true
+            },
+            {
+              "name": "capability_status",
+              "flags": [
+                "--capability-status"
+              ],
+              "choices": [
+                "current",
+                "fresh",
+                "accepted"
+              ],
+              "default": "current"
+            },
+            {
+              "name": "status_owner",
+              "flags": [
+                "--status-owner"
+              ],
+              "choices": [
+                "provider-adapter",
+                "external-operation-adapter"
+              ],
+              "default": "provider-adapter"
+            },
+            {
+              "name": "status",
+              "flags": [
+                "--status"
+              ],
+              "required": true,
+              "choices": [
+                "delivered",
+                "failed"
+              ]
+            },
+            {
+              "name": "detail",
+              "flags": [
+                "--detail"
+              ],
+              "default": ""
+            },
+            {
+              "name": "supersedes",
+              "flags": [
+                "--supersedes"
+              ],
+              "default": ""
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "advanced_host_repo",
+          "classification_note": "producer-owned external delivery attempt/result receipt indexed before admission",
+          "mutates_state": true
+        },
+        {
+          "name": "external-delivery",
+          "help": "Admit one external delivery result from a current producer-owned adapter receipt.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "evaluation_id",
+              "flags": [
+                "--evaluation-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "adapter_receipt_ref",
+              "flags": [
+                "--adapter-receipt-ref"
+              ],
+              "required": true
+            },
+            {
+              "name": "explicit",
+              "flags": [
+                "--explicit"
+              ],
+              "action": "store_true",
+              "default": false
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "admit delivery status only from a current indexed producer-owned adapter receipt",
+          "mutates_state": true
+        },
+        {
+          "name": "delivery-status",
+          "help": "Project per-sink report delivery status from admitted receipts.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "evaluation_id",
+              "flags": [
+                "--evaluation-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "explicit",
+              "flags": [
+                "--explicit"
+              ],
+              "action": "store_true",
+              "default": false
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "read-only delivery status derived from local and provider-owned receipts",
+          "mutates_state": false
+        },
+        {
+          "name": "retry",
+          "help": "Return the current retryable external delivery request for pending or failed sinks.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "evaluation_id",
+              "flags": [
+                "--evaluation-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "sink_id",
+              "flags": [
+                "--sink-id"
+              ],
+              "default": ""
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "read-only retry projection; actual success still requires a fresh adapter receipt",
+          "mutates_state": false
+        },
+        {
           "name": "transition",
           "help": "Move an evaluation through a validated lifecycle transition.",
           "uses_option_groups": [

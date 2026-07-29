@@ -18,7 +18,6 @@ from agentic_workspace.evaluation import (
     EVALUATION_SUMMARY_KIND,
     EVALUATIONS_KIND,
     EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
-    EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND,
     OBSERVATION_RETENTION_CAP,
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
@@ -27,11 +26,14 @@ from agentic_workspace.evaluation import (
     append_observation,
     closure_authority,
     evaluation_collection_actions,
+    evaluation_report_delivery_retry_request,
+    evaluation_report_delivery_status,
     evaluation_report_payload,
     evaluation_summary,
     execute_evaluation_collection_action,
     external_evaluation_report_delivery_request,
     prune_observations,
+    record_external_evaluation_adapter_receipt,
     record_external_evaluation_report_delivery,
     record_local_evaluation_report_delivery,
     record_material_finding_followup,
@@ -162,26 +164,21 @@ def _definition_kwargs() -> dict:
 
 
 def _adapter_receipt_file(tmp_path: Path, receipt: dict) -> str:
-    receipt_id = str(receipt.get("receipt_id") or receipt["attempt_revision"])
-    path = tmp_path / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR / f"{receipt_id}.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    indexed_receipt = {**receipt, "receipt_id": receipt_id}
-    path.write_text(json.dumps(indexed_receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
-    index_path = path.parent / "index.json"
-    index = (
-        json.loads(index_path.read_text(encoding="utf-8"))
-        if index_path.exists()
-        else {"kind": EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND, "receipts": {}}
+    result = record_external_evaluation_adapter_receipt(
+        target_root=tmp_path,
+        delivery_id=receipt["delivery_id"],
+        sink_id=receipt["sink_id"],
+        producer=receipt["producer"],
+        attempt_revision=receipt["attempt_revision"],
+        receipt_revision=receipt["receipt_revision"],
+        capability_revision=receipt["capability_revision"],
+        capability_status=receipt.get("capability_status", "current"),
+        status=receipt["status"],
+        status_owner=receipt.get("status_owner", "provider-adapter"),
+        detail=receipt.get("detail", ""),
+        supersedes=receipt.get("supersedes", ""),
     )
-    index["receipts"][receipt_id] = {
-        "path": path.name,
-        "status": receipt.get("status"),
-        "producer": receipt.get("producer"),
-        "receipt_revision": receipt.get("receipt_revision"),
-        "capability_revision": receipt.get("capability_revision"),
-    }
-    index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
-    return path.relative_to(tmp_path).as_posix()
+    return result["receipt_ref"]
 
 
 def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(tmp_path: Path) -> None:
@@ -330,6 +327,9 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
     assert external["request_revision"] == external["delivery_id"]
     assert external["authority_revision"] == explicit["report_authority"]["revision"]
     assert record_external_evaluation_report_delivery(target_root=tmp_path, request=external)["status"] == "adapter-receipt-required"
+    initial_status = evaluation_report_delivery_status(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
+    assert initial_status["status"] == "pending"
+    assert initial_status["sink_statuses"][0]["status"] == "pending"
     failed_receipt = {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-receipt/v1",
         "producer": "github-issues-adapter",
@@ -363,6 +363,9 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
         )["retry"]
         is True
     )
+    retry = evaluation_report_delivery_retry_request(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", sink_id="#1969")
+    assert retry["status"] == "retryable"
+    assert retry["sink_requests"][0]["latest_attempt_revision"] == "attempt-1"
     delivered_receipt = {**failed_receipt, "attempt_revision": "attempt-2", "receipt_revision": "receipt-2", "status": "delivered"}
     assert (
         record_external_evaluation_report_delivery(
@@ -380,6 +383,19 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
         )["status"]
         == "already-delivered"
     )
+    delivery_status = evaluation_report_delivery_status(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
+    assert delivery_status["status"] == "delivered"
+    assert delivery_status["sink_statuses"] == [
+        {
+            "sink_id": "#1969",
+            "status": "delivered",
+            "attempt_count": 2,
+            "latest_attempt_revision": "attempt-2",
+            "latest_adapter_receipt_ref": delivery_status["sink_statuses"][0]["latest_adapter_receipt_ref"],
+            "retry": False,
+            "idempotency_key": external["sink_requests"][0]["idempotency_key"],
+        }
+    ]
 
 
 def test_external_evaluation_delivery_rejects_stale_request(tmp_path: Path) -> None:
@@ -1023,3 +1039,77 @@ def test_evaluation_cli_register_observe_status(tmp_path: Path, capsys) -> None:
     )
     prune = json.loads(capsys.readouterr().out)
     assert prune["operation_id"] == "evaluation.prune"
+
+
+def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text("schema_version = 1\n\n[workspace]\nenabled = true\n", encoding="utf-8")
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    invocation = [sys.executable, str(ROOT / "scripts" / "run_agentic_workspace.py")]
+
+    from agentic_workspace.generated_operations import (
+        evaluation_delivery_status,
+        evaluation_external_adapter_receipt,
+        evaluation_external_delivery,
+        evaluation_external_request,
+        evaluation_local_delivery,
+        evaluation_report_preview,
+        evaluation_retry,
+    )
+
+    preview = evaluation_report_preview(
+        {"evaluation_id": "eval-1969-operating-loop", "explicit": True},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert preview["status"] == "ready"
+    local = evaluation_local_delivery(
+        {"evaluation_id": "eval-1969-operating-loop", "explicit": True},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert local["receipt"]["external_delivery"].startswith("unattempted")
+    request = evaluation_external_request(
+        {"evaluation_id": "eval-1969-operating-loop", "explicit": True},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert request["status"] == "adapter-required"
+    pending = evaluation_delivery_status(
+        {"evaluation_id": "eval-1969-operating-loop", "explicit": True},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert pending["status"] == "pending"
+    adapter = evaluation_external_adapter_receipt(
+        {
+            "delivery_id": request["delivery_id"],
+            "sink_id": "#1969",
+            "producer": "github-issues-adapter",
+            "attempt_revision": "attempt-public-1",
+            "receipt_revision": "receipt-public-1",
+            "capability_revision": "github-issues-adapter:v1",
+            "status": "failed",
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert adapter["status"] == "recorded"
+    admitted = evaluation_external_delivery(
+        {
+            "evaluation_id": "eval-1969-operating-loop",
+            "explicit": True,
+            "adapter_receipt_ref": adapter["receipt_ref"],
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert admitted["status"] == "failed"
+    retry = evaluation_retry(
+        {"evaluation_id": "eval-1969-operating-loop", "sink_id": "#1969"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert retry["status"] == "retryable"
