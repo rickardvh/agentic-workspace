@@ -2914,6 +2914,90 @@
           "output emission mechanics"
         ]
       },
+      "conformance_refs": [
+        "planning.closeout.lifecycle.dry-run.process"
+      ]
+    },
+    {
+      "id": "planning.targeted-write.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-planning",
+        "name": "targeted-write",
+        "command_manifest": "package:planning:cli",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "planning.targeted-write.lifecycle",
+        "registry": "operation_contracts.json",
+        "path": "operations/planning.targeted-write.lifecycle.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.targeted-write.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "command.arguments",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "help and usage text source",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "exact execplan owner selection",
+          "revision guard validation",
+          "planning state and lane projection update policy",
+          "rollback-safe write transaction"
+        ]
+      },
+      "conformance_refs": [
+        "planning.targeted-write.lifecycle.preview.process"
+      ]
+    },
+    {
       "id": "planning.close-item.cli",
       "operation_ref": {
         "id": "planning.close-item.lifecycle",

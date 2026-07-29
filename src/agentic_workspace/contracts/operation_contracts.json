@@ -593,6 +593,12 @@
       "path": "operations/planning.promote-to-plan.lifecycle.json"
     },
     {
+      "id": "planning.targeted-write.lifecycle",
+      "path": "operations/planning.targeted-write.lifecycle.json",
+      "command": "targeted-write",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "command": "prompt",
       "id": "planning.prompt.render",
       "migration_status": "runtime-consumed",

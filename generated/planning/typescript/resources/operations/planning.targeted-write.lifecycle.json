@@ -1,20 +1,55 @@
 {
-  "command": {
-    "name": "targeted-write"
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "targeted-write",
+    "format_option": "format",
+    "program": "agentic-planning"
   },
-  "evidence": [
-    "targeted writer CLI preview/apply tests",
-    "generated command conformance",
-    "Planning package tests"
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "one exact canonical owner selected by id/path",
+    "preview returns owner/state/lane revisions and changed fields without writes",
+    "apply writes owner/projection updates and local receipt atomically after revision guards",
+    "replay is idempotent"
   ],
   "id": "planning.targeted-write.lifecycle",
   "inputs": [
-    "plan",
-    "patch",
-    "expect_planning_revision",
-    "expect_owner_revision",
-    "expect_lane_revision",
-    "apply"
+    {
+      "name": "plan",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "patch",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_planning_revision",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_owner_revision",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_lane_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "apply",
+      "required": false,
+      "source": "cli-option"
+    }
   ],
   "intent": "Support the #2283 targeted-writer path without delete/recreate behavior or broad plan rewrites.",
   "ir_plan": {
@@ -22,7 +57,9 @@
     "steps": [
       {
         "arguments": {},
+        "description": "Resolve one live owner, validate revision guards, derive projection effects, and preview or write atomically.",
         "id": "apply_targeted_write",
+        "on_error": "emit_usage_error",
         "outputs": [
           "result"
         ],
@@ -30,7 +67,9 @@
       },
       {
         "arguments": {},
+        "description": "Emit targeted writer result in the requested format.",
         "id": "emit_output",
+        "on_error": "emit_usage_error",
         "outputs": [
           "emitted"
         ],
@@ -38,25 +77,49 @@
       }
     ]
   },
-  "kind": "agentic-workspace/operation-contract/v1",
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
   "migration_status": "runtime-consumed",
-  "non_solutions": [
+  "output": {
+    "description": "Targeted execplan writer preview, apply, no-op, rejection, or rollback result.",
+    "kind": "json"
+  },
+  "proof": [
+    "targeted writer CLI preview/apply/replay tests preserve unrelated records and templates",
+    "generated command conformance",
+    "Planning package mutation rollback tests",
     "title-based owner selection",
     "delete and recreate an execplan",
     "hand-edit lifecycle or lane state without projection effects"
   ],
-  "postconditions": [
-    "one exact canonical owner selected by id/path",
-    "preview returns owner/state/lane revisions and changed fields",
-    "apply writes owner/projection updates and local receipt atomically",
-    "replay is idempotent"
+  "reads": [
+    {
+      "required": true,
+      "surface": "target repository Planning state and owner records"
+    }
   ],
+  "schema_version": "agentic-workspace/operation/v1",
   "steps": [
     {
       "description": "Resolve one live owner, validate revision guards, derive projection effects, and preview or write atomically.",
       "id": "apply_targeted_write",
       "uses": "planning.targeted-write.apply"
+    },
+    {
+      "description": "Emit targeted writer result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
     }
   ],
-  "summary": "Preview or apply a guarded patch to exactly one canonical execplan."
+  "summary": "Preview or apply a guarded patch to exactly one canonical execplan.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/",
+      "when": "--apply is set and the patch changes the selected owner"
+    }
+  ]
 }

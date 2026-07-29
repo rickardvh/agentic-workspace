@@ -305,11 +305,20 @@ def test_targeted_execplan_writer_rejects_missing_or_stale_lane_guard(tmp_path: 
 def test_targeted_execplan_writer_cli_preview_apply_and_projection_effects(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    unrelated_path = tmp_path / ".agentic-workspace/planning/execplans/unrelated-plan.plan.json"
+    completed_path = tmp_path / ".agentic-workspace/planning/archive/completed-plan.plan.json"
+    template_path = tmp_path / ".agentic-workspace/planning/templates/default.plan.json"
     _write_live_execplan_state(tmp_path, item_id="active-plan")
     _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    _write_execplan_record(unrelated_path, item_id="unrelated-plan", status="in-progress")
+    _write_execplan_record(completed_path, item_id="completed-plan", status="done")
+    _write(template_path, '{"kind":"agentic-planning-template","template_id":"default","body":"do not touch"}')
     record = json.loads(plan_path.read_text(encoding="utf-8"))
     record["revision"] = 1
     plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    unrelated_before = unrelated_path.read_bytes()
+    completed_before = completed_path.read_bytes()
+    template_before = template_path.read_bytes()
     revision = planning_revision(tmp_path)["revision_id"]
 
     assert (
@@ -335,6 +344,9 @@ def test_targeted_execplan_writer_cli_preview_apply_and_projection_effects(tmp_p
     assert preview["status"] == "preview"
     assert preview["changes"]["next_action"]["after"] == "run generated CLI proof"
     assert json.loads(plan_path.read_text(encoding="utf-8")).get("next_action") != "run generated CLI proof"
+    assert unrelated_path.read_bytes() == unrelated_before
+    assert completed_path.read_bytes() == completed_before
+    assert template_path.read_bytes() == template_before
 
     assert (
         planning_cli.main(
@@ -360,6 +372,36 @@ def test_targeted_execplan_writer_cli_preview_apply_and_projection_effects(tmp_p
     assert applied["status"] == "applied"
     assert applied["projection_effects"]["state"]["todo.active_items.active-plan"]["after"]["next_action"] == "run generated CLI proof"
     assert json.loads(plan_path.read_text(encoding="utf-8"))["next_action"] == "run generated CLI proof"
+    assert unrelated_path.read_bytes() == unrelated_before
+    assert completed_path.read_bytes() == completed_before
+    assert template_path.read_bytes() == template_before
+
+    replay_revision = planning_revision(tmp_path)["revision_id"]
+    assert (
+        planning_cli.main(
+            [
+                "targeted-write",
+                "active-plan",
+                "--target",
+                str(tmp_path),
+                "--patch",
+                json.dumps({"next_action": "run generated CLI proof"}),
+                "--expect-planning-revision",
+                replay_revision,
+                "--expect-owner-revision",
+                "2",
+                "--apply",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    replay = json.loads(capsys.readouterr().out)
+    assert replay["status"] == "no-op"
+    assert unrelated_path.read_bytes() == unrelated_before
+    assert completed_path.read_bytes() == completed_before
+    assert template_path.read_bytes() == template_before
 
 
 def test_targeted_execplan_writer_lifecycle_updates_lane_projection(tmp_path: Path) -> None:
