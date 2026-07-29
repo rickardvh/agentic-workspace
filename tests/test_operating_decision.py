@@ -47,39 +47,6 @@ def _fixture_source_revision(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _write_context_owner_result_receipts(root: Path, *, surfaces: list[str] | None = None) -> None:
-    from agentic_workspace import operating_decision
-
-    receipt_dir = root / operating_decision.CONTEXT_OWNER_RESULT_RECEIPT_DIR
-    receipt_dir.mkdir(parents=True, exist_ok=True)
-    requested = set(surfaces or operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS)
-    registry = {str(item.get("surface") or ""): item for item in operating_decision.CONTEXT_AUTHORITY_REGISTRY}
-    for surface in sorted(requested):
-        if surface in {"planning", "memory", "mutation-baseline", "generated-references"}:
-            continue
-        spec = operating_decision.CONTEXT_AUTHORITY_SOURCE_SPECS.get(surface, {})
-        source_rel = str(spec.get("source") or "")
-        if not source_rel:
-            continue
-        source_path = root / source_rel
-        if not source_path.exists():
-            continue
-        contract = operating_decision._surface_owner_contract(surface)
-        item = registry[surface]
-        receipt = {
-            "kind": str(contract.get("owner_result_kind") or ""),
-            "producer": str(contract.get("owner_module") or ""),
-            "status": "current",
-            "surface": surface,
-            "owner": item["owner"],
-            "source_id": source_rel,
-            "source_revision": "sha256:" + _fixture_source_revision(source_path),
-            "git_head": "",
-            "adapter_id": f"{surface}.owner-result",
-        }
-        (receipt_dir / f"{surface}.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
 def test_operating_decision_emits_one_typed_primary_action() -> None:
     invocation = operation_invocation(
         operation_id="proof.report",
@@ -738,7 +705,6 @@ command = "pytest tests/test_operating_decision.py"
         "terminal = object()\n",
         encoding="utf-8",
     )
-    _write_context_owner_result_receipts(root)
 
 
 def test_context_authority_projection_selects_repository_sources_and_ignores_forged_records(tmp_path: Path) -> None:
@@ -1053,36 +1019,62 @@ def test_context_authority_owner_result_revisions_bind_selection_and_schema_back
 
 
 @pytest.mark.parametrize(
-    ("mutation", "expected_reason", "expected_failure"),
+    "receipt_payload",
     [
-        ("missing", "owner-result-receipt-missing", ""),
-        ("stale", "owner-result-receipt-mismatch", "status"),
-        ("superseded", "owner-result-receipt-mismatch", "lifecycle"),
-        ("revision-mismatch", "owner-result-receipt-mismatch", "source_revision"),
-        ("wrong-producer", "owner-result-receipt-mismatch", "producer"),
+        {},
+        {
+            "kind": "agentic-workspace/system-intent-mirror/v1",
+            "producer": "agentic_workspace.system_intent",
+            "status": "current",
+            "surface": "system-intent",
+            "source_id": "SYSTEM_INTENT.md",
+            "source_revision": "sha256:caller-asserted",
+            "git_head": "",
+            "adapter_id": "system-intent.owner-result",
+        },
     ],
 )
-def test_context_authority_requires_current_owner_receipts_even_when_markers_match(
+def test_context_authority_ignores_checked_in_owner_result_receipts(
     tmp_path: Path,
-    mutation: str,
-    expected_reason: str,
-    expected_failure: str,
+    receipt_payload: dict[str, object],
 ) -> None:
     _write_context_authority_sources(tmp_path)
     receipt_path = tmp_path / ".agentic-workspace/context-authority/owner-results/system-intent.json"
-    if mutation == "missing":
-        receipt_path.unlink()
-    else:
-        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-        if mutation == "stale":
-            receipt["status"] = "stale"
-        elif mutation == "superseded":
-            receipt["superseded_by"] = "sha256:replacement"
-        elif mutation == "revision-mismatch":
-            receipt["source_revision"] = "sha256:stale-source"
-        elif mutation == "wrong-producer":
-            receipt["producer"] = "agentic_workspace.tests.forged_owner"
-        receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    receipt_path.write_text(json.dumps(receipt_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="shape authority routing ownership skill guidance memory",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "admitted"
+    system_intent = next(item for item in projection["authorities"] if item["surface"] == "system-intent")
+    assert system_intent["source"]["admission"]["owner_result"]["status"] == "current"
+    assert system_intent["source"]["admission"]["owner_result"]["owner_operation"]["status"] == "executed"
+    assert "owner_receipt_ref" not in system_intent["source"]["admission"]["owner_result"]
+
+
+def test_context_authority_rejects_owner_result_without_owner_operation_envelope(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_context_authority_sources(tmp_path)
+    from agentic_workspace import operating_decision
+
+    def forged_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+        return {
+            "kind": "agentic-workspace/system-intent-mirror/v1",
+            "producer": "agentic_workspace.system_intent",
+            "status": "current",
+            "surface": surface,
+            "owner": item["owner"],
+            "source_id": "SYSTEM_INTENT.md",
+            "source_revision": "sha256:" + _fixture_source_revision(chosen),
+            "git_head": git_head,
+            "revision": "sha256:caller-current",
+            "adapter_id": "system-intent.owner-result",
+        }
+
+    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "system-intent", forged_adapter)
 
     projection = resolve_context_authority_projection(
         consumer="start",
@@ -1092,22 +1084,7 @@ def test_context_authority_requires_current_owner_receipts_even_when_markers_mat
 
     assert projection["status"] == "repair-required"
     system_intent = next(item for item in projection["excluded_authorities"] if item["surface"] == "system-intent")
-    assert system_intent["reason"] == expected_reason
-    from agentic_workspace import operating_decision
-
-    registry_item = next(item for item in operating_decision.CONTEXT_AUTHORITY_REGISTRY if item["surface"] == "system-intent")
-    source_record = _resolve_context_authority_source(
-        item=registry_item,
-        consumer="start",
-        task="shape authority routing ownership skill guidance memory",
-        paths=[],
-        target_root=tmp_path,
-    )
-    owner_result = source_record["owner_result"]
-    assert owner_result["owner_receipt_required"] is True
-    assert owner_result["owner_receipt_ref"] == ".agentic-workspace/context-authority/owner-results/system-intent.json"
-    if expected_failure:
-        assert expected_failure in owner_result["receipt_failures"]
+    assert system_intent["reason"] == "owner-result-identity-mismatch"
 
 
 def test_context_authority_rejects_parseable_file_without_owner_boundary(tmp_path: Path) -> None:

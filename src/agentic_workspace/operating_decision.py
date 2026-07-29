@@ -500,14 +500,44 @@ def _owner_result_base(
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     producer, result_kind, repair_operation_id = _owner_contract_result_identity(surface)
+    source_id = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
+    source_revision = "sha256:" + revision
+    default_owner_operation = {
+        "kind": "agentic-workspace/context-authority-owner-operation/v1",
+        "status": "executed",
+        "operation_id": repair_operation_id,
+        "run_id": "sha256:"
+        + _digest(
+            {
+                "operation_id": repair_operation_id,
+                "producer": producer,
+                "surface": surface,
+                "owner": item.get("owner"),
+                "source_id": source_id,
+                "source_revision": source_revision,
+                "git_head": git_head,
+                "adapter_id": adapter_id,
+                "selection_revision": "sha256:" + _digest(selection),
+            }
+        ),
+        "producer": producer,
+        "surface": surface,
+        "source_id": source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "adapter_id": adapter_id,
+        "selection_revision": "sha256:" + _digest(selection),
+        "admission_rule": "current authority is admitted from registered owner-operation adapter output, not checked-in assertion files",
+    }
+    merged_extra = {"owner_operation": default_owner_operation, **(extra or {})}
     payload = {
         "kind": result_kind,
         "producer": producer,
         "status": status,
         "surface": surface,
         "owner": item.get("owner"),
-        "source_id": chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix(),
-        "source_revision": "sha256:" + revision,
+        "source_id": source_id,
+        "source_revision": source_revision,
         "git_head": git_head,
         "selection": selection,
         "adapter_id": adapter_id,
@@ -515,47 +545,11 @@ def _owner_result_base(
     }
     if reason:
         payload["reason"] = reason
-    if extra:
-        payload.update(extra)
+    payload.update(merged_extra)
     return _finalize_owner_result(payload)
 
 
-CONTEXT_OWNER_RESULT_RECEIPT_DIR = Path(".agentic-workspace/context-authority/owner-results")
-
-
-def _missing_owner_receipt_result(
-    *,
-    surface: str,
-    item: dict[str, Any],
-    root: Path,
-    chosen: Path,
-    revision: str,
-    git_head: str,
-    selection: dict[str, Any],
-    adapter_id: str,
-    reason: str,
-    extra: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    return _owner_result_base(
-        surface=surface,
-        item=item,
-        root=root,
-        chosen=chosen,
-        revision=revision,
-        git_head=git_head,
-        selection=selection,
-        adapter_id=adapter_id,
-        status="missing",
-        reason=reason,
-        extra={
-            "owner_receipt_required": True,
-            "owner_receipt_ref": (CONTEXT_OWNER_RESULT_RECEIPT_DIR / f"{surface}.json").as_posix(),
-            **(extra or {}),
-        },
-    )
-
-
-def _load_owner_result_receipt(
+def _owner_operation_envelope(
     *,
     surface: str,
     item: dict[str, Any],
@@ -568,84 +562,88 @@ def _load_owner_result_receipt(
     boundary: str,
     structural_backing: dict[str, Any],
 ) -> dict[str, Any]:
-    receipt_ref = CONTEXT_OWNER_RESULT_RECEIPT_DIR / f"{surface}.json"
-    receipt_path = root / receipt_ref
-    try:
-        payload = json.loads(receipt_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return _missing_owner_receipt_result(
-            surface=surface,
-            item=item,
-            root=root,
-            chosen=chosen,
-            revision=revision,
-            git_head=git_head,
-            selection=selection,
-            adapter_id=adapter_id,
-            reason="owner-result-receipt-missing",
-            extra={"owner_boundary": boundary, "schema_backing": structural_backing, "error": str(exc)},
-        )
-    if not isinstance(payload, dict):
-        return _missing_owner_receipt_result(
-            surface=surface,
-            item=item,
-            root=root,
-            chosen=chosen,
-            revision=revision,
-            git_head=git_head,
-            selection=selection,
-            adapter_id=adapter_id,
-            reason="owner-result-receipt-invalid",
-            extra={"owner_boundary": boundary, "schema_backing": structural_backing},
-        )
-    producer, result_kind, repair_operation_id = _owner_contract_result_identity(surface)
-    expected_source = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
-    expected_source_revision = "sha256:" + revision
-    failures = [
-        field
-        for field, expected, actual in [
-            ("kind", result_kind, payload.get("kind")),
-            ("producer", producer, payload.get("producer")),
-            ("status", "current", payload.get("status")),
-            ("surface", surface, payload.get("surface")),
-            ("owner", item.get("owner"), payload.get("owner")),
-            ("source_id", expected_source, payload.get("source_id")),
-            ("source_revision", expected_source_revision, payload.get("source_revision")),
-            ("git_head", git_head, payload.get("git_head")),
-            ("adapter_id", adapter_id, payload.get("adapter_id")),
-        ]
-        if str(actual or "") != str(expected or "")
-    ]
-    if payload.get("superseded_by") or payload.get("revoked_at"):
-        failures.append("lifecycle")
-    if failures:
-        return _missing_owner_receipt_result(
-            surface=surface,
-            item=item,
-            root=root,
-            chosen=chosen,
-            revision=revision,
-            git_head=git_head,
-            selection=selection,
-            adapter_id=adapter_id,
-            reason="owner-result-receipt-mismatch",
-            extra={
-                "owner_boundary": boundary,
-                "schema_backing": structural_backing,
-                "receipt_failures": failures,
-                "receipt_ref": receipt_ref.as_posix(),
-            },
-        )
-    return _finalize_owner_result(
-        {
-            **payload,
-            "selection": selection,
-            "repair_operation_id": str(payload.get("repair_operation_id") or repair_operation_id),
-            "owner_boundary": str(payload.get("owner_boundary") or boundary),
-            "schema_backing": _as_dict(payload.get("schema_backing")) or structural_backing,
-            "owner_receipt_ref": receipt_ref.as_posix(),
-            "owner_receipt_required": True,
-        }
+    producer, _result_kind, repair_operation_id = _owner_contract_result_identity(surface)
+    source_id = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
+    source_revision = "sha256:" + revision
+    operation_id = repair_operation_id
+    operation_run_identity = {
+        "operation_id": operation_id,
+        "producer": producer,
+        "surface": surface,
+        "owner": item.get("owner"),
+        "source_id": source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "adapter_id": adapter_id,
+        "selection_revision": "sha256:" + _digest(selection),
+        "schema_backing_revision": "sha256:" + _digest(structural_backing),
+    }
+    return {
+        "owner_boundary": boundary,
+        "schema_backing": structural_backing,
+        "owner_operation": {
+            "kind": "agentic-workspace/context-authority-owner-operation/v1",
+            "status": "executed",
+            "operation_id": operation_id,
+            "run_id": "sha256:" + _digest(operation_run_identity),
+            "producer": producer,
+            "surface": surface,
+            "source_id": source_id,
+            "source_revision": source_revision,
+            "git_head": git_head,
+            "adapter_id": adapter_id,
+            "selection_revision": operation_run_identity["selection_revision"],
+            "schema_backing_revision": operation_run_identity["schema_backing_revision"],
+            "admission_rule": (
+                "Context authority admits current results only from a registered owner-operation adapter. "
+                "Checked-in owner-result JSON is evidence only and cannot mint current authority."
+            ),
+        },
+    }
+
+
+def _owner_operation_result_base(
+    *,
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    adapter_id: str,
+    boundary: str,
+    structural_backing: dict[str, Any],
+    status: str = "current",
+    reason: str = "",
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return _owner_result_base(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id=adapter_id,
+        status=status,
+        reason=reason,
+        extra={
+            **_owner_operation_envelope(
+                surface=surface,
+                item=item,
+                root=root,
+                chosen=chosen,
+                revision=revision,
+                git_head=git_head,
+                selection=selection,
+                adapter_id=adapter_id,
+                boundary=boundary,
+                structural_backing=structural_backing,
+            ),
+            **(extra or {}),
+        },
     )
 
 
@@ -730,7 +728,7 @@ def _contracted_text_owner_result(
                 "population": {"status": "invalid"},
             },
         )
-    return _load_owner_result_receipt(
+    return _owner_operation_result_base(
         surface=surface,
         item=item,
         root=root,
@@ -739,8 +737,8 @@ def _contracted_text_owner_result(
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
-        boundary=boundary,
         structural_backing={**structural_backing, "population": {"status": "present"}},
+        boundary=boundary,
     )
 
 
@@ -785,7 +783,7 @@ def _contracted_toml_owner_result(
                 "population": {"status": "invalid"},
             },
         )
-    return _load_owner_result_receipt(
+    return _owner_operation_result_base(
         surface=surface,
         item=item,
         root=root,
@@ -794,8 +792,8 @@ def _contracted_toml_owner_result(
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
-        boundary=boundary,
         structural_backing={**structural_backing, "population": {"status": "present"}},
+        boundary=boundary,
     )
 
 
@@ -1079,7 +1077,7 @@ def _module_owner_result(
                 "population": {"status": "invalid"},
             },
         )
-    return _load_owner_result_receipt(
+    return _owner_operation_result_base(
         surface=surface,
         item=item,
         root=root,
@@ -1088,8 +1086,8 @@ def _module_owner_result(
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
-        boundary=boundary,
         structural_backing={**structural_backing, "population": {"status": "present"}},
+        boundary=boundary,
     )
 
 
@@ -1695,6 +1693,23 @@ def resolve_context_authority_projection(
         owner_contract = _surface_owner_contract(surface)
         expected_producer = str(owner_contract.get("owner_module") or "")
         expected_result_kind = str(owner_contract.get("owner_result_kind") or "")
+        owner_operation = _as_dict(owner_result.get("owner_operation"))
+        expected_source_id = str(record.get("source_id") or record.get("source") or "")
+        expected_source_revision = str(admission.get("source_revision") or "")
+        owner_operation_valid = (
+            owner_operation.get("kind") == "agentic-workspace/context-authority-owner-operation/v1"
+            and owner_operation.get("status") == "executed"
+            and owner_operation.get("operation_id")
+            == str(owner_contract.get("repair_operation_id") or f"context-authority.{surface}.refresh-source")
+            and owner_operation.get("producer") == expected_producer
+            and owner_operation.get("surface") == surface
+            and owner_operation.get("source_id") == expected_source_id
+            and owner_operation.get("source_revision") == expected_source_revision
+            and owner_operation.get("git_head") == owner_result.get("git_head")
+            and owner_operation.get("adapter_id") == f"{surface}.owner-result"
+            and isinstance(owner_operation.get("run_id"), str)
+            and str(owner_operation.get("run_id")).startswith("sha256:")
+        )
         owner_identity_valid = (
             owner_admission.get("producer") == expected_producer
             and owner_admission.get("result_kind") == expected_result_kind
@@ -1703,6 +1718,7 @@ def resolve_context_authority_projection(
             and owner_result.get("kind") == expected_result_kind
             and owner_result.get("status") == "current"
             and owner_result.get("adapter_id") == f"{surface}.owner-result"
+            and owner_operation_valid
         )
         applicable = (
             bool(record)
