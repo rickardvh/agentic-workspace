@@ -4,6 +4,43 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def _trusted_guidance_host_event(
+    target_root: Path,
+    *,
+    authority: str,
+    producer_class: str,
+    producer_id: str,
+    source_ref: str,
+    source: str = "",
+    target_revision: str = "",
+    event_id: str = "",
+) -> dict[str, object]:
+    from agentic_workspace.agent_guidance import TRUSTED_AUTHORITY_EVENT_STORE_PATH, _json_digest
+
+    event = {
+        "kind": "agentic-workspace/trusted-authority-host-event/v1",
+        "status": "current",
+        "authority": authority,
+        "producer_class": producer_class,
+        "producer_id": producer_id,
+        "source": source or authority,
+        "source_ref": source_ref,
+        "target_revision": target_revision,
+        "event_id": event_id,
+        "recorded_at": "2026-07-29T00:00:00Z",
+        "custody": {
+            "producer": "github-review-adapter",
+            "trusted_channel": "github-review-webhook",
+            "rule": "Fixture for an adapter-owned host event; repo-local guidance code only imports it.",
+        },
+    }
+    event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
+    event["event_ref"] = event_ref
+    path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
+    _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
+    return {"event_ref": event_ref, "event": event}
+
+
 def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
@@ -1609,7 +1646,6 @@ def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tm
         apply_guidance_promotion,
         guidance_promotion_from_store,
         record_guidance_remember_receipt,
-        record_trusted_authority_host_event,
     )
 
     target = tmp_path / "repo"
@@ -1621,8 +1657,8 @@ def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tm
     )
     store = target / ".agentic-workspace/local/correction-events.json"
     store.parent.mkdir(parents=True, exist_ok=True)
-    host_event = record_trusted_authority_host_event(
-        target_root=target,
+    host_event = _trusted_guidance_host_event(
+        target,
         authority="explicit-user-correction",
         producer_class="human-reviewer",
         producer_id="reviewer-1",
@@ -1721,9 +1757,21 @@ def test_guidance_promotion_rejects_hand_authored_remember_receipt_path(tmp_path
 
 
 def test_guidance_receipts_require_trusted_host_event_before_authority_storage(tmp_path: Path) -> None:
-    from agentic_workspace.agent_guidance import record_guidance_remember_receipt, record_trusted_authority_receipt
+    from agentic_workspace.agent_guidance import (
+        record_guidance_remember_receipt,
+        record_trusted_authority_host_event,
+        record_trusted_authority_receipt,
+    )
     from agentic_workspace.config import WorkspaceUsageError
 
+    with pytest.raises(WorkspaceUsageError, match="adapter-owned evidence"):
+        record_trusted_authority_host_event(
+            target_root=tmp_path,
+            authority="pr-review",
+            producer_class="human-reviewer",
+            producer_id="reviewer-1",
+            source_ref="review-1",
+        )
     with pytest.raises(WorkspaceUsageError, match="trusted host event ref"):
         record_trusted_authority_receipt(
             target_root=tmp_path,

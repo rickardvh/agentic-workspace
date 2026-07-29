@@ -715,41 +715,10 @@ def record_trusted_authority_host_event(
     event_id: str = "",
     trusted_channel: str = "host-trusted-authority-event",
 ) -> dict[str, Any]:
-    if authority not in ADMITTED_CORRECTION_AUTHORITIES:
-        raise WorkspaceUsageError(f"unsupported correction authority: {authority}")
-    if producer_class not in TRUSTED_CORRECTION_PRODUCERS.get(authority, set()):
-        raise WorkspaceUsageError(f"producer class {producer_class!r} is not trusted for {authority}.")
-    if not source_ref:
-        raise WorkspaceUsageError("trusted authority host events require source_ref.")
-    event = {
-        "kind": "agentic-workspace/trusted-authority-host-event/v1",
-        "status": "current",
-        "authority": authority,
-        "producer_class": producer_class,
-        "producer_id": producer_id,
-        "source": source or authority,
-        "source_ref": source_ref,
-        "target_revision": target_revision,
-        "event_id": event_id,
-        "recorded_at": _guidance_now(),
-        "custody": {
-            "producer": "agentic-workspace.trusted-authority-host-event",
-            "trusted_channel": trusted_channel,
-            "rule": "Guidance receipts consume this host event; caller-supplied authority strings alone are not promotion authority.",
-        },
-    }
-    event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
-    event["event_ref"] = event_ref
-    path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(event, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
-    return {
-        "kind": "agentic-workspace/trusted-authority-host-event-result/v1",
-        "status": "stored",
-        "event_ref": event_ref,
-        "event": event,
-        "path": (TRUSTED_AUTHORITY_EVENT_STORE_PATH / path.name).as_posix(),
-    }
+    raise WorkspaceUsageError(
+        "trusted authority host events are adapter-owned evidence and cannot be minted by repo-local guidance code; "
+        "import a current host event into .agentic-workspace/local/trusted-authority-events and pass its host_event_ref."
+    )
 
 
 def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[str, Any]:
@@ -766,8 +735,10 @@ def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[
     if event.get("status") != "current":
         raise WorkspaceUsageError("trusted authority host event is not current.")
     custody = event.get("custody") if isinstance(event.get("custody"), dict) else {}
-    if custody.get("producer") != "agentic-workspace.trusted-authority-host-event":
+    if custody.get("producer") in {"", "agentic-workspace.trusted-authority-host-event", "caller", "implementer"}:
         raise WorkspaceUsageError("trusted authority host event is not producer-owned.")
+    if custody.get("trusted_channel") not in {"github-review-webhook", "human-instruction-host", "evaluation-result-adapter"}:
+        raise WorkspaceUsageError("trusted authority host event does not come from an admitted host channel.")
     authority = str(event.get("authority") or "")
     producer_class = str(event.get("producer_class") or "")
     if authority not in ADMITTED_CORRECTION_AUTHORITIES or producer_class not in TRUSTED_CORRECTION_PRODUCERS.get(authority, set()):
