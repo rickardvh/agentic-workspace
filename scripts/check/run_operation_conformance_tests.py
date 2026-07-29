@@ -54,6 +54,11 @@ READINESS_CASES = (
     "mutation-failed",
 )
 CONFORMANCE_RECEIPT_EXPIRES_AT = "2026-12-31T00:00:00Z"
+EXTERNAL_CONFORMANCE_RECEIPT_PATHS = (
+    REPO_ROOT / "src/agentic_workspace/contracts/external_operation_conformance_receipts.json",
+    REPO_ROOT / "generated/workspace/python/external_operation_conformance_receipts.json",
+    REPO_ROOT / "generated/workspace/typescript/external_operation_conformance_receipts.json",
+)
 
 
 def build_external_operation_conformance_receipts(
@@ -184,6 +189,25 @@ def build_external_operation_conformance_receipts(
         "expires_at": expires_at,
         "status": "recorded" if receipts else "no-operation-results",
         "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored.",
+    }
+
+
+def write_external_operation_conformance_receipts(
+    receipt_store: Mapping[str, object], *, paths: tuple[Path, ...] | None = None
+) -> dict[str, object]:
+    """Persist the authoritative receipt mirrors consumed by packaged clients."""
+    selected_paths = paths or EXTERNAL_CONFORMANCE_RECEIPT_PATHS
+    text = json.dumps(dict(receipt_store), indent=2, sort_keys=True) + "\n"
+    written: list[str] = []
+    for path in selected_paths:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8", newline="\n")
+        written.append(path.relative_to(REPO_ROOT).as_posix() if path.is_relative_to(REPO_ROOT) else path.as_posix())
+    return {
+        "kind": "agentic-workspace/external-operation-conformance-receipt-write/v1",
+        "status": "written",
+        "receipt_count": len(receipt_store.get("receipts", [])) if isinstance(receipt_store.get("receipts"), list) else 0,
+        "paths": written,
     }
 
 
@@ -723,6 +747,9 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     payload = run_ir_cases(target_selection=str(args.target), case_filter=set(args.case), require_node=bool(args.require_node))
+    profile = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/external_consumer_profile.json").read_text(encoding="utf-8"))
+    receipt_store = build_external_operation_conformance_receipts(profile, conformance_result=payload)
+    payload["external_operation_conformance_receipts"] = write_external_operation_conformance_receipts(receipt_store)
     if args.format == "json":
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:

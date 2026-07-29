@@ -686,6 +686,39 @@ def test_external_conformance_receipts_pass_only_from_complete_result_vectors() 
     assert receipt["custody"]["producer"] == "agentic-workspace.operation-conformance-runner"
 
 
+def test_operation_conformance_main_writes_authoritative_receipt_mirrors(tmp_path: Path, monkeypatch) -> None:
+    runner = _load_test_ir_runner()
+    paths = (
+        tmp_path / "src" / "external_operation_conformance_receipts.json",
+        tmp_path / "python" / "external_operation_conformance_receipts.json",
+        tmp_path / "typescript" / "external_operation_conformance_receipts.json",
+    )
+    conformance_result = {
+        "kind": "operation-conformance-proof/v1",
+        "summary": {"state": "pass", "pass_count": 1, "fail_count": 0, "unavailable_count": 0, "skipped_count": 0},
+        "readiness_transports": {transport: {"status": "passed"} for transport in runner.READINESS_TRANSPORTS},
+        "readiness_cases": {case: {"status": "passed"} for case in runner.READINESS_CASES},
+        "cases": [
+            {
+                "case_id": "assignment.export.process",
+                "behavioral_class": "absent",
+                "operation_id": "assignment.export",
+                "target": "python",
+                "state": "pass",
+            }
+        ],
+    }
+    monkeypatch.setattr(runner, "run_ir_cases", lambda **_kwargs: conformance_result)
+    monkeypatch.setattr(runner, "EXTERNAL_CONFORMANCE_RECEIPT_PATHS", paths)
+
+    assert runner.main(["--format", "json"]) == 0
+
+    stores = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
+    assert stores[0] == stores[1] == stores[2]
+    assert stores[0]["status"] == "recorded"
+    assert any(receipt["operation_id"] == "assignment.export" for receipt in stores[0]["receipts"])
+
+
 def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -> None:
     checker = _load_checker()
 
