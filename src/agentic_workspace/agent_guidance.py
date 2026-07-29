@@ -1283,6 +1283,48 @@ def _guidance_mutation_receipt(
     }
 
 
+def _record_guidance_mutation_receipt(
+    *,
+    operation: str,
+    target_root: Path,
+    store_path: Path,
+    store_pre_digest: str,
+    records: list[dict[str, Any]],
+    affected_records: list[dict[str, Any]],
+    postconditions: list[str],
+    owner_admission: dict[str, Any],
+) -> dict[str, Any]:
+    mutation = _guidance_mutation_receipt(
+        operation=operation,
+        target_root=target_root,
+        store_path=store_path,
+        store_pre_digest=store_pre_digest,
+        records=records,
+        affected_records=affected_records,
+        postconditions=postconditions,
+        owner_admission=owner_admission,
+    )
+    stored = _store_guidance_receipt(
+        target_root=target_root,
+        operation_id=f"agent-guidance.{operation}",
+        receipt={
+            "receipt_type": "guidance-mutation",
+            "operation": operation,
+            "mutation_receipt": mutation,
+            "store_ref": mutation["store_ref"],
+            "affected_record_ids": mutation["affected_record_ids"],
+            "idempotency_key": mutation["idempotency_key"],
+        },
+    )
+    return {
+        **mutation,
+        "receipt_ref": stored["receipt_ref"],
+        "receipt_store": stored["store"],
+        "receipt_custody": stored["receipt"]["custody"],
+        "receipt_status": stored["status"],
+    }
+
+
 def _guidance_owner_admission(*, destination: dict[str, Any], store_digest: str, store_path: Path, target_root: Path) -> dict[str, Any]:
     owner = str(destination.get("owner") or "")
     operation_id = str(destination.get("owner_operation_id") or "")
@@ -1387,7 +1429,7 @@ def apply_guidance_promotion(
         "status": "promoted",
         "record": record,
         "store": _repo_relative(path, root=target_root),
-        "mutation_receipt": _guidance_mutation_receipt(
+        "mutation_receipt": _record_guidance_mutation_receipt(
             operation="promote",
             target_root=target_root,
             store_path=path,
@@ -1596,7 +1638,7 @@ def transition_guidance(
         "record": record,
         "records": affected,
         "store": _repo_relative(path, root=target_root),
-        "mutation_receipt": _guidance_mutation_receipt(
+        "mutation_receipt": _record_guidance_mutation_receipt(
             operation=operation,
             target_root=target_root,
             store_path=path,

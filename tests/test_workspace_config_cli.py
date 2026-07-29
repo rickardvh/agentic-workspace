@@ -1905,9 +1905,12 @@ def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_
         encoding="utf-8",
     )
     decision = guidance_promotion_from_store(target_root=target)
-    first = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][0]["guidance_id"])["record"]
-    second = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][1]["guidance_id"])["record"]
-    third = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][2]["guidance_id"])["record"]
+    first_promotion = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][0]["guidance_id"])
+    second_promotion = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][1]["guidance_id"])
+    third_promotion = apply_guidance_promotion(target_root=target, guidance_id=decision["guidance"][2]["guidance_id"])
+    first = first_promotion["record"]
+    second = second_promotion["record"]
+    third = third_promotion["record"]
 
     missing_revision = transition_guidance(
         target_root=target,
@@ -1971,15 +1974,25 @@ def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_
 
     assert missing_revision["status"] == "expected-revision-required"
     assert stale_revision["status"] == "stale-guidance-revision"
+    assert first_promotion["mutation_receipt"]["receipt_ref"].startswith("guidance-receipt:")
+    assert first_promotion["mutation_receipt"]["receipt_custody"]["producer"] == "agentic-workspace.guidance-receipt-index"
     assert edited["record"]["instruction"] == "Prefer focused edits."
+    assert edited["mutation_receipt"]["receipt_ref"].startswith("guidance-receipt:")
+    assert edited["mutation_receipt"]["receipt_store"] == ".agentic-workspace/local/guidance-receipts.json"
     assert second["guidance_id"] in merged["record"]["merged_guidance_ids"]
     assert next(item for item in merged["records"] if item["guidance_id"] == second["guidance_id"])["status"] == "merged"
     assert merged["mutation_receipt"]["atomic_record_count"] == 2
+    assert merged["mutation_receipt"]["receipt_ref"].startswith("guidance-receipt:")
     assert split["record"]["status"] == "split-retired"
     assert len(split["record"]["split_replacements"]) == 2
     assert {item["status"] for item in split["records"] if item["guidance_id"] in split["record"]["split_replacement_ids"]} == {"active"}
+    assert split["mutation_receipt"]["receipt_ref"].startswith("guidance-receipt:")
     assert missing_replacement["status"] == "missing-replacement-guidance"
     assert superseded["record"]["status"] == "superseded"
+    assert superseded["mutation_receipt"]["receipt_ref"].startswith("guidance-receipt:")
+    receipt_index = json.loads((target / ".agentic-workspace/local/guidance-receipts.json").read_text(encoding="utf-8"))
+    mutation_receipts = [item for item in receipt_index["receipts"] if item.get("receipt_type") == "guidance-mutation"]
+    assert {item["operation"] for item in mutation_receipts} >= {"promote", "edit", "merge", "split", "supersede"}
 
 
 def test_correction_event_lifecycle_rejects_delivery_replay_separately_from_recurrence() -> None:
@@ -2001,6 +2014,39 @@ def test_correction_event_lifecycle_rejects_delivery_replay_separately_from_recu
 
     assert admitted["admitted_events"][0]["admission_state"] == "accepted-candidate"
     assert {item["reason"] for item in admitted["rejected_events"]} == {"duplicate-replay"}
+
+
+def test_correction_event_caller_authority_without_receipt_remains_non_routing() -> None:
+    from agentic_workspace.agent_guidance import admit_correction_events, guidance_promotion_decision
+
+    subjects = [
+        {
+            "profile_name": "fast_worker",
+            "stable_target_id": "user-local:fast-worker",
+            "target_revision": "rev-b",
+            "aliases": ["fast"],
+            "identity_status": "active",
+            "revision_policy": "preserve",
+        }
+    ]
+    caller_claimed_review = _correction_event(
+        target_identity_ref="user-local:fast-worker",
+        authority="pr-review",
+        producer_class="agent",
+        producer_id="agent-self-observation",
+        source_ref="agent-note-claims-review-authority",
+        evidence_hash="sha256:agent-note",
+    )
+
+    admitted = admit_correction_events(events=[caller_claimed_review], subjects=subjects)
+    decision = guidance_promotion_decision(admission=admitted)
+
+    assert admitted["admitted_events"] == []
+    assert admitted["low_authority_events"][0]["authority"] == "agent-self-observation"
+    assert admitted["derived_routes"]["target_guidance"] == []
+    assert admitted["derived_routes"]["low_authority"] == [admitted["low_authority_events"][0]["event_id"]]
+    assert decision["status"] == "review-required"
+    assert decision["guidance"] == []
 
 
 def test_correction_event_lifecycle_applies_revision_policies_and_rejects_unknown_or_secret_events() -> None:
