@@ -1040,6 +1040,7 @@ candidates = []
     invocation = route["next_safe_action"]["operation_invocation"]
     assert invocation["operation_id"] == "planning.front-door"
     assert invocation["operation_action"] == "route-decision-next-action"
+    assert invocation["operation_path"] == "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.front-door.json"
     assert invocation["authority"] == "agentic-planning/route-decision/v1"
     assert invocation["input_revision"].startswith("sha256:")
     assert invocation["input_identity"]["route_action"] == "prove-current-task"

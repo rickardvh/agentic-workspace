@@ -57,6 +57,8 @@ from agentic_workspace.workspace_runtime_generated_surface import (
     _command_with_cli_invoke,
 )
 
+PLANNING_FRONT_DOOR_OPERATION_PATH = "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.front-door.json"
+
 
 def _stable_revision(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
@@ -1310,8 +1312,9 @@ def _planning_route_decision_payload(
     owner_facts = _as_dict(route_inputs.get("owner"))
     selected_owner_ref = str(route_evidence.get("active_execplan") or owner_facts.get("ref") or "")
     task_mode = str(task_binding.get("mode") or "")
+    route_proposal = _as_dict(reconciliation_proposal) or _as_dict(route_evidence.get("reconciliation_proposal"))
     next_packet = _route_decision_next_action_packet(
-        route_evidence=route_evidence,
+        route_evidence={**route_evidence, "reconciliation_proposal": route_proposal},
         task_relation=task_relation,
         owner_posture=owner_posture,
         required_transition=transition,
@@ -1387,6 +1390,13 @@ def _planning_route_decision_payload(
     if proposal.get("status") == "current":
         proposal_posture = str(proposal.get("owner_posture") or "reconciliation-pending")
         proposal_transition = str(proposal.get("required_transition") or "reconcile")
+        proposal_next_packet = _route_decision_next_action_packet(
+            route_evidence={**route_evidence, "reconciliation_proposal": proposal},
+            task_relation=task_relation,
+            owner_posture=proposal_posture,
+            required_transition=proposal_transition,
+            planning_revision=planning_revision,
+        )
         decision.update(
             {
                 "owner_posture": proposal_posture,
@@ -1395,12 +1405,8 @@ def _planning_route_decision_payload(
                 "mutation_authority": "reconciliation-proposal",
                 "proof_expectation": "apply the current reconciliation proposal and retain its mutation receipt",
                 "state_update_policy": "reconciliation-apply-required",
-                "next_safe_action": {
-                    "action": "apply-planning-reconciliation-proposal",
-                    "command": proposal.get("apply_command", ""),
-                    "run": proposal.get("apply_command", ""),
-                    "summary": "Apply the current Planning reconciliation proposal after its compare-and-swap check.",
-                },
+                "next_safe_action": proposal_next_packet,
+                "action_identity": _as_dict(_as_dict(proposal_next_packet.get("operation_invocation")).get("input_identity")),
             }
         )
         decision["reason_codes"] = [*decision["reason_codes"], "current-reconciliation-proposal"]
@@ -1469,7 +1475,7 @@ def _route_decision_next_action_packet(
     )
     mutation_baseline = _as_dict(route_inputs.get("mutation_baseline"))
     mutation_scope = _as_dict(mutation_baseline.get("scope"))
-    route_proposal = _as_dict(route_inputs.get("reconciliation_proposal"))
+    route_proposal = _as_dict(route_evidence.get("reconciliation_proposal")) or _as_dict(route_inputs.get("reconciliation_proposal"))
     if owner_posture == "completed-residue":
         completed_plan = _as_dict(route_evidence.get("completed_active_plan"))
         action = "archive-or-retire-completed-plan"
@@ -1544,7 +1550,7 @@ def _route_decision_next_action_packet(
         "operation_invocation": {
             "operation_id": "planning.front-door",
             "operation_action": "route-decision-next-action",
-            "operation_path": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+            "operation_path": PLANNING_FRONT_DOOR_OPERATION_PATH,
             "adapter_id": "planning.front-door.cli",
             "authority": "agentic-planning/route-decision/v1",
             "input_revision": input_revision,
@@ -1564,6 +1570,77 @@ def _route_decision_next_action_packet(
             "preconditions": required_inputs,
             "expected_transition": required_transition,
         },
+    }
+
+
+def validate_planning_route_action_invocation(
+    *,
+    invocation: dict[str, Any],
+    live_route_decision: dict[str, Any],
+) -> dict[str, Any]:
+    """Admit a Planning route action only while its live authority inputs match.
+
+    The route decision advertises ``planning.front-door`` as the executable
+    operation, but execution cannot trust the caller's serialized packet.  This
+    admission boundary compares the caller-supplied invocation with the current
+    route decision's own operation identity before any mutation or claim
+    advancement may use the action.
+    """
+
+    live_invocation = _as_dict(_as_dict(live_route_decision.get("next_safe_action")).get("operation_invocation"))
+    required = {
+        "operation_id": "planning.front-door",
+        "operation_action": "route-decision-next-action",
+        "operation_path": PLANNING_FRONT_DOOR_OPERATION_PATH,
+        "authority": "agentic-planning/route-decision/v1",
+    }
+    static_failures = [
+        field
+        for field, expected in required.items()
+        if str(invocation.get(field) or "") != expected or str(live_invocation.get(field) or "") != expected
+    ]
+    caller_identity = _as_dict(invocation.get("input_identity"))
+    live_identity = _as_dict(live_invocation.get("input_identity"))
+    live_revision = "sha256:" + _stable_revision(live_identity) if live_identity else ""
+    revision_failures = [
+        field
+        for field, caller, live in [
+            ("input_identity", caller_identity, live_identity),
+            ("input_revision", str(invocation.get("input_revision") or ""), live_revision),
+        ]
+        if caller != live
+    ]
+    changed_authority_fields = [
+        field
+        for field in [
+            "planning_revision",
+            "selected_owner_revision",
+            "task_binding_identity",
+            "mutation_baseline_id",
+            "mutation_scope_digest",
+            "reconciliation_proposal_id",
+            "reconciliation_proposal_revision",
+        ]
+        if str(caller_identity.get(field) or "") != str(live_identity.get(field) or "")
+    ]
+    status = "admitted" if not static_failures and not revision_failures else "rejected"
+    return {
+        "kind": "agentic-planning/route-action-admission/v1",
+        "status": status,
+        "operation_id": str(invocation.get("operation_id") or ""),
+        "operation_path": str(invocation.get("operation_path") or ""),
+        "live_operation_path": str(live_invocation.get("operation_path") or ""),
+        "input_revision": str(invocation.get("input_revision") or ""),
+        "live_input_revision": live_revision,
+        "static_failures": static_failures,
+        "revision_failures": revision_failures,
+        "changed_authority_fields": changed_authority_fields,
+        "rejection": {
+            "status": "reject-on-input-revision-mismatch",
+            "reason": "caller route-action identity is stale or not bound to the Planning front-door operation",
+        }
+        if status == "rejected"
+        else {},
     }
 
 
