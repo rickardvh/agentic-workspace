@@ -20,6 +20,8 @@ from agentic_workspace.config import (
 CORRECTION_EVENT_RETENTION_CAP = 20
 GUIDANCE_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/guidance-receipts.json")
 TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-events")
+TRUSTED_AUTHORITY_ADMISSION_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-admissions")
+TRUSTED_AUTHORITY_ADMISSION_INDEX_PATH = TRUSTED_AUTHORITY_ADMISSION_STORE_PATH / "index.json"
 TRUSTED_AUTHORITY_EVENT_AUDIENCE = "agentic-workspace.guidance-authority"
 _CURRENT_TRUSTED_AUTHORITY_EVENT_ADMISSIONS: dict[str, dict[str, Any]] = {}
 
@@ -831,6 +833,170 @@ def _install_trusted_authority_host_admission_for_adapter_test(
         },
     }
     _CURRENT_TRUSTED_AUTHORITY_EVENT_ADMISSIONS[admission_ref] = admission
+    return _write_trusted_authority_host_admission(target_root=target_root, admission=admission)
+
+
+def _trusted_authority_admission_index(*, target_root: Path) -> dict[str, Any]:
+    path = target_root / TRUSTED_AUTHORITY_ADMISSION_INDEX_PATH
+    if not path.is_file():
+        return {"kind": "agentic-workspace/trusted-authority-host-admission-index/v1", "admissions": []}
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("trusted authority host admission index is missing or unreadable.") from exc
+    if not isinstance(loaded, dict) or loaded.get("kind") != "agentic-workspace/trusted-authority-host-admission-index/v1":
+        raise WorkspaceUsageError("trusted authority host admission index has the wrong contract.")
+    admissions = loaded.get("admissions")
+    if not isinstance(admissions, list):
+        raise WorkspaceUsageError("trusted authority host admission index has the wrong contract.")
+    return loaded
+
+
+def _trusted_authority_admission_path(*, target_root: Path, admission_ref: str) -> Path:
+    if not admission_ref.startswith("trusted-authority-admission:") or "/" in admission_ref or "\\" in admission_ref:
+        raise WorkspaceUsageError("trusted authority host admission ref has the wrong contract.")
+    return target_root / TRUSTED_AUTHORITY_ADMISSION_STORE_PATH / f"{admission_ref.removeprefix('trusted-authority-admission:')}.json"
+
+
+def _write_trusted_authority_host_admission(*, target_root: Path, admission: dict[str, Any]) -> dict[str, Any]:
+    admission_ref = str(admission.get("admission_ref") or "")
+    path = _trusted_authority_admission_path(target_root=target_root, admission_ref=admission_ref)
+    index_path = target_root / TRUSTED_AUTHORITY_ADMISSION_INDEX_PATH
+    index = _trusted_authority_admission_index(target_root=target_root)
+    revision = _json_digest(admission)
+    stored = {**admission, "revision": revision, "admission_path": path.relative_to(target_root).as_posix()}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(stored, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    entries = [entry for entry in index.get("admissions", []) if isinstance(entry, dict)]
+    entries = [entry for entry in entries if entry.get("admission_ref") != admission_ref]
+    entries.append(
+        {
+            "admission_ref": admission_ref,
+            "path": stored["admission_path"],
+            "revision": revision,
+            "status": str(stored.get("status") or ""),
+            "event_ref": str(stored.get("event_ref") or ""),
+            "event_digest": str(stored.get("event_digest") or ""),
+        }
+    )
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    index_path.write_text(
+        json.dumps(
+            {"kind": "agentic-workspace/trusted-authority-host-admission-index/v1", "admissions": entries},
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return stored
+
+
+def admit_trusted_authority_host_event(
+    *,
+    target_root: Path,
+    event: dict[str, Any],
+    event_ref: str,
+    producer: str,
+    trusted_channel: str,
+    target_revision: str,
+    issued_at: str,
+    expires_at: str,
+    nonce: str,
+    source_ref: str,
+    status: str = "current",
+    revoked_at: str = "",
+    superseded_by: str = "",
+) -> dict[str, Any]:
+    """Record the host/adapter-owned admission result consumed by promotion.
+
+    This is the production boundary for host adapters: callers submit an
+    already-resolved event plus adapter custody facts and receive only an
+    opaque admission ref. Guidance promotion later re-resolves that ref from
+    the admission store and validates digest, scope, lifecycle, and custody.
+    """
+
+    if trusted_channel not in {"github-review-webhook", "human-instruction-host", "evaluation-result-adapter"}:
+        raise WorkspaceUsageError("trusted authority host admission requires an admitted host channel.")
+    if producer in {"", "agentic-workspace.trusted-authority-host-event", "caller", "implementer"}:
+        raise WorkspaceUsageError("trusted authority host admission requires producer-owned custody.")
+    ref = str(event_ref or event.get("event_ref") or "").strip()
+    if not ref.startswith("trusted-authority-event:") or "/" in ref or "\\" in ref:
+        raise WorkspaceUsageError("trusted authority host admission requires a trusted host event ref.")
+    event_digest = _trusted_authority_event_digest(event)
+    admission_ref = (
+        "trusted-authority-admission:"
+        + _json_digest(
+            {
+                "event_ref": ref,
+                "event_digest": event_digest,
+                "workspace_ref": f"workspace:path:{target_root.resolve()}",
+                "producer": producer,
+                "trusted_channel": trusted_channel,
+                "nonce": nonce,
+            }
+        )[:24]
+    )
+    admission = {
+        "kind": "agentic-workspace/trusted-authority-host-admission-result/v1",
+        "status": status,
+        "admission_ref": admission_ref,
+        "event_ref": ref,
+        "event_digest": event_digest,
+        "authority": str(event.get("authority") or ""),
+        "producer_class": str(event.get("producer_class") or ""),
+        "producer": producer,
+        "trusted_channel": trusted_channel,
+        "source_ref": source_ref or str(event.get("source_ref") or ""),
+        "target_revision": target_revision,
+        "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        "workspace_ref": f"workspace:path:{target_root.resolve()}",
+        "workspace_path": str(target_root.resolve()),
+        "issued_at": issued_at,
+        "expires_at": expires_at,
+        "nonce": nonce,
+        "revoked_at": revoked_at,
+        "superseded_by": superseded_by,
+        "custody": {
+            "producer": "trusted-authority-host-adapter",
+            "trusted_channel": "host-admission-operation",
+            "rule": "Host adapters own admission production; guidance promotion consumes only this opaque current result.",
+        },
+    }
+    stored = _write_trusted_authority_host_admission(target_root=target_root, admission=admission)
+    return {
+        "kind": "agentic-workspace/trusted-authority-host-admission-operation-result/v1",
+        "status": "admitted" if status == "current" else "recorded",
+        "admission_ref": admission_ref,
+        "admission": stored,
+        "event_ref": ref,
+        "rule": "Guidance promotion re-resolves this opaque host-admission ref and rejects raw event files or process-local admission state.",
+    }
+
+
+def _trusted_authority_host_admission(*, target_root: Path, admission_ref: str) -> dict[str, Any] | None:
+    try:
+        index = _trusted_authority_admission_index(target_root=target_root)
+        entry = next(
+            (
+                item
+                for item in index.get("admissions", [])
+                if isinstance(item, dict) and item.get("admission_ref") == admission_ref and item.get("status") == "current"
+            ),
+            None,
+        )
+        if entry is None:
+            return None
+        path = _trusted_authority_admission_path(target_root=target_root, admission_ref=admission_ref)
+        admission = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, WorkspaceUsageError):
+        return None
+    if not isinstance(admission, dict):
+        return None
+    if admission.get("revision") and admission.get("revision") != _json_digest(
+        {key: value for key, value in admission.items() if key not in {"revision", "admission_path"}}
+    ):
+        return None
     return admission
 
 
@@ -838,7 +1004,7 @@ def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any], tar
     admission_ref = str(event.get("host_admission_ref") or "")
     if not admission_ref.startswith("trusted-authority-admission:"):
         return False
-    admitted = _CURRENT_TRUSTED_AUTHORITY_EVENT_ADMISSIONS.get(admission_ref)
+    admitted = _trusted_authority_host_admission(target_root=target_root, admission_ref=admission_ref)
     if not isinstance(admitted, dict):
         return False
     raw_event_custody = event.get("custody")
@@ -874,10 +1040,10 @@ def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any], tar
         return False
     raw_admission_custody = admitted.get("custody")
     admission_custody = raw_admission_custody if isinstance(raw_admission_custody, dict) else {}
-    return (
-        admission_custody.get("producer") == "trusted-authority-host-adapter"
-        and admission_custody.get("trusted_channel") == "host-admission-capability"
-    )
+    return admission_custody.get("producer") == "trusted-authority-host-adapter" and admission_custody.get("trusted_channel") in {
+        "host-admission-capability",
+        "host-admission-operation",
+    }
 
 
 def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[str, Any]:
