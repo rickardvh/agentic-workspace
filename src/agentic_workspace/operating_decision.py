@@ -640,32 +640,28 @@ def _owner_operation_result_base(
             },
         )
 
-    def derive_owner_result(producer: str, result_kind: str, repair_operation_id: str) -> dict[str, Any]:
-        owner_result = _owner_result_base(
-            surface=surface,
-            item=item,
-            root=root,
-            chosen=chosen,
-            revision=revision,
-            git_head=git_head,
-            selection=selection,
-            adapter_id=adapter_id,
-            status=status,
-            reason=reason,
-            extra={
-                "owner_boundary": boundary,
-                "schema_backing": structural_backing,
-                **(extra or {}),
-            },
-        )
-        return _finalize_owner_result(
-            {
-                **{key: value for key, value in owner_result.items() if key not in {"producer", "kind", "repair_operation_id", "revision"}},
-                "kind": result_kind,
-                "producer": producer,
-                "repair_operation_id": repair_operation_id,
-            }
-        )
+    owner_result = _owner_result_base(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id=adapter_id,
+        status=status,
+        reason=reason,
+        extra={
+            "owner_boundary": boundary,
+            "schema_backing": structural_backing,
+            **(extra or {}),
+        },
+    )
+    owner_result_payload = {
+        key: value
+        for key, value in owner_result.items()
+        if key not in {"producer", "kind", "repair_operation_id", "revision", "owner_operation", "owner_execution_receipt"}
+    }
 
     return execute_context_owner_operation(
         surface=surface,
@@ -676,7 +672,7 @@ def _owner_operation_result_base(
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
-        derive_owner_result=derive_owner_result,
+        owner_result_payload=owner_result_payload,
     )
 
 

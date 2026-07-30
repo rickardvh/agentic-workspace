@@ -1189,21 +1189,20 @@ def test_context_authority_rejects_digest_only_synthesized_owner_operation(tmp_p
     assert system_intent["reason"] == "owner-operation-receipt-missing"
 
 
-def test_context_authority_rejects_replayed_owner_operation_receipt_without_current_execution(
+def test_context_authority_owner_operation_receipt_currentness_is_recomputable_across_processes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _write_context_authority_sources(tmp_path)
-    from agentic_workspace import context_authority_owner_operations, operating_decision
+    from agentic_workspace import operating_decision
 
     real_adapter = operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS["system-intent"]
 
-    def replayed_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+    def cross_process_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
         result = real_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific)
-        context_authority_owner_operations._CURRENT_OWNER_RECEIPTS.clear()
         return result
 
-    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "system-intent", replayed_adapter)
+    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "system-intent", cross_process_adapter)
 
     projection = resolve_context_authority_projection(
         consumer="start",
@@ -1211,9 +1210,9 @@ def test_context_authority_rejects_replayed_owner_operation_receipt_without_curr
         target_root=tmp_path,
     )
 
-    assert projection["status"] == "repair-required"
-    system_intent = next(item for item in projection["excluded_authorities"] if item["surface"] == "system-intent")
-    assert system_intent["reason"] == "owner-operation-receipt-not-admitted"
+    system_intent = next(item for item in projection["authorities"] if item["surface"] == "system-intent")
+    receipt = system_intent["source"]["admission"]["owner_result"]["owner_execution_receipt"]
+    assert receipt["current_resolution"]["resolution_mode"] == "deterministic-source-revision"
 
 
 def test_context_authority_rejects_parseable_file_without_owner_boundary(tmp_path: Path) -> None:
@@ -1287,21 +1286,22 @@ def test_context_owner_operation_executor_does_not_accept_caller_authority_field
 
     parameters = set(inspect.signature(execute_context_owner_operation).parameters)
 
-    assert "derive_owner_result" in parameters
+    assert "derive_owner_result" not in parameters
     assert "producer" not in parameters
     assert "operation_id" not in parameters
     assert "owner_result" not in parameters
+    assert "owner_result_payload" in parameters
     assert "structural_backing" not in parameters
     assert "boundary" not in parameters
 
 
-def test_context_owner_operation_executor_rejects_wrong_registered_identity(tmp_path: Path) -> None:
+def test_context_owner_operation_executor_rejects_caller_supplied_authority_fields(tmp_path: Path) -> None:
     from agentic_workspace.context_authority_owner_operations import execute_context_owner_operation
 
     _write_context_authority_sources(tmp_path)
     chosen = tmp_path / "SYSTEM_INTENT.md"
 
-    with pytest.raises(ValueError, match="wrong owner identity"):
+    with pytest.raises(ValueError, match="caller-supplied owner authority fields"):
         execute_context_owner_operation(
             surface="system-intent",
             owner="workspace-runtime",
@@ -1311,7 +1311,7 @@ def test_context_owner_operation_executor_rejects_wrong_registered_identity(tmp_
             git_head="head",
             selection={"consumer": "start"},
             adapter_id="system-intent.owner-result",
-            derive_owner_result=lambda _producer, _kind, _operation_id: {
+            owner_result_payload={
                 "kind": "forged-kind",
                 "producer": "forged-producer",
                 "status": "current",

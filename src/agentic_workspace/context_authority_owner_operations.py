@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 _CONTEXT_AUTHORITY_REGISTRY_RESOURCE = "context_authority_registry.json"
 
@@ -20,9 +20,6 @@ def _finalize_owner_result(payload: dict[str, Any]) -> dict[str, Any]:
         "revision": "sha256:"
         + _digest({key: value for key, value in payload.items() if key != "revision" and not str(key).endswith("_debug")}),
     }
-
-
-_CURRENT_OWNER_RECEIPTS: dict[str, dict[str, Any]] = {}
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -58,9 +55,6 @@ for _item in _as_list(_REGISTRY_CONTRACT.get("surfaces")):
     }
 
 
-ContextOwnerDerivation = Callable[[str, str, str], dict[str, Any]]
-
-
 def execute_context_owner_operation(
     *,
     surface: str,
@@ -71,7 +65,7 @@ def execute_context_owner_operation(
     git_head: str,
     selection: dict[str, Any],
     adapter_id: str,
-    derive_owner_result: ContextOwnerDerivation,
+    owner_result_payload: dict[str, Any],
 ) -> dict[str, Any]:
     """Execute the registered owner operation and return an admitted result."""
 
@@ -81,15 +75,31 @@ def execute_context_owner_operation(
     producer = spec["producer"]
     result_kind = spec["result_kind"]
     operation_id = spec["operation_id"]
-    owner_result = derive_owner_result(producer, result_kind, operation_id)
-    if not isinstance(owner_result, dict):
-        raise ValueError("context owner operation derivation must return a result object")
-    if owner_result.get("producer") != producer or owner_result.get("kind") != result_kind:
-        raise ValueError("context owner operation derivation returned the wrong owner identity")
+    if not isinstance(owner_result_payload, dict):
+        raise ValueError("context owner operation payload must be a result object")
+    forbidden_authority_fields = {
+        "producer",
+        "kind",
+        "repair_operation_id",
+        "revision",
+        "owner_operation",
+        "owner_execution_receipt",
+    }
+    supplied_authority_fields = sorted(forbidden_authority_fields.intersection(owner_result_payload))
+    if supplied_authority_fields:
+        raise ValueError(f"caller-supplied owner authority fields are not accepted: {', '.join(supplied_authority_fields)}")
+    owner_result = _finalize_owner_result(
+        {
+            **owner_result_payload,
+            "kind": result_kind,
+            "producer": producer,
+            "repair_operation_id": operation_id,
+        }
+    )
     structural_backing = _as_dict(owner_result.get("schema_backing"))
     boundary = str(owner_result.get("owner_boundary") or "")
     if not structural_backing or not boundary:
-        raise ValueError("context owner operation derivation must provide owner boundary and schema backing")
+        raise ValueError("context owner operation payload must provide owner boundary and schema backing")
     source_id = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
     result_payload_revision = str(owner_result.get("revision") or "")
     schema_backing_revision = "sha256:" + _digest(structural_backing)
@@ -134,7 +144,25 @@ def execute_context_owner_operation(
         "executor": receipt_identity["executor"],
         "receipt_schema": receipt_identity["receipt_schema"],
         "supersedes": "",
-        "admission_rule": "Only this registered owner-operation front door can make this receipt current.",
+        "current_resolution": {
+            "kind": "agentic-workspace/context-authority-current-resolution/v1",
+            "status": "current",
+            "resolution_mode": "deterministic-source-revision",
+            "receipt_index_ref": f"context-authority-current:{surface}:{source_id}",
+            "recompute_inputs": [
+                "operation_id",
+                "producer",
+                "surface",
+                "source_id",
+                "source_revision",
+                "git_head",
+                "selection_revision",
+                "schema_backing_revision",
+                "result_payload_revision",
+            ],
+            "rule": "Receipt currentness is re-resolved from producer-owned operation identity and current source revision; no process-local map is authoritative.",
+        },
+        "admission_rule": "Only this registered owner-operation front door can construct the producer-owned receipt.",
     }
     owner_operation = {
         "kind": "agentic-workspace/context-authority-owner-operation/v1",
@@ -153,7 +181,7 @@ def execute_context_owner_operation(
         "result_payload_revision": result_payload_revision,
         "admission_rule": (
             "Context authority admits current results only from a registered owner-operation front-door receipt. "
-            "Checked-in owner-result JSON and caller-constructed receipts are evidence only."
+            "Checked-in owner-result JSON and caller-constructed receipts are evidence only; currentness is recomputable across processes."
         ),
     }
     admitted_result = _finalize_owner_result(
@@ -165,11 +193,6 @@ def execute_context_owner_operation(
             "owner_execution_receipt": owner_execution_receipt,
         }
     )
-    _CURRENT_OWNER_RECEIPTS[receipt_id] = {
-        "owner_operation": owner_operation,
-        "owner_execution_receipt": owner_execution_receipt,
-        "result_revision": admitted_result["revision"],
-    }
     return admitted_result
 
 
@@ -180,13 +203,40 @@ def registered_context_owner_receipt_status(
     result_revision: str,
 ) -> tuple[bool, str]:
     receipt_id = str(receipt.get("receipt_id") or "")
-    current = _CURRENT_OWNER_RECEIPTS.get(receipt_id)
-    if not current:
-        return False, "owner-operation-receipt-not-admitted"
-    if current.get("owner_operation") != owner_operation:
+    if not receipt_id.startswith("sha256:"):
+        return False, "owner-operation-receipt-id-missing"
+    current_resolution = _as_dict(receipt.get("current_resolution"))
+    if current_resolution.get("status") != "current":
+        return False, "owner-operation-current-resolution-missing"
+    if current_resolution.get("resolution_mode") != "deterministic-source-revision":
+        return False, "owner-operation-current-resolution-unsupported"
+    operation_identity = {
+        "operation_id": receipt.get("operation_id"),
+        "producer": receipt.get("producer"),
+        "surface": receipt.get("surface"),
+        "owner": receipt.get("owner"),
+        "source_id": receipt.get("source_id"),
+        "source_revision": receipt.get("source_revision"),
+        "git_head": receipt.get("git_head"),
+        "adapter_id": receipt.get("adapter_id"),
+        "selection_revision": receipt.get("selection_revision"),
+        "schema_backing_revision": receipt.get("schema_backing_revision"),
+        "result_payload_revision": receipt.get("result_payload_revision"),
+    }
+    expected_run_id = "sha256:" + _digest(operation_identity)
+    receipt_identity = {
+        **operation_identity,
+        "run_id": expected_run_id,
+        "executor": receipt.get("executor"),
+        "receipt_schema": receipt.get("receipt_schema"),
+    }
+    expected_receipt_id = "sha256:" + _digest(receipt_identity)
+    if receipt.get("run_id") != expected_run_id or owner_operation.get("run_id") != expected_run_id:
         return False, "owner-operation-current-run-mismatch"
-    if current.get("owner_execution_receipt") != receipt:
+    if receipt_id != expected_receipt_id or owner_operation.get("receipt_id") != expected_receipt_id:
         return False, "owner-operation-current-receipt-mismatch"
-    if current.get("result_revision") != result_revision:
+    if owner_operation.get("result_payload_revision") != receipt.get("result_payload_revision"):
+        return False, "owner-operation-current-result-mismatch"
+    if not str(result_revision or "").startswith("sha256:"):
         return False, "owner-operation-current-result-mismatch"
     return True, ""
