@@ -13,6 +13,7 @@ from typing import Any, Callable
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
 from agentic_workspace.authority_envelope import mutation_baseline_payload
 from agentic_workspace.context_authority_owner_operations import (
+    _issue_context_owner_adapter_result,
     admit_context_owner_operation_result,
     registered_context_owner_receipt_status,
 )
@@ -668,7 +669,7 @@ def _owner_operation_result_base(
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
-        owner_result=owner_result,
+        owner_result_handle=_issue_context_owner_adapter_result(owner_result),
     )
 
 

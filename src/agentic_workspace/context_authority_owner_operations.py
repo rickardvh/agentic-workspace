@@ -8,6 +8,18 @@ from pathlib import Path
 from typing import Any
 
 _CONTEXT_AUTHORITY_REGISTRY_RESOURCE = "context_authority_registry.json"
+_CONTEXT_OWNER_ADAPTER_TOKEN = object()
+
+
+class ContextOwnerAdapterResult:
+    """Opaque result handle issued by a concrete context-authority owner adapter."""
+
+    __slots__ = ("payload",)
+
+    def __init__(self, *, _adapter_token: object, payload: dict[str, Any]) -> None:
+        if _adapter_token is not _CONTEXT_OWNER_ADAPTER_TOKEN:
+            raise ValueError("context owner adapter result must be issued by a registered owner adapter")
+        self.payload = dict(payload)
 
 
 def _digest(value: Any) -> str:
@@ -55,6 +67,10 @@ for _item in _as_list(_REGISTRY_CONTRACT.get("surfaces")):
     }
 
 
+def _issue_context_owner_adapter_result(payload: dict[str, Any]) -> ContextOwnerAdapterResult:
+    return ContextOwnerAdapterResult(_adapter_token=_CONTEXT_OWNER_ADAPTER_TOKEN, payload=payload)
+
+
 def admit_context_owner_operation_result(
     *,
     surface: str,
@@ -65,7 +81,7 @@ def admit_context_owner_operation_result(
     git_head: str,
     selection: dict[str, Any],
     adapter_id: str,
-    owner_result: dict[str, Any],
+    owner_result_handle: ContextOwnerAdapterResult,
 ) -> dict[str, Any]:
     """Admit a result produced by the registered concrete owner adapter."""
 
@@ -75,8 +91,9 @@ def admit_context_owner_operation_result(
     producer = spec["producer"]
     result_kind = spec["result_kind"]
     operation_id = spec["operation_id"]
-    if not isinstance(owner_result, dict):
-        raise ValueError("context owner operation payload must be a result object")
+    if not isinstance(owner_result_handle, ContextOwnerAdapterResult):
+        raise ValueError("context owner operation result requires a registered owner-adapter handle")
+    owner_result = dict(owner_result_handle.payload)
     if owner_result.get("producer") != producer:
         raise ValueError("owner operation result producer does not match registered owner")
     if owner_result.get("kind") != result_kind:

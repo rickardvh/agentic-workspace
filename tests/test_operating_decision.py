@@ -1319,7 +1319,8 @@ def test_context_owner_operation_admission_does_not_accept_caller_semantic_paylo
     assert "derive_owner_result" not in parameters
     assert "producer" not in parameters
     assert "operation_id" not in parameters
-    assert "owner_result" in parameters
+    assert "owner_result" not in parameters
+    assert "owner_result_handle" in parameters
     assert "owner_result_payload" not in parameters
     assert "structural_backing" not in parameters
     assert "boundary" not in parameters
@@ -1331,7 +1332,7 @@ def test_context_owner_operation_admission_rejects_forged_owner_identity(tmp_pat
     _write_context_authority_sources(tmp_path)
     chosen = tmp_path / "SYSTEM_INTENT.md"
 
-    with pytest.raises(ValueError, match="producer does not match"):
+    with pytest.raises(ValueError, match="registered owner-adapter handle"):
         admit_context_owner_operation_result(
             surface="system-intent",
             owner="workspace-runtime",
@@ -1341,7 +1342,7 @@ def test_context_owner_operation_admission_rejects_forged_owner_identity(tmp_pat
             git_head="head",
             selection={"consumer": "start"},
             adapter_id="system-intent.owner-result",
-            owner_result={
+            owner_result_handle={
                 "kind": "forged-kind",
                 "producer": "forged-producer",
                 "status": "current",
