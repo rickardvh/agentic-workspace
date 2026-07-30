@@ -422,6 +422,7 @@
           "_compact_selector_next_safe_action",
           "_compact_start_closeout_obligations",
           "_compact_start_local_footprint_advisory",
+          "_deferred_start_local_footprint_advisory",
           "_compact_start_proof_payload",
           "_compact_tiny_required_proof_commands",
           "_context_router_family_payload",
