@@ -1824,10 +1824,13 @@ def test_guidance_receipts_require_trusted_host_event_before_authority_storage(t
 
 def test_guidance_receipts_accept_host_adapter_admission_operation(tmp_path: Path) -> None:
     from agentic_workspace.agent_guidance import (
+        _TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN,
+        TRUSTED_AUTHORITY_EVENT_AUDIENCE,
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
+        TrustedAuthorityHostAdmissionHandle,
         _json_digest,
+        _trusted_authority_event_digest,
         admit_trusted_authority_host_event,
-        issue_trusted_authority_host_admission_for_adapter,
         record_trusted_authority_receipt,
     )
 
@@ -1849,17 +1852,43 @@ def test_guidance_receipts_accept_host_adapter_admission_operation(tmp_path: Pat
     }
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
-    handle = issue_trusted_authority_host_admission_for_adapter(
-        target_root=tmp_path,
-        event=event,
-        event_ref=event_ref,
-        producer="github-review-adapter",
-        trusted_channel="github-review-webhook",
-        target_revision="rev-1",
-        issued_at="2026-07-29T00:00:00Z",
-        expires_at="2099-01-01T00:00:00Z",
-        nonce="review-event-1",
-        source_ref="review-1",
+    handle = TrustedAuthorityHostAdmissionHandle(
+        _host_boundary_token=_TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN,
+        admission={
+            "kind": "agentic-workspace/trusted-authority-host-admission-result/v1",
+            "status": "current",
+            "admission_ref": "trusted-authority-admission:"
+            + _json_digest(
+                {
+                    "event_ref": event_ref,
+                    "event_digest": _trusted_authority_event_digest(event),
+                    "workspace_ref": f"workspace:path:{tmp_path.resolve()}",
+                    "producer": "github-review-adapter",
+                    "trusted_channel": "github-review-webhook",
+                    "nonce": "review-event-1",
+                }
+            )[:24],
+            "event_ref": event_ref,
+            "event_digest": _trusted_authority_event_digest(event),
+            "authority": "pr-review",
+            "producer_class": "human-reviewer",
+            "producer": "github-review-adapter",
+            "trusted_channel": "github-review-webhook",
+            "source_ref": "review-1",
+            "target_revision": "rev-1",
+            "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+            "workspace_ref": f"workspace:path:{tmp_path.resolve()}",
+            "workspace_path": str(tmp_path.resolve()),
+            "issued_at": "2026-07-29T00:00:00Z",
+            "expires_at": "2099-01-01T00:00:00Z",
+            "nonce": "review-event-1",
+            "revoked_at": "",
+            "superseded_by": "",
+            "custody": {
+                "producer": "trusted-authority-host-adapter",
+                "trusted_channel": "host-admission-capability",
+            },
+        },
     )
     admitted = admit_trusted_authority_host_event(target_root=tmp_path, admission_handle=handle)
     event["host_admission_ref"] = admitted["admission_ref"]
@@ -1893,6 +1922,14 @@ def test_guidance_host_admission_rejects_raw_caller_mapping(tmp_path: Path) -> N
                 "admission_ref": "trusted-authority-admission:caller-forged",
             },
         )
+
+
+def test_guidance_host_admission_issuer_is_not_public_runtime_entrypoint() -> None:
+    source = (Path(__file__).resolve().parents[1] / "src/agentic_workspace/agent_guidance.py").read_text(encoding="utf-8")
+
+    assert "def issue_trusted_authority_host_admission_for_adapter(" not in source
+    assert "def admit_trusted_authority_host_event(" in source
+    assert "TrustedAuthorityHostAdmissionHandle" in source
 
 
 def test_guidance_receipts_reject_jointly_forged_local_host_event(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
