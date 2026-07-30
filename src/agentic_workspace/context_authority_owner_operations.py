@@ -5,7 +5,9 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+_CONTEXT_AUTHORITY_REGISTRY_RESOURCE = "context_authority_registry.json"
 
 
 def _digest(value: Any) -> str:
@@ -23,6 +25,42 @@ def _finalize_owner_result(payload: dict[str, Any]) -> dict[str, Any]:
 _CURRENT_OWNER_RECEIPTS: dict[str, dict[str, Any]] = {}
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _load_registry_contract() -> dict[str, Any]:
+    path = Path(__file__).resolve().parent / "contracts" / _CONTEXT_AUTHORITY_REGISTRY_RESOURCE
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+_REGISTRY_CONTRACT = _load_registry_contract()
+_OWNER_OPERATION_SPECS: dict[str, dict[str, str]] = {}
+for _item in _as_list(_REGISTRY_CONTRACT.get("surfaces")):
+    if not isinstance(_item, dict):
+        continue
+    _surface = str(_item.get("surface") or "")
+    _owner_contract = _as_dict(_item.get("source_owner_contract"))
+    if not _surface:
+        continue
+    _OWNER_OPERATION_SPECS[_surface] = {
+        "producer": str(_owner_contract.get("owner_module") or ""),
+        "result_kind": str(_owner_contract.get("owner_result_kind") or ""),
+        "operation_id": str(_owner_contract.get("repair_operation_id") or f"context-authority.{_surface}.refresh-source"),
+    }
+
+
+ContextOwnerDerivation = Callable[[str, str, str], dict[str, Any]]
+
+
 def execute_context_owner_operation(
     *,
     surface: str,
@@ -33,14 +71,25 @@ def execute_context_owner_operation(
     git_head: str,
     selection: dict[str, Any],
     adapter_id: str,
-    producer: str,
-    operation_id: str,
-    boundary: str,
-    structural_backing: dict[str, Any],
-    owner_result: dict[str, Any],
+    derive_owner_result: ContextOwnerDerivation,
 ) -> dict[str, Any]:
     """Execute the registered owner operation and return an admitted result."""
 
+    spec = _OWNER_OPERATION_SPECS.get(surface)
+    if not spec or not spec.get("producer") or not spec.get("result_kind") or not spec.get("operation_id"):
+        raise ValueError(f"context owner operation is not registered for surface {surface!r}")
+    producer = spec["producer"]
+    result_kind = spec["result_kind"]
+    operation_id = spec["operation_id"]
+    owner_result = derive_owner_result(producer, result_kind, operation_id)
+    if not isinstance(owner_result, dict):
+        raise ValueError("context owner operation derivation must return a result object")
+    if owner_result.get("producer") != producer or owner_result.get("kind") != result_kind:
+        raise ValueError("context owner operation derivation returned the wrong owner identity")
+    structural_backing = _as_dict(owner_result.get("schema_backing"))
+    boundary = str(owner_result.get("owner_boundary") or "")
+    if not structural_backing or not boundary:
+        raise ValueError("context owner operation derivation must provide owner boundary and schema backing")
     source_id = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
     result_payload_revision = str(owner_result.get("revision") or "")
     schema_backing_revision = "sha256:" + _digest(structural_backing)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import inspect
 import json
 import subprocess
 from pathlib import Path
@@ -1279,6 +1280,51 @@ def test_context_authority_owner_results_are_semantic_adapter_dispatched() -> No
         in source
     )
     assert "parseability alone" not in source
+
+
+def test_context_owner_operation_executor_does_not_accept_caller_authority_fields() -> None:
+    from agentic_workspace.context_authority_owner_operations import execute_context_owner_operation
+
+    parameters = set(inspect.signature(execute_context_owner_operation).parameters)
+
+    assert "derive_owner_result" in parameters
+    assert "producer" not in parameters
+    assert "operation_id" not in parameters
+    assert "owner_result" not in parameters
+    assert "structural_backing" not in parameters
+    assert "boundary" not in parameters
+
+
+def test_context_owner_operation_executor_rejects_wrong_registered_identity(tmp_path: Path) -> None:
+    from agentic_workspace.context_authority_owner_operations import execute_context_owner_operation
+
+    _write_context_authority_sources(tmp_path)
+    chosen = tmp_path / "SYSTEM_INTENT.md"
+
+    with pytest.raises(ValueError, match="wrong owner identity"):
+        execute_context_owner_operation(
+            surface="system-intent",
+            owner="workspace-runtime",
+            root=tmp_path,
+            chosen=chosen,
+            source_revision="sha256:" + _fixture_source_revision(chosen),
+            git_head="head",
+            selection={"consumer": "start"},
+            adapter_id="system-intent.owner-result",
+            derive_owner_result=lambda _producer, _kind, _operation_id: {
+                "kind": "forged-kind",
+                "producer": "forged-producer",
+                "status": "current",
+                "surface": "system-intent",
+                "source_id": "SYSTEM_INTENT.md",
+                "source_revision": "sha256:" + _fixture_source_revision(chosen),
+                "git_head": "head",
+                "adapter_id": "system-intent.owner-result",
+                "revision": "sha256:forged",
+                "owner_boundary": "forged",
+                "schema_backing": {"source_format": "markdown"},
+            },
+        )
 
 
 def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path: Path) -> None:
