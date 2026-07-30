@@ -18,14 +18,15 @@ def _write_independent_review_host_result(
     import subprocess
 
     from agentic_workspace.workspace_runtime_proof import (
+        _INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN,
         INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
         INDEPENDENT_REVIEW_HOST_RESULT_DIR,
         INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
+        IndependentReviewHostAdmissionCapability,
         _host_result_body_for_admission,
         _stable_review_json_bytes,
         _stable_review_json_digest,
         admit_independent_review_host_result_capability,
-        issue_independent_review_host_result_capability_for_adapter,
     )
 
     result = dict(review_result)
@@ -127,7 +128,8 @@ def _write_independent_review_host_result(
         "authority": "host-adapter-owned",
     }
     if install_host_admission:
-        handle = issue_independent_review_host_result_capability_for_adapter(
+        handle = IndependentReviewHostAdmissionCapability(
+            _host_boundary_token=_INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN,
             host_result_ref=host_result_ref,
             admission=host_result["host_admission"],
             public_key=key,
@@ -7747,6 +7749,14 @@ def test_independent_review_host_admission_rejects_raw_imported_mappings(tmp_pat
                 "capability": host_inputs["host_capability"],
             },
         )
+
+
+def test_independent_review_host_capability_issuer_is_not_public_runtime_entrypoint() -> None:
+    source = (ROOT / "src/agentic_workspace/workspace_runtime_proof.py").read_text(encoding="utf-8")
+
+    assert "def issue_independent_review_host_result_capability_for_adapter(" not in source
+    assert "def admit_independent_review_host_result_capability(" in source
+    assert "IndependentReviewHostAdmissionCapability" in source
 
 
 def test_trusted_independent_review_rejects_caller_controlled_environment_trust_root(

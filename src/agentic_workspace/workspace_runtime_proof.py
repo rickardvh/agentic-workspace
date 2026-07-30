@@ -6864,29 +6864,6 @@ class IndependentReviewHostAdmissionCapability:
 _INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN = object()
 
 
-def issue_independent_review_host_result_capability_for_adapter(
-    *,
-    host_result_ref: str,
-    admission: Mapping[str, Any],
-    public_key: Mapping[str, Any],
-    capability: Mapping[str, Any],
-) -> IndependentReviewHostAdmissionCapability:
-    """Return a host/adapter-issued independent-review admission handle.
-
-    This is the explicit host boundary used by adapter integrations and tests:
-    ordinary generated operations still receive only the opaque host result ref,
-    not verifier material or caller-authored capability JSON.
-    """
-
-    return IndependentReviewHostAdmissionCapability(
-        _host_boundary_token=_INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN,
-        host_result_ref=host_result_ref,
-        admission=admission,
-        public_key=public_key,
-        capability=capability,
-    )
-
-
 def admit_independent_review_host_result_capability(
     *,
     capability_handle: IndependentReviewHostAdmissionCapability,
@@ -6950,7 +6927,8 @@ def _install_independent_review_host_result_admission_for_adapter_test(
         "authority": "host-adapter-owned",
         "scope": "test-only",
     }
-    handle = issue_independent_review_host_result_capability_for_adapter(
+    handle = IndependentReviewHostAdmissionCapability(
+        _host_boundary_token=_INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN,
         host_result_ref=ref,
         admission=admission,
         public_key=public_key,
