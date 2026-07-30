@@ -6550,6 +6550,34 @@ const commandDefinitions = [
               "name": "review_result_ref"
             },
             {
+              "flags": [
+                "--host-result-ref"
+              ],
+              "help": "Opaque host/adapter independent-review result ref to import and admit.",
+              "name": "host_result_ref"
+            },
+            {
+              "flags": [
+                "--host-admission-json"
+              ],
+              "help": "Serialized host/adapter admission for an independent-review host result.",
+              "name": "host_admission_json"
+            },
+            {
+              "flags": [
+                "--host-public-key-json"
+              ],
+              "help": "Serialized host/adapter public key metadata for admission verification.",
+              "name": "host_public_key_json"
+            },
+            {
+              "flags": [
+                "--host-capability-json"
+              ],
+              "help": "Serialized host-owned admission capability; local files and environment variables are caches only.",
+              "name": "host_capability_json"
+            },
+            {
               "choices": [
                 "fresh-context",
                 "separate-actor",

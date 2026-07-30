@@ -154,6 +154,7 @@ INDEPENDENT_REVIEW_HOST_RESULT_DIR = Path(".agentic-workspace/local/independent-
 INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-review-host-result-index/v1"
 INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
+INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
 _CURRENT_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS: dict[str, dict[str, Any]] = {}
 
 
@@ -6838,24 +6839,76 @@ def _load_independent_review_host_result(*, target_root: Path, host_result_ref: 
     return imported
 
 
-def _install_independent_review_host_result_admission_for_adapter_test(
-    *, host_result_ref: str, admission: Mapping[str, Any], public_key: Mapping[str, Any]
-) -> None:
-    """Install an opaque host-owned independent-review admission for adapter tests.
+def admit_independent_review_host_result_capability(
+    *,
+    host_result_ref: str,
+    admission: Mapping[str, Any],
+    public_key: Mapping[str, Any],
+    capability: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Install an opaque host/adapter-owned review-result admission capability.
 
-    Runtime admission intentionally does not read caller-controlled environment
-    variables or repo-local trust roots. Real hosts/adapters are expected to
-    inject already verified/current admission material across their protected
-    process boundary; tests use this helper to model that boundary explicitly.
+    The runtime intentionally does not read caller-controlled environment
+    variables or repo-local trust roots. A host or adapter that owns review
+    custody injects this in-memory capability across its protected process
+    boundary, then AW revalidates the referenced result against the capability
+    at assignment admission and proof/claim time. Repo-local result, index, and
+    admission files remain caches; without this capability they have no
+    authority-bearing effect.
     """
 
     ref = str(host_result_ref or "").replace("\\", "/").strip()
     if not ref:
         raise WorkspaceUsageError("independent review host admission requires host_result_ref.")
+    capability_payload = dict(capability)
+    if (
+        capability_payload.get("kind") != INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND
+        or capability_payload.get("status") != "current"
+        or capability_payload.get("host_result_ref") != ref
+        or capability_payload.get("operation") != "assignment.admit.independent-review"
+        or capability_payload.get("audience") != INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE
+        or capability_payload.get("authority") != "host-adapter-owned"
+    ):
+        raise WorkspaceUsageError("independent review host admission capability is not current host-owned authority.")
+    if str(capability_payload.get("capability_id") or "").strip() == "":
+        raise WorkspaceUsageError("independent review host admission capability requires capability_id.")
     _CURRENT_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS[ref] = {
         "admission": dict(admission),
         "public_key": dict(public_key),
+        "capability": capability_payload,
     }
+    return {
+        "kind": "agentic-workspace/independent-review-host-admission-capability-result/v1",
+        "operation_id": "assignment.admit.independent-review-host-capability",
+        "status": "admitted",
+        "host_result_ref": ref,
+        "capability_id": str(capability_payload.get("capability_id") or ""),
+        "rule": "Only a host/adapter-injected capability can authorize an independent-review host result; local files and environment variables are non-authoritative caches.",
+    }
+
+
+def _install_independent_review_host_result_admission_for_adapter_test(
+    *, host_result_ref: str, admission: Mapping[str, Any], public_key: Mapping[str, Any]
+) -> None:
+    """Compatibility wrapper for older tests; not a production admission route."""
+
+    ref = str(host_result_ref or "").replace("\\", "/").strip()
+    capability = {
+        "kind": INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND,
+        "status": "current",
+        "capability_id": "adapter-test:" + _stable_review_json_digest({"host_result_ref": ref})[:16],
+        "host_result_ref": ref,
+        "operation": "assignment.admit.independent-review",
+        "audience": INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
+        "authority": "host-adapter-owned",
+        "scope": "test-only",
+    }
+    admit_independent_review_host_result_capability(
+        host_result_ref=ref,
+        admission=admission,
+        public_key=public_key,
+        capability=capability,
+    )
 
 
 def _parse_review_time(value: Any) -> datetime | None:
@@ -6874,6 +6927,19 @@ def _parse_review_time(value: Any) -> datetime | None:
 def _host_admits_independent_review_host_result(host_result_ref: str, host_result: dict[str, Any], *, target_root: Path) -> bool:
     installed = _CURRENT_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS.get(host_result_ref)
     if not isinstance(installed, dict):
+        return False
+    capability = installed.get("capability")
+    if not isinstance(capability, dict):
+        return False
+    if (
+        capability.get("kind") != INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND
+        or capability.get("status") != "current"
+        or capability.get("host_result_ref") != host_result_ref
+        or capability.get("operation") != "assignment.admit.independent-review"
+        or capability.get("audience") != INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE
+        or capability.get("authority") != "host-adapter-owned"
+        or not str(capability.get("capability_id") or "").strip()
+    ):
         return False
     admission = installed.get("admission")
     if not isinstance(admission, dict):
@@ -7110,6 +7176,21 @@ def _independent_review_result_failures(
     return failures
 
 
+def _independent_review_mapping_input(value: Any, *, field: str) -> dict[str, Any]:
+    if not value:
+        return {}
+    if isinstance(value, Mapping):
+        return dict(value)
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise WorkspaceUsageError(f"{field} must be a JSON object.") from exc
+        if isinstance(parsed, dict):
+            return parsed
+    raise WorkspaceUsageError(f"{field} must be a JSON object.")
+
+
 def record_admitted_independent_review_receipt(
     *,
     target_root: Path,
@@ -7189,6 +7270,43 @@ def record_admitted_independent_review_receipt(
 def admit_independent_review_result_operation(
     *, target_root: Path, values: Mapping[str, Any], changed_paths: list[str] | None = None
 ) -> dict[str, Any]:
+    host_result_ref = str(values.get("host_result_ref") or "").strip()
+    if host_result_ref:
+        try:
+            capability_result = admit_independent_review_host_result_capability(
+                host_result_ref=host_result_ref,
+                admission=_independent_review_mapping_input(
+                    values.get("host_admission") or values.get("host_admission_json"),
+                    field="host_admission_json",
+                ),
+                public_key=_independent_review_mapping_input(
+                    values.get("host_public_key") or values.get("host_public_key_json"),
+                    field="host_public_key_json",
+                ),
+                capability=_independent_review_mapping_input(
+                    values.get("host_capability") or values.get("host_capability_json"),
+                    field="host_capability_json",
+                ),
+            )
+            trusted = record_trusted_independent_review_result(
+                target_root=target_root,
+                review_result={"host_result_ref": host_result_ref},
+            )
+            values = {**dict(values), "review_result_ref": trusted["result_ref"]}
+        except WorkspaceUsageError as exc:
+            return {
+                "kind": "agentic-workspace/independent-review-admission-result/v1",
+                "operation_id": "independent-review.admit",
+                "status": "rejected",
+                "admitted": False,
+                "failures": [{"reason": "host-capability-admission-rejected", "field": "host_result_ref", "detail": str(exc)}],
+                "repair_operation": {
+                    "id": "independent-review.repair",
+                    "summary": "Provide a current host/adapter-owned admission capability for the review result.",
+                },
+            }
+    else:
+        capability_result = {}
     raw_result = values.get("review_result") or values.get("review_result_json")
     if raw_result:
         review_result: dict[str, Any] = {}
@@ -7249,6 +7367,7 @@ def admit_independent_review_result_operation(
         "receipt_ref": stored["receipt_ref"],
         "receipt": stored["receipt"],
         "store": stored["store"],
+        **({"host_capability_admission": capability_result} if capability_result else {}),
         "rule": "Review separation is admitted only from a producer-owned review result bound to the current changed scope.",
     }
 

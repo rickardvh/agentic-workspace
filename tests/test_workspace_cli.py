@@ -4551,7 +4551,7 @@ def test_start_default_routes_memory_and_installed_state_detail_behind_selectors
     assert payload["context"]["memory"]["status"] in {"recommended", "not_checked"}
 
 
-def test_start_flags_over_budget_local_footprint_as_advisory_selector(tmp_path: Path, capsys) -> None:
+def test_start_defers_local_footprint_scan_until_selector_requests_it(tmp_path: Path, capsys, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
@@ -4561,13 +4561,18 @@ def test_start_flags_over_budget_local_footprint_as_advisory_selector(tmp_path: 
     )
     _write(tmp_path / ".agentic-workspace" / "local" / "scratch" / "legacy" / "artifact.txt", "legacy\n")
 
+    original_local_footprint = cli._local_footprint_payload
+
+    def fail_default_scan(**_kwargs: object) -> dict[str, object]:
+        raise AssertionError("default startup must not scan local footprint")
+
+    monkeypatch.setattr(cli, "_local_footprint_payload", fail_default_scan)
     assert cli.main(["start", "--target", str(tmp_path), "--task", "inspect repo", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
     assert "local_footprint" not in payload
-    assert "local_footprint=attention" in payload["action_signals"]["changed_signals"]
-    assert "local_footprint" in payload["action_signals"]["advisory_detail"]["selectors"]
 
+    monkeypatch.setattr(cli, "_local_footprint_payload", original_local_footprint)
     assert cli.main(["start", "--target", str(tmp_path), "--select", "local_footprint", "--format", "json"]) == 0
     selected = json.loads(capsys.readouterr().out)["values"]["local_footprint"]
     assert selected["status"] == "attention"
