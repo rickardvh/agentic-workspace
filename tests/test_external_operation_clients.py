@@ -215,12 +215,20 @@ def test_external_readiness_report_ignores_inline_profile_conformance_evidence(m
     assert "executed-conformance-receipt" in report["excluded_operations"][0]["missing_evidence"]
 
 
-def test_packaged_conformance_receipt_store_contains_current_runtime_backed_receipts() -> None:
+def test_packaged_conformance_receipt_store_fails_closed_without_full_external_evidence() -> None:
     store = public_client.external_operation_conformance_receipts()
     assert store["kind"] == "agentic-workspace/external-operation-conformance-receipt-store/v1"
-    assert store["status"] == "not-run"
-    assert store["receipts"] == []
-    assert "profile declarations" in store["rule"]
+    assert store["status"] == "recorded"
+    receipts = {receipt["operation_id"]: receipt for receipt in store["receipts"]}
+    assert {"config.report", "delegation-outcome.append"}.issubset(receipts)
+    for operation_id in ("config.report", "delegation-outcome.append"):
+        receipt = receipts[operation_id]
+        assert receipt["status"] == "failed"
+        assert receipt["runtime_exception_revision"] == ""
+        assert receipt["runtime_exception_admission"]["reason"] == "missing-operation-specific-runtime-exception-revision"
+        assert receipt["transports"]["vendor-neutral"]["status"] == "not-run"
+        assert receipt["cases"]["absent"]["status"] == "not-run"
+        assert receipt["operation_result_evidence"]
 
 
 def test_external_readiness_report_rejects_revoked_superseded_and_expired_receipts(monkeypatch) -> None:

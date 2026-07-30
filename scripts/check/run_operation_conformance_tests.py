@@ -4,11 +4,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
 from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -54,6 +56,7 @@ READINESS_CASES = (
     "mutation-failed",
 )
 CONFORMANCE_RECEIPT_EXPIRES_AT = "2026-12-31T00:00:00Z"
+CONFORMANCE_RECEIPT_TTL_DAYS = 14
 EXTERNAL_CONFORMANCE_RECEIPT_PATHS = (
     REPO_ROOT / "src/agentic_workspace/contracts/external_operation_conformance_receipts.json",
     REPO_ROOT / "generated/workspace/python/external_operation_conformance_receipts.json",
@@ -61,12 +64,258 @@ EXTERNAL_CONFORMANCE_RECEIPT_PATHS = (
 )
 
 
+def _stable_json_digest(value: object) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
+
+
+def _utc_timestamp() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _expires_from(executed_at: str) -> str:
+    parsed = datetime.fromisoformat(executed_at.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return (parsed + timedelta(days=CONFORMANCE_RECEIPT_TTL_DAYS)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _runner_revision() -> str:
+    runner_path = REPO_ROOT / "scripts/check/run_operation_conformance_tests.py"
+    return f"{runner_path.relative_to(REPO_ROOT).as_posix()}@sha256:{hashlib.sha256(runner_path.read_bytes()).hexdigest()}"
+
+
+def _all_passed(results: list[dict[str, object]]) -> bool:
+    return bool(results) and all(result.get("state") == "pass" for result in results)
+
+
+def _status(
+    state: str,
+    *,
+    evidence: list[str] | None = None,
+    reason: str | None = None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {"status": state}
+    if evidence:
+        payload["evidence"] = sorted(set(evidence))
+    if reason:
+        payload["reason"] = reason
+    return payload
+
+
+def _result_evidence_ref(result: Mapping[str, object]) -> str:
+    payload = {
+        "operation_id": result.get("operation_id", ""),
+        "case_id": result.get("case_id", ""),
+        "target": result.get("target", ""),
+        "adapter_id": result.get("adapter_id", ""),
+        "state": result.get("state", ""),
+        "selected_fields": result.get("selected_fields", {}),
+        "mutation_outcome": result.get("mutation_outcome", {}),
+    }
+    digest = _stable_json_digest(payload)[:16]
+    return (
+        f"{payload['operation_id']}:{payload['case_id']}:"
+        f"{payload['target']}:{payload['adapter_id']}@sha256:{digest}"
+    )
+
+
+def _passed_results(results: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [result for result in results if result.get("state") == "pass"]
+
+
+def _operation_contract(entry: Mapping[str, object]) -> Mapping[str, object]:
+    operation_contract_ref = str(entry.get("operation_contract") or "").strip()
+    if not operation_contract_ref:
+        return {}
+    try:
+        loaded_contract = json.loads((REPO_ROOT / operation_contract_ref).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return loaded_contract if isinstance(loaded_contract, Mapping) else {}
+
+
+def _is_mutation_operation(entry: Mapping[str, object]) -> tuple[bool, str]:
+    operation_contract = _operation_contract(entry)
+    effects = operation_contract.get("effects") if isinstance(operation_contract.get("effects"), Mapping) else {}
+    writes = operation_contract.get("writes") if isinstance(operation_contract.get("writes"), list) else []
+    locality = operation_contract.get("locality") if isinstance(operation_contract.get("locality"), Mapping) else {}
+    if isinstance(effects, Mapping) and effects.get("read_only") is True and not writes:
+        return False, "operation contract is read-only and declares no writes"
+    if isinstance(effects, Mapping) and effects.get("writes_repo_state") is True:
+        return True, "effects.writes_repo_state=true"
+    if writes:
+        return True, "operation contract declares writes"
+    if isinstance(effects, Mapping) and effects.get("read_only") is False:
+        return True, "effects.read_only=false"
+    if isinstance(locality, Mapping) and str(locality.get("outside_repo_writes") or "") not in {"", "forbidden"}:
+        return True, "operation locality allows outside-repo writes"
+    return False, "operation contract has no declared mutation effect"
+
+
+def _readiness_case_label(result: Mapping[str, object]) -> str:
+    explicit = str(result.get("readiness_case") or "").strip()
+    if explicit:
+        return explicit
+    behavioral_class = str(result.get("behavioral_class") or "").strip()
+    if behavioral_class in READINESS_CASES:
+        return behavioral_class
+    if behavioral_class == "error":
+        return "malformed"
+    return ""
+
+
+def _mutation_case_label(result: Mapping[str, object]) -> str:
+    explicit = _readiness_case_label(result)
+    if explicit.startswith("mutation-"):
+        return explicit
+    mutation_outcome = result.get("mutation_outcome")
+    if isinstance(mutation_outcome, Mapping):
+        reason_code = str(mutation_outcome.get("reason_code") or mutation_outcome.get("outcome") or "")
+        mutation_applied = mutation_outcome.get("mutation_applied")
+    else:
+        selected_fields = result.get("selected_fields")
+        selected = selected_fields if isinstance(selected_fields, Mapping) else {}
+        reason_code = str(selected.get("reason_code") or selected.get("outcome") or selected.get("status") or "")
+        mutation_applied = selected.get("mutation_applied")
+    if mutation_applied is True or reason_code in {"mutation-applied", "applied", "recorded", "written", "appended"}:
+        return "mutation-applied"
+    if mutation_applied is False and reason_code in {
+        "mutation-noop",
+        "noop",
+        "no-op",
+        "idempotent",
+        "already-present",
+        "duplicate",
+        "blocked",
+    }:
+        return "mutation-noop"
+    if reason_code in {"mutation-rejected", "rejected", "invalid", "invalid-input", "forbidden", "unauthorized"}:
+        return "mutation-rejected"
+    if reason_code in {"mutation-failed", "failed", "error"}:
+        return "mutation-failed"
+    return ""
+
+
+def _runtime_exception_revision_for_operation(
+    *,
+    entry: Mapping[str, object],
+    conformance_result: Mapping[str, object],
+    operation_id: str,
+    operation_fingerprint: str,
+    profile_fingerprint: str,
+    operation_results: list[dict[str, object]],
+) -> tuple[str, dict[str, object]]:
+    consumption = entry.get("external_consumption", {})
+    runtime_exceptions = consumption.get("runtime_exceptions") if isinstance(consumption, Mapping) else None
+    if not runtime_exceptions:
+        return "", {"status": "not-required"}
+    revisions = conformance_result.get("runtime_exception_revisions", {})
+    revision = ""
+    if isinstance(revisions, Mapping):
+        revision = str(revisions.get(operation_id) or "")
+    if revision and revision != "#2044@accepted":
+        return revision, {
+            "status": "admitted",
+            "operation_id": operation_id,
+            "revision": revision,
+            "rule": "Runtime exception evidence is operation-specific and supplied by a separate authoritative owner.",
+        }
+    if revision == "#2044@accepted":
+        return "", {
+            "status": "rejected",
+            "reason": "missing-operation-specific-runtime-exception-revision",
+            "rule": "Blanket issue labels are not executable operation-specific runtime-exception evidence.",
+        }
+    return "", {
+        "status": "rejected",
+        "reason": "missing-operation-specific-runtime-exception-revision",
+        "rule": "Runtime exceptions must be admitted per operation/profile by an authority outside the conformance result.",
+    }
+
+
+def _readiness_transport_statuses(operation_results: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+    def _status_for(results: list[dict[str, object]], *, missing_reason: str) -> dict[str, object]:
+        if not results:
+            return _status("not-run", reason=missing_reason)
+        if _all_passed(results):
+            return _status("passed", evidence=[_result_evidence_ref(result) for result in results])
+        states = sorted({str(result.get("state") or "not-run") for result in results})
+        return _status(
+            "failed",
+            evidence=[_result_evidence_ref(result) for result in results],
+            reason=f"transport results were not all pass: {', '.join(states)}",
+        )
+
+    def _adapter(adapter: str) -> list[dict[str, object]]:
+        return [result for result in operation_results if result.get("adapter_id") == adapter]
+
+    def _target(target: str) -> list[dict[str, object]]:
+        return [result for result in operation_results if result.get("target") == target]
+
+    transports = {
+        "python": _status_for(
+            _target("python"),
+            missing_reason="no Python operation result was produced by this invocation",
+        ),
+        "typescript": _status_for(
+            _target("typescript"),
+            missing_reason="no TypeScript operation result was produced by this invocation",
+        ),
+        "cli-json": _status_for(
+            _adapter("cli.process"),
+            missing_reason="no CLI JSON operation result was produced by this invocation",
+        ),
+    }
+    vendor_results = [
+        result
+        for result in operation_results
+        if result.get("target") == "vendor-neutral" or str(result.get("adapter_id") or "").startswith("vendor-neutral")
+    ]
+    transports["vendor-neutral"] = _status_for(
+        vendor_results,
+        missing_reason="no independently packaged vendor-neutral consumer result was produced by this invocation",
+    )
+    return transports
+
+
+def _readiness_case_statuses(entry: Mapping[str, object], operation_results: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+    is_mutation_operation, mutation_reason = _is_mutation_operation(entry)
+
+    def _results_for(case_name: str) -> list[dict[str, object]]:
+        if case_name.startswith("mutation-"):
+            return [result for result in operation_results if _mutation_case_label(result) == case_name]
+        return [result for result in operation_results if _readiness_case_label(result) == case_name]
+
+    def _case_status(case_name: str) -> dict[str, object]:
+        results = _results_for(case_name)
+        if case_name.startswith("mutation-") and not is_mutation_operation:
+            return _status(
+                "passed",
+                reason=f"not applicable: {mutation_reason}",
+                evidence=[str(entry.get("operation_contract") or entry.get("id") or "operation-contract")],
+            )
+        if not results:
+            return _status("not-run", reason=f"no {case_name} result was produced by this invocation")
+        if _all_passed(results):
+            return _status("passed", evidence=[_result_evidence_ref(result) for result in results])
+        states = sorted({str(result.get("state") or "not-run") for result in results})
+        return _status(
+            "failed",
+            evidence=[_result_evidence_ref(result) for result in results],
+            reason=f"{case_name} results were not all pass: {', '.join(states)}",
+        )
+
+    return {case: _case_status(case) for case in READINESS_CASES}
+
+
 def build_external_operation_conformance_receipts(
     profile: Mapping[str, object],
     *,
     conformance_result: Mapping[str, object] | None = None,
-    executed_at: str = "2026-07-29T00:00:00Z",
-    expires_at: str = CONFORMANCE_RECEIPT_EXPIRES_AT,
+    executed_at: str | None = None,
+    expires_at: str | None = None,
+    runner_revision: str | None = None,
+    invocation_id: str | None = None,
 ) -> dict[str, object]:
     """Build producer-owned external readiness receipts for packaged operations.
 
@@ -81,17 +330,30 @@ def build_external_operation_conformance_receipts(
             "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
             "receipts": [],
             "producer": "scripts/check/run_operation_conformance_tests.py",
-            "expires_at": expires_at,
             "status": "not-run",
             "rule": "No packaged conformance receipts are synthesized from profile declarations; run conformance and pass its result set to build receipts.",
         }
 
     receipts: list[dict[str, object]] = []
+    actual_executed_at = executed_at or _utc_timestamp()
+    actual_expires_at = expires_at or _expires_from(actual_executed_at)
+    actual_runner_revision = runner_revision or _runner_revision()
     profile_fingerprint = (
         str((profile.get("compatibility") or {}).get("fingerprint", "")) if isinstance(profile.get("compatibility"), Mapping) else ""
     )
     all_results = [dict(result) for result in conformance_result.get("cases", []) if isinstance(result, Mapping)]
-    result_digest = hashlib.sha256(json.dumps(conformance_result, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
+    result_digest = _stable_json_digest(conformance_result)
+    actual_invocation_id = invocation_id or (
+        f"operation-conformance:{actual_runner_revision[:12]}:{result_digest[:24]}:{actual_executed_at}"
+    )
+    result_identity = {
+        "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
+        "status": "current",
+        "invocation_id": actual_invocation_id,
+        "runner_revision": actual_runner_revision,
+        "result_digest": result_digest,
+        "executed_at": actual_executed_at,
+    }
 
     def _state_for_results(results: list[dict[str, object]]) -> str:
         states = {str(result.get("state") or "not-run") for result in results}
@@ -118,46 +380,35 @@ def build_external_operation_conformance_receipts(
         operation_results = [result for result in all_results if str(result.get("operation_id") or "") == operation_id]
         if not operation_results:
             continue
-        readiness_transports = conformance_result.get("readiness_transports", {})
-        transports: dict[str, dict[str, object]] = {}
-        for transport in READINESS_TRANSPORTS:
-            if isinstance(readiness_transports, Mapping) and isinstance(readiness_transports.get(transport), Mapping):
-                transports[transport] = dict(readiness_transports[transport])
-                continue
-            if transport == "python":
-                selected = [result for result in operation_results if result.get("target") == "python"]
-            elif transport == "typescript":
-                selected = [result for result in operation_results if result.get("target") == "typescript"]
-            elif transport == "vendor-neutral":
-                selected = [result for result in operation_results if result.get("target") == "parity"]
-            else:
-                selected = [result for result in operation_results if result.get("target") in {"cli-json", "process"}]
-            transports[transport] = {"status": _state_for_results(selected)}
-        readiness_cases = conformance_result.get("readiness_cases", {})
-        cases: dict[str, dict[str, object]] = {}
-        for case in READINESS_CASES:
-            if isinstance(readiness_cases, Mapping) and isinstance(readiness_cases.get(case), Mapping):
-                cases[case] = dict(readiness_cases[case])
-                continue
-            selected = [
-                result
-                for result in operation_results
-                if result.get("case_id") == case or result.get("behavioral_class") == case or result.get("case_class") == case
-            ]
-            cases[case] = {"status": _state_for_results(selected)}
-        receipt_status = "passed" if all(item["status"] == "passed" for item in [*transports.values(), *cases.values()]) else "failed"
+        runtime_exception_revision, runtime_exception_admission = _runtime_exception_revision_for_operation(
+            entry=entry,
+            conformance_result=conformance_result,
+            operation_id=operation_id,
+            operation_fingerprint=operation_fingerprint,
+            profile_fingerprint=profile_fingerprint,
+            operation_results=operation_results,
+        )
+        transports = _readiness_transport_statuses(operation_results)
+        cases = _readiness_case_statuses(entry, operation_results)
+        receipt_status = (
+            "passed"
+            if all(item["status"] == "passed" for item in [*transports.values(), *cases.values()])
+            and runtime_exception_admission.get("status") in {"not-required", "admitted"}
+            else "failed"
+        )
         receipt_basis = {
             "operation_id": operation_id,
             "operation_fingerprint": operation_fingerprint,
             "profile_fingerprint": profile_fingerprint,
             "conformance_refs": conformance_refs,
-            "conformance_result_digest": result_digest,
+            "result_identity": result_identity,
             "operation_results": operation_results,
+            "operation_result_evidence": [_result_evidence_ref(result) for result in operation_results],
             "transports": transports,
             "cases": cases,
             "producer": "scripts/check/run_operation_conformance_tests.py",
         }
-        digest = hashlib.sha256(json.dumps(receipt_basis, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:24]
+        digest = _stable_json_digest(receipt_basis)[:24]
         receipts.append(
             {
                 "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
@@ -166,11 +417,14 @@ def build_external_operation_conformance_receipts(
                 "operation_fingerprint": operation_fingerprint,
                 "profile_fingerprint": profile_fingerprint,
                 "status": receipt_status,
-                "executed_at": executed_at,
-                "expires_at": expires_at,
-                "runtime_exception_revision": "#2044@accepted",
+                "executed_at": actual_executed_at,
+                "expires_at": actual_expires_at,
+                "runtime_exception_revision": runtime_exception_revision,
+                "runtime_exception_admission": runtime_exception_admission,
                 "conformance_result_digest": result_digest,
+                "result_identity": result_identity,
                 "conformance_refs": conformance_refs,
+                "operation_result_evidence": [_result_evidence_ref(result) for result in operation_results],
                 "transports": transports,
                 "cases": cases,
                 "custody": {
@@ -186,27 +440,113 @@ def build_external_operation_conformance_receipts(
         "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
         "receipts": receipts,
         "producer": "scripts/check/run_operation_conformance_tests.py",
-        "expires_at": expires_at,
+        "executed_at": actual_executed_at,
+        "expires_at": actual_expires_at,
+        "result_identity": result_identity,
         "status": "recorded" if receipts else "no-operation-results",
         "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored.",
     }
 
 
+def _path_label(path: Path) -> str:
+    return path.relative_to(REPO_ROOT).as_posix() if path.is_relative_to(REPO_ROOT) else path.as_posix()
+
+
+def _existing_mirror_digests(paths: tuple[Path, ...]) -> dict[Path, str]:
+    digests: dict[Path, str] = {}
+    for path in paths:
+        if path.exists():
+            digests[path] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return digests
+
+
 def write_external_operation_conformance_receipts(
-    receipt_store: Mapping[str, object], *, paths: tuple[Path, ...] | None = None
+    receipt_store: Mapping[str, object],
+    *,
+    paths: tuple[Path, ...] | None = None,
+    expected_existing_digest: str | None = None,
 ) -> dict[str, object]:
     """Persist the authoritative receipt mirrors consumed by packaged clients."""
     selected_paths = paths or EXTERNAL_CONFORMANCE_RECEIPT_PATHS
-    text = json.dumps(dict(receipt_store), indent=2, sort_keys=True) + "\n"
+    existing_digests = _existing_mirror_digests(selected_paths)
+    if existing_digests and len(existing_digests) != len(selected_paths):
+        missing = [path for path in selected_paths if path not in existing_digests]
+        raise RuntimeError(
+            "external conformance receipt mirror set is partial before publication: "
+            + ", ".join(_path_label(path) for path in missing)
+        )
+    if expected_existing_digest is None and existing_digests:
+        unique_existing_digests = set(existing_digests.values())
+        if len(unique_existing_digests) != 1:
+            raise RuntimeError(
+                "external conformance receipt mirrors are not in one pre-publication revision: "
+                + ", ".join(
+                    f"{_path_label(path)}={digest[:12]}"
+                    for path, digest in sorted(existing_digests.items(), key=lambda item: _path_label(item[0]))
+                )
+            )
+        expected_existing_digest = next(iter(unique_existing_digests))
+    mismatched = {
+        path: digest
+        for path, digest in existing_digests.items()
+        if expected_existing_digest is not None and digest != expected_existing_digest
+    }
+    if mismatched:
+        raise RuntimeError(
+            "external conformance receipt mirror revision changed before publication: "
+            + ", ".join(
+                f"{_path_label(path)}={digest[:12]}"
+                for path, digest in sorted(mismatched.items(), key=lambda item: _path_label(item[0]))
+            )
+        )
+    store = dict(receipt_store)
+    store["mirror_publication"] = {
+        "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
+        "status": "locked-staged-mirror-publication",
+        "previous_digest": expected_existing_digest or "",
+        "publisher_pid": os.getpid(),
+        "path_count": len(selected_paths),
+        "mixed_read_boundary": "Readers may rely only on matching publication_digest across all mirrors; this is not a single-filesystem atomic multi-path transaction.",
+    }
+    text = json.dumps(store, indent=2, sort_keys=True) + "\n"
+    publication_digest = hashlib.sha256(text.encode()).hexdigest()
     written: list[str] = []
-    for path in selected_paths:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8", newline="\n")
-        written.append(path.relative_to(REPO_ROOT).as_posix() if path.is_relative_to(REPO_ROOT) else path.as_posix())
+    staged: list[tuple[Path, Path]] = []
+    originals = {path: path.read_bytes() for path in selected_paths if path.exists()}
+    lock_path = selected_paths[0].parent / ".external_operation_conformance_receipts.lock"
+    lock_fd: int | None = None
+    try:
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError as exc:
+            raise RuntimeError(f"external conformance receipt mirror publication is locked: {_path_label(lock_path)}") from exc
+        os.write(lock_fd, str(os.getpid()).encode("utf-8"))
+        for path in selected_paths:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+            tmp.write_text(text, encoding="utf-8", newline="\n")
+            staged.append((path, tmp))
+        for path, tmp in staged:
+            tmp.replace(path)
+            written.append(_path_label(path))
+    except Exception:
+        for path, tmp in staged:
+            if tmp.exists():
+                tmp.unlink()
+            if path in originals:
+                path.write_bytes(originals[path])
+        raise
+    finally:
+        if lock_fd is not None:
+            os.close(lock_fd)
+            lock_path.unlink(missing_ok=True)
     return {
         "kind": "agentic-workspace/external-operation-conformance-receipt-write/v1",
         "status": "written",
-        "receipt_count": len(receipt_store.get("receipts", [])) if isinstance(receipt_store.get("receipts"), list) else 0,
+        "receipt_count": len(store.get("receipts", [])) if isinstance(store.get("receipts"), list) else 0,
+        "previous_digest": expected_existing_digest or "",
+        "publication_digest": publication_digest,
         "paths": written,
     }
 
@@ -365,6 +705,7 @@ def _run_case_target(
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
+        "readiness_case": str(case.get("readiness_case", "")),
         "operation_id": str(operation_ref.get("operation_id", "")),
         "artifact_id": str(artifact.get("artifact_id", "")) if isinstance(artifact, Mapping) else "",
         "adapter_id": str(artifact.get("adapter_id", "cli.process")) if isinstance(artifact, Mapping) else "cli.process",
@@ -391,6 +732,7 @@ def _run_python_function_case(*, case: Mapping[str, object], artifact: Mapping[s
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
+        "readiness_case": str(case.get("readiness_case", "")),
         "operation_id": str(operation_ref.get("operation_id", "")),
         "artifact_id": str(artifact.get("artifact_id", "")),
         "adapter_id": str(artifact.get("adapter_id", "python.function")),
@@ -507,6 +849,7 @@ def _function_result(
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
+        "readiness_case": str(case.get("readiness_case", "")),
         "operation_id": str(operation_id),
         "artifact_id": str(artifact.get("artifact_id", "")),
         "adapter_id": adapter_id,
@@ -596,6 +939,7 @@ def _result(
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
+        "readiness_case": str(case.get("readiness_case", "")),
         "operation_id": str(operation_id),
         "artifact_id": str(artifact.get("artifact_id", "")) if isinstance(artifact, Mapping) else "",
         "adapter_id": str(artifact.get("adapter_id", "")) if isinstance(artifact, Mapping) else "",

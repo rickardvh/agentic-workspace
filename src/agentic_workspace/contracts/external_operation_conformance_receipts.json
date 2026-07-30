@@ -1,8 +1,262 @@
 {
+  "executed_at": "2026-07-30T12:49:18Z",
+  "expires_at": "2026-08-13T12:49:18Z",
   "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
-  "receipts": [],
+  "mirror_publication": {
+    "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
+    "mixed_read_boundary": "Readers may rely only on matching publication_digest across all mirrors; this is not a single-filesystem atomic multi-path transaction.",
+    "path_count": 3,
+    "previous_digest": "22471c38c811abb3fa3cfd51a75555c8891384bcebe57ddfd1285da585de281a",
+    "publisher_pid": 28504,
+    "status": "locked-staged-mirror-publication"
+  },
   "producer": "scripts/check/run_operation_conformance_tests.py",
-  "expires_at": "2026-12-31T00:00:00Z",
-  "status": "not-run",
-  "rule": "No packaged conformance receipts are synthesized from profile declarations; run conformance and pass its result set to build receipts."
+  "receipts": [
+    {
+      "cases": {
+        "absent": {
+          "reason": "no absent result was produced by this invocation",
+          "status": "not-run"
+        },
+        "additive-field": {
+          "reason": "no additive-field result was produced by this invocation",
+          "status": "not-run"
+        },
+        "disabled": {
+          "reason": "no disabled result was produced by this invocation",
+          "status": "not-run"
+        },
+        "incompatible": {
+          "reason": "no incompatible result was produced by this invocation",
+          "status": "not-run"
+        },
+        "malformed": {
+          "evidence": [
+            "config.report:config.invalid-format.error:python:cli.process@sha256:69d5a4dcadabf6eb",
+            "config.report:config.invalid-format.error:typescript:cli.process@sha256:9e4976a01f59fca0"
+          ],
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/config.report.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/config.report.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/config.report.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/config.report.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "retryable": {
+          "reason": "no retryable result was produced by this invocation",
+          "status": "not-run"
+        }
+      },
+      "conformance_refs": [
+        "config.report.process",
+        "config.selected-text.process"
+      ],
+      "conformance_result_digest": "4b289be59c52ea044ccd1063157c86d7e7a249e4fd6caaecd9fd9e2fba17f3de",
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "result_kind": "operation-conformance-proof/v1",
+        "source": "scripts/check/run_operation_conformance_tests.py",
+        "trusted_channel": "packaged-conformance-receipt"
+      },
+      "executed_at": "2026-07-30T12:49:18Z",
+      "expires_at": "2026-08-13T12:49:18Z",
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "operation_fingerprint": "sha256:cbcd32386629e08c44b9dbbf897c6ff76ce62ca9c7831eee16c1d5ba8da64d18",
+      "operation_id": "config.report",
+      "operation_result_evidence": [
+        "config.report:config.invalid-format.error:python:cli.process@sha256:69d5a4dcadabf6eb",
+        "config.report:config.invalid-format.error:typescript:cli.process@sha256:9e4976a01f59fca0",
+        "config.report:config.selected-output.success:python:python.function@sha256:ee8d2ae121b6f5aa",
+        "config.report:config.selected-output.success:typescript:typescript.function@sha256:5e7d326f7bd694b7"
+      ],
+      "profile_fingerprint": "sha256:bf10ef565d6b778ae95c288a0bc506c88261f2a9f77680d44c25adaffb0376ff",
+      "receipt_ref": "external-conformance:config.report:fdbacf883c70eaabbb3f313e",
+      "result_identity": {
+        "executed_at": "2026-07-30T12:49:18Z",
+        "invocation_id": "operation-conformance:scripts/chec:4b289be59c52ea044ccd1063:2026-07-30T12:49:18Z",
+        "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
+        "result_digest": "4b289be59c52ea044ccd1063157c86d7e7a249e4fd6caaecd9fd9e2fba17f3de",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:2cac0046983375db0d135aff8bd076d0baaeaea82ce3185784d98cc0f391edc4",
+        "status": "current"
+      },
+      "runtime_exception_admission": {
+        "reason": "missing-operation-specific-runtime-exception-revision",
+        "rule": "Runtime exceptions must be admitted per operation/profile by an authority outside the conformance result.",
+        "status": "rejected"
+      },
+      "runtime_exception_revision": "",
+      "status": "failed",
+      "transports": {
+        "cli-json": {
+          "evidence": [
+            "config.report:config.invalid-format.error:python:cli.process@sha256:69d5a4dcadabf6eb",
+            "config.report:config.invalid-format.error:typescript:cli.process@sha256:9e4976a01f59fca0"
+          ],
+          "status": "passed"
+        },
+        "python": {
+          "evidence": [
+            "config.report:config.invalid-format.error:python:cli.process@sha256:69d5a4dcadabf6eb",
+            "config.report:config.selected-output.success:python:python.function@sha256:ee8d2ae121b6f5aa"
+          ],
+          "status": "passed"
+        },
+        "typescript": {
+          "evidence": [
+            "config.report:config.invalid-format.error:typescript:cli.process@sha256:9e4976a01f59fca0",
+            "config.report:config.selected-output.success:typescript:typescript.function@sha256:5e7d326f7bd694b7"
+          ],
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "reason": "no independently packaged vendor-neutral consumer result was produced by this invocation",
+          "status": "not-run"
+        }
+      }
+    },
+    {
+      "cases": {
+        "absent": {
+          "reason": "no absent result was produced by this invocation",
+          "status": "not-run"
+        },
+        "additive-field": {
+          "reason": "no additive-field result was produced by this invocation",
+          "status": "not-run"
+        },
+        "disabled": {
+          "reason": "no disabled result was produced by this invocation",
+          "status": "not-run"
+        },
+        "incompatible": {
+          "reason": "no incompatible result was produced by this invocation",
+          "status": "not-run"
+        },
+        "malformed": {
+          "reason": "no malformed result was produced by this invocation",
+          "status": "not-run"
+        },
+        "mutation-applied": {
+          "reason": "no mutation-applied result was produced by this invocation",
+          "status": "not-run"
+        },
+        "mutation-failed": {
+          "reason": "no mutation-failed result was produced by this invocation",
+          "status": "not-run"
+        },
+        "mutation-noop": {
+          "reason": "no mutation-noop result was produced by this invocation",
+          "status": "not-run"
+        },
+        "mutation-rejected": {
+          "reason": "no mutation-rejected result was produced by this invocation",
+          "status": "not-run"
+        },
+        "retryable": {
+          "reason": "no retryable result was produced by this invocation",
+          "status": "not-run"
+        }
+      },
+      "conformance_refs": [
+        "delegation-outcome.append.process",
+        "delegation-outcome.append-text.process"
+      ],
+      "conformance_result_digest": "4b289be59c52ea044ccd1063157c86d7e7a249e4fd6caaecd9fd9e2fba17f3de",
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "result_kind": "operation-conformance-proof/v1",
+        "source": "scripts/check/run_operation_conformance_tests.py",
+        "trusted_channel": "packaged-conformance-receipt"
+      },
+      "executed_at": "2026-07-30T12:49:18Z",
+      "expires_at": "2026-08-13T12:49:18Z",
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "operation_fingerprint": "sha256:2b0a1419d2d325564475ff783f78517d7e3cd59516f60fafe9dfb644845d0981",
+      "operation_id": "delegation-outcome.append",
+      "operation_result_evidence": [
+        "delegation-outcome.append:delegation-outcome.append-text.boundary:python:cli.process@sha256:6d25bda9291969c2",
+        "delegation-outcome.append:delegation-outcome.append-text.boundary:typescript:cli.process@sha256:07d425e097089c69",
+        "delegation-outcome.append:delegation-outcome.append-write.boundary:python:cli.process@sha256:3fd7c63647106d7c"
+      ],
+      "profile_fingerprint": "sha256:bf10ef565d6b778ae95c288a0bc506c88261f2a9f77680d44c25adaffb0376ff",
+      "receipt_ref": "external-conformance:delegation-outcome.append:41bbc60113f2d4a6b9461bea",
+      "result_identity": {
+        "executed_at": "2026-07-30T12:49:18Z",
+        "invocation_id": "operation-conformance:scripts/chec:4b289be59c52ea044ccd1063:2026-07-30T12:49:18Z",
+        "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
+        "result_digest": "4b289be59c52ea044ccd1063157c86d7e7a249e4fd6caaecd9fd9e2fba17f3de",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:2cac0046983375db0d135aff8bd076d0baaeaea82ce3185784d98cc0f391edc4",
+        "status": "current"
+      },
+      "runtime_exception_admission": {
+        "reason": "missing-operation-specific-runtime-exception-revision",
+        "rule": "Runtime exceptions must be admitted per operation/profile by an authority outside the conformance result.",
+        "status": "rejected"
+      },
+      "runtime_exception_revision": "",
+      "status": "failed",
+      "transports": {
+        "cli-json": {
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append-text.boundary:python:cli.process@sha256:6d25bda9291969c2",
+            "delegation-outcome.append:delegation-outcome.append-text.boundary:typescript:cli.process@sha256:07d425e097089c69",
+            "delegation-outcome.append:delegation-outcome.append-write.boundary:python:cli.process@sha256:3fd7c63647106d7c"
+          ],
+          "status": "passed"
+        },
+        "python": {
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append-text.boundary:python:cli.process@sha256:6d25bda9291969c2",
+            "delegation-outcome.append:delegation-outcome.append-write.boundary:python:cli.process@sha256:3fd7c63647106d7c"
+          ],
+          "status": "passed"
+        },
+        "typescript": {
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append-text.boundary:typescript:cli.process@sha256:07d425e097089c69"
+          ],
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "reason": "no independently packaged vendor-neutral consumer result was produced by this invocation",
+          "status": "not-run"
+        }
+      }
+    }
+  ],
+  "result_identity": {
+    "executed_at": "2026-07-30T12:49:18Z",
+    "invocation_id": "operation-conformance:scripts/chec:4b289be59c52ea044ccd1063:2026-07-30T12:49:18Z",
+    "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
+    "result_digest": "4b289be59c52ea044ccd1063157c86d7e7a249e4fd6caaecd9fd9e2fba17f3de",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:2cac0046983375db0d135aff8bd076d0baaeaea82ce3185784d98cc0f391edc4",
+    "status": "current"
+  },
+  "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored.",
+  "status": "recorded"
 }
