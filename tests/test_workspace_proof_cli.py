@@ -7621,7 +7621,44 @@ certification_limits = ["does not certify production authorization safety"]
     assert "high-assurance closeout posture evidence is missing" in packet["missing_or_unresolved"]["blockers"]
 
 
-def test_assignment_admit_accepts_host_capability_through_public_operation(tmp_path: Path) -> None:
+def test_assignment_admit_accepts_preinstalled_host_capability_ref(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_proof import _independent_review_scope_digest, admit_independent_review_result_operation
+
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "human",
+        "assignment_id": "critical-access-review",
+        "assignment_revision": "assignment-rev-1",
+        "review_revision": "review-rev-1",
+        "reviewed_at": "2026-07-26T13:22:00Z",
+        "changed_paths": ["services/auth/policy.py"],
+        "scope_digest": _independent_review_scope_digest(["services/auth/policy.py"]),
+        "implementer": {"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
+        "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+        "custody": {
+            "producer": "github-review-adapter",
+            "authority_ref": "SECURITY.md#critical-access",
+            "source_ref": "pull-request-review:1",
+        },
+    }
+    host_result_ref = _write_independent_review_host_result(tmp_path, review_result, install_host_admission=True)
+    assert isinstance(host_result_ref, str)
+
+    receipt = admit_independent_review_result_operation(
+        target_root=tmp_path,
+        values={
+            "host_result_ref": host_result_ref,
+            "required_mode": "human",
+            "changed": ["services/auth/policy.py"],
+        },
+    )
+
+    assert receipt["status"] == "admitted"
+    assert receipt["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
+
+
+def test_assignment_admit_rejects_caller_supplied_host_trust_root(tmp_path: Path) -> None:
     from agentic_workspace.workspace_runtime_proof import _independent_review_scope_digest, admit_independent_review_result_operation
 
     review_result = {
@@ -7662,9 +7699,8 @@ def test_assignment_admit_accepts_host_capability_through_public_operation(tmp_p
         },
     )
 
-    assert receipt["status"] == "admitted"
-    assert receipt["host_capability_admission"]["status"] == "admitted"
-    assert receipt["receipt"]["review_result"]["custody"]["host_result_ref"] == host_inputs["host_result_ref"]
+    assert receipt["status"] == "rejected"
+    assert receipt["failures"][0]["reason"] == "caller-supplied-host-trust-root-rejected"
 
 
 def test_trusted_independent_review_rejects_caller_controlled_environment_trust_root(
@@ -7826,18 +7862,10 @@ def test_assignment_admit_exposes_independent_review_admission_contract() -> Non
     generated = json.loads((ROOT / "generated/workspace/python/operations/assignment.admit.json").read_text(encoding="utf-8"))
     for payload in (source, generated):
         input_names = {item["name"] for item in payload["inputs"]}
-        assert {
-            "review_result_json",
-            "review_result_ref",
-            "host_result_ref",
-            "host_admission_json",
-            "host_public_key_json",
-            "host_capability_json",
-            "required_mode",
-            "changed",
-        }.issubset(input_names)
+        assert {"review_result_json", "review_result_ref", "host_result_ref", "required_mode", "changed"}.issubset(input_names)
+        assert {"host_admission_json", "host_public_key_json", "host_capability_json"}.isdisjoint(input_names)
         assert any("producer-owned review result" in guard for guard in payload["guards"])
-        assert any("host/adapter-owned capability" in guard for guard in payload["guards"])
+        assert any("caller-supplied verifier keys/signatures" in guard for guard in payload["guards"])
         assert any("assignment.admit admits independent-review host capabilities" in proof for proof in payload["proof"])
 
 

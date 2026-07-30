@@ -7176,21 +7176,6 @@ def _independent_review_result_failures(
     return failures
 
 
-def _independent_review_mapping_input(value: Any, *, field: str) -> dict[str, Any]:
-    if not value:
-        return {}
-    if isinstance(value, Mapping):
-        return dict(value)
-    if isinstance(value, str):
-        try:
-            parsed = json.loads(value)
-        except json.JSONDecodeError as exc:
-            raise WorkspaceUsageError(f"{field} must be a JSON object.") from exc
-        if isinstance(parsed, dict):
-            return parsed
-    raise WorkspaceUsageError(f"{field} must be a JSON object.")
-
-
 def record_admitted_independent_review_receipt(
     *,
     target_root: Path,
@@ -7270,24 +7255,39 @@ def record_admitted_independent_review_receipt(
 def admit_independent_review_result_operation(
     *, target_root: Path, values: Mapping[str, Any], changed_paths: list[str] | None = None
 ) -> dict[str, Any]:
+    caller_trust_fields = [
+        field
+        for field in (
+            "host_admission",
+            "host_admission_json",
+            "host_public_key",
+            "host_public_key_json",
+            "host_capability",
+            "host_capability_json",
+        )
+        if values.get(field)
+    ]
+    if caller_trust_fields:
+        return {
+            "kind": "agentic-workspace/independent-review-admission-result/v1",
+            "operation_id": "independent-review.admit",
+            "status": "rejected",
+            "admitted": False,
+            "failures": [
+                {
+                    "reason": "caller-supplied-host-trust-root-rejected",
+                    "field": ",".join(caller_trust_fields),
+                    "detail": "assignment.admit accepts only an opaque host-issued result ref; verifier keys, signatures, and authority-bearing capabilities must be installed by the host boundary before the operation call.",
+                }
+            ],
+            "repair_operation": {
+                "id": "independent-review.repair",
+                "summary": "Use a host/adapter-issued result reference whose admission capability is already installed outside the assignment.admit caller path.",
+            },
+        }
     host_result_ref = str(values.get("host_result_ref") or "").strip()
     if host_result_ref:
         try:
-            capability_result = admit_independent_review_host_result_capability(
-                host_result_ref=host_result_ref,
-                admission=_independent_review_mapping_input(
-                    values.get("host_admission") or values.get("host_admission_json"),
-                    field="host_admission_json",
-                ),
-                public_key=_independent_review_mapping_input(
-                    values.get("host_public_key") or values.get("host_public_key_json"),
-                    field="host_public_key_json",
-                ),
-                capability=_independent_review_mapping_input(
-                    values.get("host_capability") or values.get("host_capability_json"),
-                    field="host_capability_json",
-                ),
-            )
             trusted = record_trusted_independent_review_result(
                 target_root=target_root,
                 review_result={"host_result_ref": host_result_ref},
@@ -7305,8 +7305,6 @@ def admit_independent_review_result_operation(
                     "summary": "Provide a current host/adapter-owned admission capability for the review result.",
                 },
             }
-    else:
-        capability_result = {}
     raw_result = values.get("review_result") or values.get("review_result_json")
     if raw_result:
         review_result: dict[str, Any] = {}
@@ -7367,7 +7365,6 @@ def admit_independent_review_result_operation(
         "receipt_ref": stored["receipt_ref"],
         "receipt": stored["receipt"],
         "store": stored["store"],
-        **({"host_capability_admission": capability_result} if capability_result else {}),
         "rule": "Review separation is admitted only from a producer-owned review result bound to the current changed scope.",
     }
 

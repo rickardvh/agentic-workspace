@@ -76,18 +76,6 @@
       "description": "Opaque host/adapter independent-review result ref to import and admit.",
       "type": "string"
     },
-    "host_admission_json": {
-      "description": "Serialized host/adapter admission for an independent-review host result.",
-      "type": "string"
-    },
-    "host_public_key_json": {
-      "description": "Serialized host/adapter public key metadata for admission verification.",
-      "type": "string"
-    },
-    "host_capability_json": {
-      "description": "Serialized host-owned admission capability; local files and environment variables are caches only.",
-      "type": "string"
-    },
     "required_mode": {
       "description": "Required separation mode for independent-review admission.",
       "enum": [

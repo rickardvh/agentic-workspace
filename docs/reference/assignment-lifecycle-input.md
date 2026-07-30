@@ -26,9 +26,6 @@ Input accepted by public assignment lifecycle operations that prepare handoff pa
 | `review_result_json` | string | no |  | Serialized producer-owned independent-review result envelope to admit through assignment.admit. |  |  |
 | `review_result_ref` | string | no |  | Repo-relative path to a producer-owned independent-review result envelope. |  |  |
 | `host_result_ref` | string | no |  | Opaque host/adapter independent-review result ref to import and admit. |  |  |
-| `host_admission_json` | string | no |  | Serialized host/adapter admission for an independent-review host result. |  |  |
-| `host_public_key_json` | string | no |  | Serialized host/adapter public key metadata for admission verification. |  |  |
-| `host_capability_json` | string | no |  | Serialized host-owned admission capability; local files and environment variables are caches only. |  |  |
 | `required_mode` | enum `"fresh-context"`, `"separate-actor"`, `"distinct-provider"`, `"human"` | no |  | Required separation mode for independent-review admission. |  |  |
 | `changed` | array of string | no |  | Changed paths whose independent-review scope must match the admitted result. |  |  |
 | `changed_paths` | array of string | no |  | Changed paths whose independent-review scope must match the admitted result. |  |  |

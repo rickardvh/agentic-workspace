@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:a4e48402d4b2b0dcfe227b0b25f82569d92e4b816bdd6ab4646a9f519d5d6b14",
+  "profile_fingerprint": "sha256:bf10ef565d6b778ae95c288a0bc506c88261f2a9f77680d44c25adaffb0376ff",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -20,8 +20,8 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b5c2530d3b368ba745c6857b1f441ee0aa07ff334a74ac3d543891a8a26e56c5",
-      "compatibility_fingerprint": "sha256:fc138d21508c8ca5aae823a45ccb2efda5d12e6ae5158151d557e9d0bfdfe50b",
+      "fingerprint": "sha256:f8fba80e228c09d6f4241a69aa3a984c62c721159efc520c0722b9a83ad4f0a1",
+      "compatibility_fingerprint": "sha256:379c6ddff2990ac7b4c8da6c39319092153f9e4a0155d330426f02c78b111f2b",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -42,7 +42,7 @@
           "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
           "Independent-review admission accepts only producer-owned review result envelopes and rejects caller-authored identity packets.",
-          "Independent-review host results are admitted only through a host/adapter-owned capability; repo-local files and environment variables are non-authoritative caches.",
+          "Independent-review host results are admitted only through a pre-installed host/adapter-owned capability; repo-local files, environment variables, and caller-supplied verifier keys/signatures are non-authoritative caches.",
           "Independent-review receipts are bound to changed scope and expire, revoke, or supersede fail closed at proof admission."
         ],
         "id": "assignment.admit",
@@ -134,21 +134,6 @@
           },
           {
             "name": "host_result_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "host_admission_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "host_public_key_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "host_capability_json",
             "required": false,
             "source": "cli-option"
           },
@@ -473,21 +458,6 @@
               "source": "cli-option"
             },
             {
-              "name": "host_admission_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "host_public_key_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "host_capability_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
               "name": "required_mode",
               "required": false,
               "source": "cli-option"
@@ -515,7 +485,7 @@
             "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
             "Independent-review admission accepts only producer-owned review result envelopes and rejects caller-authored identity packets.",
-            "Independent-review host results are admitted only through a host/adapter-owned capability; repo-local files and environment variables are non-authoritative caches.",
+            "Independent-review host results are admitted only through a pre-installed host/adapter-owned capability; repo-local files, environment variables, and caller-supplied verifier keys/signatures are non-authoritative caches.",
             "Independent-review receipts are bound to changed scope and expire, revoke, or supersede fail closed at proof admission."
           ]
         },
@@ -580,15 +550,6 @@
                   "type": "string"
                 },
                 "host_result_ref": {
-                  "type": "string"
-                },
-                "host_admission_json": {
-                  "type": "string"
-                },
-                "host_public_key_json": {
-                  "type": "string"
-                },
-                "host_capability_json": {
                   "type": "string"
                 },
                 "required_mode": {
@@ -749,8 +710,8 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:c7e2c75032758fb144287daabeeccd41a779ef4234347b8b025e0b9bcfd5ebca",
-      "compatibility_fingerprint": "sha256:96caec1d810118dcae2096da9b0bf7fa886a2a0378feafe97a65993d16986efb",
+      "fingerprint": "sha256:9294c1e52779df88d666bf819b2ef3e286782ef4fa757fdeb0d644519198d7b9",
+      "compatibility_fingerprint": "sha256:4d1f945a405d1cf0f2cd53878d0c2d5cd3c931bf9edd8a1414e0b8521d0f6a13",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -1223,15 +1184,6 @@
                 "host_result_ref": {
                   "type": "string"
                 },
-                "host_admission_json": {
-                  "type": "string"
-                },
-                "host_public_key_json": {
-                  "type": "string"
-                },
-                "host_capability_json": {
-                  "type": "string"
-                },
                 "required_mode": {
                   "enum": [
                     "fresh-context",
@@ -1390,8 +1342,8 @@
     "assignment.close": {
       "identity": "assignment.close",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:5a8b19e212ead6ee1f3f23075c9c14b47511ec6200d6ec9007658b2b0a17573b",
-      "compatibility_fingerprint": "sha256:b268316b2040a8c821fd1a5e15d74c7f82e176563ac27031ac9af55fc53482ae",
+      "fingerprint": "sha256:ec5d49ad8b0674af1d53741d1d022fe2492fa46436ca8f5a26b9ae09be2af61d",
+      "compatibility_fingerprint": "sha256:f0b1c9df719a9875408ed38fd1c4ebc53663120fd1e270ddf0d3f4193a4191ff",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -1864,15 +1816,6 @@
                 "host_result_ref": {
                   "type": "string"
                 },
-                "host_admission_json": {
-                  "type": "string"
-                },
-                "host_public_key_json": {
-                  "type": "string"
-                },
-                "host_capability_json": {
-                  "type": "string"
-                },
                 "required_mode": {
                   "enum": [
                     "fresh-context",
@@ -2031,8 +1974,8 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:fb0cc8016a3b7c94baec77b7fa868730f1365b045b52acce8b66bb5474228862",
-      "compatibility_fingerprint": "sha256:2c232f05730e72544b209f6ca91f3cbfa2170c94a58ae57ac03d887f3ecce15d",
+      "fingerprint": "sha256:94146784138bb5cdf7eb9a44032391ca3d60f6498fb471a964988cc020a6b820",
+      "compatibility_fingerprint": "sha256:6ed866d41808c9fb224cd092bc4ddbd7c36afd12312184882e07f51361822038",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -2505,15 +2448,6 @@
                 "host_result_ref": {
                   "type": "string"
                 },
-                "host_admission_json": {
-                  "type": "string"
-                },
-                "host_public_key_json": {
-                  "type": "string"
-                },
-                "host_capability_json": {
-                  "type": "string"
-                },
                 "required_mode": {
                   "enum": [
                     "fresh-context",
@@ -2672,8 +2606,8 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:bfbdcf9a6b1dea981062006a7bd0d85dda0265affe4f195f45c234f54f367d67",
-      "compatibility_fingerprint": "sha256:e77a8cd79514f1511c42a18e64d8e49c83fffe7945ea100bb35852e28770acd8",
+      "fingerprint": "sha256:cb9a4708cf2907aa376f36e2592fe1be14380a1c167a82e89d0743b4b0256860",
+      "compatibility_fingerprint": "sha256:a69ae6eeb78d3cb7938d78e5ccdc6b17ab46d046364bc39a6ee0ef08de6a5c35",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -3146,15 +3080,6 @@
                 "host_result_ref": {
                   "type": "string"
                 },
-                "host_admission_json": {
-                  "type": "string"
-                },
-                "host_public_key_json": {
-                  "type": "string"
-                },
-                "host_capability_json": {
-                  "type": "string"
-                },
                 "required_mode": {
                   "enum": [
                     "fresh-context",
@@ -3313,8 +3238,8 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:20ce8e1323dde0228afc4a543dde8d6a84a2aeca16ef2e8b4fa1587e20a25438",
-      "compatibility_fingerprint": "sha256:329da51cc3dc45938797f124b4a016323c87cf5411948b858a7d2b954fe61e1b",
+      "fingerprint": "sha256:17d14cb89a4f8f802a5ccbaabefefda6b7fdb7a104a27280a50db66d26503f3a",
+      "compatibility_fingerprint": "sha256:cb13ecaded5484bd6f6fcb6021d6af07f485e73df012ca925278ff31001a83b2",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -3787,15 +3712,6 @@
                 "host_result_ref": {
                   "type": "string"
                 },
-                "host_admission_json": {
-                  "type": "string"
-                },
-                "host_public_key_json": {
-                  "type": "string"
-                },
-                "host_capability_json": {
-                  "type": "string"
-                },
                 "required_mode": {
                   "enum": [
                     "fresh-context",
@@ -3954,8 +3870,8 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:dac9f4410adb6f5dd42a57daf1e2d0a39e87e2383432400031ba556add902c08",
-      "compatibility_fingerprint": "sha256:8e1bd599edf52d24f318ef7ab2f52cd1507db62928852b2408a835a96fa7f6ca",
+      "fingerprint": "sha256:b290954b3458d18244ee11e24f7ea9f5449da7ee6e8f9c80974801069f71f552",
+      "compatibility_fingerprint": "sha256:2d460376f088efdca056a471bd1c954fa8734455dda69434b56ea54a4f36615e",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -4428,15 +4344,6 @@
                 "host_result_ref": {
                   "type": "string"
                 },
-                "host_admission_json": {
-                  "type": "string"
-                },
-                "host_public_key_json": {
-                  "type": "string"
-                },
-                "host_capability_json": {
-                  "type": "string"
-                },
                 "required_mode": {
                   "enum": [
                     "fresh-context",
@@ -4595,8 +4502,8 @@
     "assignment.reassign": {
       "identity": "assignment.reassign",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:20444ca7d183018dc6cbcafd27d470b8bf7edf3511694cb72333e468e9c5604e",
-      "compatibility_fingerprint": "sha256:df77a71b6c42aa1beb98b7e9c189cad64797924f15f0c521fd2f66a4b71c4d77",
+      "fingerprint": "sha256:5e1b994e92527dd3dabdf3104d65e7f776cb427c89e7a18df9df334a4fd61e7c",
+      "compatibility_fingerprint": "sha256:90373e70f7ba6190b8cf9fa861c7a5c1fd9010fbbf17c9fca57774c160e9196d",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5069,15 +4976,6 @@
                 "host_result_ref": {
                   "type": "string"
                 },
-                "host_admission_json": {
-                  "type": "string"
-                },
-                "host_public_key_json": {
-                  "type": "string"
-                },
-                "host_capability_json": {
-                  "type": "string"
-                },
                 "required_mode": {
                   "enum": [
                     "fresh-context",
@@ -5236,8 +5134,8 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:5b519901253224aeaf5f1a36dcf09a2411746927bb77bad8a28d5d9d08f56206",
-      "compatibility_fingerprint": "sha256:cbd5104d22cc92f60fee1cc7b81b7c8f7afada01a12283e1fdeb24dc0efc18b1",
+      "fingerprint": "sha256:d9d90a7b4e82d51be1c29d44583042521b57929d7d950d9d1b09ea9eeee6f78a",
+      "compatibility_fingerprint": "sha256:5393f592de95281cbd5076bca2fb3a606a2c84231f9ac9cfa13ee1bae209067b",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5710,15 +5608,6 @@
                 "host_result_ref": {
                   "type": "string"
                 },
-                "host_admission_json": {
-                  "type": "string"
-                },
-                "host_public_key_json": {
-                  "type": "string"
-                },
-                "host_capability_json": {
-                  "type": "string"
-                },
                 "required_mode": {
                   "enum": [
                     "fresh-context",
@@ -5877,8 +5766,8 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:932cbd8b545aee843e2828322750006f3618f638a91f02ecb2a2bf2c28d5e641",
-      "compatibility_fingerprint": "sha256:b624559951b7ba973f79998c017104bfacae47c60b99dcea97b3e6713f92019b",
+      "fingerprint": "sha256:6f8ce6d7a61af65067d1db9fdf515a4154de88b610e5ff694a57fba91895ca00",
+      "compatibility_fingerprint": "sha256:779ec57e0237331bfd46bf79076fb4726b5144bcfc6c08f82102fa569129b76e",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -6349,15 +6238,6 @@
                   "type": "string"
                 },
                 "host_result_ref": {
-                  "type": "string"
-                },
-                "host_admission_json": {
-                  "type": "string"
-                },
-                "host_public_key_json": {
-                  "type": "string"
-                },
-                "host_capability_json": {
                   "type": "string"
                 },
                 "required_mode": {
@@ -11128,18 +11008,6 @@
           },
           "host_result_ref": {
             "description": "Opaque host/adapter independent-review result ref to import and admit.",
-            "type": "string"
-          },
-          "host_admission_json": {
-            "description": "Serialized host/adapter admission for an independent-review host result.",
-            "type": "string"
-          },
-          "host_public_key_json": {
-            "description": "Serialized host/adapter public key metadata for admission verification.",
-            "type": "string"
-          },
-          "host_capability_json": {
-            "description": "Serialized host-owned admission capability; local files and environment variables are caches only.",
             "type": "string"
           },
           "required_mode": {
