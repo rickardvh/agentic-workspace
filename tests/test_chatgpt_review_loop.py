@@ -1513,14 +1513,35 @@ owner = "chatgpt-review-loop"
     assert [packet["kind"] for packet in aw_packets] == [
         "startup-context/v1",
         "implementer-context-tiny/v1",
+        "agentic-workspace/proof-receipt-write/v1",
         "startup-context/v1",
         "implementer-context-tiny/v1",
+        "agentic-workspace/proof-receipt-write/v1",
         "startup-context/v1",
         "implementer-context-tiny/v1",
+        "agentic-workspace/proof-receipt-write/v1",
     ]
     assert {packet["cwd"] for packet in aw_packets} == {(worktree_root / "pr-12").as_posix()}
     assert not (worktree_root / "pr-12" / ".venv").exists()
-    assert [packet["command"] for packet in aw_packets] == ["start", "implement", "start", "implement", "start", "implement"]
+    assert [packet["command"] for packet in aw_packets] == [
+        "start",
+        "implement",
+        "proof",
+        "start",
+        "implement",
+        "proof",
+        "start",
+        "implement",
+        "proof",
+    ]
+
+
+def test_aw_selected_receipt_recording_uses_public_proof_operation() -> None:
+    source = Path("tools/chatgpt_review_loop.py").read_text(encoding="utf-8")
+
+    assert "_record_proof_receipt_payload" not in source
+    assert "--record-receipt" in source
+    assert "AW-selected proof command did not produce an admitted proof receipt through the public AW proof operation" in source
 
 
 def test_terminal_repair_names_the_later_failed_proof_not_the_first_command(tmp_path: Path) -> None:

@@ -443,6 +443,7 @@ def _execute_focused_proof_attempt(
     runner: CommandRunner,
     proof_selection: dict[str, Any] | None = None,
     proof_scope_changed_paths: Sequence[str] | None = None,
+    aw_command: str = "",
 ) -> dict[str, Any]:
     commands = [str(command).strip() for command in proof_commands if str(command).strip()]
     if not commands:
@@ -475,6 +476,8 @@ def _execute_focused_proof_attempt(
             aw_proof_receipts.append(
                 _record_aw_selected_proof_receipt(
                     worktree=worktree,
+                    aw_command=aw_command,
+                    runner=runner,
                     command=command,
                     result="passed" if completed.returncode == 0 else "failed",
                     changed_paths=changed_scope,
@@ -540,38 +543,56 @@ def _execute_focused_proof_attempt(
 def _record_aw_selected_proof_receipt(
     *,
     worktree: Path,
+    aw_command: str,
+    runner: CommandRunner,
     command: str,
     result: str,
     changed_paths: Sequence[str],
     elapsed_ms: int,
     output_bytes: int,
 ) -> dict[str, Any]:
+    if not aw_command.strip():
+        raise LoopError("aw-proof-receipt-unavailable", "AW proof receipt recording requires the configured AW command")
+    receipt_environment = json.dumps(
+        {
+            "producer": "chatgpt-review-loop.run-aw-selected-proof",
+            "active_virtual_env": os.environ.get("VIRTUAL_ENV", ""),
+            "uv_active": os.environ.get("UV_ACTIVE", ""),
+            "output_bytes": output_bytes,
+        },
+        sort_keys=True,
+    )
     try:
-        from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
-    except Exception as exc:  # pragma: no cover - import failure is surfaced as LoopError in normal use.
-        raise LoopError("aw-proof-receipt-unavailable", "AW proof receipt writer is unavailable") from exc
-    try:
-        payload = _record_proof_receipt_payload(
-            target_root=worktree,
-            command=command,
-            result=result,
-            changed_paths=[str(path) for path in changed_paths],
-            receipt_duration_seconds=f"{max(elapsed_ms, 0) / 1000:.3f}",
-            receipt_exit_state=result,
-            receipt_environment=json.dumps(
-                {
-                    "producer": "chatgpt-review-loop.run-aw-selected-proof",
-                    "active_virtual_env": os.environ.get("VIRTUAL_ENV", ""),
-                    "uv_active": os.environ.get("UV_ACTIVE", ""),
-                    "output_bytes": output_bytes,
-                },
-                sort_keys=True,
-            ),
+        completed = runner.run(
+            [
+                *_aw_command_prefix(aw_command),
+                "proof",
+                "--target",
+                worktree.as_posix(),
+                "--format",
+                "json",
+                "--record-receipt",
+                "--receipt-command",
+                command,
+                "--receipt-result",
+                result,
+                "--receipt-duration-seconds",
+                f"{max(elapsed_ms, 0) / 1000:.3f}",
+                "--receipt-exit-state",
+                result,
+                "--receipt-environment",
+                receipt_environment,
+                *[item for path in changed_paths for item in ("--changed", str(path))],
+            ],
+            cwd=worktree,
         )
+        if completed.returncode != 0:
+            raise RuntimeError((completed.stderr or completed.stdout or "").strip() or f"proof receipt command exited {completed.returncode}")
+        payload = json.loads(completed.stdout)
     except Exception as exc:
         raise LoopError(
             "aw-proof-receipt-rejected",
-            "AW-selected proof command did not produce an admitted proof receipt",
+            "AW-selected proof command did not produce an admitted proof receipt through the public AW proof operation",
             recovery=str(exc),
         ) from exc
     receipt = payload.get("receipt") if isinstance(payload, dict) else {}
@@ -1110,6 +1131,7 @@ def run_aw_selected_proof_and_report_job_result(
         runner=runner,
         proof_selection=selection,
         proof_scope_changed_paths=changed_paths,
+        aw_command=aw_command,
     )
     return report_job_result(
         cwd=cwd,
