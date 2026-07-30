@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import os
 from datetime import UTC, datetime
@@ -511,7 +512,32 @@ def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[st
     that protected boundary they fail closed.
     """
 
-    _ = (ref, result, target_root)
+    for module_name in ("agentic_workspace_host_adapters.external_evaluation",):
+        try:
+            module = importlib.import_module(module_name)
+        except ModuleNotFoundError:
+            continue
+        verifier = getattr(module, "verify_external_evaluation_host_result", None)
+        if not callable(verifier):
+            continue
+        try:
+            verdict = verifier(
+                result_ref=ref,
+                result=dict(result),
+                target_root=str(target_root.resolve()),
+                audience=EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE,
+            )
+        except Exception:
+            continue
+        if verdict is True:
+            return True
+        if isinstance(verdict, dict) and verdict.get("status") in {"admitted", "current", "accepted"}:
+            if str(verdict.get("result_ref") or ref) != ref:
+                return False
+            digest = str(verdict.get("result_digest") or "")
+            if digest and digest != _external_delivery_adapter_host_result_digest(result):
+                return False
+            return True
     return False
 
 

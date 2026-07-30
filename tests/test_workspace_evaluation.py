@@ -328,6 +328,87 @@ def test_external_adapter_receipt_requires_matching_host_result(tmp_path: Path, 
     assert recorded["host_result_ref"] == host["result_ref"]
 
 
+def test_external_adapter_receipt_accepts_provider_adapter_verified_result_across_process(tmp_path: Path) -> None:
+    import os
+    import subprocess
+    import sys
+
+    receipt = {
+        "delivery_id": "delivery-1",
+        "sink_id": "#1969",
+        "producer": "github-issues-adapter",
+        "attempt_revision": "attempt-1",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "status": "delivered",
+    }
+    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
+    adapter_root = tmp_path / "host-adapter"
+    package_root = adapter_root / "agentic_workspace_host_adapters"
+    package_root.mkdir(parents=True, exist_ok=True)
+    (package_root / "__init__.py").write_text("", encoding="utf-8")
+    (package_root / "external_evaluation.py").write_text(
+        """
+from __future__ import annotations
+
+import hashlib
+import json
+
+
+def _result_digest(result):
+    return hashlib.sha256(
+        json.dumps(
+            {key: value for key, value in result.items() if key not in {"host_admission", "host_admission_ref"}},
+            sort_keys=True,
+            default=str,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+
+
+def verify_external_evaluation_host_result(*, result_ref, result, target_root, audience):
+    context = result.get("admission_context") if isinstance(result, dict) else {}
+    if (
+        result.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1"
+        or result.get("result_ref") != result_ref
+        or context.get("audience") != audience
+        or context.get("workspace_ref") != f"workspace:path:{target_root}"
+        or not str(context.get("nonce") or "")
+    ):
+        return {"status": "rejected", "reason": "provider-result-mismatch"}
+    return {"status": "admitted", "result_ref": result_ref, "result_digest": _result_digest(result)}
+""",
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(adapter_root) + os.pathsep + env.get("PYTHONPATH", "")
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import json; "
+                "from pathlib import Path; "
+                "from agentic_workspace.evaluation import record_external_evaluation_adapter_receipt; "
+                f"payload = record_external_evaluation_adapter_receipt(target_root=Path({str(tmp_path)!r}), "
+                "delivery_id='delivery-1', sink_id='#1969', producer='github-issues-adapter', "
+                "attempt_revision='attempt-1', receipt_revision='receipt-1', capability_revision='github-issues-adapter:v1', "
+                f"status='delivered', host_result_ref={str(host['result_ref'])!r}); "
+                "print(json.dumps(payload, sort_keys=True))"
+            ),
+        ],
+        capture_output=True,
+        cwd=ROOT,
+        env=env,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    payload = json.loads(completed.stdout)
+    assert payload["status"] == "recorded"
+    assert payload["host_result_ref"] == host["result_ref"]
+
+
 def test_external_adapter_receipt_rejects_jointly_forged_local_host_result(tmp_path: Path, monkeypatch) -> None:
     receipt = {
         "delivery_id": "delivery-1",
