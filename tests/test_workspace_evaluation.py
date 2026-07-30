@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -19,7 +20,7 @@ from agentic_workspace.evaluation import (
     EVALUATION_PENDING_COLLECTIONS_DIR,
     EVALUATION_SUMMARY_KIND,
     EVALUATIONS_KIND,
-    EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEY_ID,
+    EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND,
     EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
@@ -54,6 +55,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _write_external_evaluation_adapter_host_result(target_root: Path, **values: object) -> dict[str, object]:
+    admission_context = {
+        "audience": str(values.get("audience") or EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE),
+        "workspace_ref": str(values.get("workspace_ref") or f"workspace:path:{target_root.resolve()}"),
+        "issued_at": str(values.get("issued_at") or "2026-07-29T00:00:00Z"),
+        "expires_at": str(values.get("expires_at") or "2099-01-01T00:00:00Z"),
+        "nonce": str(values["nonce"] if "nonce" in values else f"{values['delivery_id']}:{values['sink_id']}:{values['attempt_revision']}"),
+    }
     result = {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1",
         "status": "current",
@@ -70,6 +78,7 @@ def _write_external_evaluation_adapter_host_result(target_root: Path, **values: 
         "supersedes": str(values.get("supersedes") or ""),
         "request_revision": str(values.get("request_revision") or ""),
         "recorded_at": "2026-07-29T00:00:00Z",
+        "admission_context": admission_context,
         "custody": {
             "producer": "evaluation-provider-adapter",
             "trusted_channel": "provider-webhook",
@@ -80,38 +89,42 @@ def _write_external_evaluation_adapter_host_result(target_root: Path, **values: 
     result["result_id"] = result_id
     result["result_ref"] = f"external-evaluation-adapter-host-result:{result_id}"
     signed_payload = _external_delivery_adapter_host_admission_payload(str(result["result_ref"]), result)
-    private_key = """-----BEGIN PRIVATE KEY-----
-MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDeRnuGSKyZ1DK0
-IeOFMmnoUPLeGXafks5pL+MTSKhqL9M4hoVfRdQG/sh5hYYPKmn+DkShGFRarFVK
-p8qEskZ+a4H6swiSiQVRaEKZrKJn9PViHbDFg6w+UxKOzUEjn35a0mi3c3VIwqCf
-vKS2GqZ0mVfHmQ5LPm/dG69SS1g3E0/GBd9hd4flb2Kf+icIpCfbuDvXm2qMMHnI
-BNCzigMma/zyDLe4+/YfKRc0j/vhzLvS55LI4cYbyJ03VLssRap+kAJwpp7B9JJU
-0o9mOpXAWxdtlXKx4yZEvHcMHe8a54OxgnJd+nAty06BPFPXjaYgEzRk8xNSqFMB
-rQ/Sc0W5AgMBAAECggEAFUQIyimOkuabhcKmxA31Vj/VZqSoxd5br3Jgjy4gx80E
-0DgFj16MyTEL4N2CnJWWH7OBgyii3Gx3ug1o2a59Qlfajw/dMnjXyIi5M37x6FCG
-QBF/YbxF6M4VnNI8KNJ3+iw+jsul9VTCnZnEp/QPiCEKJgtpk88Y0H6XNOBGw7kA
-dwU/6DOQrEGFCLSWpoXB+YKBF80savEMqYuPikquXMA1XIYZNQK2hUAVovfjMqhR
-6+aSERYm72zpxVWxXA37hd75qPw/8ui1W4fx42gVrjhMclyoYFKVU8tvbDJ9y38D
-vl2ksmXHMLbkA6no6PbPhlR+4ZFQg3uFs1obL584UQKBgQD4Kd3WauVDAaIf4w0W
-fF9hZPtrJimSrOs00hrp0iVyuOOL5kuw0JOTj6rAvj2hNPS6CdgaLSck57LZj0S3
-XXT3dtAH2IkwWFMC+0vkmHCHBWRkmizBL2/r+UGsWrXdQL0RWK90m5YdyBYLDqXp
-wcxfRV7Xnq6Gmeig0h40xusdEQKBgQDlS1Z3EcuAIl5njRCcnFvdKJ49mygg6361
-/ETK/DqCdQMM2StKA+oE+QqK3QuYv33RkW6P5lGksjxuXFUMSPXRy6KUwQ84diDf
-c1uwMbaO8Jz7MrLQHx78uvtbZ4FaZmD2oEda6HCjZsLdhvQxzDv07mStSSfzeuWw
-kWa616m+KQKBgQCoKeazt7gn0eGE7h0eUaVooD9m+nNNe3PfVUj7jXXm6bb4RFSi
-OpTmd4JkHgYxSWtU7frMsjBGZ+PgXZ9ZCjGKx65swqUkZ5XI/XUOMOZ/+H1xVrBh
-ML4ND9ka7FU02vvD1279+7ib8cxOLdzsLHFLVfzQ7Cyj9YOYBwqFBQ6poQKBgQDX
-elkjRGHNZH77KSH3Syk5SLaMhobLiQNm2k97wlTpzDS1mlCIGe2OBsvVe60uOqZu
-jxErwfHvqGAKBlMWXGpGYevDhzpagQibdLkxd0ZsRcoAdsB7vQNN1hno5/gzkAqH
-OlBUKiPQKv3tWKmbMqcVogKSpjEZKuE3cSztYUZvIQKBgQCSl9lwbyoBl0uHkpfr
-73b5i4wyd4ati2SXUS8oDYVtFkcbqNJcktmnQ5Q0D6L9QQKA2FJQekWqRfIq+Pcv
-ioaPTHa3ePxgbiKav/N4iu04Ce9khx/xeXsgslrNgGU6HrySn4FiG10HGYbrOV57
-ptscLbLtU7mXdb4Tfrw9Z0Rpag==
------END PRIVATE KEY-----
-"""
     key_path = target_root / ".agentic-workspace" / "local" / "external-evaluation-test-provider-key.pem"
     key_path.parent.mkdir(parents=True, exist_ok=True)
-    key_path.write_text(private_key, encoding="utf-8")
+    subprocess.run(
+        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
+        capture_output=True,
+        check=True,
+    )
+    modulus = (
+        subprocess.run(
+            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        .stdout.strip()
+        .split("=", 1)[1]
+    )
+    key_id = (
+        "external-evaluation-provider-test-"
+        + hashlib.sha256(json.dumps({"result_ref": result["result_ref"], "modulus": modulus}, sort_keys=True).encode("utf-8")).hexdigest()[
+            :12
+        ]
+    )
+    key = {
+        "algorithm": "RS256",
+        "status": str(values.get("key_status") or "current"),
+        "e": 65537,
+        "n": modulus.lower(),
+        "workspace_ref": str(values.get("key_workspace_ref") or f"workspace:path:{target_root.resolve()}"),
+        "workspace_path": str(values.get("key_workspace_path") or target_root.resolve()),
+        "not_before": str(values.get("key_not_before") or "2026-01-01T00:00:00Z"),
+        "expires_at": str(values.get("key_expires_at") or "2099-01-01T00:00:00Z"),
+    }
+    if values.get("key_revoked_at"):
+        key["revoked_at"] = str(values["key_revoked_at"])
+    os.environ["AW_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEYS"] = json.dumps({key_id: key})
     completed = subprocess.run(
         ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
         input=_evaluation_json_bytes(signed_payload),
@@ -122,7 +135,7 @@ ptscLbLtU7mXdb4Tfrw9Z0Rpag==
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
         "status": "current",
         "algorithm": "RS256",
-        "key_id": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEY_ID,
+        "key_id": key_id,
         "signed_payload": signed_payload,
         "signature": base64.b64encode(completed.stdout).decode("ascii"),
     }
@@ -367,6 +380,38 @@ def test_external_adapter_receipt_rejects_jointly_forged_local_host_result(tmp_p
     index = json.loads(index_path.read_text(encoding="utf-8"))
     index["results"][host["result_id"]]["result_digest"] = hashlib.sha256(result_path.read_bytes()).hexdigest()
     index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_external_evaluation_adapter_receipt(
+            target_root=tmp_path,
+            **receipt,
+            host_result_ref=host["result_ref"],
+        )
+
+
+@pytest.mark.parametrize(
+    ("case_name", "overrides"),
+    [
+        ("wrong-audience", {"audience": "other-consumer"}),
+        ("missing-nonce", {"nonce": ""}),
+        ("expired-admission", {"expires_at": "2026-01-01T00:00:00Z"}),
+        ("revoked-key", {"key_revoked_at": "2026-07-29T00:00:00Z"}),
+        ("wrong-workspace", {"key_workspace_path": "not-this-workspace"}),
+    ],
+)
+def test_external_adapter_receipt_rejects_invalid_host_result_admission_lifecycle(
+    tmp_path: Path, case_name: str, overrides: dict[str, object]
+) -> None:
+    receipt = {
+        "delivery_id": f"delivery-{case_name}",
+        "sink_id": "#1969",
+        "producer": "github-issues-adapter",
+        "attempt_revision": "attempt-1",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "status": "delivered",
+    }
+    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt, **overrides)
 
     with pytest.raises(WorkspaceUsageError, match="host boundary"):
         record_external_evaluation_adapter_receipt(
