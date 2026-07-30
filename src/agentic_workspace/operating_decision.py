@@ -13,8 +13,8 @@ from typing import Any, Callable
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
 from agentic_workspace.authority_envelope import mutation_baseline_payload
 from agentic_workspace.context_authority_owner_operations import (
-    _admit_context_owner_operation_result,
     registered_context_owner_receipt_status,
+    run_context_owner_operation,
 )
 
 BLOCKER_PRECEDENCE = [
@@ -471,14 +471,6 @@ def _owner_contract_result_identity(surface: str) -> tuple[str, str, str]:
     )
 
 
-def _finalize_owner_result(payload: dict[str, Any]) -> dict[str, Any]:
-    return {
-        **payload,
-        "revision": "sha256:"
-        + _digest({key: value for key, value in payload.items() if key != "revision" and not str(key).endswith("_debug")}),
-    }
-
-
 def _load_schema_backed_source(path: Path) -> tuple[dict[str, Any], dict[str, Any] | None]:
     suffix = path.suffix.lower()
     if suffix not in {".toml", ".json"}:
@@ -496,42 +488,6 @@ def _load_schema_backed_source(path: Path) -> tuple[dict[str, Any], dict[str, An
         "parse_status": "valid",
         "top_level_keys": sorted(str(key) for key in payload)[:20],
     }, payload
-
-
-def _owner_result_base(
-    *,
-    surface: str,
-    item: dict[str, Any],
-    root: Path,
-    chosen: Path,
-    revision: str,
-    git_head: str,
-    selection: dict[str, Any],
-    adapter_id: str,
-    status: str = "current",
-    reason: str = "",
-    extra: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    producer, result_kind, repair_operation_id = _owner_contract_result_identity(surface)
-    source_id = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
-    source_revision = "sha256:" + revision
-    payload = {
-        "kind": result_kind,
-        "producer": producer,
-        "status": status,
-        "surface": surface,
-        "owner": item.get("owner"),
-        "source_id": source_id,
-        "source_revision": source_revision,
-        "git_head": git_head,
-        "selection": selection,
-        "adapter_id": adapter_id,
-        "repair_operation_id": repair_operation_id,
-    }
-    if reason:
-        payload["reason"] = reason
-    payload.update(extra or {})
-    return _finalize_owner_result(payload)
 
 
 def _context_owner_operation_admission(
@@ -607,7 +563,7 @@ def _context_owner_operation_admission(
     return True, ""
 
 
-def _registered_owner_adapter_result(
+def _dispatch_registered_owner_operation(
     *,
     surface: str,
     item: dict[str, Any],
@@ -623,52 +579,20 @@ def _registered_owner_adapter_result(
     reason: str = "",
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    if status != "current":
-        return _owner_result_base(
-            surface=surface,
-            item=item,
-            root=root,
-            chosen=chosen,
-            revision=revision,
-            git_head=git_head,
-            selection=selection,
-            adapter_id=adapter_id,
-            status=status,
-            reason=reason,
-            extra={
-                "owner_boundary": boundary,
-                "schema_backing": structural_backing,
-                **(extra or {}),
-            },
-        )
-
-    owner_result = _owner_result_base(
+    return run_context_owner_operation(
         surface=surface,
-        item=item,
+        owner=item.get("owner"),
         root=root,
         chosen=chosen,
         revision=revision,
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
+        boundary=boundary,
+        structural_backing=structural_backing,
         status=status,
         reason=reason,
-        extra={
-            "owner_boundary": boundary,
-            "schema_backing": structural_backing,
-            **(extra or {}),
-        },
-    )
-    return _admit_context_owner_operation_result(
-        surface=surface,
-        owner=item.get("owner"),
-        root=root,
-        chosen=chosen,
-        source_revision="sha256:" + revision,
-        git_head=git_head,
-        selection=selection,
-        adapter_id=adapter_id,
-        owner_result=owner_result,
+        extra=extra,
     )
 
 
@@ -736,7 +660,7 @@ def _contracted_text_owner_result(
         "line_count": contract.get("line_count", 0),
     }
     if status != "current":
-        return _owner_result_base(
+        return _dispatch_registered_owner_operation(
             surface=surface,
             item=item,
             root=root,
@@ -747,13 +671,11 @@ def _contracted_text_owner_result(
             adapter_id=adapter_id,
             status=status or "invalid",
             reason=str(contract.get("reason") or ""),
-            extra={
-                "owner_boundary": boundary,
-                "schema_backing": structural_backing,
-                "population": {"status": "invalid"},
-            },
+            structural_backing=structural_backing,
+            boundary=boundary,
+            extra={"population": {"status": "invalid"}},
         )
-    return _registered_owner_adapter_result(
+    return _dispatch_registered_owner_operation(
         surface=surface,
         item=item,
         root=root,
@@ -791,7 +713,7 @@ def _contracted_toml_owner_result(
         "missing_required_keys": missing_keys,
     }
     if status != "current":
-        return _owner_result_base(
+        return _dispatch_registered_owner_operation(
             surface=surface,
             item=item,
             root=root,
@@ -802,13 +724,11 @@ def _contracted_toml_owner_result(
             adapter_id=adapter_id,
             status=status,
             reason=reason,
-            extra={
-                "owner_boundary": boundary,
-                "schema_backing": structural_backing,
-                "population": {"status": "invalid"},
-            },
+            structural_backing=structural_backing,
+            boundary=boundary,
+            extra={"population": {"status": "invalid"}},
         )
-    return _registered_owner_adapter_result(
+    return _dispatch_registered_owner_operation(
         surface=surface,
         item=item,
         root=root,
@@ -1085,7 +1005,7 @@ def _module_owner_result(
         "missing_symbols": symbol_status.get("missing_symbols", []),
     }
     if status != "current":
-        return _owner_result_base(
+        return _dispatch_registered_owner_operation(
             surface=surface,
             item=item,
             root=root,
@@ -1096,13 +1016,11 @@ def _module_owner_result(
             adapter_id=adapter_id,
             status=status or "invalid",
             reason=str(symbol_status.get("reason") or ""),
-            extra={
-                "owner_boundary": boundary,
-                "schema_backing": structural_backing,
-                "population": {"status": "invalid"},
-            },
+            structural_backing=structural_backing,
+            boundary=boundary,
+            extra={"population": {"status": "invalid"}},
         )
-    return _registered_owner_adapter_result(
+    return _dispatch_registered_owner_operation(
         surface=surface,
         item=item,
         root=root,
@@ -1132,7 +1050,7 @@ def _planning_owner_result(
         state_data = _load_toml_dict(chosen)
         admission = runtime_core._planning_owner_admission_payload(target_root=root, state_data=state_data)  # type: ignore[attr-defined]
     except Exception as exc:  # pragma: no cover - defensive, owner adapter availability is environment-specific.
-        return _owner_result_base(
+        return _dispatch_registered_owner_operation(
             surface=surface,
             item=item,
             root=root,
@@ -1143,6 +1061,8 @@ def _planning_owner_result(
             adapter_id="planning.owner-result",
             status="unavailable",
             reason="planning-owner-admission-unavailable",
+            boundary="Planning current-work admission contract",
+            structural_backing={"source_format": "toml", "parse_status": "unavailable"},
             extra={"error": str(exc)},
         )
     admission_status = str(admission.get("status") or "")
@@ -1153,7 +1073,7 @@ def _planning_owner_result(
         "accepted_statuses": sorted(accepted_statuses),
     }
     if status != "current":
-        return _owner_result_base(
+        return _dispatch_registered_owner_operation(
             surface=surface,
             item=item,
             root=root,
@@ -1164,9 +1084,15 @@ def _planning_owner_result(
             adapter_id="planning.owner-result",
             status=status,
             reason=f"planning-owner-admission-{admission_status or 'missing'}",
-            extra={**extra, "owner_boundary": "Planning current-work admission contract"},
+            boundary="Planning current-work admission contract",
+            structural_backing={
+                "source_format": "toml",
+                "planning_owner_admission": admission,
+                "accepted_statuses": sorted(accepted_statuses),
+            },
+            extra=extra,
         )
-    return _registered_owner_adapter_result(
+    return _dispatch_registered_owner_operation(
         surface=surface,
         item=item,
         root=root,
@@ -1194,7 +1120,7 @@ def _memory_owner_result(
     curation = _as_dict(source_specific.get("memory_curation"))
     curation_status = str(curation.get("status") or "")
     if curation_status != "selected":
-        return _owner_result_base(
+        return _dispatch_registered_owner_operation(
             surface=surface,
             item=item,
             root=root,
@@ -1205,9 +1131,11 @@ def _memory_owner_result(
             adapter_id="memory.owner-result",
             status="stale",
             reason=f"memory-curation-{curation_status or 'missing'}",
+            boundary="Memory route curation contract",
+            structural_backing={"source_format": "memory-manifest", "memory_curation": curation},
             extra={"memory_curation": curation},
         )
-    return _registered_owner_adapter_result(
+    return _dispatch_registered_owner_operation(
         surface=surface,
         item=item,
         root=root,
@@ -1241,7 +1169,7 @@ def _mutation_baseline_owner_result(
         "accepted_statuses": sorted(accepted_statuses),
     }
     if not current:
-        return _owner_result_base(
+        return _dispatch_registered_owner_operation(
             surface=surface,
             item=item,
             root=root,
@@ -1252,9 +1180,15 @@ def _mutation_baseline_owner_result(
             adapter_id="mutation-baseline.owner-result",
             status="stale",
             reason=f"mutation-baseline-admission-{status or 'missing'}",
-            extra={**extra, "owner_boundary": "authority-envelope mutation baseline contract"},
+            boundary="authority-envelope mutation baseline contract",
+            structural_backing={
+                "source_format": "mutation-baseline",
+                "mutation_baseline_admission": admission,
+                "accepted_statuses": sorted(accepted_statuses),
+            },
+            extra=extra,
         )
-    return _registered_owner_adapter_result(
+    return _dispatch_registered_owner_operation(
         surface=surface,
         item=item,
         root=root,
@@ -1286,7 +1220,7 @@ def _skills_owner_result(
     closure = _as_dict(source_specific.get("skill_dependency_closure"))
     satisfied = closure.get("status") == "satisfied"
     if not satisfied:
-        return _owner_result_base(
+        return _dispatch_registered_owner_operation(
             surface=surface,
             item=item,
             root=root,
@@ -1297,9 +1231,11 @@ def _skills_owner_result(
             adapter_id="skills.owner-result",
             status="stale",
             reason="skill-dependency-closure-unsatisfied",
+            boundary="workspace skill dependency closure contract",
+            structural_backing={"source_format": "skill-registry", "skill_dependency_closure": closure},
             extra={"skill_dependency_closure": closure},
         )
-    return _registered_owner_adapter_result(
+    return _dispatch_registered_owner_operation(
         surface=surface,
         item=item,
         root=root,
@@ -1327,7 +1263,7 @@ def _generated_references_owner_result(
     try:
         manifest = json.loads(chosen.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        return _owner_result_base(
+        return _dispatch_registered_owner_operation(
             surface=surface,
             item=item,
             root=root,
@@ -1338,11 +1274,13 @@ def _generated_references_owner_result(
             adapter_id="generated-references.owner-result",
             status="invalid",
             reason="generated-source-manifest-invalid",
+            boundary="generated command package source manifest",
+            structural_backing={"source_format": "json", "parse_status": "invalid"},
             extra={"error": str(exc)},
         )
     manifest_current = manifest.get("kind") == "generated-cli-source-manifest/v1" and _generated_fingerprint_is_current(root)
     if not manifest_current:
-        return _owner_result_base(
+        return _dispatch_registered_owner_operation(
             surface=surface,
             item=item,
             root=root,
@@ -1353,9 +1291,11 @@ def _generated_references_owner_result(
             adapter_id="generated-references.owner-result",
             status="stale",
             reason="generated-source-manifest-stale",
+            boundary="generated command package source manifest",
+            structural_backing={"source_format": "json", "generated_source_manifest": manifest},
             extra={"generated_source_manifest": manifest},
         )
-    return _registered_owner_adapter_result(
+    return _dispatch_registered_owner_operation(
         surface=surface,
         item=item,
         root=root,
@@ -1402,17 +1342,19 @@ def _context_owner_result_from_adapter(
 ) -> dict[str, Any]:
     adapter = CONTEXT_OWNER_RESULT_ADAPTERS.get(surface)
     if adapter is None:
-        producer, result_kind, repair_operation_id = _owner_contract_result_identity(surface)
-        return _finalize_owner_result(
-            {
-                "kind": result_kind,
-                "producer": producer,
-                "status": "unavailable",
-                "surface": surface,
-                "owner": item.get("owner"),
-                "reason": "owner-result-adapter-unavailable",
-                "repair_operation_id": repair_operation_id,
-            }
+        return _dispatch_registered_owner_operation(
+            surface=surface,
+            item=item,
+            root=root,
+            chosen=chosen,
+            revision=revision,
+            git_head=git_head,
+            selection=selection,
+            adapter_id=f"{surface}.owner-result",
+            status="unavailable",
+            reason="owner-result-adapter-unavailable",
+            boundary="registered context owner adapter dispatch",
+            structural_backing={"source_format": "unavailable", "adapter_status": "missing"},
         )
     return adapter(surface, item, root, chosen, revision, git_head, selection, source_specific)
 

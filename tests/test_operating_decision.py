@@ -1324,6 +1324,12 @@ def test_context_owner_operation_admission_does_not_accept_caller_semantic_paylo
     assert "def _issue_context_owner_adapter_result(" not in operation_source
     assert "def _owner_operation_result_base(" not in resolver_source
     assert "def _admit_concrete_owner_adapter_result(" not in resolver_source
+    assert "def _registered_owner_adapter_result(" not in resolver_source
+    assert "def _owner_result_base(" not in resolver_source
+    assert "def _finalize_owner_result(" not in resolver_source
+    assert "_admit_context_owner_operation_result" not in resolver_source
+    assert "run_context_owner_operation" in resolver_source
+    assert "_CONTEXT_OWNER_OPERATION_RUNNERS" in operation_source
     assert "_CONTEXT_OWNER_ADAPTER_TOKEN" not in resolver_source
     assert "ContextOwnerAdapterResult" not in resolver_source
 

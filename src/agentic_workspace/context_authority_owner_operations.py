@@ -30,6 +30,10 @@ def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
+def _source_id_for(root: Path, chosen: Path) -> str:
+    return chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
+
+
 def _load_registry_contract() -> dict[str, Any]:
     path = Path(__file__).resolve().parent / "contracts" / _CONTEXT_AUTHORITY_REGISTRY_RESOURCE
     try:
@@ -188,6 +192,212 @@ def _admit_context_owner_operation_result(
         }
     )
     return admitted_result
+
+
+def _owner_result_payload(
+    *,
+    surface: str,
+    owner: str | None,
+    root: Path,
+    chosen: Path,
+    source_revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    adapter_id: str,
+    status: str,
+    reason: str,
+    boundary: str,
+    structural_backing: dict[str, Any],
+    extra: dict[str, Any] | None,
+) -> dict[str, Any]:
+    spec = _OWNER_OPERATION_SPECS.get(surface)
+    if not spec or not spec.get("producer") or not spec.get("result_kind") or not spec.get("operation_id"):
+        raise ValueError(f"context owner operation is not registered for surface {surface!r}")
+    payload: dict[str, Any] = {
+        "kind": spec["result_kind"],
+        "producer": spec["producer"],
+        "status": status,
+        "surface": surface,
+        "owner": owner,
+        "source_id": _source_id_for(root, chosen),
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "selection": selection,
+        "adapter_id": adapter_id,
+        "repair_operation_id": spec["operation_id"],
+        "owner_boundary": boundary,
+        "schema_backing": structural_backing,
+    }
+    if reason:
+        payload["reason"] = reason
+    payload.update(extra or {})
+    return _finalize_owner_result(payload)
+
+
+def _run_registered_context_owner_operation(
+    *,
+    surface: str,
+    owner: str | None,
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    adapter_id: str,
+    boundary: str,
+    structural_backing: dict[str, Any],
+    status: str = "current",
+    reason: str = "",
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    source_revision = "sha256:" + revision
+    owner_result = _owner_result_payload(
+        surface=surface,
+        owner=owner,
+        root=root,
+        chosen=chosen,
+        source_revision=source_revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id=adapter_id,
+        status=status,
+        reason=reason,
+        boundary=boundary,
+        structural_backing=structural_backing,
+        extra=extra,
+    )
+    if status != "current":
+        return owner_result
+    return _admit_context_owner_operation_result(
+        surface=surface,
+        owner=owner,
+        root=root,
+        chosen=chosen,
+        source_revision=source_revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id=adapter_id,
+        owner_result=owner_result,
+    )
+
+
+def _system_intent_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="system-intent", **kwargs)
+
+
+def _architecture_principles_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="architecture-principles", **kwargs)
+
+
+def _scoped_instructions_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="scoped-instructions", **kwargs)
+
+
+def _ownership_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="ownership", **kwargs)
+
+
+def _assignment_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="assignment", **kwargs)
+
+
+def _evaluation_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="evaluation", **kwargs)
+
+
+def _proof_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="proof", **kwargs)
+
+
+def _autopilot_executor_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="autopilot-executor", **kwargs)
+
+
+def _target_guidance_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="target-guidance", **kwargs)
+
+
+def _terminal_outcome_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="terminal-outcome", **kwargs)
+
+
+def _module_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="module", **kwargs)
+
+
+def _planning_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="planning", **kwargs)
+
+
+def _memory_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="memory", **kwargs)
+
+
+def _mutation_baseline_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="mutation-baseline", **kwargs)
+
+
+def _skills_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="skills", **kwargs)
+
+
+def _generated_references_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    return _run_registered_context_owner_operation(surface="generated-references", **kwargs)
+
+
+_CONTEXT_OWNER_OPERATION_RUNNERS = {
+    "system-intent": _system_intent_owner_operation,
+    "architecture-principles": _architecture_principles_owner_operation,
+    "scoped-instructions": _scoped_instructions_owner_operation,
+    "ownership": _ownership_owner_operation,
+    "assignment": _assignment_owner_operation,
+    "evaluation": _evaluation_owner_operation,
+    "proof": _proof_owner_operation,
+    "autopilot-executor": _autopilot_executor_owner_operation,
+    "target-guidance": _target_guidance_owner_operation,
+    "terminal-outcome": _terminal_outcome_owner_operation,
+    "module": _module_owner_operation,
+    "planning": _planning_owner_operation,
+    "memory": _memory_owner_operation,
+    "mutation-baseline": _mutation_baseline_owner_operation,
+    "skills": _skills_owner_operation,
+    "generated-references": _generated_references_owner_operation,
+}
+
+
+def run_context_owner_operation(
+    *,
+    surface: str,
+    owner: str | None,
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    adapter_id: str,
+    boundary: str,
+    structural_backing: dict[str, Any],
+    status: str = "current",
+    reason: str = "",
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    runner = _CONTEXT_OWNER_OPERATION_RUNNERS.get(surface)
+    if runner is None:
+        raise ValueError(f"context owner operation is not registered for surface {surface!r}")
+    return runner(
+        owner=owner,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id=adapter_id,
+        boundary=boundary,
+        structural_backing=structural_backing,
+        status=status,
+        reason=reason,
+        extra=extra,
+    )
 
 
 def registered_context_owner_receipt_status(
