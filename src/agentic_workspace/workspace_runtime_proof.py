@@ -10,6 +10,7 @@ import base64
 import copy
 import fnmatch
 import hashlib
+import importlib
 import json
 import os
 import re
@@ -6862,7 +6863,32 @@ def _host_admits_independent_review_host_result(host_result_ref: str, host_resul
     closed.
     """
 
-    _ = (host_result_ref, host_result, target_root)
+    for module_name in ("agentic_workspace_host_adapters.independent_review",):
+        try:
+            module = importlib.import_module(module_name)
+        except ModuleNotFoundError:
+            continue
+        verifier = getattr(module, "verify_independent_review_host_result", None)
+        if not callable(verifier):
+            continue
+        try:
+            verdict = verifier(
+                host_result_ref=host_result_ref,
+                host_result=dict(host_result),
+                target_root=str(target_root.resolve()),
+                audience=INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
+            )
+        except Exception:
+            continue
+        if verdict is True:
+            return True
+        if isinstance(verdict, dict) and verdict.get("status") in {"admitted", "current", "accepted"}:
+            if str(verdict.get("host_result_ref") or host_result_ref) != host_result_ref:
+                return False
+            digest = str(verdict.get("host_result_digest") or "")
+            if digest and digest != _stable_review_json_digest(host_result):
+                return False
+            return True
     return False
 
 
@@ -7127,12 +7153,12 @@ def admit_independent_review_result_operation(
                 {
                     "reason": "caller-supplied-host-trust-root-rejected",
                     "field": ",".join(caller_trust_fields),
-                    "detail": "assignment.admit accepts only an opaque host-issued result ref; verifier keys, signatures, and authority-bearing capabilities must be installed by the host boundary before the operation call.",
+                    "detail": "assignment.admit accepts only an opaque host-issued result ref; verifier keys, signatures, and authority-bearing capabilities are accepted only from an installed host/adapter verifier outside the operation caller path.",
                 }
             ],
             "repair_operation": {
                 "id": "independent-review.repair",
-                "summary": "Use a host/adapter-issued result reference whose admission capability is already installed outside the assignment.admit caller path.",
+                "summary": "Use a host/adapter-issued result reference that an installed host/adapter verifier can admit outside the assignment.admit caller path.",
             },
         }
     host_result_ref = str(values.get("host_result_ref") or "").strip()
@@ -7152,7 +7178,7 @@ def admit_independent_review_result_operation(
                 "failures": [{"reason": "host-capability-admission-rejected", "field": "host_result_ref", "detail": str(exc)}],
                 "repair_operation": {
                     "id": "independent-review.repair",
-                    "summary": "Provide a current host/adapter-owned admission capability for the review result.",
+                    "summary": "Provide a current host/adapter verifier for the review result.",
                 },
             }
     raw_result = values.get("review_result") or values.get("review_result_json")

@@ -18,7 +18,7 @@
     "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
     "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
     "Independent-review admission accepts only producer-owned review result envelopes and rejects caller-authored identity packets.",
-    "Independent-review host results are admitted only through a pre-installed host/adapter-owned capability; repo-local files, environment variables, and caller-supplied verifier keys/signatures are non-authoritative caches.",
+    "Independent-review host results are admitted only through an installed host/adapter verifier module; repo-local files, environment variables, and caller-supplied verifier keys/signatures are non-authoritative caches.",
     "Independent-review receipts are bound to changed scope and expire, revoke, or supersede fail closed at proof admission."
   ],
   "id": "assignment.admit",
@@ -169,7 +169,7 @@
     "assignment.admit.process",
     "generated external clients expose and negotiate the operation family as runtime-backed",
     "operation contract validates against operation.schema.json",
-    "assignment.admit admits independent-review host capabilities and results through the same generated public operation used by external clients",
+    "assignment.admit admits independent-review host results through the same generated public operation used by external clients while requiring host/adapter verifier custody outside the caller path",
     "proof decision rejects expired, revoked, superseded, wrong-scope, same-actor, or caller-shaped independent-review evidence"
   ],
   "reads": [

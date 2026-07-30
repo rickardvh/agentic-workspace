@@ -7678,6 +7678,97 @@ def test_assignment_admit_accepts_preinstalled_host_capability_ref(tmp_path: Pat
     assert receipt["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
 
 
+def test_assignment_admit_accepts_host_adapter_verified_result_across_process(tmp_path: Path) -> None:
+    import os
+    import subprocess
+    import sys
+
+    from agentic_workspace.workspace_runtime_proof import _independent_review_scope_digest
+
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "human",
+        "assignment_id": "critical-access-review",
+        "assignment_revision": "assignment-rev-1",
+        "review_revision": "review-rev-1",
+        "reviewed_at": "2026-07-26T13:22:00Z",
+        "changed_paths": ["services/auth/policy.py"],
+        "scope_digest": _independent_review_scope_digest(["services/auth/policy.py"]),
+        "implementer": {"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
+        "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+        "custody": {
+            "producer": "github-review-adapter",
+            "authority_ref": "SECURITY.md#critical-access",
+            "source_ref": "pull-request-review:1",
+        },
+    }
+    host_result_ref = _write_independent_review_host_result(tmp_path, review_result, install_host_admission=False)
+    assert isinstance(host_result_ref, str)
+    adapter_root = tmp_path / "host-adapter"
+    _write(adapter_root / "agentic_workspace_host_adapters" / "__init__.py", "")
+    _write(
+        adapter_root / "agentic_workspace_host_adapters" / "independent_review.py",
+        """
+from __future__ import annotations
+
+import hashlib
+import json
+
+
+def _digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def verify_independent_review_host_result(*, host_result_ref, host_result, target_root, audience):
+    admission = host_result.get("host_admission") if isinstance(host_result, dict) else {}
+    payload = admission.get("signed_payload") if isinstance(admission, dict) else {}
+    context = host_result.get("admission_context") if isinstance(host_result, dict) else {}
+    if (
+        admission.get("kind") != "agentic-workspace/independent-review-host-result-admission/v1"
+        or admission.get("status") != "current"
+        or payload.get("host_result_ref") != host_result_ref
+        or payload.get("audience") != audience
+        or context.get("audience") != audience
+        or context.get("workspace_ref") != f"workspace:path:{target_root}"
+    ):
+        return {"status": "rejected", "reason": "host-admission-mismatch"}
+    return {
+        "status": "admitted",
+        "host_result_ref": host_result_ref,
+        "host_result_digest": _digest(host_result),
+        "authority": "test-host-adapter-module",
+    }
+""",
+    )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(adapter_root) + os.pathsep + env.get("PYTHONPATH", "")
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import json; "
+                "from pathlib import Path; "
+                "from agentic_workspace.workspace_runtime_proof import admit_independent_review_result_operation; "
+                f"payload = admit_independent_review_result_operation(target_root=Path({str(tmp_path)!r}), "
+                f"values={{'host_result_ref': {host_result_ref!r}, 'required_mode': 'human', 'changed': ['services/auth/policy.py']}}); "
+                "print(json.dumps(payload, sort_keys=True))"
+            ),
+        ],
+        capture_output=True,
+        cwd=ROOT,
+        env=env,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    payload = json.loads(completed.stdout)
+    assert payload["status"] == "admitted"
+    assert payload["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
+
+
 def test_assignment_admit_rejects_caller_supplied_host_trust_root(tmp_path: Path) -> None:
     from agentic_workspace.workspace_runtime_proof import _independent_review_scope_digest, admit_independent_review_result_operation
 
@@ -7948,7 +8039,7 @@ def test_assignment_admit_exposes_independent_review_admission_contract() -> Non
         assert {"host_admission_json", "host_public_key_json", "host_capability_json"}.isdisjoint(input_names)
         assert any("producer-owned review result" in guard for guard in payload["guards"])
         assert any("caller-supplied verifier keys/signatures" in guard for guard in payload["guards"])
-        assert any("assignment.admit admits independent-review host capabilities" in proof for proof in payload["proof"])
+        assert any("assignment.admit admits independent-review host results" in proof for proof in payload["proof"])
 
 
 def test_high_assurance_closeout_posture_rejects_hand_written_independent_review_receipt(tmp_path: Path, capsys) -> None:
