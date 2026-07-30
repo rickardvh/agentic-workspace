@@ -421,6 +421,15 @@ def _generated_fingerprint_is_current(root: Path) -> bool:
                 return False
         return True
     paths = payload.get("file_paths")
+    if (
+        payload.get("kind") == "generated-cli-source-manifest/v1"
+        and isinstance(paths, list)
+        and paths
+        and all(isinstance(path, str) and path for path in paths)
+        and payload.get("git_index_entries") is None
+        and payload.get("git_index_identity") is None
+    ):
+        return all((root / str(path)).exists() for path in paths)
     expected_entries = payload.get("git_index_entries")
     expected_identity = payload.get("git_index_identity")
     if (
@@ -502,34 +511,6 @@ def _owner_result_base(
     producer, result_kind, repair_operation_id = _owner_contract_result_identity(surface)
     source_id = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
     source_revision = "sha256:" + revision
-    default_owner_operation = {
-        "kind": "agentic-workspace/context-authority-owner-operation/v1",
-        "status": "executed",
-        "operation_id": repair_operation_id,
-        "run_id": "sha256:"
-        + _digest(
-            {
-                "operation_id": repair_operation_id,
-                "producer": producer,
-                "surface": surface,
-                "owner": item.get("owner"),
-                "source_id": source_id,
-                "source_revision": source_revision,
-                "git_head": git_head,
-                "adapter_id": adapter_id,
-                "selection_revision": "sha256:" + _digest(selection),
-            }
-        ),
-        "producer": producer,
-        "surface": surface,
-        "source_id": source_id,
-        "source_revision": source_revision,
-        "git_head": git_head,
-        "adapter_id": adapter_id,
-        "selection_revision": "sha256:" + _digest(selection),
-        "admission_rule": "current authority is admitted from registered owner-operation adapter output, not checked-in assertion files",
-    }
-    merged_extra = {"owner_operation": default_owner_operation, **(extra or {})}
     payload = {
         "kind": result_kind,
         "producer": producer,
@@ -545,11 +526,11 @@ def _owner_result_base(
     }
     if reason:
         payload["reason"] = reason
-    payload.update(merged_extra)
+    payload.update(extra or {})
     return _finalize_owner_result(payload)
 
 
-def _owner_operation_envelope(
+def _execute_context_owner_operation(
     *,
     surface: str,
     item: dict[str, Any],
@@ -561,11 +542,14 @@ def _owner_operation_envelope(
     adapter_id: str,
     boundary: str,
     structural_backing: dict[str, Any],
+    owner_result: dict[str, Any],
 ) -> dict[str, Any]:
     producer, _result_kind, repair_operation_id = _owner_contract_result_identity(surface)
     source_id = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
     source_revision = "sha256:" + revision
     operation_id = repair_operation_id
+    result_payload_revision = str(owner_result.get("revision") or "")
+    schema_backing_revision = "sha256:" + _digest(structural_backing)
     operation_run_identity = {
         "operation_id": operation_id,
         "producer": producer,
@@ -576,30 +560,132 @@ def _owner_operation_envelope(
         "git_head": git_head,
         "adapter_id": adapter_id,
         "selection_revision": "sha256:" + _digest(selection),
-        "schema_backing_revision": "sha256:" + _digest(structural_backing),
+        "schema_backing_revision": schema_backing_revision,
+        "result_payload_revision": result_payload_revision,
     }
-    return {
-        "owner_boundary": boundary,
-        "schema_backing": structural_backing,
-        "owner_operation": {
-            "kind": "agentic-workspace/context-authority-owner-operation/v1",
-            "status": "executed",
-            "operation_id": operation_id,
-            "run_id": "sha256:" + _digest(operation_run_identity),
-            "producer": producer,
-            "surface": surface,
-            "source_id": source_id,
-            "source_revision": source_revision,
-            "git_head": git_head,
-            "adapter_id": adapter_id,
-            "selection_revision": operation_run_identity["selection_revision"],
-            "schema_backing_revision": operation_run_identity["schema_backing_revision"],
-            "admission_rule": (
-                "Context authority admits current results only from a registered owner-operation adapter. "
-                "Checked-in owner-result JSON is evidence only and cannot mint current authority."
-            ),
-        },
+    run_id = "sha256:" + _digest(operation_run_identity)
+    receipt_identity = {
+        **operation_run_identity,
+        "run_id": run_id,
+        "executor": "agentic_workspace.operating_decision._execute_context_owner_operation",
+        "receipt_schema": "src/agentic_workspace/contracts/schemas/context_authority_owner_result.schema.json",
     }
+    receipt_id = "sha256:" + _digest(receipt_identity)
+    owner_execution_receipt = {
+        "kind": "agentic-workspace/context-authority-owner-execution-receipt/v1",
+        "status": "executed",
+        "current_state": "current",
+        "receipt_id": receipt_id,
+        "run_id": run_id,
+        "operation_id": operation_id,
+        "producer": producer,
+        "surface": surface,
+        "owner": item.get("owner"),
+        "source_id": source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "adapter_id": adapter_id,
+        "selection_revision": operation_run_identity["selection_revision"],
+        "schema_backing_revision": schema_backing_revision,
+        "result_payload_revision": result_payload_revision,
+        "executor": receipt_identity["executor"],
+        "receipt_schema": receipt_identity["receipt_schema"],
+        "supersedes": "",
+        "admission_rule": "Only owner-operation executor receipts can admit current context authority results.",
+    }
+    owner_operation = {
+        "kind": "agentic-workspace/context-authority-owner-operation/v1",
+        "status": "executed",
+        "operation_id": operation_id,
+        "run_id": run_id,
+        "receipt_id": receipt_id,
+        "producer": producer,
+        "surface": surface,
+        "source_id": source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "adapter_id": adapter_id,
+        "selection_revision": operation_run_identity["selection_revision"],
+        "schema_backing_revision": schema_backing_revision,
+        "result_payload_revision": result_payload_revision,
+        "admission_rule": (
+            "Context authority admits current results only from a registered owner-operation executor receipt. "
+            "Checked-in owner-result JSON is evidence only and cannot mint current authority."
+        ),
+    }
+    return _finalize_owner_result(
+        {
+            **owner_result,
+            "owner_boundary": boundary,
+            "schema_backing": structural_backing,
+            "owner_operation": owner_operation,
+            "owner_execution_receipt": owner_execution_receipt,
+        }
+    )
+
+
+def _context_owner_operation_admission(
+    *,
+    owner_result: dict[str, Any],
+    surface: str,
+    expected_producer: str,
+    expected_result_kind: str,
+    expected_operation_id: str,
+    expected_source_id: str,
+    expected_source_revision: str,
+) -> tuple[bool, str]:
+    owner_operation = _as_dict(owner_result.get("owner_operation"))
+    receipt = _as_dict(owner_result.get("owner_execution_receipt"))
+    if not owner_operation:
+        return False, "owner-operation-missing"
+    if not receipt:
+        return False, "owner-operation-receipt-missing"
+    if receipt.get("kind") != "agentic-workspace/context-authority-owner-execution-receipt/v1":
+        return False, "owner-operation-receipt-kind-mismatch"
+    if receipt.get("status") != "executed" or receipt.get("current_state") != "current":
+        return False, "owner-operation-receipt-not-current"
+    expected_adapter_id = f"{surface}.owner-result"
+    shared_expectations = {
+        "operation_id": expected_operation_id,
+        "producer": expected_producer,
+        "surface": surface,
+        "source_id": expected_source_id,
+        "source_revision": expected_source_revision,
+        "git_head": owner_result.get("git_head"),
+        "adapter_id": expected_adapter_id,
+    }
+    for key, expected in shared_expectations.items():
+        if owner_operation.get(key) != expected or receipt.get(key) != expected:
+            return False, f"owner-operation-{key.replace('_', '-')}-mismatch"
+    if owner_operation.get("kind") != "agentic-workspace/context-authority-owner-operation/v1":
+        return False, "owner-operation-kind-mismatch"
+    if owner_operation.get("status") != "executed":
+        return False, "owner-operation-status-mismatch"
+    if not isinstance(owner_operation.get("run_id"), str) or not str(owner_operation.get("run_id")).startswith("sha256:"):
+        return False, "owner-operation-run-id-missing"
+    if owner_operation.get("run_id") != receipt.get("run_id"):
+        return False, "owner-operation-run-id-mismatch"
+    if owner_operation.get("receipt_id") != receipt.get("receipt_id"):
+        return False, "owner-operation-receipt-id-mismatch"
+    if owner_operation.get("selection_revision") != receipt.get("selection_revision"):
+        return False, "owner-operation-selection-revision-mismatch"
+    if owner_operation.get("schema_backing_revision") != receipt.get("schema_backing_revision"):
+        return False, "owner-operation-schema-backing-revision-mismatch"
+    if owner_operation.get("result_payload_revision") != receipt.get("result_payload_revision"):
+        return False, "owner-operation-result-payload-revision-mismatch"
+    if receipt.get("supersedes"):
+        return False, "owner-operation-receipt-superseded"
+    if not str(receipt.get("receipt_id") or "").startswith("sha256:"):
+        return False, "owner-operation-receipt-id-missing"
+    owner_identity_valid = (
+        owner_result.get("producer") == expected_producer
+        and owner_result.get("kind") == expected_result_kind
+        and owner_result.get("status") == "current"
+        and owner_result.get("adapter_id") == expected_adapter_id
+    )
+    if not owner_identity_valid:
+        return False, "owner-result-identity-mismatch"
+    return True, ""
 
 
 def _owner_operation_result_base(
@@ -618,7 +704,7 @@ def _owner_operation_result_base(
     reason: str = "",
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return _owner_result_base(
+    owner_result = _owner_result_base(
         surface=surface,
         item=item,
         root=root,
@@ -630,20 +716,25 @@ def _owner_operation_result_base(
         status=status,
         reason=reason,
         extra={
-            **_owner_operation_envelope(
-                surface=surface,
-                item=item,
-                root=root,
-                chosen=chosen,
-                revision=revision,
-                git_head=git_head,
-                selection=selection,
-                adapter_id=adapter_id,
-                boundary=boundary,
-                structural_backing=structural_backing,
-            ),
+            "owner_boundary": boundary,
+            "schema_backing": structural_backing,
             **(extra or {}),
         },
+    )
+    if status != "current":
+        return owner_result
+    return _execute_context_owner_operation(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        adapter_id=adapter_id,
+        boundary=boundary,
+        structural_backing=structural_backing,
+        owner_result=owner_result,
     )
 
 
@@ -1123,7 +1214,25 @@ def _planning_owner_result(
     admission_status = str(admission.get("status") or "")
     accepted_statuses = {"accepted", "admitted", "current", "none"}
     status = "current" if admission_status in accepted_statuses else "stale"
-    return _owner_result_base(
+    extra = {
+        "planning_owner_admission": admission,
+        "accepted_statuses": sorted(accepted_statuses),
+    }
+    if status != "current":
+        return _owner_result_base(
+            surface=surface,
+            item=item,
+            root=root,
+            chosen=chosen,
+            revision=revision,
+            git_head=git_head,
+            selection=selection,
+            adapter_id="planning.owner-result",
+            status=status,
+            reason=f"planning-owner-admission-{admission_status or 'missing'}",
+            extra={**extra, "owner_boundary": "Planning current-work admission contract"},
+        )
+    return _owner_operation_result_base(
         surface=surface,
         item=item,
         root=root,
@@ -1132,13 +1241,9 @@ def _planning_owner_result(
         git_head=git_head,
         selection=selection,
         adapter_id="planning.owner-result",
-        status=status,
-        reason="" if status == "current" else f"planning-owner-admission-{admission_status or 'missing'}",
-        extra={
-            "planning_owner_admission": admission,
-            "accepted_statuses": sorted(accepted_statuses),
-            "owner_boundary": "Planning current-work admission contract",
-        },
+        boundary="Planning current-work admission contract",
+        structural_backing={"source_format": "toml", "planning_owner_admission": admission, "accepted_statuses": sorted(accepted_statuses)},
+        extra=extra,
     )
 
 
@@ -1168,7 +1273,7 @@ def _memory_owner_result(
             reason=f"memory-curation-{curation_status or 'missing'}",
             extra={"memory_curation": curation},
         )
-    return _owner_result_base(
+    return _owner_operation_result_base(
         surface=surface,
         item=item,
         root=root,
@@ -1177,6 +1282,8 @@ def _memory_owner_result(
         git_head=git_head,
         selection=selection,
         adapter_id="memory.owner-result",
+        boundary="Memory route curation contract",
+        structural_backing={"source_format": "memory-manifest", "memory_curation": curation},
         extra={"memory_curation": curation},
     )
 
@@ -1195,7 +1302,25 @@ def _mutation_baseline_owner_result(
     status = str(admission.get("status") or "")
     accepted_statuses = {"clean", "clean-scope", "dirty-accounted", "scoped-status-current", "current"}
     current = status in accepted_statuses
-    return _owner_result_base(
+    extra = {
+        "mutation_baseline_admission": admission,
+        "accepted_statuses": sorted(accepted_statuses),
+    }
+    if not current:
+        return _owner_result_base(
+            surface=surface,
+            item=item,
+            root=root,
+            chosen=chosen,
+            revision=revision,
+            git_head=git_head,
+            selection=selection,
+            adapter_id="mutation-baseline.owner-result",
+            status="stale",
+            reason=f"mutation-baseline-admission-{status or 'missing'}",
+            extra={**extra, "owner_boundary": "authority-envelope mutation baseline contract"},
+        )
+    return _owner_operation_result_base(
         surface=surface,
         item=item,
         root=root,
@@ -1204,13 +1329,13 @@ def _mutation_baseline_owner_result(
         git_head=git_head,
         selection=selection,
         adapter_id="mutation-baseline.owner-result",
-        status="current" if current else "stale",
-        reason="" if current else f"mutation-baseline-admission-{status or 'missing'}",
-        extra={
+        boundary="authority-envelope mutation baseline contract",
+        structural_backing={
+            "source_format": "mutation-baseline",
             "mutation_baseline_admission": admission,
             "accepted_statuses": sorted(accepted_statuses),
-            "owner_boundary": "authority-envelope mutation baseline contract",
         },
+        extra=extra,
     )
 
 
@@ -1226,7 +1351,21 @@ def _skills_owner_result(
 ) -> dict[str, Any]:
     closure = _as_dict(source_specific.get("skill_dependency_closure"))
     satisfied = closure.get("status") == "satisfied"
-    return _owner_result_base(
+    if not satisfied:
+        return _owner_result_base(
+            surface=surface,
+            item=item,
+            root=root,
+            chosen=chosen,
+            revision=revision,
+            git_head=git_head,
+            selection=selection,
+            adapter_id="skills.owner-result",
+            status="stale",
+            reason="skill-dependency-closure-unsatisfied",
+            extra={"skill_dependency_closure": closure},
+        )
+    return _owner_operation_result_base(
         surface=surface,
         item=item,
         root=root,
@@ -1235,8 +1374,8 @@ def _skills_owner_result(
         git_head=git_head,
         selection=selection,
         adapter_id="skills.owner-result",
-        status="current" if satisfied else "stale",
-        reason="" if satisfied else "skill-dependency-closure-unsatisfied",
+        boundary="workspace skill dependency closure contract",
+        structural_backing={"source_format": "skill-registry", "skill_dependency_closure": closure},
         extra={"skill_dependency_closure": closure},
     )
 
@@ -1268,7 +1407,21 @@ def _generated_references_owner_result(
             extra={"error": str(exc)},
         )
     manifest_current = manifest.get("kind") == "generated-cli-source-manifest/v1" and _generated_fingerprint_is_current(root)
-    return _owner_result_base(
+    if not manifest_current:
+        return _owner_result_base(
+            surface=surface,
+            item=item,
+            root=root,
+            chosen=chosen,
+            revision=revision,
+            git_head=git_head,
+            selection=selection,
+            adapter_id="generated-references.owner-result",
+            status="stale",
+            reason="generated-source-manifest-stale",
+            extra={"generated_source_manifest": manifest},
+        )
+    return _owner_operation_result_base(
         surface=surface,
         item=item,
         root=root,
@@ -1277,8 +1430,8 @@ def _generated_references_owner_result(
         git_head=git_head,
         selection=selection,
         adapter_id="generated-references.owner-result",
-        status="current" if manifest_current else "stale",
-        reason="" if manifest_current else "generated-source-manifest-stale",
+        boundary="generated CLI source manifest contract",
+        structural_backing={"source_format": "json", "generated_source_manifest_kind": str(manifest.get("kind") or "")},
         extra={"generated_source_manifest": manifest},
     )
 
@@ -1693,31 +1846,22 @@ def resolve_context_authority_projection(
         owner_contract = _surface_owner_contract(surface)
         expected_producer = str(owner_contract.get("owner_module") or "")
         expected_result_kind = str(owner_contract.get("owner_result_kind") or "")
-        owner_operation = _as_dict(owner_result.get("owner_operation"))
         expected_source_id = str(record.get("source_id") or record.get("source") or "")
         expected_source_revision = str(admission.get("source_revision") or "")
-        owner_operation_valid = (
-            owner_operation.get("kind") == "agentic-workspace/context-authority-owner-operation/v1"
-            and owner_operation.get("status") == "executed"
-            and owner_operation.get("operation_id")
-            == str(owner_contract.get("repair_operation_id") or f"context-authority.{surface}.refresh-source")
-            and owner_operation.get("producer") == expected_producer
-            and owner_operation.get("surface") == surface
-            and owner_operation.get("source_id") == expected_source_id
-            and owner_operation.get("source_revision") == expected_source_revision
-            and owner_operation.get("git_head") == owner_result.get("git_head")
-            and owner_operation.get("adapter_id") == f"{surface}.owner-result"
-            and isinstance(owner_operation.get("run_id"), str)
-            and str(owner_operation.get("run_id")).startswith("sha256:")
+        expected_operation_id = str(owner_contract.get("repair_operation_id") or f"context-authority.{surface}.refresh-source")
+        owner_operation_valid, owner_operation_reason = _context_owner_operation_admission(
+            owner_result=owner_result,
+            surface=surface,
+            expected_producer=expected_producer,
+            expected_result_kind=expected_result_kind,
+            expected_operation_id=expected_operation_id,
+            expected_source_id=expected_source_id,
+            expected_source_revision=expected_source_revision,
         )
         owner_identity_valid = (
             owner_admission.get("producer") == expected_producer
             and owner_admission.get("result_kind") == expected_result_kind
             and owner_admission.get("revision") == owner_result.get("revision")
-            and owner_result.get("producer") == expected_producer
-            and owner_result.get("kind") == expected_result_kind
-            and owner_result.get("status") == "current"
-            and owner_result.get("adapter_id") == f"{surface}.owner-result"
             and owner_operation_valid
         )
         applicable = (
@@ -1763,7 +1907,7 @@ def resolve_context_authority_projection(
                     "surface": surface,
                     "reason": str(
                         record.get("reason")
-                        or ("owner-result-identity-mismatch" if record_status == "current" and not owner_identity_valid else record_status)
+                        or (owner_operation_reason if record_status == "current" and not owner_identity_valid else record_status)
                     ),
                     "selected_required": bool(record.get("selected_required")),
                     "caller_record_status": authority["caller_record_status"],

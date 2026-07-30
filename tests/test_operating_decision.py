@@ -983,7 +983,7 @@ def test_context_authority_projection_rejects_forged_owner_result_identity(tmp_p
 
     assert projection["status"] == "repair-required"
     skills = next(item for item in projection["excluded_authorities"] if item["surface"] == "skills")
-    assert skills["reason"] == "owner-result-identity-mismatch"
+    assert skills["reason"] == "owner-operation-missing"
 
 
 def test_context_authority_owner_result_revisions_bind_selection_and_schema_backing(tmp_path: Path) -> None:
@@ -1053,6 +1053,7 @@ def test_context_authority_ignores_checked_in_owner_result_receipts(
     system_intent = next(item for item in projection["authorities"] if item["surface"] == "system-intent")
     assert system_intent["source"]["admission"]["owner_result"]["status"] == "current"
     assert system_intent["source"]["admission"]["owner_result"]["owner_operation"]["status"] == "executed"
+    assert system_intent["source"]["admission"]["owner_result"]["owner_execution_receipt"]["current_state"] == "current"
     assert "owner_receipt_ref" not in system_intent["source"]["admission"]["owner_result"]
 
 
@@ -1084,7 +1085,107 @@ def test_context_authority_rejects_owner_result_without_owner_operation_envelope
 
     assert projection["status"] == "repair-required"
     system_intent = next(item for item in projection["excluded_authorities"] if item["surface"] == "system-intent")
-    assert system_intent["reason"] == "owner-result-identity-mismatch"
+    assert system_intent["reason"] == "owner-operation-missing"
+
+
+@pytest.mark.parametrize(
+    ("tamper", "expected_reason"),
+    [
+        ("missing_receipt", "owner-operation-receipt-missing"),
+        ("wrong_producer", "owner-operation-producer-mismatch"),
+        ("wrong_operation", "owner-operation-operation-id-mismatch"),
+        ("superseded", "owner-operation-receipt-not-current"),
+        ("stale_source_revision", "owner-operation-source-revision-mismatch"),
+    ],
+)
+def test_context_authority_rejects_tampered_owner_operation_receipts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tamper: str,
+    expected_reason: str,
+) -> None:
+    _write_context_authority_sources(tmp_path)
+    from agentic_workspace import operating_decision
+
+    real_adapter = operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS["system-intent"]
+
+    def tampered_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+        result = real_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific)
+        owner_operation = dict(result.get("owner_operation") or {})
+        receipt = dict(result.get("owner_execution_receipt") or {})
+        if tamper == "missing_receipt":
+            result.pop("owner_execution_receipt", None)
+        elif tamper == "wrong_producer":
+            receipt["producer"] = "forged.producer"
+            result["owner_execution_receipt"] = receipt
+        elif tamper == "wrong_operation":
+            owner_operation["operation_id"] = "forged.operation"
+            result["owner_operation"] = owner_operation
+        elif tamper == "superseded":
+            receipt["current_state"] = "superseded"
+            receipt["supersedes"] = "sha256:older"
+            result["owner_execution_receipt"] = receipt
+        elif tamper == "stale_source_revision":
+            receipt["source_revision"] = "sha256:stale"
+            result["owner_execution_receipt"] = receipt
+        return result
+
+    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "system-intent", tampered_adapter)
+
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="shape authority routing ownership skill guidance memory",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    system_intent = next(item for item in projection["excluded_authorities"] if item["surface"] == "system-intent")
+    assert system_intent["reason"] == expected_reason
+
+
+def test_context_authority_rejects_digest_only_synthesized_owner_operation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _write_context_authority_sources(tmp_path)
+    from agentic_workspace import operating_decision
+
+    def digest_only_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+        source_revision = "sha256:" + _fixture_source_revision(chosen)
+        return {
+            "kind": "agentic-workspace/system-intent-mirror/v1",
+            "producer": "agentic_workspace.system_intent",
+            "status": "current",
+            "surface": surface,
+            "owner": item["owner"],
+            "source_id": "SYSTEM_INTENT.md",
+            "source_revision": source_revision,
+            "git_head": git_head,
+            "revision": "sha256:caller-current",
+            "adapter_id": "system-intent.owner-result",
+            "owner_operation": {
+                "kind": "agentic-workspace/context-authority-owner-operation/v1",
+                "status": "executed",
+                "operation_id": "context-authority.system-intent.refresh-source",
+                "run_id": "sha256:" + operating_decision._digest({"source_revision": source_revision}),
+                "receipt_id": "sha256:" + operating_decision._digest({"source_revision": source_revision, "receipt": True}),
+                "producer": "agentic_workspace.system_intent",
+                "surface": surface,
+                "source_id": "SYSTEM_INTENT.md",
+                "source_revision": source_revision,
+                "git_head": git_head,
+                "adapter_id": "system-intent.owner-result",
+            },
+        }
+
+    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "system-intent", digest_only_adapter)
+
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="shape authority routing ownership skill guidance memory",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    system_intent = next(item for item in projection["excluded_authorities"] if item["surface"] == "system-intent")
+    assert system_intent["reason"] == "owner-operation-receipt-missing"
 
 
 def test_context_authority_rejects_parseable_file_without_owner_boundary(tmp_path: Path) -> None:
