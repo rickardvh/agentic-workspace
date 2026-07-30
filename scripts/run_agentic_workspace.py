@@ -338,9 +338,18 @@ def _dispatch_to_source_cli(argv: Sequence[str]) -> int:
     return int(cli_main(list(argv)))
 
 
+def _should_refresh_generated_cli_for_argv(argv: Sequence[str]) -> bool:
+    if os.environ.get("AW_SKIP_GENERATED_CLI_REFRESH") == "1":
+        return False
+    if os.environ.get("AW_FORCE_GENERATED_CLI_REFRESH") == "1":
+        return True
+    args = [arg for arg in argv if arg != "--"]
+    return not args or args[0] != "start"
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
-    if os.environ.get("AW_SKIP_GENERATED_CLI_REFRESH") != "1":
+    if _should_refresh_generated_cli_for_argv(args):
         ensure_generated_cli_current()
     return _dispatch_to_source_cli(args)
 

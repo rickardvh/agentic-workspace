@@ -68,6 +68,31 @@ def test_launcher_skips_generation_when_fingerprint_cache_matches(tmp_path: Path
     assert refreshed is False
 
 
+def test_launcher_does_not_refresh_generated_cli_for_start(monkeypatch) -> None:
+    module = _load_module()
+
+    def fail_refresh() -> bool:
+        raise AssertionError("start must not refresh generated CLI before first-contact routing")
+
+    observed: list[list[str]] = []
+    monkeypatch.setattr(module, "ensure_generated_cli_current", fail_refresh)
+    monkeypatch.setattr(module, "_dispatch_to_source_cli", lambda argv: observed.append(list(argv)) or 0)
+
+    assert module.main(["start", "--target", ".", "--format", "json"]) == 0
+    assert observed == [["start", "--target", ".", "--format", "json"]]
+
+
+def test_launcher_force_refresh_still_applies_to_start(monkeypatch) -> None:
+    module = _load_module()
+    calls: list[str] = []
+    monkeypatch.setenv("AW_FORCE_GENERATED_CLI_REFRESH", "1")
+    monkeypatch.setattr(module, "ensure_generated_cli_current", lambda: calls.append("refresh") or False)
+    monkeypatch.setattr(module, "_dispatch_to_source_cli", lambda _argv: 0)
+
+    assert module.main(["start", "--target", ".", "--format", "json"]) == 0
+    assert calls == ["refresh"]
+
+
 def test_launcher_skips_content_hash_when_manifest_cache_is_fresh(tmp_path: Path) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
