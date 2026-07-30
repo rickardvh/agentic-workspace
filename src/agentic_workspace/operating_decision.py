@@ -13,7 +13,7 @@ from typing import Any, Callable
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
 from agentic_workspace.authority_envelope import mutation_baseline_payload
 from agentic_workspace.context_authority_owner_operations import (
-    execute_context_owner_operation,
+    admit_context_owner_operation_result,
     registered_context_owner_receipt_status,
 )
 
@@ -537,6 +537,7 @@ def _owner_result_base(
 def _context_owner_operation_admission(
     *,
     owner_result: dict[str, Any],
+    root: Path | None,
     surface: str,
     expected_producer: str,
     expected_result_kind: str,
@@ -599,6 +600,7 @@ def _context_owner_operation_admission(
         owner_operation=owner_operation,
         receipt=receipt,
         result_revision=str(owner_result.get("revision") or ""),
+        root=root,
     )
     if not registered:
         return False, reason
@@ -657,13 +659,7 @@ def _owner_operation_result_base(
             **(extra or {}),
         },
     )
-    owner_result_payload = {
-        key: value
-        for key, value in owner_result.items()
-        if key not in {"producer", "kind", "repair_operation_id", "revision", "owner_operation", "owner_execution_receipt"}
-    }
-
-    return execute_context_owner_operation(
+    return admit_context_owner_operation_result(
         surface=surface,
         owner=item.get("owner"),
         root=root,
@@ -672,7 +668,7 @@ def _owner_operation_result_base(
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
-        owner_result_payload=owner_result_payload,
+        owner_result=owner_result,
     )
 
 
@@ -1789,6 +1785,7 @@ def resolve_context_authority_projection(
         expected_operation_id = str(owner_contract.get("repair_operation_id") or f"context-authority.{surface}.refresh-source")
         owner_operation_valid, owner_operation_reason = _context_owner_operation_admission(
             owner_result=owner_result,
+            root=target_root,
             surface=surface,
             expected_producer=expected_producer,
             expected_result_kind=expected_result_kind,

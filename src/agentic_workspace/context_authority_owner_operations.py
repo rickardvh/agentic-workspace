@@ -55,7 +55,7 @@ for _item in _as_list(_REGISTRY_CONTRACT.get("surfaces")):
     }
 
 
-def execute_context_owner_operation(
+def admit_context_owner_operation_result(
     *,
     surface: str,
     owner: str | None,
@@ -65,9 +65,9 @@ def execute_context_owner_operation(
     git_head: str,
     selection: dict[str, Any],
     adapter_id: str,
-    owner_result_payload: dict[str, Any],
+    owner_result: dict[str, Any],
 ) -> dict[str, Any]:
-    """Execute the registered owner operation and return an admitted result."""
+    """Admit a result produced by the registered concrete owner adapter."""
 
     spec = _OWNER_OPERATION_SPECS.get(surface)
     if not spec or not spec.get("producer") or not spec.get("result_kind") or not spec.get("operation_id"):
@@ -75,27 +75,22 @@ def execute_context_owner_operation(
     producer = spec["producer"]
     result_kind = spec["result_kind"]
     operation_id = spec["operation_id"]
-    if not isinstance(owner_result_payload, dict):
+    if not isinstance(owner_result, dict):
         raise ValueError("context owner operation payload must be a result object")
-    forbidden_authority_fields = {
-        "producer",
-        "kind",
-        "repair_operation_id",
-        "revision",
-        "owner_operation",
-        "owner_execution_receipt",
-    }
-    supplied_authority_fields = sorted(forbidden_authority_fields.intersection(owner_result_payload))
-    if supplied_authority_fields:
-        raise ValueError(f"caller-supplied owner authority fields are not accepted: {', '.join(supplied_authority_fields)}")
-    owner_result = _finalize_owner_result(
-        {
-            **owner_result_payload,
-            "kind": result_kind,
-            "producer": producer,
-            "repair_operation_id": operation_id,
-        }
-    )
+    if owner_result.get("producer") != producer:
+        raise ValueError("owner operation result producer does not match registered owner")
+    if owner_result.get("kind") != result_kind:
+        raise ValueError("owner operation result kind does not match registered owner")
+    if owner_result.get("repair_operation_id") != operation_id:
+        raise ValueError("owner operation result id does not match registered owner")
+    if owner_result.get("source_revision") != source_revision:
+        raise ValueError("owner operation result source revision is stale")
+    if owner_result.get("git_head") != git_head:
+        raise ValueError("owner operation result git head is stale")
+    if owner_result.get("adapter_id") != adapter_id:
+        raise ValueError("owner operation result adapter id does not match selected owner adapter")
+    if owner_result.get("owner_operation") or owner_result.get("owner_execution_receipt"):
+        raise ValueError("owner operation result must not carry caller-provided operation receipts")
     structural_backing = _as_dict(owner_result.get("schema_backing"))
     boundary = str(owner_result.get("owner_boundary") or "")
     if not structural_backing or not boundary:
@@ -201,6 +196,7 @@ def registered_context_owner_receipt_status(
     owner_operation: dict[str, Any],
     receipt: dict[str, Any],
     result_revision: str,
+    root: Path | None = None,
 ) -> tuple[bool, str]:
     receipt_id = str(receipt.get("receipt_id") or "")
     if not receipt_id.startswith("sha256:"):
@@ -237,6 +233,27 @@ def registered_context_owner_receipt_status(
         return False, "owner-operation-current-receipt-mismatch"
     if owner_operation.get("result_payload_revision") != receipt.get("result_payload_revision"):
         return False, "owner-operation-current-result-mismatch"
+    if root is not None:
+        source_id = str(receipt.get("source_id") or "")
+        source_path = root / source_id
+        if not source_id or not source_path.exists():
+            return False, "owner-operation-current-source-missing"
+        try:
+            current_source_revision = "sha256:" + (
+                _digest(
+                    {
+                        path.relative_to(source_path).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                        for path in sorted(source_path.rglob("*"))
+                        if path.is_file()
+                    }
+                )
+                if source_path.is_dir()
+                else hashlib.sha256(source_path.read_bytes()).hexdigest()
+            )
+        except OSError:
+            return False, "owner-operation-current-source-unreadable"
+        if receipt.get("source_revision") != current_source_revision:
+            return False, "owner-operation-current-source-stale"
     if not str(result_revision or "").startswith("sha256:"):
         return False, "owner-operation-current-result-mismatch"
     return True, ""

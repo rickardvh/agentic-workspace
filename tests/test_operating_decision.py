@@ -1215,6 +1215,36 @@ def test_context_authority_owner_operation_receipt_currentness_is_recomputable_a
     assert receipt["current_resolution"]["resolution_mode"] == "deterministic-source-revision"
 
 
+def test_context_authority_rejects_receipt_when_source_changes_after_owner_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_context_authority_sources(tmp_path)
+    from agentic_workspace import operating_decision
+
+    real_adapter = operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS["system-intent"]
+
+    def stale_after_issue_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+        result = real_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific)
+        chosen.write_text(
+            "# System Intent\n\n## Purpose\nchanged after receipt\n\n## Governing intents\n- changed\n",
+            encoding="utf-8",
+        )
+        return result
+
+    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "system-intent", stale_after_issue_adapter)
+
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="shape authority routing ownership skill guidance memory",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    system_intent = next(item for item in projection["excluded_authorities"] if item["surface"] == "system-intent")
+    assert system_intent["reason"] == "owner-operation-current-source-stale"
+
+
 def test_context_authority_rejects_parseable_file_without_owner_boundary(tmp_path: Path) -> None:
     _write_context_authority_sources(tmp_path)
     (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
@@ -1281,28 +1311,28 @@ def test_context_authority_owner_results_are_semantic_adapter_dispatched() -> No
     assert "parseability alone" not in source
 
 
-def test_context_owner_operation_executor_does_not_accept_caller_authority_fields() -> None:
-    from agentic_workspace.context_authority_owner_operations import execute_context_owner_operation
+def test_context_owner_operation_admission_does_not_accept_caller_semantic_payload() -> None:
+    from agentic_workspace.context_authority_owner_operations import admit_context_owner_operation_result
 
-    parameters = set(inspect.signature(execute_context_owner_operation).parameters)
+    parameters = set(inspect.signature(admit_context_owner_operation_result).parameters)
 
     assert "derive_owner_result" not in parameters
     assert "producer" not in parameters
     assert "operation_id" not in parameters
-    assert "owner_result" not in parameters
-    assert "owner_result_payload" in parameters
+    assert "owner_result" in parameters
+    assert "owner_result_payload" not in parameters
     assert "structural_backing" not in parameters
     assert "boundary" not in parameters
 
 
-def test_context_owner_operation_executor_rejects_caller_supplied_authority_fields(tmp_path: Path) -> None:
-    from agentic_workspace.context_authority_owner_operations import execute_context_owner_operation
+def test_context_owner_operation_admission_rejects_forged_owner_identity(tmp_path: Path) -> None:
+    from agentic_workspace.context_authority_owner_operations import admit_context_owner_operation_result
 
     _write_context_authority_sources(tmp_path)
     chosen = tmp_path / "SYSTEM_INTENT.md"
 
-    with pytest.raises(ValueError, match="caller-supplied owner authority fields"):
-        execute_context_owner_operation(
+    with pytest.raises(ValueError, match="producer does not match"):
+        admit_context_owner_operation_result(
             surface="system-intent",
             owner="workspace-runtime",
             root=tmp_path,
@@ -1311,7 +1341,7 @@ def test_context_owner_operation_executor_rejects_caller_supplied_authority_fiel
             git_head="head",
             selection={"consumer": "start"},
             adapter_id="system-intent.owner-result",
-            owner_result_payload={
+            owner_result={
                 "kind": "forged-kind",
                 "producer": "forged-producer",
                 "status": "current",
