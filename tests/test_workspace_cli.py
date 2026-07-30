@@ -6999,7 +6999,8 @@ def test_route_safety_projection_fails_closed_for_unbaselined_bounded_mutation()
         }
     )
 
-    assert outcome["status"] == "attention"
+    assert outcome["status"] == "blocked"
+    assert outcome["workflow_sufficient"] is False
     assert outcome["decision"] == "mutation-baseline-required"
     assert outcome["required_next_action"] == "refresh-mutation-baseline"
 

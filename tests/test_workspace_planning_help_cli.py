@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import importlib
 import json
 
 import pytest
-from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
-from generated.workspace.python.commands import planning_front_door
+from command_generation.generated_package_loader import (
+    load_generated_command_module_for_entrypoint,
+    load_generated_command_package_for_entrypoint,
+)
 
+generated_workspace = load_generated_command_package_for_entrypoint("agentic-workspace")
 cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
+planning_front_door = importlib.import_module(f"{generated_workspace.__name__}.commands.planning_front_door")
 
 
 def test_invalid_command_shows_preflight_fallback_hint(capsys) -> None:
