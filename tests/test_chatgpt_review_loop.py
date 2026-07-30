@@ -1257,23 +1257,39 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
     git(["init"])
     git(["config", "user.email", "codex@example.test"])
     git(["config", "user.name", "Codex Test"])
-    (owner / "src").mkdir()
-    (owner / "src" / "app.py").write_text("value = 'initial'\n", encoding="utf-8")
-    git(["add", "src/app.py"])
-    git(["commit", "-m", "initial"])
-    git(["branch", "-M", branch])
-    git(["remote", "add", "origin", remote.as_posix()])
-    git(["push", "-u", "origin", branch])
-    start_head = git(["rev-parse", "HEAD"])
     (owner / ".agentic-workspace").mkdir()
     (owner / ".agentic-workspace" / "config.toml").write_text(
-        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        """schema_version = 1
+[workspace]
+cli_invoke = "agentic-workspace"
+
+[assurance.domain_proof_lanes.spawned_review_app]
+purpose = "Spawned review-loop changed-path proof."
+applies_to_paths = ["src/app.py"]
+commands = ["python tools/proof_app.py"]
+proof_profiles = ["workspace_behavior"]
+claim_boundary = "spawned-review-focused-proof"
+owner = "chatgpt-review-loop"
+""",
         encoding="utf-8",
     )
     (owner / "AGENTS.md").write_text(
         "Authority marker:\n\n<!-- agentic-workspace:workflow:start -->\nOrdinary route:\n<!-- agentic-workspace:workflow:end -->\n",
         encoding="utf-8",
     )
+    (owner / "src").mkdir()
+    (owner / "src" / "app.py").write_text("value = 'initial'\n", encoding="utf-8")
+    (owner / "tools").mkdir()
+    (owner / "tools" / "proof_app.py").write_text(
+        "import pathlib\nimport sys\n\nsys.exit(1 if 'failed-local-repair' in pathlib.Path('src/app.py').read_text(encoding='utf-8') else 0)\n",
+        encoding="utf-8",
+    )
+    git(["add", "AGENTS.md", ".agentic-workspace/config.toml", "src/app.py", "tools/proof_app.py"])
+    git(["commit", "-m", "initial"])
+    git(["branch", "-M", branch])
+    git(["remote", "add", "origin", remote.as_posix()])
+    git(["push", "-u", "origin", branch])
+    start_head = git(["rev-parse", "HEAD"])
     monkeypatch.setenv("VIRTUAL_ENV", (owner / ".venv-owner").as_posix())
     monkeypatch.setenv("UV_ACTIVE", "1")
     monkeypatch.setenv(loop.OWNER_ROOT_ENV, owner.as_posix())
@@ -1350,35 +1366,19 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
                 git(["add", "src/app.py"], cwd=cwd)
                 git(["commit", "-m", "fresh repair"], cwd=cwd)
                 git(["push", "origin", f"HEAD:{branch}"], cwd=cwd)
-                proof_commands = [
-                    f"{aw_command} start --target . --task spawned-worktree-proof --format json",
-                    f"{aw_command} implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
-                    "git rev-parse --verify HEAD",
-                ]
                 push_status = "passed"
             elif len(launches) == 2:
                 (cwd / "src" / "app.py").write_text("value = 'failed-local-repair'\n", encoding="utf-8")
                 git(["add", "src/app.py"], cwd=cwd)
                 git(["commit", "-m", "failed local repair"], cwd=cwd)
-                proof_commands = [
-                    f"{aw_command} start --target . --task spawned-worktree-proof --format json",
-                    f"{aw_command} implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
-                    "git rev-parse --verify refs/heads/definitely-missing-proof-ref",
-                ]
                 push_status = "failed"
             else:
                 (cwd / "src" / "app.py").write_text("value = 'final-repair'\n", encoding="utf-8")
                 git(["add", "src/app.py"], cwd=cwd)
                 git(["commit", "-m", "final proof repair"], cwd=cwd)
                 git(["push", "origin", f"HEAD:{branch}"], cwd=cwd)
-                proof_commands = [
-                    f"{aw_command} start --target . --task spawned-worktree-proof --format json",
-                    f"{aw_command} implement --target . --changed src/app.py --task spawned-worktree-proof --format json",
-                    "git rev-parse --verify HEAD",
-                ]
                 push_status = "passed"
 
-            proof_sequences.append(proof_commands)
             assert (
                 loop.main(
                     [
@@ -1387,8 +1387,13 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
                         cwd.as_posix(),
                         "--session-id",
                         session_id,
-                        "--run-proof-commands-json",
-                        json.dumps(proof_commands),
+                        "--run-aw-selected-proof",
+                        "--aw-command",
+                        aw_command,
+                        "--changed",
+                        "src/app.py",
+                        "--task",
+                        "spawned-worktree-proof",
                         "--push-status",
                         push_status,
                     ],
@@ -1396,6 +1401,7 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
                 )
                 == 0
             )
+            proof_sequences.append(loop._load_state(owner, 12)["terminal_result"]["proof_commands"])
             monkeypatch.setattr(
                 sys,
                 "stdin",
@@ -1436,18 +1442,30 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
     assert failed_stop_statuses == ["resume-in-progress"]
     assert saved["status"] == "recovery-required"
     assert saved["terminal_result"]["proof_status"] == "failed"
-    assert saved["terminal_result"]["failed_command"] == "git rev-parse --verify refs/heads/definitely-missing-proof-ref"
+    assert saved["terminal_result"]["failed_command"] == proof_sequences[1][0]
     assert saved["terminal_result"]["proof_commands"] == proof_sequences[1]
-    assert saved["terminal_result"]["proof_attempt_result"]["failed_command_index"] == 2
+    assert saved["terminal_result"]["proof_attempt_result"]["failed_command_index"] == 0
     assert saved["terminal_result"]["proof_attempt_result"]["producer"] == "chatgpt-review-loop.focused-proof-executor"
+    proof_selection = saved["terminal_result"]["proof_attempt_result"]["proof_selection"]
+    assert proof_selection["kind"] == "agentic-workspace/chatgpt-review-aw-proof-selection/v1"
+    assert proof_selection["operation"] == "chatgpt-review-loop.run-aw-selected-focused-proof"
+    assert proof_selection["scope"]["changed_paths"] == ["src/app.py"]
+    assert proof_selection["selected_commands"] == proof_sequences[1]
+    assert proof_selection["selected_command_count"] == 1
+    assert proof_selection["blocked_claims"] == ["handoff-recorded", "merge-ready", "proof-passed"]
+    assert proof_selection["start"]["kind"] == "startup-context/v1"
+    assert proof_selection["start"]["revision"].startswith("sha256:")
+    assert proof_selection["implement"]["kind"].startswith("implementer-context")
+    assert proof_selection["implement"]["revision"].startswith("sha256:")
+    assert proof_selection["admission"]["status"] == "admitted"
     assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["new_environment_created"] is False
     assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["environment_reuse"] == "configured-active-environment"
     assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["output_bytes"] < 32768
     assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["elapsed_ms"] < 3000
-    aw_command_results = saved["terminal_result"]["proof_attempt_result"]["command_results"][:2]
-    assert [result["status"] for result in aw_command_results] == ["passed", "passed"]
-    assert [result["output_bytes"] < 20000 for result in aw_command_results] == [True, True]
-    assert [result["elapsed_ms"] < 1200 for result in aw_command_results] == [True, True]
+    proof_command_results = saved["terminal_result"]["proof_attempt_result"]["command_results"]
+    assert [(result["command"], result["status"]) for result in proof_command_results] == [(proof_sequences[1][0], "failed")]
+    assert proof_command_results[0]["output_bytes"] < 20000
+    assert proof_command_results[0]["elapsed_ms"] < 1200
     assert saved["terminal_result"]["repair"]["action"] == "repair the failed focused proof, rerun it, then report the exact job result"
     assert saved["terminal_result"]["repair"]["attempt_revision"] == saved["terminal_result"]["proof_attempt_result"]["attempt_revision"]
     assert saved["terminal_result"]["repair"]["blocked_claims"] == ["handoff-recorded", "merge-ready", "proof-passed"]
@@ -1470,6 +1488,10 @@ def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tm
     assert final["terminal_result"]["attempt_id"] != failed_attempt_id
     assert final["terminal_result"]["proof_attempt_result"]["attempt_revision"] != failed_attempt_revision
     assert final["terminal_result"]["proof_attempt_result"]["producer"] == "chatgpt-review-loop.focused-proof-executor"
+    final_selection = final["terminal_result"]["proof_attempt_result"]["proof_selection"]
+    assert final_selection["selected_commands"] == proof_sequences[2]
+    assert final_selection["scope"]["changed_paths"] == ["src/app.py"]
+    assert final_selection["blocked_claims"] == ["handoff-recorded", "merge-ready", "proof-passed"]
     assert loop._validated_attempt_result(final, worktree=worktree_root / "pr-12", start_head=first_head)
     stale_failed_state = {**final, "terminal_result": saved["terminal_result"]}
     assert not loop._validated_attempt_result(stale_failed_state, worktree=worktree_root / "pr-12", start_head=first_head)

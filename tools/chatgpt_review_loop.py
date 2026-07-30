@@ -441,6 +441,7 @@ def _execute_focused_proof_attempt(
     proof_commands: Sequence[str],
     starting_head: str,
     runner: CommandRunner,
+    proof_selection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     commands = [str(command).strip() for command in proof_commands if str(command).strip()]
     if not commands:
@@ -499,6 +500,7 @@ def _execute_focused_proof_attempt(
         "ending_head": ending_head,
         "proof_boundary": "focused-proof",
         "proof_commands": commands,
+        "proof_selection": proof_selection or {},
         "failed_command_index": failed_index,
         "failed_command": commands[failed_index] if failed_index >= 0 else "",
         "proof_exit_code": proof_exit_code,
@@ -512,6 +514,84 @@ def _execute_focused_proof_attempt(
             "environment_reuse": "configured-active-environment",
         },
         "repair_action": "repair the failed focused proof, rerun it, then report the exact job result",
+    }
+
+
+def _packet_revision(payload: dict[str, Any]) -> str:
+    return "sha256:" + hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+def _aw_command_prefix(command: str) -> list[str]:
+    parts = shlex.split(command, posix=os.name != "nt")
+    if not parts:
+        raise LoopError("aw-command-missing", "AW-selected proof requires a non-empty AW command")
+    return parts
+
+
+def _proof_commands_from_aw_packet(packet: dict[str, Any]) -> list[str]:
+    candidates: list[Any] = []
+    proof = packet.get("proof")
+    if isinstance(proof, dict):
+        candidates.extend(proof.get("required_commands", []) if isinstance(proof.get("required_commands"), list) else [])
+    next_action = packet.get("next")
+    if isinstance(next_action, dict):
+        candidates.extend(next_action.get("commands", []) if isinstance(next_action.get("commands"), list) else [])
+        if next_action.get("command"):
+            candidates.append(next_action.get("command"))
+    action_signals = packet.get("action_signals")
+    if isinstance(action_signals, dict):
+        candidates.extend(action_signals.get("proof_commands", []) if isinstance(action_signals.get("proof_commands"), list) else [])
+    commands: list[str] = []
+    for item in candidates:
+        command = str(item or "").strip()
+        if command and command not in commands:
+            commands.append(command)
+    return commands
+
+
+def _aw_selected_proof(
+    *,
+    worktree: Path,
+    aw_command: str,
+    changed_paths: Sequence[str],
+    task: str,
+    runner: CommandRunner,
+) -> dict[str, Any]:
+    changed = [str(path).strip().replace("\\", "/") for path in changed_paths if str(path).strip()]
+    if not changed:
+        raise LoopError("aw-proof-scope-missing", "AW-selected proof requires at least one changed path")
+    prefix = _aw_command_prefix(aw_command)
+    start_command = [*prefix, "start", "--target", ".", "--task", task, "--format", "json"]
+    implement_command = [*prefix, "implement", "--target", ".", "--changed", *changed, "--task", task, "--format", "json"]
+    start_completed = runner.run(start_command, cwd=worktree)
+    implement_completed = runner.run(implement_command, cwd=worktree)
+    if start_completed.returncode != 0 or implement_completed.returncode != 0:
+        raise LoopError("aw-proof-selection-failed", "AW start/implement did not return a proof selection packet")
+    try:
+        start_packet = json.loads(start_completed.stdout)
+        implement_packet = json.loads(implement_completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise LoopError("aw-proof-selection-invalid", "AW proof selection output was not JSON") from exc
+    if not isinstance(start_packet, dict) or not isinstance(implement_packet, dict):
+        raise LoopError("aw-proof-selection-invalid", "AW proof selection output must be JSON objects")
+    proof_commands = _proof_commands_from_aw_packet(implement_packet)
+    if not proof_commands:
+        raise LoopError("aw-proof-command-missing", "AW implement packet did not select any proof commands for this scope")
+    blocked_claims = ["handoff-recorded", "merge-ready", "proof-passed"]
+    return {
+        "kind": "agentic-workspace/chatgpt-review-aw-proof-selection/v1",
+        "operation": "chatgpt-review-loop.run-aw-selected-focused-proof",
+        "scope": {"changed_paths": changed, "worktree": worktree.as_posix()},
+        "task": task,
+        "start": {"kind": str(start_packet.get("kind") or ""), "revision": _packet_revision(start_packet)},
+        "implement": {"kind": str(implement_packet.get("kind") or ""), "revision": _packet_revision(implement_packet)},
+        "selected_commands": proof_commands,
+        "selected_command_count": len(proof_commands),
+        "blocked_claims": blocked_claims,
+        "admission": {
+            "status": "admitted",
+            "rule": "Focused proof commands must come from the AW implement packet for the changed-path scope.",
+        },
     }
 
 
@@ -861,6 +941,60 @@ def run_proof_and_report_job_result(
         proof_commands=proof_commands,
         starting_head=str(attempt["starting_head"]),
         runner=runner,
+    )
+    return report_job_result(
+        cwd=cwd,
+        session_id=session_id,
+        proof_status=str(producer_result["status"]),
+        proof_command=str(
+            producer_result.get("failed_command") or (producer_result["proof_commands"][0] if producer_result["proof_commands"] else "")
+        ),
+        proof_exit_code=int(producer_result["proof_exit_code"]),
+        push_status=push_status,
+        runner=runner,
+        supersede=supersede,
+        producer_owned_proof_result=producer_result,
+    )
+
+
+def run_aw_selected_proof_and_report_job_result(
+    *,
+    cwd: Path,
+    session_id: str,
+    aw_command: str,
+    changed_paths: Sequence[str],
+    task: str,
+    push_status: str,
+    runner: CommandRunner,
+    supersede: bool = False,
+) -> dict[str, Any]:
+    root = _repo_root(cwd, runner)
+    worktree = cwd.resolve()
+    owner_root = Path(os.environ.get(OWNER_ROOT_ENV, root.as_posix())).resolve()
+    candidates = [
+        state
+        for state in _all_states(owner_root)
+        if isinstance(state.get("job_attempt"), dict)
+        and state["job_attempt"].get("worktree") == worktree.as_posix()
+        and (state.get("session_id") in {"", session_id} or state["job_attempt"].get("session_id") in {"", session_id})
+    ]
+    if len(candidates) != 1:
+        raise LoopError("job-result-session-ambiguous", "job result requires exactly one bound owning session")
+    attempt = candidates[0]["job_attempt"]
+    selection = _aw_selected_proof(
+        worktree=worktree,
+        aw_command=aw_command,
+        changed_paths=changed_paths,
+        task=task,
+        runner=runner,
+    )
+    producer_result = _execute_focused_proof_attempt(
+        attempt=attempt,
+        worktree=worktree,
+        proof_commands=[str(command) for command in selection["selected_commands"]],
+        starting_head=str(attempt["starting_head"]),
+        runner=runner,
+        proof_selection=selection,
     )
     return report_job_result(
         cwd=cwd,
@@ -1270,7 +1404,7 @@ def _review_prompt(review: Review, *, branch: str = "") -> str:
         f"Source: {review.url or review.comment_id}\n\n"
         f"Required work:\n{review.findings}\n\n"
         f"{'You are detached: push with git push origin HEAD:' + branch + '. ' if branch else ''}Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook record the next handoff. "
-        "After push, record proof and push custody with `python tools/chatgpt_review_loop.py job-result --session-id $CODEX_THREAD_ID --run-proof-commands-json '[\"<proof command>\"]' --push-status passed|failed`. Do not merge from this continuation."
+        "After push, record proof and push custody with `python tools/chatgpt_review_loop.py job-result --session-id $CODEX_THREAD_ID --run-aw-selected-proof --changed <changed-paths> --push-status passed|failed`. Do not merge from this continuation."
     )
 
 
@@ -2103,6 +2237,14 @@ def _parser() -> argparse.ArgumentParser:
         default="",
         help="JSON array of selected proof commands for the loop to execute and record as producer-owned proof evidence.",
     )
+    result_parser.add_argument(
+        "--run-aw-selected-proof",
+        action="store_true",
+        help="Ask AW start/implement for the changed-path proof commands, then execute that selected proof.",
+    )
+    result_parser.add_argument("--aw-command", default="agentic-workspace", help="Configured AW invocation for --run-aw-selected-proof.")
+    result_parser.add_argument("--changed", nargs="*", default=[], help="Changed paths used as the AW proof-selection scope.")
+    result_parser.add_argument("--task", default="chatgpt-review-loop proof", help="Task text used for AW proof selection.")
     result_parser.add_argument("--failed-command-index", type=int, default=None)
     result_parser.add_argument("--proof-exit-code", type=int)
     result_parser.add_argument("--push-status", choices=["passed", "failed"], required=True)
@@ -2194,6 +2336,24 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                 _emit(result)
             return 0
         if args.command == "job-result":
+            if args.run_aw_selected_proof:
+                if args.run_proof_commands_json or args.proof_commands_json:
+                    raise LoopError(
+                        "proof-selection-conflict",
+                        "--run-aw-selected-proof cannot be combined with caller-supplied proof command JSON",
+                    )
+                result = run_aw_selected_proof_and_report_job_result(
+                    cwd=args.target.resolve(),
+                    session_id=args.session_id.strip(),
+                    aw_command=args.aw_command,
+                    changed_paths=args.changed,
+                    task=args.task,
+                    push_status=args.push_status,
+                    runner=runner,
+                    supersede=args.supersede,
+                )
+                _emit(result)
+                return 0
             run_proof_commands = json.loads(args.run_proof_commands_json) if args.run_proof_commands_json else None
             if run_proof_commands is not None:
                 if not isinstance(run_proof_commands, list):
