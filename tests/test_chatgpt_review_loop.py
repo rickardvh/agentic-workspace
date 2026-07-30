@@ -1454,10 +1454,20 @@ owner = "chatgpt-review-loop"
     assert proof_selection["implement"]["kind"].startswith("implementer-context")
     assert proof_selection["implement"]["revision"].startswith("sha256:")
     assert proof_selection["admission"]["status"] == "admitted"
-    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["new_environment_created"] is False
-    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["environment_reuse"] == "configured-active-environment"
-    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["output_bytes"] < 32768
-    assert saved["terminal_result"]["proof_attempt_result"]["metrics"]["elapsed_ms"] < 3000
+    attempt_result = saved["terminal_result"]["proof_attempt_result"]
+    assert attempt_result["aw_proof_receipt_admission"]["status"] == "admitted"
+    assert attempt_result["aw_proof_receipt_admission"]["receipt_count"] == 1
+    receipt = attempt_result["aw_proof_receipts"][0]
+    assert receipt["status"] == "written"
+    assert receipt["path"] == ".agentic-workspace/local/proof-receipts/last.json"
+    assert receipt["trusted_producer_receipt_ref"].startswith("proof://receipts/")
+    assert receipt["admission"]["status"] == "admitted"
+    assert receipt["admission"]["result_class"] == "failed"
+    assert (Path(proof_selection["scope"]["worktree"]) / receipt["path"]).is_file()
+    assert attempt_result["metrics"]["new_environment_created"] is False
+    assert attempt_result["metrics"]["environment_reuse"] == "configured-active-environment"
+    assert attempt_result["metrics"]["output_bytes"] < 32768
+    assert attempt_result["metrics"]["elapsed_ms"] < 3000
     proof_command_results = saved["terminal_result"]["proof_attempt_result"]["command_results"]
     assert [(result["command"], result["status"]) for result in proof_command_results] == [(proof_sequences[1][0], "failed")]
     assert proof_command_results[0]["output_bytes"] < 20000

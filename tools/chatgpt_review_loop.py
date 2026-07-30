@@ -442,15 +442,18 @@ def _execute_focused_proof_attempt(
     starting_head: str,
     runner: CommandRunner,
     proof_selection: dict[str, Any] | None = None,
+    proof_scope_changed_paths: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     commands = [str(command).strip() for command in proof_commands if str(command).strip()]
     if not commands:
         raise LoopError("proof-command-missing", "producer-owned proof execution requires at least one command")
     command_results: list[dict[str, Any]] = []
+    aw_proof_receipts: list[dict[str, Any]] = []
     failed_index = -1
     proof_exit_code = 0
     total_output_bytes = 0
     started_all = time.perf_counter_ns()
+    changed_scope = [str(path).strip().replace("\\", "/") for path in (proof_scope_changed_paths or []) if str(path).strip()]
     for index, command in enumerate(commands):
         started = time.perf_counter_ns()
         completed = runner.run(_split_proof_command(command), cwd=worktree)
@@ -468,6 +471,17 @@ def _execute_focused_proof_attempt(
                 "status": "passed" if completed.returncode == 0 else "failed",
             }
         )
+        if proof_selection and changed_scope:
+            aw_proof_receipts.append(
+                _record_aw_selected_proof_receipt(
+                    worktree=worktree,
+                    command=command,
+                    result="passed" if completed.returncode == 0 else "failed",
+                    changed_paths=changed_scope,
+                    elapsed_ms=elapsed_ms,
+                    output_bytes=output_bytes,
+                )
+            )
         if completed.returncode != 0:
             failed_index = index
             proof_exit_code = int(completed.returncode)
@@ -506,6 +520,12 @@ def _execute_focused_proof_attempt(
         "proof_exit_code": proof_exit_code,
         "producer": "chatgpt-review-loop.focused-proof-executor",
         "command_results": command_results,
+        "aw_proof_receipts": aw_proof_receipts,
+        "aw_proof_receipt_admission": _aw_receipt_admission_summary(
+            proof_selection=proof_selection,
+            command_results=command_results,
+            receipts=aw_proof_receipts,
+        ),
         "metrics": {
             "command_count": len(command_results),
             "elapsed_ms": int((time.perf_counter_ns() - started_all) / 1_000_000),
@@ -514,6 +534,87 @@ def _execute_focused_proof_attempt(
             "environment_reuse": "configured-active-environment",
         },
         "repair_action": "repair the failed focused proof, rerun it, then report the exact job result",
+    }
+
+
+def _record_aw_selected_proof_receipt(
+    *,
+    worktree: Path,
+    command: str,
+    result: str,
+    changed_paths: Sequence[str],
+    elapsed_ms: int,
+    output_bytes: int,
+) -> dict[str, Any]:
+    try:
+        from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
+    except Exception as exc:  # pragma: no cover - import failure is surfaced as LoopError in normal use.
+        raise LoopError("aw-proof-receipt-unavailable", "AW proof receipt writer is unavailable") from exc
+    try:
+        payload = _record_proof_receipt_payload(
+            target_root=worktree,
+            command=command,
+            result=result,
+            changed_paths=[str(path) for path in changed_paths],
+            receipt_duration_seconds=f"{max(elapsed_ms, 0) / 1000:.3f}",
+            receipt_exit_state=result,
+            receipt_environment=json.dumps(
+                {
+                    "producer": "chatgpt-review-loop.run-aw-selected-proof",
+                    "active_virtual_env": os.environ.get("VIRTUAL_ENV", ""),
+                    "uv_active": os.environ.get("UV_ACTIVE", ""),
+                    "output_bytes": output_bytes,
+                },
+                sort_keys=True,
+            ),
+        )
+    except Exception as exc:
+        raise LoopError(
+            "aw-proof-receipt-rejected",
+            "AW-selected proof command did not produce an admitted proof receipt",
+            recovery=str(exc),
+        ) from exc
+    receipt = payload.get("receipt") if isinstance(payload, dict) else {}
+    admission = receipt.get("admission") if isinstance(receipt, dict) else {}
+    return {
+        "kind": "agentic-workspace/chatgpt-review-aw-proof-receipt/v1",
+        "status": str(payload.get("status") or "") if isinstance(payload, dict) else "",
+        "path": str(payload.get("path") or "") if isinstance(payload, dict) else "",
+        "trusted_producer_receipt_ref": str(payload.get("trusted_producer_receipt_ref") or "") if isinstance(payload, dict) else "",
+        "command": command,
+        "result": result,
+        "changed_paths": [str(path) for path in changed_paths],
+        "receipt_revision": "sha256:" + hashlib.sha256(json.dumps(receipt, sort_keys=True, default=str).encode()).hexdigest()
+        if isinstance(receipt, dict)
+        else "",
+        "admission": admission if isinstance(admission, dict) else {},
+    }
+
+
+def _aw_receipt_admission_summary(
+    *,
+    proof_selection: dict[str, Any] | None,
+    command_results: Sequence[dict[str, Any]],
+    receipts: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    if not proof_selection:
+        return {"status": "not-required", "rule": "Non-AW-selected proof execution is review-loop producer-owned only."}
+    if len(receipts) != len(command_results):
+        return {
+            "status": "rejected",
+            "reason": "missing-aw-proof-receipt",
+            "rule": "AW-selected proof execution must record one admitted AW proof receipt for every executed command.",
+        }
+    rejected = [
+        receipt
+        for receipt in receipts
+        if not isinstance(receipt.get("admission"), dict) or receipt["admission"].get("status") != "admitted"
+    ]
+    return {
+        "status": "admitted" if not rejected else "rejected",
+        "receipt_count": len(receipts),
+        "rejected_count": len(rejected),
+        "rule": "AW-selected proof execution carries AW proof receipt admission into review-loop terminal custody.",
     }
 
 
@@ -845,6 +946,14 @@ def report_job_result(
             or proof_attempt_result.get("ending_head") != ending_head
         ):
             raise LoopError("proof-attempt-result-invalid", "producer-owned proof attempt result does not match this launch")
+        selection = proof_attempt_result.get("proof_selection")
+        if isinstance(selection, dict) and selection.get("kind") == "agentic-workspace/chatgpt-review-aw-proof-selection/v1":
+            admission = proof_attempt_result.get("aw_proof_receipt_admission")
+            if not isinstance(admission, dict) or admission.get("status") != "admitted":
+                raise LoopError(
+                    "aw-proof-receipt-admission-required",
+                    "AW-selected proof results require admitted AW proof receipts before job-result custody",
+                )
         proof_status = str(proof_attempt_result["status"])
         proof_exit_code = int(proof_attempt_result["proof_exit_code"])
     else:
@@ -1000,6 +1109,7 @@ def run_aw_selected_proof_and_report_job_result(
         starting_head=str(attempt["starting_head"]),
         runner=runner,
         proof_selection=selection,
+        proof_scope_changed_paths=changed_paths,
     )
     return report_job_result(
         cwd=cwd,
