@@ -367,6 +367,14 @@ def test_external_evaluation_host_admission_rejects_raw_caller_mapping(tmp_path:
         )
 
 
+def test_external_evaluation_host_admission_issuer_is_not_public_runtime_entrypoint() -> None:
+    source = (ROOT / "src/agentic_workspace/evaluation.py").read_text(encoding="utf-8")
+
+    assert "def issue_external_evaluation_adapter_host_result_admission_for_adapter(" not in source
+    assert "def admit_external_evaluation_adapter_host_result(" in source
+    assert "ExternalEvaluationAdapterHostResultAdmissionHandle" in source
+
+
 def test_external_adapter_receipt_reresolves_host_admission_across_process_boundary(tmp_path: Path) -> None:
     from agentic_workspace import evaluation
 

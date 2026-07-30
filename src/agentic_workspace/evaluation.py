@@ -460,7 +460,7 @@ class ExternalEvaluationAdapterHostResultAdmissionHandle:
         self.admission = dict(admission)
 
 
-def issue_external_evaluation_adapter_host_result_admission_for_adapter(
+def _external_evaluation_adapter_host_result_admission_payload(
     *,
     target_root: Path,
     ref: str,
@@ -471,15 +471,7 @@ def issue_external_evaluation_adapter_host_result_admission_for_adapter(
     nonce: str = "",
     revoked_at: str = "",
     superseded_by: str = "",
-) -> ExternalEvaluationAdapterHostResultAdmissionHandle:
-    """Issue a provider-owned host-result admission handle.
-
-    A host/adapter authenticates provider evidence outside the repo runtime and
-    injects only this opaque handle for local receipt admission. Repo-local
-    result/admission files are caches and are not consumed as authority unless
-    the provider-issued admission is re-resolvable.
-    """
-
+) -> dict[str, Any]:
     raw_custody = result.get("custody")
     custody = raw_custody if isinstance(raw_custody, dict) else {}
     raw_context = result.get("admission_context")
@@ -523,10 +515,7 @@ def issue_external_evaluation_adapter_host_result_admission_for_adapter(
             "rule": "Opaque test fixture for provider-admitted delivery result; local JSON alone is not authority.",
         },
     }
-    return ExternalEvaluationAdapterHostResultAdmissionHandle(
-        _host_boundary_token=_EXTERNAL_EVALUATION_ADAPTER_HOST_BOUNDARY_TOKEN,
-        admission=admission,
-    )
+    return admission
 
 
 def _write_external_evaluation_adapter_host_result_admission(*, target_root: Path, admission: dict[str, Any]) -> dict[str, Any]:
@@ -570,10 +559,13 @@ def admit_external_evaluation_adapter_host_result(
 def _install_external_evaluation_adapter_host_result_admission_for_adapter_test(
     **kwargs: Any,
 ) -> dict[str, Any]:
-    handle = issue_external_evaluation_adapter_host_result_admission_for_adapter(**kwargs)
     target_root = kwargs.get("target_root")
     if not isinstance(target_root, Path):
         raise WorkspaceUsageError("external evaluation adapter test admission requires target_root.")
+    handle = ExternalEvaluationAdapterHostResultAdmissionHandle(
+        _host_boundary_token=_EXTERNAL_EVALUATION_ADAPTER_HOST_BOUNDARY_TOKEN,
+        admission=_external_evaluation_adapter_host_result_admission_payload(**kwargs),
+    )
     return admit_external_evaluation_adapter_host_result(target_root=target_root, admission_handle=handle)
 
 
