@@ -152,24 +152,9 @@ INDEPENDENT_REVIEW_RESULT_DIR = Path(".agentic-workspace/local/independent-revie
 INDEPENDENT_REVIEW_RESULT_INDEX_KIND = "agentic-workspace/independent-review-result-index/v1"
 INDEPENDENT_REVIEW_HOST_RESULT_DIR = Path(".agentic-workspace/local/independent-review-host-results")
 INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-review-host-result-index/v1"
-INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEY_ID = "github-review-webhook-rsa-2026-07-30"
-INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_PUBLIC_KEYS = {
-    INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEY_ID: {
-        "algorithm": "RS256",
-        "e": 65537,
-        "n": (
-            "de467b8648ac99d432b421e3853269e850f2de19769f92ce692fe31348a86a2f"
-            "d33886855f45d406fec87985860f2a69fe0e44a118545aac554aa7ca84b2467e"
-            "6b81fab30892890551684299aca267f4f5621db0c583ac3e53128ecd41239f7e"
-            "5ad268b7737548c2a09fbca4b61aa6749957c7990e4b3e6fdd1baf524b5837"
-            "134fc605df617787e56f629ffa2708a427dbb83bd79b6a8c3079c804d0b38a"
-            "03266bfcf20cb7b8fbf61f2917348ffbe1ccbbd2e792c8e1c61bc89d3754"
-            "bb2c45aa7e900270a69ec1f49254d28f663a95c05b176d9572b1e32644bc"
-            "770c1def1ae783b182725dfa702dcb4e813c53d78da620133464f31352a8"
-            "5301ad0fd27345b9"
-        ),
-    }
-}
+INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEY_ID = "independent-review-host-configured"
+INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_PUBLIC_KEYS: dict[str, dict[str, Any]] = {}
+INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 
 
@@ -6845,7 +6830,7 @@ def _load_independent_review_host_result(*, target_root: Path, host_result_ref: 
         raise WorkspaceUsageError("independent review host result digest does not match the host index.")
     if entry.get("review_result_digest") != _stable_review_json_digest(result):
         raise WorkspaceUsageError("independent review result digest does not match the host index.")
-    if not _host_admits_independent_review_host_result(ref.replace("\\", "/"), host_result):
+    if not _host_admits_independent_review_host_result(ref.replace("\\", "/"), host_result, target_root=target_root):
         raise WorkspaceUsageError("independent review host result was not admitted by the host boundary.")
     imported = dict(result)
     imported["host_result_ref"] = ref.replace("\\", "/")
@@ -6854,7 +6839,37 @@ def _load_independent_review_host_result(*, target_root: Path, host_result_ref: 
     return imported
 
 
-def _host_admits_independent_review_host_result(host_result_ref: str, host_result: dict[str, Any]) -> bool:
+def _independent_review_public_keys_from_host() -> dict[str, dict[str, Any]]:
+    keys = {key_id: dict(key) for key_id, key in INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_PUBLIC_KEYS.items()}
+    raw = os.environ.get("AW_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEYS", "").strip()
+    if not raw:
+        return keys
+    try:
+        loaded = json.loads(raw)
+    except json.JSONDecodeError:
+        return keys
+    if not isinstance(loaded, dict):
+        return keys
+    for key_id, key in loaded.items():
+        if isinstance(key, dict):
+            keys[str(key_id)] = dict(key)
+    return keys
+
+
+def _parse_review_time(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed
+
+
+def _host_admits_independent_review_host_result(host_result_ref: str, host_result: dict[str, Any], *, target_root: Path) -> bool:
     admission = host_result.get("host_admission")
     if not isinstance(admission, dict):
         return False
@@ -6862,10 +6877,11 @@ def _host_admits_independent_review_host_result(host_result_ref: str, host_resul
     if not isinstance(signed_payload, dict):
         return False
     key_id = str(admission.get("key_id") or "")
-    public_key = INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_PUBLIC_KEYS.get(key_id)
+    public_key = _independent_review_public_keys_from_host().get(key_id)
     if not isinstance(public_key, dict):
         return False
     custody = _as_dict(host_result.get("custody"))
+    context = _as_dict(host_result.get("admission_context"))
     expected_payload = {
         "kind": "agentic-workspace/independent-review-host-result-admission-payload/v1",
         "host_result_ref": host_result_ref,
@@ -6873,15 +6889,48 @@ def _host_admits_independent_review_host_result(host_result_ref: str, host_resul
         "issuer": str(custody.get("trusted_channel") or ""),
         "producer": str(custody.get("producer") or ""),
         "trusted_channel": str(custody.get("trusted_channel") or ""),
+        "audience": str(context.get("audience") or ""),
+        "workspace_ref": str(context.get("workspace_ref") or ""),
+        "operation": str(context.get("operation") or ""),
+        "assignment_revision": str(context.get("assignment_revision") or ""),
+        "proof_subject_revision": str(context.get("proof_subject_revision") or ""),
+        "issued_at": str(context.get("issued_at") or ""),
+        "expires_at": str(context.get("expires_at") or ""),
+        "nonce": str(context.get("nonce") or ""),
     }
     if signed_payload != expected_payload:
         return False
+    now = datetime.now(timezone.utc)
+    issued_at = _parse_review_time(signed_payload.get("issued_at"))
+    expires_at = _parse_review_time(signed_payload.get("expires_at"))
+    key_not_before = _parse_review_time(public_key.get("not_before"))
+    key_expires_at = _parse_review_time(public_key.get("expires_at"))
+    workspace_ref = str(signed_payload.get("workspace_ref") or "")
+    key_workspace_path = str(public_key.get("workspace_path") or "")
     if (
         admission.get("kind") != "agentic-workspace/independent-review-host-result-admission/v1"
         or admission.get("status") != "current"
+        or public_key.get("status", "current") != "current"
         or admission.get("algorithm") != public_key.get("algorithm")
         or admission.get("revoked_at")
         or admission.get("superseded_by")
+        or public_key.get("revoked_at")
+        or public_key.get("superseded_by")
+        or signed_payload.get("audience") != INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE
+        or signed_payload.get("operation") != "assignment.admit.independent-review"
+        or not str(signed_payload.get("assignment_revision") or "")
+        or not str(signed_payload.get("proof_subject_revision") or "")
+        or not workspace_ref
+        or workspace_ref != str(public_key.get("workspace_ref") or workspace_ref)
+        or workspace_ref.removeprefix("workspace:path:") != str(target_root.resolve())
+        or (bool(key_workspace_path) and key_workspace_path != str(target_root.resolve()))
+        or issued_at is None
+        or expires_at is None
+        or issued_at > now
+        or expires_at <= now
+        or (key_not_before is not None and key_not_before > now)
+        or (key_expires_at is not None and key_expires_at <= now)
+        or not str(signed_payload.get("nonce") or "")
     ):
         return False
     if signed_payload["issuer"] not in {"github-review-webhook", "human-review-host", "external-review-adapter"}:

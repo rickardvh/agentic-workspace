@@ -8,10 +8,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _write_independent_review_host_result(target_root: Path, review_result: dict[str, object]) -> str:
     import base64
+    import os
     import subprocess
 
     from agentic_workspace.workspace_runtime_proof import (
-        INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEY_ID,
+        INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
         INDEPENDENT_REVIEW_HOST_RESULT_DIR,
         INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
         _host_result_body_for_admission,
@@ -23,9 +24,24 @@ def _write_independent_review_host_result(target_root: Path, review_result: dict
     custody = dict(result.get("custody") if isinstance(result.get("custody"), dict) else {})
     custody.update({"producer": "github-review-adapter", "trusted_channel": "github-review-webhook"})
     result["custody"] = custody
+    admission_context = {
+        "audience": str(result.get("audience") or INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE),
+        "workspace_ref": str(result.get("workspace_ref") or f"workspace:path:{target_root.resolve()}"),
+        "operation": str(result.get("operation") or "assignment.admit.independent-review"),
+        "assignment_revision": str(result.get("assignment_revision") or "assignment-rev-1"),
+        "proof_subject_revision": str(result.get("proof_subject_revision") or "proof-subject-rev-1"),
+        "issued_at": str(result.get("admission_issued_at") or "2026-07-29T00:00:00Z"),
+        "expires_at": str(result.get("admission_expires_at") or "2099-01-01T00:00:00Z"),
+        "nonce": str(
+            result["nonce"]
+            if "nonce" in result
+            else f"{result.get('review_id', 'review')}:{result.get('assignment_revision', 'assignment-rev-1')}"
+        ),
+    }
     host_result = {
         "kind": "agentic-workspace/independent-review-host-result/v1",
         "status": "current",
+        "admission_context": admission_context,
         "custody": {
             "producer": "github-review-adapter",
             "trusted_channel": "github-review-webhook",
@@ -41,43 +57,44 @@ def _write_independent_review_host_result(target_root: Path, review_result: dict
         "issuer": "github-review-webhook",
         "producer": "github-review-adapter",
         "trusted_channel": "github-review-webhook",
+        **admission_context,
     }
     host_id = _stable_review_json_digest(host_result)[:24]
     root = target_root / INDEPENDENT_REVIEW_HOST_RESULT_DIR
     path = root / f"{host_id}.json"
     host_result_ref = path.relative_to(target_root).as_posix()
     signed_payload["host_result_ref"] = host_result_ref
-    private_key = """-----BEGIN PRIVATE KEY-----
-MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDeRnuGSKyZ1DK0
-IeOFMmnoUPLeGXafks5pL+MTSKhqL9M4hoVfRdQG/sh5hYYPKmn+DkShGFRarFVK
-p8qEskZ+a4H6swiSiQVRaEKZrKJn9PViHbDFg6w+UxKOzUEjn35a0mi3c3VIwqCf
-vKS2GqZ0mVfHmQ5LPm/dG69SS1g3E0/GBd9hd4flb2Kf+icIpCfbuDvXm2qMMHnI
-BNCzigMma/zyDLe4+/YfKRc0j/vhzLvS55LI4cYbyJ03VLssRap+kAJwpp7B9JJU
-0o9mOpXAWxdtlXKx4yZEvHcMHe8a54OxgnJd+nAty06BPFPXjaYgEzRk8xNSqFMB
-rQ/Sc0W5AgMBAAECggEAFUQIyimOkuabhcKmxA31Vj/VZqSoxd5br3Jgjy4gx80E
-0DgFj16MyTEL4N2CnJWWH7OBgyii3Gx3ug1o2a59Qlfajw/dMnjXyIi5M37x6FCG
-QBF/YbxF6M4VnNI8KNJ3+iw+jsul9VTCnZnEp/QPiCEKJgtpk88Y0H6XNOBGw7kA
-dwU/6DOQrEGFCLSWpoXB+YKBF80savEMqYuPikquXMA1XIYZNQK2hUAVovfjMqhR
-6+aSERYm72zpxVWxXA37hd75qPw/8ui1W4fx42gVrjhMclyoYFKVU8tvbDJ9y38D
-vl2ksmXHMLbkA6no6PbPhlR+4ZFQg3uFs1obL584UQKBgQD4Kd3WauVDAaIf4w0W
-fF9hZPtrJimSrOs00hrp0iVyuOOL5kuw0JOTj6rAvj2hNPS6CdgaLSck57LZj0S3
-XXT3dtAH2IkwWFMC+0vkmHCHBWRkmizBL2/r+UGsWrXdQL0RWK90m5YdyBYLDqXp
-wcxfRV7Xnq6Gmeig0h40xusdEQKBgQDlS1Z3EcuAIl5njRCcnFvdKJ49mygg6361
-/ETK/DqCdQMM2StKA+oE+QqK3QuYv33RkW6P5lGksjxuXFUMSPXRy6KUwQ84diDf
-c1uwMbaO8Jz7MrLQHx78uvtbZ4FaZmD2oEda6HCjZsLdhvQxzDv07mStSSfzeuWw
-kWa616m+KQKBgQCoKeazt7gn0eGE7h0eUaVooD9m+nNNe3PfVUj7jXXm6bb4RFSi
-OpTmd4JkHgYxSWtU7frMsjBGZ+PgXZ9ZCjGKx65swqUkZ5XI/XUOMOZ/+H1xVrBh
-ML4ND9ka7FU02vvD1279+7ib8cxOLdzsLHFLVfzQ7Cyj9YOYBwqFBQ6poQKBgQDX
-elkjRGHNZH77KSH3Syk5SLaMhobLiQNm2k97wlTpzDS1mlCIGe2OBsvVe60uOqZu
-jxErwfHvqGAKBlMWXGpGYevDhzpagQibdLkxd0ZsRcoAdsB7vQNN1hno5/gzkAqH
-OlBUKiPQKv3tWKmbMqcVogKSpjEZKuE3cSztYUZvIQKBgQCSl9lwbyoBl0uHkpfr
-73b5i4wyd4ati2SXUS8oDYVtFkcbqNJcktmnQ5Q0D6L9QQKA2FJQekWqRfIq+Pcv
-ioaPTHa3ePxgbiKav/N4iu04Ce9khx/xeXsgslrNgGU6HrySn4FiG10HGYbrOV57
-ptscLbLtU7mXdb4Tfrw9Z0Rpag==
------END PRIVATE KEY-----
-"""
     key_path = target_root / ".agentic-workspace" / "local" / "independent-review-test-host-key.pem"
-    _write(key_path, private_key)
+    key_path.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
+        capture_output=True,
+        check=True,
+    )
+    modulus = (
+        subprocess.run(
+            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        .stdout.strip()
+        .split("=", 1)[1]
+    )
+    key_id = "independent-review-host-test-" + _stable_review_json_digest({"host_result_ref": host_result_ref, "modulus": modulus})[:12]
+    key = {
+        "algorithm": "RS256",
+        "status": str(result.get("key_status") or "current"),
+        "e": 65537,
+        "n": modulus.lower(),
+        "workspace_ref": str(result.get("key_workspace_ref") or f"workspace:path:{target_root.resolve()}"),
+        "workspace_path": str(result.get("key_workspace_path") or target_root.resolve()),
+        "not_before": str(result.get("key_not_before") or "2026-01-01T00:00:00Z"),
+        "expires_at": str(result.get("key_expires_at") or "2099-01-01T00:00:00Z"),
+    }
+    if result.get("key_revoked_at"):
+        key["revoked_at"] = str(result["key_revoked_at"])
+    os.environ["AW_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEYS"] = json.dumps({key_id: key})
     completed = subprocess.run(
         ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
         input=_stable_review_json_bytes(signed_payload),
@@ -88,7 +105,7 @@ ptscLbLtU7mXdb4Tfrw9Z0Rpag==
         "kind": "agentic-workspace/independent-review-host-result-admission/v1",
         "status": "current",
         "algorithm": "RS256",
-        "key_id": INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEY_ID,
+        "key_id": key_id,
         "signed_payload": signed_payload,
         "signature": base64.b64encode(completed.stdout).decode("ascii"),
     }
@@ -7620,6 +7637,46 @@ def test_trusted_independent_review_rejects_jointly_forged_local_host_result(tmp
     host_id = host_path.stem
     index["results"][host_id]["host_result_digest"] = _stable_review_json_digest(host_result)
     _write(index_path, json.dumps(index, indent=2, sort_keys=True) + "\n")
+
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
+
+
+@pytest.mark.parametrize(
+    ("case_name", "overrides"),
+    [
+        ("wrong-audience", {"audience": "other-consumer"}),
+        ("missing-nonce", {"nonce": ""}),
+        ("expired-admission", {"admission_expires_at": "2026-01-01T00:00:00Z"}),
+        ("revoked-key", {"key_revoked_at": "2026-07-29T00:00:00Z"}),
+        ("wrong-workspace", {"key_workspace_path": "not-this-workspace"}),
+        ("wrong-operation", {"operation": "assignment.admit.other"}),
+    ],
+)
+def test_trusted_independent_review_rejects_invalid_host_admission_lifecycle(
+    tmp_path: Path, case_name: str, overrides: dict[str, object]
+) -> None:
+    from agentic_workspace.workspace_runtime_proof import WorkspaceUsageError, record_trusted_independent_review_result
+
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "human",
+        "assignment_id": "critical-access-review",
+        "assignment_revision": "assignment-rev-1",
+        "proof_subject_revision": "proof-subject-rev-1",
+        "review_revision": "review-rev-1",
+        "review_id": f"review-{case_name}",
+        "reviewed_at": "2026-07-26T13:22:00Z",
+        "changed_paths": ["services/auth/policy.py"],
+        "custody": {
+            "producer": "github-review-adapter",
+            "authority_ref": "SECURITY.md#critical-access",
+            "source_ref": "pull-request-review:1",
+        },
+        **overrides,
+    }
+    host_result_ref = _write_independent_review_host_result(tmp_path, review_result)
 
     with pytest.raises(WorkspaceUsageError, match="host boundary"):
         record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
