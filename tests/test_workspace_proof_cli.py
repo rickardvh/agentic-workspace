@@ -25,6 +25,7 @@ def _write_independent_review_host_result(
         _stable_review_json_bytes,
         _stable_review_json_digest,
         admit_independent_review_host_result_capability,
+        issue_independent_review_host_result_capability_for_adapter,
     )
 
     result = dict(review_result)
@@ -126,12 +127,13 @@ def _write_independent_review_host_result(
         "authority": "host-adapter-owned",
     }
     if install_host_admission:
-        admit_independent_review_host_result_capability(
+        handle = issue_independent_review_host_result_capability_for_adapter(
             host_result_ref=host_result_ref,
             admission=host_result["host_admission"],
             public_key=key,
             capability=capability,
         )
+        admit_independent_review_host_result_capability(capability_handle=handle)
     if caller_env_admission_keys:
         import os
 
@@ -7701,6 +7703,50 @@ def test_assignment_admit_rejects_caller_supplied_host_trust_root(tmp_path: Path
 
     assert receipt["status"] == "rejected"
     assert receipt["failures"][0]["reason"] == "caller-supplied-host-trust-root-rejected"
+
+
+def test_independent_review_host_admission_rejects_raw_imported_mappings(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_proof import (
+        WorkspaceUsageError,
+        _independent_review_scope_digest,
+        admit_independent_review_host_result_capability,
+    )
+
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "human",
+        "assignment_id": "critical-access-review",
+        "assignment_revision": "assignment-rev-1",
+        "review_revision": "review-rev-1",
+        "reviewed_at": "2026-07-26T13:22:00Z",
+        "changed_paths": ["services/auth/policy.py"],
+        "scope_digest": _independent_review_scope_digest(["services/auth/policy.py"]),
+        "implementer": {"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
+        "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+        "custody": {
+            "producer": "github-review-adapter",
+            "authority_ref": "SECURITY.md#critical-access",
+            "source_ref": "pull-request-review:1",
+        },
+    }
+    host_inputs = _write_independent_review_host_result(
+        tmp_path,
+        review_result,
+        install_host_admission=False,
+        return_capability_inputs=True,
+    )
+    assert isinstance(host_inputs, dict)
+
+    with pytest.raises(WorkspaceUsageError, match="opaque host-issued capability handle"):
+        admit_independent_review_host_result_capability(  # type: ignore[arg-type]
+            capability_handle={
+                "host_result_ref": host_inputs["host_result_ref"],
+                "admission": host_inputs["host_admission"],
+                "public_key": host_inputs["host_public_key"],
+                "capability": host_inputs["host_capability"],
+            },
+        )
 
 
 def test_trusted_independent_review_rejects_caller_controlled_environment_trust_root(

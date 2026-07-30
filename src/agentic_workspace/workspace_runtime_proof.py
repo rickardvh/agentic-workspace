@@ -6839,12 +6839,57 @@ def _load_independent_review_host_result(*, target_root: Path, host_result_ref: 
     return imported
 
 
-def admit_independent_review_host_result_capability(
+class IndependentReviewHostAdmissionCapability:
+    """Opaque host/adapter-issued authority handle for independent review results."""
+
+    __slots__ = ("admission", "capability", "host_result_ref", "public_key")
+
+    def __init__(
+        self,
+        *,
+        _host_boundary_token: object,
+        host_result_ref: str,
+        admission: Mapping[str, Any],
+        public_key: Mapping[str, Any],
+        capability: Mapping[str, Any],
+    ) -> None:
+        if _host_boundary_token is not _INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN:
+            raise WorkspaceUsageError("independent review host capability must be issued by a host adapter boundary.")
+        self.host_result_ref = str(host_result_ref or "").replace("\\", "/").strip()
+        self.admission = dict(admission)
+        self.public_key = dict(public_key)
+        self.capability = dict(capability)
+
+
+_INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN = object()
+
+
+def issue_independent_review_host_result_capability_for_adapter(
     *,
     host_result_ref: str,
     admission: Mapping[str, Any],
     public_key: Mapping[str, Any],
     capability: Mapping[str, Any],
+) -> IndependentReviewHostAdmissionCapability:
+    """Return a host/adapter-issued independent-review admission handle.
+
+    This is the explicit host boundary used by adapter integrations and tests:
+    ordinary generated operations still receive only the opaque host result ref,
+    not verifier material or caller-authored capability JSON.
+    """
+
+    return IndependentReviewHostAdmissionCapability(
+        _host_boundary_token=_INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN,
+        host_result_ref=host_result_ref,
+        admission=admission,
+        public_key=public_key,
+        capability=capability,
+    )
+
+
+def admit_independent_review_host_result_capability(
+    *,
+    capability_handle: IndependentReviewHostAdmissionCapability,
 ) -> dict[str, Any]:
     """Install an opaque host/adapter-owned review-result admission capability.
 
@@ -6857,10 +6902,12 @@ def admit_independent_review_host_result_capability(
     authority-bearing effect.
     """
 
-    ref = str(host_result_ref or "").replace("\\", "/").strip()
+    if not isinstance(capability_handle, IndependentReviewHostAdmissionCapability):
+        raise WorkspaceUsageError("independent review host admission requires an opaque host-issued capability handle.")
+    ref = capability_handle.host_result_ref
     if not ref:
         raise WorkspaceUsageError("independent review host admission requires host_result_ref.")
-    capability_payload = dict(capability)
+    capability_payload = dict(capability_handle.capability)
     if (
         capability_payload.get("kind") != INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND
         or capability_payload.get("status") != "current"
@@ -6873,8 +6920,8 @@ def admit_independent_review_host_result_capability(
     if str(capability_payload.get("capability_id") or "").strip() == "":
         raise WorkspaceUsageError("independent review host admission capability requires capability_id.")
     _CURRENT_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS[ref] = {
-        "admission": dict(admission),
-        "public_key": dict(public_key),
+        "admission": dict(capability_handle.admission),
+        "public_key": dict(capability_handle.public_key),
         "capability": capability_payload,
     }
     return {
@@ -6903,12 +6950,13 @@ def _install_independent_review_host_result_admission_for_adapter_test(
         "authority": "host-adapter-owned",
         "scope": "test-only",
     }
-    admit_independent_review_host_result_capability(
+    handle = issue_independent_review_host_result_capability_for_adapter(
         host_result_ref=ref,
         admission=admission,
         public_key=public_key,
         capability=capability,
     )
+    admit_independent_review_host_result_capability(capability_handle=handle)
 
 
 def _parse_review_time(value: Any) -> datetime | None:
