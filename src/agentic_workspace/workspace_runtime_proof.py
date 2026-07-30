@@ -155,7 +155,6 @@ INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-revie
 INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
-_CURRENT_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS: dict[str, dict[str, Any]] = {}
 
 
 def _proof_lifecycle_command(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -6839,104 +6838,6 @@ def _load_independent_review_host_result(*, target_root: Path, host_result_ref: 
     return imported
 
 
-class IndependentReviewHostAdmissionCapability:
-    """Opaque host/adapter-issued authority handle for independent review results."""
-
-    __slots__ = ("admission", "capability", "host_result_ref", "public_key")
-
-    def __init__(
-        self,
-        *,
-        _host_boundary_token: object,
-        host_result_ref: str,
-        admission: Mapping[str, Any],
-        public_key: Mapping[str, Any],
-        capability: Mapping[str, Any],
-    ) -> None:
-        if _host_boundary_token is not _INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN:
-            raise WorkspaceUsageError("independent review host capability must be issued by a host adapter boundary.")
-        self.host_result_ref = str(host_result_ref or "").replace("\\", "/").strip()
-        self.admission = dict(admission)
-        self.public_key = dict(public_key)
-        self.capability = dict(capability)
-
-
-_INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN = object()
-
-
-def admit_independent_review_host_result_capability(
-    *,
-    capability_handle: IndependentReviewHostAdmissionCapability,
-) -> dict[str, Any]:
-    """Install an opaque host/adapter-owned review-result admission capability.
-
-    The runtime intentionally does not read caller-controlled environment
-    variables or repo-local trust roots. A host or adapter that owns review
-    custody injects this in-memory capability across its protected process
-    boundary, then AW revalidates the referenced result against the capability
-    at assignment admission and proof/claim time. Repo-local result, index, and
-    admission files remain caches; without this capability they have no
-    authority-bearing effect.
-    """
-
-    if not isinstance(capability_handle, IndependentReviewHostAdmissionCapability):
-        raise WorkspaceUsageError("independent review host admission requires an opaque host-issued capability handle.")
-    ref = capability_handle.host_result_ref
-    if not ref:
-        raise WorkspaceUsageError("independent review host admission requires host_result_ref.")
-    capability_payload = dict(capability_handle.capability)
-    if (
-        capability_payload.get("kind") != INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND
-        or capability_payload.get("status") != "current"
-        or capability_payload.get("host_result_ref") != ref
-        or capability_payload.get("operation") != "assignment.admit.independent-review"
-        or capability_payload.get("audience") != INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE
-        or capability_payload.get("authority") != "host-adapter-owned"
-    ):
-        raise WorkspaceUsageError("independent review host admission capability is not current host-owned authority.")
-    if str(capability_payload.get("capability_id") or "").strip() == "":
-        raise WorkspaceUsageError("independent review host admission capability requires capability_id.")
-    _CURRENT_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS[ref] = {
-        "admission": dict(capability_handle.admission),
-        "public_key": dict(capability_handle.public_key),
-        "capability": capability_payload,
-    }
-    return {
-        "kind": "agentic-workspace/independent-review-host-admission-capability-result/v1",
-        "operation_id": "assignment.admit.independent-review-host-capability",
-        "status": "admitted",
-        "host_result_ref": ref,
-        "capability_id": str(capability_payload.get("capability_id") or ""),
-        "rule": "Only a host/adapter-injected capability can authorize an independent-review host result; local files and environment variables are non-authoritative caches.",
-    }
-
-
-def _install_independent_review_host_result_admission_for_adapter_test(
-    *, host_result_ref: str, admission: Mapping[str, Any], public_key: Mapping[str, Any]
-) -> None:
-    """Compatibility wrapper for older tests; not a production admission route."""
-
-    ref = str(host_result_ref or "").replace("\\", "/").strip()
-    capability = {
-        "kind": INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND,
-        "status": "current",
-        "capability_id": "adapter-test:" + _stable_review_json_digest({"host_result_ref": ref})[:16],
-        "host_result_ref": ref,
-        "operation": "assignment.admit.independent-review",
-        "audience": INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
-        "authority": "host-adapter-owned",
-        "scope": "test-only",
-    }
-    handle = IndependentReviewHostAdmissionCapability(
-        _host_boundary_token=_INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN,
-        host_result_ref=ref,
-        admission=admission,
-        public_key=public_key,
-        capability=capability,
-    )
-    admit_independent_review_host_result_capability(capability_handle=handle)
-
-
 def _parse_review_time(value: Any) -> datetime | None:
     text = str(value or "").strip()
     if not text:
@@ -6951,95 +6852,18 @@ def _parse_review_time(value: Any) -> datetime | None:
 
 
 def _host_admits_independent_review_host_result(host_result_ref: str, host_result: dict[str, Any], *, target_root: Path) -> bool:
-    installed = _CURRENT_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS.get(host_result_ref)
-    if not isinstance(installed, dict):
-        return False
-    capability = installed.get("capability")
-    if not isinstance(capability, dict):
-        return False
-    if (
-        capability.get("kind") != INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND
-        or capability.get("status") != "current"
-        or capability.get("host_result_ref") != host_result_ref
-        or capability.get("operation") != "assignment.admit.independent-review"
-        or capability.get("audience") != INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE
-        or capability.get("authority") != "host-adapter-owned"
-        or not str(capability.get("capability_id") or "").strip()
-    ):
-        return False
-    admission = installed.get("admission")
-    if not isinstance(admission, dict):
-        return False
-    signed_payload = admission.get("signed_payload")
-    if not isinstance(signed_payload, dict):
-        return False
-    key_id = str(admission.get("key_id") or "")
-    public_key = installed.get("public_key")
-    if not isinstance(public_key, dict):
-        return False
-    if str(public_key.get("key_id") or key_id) != key_id:
-        return False
-    custody = _as_dict(host_result.get("custody"))
-    context = _as_dict(host_result.get("admission_context"))
-    expected_payload = {
-        "kind": "agentic-workspace/independent-review-host-result-admission-payload/v1",
-        "host_result_ref": host_result_ref,
-        "host_result_body_digest": _stable_review_json_digest(_host_result_body_for_admission(host_result)),
-        "issuer": str(custody.get("trusted_channel") or ""),
-        "producer": str(custody.get("producer") or ""),
-        "trusted_channel": str(custody.get("trusted_channel") or ""),
-        "audience": str(context.get("audience") or ""),
-        "workspace_ref": str(context.get("workspace_ref") or ""),
-        "operation": str(context.get("operation") or ""),
-        "assignment_revision": str(context.get("assignment_revision") or ""),
-        "proof_subject_revision": str(context.get("proof_subject_revision") or ""),
-        "issued_at": str(context.get("issued_at") or ""),
-        "expires_at": str(context.get("expires_at") or ""),
-        "nonce": str(context.get("nonce") or ""),
-    }
-    if signed_payload != expected_payload:
-        return False
-    now = datetime.now(timezone.utc)
-    issued_at = _parse_review_time(signed_payload.get("issued_at"))
-    expires_at = _parse_review_time(signed_payload.get("expires_at"))
-    key_not_before = _parse_review_time(public_key.get("not_before"))
-    key_expires_at = _parse_review_time(public_key.get("expires_at"))
-    workspace_ref = str(signed_payload.get("workspace_ref") or "")
-    key_workspace_path = str(public_key.get("workspace_path") or "")
-    if (
-        admission.get("kind") != "agentic-workspace/independent-review-host-result-admission/v1"
-        or admission.get("status") != "current"
-        or public_key.get("status", "current") != "current"
-        or admission.get("algorithm") != public_key.get("algorithm")
-        or admission.get("revoked_at")
-        or admission.get("superseded_by")
-        or public_key.get("revoked_at")
-        or public_key.get("superseded_by")
-        or signed_payload.get("audience") != INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE
-        or signed_payload.get("operation") != "assignment.admit.independent-review"
-        or not str(signed_payload.get("assignment_revision") or "")
-        or not str(signed_payload.get("proof_subject_revision") or "")
-        or not workspace_ref
-        or workspace_ref != str(public_key.get("workspace_ref") or workspace_ref)
-        or workspace_ref.removeprefix("workspace:path:") != str(target_root.resolve())
-        or (bool(key_workspace_path) and key_workspace_path != str(target_root.resolve()))
-        or issued_at is None
-        or expires_at is None
-        or issued_at > now
-        or expires_at <= now
-        or (key_not_before is not None and key_not_before > now)
-        or (key_expires_at is not None and key_expires_at <= now)
-        or not str(signed_payload.get("nonce") or "")
-    ):
-        return False
-    if signed_payload["issuer"] not in {"github-review-webhook", "human-review-host", "external-review-adapter"}:
-        return False
-    return _rsa_sha256_verify(
-        message=_stable_review_json_bytes(signed_payload),
-        signature_b64=str(admission.get("signature") or ""),
-        modulus_hex=str(public_key.get("n") or ""),
-        exponent=int(public_key.get("e") or 0),
-    )
+    """Return whether the protected host boundary admitted this result.
+
+    AW production runtime deliberately has no capability issuer, signing key,
+    process-global trust registry, or caller-supplied verifier material. Host
+    adapters that own independent-review custody must inject/override this
+    verification boundary from outside ordinary AW operation authority. Without
+    that host-owned boundary, repo-local result files are inert caches and fail
+    closed.
+    """
+
+    _ = (host_result_ref, host_result, target_root)
+    return False
 
 
 def record_trusted_independent_review_result(*, target_root: Path, review_result: Mapping[str, Any]) -> dict[str, Any]:

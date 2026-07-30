@@ -10,6 +10,7 @@ def _write_independent_review_host_result(
     target_root: Path,
     review_result: dict[str, object],
     *,
+    host_admission_monkeypatch: pytest.MonkeyPatch | None = None,
     install_host_admission: bool = True,
     caller_env_admission_keys: bool = False,
     return_capability_inputs: bool = False,
@@ -18,15 +19,12 @@ def _write_independent_review_host_result(
     import subprocess
 
     from agentic_workspace.workspace_runtime_proof import (
-        _INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN,
         INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
         INDEPENDENT_REVIEW_HOST_RESULT_DIR,
         INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
-        IndependentReviewHostAdmissionCapability,
         _host_result_body_for_admission,
         _stable_review_json_bytes,
         _stable_review_json_digest,
-        admit_independent_review_host_result_capability,
     )
 
     result = dict(review_result)
@@ -127,15 +125,22 @@ def _write_independent_review_host_result(
         "audience": INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
         "authority": "host-adapter-owned",
     }
-    if install_host_admission:
-        handle = IndependentReviewHostAdmissionCapability(
-            _host_boundary_token=_INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN,
-            host_result_ref=host_result_ref,
-            admission=host_result["host_admission"],
-            public_key=key,
-            capability=capability,
+    if install_host_admission and host_admission_monkeypatch is not None:
+        import agentic_workspace.workspace_runtime_proof as proof_runtime
+
+        admitted_ref = host_result_ref
+
+        def _test_host_admits_independent_review_host_result(
+            checked_ref: str, checked_result: dict[str, object], *, target_root: Path
+        ) -> bool:
+            _ = (checked_result, target_root)
+            return checked_ref == admitted_ref
+
+        host_admission_monkeypatch.setattr(
+            proof_runtime,
+            "_host_admits_independent_review_host_result",
+            _test_host_admits_independent_review_host_result,
         )
-        admit_independent_review_host_result_capability(capability_handle=handle)
     if caller_env_admission_keys:
         import os
 
@@ -7535,7 +7540,9 @@ certification_limits = ["does not certify production authorization safety"]
     assert posture["matched_count"] == 0
 
 
-def test_high_assurance_closeout_posture_accepts_admitted_independent_review_receipt(tmp_path: Path, capsys) -> None:
+def test_high_assurance_closeout_posture_accepts_admitted_independent_review_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
     from agentic_workspace.workspace_runtime_proof import (
         WorkspaceUsageError,
         _independent_review_scope_digest,
@@ -7584,7 +7591,11 @@ certification_limits = ["does not certify production authorization safety"]
     }
     with pytest.raises(WorkspaceUsageError, match="host_result_ref"):
         record_trusted_independent_review_result(target_root=tmp_path, review_result=review_result)
-    host_result_ref = _write_independent_review_host_result(tmp_path, review_result)
+    host_result_ref = _write_independent_review_host_result(
+        tmp_path,
+        review_result,
+        host_admission_monkeypatch=monkeypatch,
+    )
     trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
     inline = admit_independent_review_result_operation(
         target_root=tmp_path,
@@ -7625,7 +7636,7 @@ certification_limits = ["does not certify production authorization safety"]
     assert "high-assurance closeout posture evidence is missing" in packet["missing_or_unresolved"]["blockers"]
 
 
-def test_assignment_admit_accepts_preinstalled_host_capability_ref(tmp_path: Path) -> None:
+def test_assignment_admit_accepts_preinstalled_host_capability_ref(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from agentic_workspace.workspace_runtime_proof import _independent_review_scope_digest, admit_independent_review_result_operation
 
     review_result = {
@@ -7646,7 +7657,12 @@ def test_assignment_admit_accepts_preinstalled_host_capability_ref(tmp_path: Pat
             "source_ref": "pull-request-review:1",
         },
     }
-    host_result_ref = _write_independent_review_host_result(tmp_path, review_result, install_host_admission=True)
+    host_result_ref = _write_independent_review_host_result(
+        tmp_path,
+        review_result,
+        host_admission_monkeypatch=monkeypatch,
+        install_host_admission=True,
+    )
     assert isinstance(host_result_ref, str)
 
     receipt = admit_independent_review_result_operation(
@@ -7711,7 +7727,7 @@ def test_independent_review_host_admission_rejects_raw_imported_mappings(tmp_pat
     from agentic_workspace.workspace_runtime_proof import (
         WorkspaceUsageError,
         _independent_review_scope_digest,
-        admit_independent_review_host_result_capability,
+        record_trusted_independent_review_result,
     )
 
     review_result = {
@@ -7740,13 +7756,14 @@ def test_independent_review_host_admission_rejects_raw_imported_mappings(tmp_pat
     )
     assert isinstance(host_inputs, dict)
 
-    with pytest.raises(WorkspaceUsageError, match="opaque host-issued capability handle"):
-        admit_independent_review_host_result_capability(  # type: ignore[arg-type]
-            capability_handle={
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_trusted_independent_review_result(
+            target_root=tmp_path,
+            review_result={
                 "host_result_ref": host_inputs["host_result_ref"],
-                "admission": host_inputs["host_admission"],
-                "public_key": host_inputs["host_public_key"],
-                "capability": host_inputs["host_capability"],
+                "host_admission": host_inputs["host_admission"],
+                "host_public_key": host_inputs["host_public_key"],
+                "host_capability": host_inputs["host_capability"],
             },
         )
 
@@ -7755,8 +7772,11 @@ def test_independent_review_host_capability_issuer_is_not_public_runtime_entrypo
     source = (ROOT / "src/agentic_workspace/workspace_runtime_proof.py").read_text(encoding="utf-8")
 
     assert "def issue_independent_review_host_result_capability_for_adapter(" not in source
-    assert "def admit_independent_review_host_result_capability(" in source
-    assert "IndependentReviewHostAdmissionCapability" in source
+    assert "def admit_independent_review_host_result_capability(" not in source
+    assert "def _install_independent_review_host_result_admission_for_adapter_test(" not in source
+    assert "IndependentReviewHostAdmissionCapability" not in source
+    assert "_INDEPENDENT_REVIEW_HOST_BOUNDARY_TOKEN" not in source
+    assert "_CURRENT_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS" not in source
 
 
 def test_trusted_independent_review_rejects_caller_controlled_environment_trust_root(
@@ -7862,7 +7882,9 @@ def test_trusted_independent_review_rejects_invalid_host_admission_lifecycle(
         record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
 
 
-def test_high_assurance_closeout_posture_rejects_expired_independent_review_receipt(tmp_path: Path, capsys) -> None:
+def test_high_assurance_closeout_posture_rejects_expired_independent_review_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
     from agentic_workspace.workspace_runtime_proof import (
         _independent_review_scope_digest,
         admit_independent_review_result_operation,
@@ -7903,7 +7925,11 @@ claim_boundary = "critical-access-closeout"
         "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
         "custody": {"producer": "github-review-adapter", "authority_ref": "SECURITY.md#critical-access"},
     }
-    host_result_ref = _write_independent_review_host_result(tmp_path, review_result)
+    host_result_ref = _write_independent_review_host_result(
+        tmp_path,
+        review_result,
+        host_admission_monkeypatch=monkeypatch,
+    )
     trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
     admission = admit_independent_review_result_operation(
         target_root=tmp_path,
