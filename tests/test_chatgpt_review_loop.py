@@ -1200,31 +1200,27 @@ def test_resume_rejects_stale_result_even_when_a_new_head_was_handed_off(tmp_pat
     assert loop._load_state(tmp_path, 12)["terminal_result"]["proof_status"] == "unreported"
 
 
-def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
-    review = {"id": "failed-proof", "body": f"Fix it\n{marker()}", "url": "u"}
-    runner = FakeRunner(tmp_path, comments=[review])
-    runner.next_handoff_head = HEAD_B
-    runner.next_job_result = {"proof_status": "failed", "proof_command": "pytest -q", "proof_exit_code": 1, "push_status": "passed"}
+def test_job_result_rejects_caller_reported_failed_proof_after_push(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    saved = state(tmp_path, status="resume-in-progress")
+    loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
+    saved["session_id"] = ""
+    saved["job_attempt"]["session_id"] = ""
+    loop._save_state(tmp_path, saved)
 
-    result = loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
+    with pytest.raises(loop.LoopError) as error:
+        loop.report_job_result(
+            cwd=tmp_path,
+            session_id=SESSION,
+            proof_status="failed",
+            proof_command="pytest -q",
+            proof_exit_code=1,
+            push_status="passed",
+            runner=runner,
+        )
 
-    assert result["event"] == "proof-failed"
-    terminal = loop._load_state(tmp_path, 12)["terminal_result"]
-    assert terminal["proof_status"] == "failed"
-    assert terminal["repair"] == {
-        "status": "repair-required",
-        "failed_command": "pytest -q",
-        "proof_exit_code": 1,
-        "proof_commands": ["pytest -q"],
-        "proof_boundary": "focused-proof",
-        "attempt_id": terminal["attempt_id"],
-        "attempt_revision": terminal["proof_attempt_result"]["attempt_revision"],
-        "starting_head": HEAD_A,
-        "action": "repair the failed focused proof, rerun it, then report the exact job result",
-        "blocked_claims": ["handoff-recorded", "merge-ready", "proof-passed"],
-    }
-    assert terminal["proof_attempt_result"]["kind"] == "agentic-workspace/focused-proof-attempt-result/v1"
-    assert terminal["proof_attempt_result"]["failed_command_index"] == 0
+    assert error.value.code == "job-result-failed-proof-requires-executor"
+    assert "producer-owned proof attempt" in str(error.value)
 
 
 def test_spawned_worktree_sequence_records_failed_proof_repair_and_final_head(tmp_path: Path, monkeypatch) -> None:

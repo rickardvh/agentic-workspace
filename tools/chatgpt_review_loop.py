@@ -853,6 +853,11 @@ def report_job_result(
                 "job-result-caller-proof-identity-unsupported",
                 "multi-command proof identity must be produced by --run-proof-commands-json, not caller-supplied list/index fields",
             )
+        if proof_status == "failed":
+            raise LoopError(
+                "job-result-failed-proof-requires-executor",
+                "failed proof repair requires a producer-owned proof attempt from --run-proof-commands-json or --run-aw-selected-proof",
+            )
         proof_attempt_result = _focused_proof_attempt_result(
             attempt=attempt,
             proof_status=proof_status,
