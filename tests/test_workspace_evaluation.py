@@ -26,7 +26,6 @@ from agentic_workspace.evaluation import (
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
     WORKSPACE_LOCAL_EVALUATIONS_DIR,
-    _install_external_evaluation_adapter_host_result_admission_for_adapter_test,
     _write_indexed_owner_receipt,
     append_observation,
     closure_authority,
@@ -51,7 +50,12 @@ from agentic_workspace.evaluation import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _write_external_evaluation_adapter_host_result(target_root: Path, **values: object) -> dict[str, object]:
+def _write_external_evaluation_adapter_host_result(
+    target_root: Path,
+    *,
+    host_admission_monkeypatch: pytest.MonkeyPatch | None = None,
+    **values: object,
+) -> dict[str, object]:
     admission_context = {
         "audience": str(values.get("audience") or EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE),
         "workspace_ref": str(values.get("workspace_ref") or f"workspace:path:{target_root.resolve()}"),
@@ -85,27 +89,35 @@ def _write_external_evaluation_adapter_host_result(target_root: Path, **values: 
     result_id = hashlib.sha256(json.dumps(result, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
     result["result_id"] = result_id
     result["result_ref"] = f"external-evaluation-adapter-host-result:{result_id}"
-    admission = _install_external_evaluation_adapter_host_result_admission_for_adapter_test(
-        target_root=target_root,
-        ref=str(result["result_ref"]),
-        result=result,
-        issued_at=admission_context["issued_at"],
-        expires_at=admission_context["expires_at"],
-        nonce=admission_context["nonce"],
+    result["host_admission_ref"] = (
+        "external-evaluation-adapter-host-result-admission:"
+        + hashlib.sha256(
+            json.dumps(
+                {
+                    "result_ref": result["result_ref"],
+                    "workspace_ref": f"workspace:path:{target_root.resolve()}",
+                    "nonce": admission_context["nonce"],
+                    "overrides": values,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()[:24]
     )
-    if "audience" in values:
-        admission["audience"] = str(values["audience"])
-    if "workspace_ref" in values:
-        admission["workspace_ref"] = str(values["workspace_ref"])
-    if "key_workspace_ref" in values:
-        admission["workspace_ref"] = str(values["key_workspace_ref"])
-    if "key_workspace_path" in values:
-        admission["workspace_path"] = str(values["key_workspace_path"])
-    if "key_status" in values:
-        admission["status"] = str(values["key_status"])
-    if "key_revoked_at" in values:
-        admission["revoked_at"] = str(values["key_revoked_at"])
-    result["host_admission_ref"] = admission["admission_ref"]
+    if host_admission_monkeypatch is not None:
+        import agentic_workspace.evaluation as evaluation_runtime
+
+        admitted_ref = str(result["result_ref"])
+
+        def _test_host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, object], *, target_root: Path) -> bool:
+            _ = (result, target_root)
+            return ref == admitted_ref
+
+        host_admission_monkeypatch.setattr(
+            evaluation_runtime,
+            "_host_admits_external_delivery_adapter_host_result",
+            _test_host_admits_external_delivery_adapter_host_result,
+        )
     root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR
     path = root / f"{result_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -257,9 +269,10 @@ def _definition_kwargs() -> dict:
     }
 
 
-def _adapter_receipt_file(tmp_path: Path, receipt: dict) -> str:
+def _adapter_receipt_file(tmp_path: Path, receipt: dict, *, host_admission_monkeypatch: pytest.MonkeyPatch) -> str:
     host = _write_external_evaluation_adapter_host_result(
         tmp_path,
+        host_admission_monkeypatch=host_admission_monkeypatch,
         delivery_id=receipt["delivery_id"],
         sink_id=receipt["sink_id"],
         producer=receipt["producer"],
@@ -290,7 +303,7 @@ def _adapter_receipt_file(tmp_path: Path, receipt: dict) -> str:
     return result["receipt_ref"]
 
 
-def test_external_adapter_receipt_requires_matching_host_result(tmp_path: Path) -> None:
+def test_external_adapter_receipt_requires_matching_host_result(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     receipt = {
         "delivery_id": "delivery-1",
         "sink_id": "#1969",
@@ -304,7 +317,7 @@ def test_external_adapter_receipt_requires_matching_host_result(tmp_path: Path) 
         record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt)
     with pytest.raises(WorkspaceUsageError, match="provider-owned evidence"):
         record_external_evaluation_adapter_host_result(target_root=tmp_path, **receipt)
-    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
+    host = _write_external_evaluation_adapter_host_result(tmp_path, host_admission_monkeypatch=monkeypatch, **receipt)
     with pytest.raises(WorkspaceUsageError, match="do not match"):
         record_external_evaluation_adapter_receipt(
             target_root=tmp_path,
@@ -354,30 +367,25 @@ def test_external_adapter_receipt_rejects_jointly_forged_local_host_result(tmp_p
 
 
 def test_external_evaluation_host_admission_rejects_raw_caller_mapping(tmp_path: Path) -> None:
-    from agentic_workspace.evaluation import admit_external_evaluation_adapter_host_result
+    import agentic_workspace.evaluation as evaluation_runtime
 
-    with pytest.raises(WorkspaceUsageError, match="opaque provider-issued admission handle"):
-        admit_external_evaluation_adapter_host_result(  # type: ignore[arg-type]
-            target_root=tmp_path,
-            admission_handle={
-                "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-result/v1",
-                "status": "current",
-                "admission_ref": "external-evaluation-adapter-host-result-admission:caller-forged",
-            },
-        )
+    _ = tmp_path
+    assert not hasattr(evaluation_runtime, "admit_external_evaluation_adapter_host_result")
+    assert not hasattr(evaluation_runtime, "ExternalEvaluationAdapterHostResultAdmissionHandle")
 
 
 def test_external_evaluation_host_admission_issuer_is_not_public_runtime_entrypoint() -> None:
     source = (ROOT / "src/agentic_workspace/evaluation.py").read_text(encoding="utf-8")
 
     assert "def issue_external_evaluation_adapter_host_result_admission_for_adapter(" not in source
-    assert "def admit_external_evaluation_adapter_host_result(" in source
-    assert "ExternalEvaluationAdapterHostResultAdmissionHandle" in source
+    assert "def admit_external_evaluation_adapter_host_result(" not in source
+    assert "def _install_external_evaluation_adapter_host_result_admission_for_adapter_test(" not in source
+    assert "ExternalEvaluationAdapterHostResultAdmissionHandle" not in source
+    assert "_EXTERNAL_EVALUATION_ADAPTER_HOST_BOUNDARY_TOKEN" not in source
+    assert "_CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS" not in source
 
 
-def test_external_adapter_receipt_reresolves_host_admission_across_process_boundary(tmp_path: Path) -> None:
-    from agentic_workspace import evaluation
-
+def test_external_adapter_receipt_rejects_local_admission_cache_across_process_boundary(tmp_path: Path) -> None:
     receipt = {
         "delivery_id": "delivery-1",
         "sink_id": "#1969",
@@ -388,12 +396,9 @@ def test_external_adapter_receipt_reresolves_host_admission_across_process_bound
         "status": "delivered",
     }
     host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
-    evaluation._CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS.clear()
 
-    recorded = record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
-
-    assert recorded["status"] == "recorded"
-    assert recorded["host_result_ref"] == host["result_ref"]
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
 
 
 @pytest.mark.parametrize(
@@ -550,7 +555,7 @@ def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(t
     assert quiet["actions"] == []
 
 
-def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -> None:
+def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
     quiet = evaluation_report_payload(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
     assert quiet["status"] == "not-due"
@@ -606,7 +611,11 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
         record_external_evaluation_report_delivery(
             target_root=tmp_path,
             request=external,
-            adapter_receipt_ref=_adapter_receipt_file(tmp_path, failed_receipt),
+            adapter_receipt_ref=_adapter_receipt_file(
+                tmp_path,
+                failed_receipt,
+                host_admission_monkeypatch=monkeypatch,
+            ),
         )["retry"]
         is True
     )
@@ -618,7 +627,11 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
         record_external_evaluation_report_delivery(
             target_root=tmp_path,
             request=external,
-            adapter_receipt_ref=_adapter_receipt_file(tmp_path, delivered_receipt),
+            adapter_receipt_ref=_adapter_receipt_file(
+                tmp_path,
+                delivered_receipt,
+                host_admission_monkeypatch=monkeypatch,
+            ),
         )["status"]
         == "delivered"
     )
@@ -626,7 +639,11 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path) -
         record_external_evaluation_report_delivery(
             target_root=tmp_path,
             request=external,
-            adapter_receipt_ref=_adapter_receipt_file(tmp_path, delivered_receipt),
+            adapter_receipt_ref=_adapter_receipt_file(
+                tmp_path,
+                delivered_receipt,
+                host_admission_monkeypatch=monkeypatch,
+            ),
         )["status"]
         == "already-delivered"
     )
@@ -1299,11 +1316,9 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
     from agentic_workspace.generated_operations import (
         evaluation_delivery_status,
         evaluation_external_adapter_receipt,
-        evaluation_external_delivery,
         evaluation_external_request,
         evaluation_local_delivery,
         evaluation_report_preview,
-        evaluation_retry,
     )
 
     preview = evaluation_report_preview(
@@ -1340,34 +1355,21 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
         capability_revision="github-issues-adapter:v1",
         status="failed",
     )
-    adapter = evaluation_external_adapter_receipt(
-        {
-            "delivery_id": request["delivery_id"],
-            "sink_id": "#1969",
-            "producer": "github-issues-adapter",
-            "attempt_revision": "attempt-public-1",
-            "receipt_revision": "receipt-public-1",
-            "capability_revision": "github-issues-adapter:v1",
-            "status": "failed",
-            "host_result_ref": host["result_ref"],
-        },
-        target=tmp_path,
-        invocation=invocation,
-    )
-    assert adapter["status"] == "recorded"
-    admitted = evaluation_external_delivery(
-        {
-            "evaluation_id": "eval-1969-operating-loop",
-            "explicit": True,
-            "adapter_receipt_ref": adapter["receipt_ref"],
-        },
-        target=tmp_path,
-        invocation=invocation,
-    )
-    assert admitted["status"] == "failed"
-    retry = evaluation_retry(
-        {"evaluation_id": "eval-1969-operating-loop", "sink_id": "#1969"},
-        target=tmp_path,
-        invocation=invocation,
-    )
-    assert retry["status"] == "retryable"
+    from agentic_workspace import AWClientError
+
+    with pytest.raises(AWClientError) as exc_info:
+        evaluation_external_adapter_receipt(
+            {
+                "delivery_id": request["delivery_id"],
+                "sink_id": "#1969",
+                "producer": "github-issues-adapter",
+                "attempt_revision": "attempt-public-1",
+                "receipt_revision": "receipt-public-1",
+                "capability_revision": "github-issues-adapter:v1",
+                "status": "failed",
+                "host_result_ref": host["result_ref"],
+            },
+            target=tmp_path,
+            invocation=invocation,
+        )
+    assert "host boundary" in json.dumps(exc_info.value.args)

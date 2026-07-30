@@ -5,7 +5,7 @@ import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, mutation_baseline_payload
 from agentic_workspace.config import WorkspaceUsageError
@@ -30,8 +30,6 @@ EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND = (
     "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-index/v1"
 )
 EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE = "agentic-workspace.evaluation-external-delivery"
-_CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS: dict[str, dict[str, Any]] = {}
-_EXTERNAL_EVALUATION_ADAPTER_HOST_BOUNDARY_TOKEN = object()
 EVALUATION_FINDING_FOLLOWUPS_KIND = "agentic-workspace/evaluation-finding-followups/v1"
 OBSERVATION_RETENTION_CAP = 100
 OBSERVATION_BYTE_CAP = 256_000
@@ -449,75 +447,6 @@ def _parse_evaluation_time(value: Any) -> datetime | None:
     return parsed
 
 
-class ExternalEvaluationAdapterHostResultAdmissionHandle:
-    """Opaque provider/adapter-issued admission handle for delivery results."""
-
-    __slots__ = ("admission",)
-
-    def __init__(self, *, _host_boundary_token: object, admission: Mapping[str, Any]) -> None:
-        if _host_boundary_token is not _EXTERNAL_EVALUATION_ADAPTER_HOST_BOUNDARY_TOKEN:
-            raise WorkspaceUsageError("external evaluation host result admission must be issued by a provider adapter boundary.")
-        self.admission = dict(admission)
-
-
-def _external_evaluation_adapter_host_result_admission_payload(
-    *,
-    target_root: Path,
-    ref: str,
-    result: dict[str, Any],
-    status: str = "current",
-    issued_at: str = "2026-07-29T00:00:00Z",
-    expires_at: str = "2099-01-01T00:00:00Z",
-    nonce: str = "",
-    revoked_at: str = "",
-    superseded_by: str = "",
-) -> dict[str, Any]:
-    raw_custody = result.get("custody")
-    custody = raw_custody if isinstance(raw_custody, dict) else {}
-    raw_context = result.get("admission_context")
-    context = raw_context if isinstance(raw_context, dict) else {}
-    result_digest = _external_delivery_adapter_host_result_digest(result)
-    admission_ref = (
-        "external-evaluation-adapter-host-result-admission:"
-        + _stable_json_digest(
-            {
-                "result_ref": ref,
-                "result_digest": result_digest,
-                "workspace_ref": f"workspace:path:{target_root.resolve()}",
-                "nonce": nonce or str(context.get("nonce") or ""),
-            }
-        )[:24]
-    )
-    admission = {
-        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-result/v1",
-        "status": status,
-        "admission_ref": admission_ref,
-        "result_ref": ref,
-        "result_digest": result_digest,
-        "delivery_id": str(result.get("delivery_id") or ""),
-        "sink_id": str(result.get("sink_id") or ""),
-        "attempt_revision": str(result.get("attempt_revision") or ""),
-        "receipt_revision": str(result.get("receipt_revision") or ""),
-        "capability_revision": str(result.get("capability_revision") or ""),
-        "producer": str(custody.get("producer") or ""),
-        "trusted_channel": str(custody.get("trusted_channel") or ""),
-        "audience": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE,
-        "workspace_ref": f"workspace:path:{target_root.resolve()}",
-        "workspace_path": str(target_root.resolve()),
-        "issued_at": issued_at,
-        "expires_at": expires_at,
-        "nonce": nonce or str(context.get("nonce") or ""),
-        "revoked_at": revoked_at,
-        "superseded_by": superseded_by,
-        "custody": {
-            "producer": "external-evaluation-provider-host-adapter",
-            "trusted_channel": "host-admission-capability",
-            "rule": "Opaque test fixture for provider-admitted delivery result; local JSON alone is not authority.",
-        },
-    }
-    return admission
-
-
 def _write_external_evaluation_adapter_host_result_admission(*, target_root: Path, admission: dict[str, Any]) -> dict[str, Any]:
     admission_ref = str(admission.get("admission_ref") or "")
     admission_id = admission_ref.removeprefix("external-evaluation-adapter-host-result-admission:")
@@ -542,39 +471,9 @@ def _write_external_evaluation_adapter_host_result_admission(*, target_root: Pat
     return admission
 
 
-def admit_external_evaluation_adapter_host_result(
-    *,
-    target_root: Path,
-    admission_handle: ExternalEvaluationAdapterHostResultAdmissionHandle,
-) -> dict[str, Any]:
-    """Install a current provider-owned host-result admission from an opaque handle."""
-
-    if not isinstance(admission_handle, ExternalEvaluationAdapterHostResultAdmissionHandle):
-        raise WorkspaceUsageError("external evaluation host result admission requires an opaque provider-issued admission handle.")
-    admission = dict(admission_handle.admission)
-    _CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS[str(admission.get("admission_ref") or "")] = admission
-    return _write_external_evaluation_adapter_host_result_admission(target_root=target_root, admission=admission)
-
-
-def _install_external_evaluation_adapter_host_result_admission_for_adapter_test(
-    **kwargs: Any,
-) -> dict[str, Any]:
-    target_root = kwargs.get("target_root")
-    if not isinstance(target_root, Path):
-        raise WorkspaceUsageError("external evaluation adapter test admission requires target_root.")
-    handle = ExternalEvaluationAdapterHostResultAdmissionHandle(
-        _host_boundary_token=_EXTERNAL_EVALUATION_ADAPTER_HOST_BOUNDARY_TOKEN,
-        admission=_external_evaluation_adapter_host_result_admission_payload(**kwargs),
-    )
-    return admit_external_evaluation_adapter_host_result(target_root=target_root, admission_handle=handle)
-
-
 def _load_external_delivery_adapter_host_admission(*, target_root: Path, admission_ref: str, result_ref: str) -> dict[str, Any] | None:
     if not admission_ref.startswith("external-evaluation-adapter-host-result-admission:"):
         return None
-    cached = _CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS.get(admission_ref)
-    if isinstance(cached, dict):
-        return cached
     admission_id = admission_ref.removeprefix("external-evaluation-adapter-host-result-admission:")
     root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR
     index_path = root / "index.json"
@@ -599,55 +498,21 @@ def _load_external_delivery_adapter_host_admission(*, target_root: Path, admissi
         or hashlib.sha256(candidate.read_bytes()).hexdigest() != entry.get("admission_digest")
     ):
         return None
-    _CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS[admission_ref] = payload
     return payload
 
 
 def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, Any], *, target_root: Path) -> bool:
-    admission_ref = str(result.get("host_admission_ref") or "")
-    if not admission_ref.startswith("external-evaluation-adapter-host-result-admission:"):
-        return False
-    admission = _load_external_delivery_adapter_host_admission(target_root=target_root, admission_ref=admission_ref, result_ref=ref)
-    if not isinstance(admission, dict):
-        return False
-    raw_custody = result.get("custody")
-    custody: dict[str, Any] = raw_custody if isinstance(raw_custody, dict) else {}
-    raw_admission_custody = admission.get("custody")
-    admission_custody = raw_admission_custody if isinstance(raw_admission_custody, dict) else {}
-    now = datetime.now(UTC)
-    issued_at = _parse_evaluation_time(admission.get("issued_at"))
-    expires_at = _parse_evaluation_time(admission.get("expires_at"))
-    workspace_ref = str(admission.get("workspace_ref") or "")
-    if (
-        admission.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-result/v1"
-        or admission.get("status") != "current"
-        or admission.get("admission_ref") != admission_ref
-        or admission.get("result_ref") != ref
-        or admission.get("result_digest") != _external_delivery_adapter_host_result_digest(result)
-        or admission.get("delivery_id") != str(result.get("delivery_id") or "")
-        or admission.get("sink_id") != str(result.get("sink_id") or "")
-        or admission.get("attempt_revision") != str(result.get("attempt_revision") or "")
-        or admission.get("receipt_revision") != str(result.get("receipt_revision") or "")
-        or admission.get("capability_revision") != str(result.get("capability_revision") or "")
-        or admission.get("trusted_channel") not in {"provider-webhook", "external-operation-adapter", "delivery-provider-receipt"}
-        or admission.get("producer") != str(custody.get("producer") or "")
-        or admission.get("audience") != EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE
-        or not workspace_ref
-        or workspace_ref.removeprefix("workspace:path:") != str(target_root.resolve())
-        or str(admission.get("workspace_path") or "") != str(target_root.resolve())
-        or issued_at is None
-        or expires_at is None
-        or issued_at > now
-        or expires_at <= now
-        or not str(admission.get("nonce") or "")
-        or admission.get("revoked_at")
-        or admission.get("superseded_by")
-    ):
-        return False
-    return (
-        admission_custody.get("producer") == "external-evaluation-provider-host-adapter"
-        and admission_custody.get("trusted_channel") == "host-admission-capability"
-    )
+    """Return whether the protected provider/adapter boundary admitted this result.
+
+    Production evaluation code intentionally has no token, handle constructor,
+    process-global admission registry, or caller-callable admission operation.
+    Provider adapters must inject this verdict from outside ordinary AW
+    operation authority. Repo-local result/admission files are caches; without
+    that protected boundary they fail closed.
+    """
+
+    _ = (ref, result, target_root)
+    return False
 
 
 def _load_external_delivery_adapter_host_result(*, target_root: Path, result_ref: str) -> dict[str, Any]:
