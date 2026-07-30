@@ -14,18 +14,30 @@ def _trusted_guidance_host_event(
     source: str = "",
     target_revision: str = "",
     event_id: str = "",
+    admission_context_overrides: dict[str, object] | None = None,
+    key_overrides: dict[str, object] | None = None,
 ) -> dict[str, object]:
     import base64
+    import os
     import subprocess
 
     from agentic_workspace.agent_guidance import (
-        TRUSTED_AUTHORITY_EVENT_ADMISSION_KEY_ID,
+        TRUSTED_AUTHORITY_EVENT_AUDIENCE,
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
         _guidance_json_bytes,
         _json_digest,
         _trusted_authority_event_admission_payload,
     )
 
+    admission_context = {
+        "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        "workspace_ref": f"workspace:path:{target_root.resolve()}",
+        "issued_at": "2026-07-29T00:00:00Z",
+        "expires_at": "2099-01-01T00:00:00Z",
+        "nonce": f"{source_ref}:{event_id or 'event'}",
+    }
+    if admission_context_overrides:
+        admission_context.update(admission_context_overrides)
     event = {
         "kind": "agentic-workspace/trusted-authority-host-event/v1",
         "status": "current",
@@ -37,6 +49,7 @@ def _trusted_guidance_host_event(
         "target_revision": target_revision,
         "event_id": event_id,
         "recorded_at": "2026-07-29T00:00:00Z",
+        "admission_context": admission_context,
         "custody": {
             "producer": "github-review-adapter",
             "trusted_channel": "github-review-webhook",
@@ -46,37 +59,37 @@ def _trusted_guidance_host_event(
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
     signed_payload = _trusted_authority_event_admission_payload(ref=event_ref, event=event)
-    private_key = """-----BEGIN PRIVATE KEY-----
-MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDeRnuGSKyZ1DK0
-IeOFMmnoUPLeGXafks5pL+MTSKhqL9M4hoVfRdQG/sh5hYYPKmn+DkShGFRarFVK
-p8qEskZ+a4H6swiSiQVRaEKZrKJn9PViHbDFg6w+UxKOzUEjn35a0mi3c3VIwqCf
-vKS2GqZ0mVfHmQ5LPm/dG69SS1g3E0/GBd9hd4flb2Kf+icIpCfbuDvXm2qMMHnI
-BNCzigMma/zyDLe4+/YfKRc0j/vhzLvS55LI4cYbyJ03VLssRap+kAJwpp7B9JJU
-0o9mOpXAWxdtlXKx4yZEvHcMHe8a54OxgnJd+nAty06BPFPXjaYgEzRk8xNSqFMB
-rQ/Sc0W5AgMBAAECggEAFUQIyimOkuabhcKmxA31Vj/VZqSoxd5br3Jgjy4gx80E
-0DgFj16MyTEL4N2CnJWWH7OBgyii3Gx3ug1o2a59Qlfajw/dMnjXyIi5M37x6FCG
-QBF/YbxF6M4VnNI8KNJ3+iw+jsul9VTCnZnEp/QPiCEKJgtpk88Y0H6XNOBGw7kA
-dwU/6DOQrEGFCLSWpoXB+YKBF80savEMqYuPikquXMA1XIYZNQK2hUAVovfjMqhR
-6+aSERYm72zpxVWxXA37hd75qPw/8ui1W4fx42gVrjhMclyoYFKVU8tvbDJ9y38D
-vl2ksmXHMLbkA6no6PbPhlR+4ZFQg3uFs1obL584UQKBgQD4Kd3WauVDAaIf4w0W
-fF9hZPtrJimSrOs00hrp0iVyuOOL5kuw0JOTj6rAvj2hNPS6CdgaLSck57LZj0S3
-XXT3dtAH2IkwWFMC+0vkmHCHBWRkmizBL2/r+UGsWrXdQL0RWK90m5YdyBYLDqXp
-wcxfRV7Xnq6Gmeig0h40xusdEQKBgQDlS1Z3EcuAIl5njRCcnFvdKJ49mygg6361
-/ETK/DqCdQMM2StKA+oE+QqK3QuYv33RkW6P5lGksjxuXFUMSPXRy6KUwQ84diDf
-c1uwMbaO8Jz7MrLQHx78uvtbZ4FaZmD2oEda6HCjZsLdhvQxzDv07mStSSfzeuWw
-kWa616m+KQKBgQCoKeazt7gn0eGE7h0eUaVooD9m+nNNe3PfVUj7jXXm6bb4RFSi
-OpTmd4JkHgYxSWtU7frMsjBGZ+PgXZ9ZCjGKx65swqUkZ5XI/XUOMOZ/+H1xVrBh
-ML4ND9ka7FU02vvD1279+7ib8cxOLdzsLHFLVfzQ7Cyj9YOYBwqFBQ6poQKBgQDX
-elkjRGHNZH77KSH3Syk5SLaMhobLiQNm2k97wlTpzDS1mlCIGe2OBsvVe60uOqZu
-jxErwfHvqGAKBlMWXGpGYevDhzpagQibdLkxd0ZsRcoAdsB7vQNN1hno5/gzkAqH
-OlBUKiPQKv3tWKmbMqcVogKSpjEZKuE3cSztYUZvIQKBgQCSl9lwbyoBl0uHkpfr
-73b5i4wyd4ati2SXUS8oDYVtFkcbqNJcktmnQ5Q0D6L9QQKA2FJQekWqRfIq+Pcv
-ioaPTHa3ePxgbiKav/N4iu04Ce9khx/xeXsgslrNgGU6HrySn4FiG10HGYbrOV57
-ptscLbLtU7mXdb4Tfrw9Z0Rpag==
------END PRIVATE KEY-----
-"""
     key_path = target_root / ".agentic-workspace" / "local" / "trusted-authority-test-host-key.pem"
-    _write(key_path, private_key)
+    key_path.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
+        capture_output=True,
+        check=True,
+    )
+    modulus = (
+        subprocess.run(
+            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        .stdout.strip()
+        .split("=", 1)[1]
+    )
+    key_id = "trusted-authority-host-test-" + _json_digest({"event_ref": event_ref, "modulus": modulus})[:12]
+    key = {
+        "algorithm": "RS256",
+        "status": "current",
+        "e": 65537,
+        "n": modulus.lower(),
+        "workspace_ref": f"workspace:path:{target_root.resolve()}",
+        "workspace_path": str(target_root.resolve()),
+        "not_before": "2026-01-01T00:00:00Z",
+        "expires_at": "2099-01-01T00:00:00Z",
+    }
+    if key_overrides:
+        key.update(key_overrides)
+    os.environ["AW_TRUSTED_AUTHORITY_EVENT_ADMISSION_KEYS"] = json.dumps({key_id: key})
     completed = subprocess.run(
         ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
         input=_guidance_json_bytes(signed_payload),
@@ -87,7 +100,7 @@ ptscLbLtU7mXdb4Tfrw9Z0Rpag==
         "kind": "agentic-workspace/trusted-authority-host-admission/v1",
         "status": "current",
         "algorithm": "RS256",
-        "key_id": TRUSTED_AUTHORITY_EVENT_ADMISSION_KEY_ID,
+        "key_id": key_id,
         "signed_payload": signed_payload,
         "signature": base64.b64encode(completed.stdout).decode("ascii"),
     }
@@ -1905,6 +1918,50 @@ def test_guidance_receipts_reject_jointly_forged_local_host_event(tmp_path: Path
             source_ref="review-1",
             target_revision="rev-1",
             host_event_ref=event_ref,
+        )
+
+
+@pytest.mark.parametrize(
+    ("case_name", "admission_context_overrides", "key_overrides"),
+    [
+        ("wrong-audience", {"audience": "other-consumer"}, {}),
+        ("missing-nonce", {"nonce": ""}, {}),
+        ("expired-admission", {"expires_at": "2026-01-01T00:00:00Z"}, {}),
+        ("revoked-key", {}, {"revoked_at": "2026-07-29T00:00:00Z"}),
+        ("wrong-workspace", {}, {"workspace_path": "not-this-workspace"}),
+    ],
+)
+def test_guidance_receipts_reject_invalid_host_admission_lifecycle(
+    tmp_path: Path,
+    case_name: str,
+    admission_context_overrides: dict[str, object],
+    key_overrides: dict[str, object],
+) -> None:
+    from agentic_workspace.agent_guidance import record_trusted_authority_receipt
+    from agentic_workspace.config import WorkspaceUsageError
+
+    host_event = _trusted_guidance_host_event(
+        tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref=f"review-{case_name}",
+        target_revision="rev-1",
+        admission_context_overrides=admission_context_overrides,
+        key_overrides=key_overrides,
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_trusted_authority_receipt(
+            target_root=tmp_path,
+            authority="pr-review",
+            producer_class="human-reviewer",
+            producer_id="reviewer-1",
+            source="github-review",
+            source_ref=f"review-{case_name}",
+            target_revision="rev-1",
+            host_event_ref=str(host_event["event_ref"]),
         )
 
 

@@ -21,24 +21,9 @@ from agentic_workspace.config import (
 CORRECTION_EVENT_RETENTION_CAP = 20
 GUIDANCE_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/guidance-receipts.json")
 TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-events")
-TRUSTED_AUTHORITY_EVENT_ADMISSION_KEY_ID = "trusted-authority-host-rsa-2026-07-30"
-TRUSTED_AUTHORITY_EVENT_ADMISSION_PUBLIC_KEYS = {
-    TRUSTED_AUTHORITY_EVENT_ADMISSION_KEY_ID: {
-        "algorithm": "RS256",
-        "e": 65537,
-        "n": (
-            "de467b8648ac99d432b421e3853269e850f2de19769f92ce692fe31348a86a2f"
-            "d33886855f45d406fec87985860f2a69fe0e44a118545aac554aa7ca84b2467e"
-            "6b81fab30892890551684299aca267f4f5621db0c583ac3e53128ecd41239f7e"
-            "5ad268b7737548c2a09fbca4b61aa6749957c7990e4b3e6fdd1baf524b5837"
-            "134fc605df617787e56f629ffa2708a427dbb83bd79b6a8c3079c804d0b38a"
-            "03266bfcf20cb7b8fbf61f2917348ffbe1ccbbd2e792c8e1c61bc89d3754"
-            "bb2c45aa7e900270a69ec1f49254d28f663a95c05b176d9572b1e32644bc"
-            "770c1def1ae783b182725dfa702dcb4e813c53d78da620133464f31352a8"
-            "5301ad0fd27345b9"
-        ),
-    }
-}
+TRUSTED_AUTHORITY_EVENT_ADMISSION_KEY_ID = "trusted-authority-host-configured"
+TRUSTED_AUTHORITY_EVENT_ADMISSION_PUBLIC_KEYS: dict[str, dict[str, Any]] = {}
+TRUSTED_AUTHORITY_EVENT_AUDIENCE = "agentic-workspace.guidance-authority"
 
 
 def _guidance_now() -> str:
@@ -747,6 +732,8 @@ def _trusted_authority_event_digest(event: dict[str, Any]) -> str:
 def _trusted_authority_event_admission_payload(*, ref: str, event: dict[str, Any]) -> dict[str, Any]:
     raw_custody = event.get("custody")
     custody = raw_custody if isinstance(raw_custody, dict) else {}
+    raw_context = event.get("admission_context")
+    context = raw_context if isinstance(raw_context, dict) else {}
     return {
         "kind": "agentic-workspace/trusted-authority-host-admission-payload/v1",
         "event_ref": ref,
@@ -757,6 +744,11 @@ def _trusted_authority_event_admission_payload(*, ref: str, event: dict[str, Any
         "trusted_channel": str(custody.get("trusted_channel") or ""),
         "source_ref": str(event.get("source_ref") or ""),
         "target_revision": str(event.get("target_revision") or ""),
+        "audience": str(context.get("audience") or ""),
+        "workspace_ref": str(context.get("workspace_ref") or ""),
+        "issued_at": str(context.get("issued_at") or ""),
+        "expires_at": str(context.get("expires_at") or ""),
+        "nonce": str(context.get("nonce") or ""),
     }
 
 
@@ -783,22 +775,82 @@ def _rsa_sha256_verify(*, message: bytes, signature_b64: str, modulus_hex: str, 
     return encoded[separator + 1 :] == digest_info
 
 
-def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any]) -> bool:
+def _trusted_authority_public_keys_from_host() -> dict[str, dict[str, Any]]:
+    """Return host-injected trusted public keys.
+
+    Repo-local code intentionally ships no production trust root. Tests and host
+    adapters may inject a public-key set through this environment boundary while
+    keeping private signing capability outside source and generated payloads.
+    """
+
+    keys = {key_id: dict(key) for key_id, key in TRUSTED_AUTHORITY_EVENT_ADMISSION_PUBLIC_KEYS.items()}
+    raw = os.environ.get("AW_TRUSTED_AUTHORITY_EVENT_ADMISSION_KEYS", "").strip()
+    if not raw:
+        return keys
+    try:
+        loaded = json.loads(raw)
+    except json.JSONDecodeError:
+        return keys
+    if not isinstance(loaded, dict):
+        return keys
+    for key_id, key in loaded.items():
+        if isinstance(key, dict):
+            keys[str(key_id)] = dict(key)
+    return keys
+
+
+def _parse_guidance_time(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed
+
+
+def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any], target_root: Path) -> bool:
     admitted = event.get("host_admission")
     if not isinstance(admitted, dict):
         return False
     signed_payload = admitted.get("signed_payload")
     if not isinstance(signed_payload, dict) or signed_payload != _trusted_authority_event_admission_payload(ref=ref, event=event):
         return False
-    key = TRUSTED_AUTHORITY_EVENT_ADMISSION_PUBLIC_KEYS.get(str(admitted.get("key_id") or ""))
+    key = _trusted_authority_public_keys_from_host().get(str(admitted.get("key_id") or ""))
     if not isinstance(key, dict):
         return False
+    now = datetime.now(UTC)
+    issued_at = _parse_guidance_time(signed_payload.get("issued_at"))
+    expires_at = _parse_guidance_time(signed_payload.get("expires_at"))
+    key_not_before = _parse_guidance_time(key.get("not_before"))
+    key_expires_at = _parse_guidance_time(key.get("expires_at"))
+    workspace_ref = str(signed_payload.get("workspace_ref") or "")
+    expected_workspace = str(key.get("workspace_ref") or workspace_ref)
+    key_workspace_path = str(key.get("workspace_path") or "")
     if (
         admitted.get("kind") != "agentic-workspace/trusted-authority-host-admission/v1"
         or admitted.get("status") != "current"
+        or key.get("status", "current") != "current"
         or admitted.get("algorithm") != key.get("algorithm")
         or admitted.get("revoked_at")
         or admitted.get("superseded_by")
+        or key.get("revoked_at")
+        or key.get("superseded_by")
+        or signed_payload.get("audience") != TRUSTED_AUTHORITY_EVENT_AUDIENCE
+        or workspace_ref != expected_workspace
+        or not workspace_ref
+        or workspace_ref.removeprefix("workspace:path:") != str(target_root.resolve())
+        or (bool(key_workspace_path) and key_workspace_path != str(target_root.resolve()))
+        or issued_at is None
+        or expires_at is None
+        or issued_at > now
+        or expires_at <= now
+        or (key_not_before is not None and key_not_before > now)
+        or (key_expires_at is not None and key_expires_at <= now)
+        or not str(signed_payload.get("nonce") or "")
         or signed_payload.get("trusted_channel") not in {"github-review-webhook", "human-instruction-host", "evaluation-result-adapter"}
     ):
         return False
@@ -823,7 +875,7 @@ def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[
         raise WorkspaceUsageError("trusted authority host event has the wrong contract.")
     if event.get("status") != "current":
         raise WorkspaceUsageError("trusted authority host event is not current.")
-    if not _host_admits_trusted_authority_event(ref=ref, event=event):
+    if not _host_admits_trusted_authority_event(ref=ref, event=event, target_root=target_root):
         raise WorkspaceUsageError("trusted authority host event was not admitted by the host boundary.")
     custody = event.get("custody") if isinstance(event.get("custody"), dict) else {}
     if custody.get("producer") in {"", "agentic-workspace.trusted-authority-host-event", "caller", "implementer"}:
