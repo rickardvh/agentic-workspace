@@ -448,7 +448,7 @@ def _parse_evaluation_time(value: Any) -> datetime | None:
     return parsed
 
 
-def _install_external_evaluation_adapter_host_result_admission_for_adapter_test(
+def admit_external_evaluation_adapter_host_result(
     *,
     target_root: Path,
     ref: str,
@@ -460,12 +460,12 @@ def _install_external_evaluation_adapter_host_result_admission_for_adapter_test(
     revoked_at: str = "",
     superseded_by: str = "",
 ) -> dict[str, Any]:
-    """Install a current provider-owned host-result admission for tests.
+    """Install a current provider-owned host-result admission capability.
 
-    Production AW code has no caller-facing operation that authors external
-    provider delivery authority. A host/adapter authenticates provider evidence
-    outside the repo runtime and injects only an opaque current admission result
-    for the local receipt admission path to consume.
+    A host/adapter authenticates provider evidence outside the repo runtime and
+    injects only this opaque current admission result for local receipt
+    admission. Repo-local result/admission files are caches and are not consumed
+    as authority without this live capability.
     """
 
     raw_custody = result.get("custody")
@@ -534,42 +534,19 @@ def _install_external_evaluation_adapter_host_result_admission_for_adapter_test(
     return admission
 
 
+def _install_external_evaluation_adapter_host_result_admission_for_adapter_test(
+    **kwargs: Any,
+) -> dict[str, Any]:
+    return admit_external_evaluation_adapter_host_result(**kwargs)
+
+
 def _load_external_delivery_adapter_host_admission(*, target_root: Path, admission_ref: str, result_ref: str) -> dict[str, Any] | None:
     if not admission_ref.startswith("external-evaluation-adapter-host-result-admission:"):
         return None
     cached = _CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS.get(admission_ref)
     if isinstance(cached, dict):
         return cached
-    admission_id = admission_ref.removeprefix("external-evaluation-adapter-host-result-admission:")
-    root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR
-    path = root / f"{admission_id}.json"
-    try:
-        raw = path.read_bytes()
-        admission = json.loads(raw.decode("utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if (
-        not isinstance(admission, dict)
-        or admission.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-result/v1"
-        or admission.get("admission_ref") != admission_ref
-        or admission.get("result_ref") != result_ref
-    ):
-        return None
-    index = _load_json(root / "index.json", default={})
-    entries = index.get("admissions") if index.get("kind") == EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND else {}
-    entry = entries.get(admission_id) if isinstance(entries, dict) else None
-    if not isinstance(entry, dict):
-        return None
-    indexed_path = (root / str(entry.get("path") or "")).resolve()
-    if (
-        indexed_path != path.resolve()
-        or entry.get("status") != "current"
-        or entry.get("result_ref") != result_ref
-        or entry.get("result_digest") != admission.get("result_digest")
-        or entry.get("admission_digest") != hashlib.sha256(raw).hexdigest()
-    ):
-        return None
-    return admission
+    return None
 
 
 def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, Any], *, target_root: Path) -> bool:

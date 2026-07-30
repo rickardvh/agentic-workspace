@@ -13232,6 +13232,38 @@ def _compact_start_local_footprint_advisory(value: dict[str, Any], *, cli_invoke
     }
 
 
+def _deferred_start_local_footprint_advisory(*, cli_invoke: str, target_root: Path | None = None) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
+    return {
+        "kind": "agentic-workspace/local-footprint/v1",
+        "status": "deferred",
+        "budget_status": [],
+        "scratch_retention": {
+            "managed_run_count": "not-scanned",
+            "legacy_entry_count": "not-scanned",
+            "eligible_prune_count": "not-scanned",
+            "eligible_prune_paths": [],
+        },
+        "next_action": {
+            "action": "inspect-local-footprint-when-needed",
+            "report": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --section local_footprint --format json",
+                cli_invoke=cli_invoke,
+                target_arg=target_arg,
+            ),
+        },
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace start --target ./repo --select local_footprint --format json",
+            cli_invoke=cli_invoke,
+            target_arg=target_arg,
+        ),
+        "rule": (
+            "Default startup keeps local-footprint scanning off the first-contact critical path; "
+            "select local_footprint or run the local_footprint report for detailed evidence."
+        ),
+    }
+
+
 def _local_aw_state_role(path: str) -> str:
     normalized = path.replace("\\", "/")
     if normalized in {".agentic-workspace/config.toml", ".agentic-workspace/config.local.toml", ".agentic-workspace/OWNERSHIP.toml"}:
@@ -30588,11 +30620,7 @@ def _start_tiny_payload_fast(
             cli_invoke=config.cli_invoke,
         ),
     }
-    local_footprint = _compact_start_local_footprint_advisory(
-        _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke),
-        cli_invoke=config.cli_invoke,
-        target_root=target_root,
-    )
+    local_footprint = _deferred_start_local_footprint_advisory(cli_invoke=config.cli_invoke, target_root=target_root)
     if local_footprint.get("status") == "attention":
         payload["local_footprint"] = local_footprint
     pre_test_guardrail = _pre_test_evidence_guardrail_payload(

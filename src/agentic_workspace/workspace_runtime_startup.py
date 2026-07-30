@@ -60,6 +60,7 @@ from agentic_workspace.workspace_runtime_core import (
     _completion_closeout_inspection_payload,
     _context_router_family_payload,
     _continuation_reorientation_payload,
+    _deferred_start_local_footprint_advisory,
     _emit_payload,
     _execution_posture_payload,
     _fast_installed_modules,
@@ -911,11 +912,7 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
         ),
     }
-    local_footprint = _compact_start_local_footprint_advisory(
-        _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke),
-        cli_invoke=config.cli_invoke,
-        target_root=target_root,
-    )
+    local_footprint = _deferred_start_local_footprint_advisory(cli_invoke=config.cli_invoke, target_root=target_root)
     if local_footprint.get("status") == "attention":
         payload["local_footprint"] = local_footprint
     pre_test_guardrail = _pre_test_evidence_guardrail_payload(
