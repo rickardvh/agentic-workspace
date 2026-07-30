@@ -17,16 +17,11 @@ def _trusted_guidance_host_event(
     admission_context_overrides: dict[str, object] | None = None,
     key_overrides: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    import base64
-    import os
-    import subprocess
-
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
-        _guidance_json_bytes,
+        _install_trusted_authority_host_admission_for_adapter_test,
         _json_digest,
-        _trusted_authority_event_admission_payload,
     )
 
     admission_context = {
@@ -58,52 +53,19 @@ def _trusted_guidance_host_event(
     }
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
-    signed_payload = _trusted_authority_event_admission_payload(ref=event_ref, event=event)
-    key_path = target_root / ".agentic-workspace" / "local" / "trusted-authority-test-host-key.pem"
-    key_path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
-        capture_output=True,
-        check=True,
+    admission = _install_trusted_authority_host_admission_for_adapter_test(
+        target_root=target_root,
+        ref=event_ref,
+        event=event,
+        issued_at=str(admission_context["issued_at"]),
+        expires_at=str(admission_context["expires_at"]),
+        nonce=str(admission_context["nonce"]),
     )
-    modulus = (
-        subprocess.run(
-            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-        .stdout.strip()
-        .split("=", 1)[1]
-    )
-    key_id = "trusted-authority-host-test-" + _json_digest({"event_ref": event_ref, "modulus": modulus})[:12]
-    key = {
-        "algorithm": "RS256",
-        "status": "current",
-        "e": 65537,
-        "n": modulus.lower(),
-        "workspace_ref": f"workspace:path:{target_root.resolve()}",
-        "workspace_path": str(target_root.resolve()),
-        "not_before": "2026-01-01T00:00:00Z",
-        "expires_at": "2099-01-01T00:00:00Z",
-    }
+    if admission_context_overrides and "audience" in admission_context_overrides:
+        admission["audience"] = str(admission_context_overrides["audience"])
     if key_overrides:
-        key.update(key_overrides)
-    os.environ["AW_TRUSTED_AUTHORITY_EVENT_ADMISSION_KEYS"] = json.dumps({key_id: key})
-    completed = subprocess.run(
-        ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
-        input=_guidance_json_bytes(signed_payload),
-        capture_output=True,
-        check=True,
-    )
-    event["host_admission"] = {
-        "kind": "agentic-workspace/trusted-authority-host-admission/v1",
-        "status": "current",
-        "algorithm": "RS256",
-        "key_id": key_id,
-        "signed_payload": signed_payload,
-        "signature": base64.b64encode(completed.stdout).decode("ascii"),
-    }
+        admission.update(key_overrides)
+    event["host_admission_ref"] = admission["admission_ref"]
     path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
     return {"event_ref": event_ref, "event": event}
@@ -1861,7 +1823,6 @@ def test_guidance_receipts_reject_jointly_forged_local_host_event(tmp_path: Path
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
         _json_digest,
-        _trusted_authority_event_admission_payload,
         record_trusted_authority_receipt,
     )
     from agentic_workspace.config import WorkspaceUsageError
@@ -1884,27 +1845,15 @@ def test_guidance_receipts_reject_jointly_forged_local_host_event(tmp_path: Path
     }
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
-    monkeypatch.setenv(
-        "AW_TRUSTED_AUTHORITY_EVENT_ADMISSIONS",
-        json.dumps(
-            {
-                event_ref: {
-                    "kind": "agentic-workspace/trusted-authority-host-admission/v1",
-                    "status": "current",
-                    "event_ref": event_ref,
-                    "issuer": "github-review-webhook",
-                }
-            }
-        ),
-    )
+    monkeypatch.setenv("AW_TRUSTED_AUTHORITY_EVENT_ADMISSION_KEYS", json.dumps({"caller-key": {"status": "current"}}))
     event["host_admission"] = {
         "kind": "agentic-workspace/trusted-authority-host-admission/v1",
         "status": "current",
         "algorithm": "RS256",
-        "key_id": "trusted-authority-host-rsa-2026-07-30",
-        "signed_payload": _trusted_authority_event_admission_payload(ref=event_ref, event=event),
+        "key_id": "caller-key",
         "signature": "caller-forged-signature",
     }
+    event["host_admission_ref"] = "trusted-authority-admission:caller-forged"
     path = tmp_path / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
 

@@ -50,15 +50,11 @@ def _trusted_guidance_host_event(
     target_revision: str = "",
     event_id: str = "",
 ) -> dict[str, object]:
-    import base64
-    import os
-
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
-        _guidance_json_bytes,
+        _install_trusted_authority_host_admission_for_adapter_test,
         _json_digest,
-        _trusted_authority_event_admission_payload,
     )
 
     event = {
@@ -87,53 +83,15 @@ def _trusted_guidance_host_event(
     }
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
-    signed_payload = _trusted_authority_event_admission_payload(ref=event_ref, event=event)
-    key_path = target_root / ".agentic-workspace" / "local" / "trusted-authority-test-host-key.pem"
-    key_path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
-        capture_output=True,
-        check=True,
+    admission = _install_trusted_authority_host_admission_for_adapter_test(
+        target_root=target_root,
+        ref=event_ref,
+        event=event,
+        issued_at=str(event["admission_context"]["issued_at"]),
+        expires_at=str(event["admission_context"]["expires_at"]),
+        nonce=str(event["admission_context"]["nonce"]),
     )
-    modulus = (
-        subprocess.run(
-            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-        .stdout.strip()
-        .split("=", 1)[1]
-    )
-    key_id = "trusted-authority-host-test-" + _json_digest({"event_ref": event_ref, "modulus": modulus})[:12]
-    os.environ["AW_TRUSTED_AUTHORITY_EVENT_ADMISSION_KEYS"] = json.dumps(
-        {
-            key_id: {
-                "algorithm": "RS256",
-                "status": "current",
-                "e": 65537,
-                "n": modulus.lower(),
-                "workspace_ref": f"workspace:path:{target_root.resolve()}",
-                "workspace_path": str(target_root.resolve()),
-                "not_before": "2026-01-01T00:00:00Z",
-                "expires_at": "2099-01-01T00:00:00Z",
-            }
-        }
-    )
-    completed = subprocess.run(
-        ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
-        input=_guidance_json_bytes(signed_payload),
-        capture_output=True,
-        check=True,
-    )
-    event["host_admission"] = {
-        "kind": "agentic-workspace/trusted-authority-host-admission/v1",
-        "status": "current",
-        "algorithm": "RS256",
-        "key_id": key_id,
-        "signed_payload": signed_payload,
-        "signature": base64.b64encode(completed.stdout).decode("ascii"),
-    }
+    event["host_admission_ref"] = admission["admission_ref"]
     path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(event, indent=2, sort_keys=True) + "\n", encoding="utf-8")

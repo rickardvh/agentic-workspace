@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 import os
@@ -21,9 +20,8 @@ from agentic_workspace.config import (
 CORRECTION_EVENT_RETENTION_CAP = 20
 GUIDANCE_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/guidance-receipts.json")
 TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-events")
-TRUSTED_AUTHORITY_EVENT_ADMISSION_KEY_ID = "trusted-authority-host-configured"
-TRUSTED_AUTHORITY_EVENT_ADMISSION_PUBLIC_KEYS: dict[str, dict[str, Any]] = {}
 TRUSTED_AUTHORITY_EVENT_AUDIENCE = "agentic-workspace.guidance-authority"
+_CURRENT_TRUSTED_AUTHORITY_EVENT_ADMISSIONS: dict[str, dict[str, Any]] = {}
 
 
 def _guidance_now() -> str:
@@ -726,7 +724,7 @@ def record_trusted_authority_host_event(
 
 
 def _trusted_authority_event_digest(event: dict[str, Any]) -> str:
-    return _json_digest({key: value for key, value in event.items() if key != "host_admission"})
+    return _json_digest({key: value for key, value in event.items() if key not in {"host_admission", "host_admission_ref"}})
 
 
 def _trusted_authority_event_admission_payload(*, ref: str, event: dict[str, Any]) -> dict[str, Any]:
@@ -756,49 +754,6 @@ def _guidance_json_bytes(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
 
 
-def _rsa_sha256_verify(*, message: bytes, signature_b64: str, modulus_hex: str, exponent: int) -> bool:
-    try:
-        signature = base64.b64decode(signature_b64, validate=True)
-        modulus = int(modulus_hex, 16)
-    except (TypeError, ValueError):
-        return False
-    key_size = (modulus.bit_length() + 7) // 8
-    if len(signature) != key_size:
-        return False
-    encoded = pow(int.from_bytes(signature, "big"), exponent, modulus).to_bytes(key_size, "big")
-    digest_info = bytes.fromhex("3031300d060960864801650304020105000420") + hashlib.sha256(message).digest()
-    separator = encoded.find(b"\x00", 2)
-    if not encoded.startswith(b"\x00\x01") or separator < 10:
-        return False
-    if encoded[2:separator] != b"\xff" * (separator - 2):
-        return False
-    return encoded[separator + 1 :] == digest_info
-
-
-def _trusted_authority_public_keys_from_host() -> dict[str, dict[str, Any]]:
-    """Return host-injected trusted public keys.
-
-    Repo-local code intentionally ships no production trust root. Tests and host
-    adapters may inject a public-key set through this environment boundary while
-    keeping private signing capability outside source and generated payloads.
-    """
-
-    keys = {key_id: dict(key) for key_id, key in TRUSTED_AUTHORITY_EVENT_ADMISSION_PUBLIC_KEYS.items()}
-    raw = os.environ.get("AW_TRUSTED_AUTHORITY_EVENT_ADMISSION_KEYS", "").strip()
-    if not raw:
-        return keys
-    try:
-        loaded = json.loads(raw)
-    except json.JSONDecodeError:
-        return keys
-    if not isinstance(loaded, dict):
-        return keys
-    for key_id, key in loaded.items():
-        if isinstance(key, dict):
-            keys[str(key_id)] = dict(key)
-    return keys
-
-
 def _parse_guidance_time(value: Any) -> datetime | None:
     text = str(value or "").strip()
     if not text:
@@ -812,53 +767,116 @@ def _parse_guidance_time(value: Any) -> datetime | None:
     return parsed
 
 
+def _install_trusted_authority_host_admission_for_adapter_test(
+    *,
+    target_root: Path,
+    ref: str,
+    event: dict[str, Any],
+    status: str = "current",
+    issued_at: str = "2026-07-29T00:00:00Z",
+    expires_at: str = "2099-01-01T00:00:00Z",
+    nonce: str = "",
+    revoked_at: str = "",
+    superseded_by: str = "",
+) -> dict[str, Any]:
+    """Install a current host-owned admission result for tests.
+
+    Production guidance code intentionally has no public operation that creates
+    trusted authority. Host/adapters authenticate external evidence outside the
+    repo runtime and may inject only the resulting opaque, current admission
+    identity into this process. Local event files are caches and are never
+    sufficient authority without this current result.
+    """
+
+    raw_custody = event.get("custody")
+    custody = raw_custody if isinstance(raw_custody, dict) else {}
+    raw_context = event.get("admission_context")
+    context = raw_context if isinstance(raw_context, dict) else {}
+    event_digest = _trusted_authority_event_digest(event)
+    admission_ref = (
+        "trusted-authority-admission:"
+        + _json_digest(
+            {
+                "event_ref": ref,
+                "event_digest": event_digest,
+                "workspace_ref": f"workspace:path:{target_root.resolve()}",
+                "nonce": nonce or str(context.get("nonce") or ""),
+            }
+        )[:24]
+    )
+    admission = {
+        "kind": "agentic-workspace/trusted-authority-host-admission-result/v1",
+        "status": status,
+        "admission_ref": admission_ref,
+        "event_ref": ref,
+        "event_digest": event_digest,
+        "authority": str(event.get("authority") or ""),
+        "producer_class": str(event.get("producer_class") or ""),
+        "producer": str(custody.get("producer") or ""),
+        "trusted_channel": str(custody.get("trusted_channel") or ""),
+        "source_ref": str(event.get("source_ref") or ""),
+        "target_revision": str(event.get("target_revision") or ""),
+        "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        "workspace_ref": f"workspace:path:{target_root.resolve()}",
+        "workspace_path": str(target_root.resolve()),
+        "issued_at": issued_at,
+        "expires_at": expires_at,
+        "nonce": nonce or str(context.get("nonce") or ""),
+        "revoked_at": revoked_at,
+        "superseded_by": superseded_by,
+        "custody": {
+            "producer": "trusted-authority-host-adapter",
+            "trusted_channel": "host-admission-capability",
+            "rule": "Opaque test fixture for a host-admitted authority event; event JSON alone is not authority.",
+        },
+    }
+    _CURRENT_TRUSTED_AUTHORITY_EVENT_ADMISSIONS[admission_ref] = admission
+    return admission
+
+
 def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any], target_root: Path) -> bool:
-    admitted = event.get("host_admission")
+    admission_ref = str(event.get("host_admission_ref") or "")
+    if not admission_ref.startswith("trusted-authority-admission:"):
+        return False
+    admitted = _CURRENT_TRUSTED_AUTHORITY_EVENT_ADMISSIONS.get(admission_ref)
     if not isinstance(admitted, dict):
         return False
-    signed_payload = admitted.get("signed_payload")
-    if not isinstance(signed_payload, dict) or signed_payload != _trusted_authority_event_admission_payload(ref=ref, event=event):
-        return False
-    key = _trusted_authority_public_keys_from_host().get(str(admitted.get("key_id") or ""))
-    if not isinstance(key, dict):
-        return False
+    raw_event_custody = event.get("custody")
+    event_custody = raw_event_custody if isinstance(raw_event_custody, dict) else {}
     now = datetime.now(UTC)
-    issued_at = _parse_guidance_time(signed_payload.get("issued_at"))
-    expires_at = _parse_guidance_time(signed_payload.get("expires_at"))
-    key_not_before = _parse_guidance_time(key.get("not_before"))
-    key_expires_at = _parse_guidance_time(key.get("expires_at"))
-    workspace_ref = str(signed_payload.get("workspace_ref") or "")
-    expected_workspace = str(key.get("workspace_ref") or workspace_ref)
-    key_workspace_path = str(key.get("workspace_path") or "")
+    issued_at = _parse_guidance_time(admitted.get("issued_at"))
+    expires_at = _parse_guidance_time(admitted.get("expires_at"))
+    workspace_ref = str(admitted.get("workspace_ref") or "")
     if (
-        admitted.get("kind") != "agentic-workspace/trusted-authority-host-admission/v1"
+        admitted.get("kind") != "agentic-workspace/trusted-authority-host-admission-result/v1"
         or admitted.get("status") != "current"
-        or key.get("status", "current") != "current"
-        or admitted.get("algorithm") != key.get("algorithm")
+        or admitted.get("admission_ref") != admission_ref
+        or admitted.get("event_ref") != ref
+        or admitted.get("event_digest") != _trusted_authority_event_digest(event)
+        or admitted.get("authority") != str(event.get("authority") or "")
+        or admitted.get("producer_class") != str(event.get("producer_class") or "")
+        or admitted.get("source_ref") != str(event.get("source_ref") or "")
+        or admitted.get("target_revision") != str(event.get("target_revision") or "")
         or admitted.get("revoked_at")
         or admitted.get("superseded_by")
-        or key.get("revoked_at")
-        or key.get("superseded_by")
-        or signed_payload.get("audience") != TRUSTED_AUTHORITY_EVENT_AUDIENCE
-        or workspace_ref != expected_workspace
+        or admitted.get("audience") != TRUSTED_AUTHORITY_EVENT_AUDIENCE
         or not workspace_ref
         or workspace_ref.removeprefix("workspace:path:") != str(target_root.resolve())
-        or (bool(key_workspace_path) and key_workspace_path != str(target_root.resolve()))
+        or str(admitted.get("workspace_path") or "") != str(target_root.resolve())
         or issued_at is None
         or expires_at is None
         or issued_at > now
         or expires_at <= now
-        or (key_not_before is not None and key_not_before > now)
-        or (key_expires_at is not None and key_expires_at <= now)
-        or not str(signed_payload.get("nonce") or "")
-        or signed_payload.get("trusted_channel") not in {"github-review-webhook", "human-instruction-host", "evaluation-result-adapter"}
+        or not str(admitted.get("nonce") or "")
+        or admitted.get("trusted_channel") not in {"github-review-webhook", "human-instruction-host", "evaluation-result-adapter"}
+        or admitted.get("producer") != str(event_custody.get("producer") or "")
     ):
         return False
-    return _rsa_sha256_verify(
-        message=_guidance_json_bytes(signed_payload),
-        signature_b64=str(admitted.get("signature") or ""),
-        modulus_hex=str(key.get("n") or ""),
-        exponent=int(key.get("e") or 0),
+    raw_admission_custody = admitted.get("custody")
+    admission_custody = raw_admission_custody if isinstance(raw_admission_custody, dict) else {}
+    return (
+        admission_custody.get("producer") == "trusted-authority-host-adapter"
+        and admission_custody.get("trusted_channel") == "host-admission-capability"
     )
 
 
