@@ -1864,6 +1864,84 @@ def test_guidance_receipts_accept_protected_host_admission_boundary(tmp_path: Pa
     assert receipt_result["receipt_ref"].startswith("guidance-receipt:")
 
 
+def test_guidance_receipts_accept_host_adapter_verified_event_across_process(tmp_path: Path) -> None:
+    import os
+    import subprocess
+    import sys
+
+    host_event = _trusted_guidance_host_event(
+        tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref="review-1",
+        target_revision="rev-1",
+        event_id="review-event-1",
+    )
+    adapter_root = tmp_path / "host-adapter"
+    _write(adapter_root / "agentic_workspace_host_adapters" / "__init__.py", "")
+    _write(
+        adapter_root / "agentic_workspace_host_adapters" / "guidance_authority.py",
+        """
+from __future__ import annotations
+
+import hashlib
+import json
+
+
+def _event_digest(event):
+    return hashlib.sha256(
+        json.dumps(
+            {key: value for key, value in event.items() if key not in {"host_admission", "host_admission_ref"}},
+            sort_keys=True,
+            default=str,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+
+
+def verify_trusted_authority_event(*, event_ref, event, target_root, audience):
+    context = event.get("admission_context") if isinstance(event, dict) else {}
+    if (
+        event.get("kind") != "agentic-workspace/trusted-authority-host-event/v1"
+        or event.get("event_ref") != event_ref
+        or context.get("audience") != audience
+        or context.get("workspace_ref") != f"workspace:path:{target_root}"
+        or not str(context.get("nonce") or "")
+    ):
+        return {"status": "rejected", "reason": "host-event-mismatch"}
+    return {"status": "admitted", "event_ref": event_ref, "event_digest": _event_digest(event)}
+""",
+    )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(adapter_root) + os.pathsep + env.get("PYTHONPATH", "")
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import json; "
+                "from pathlib import Path; "
+                "from agentic_workspace.agent_guidance import record_trusted_authority_receipt; "
+                f"payload = record_trusted_authority_receipt(target_root=Path({str(tmp_path)!r}), "
+                "authority='pr-review', producer_class='human-reviewer', producer_id='reviewer-1', "
+                "source='github-review', source_ref='review-1', target_revision='rev-1', event_id='review-event-1', "
+                f"host_event_ref={str(host_event['event_ref'])!r}); "
+                "print(json.dumps(payload, sort_keys=True))"
+            ),
+        ],
+        capture_output=True,
+        cwd=Path(__file__).resolve().parents[1],
+        env=env,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    payload = json.loads(completed.stdout)
+    assert payload["receipt_ref"].startswith("guidance-receipt:")
+
+
 def test_guidance_host_admission_rejects_raw_caller_mapping(tmp_path: Path) -> None:
     import agentic_workspace.agent_guidance as guidance_runtime
 

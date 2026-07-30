@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import os
 from datetime import UTC, datetime
@@ -860,7 +861,32 @@ def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any], tar
     files are caches; without the protected host boundary they fail closed.
     """
 
-    _ = (ref, event, target_root)
+    for module_name in ("agentic_workspace_host_adapters.guidance_authority",):
+        try:
+            module = importlib.import_module(module_name)
+        except ModuleNotFoundError:
+            continue
+        verifier = getattr(module, "verify_trusted_authority_event", None)
+        if not callable(verifier):
+            continue
+        try:
+            verdict = verifier(
+                event_ref=ref,
+                event=dict(event),
+                target_root=str(target_root.resolve()),
+                audience=TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+            )
+        except Exception:
+            continue
+        if verdict is True:
+            return True
+        if isinstance(verdict, dict) and verdict.get("status") in {"admitted", "current", "accepted"}:
+            if str(verdict.get("event_ref") or ref) != ref:
+                return False
+            digest = str(verdict.get("event_digest") or "")
+            if digest and digest != _trusted_authority_event_digest(event):
+                return False
+            return True
     return False
 
 
