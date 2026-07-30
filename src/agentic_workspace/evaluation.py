@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 import os
@@ -18,6 +17,7 @@ EVALUATION_CLOSURE_AUTHORITY_KIND = "agentic-workspace/evaluation-closure-author
 WORKSPACE_EVALUATIONS_PATH = Path(".agentic-workspace/evaluations.json")
 WORKSPACE_LOCAL_EVALUATIONS_DIR = Path(".agentic-workspace/local/evaluations")
 EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-host-results"
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-host-result-admissions"
 EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-receipts"
 EVALUATION_PENDING_COLLECTIONS_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "pending-collections"
 ASSIGNMENT_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/planning/assignment-receipts")
@@ -26,9 +26,11 @@ EVALUATION_FINDING_FOLLOWUPS_PATH = Path(".agentic-workspace/planning/evaluation
 EVALUATION_OWNER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-owner-receipt-index/v1"
 EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-external-delivery-adapter-receipt-index/v1"
 EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND = "agentic-workspace/evaluation-external-delivery-adapter-host-result-index/v1"
-EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEY_ID = "external-evaluation-provider-configured"
-EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_PUBLIC_KEYS: dict[str, dict[str, Any]] = {}
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND = (
+    "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-index/v1"
+)
 EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE = "agentic-workspace.evaluation-external-delivery"
+_CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS: dict[str, dict[str, Any]] = {}
 EVALUATION_FINDING_FOLLOWUPS_KIND = "agentic-workspace/evaluation-finding-followups/v1"
 OBSERVATION_RETENTION_CAP = 100
 OBSERVATION_BYTE_CAP = 256_000
@@ -402,7 +404,7 @@ def record_external_evaluation_adapter_host_result(
 
 
 def _external_delivery_adapter_host_result_digest(result: dict[str, Any]) -> str:
-    return _stable_json_digest({key: value for key, value in result.items() if key != "host_admission"})
+    return _stable_json_digest({key: value for key, value in result.items() if key not in {"host_admission", "host_admission_ref"}})
 
 
 def _external_delivery_adapter_host_admission_payload(ref: str, result: dict[str, Any]) -> dict[str, Any]:
@@ -433,42 +435,6 @@ def _evaluation_json_bytes(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
 
 
-def _rsa_sha256_verify(*, message: bytes, signature_b64: str, modulus_hex: str, exponent: int) -> bool:
-    try:
-        signature = base64.b64decode(signature_b64, validate=True)
-        modulus = int(modulus_hex, 16)
-    except (TypeError, ValueError):
-        return False
-    key_size = (modulus.bit_length() + 7) // 8
-    if len(signature) != key_size:
-        return False
-    encoded = pow(int.from_bytes(signature, "big"), exponent, modulus).to_bytes(key_size, "big")
-    digest_info = bytes.fromhex("3031300d060960864801650304020105000420") + hashlib.sha256(message).digest()
-    separator = encoded.find(b"\x00", 2)
-    if not encoded.startswith(b"\x00\x01") or separator < 10:
-        return False
-    if encoded[2:separator] != b"\xff" * (separator - 2):
-        return False
-    return encoded[separator + 1 :] == digest_info
-
-
-def _external_adapter_public_keys_from_host() -> dict[str, dict[str, Any]]:
-    keys = {key_id: dict(key) for key_id, key in EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_PUBLIC_KEYS.items()}
-    raw = os.environ.get("AW_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEYS", "").strip()
-    if not raw:
-        return keys
-    try:
-        loaded = json.loads(raw)
-    except json.JSONDecodeError:
-        return keys
-    if not isinstance(loaded, dict):
-        return keys
-    for key_id, key in loaded.items():
-        if isinstance(key, dict):
-            keys[str(key_id)] = dict(key)
-    return keys
-
-
 def _parse_evaluation_time(value: Any) -> datetime | None:
     text = str(value or "").strip()
     if not text:
@@ -482,55 +448,174 @@ def _parse_evaluation_time(value: Any) -> datetime | None:
     return parsed
 
 
+def _install_external_evaluation_adapter_host_result_admission_for_adapter_test(
+    *,
+    target_root: Path,
+    ref: str,
+    result: dict[str, Any],
+    status: str = "current",
+    issued_at: str = "2026-07-29T00:00:00Z",
+    expires_at: str = "2099-01-01T00:00:00Z",
+    nonce: str = "",
+    revoked_at: str = "",
+    superseded_by: str = "",
+) -> dict[str, Any]:
+    """Install a current provider-owned host-result admission for tests.
+
+    Production AW code has no caller-facing operation that authors external
+    provider delivery authority. A host/adapter authenticates provider evidence
+    outside the repo runtime and injects only an opaque current admission result
+    for the local receipt admission path to consume.
+    """
+
+    raw_custody = result.get("custody")
+    custody = raw_custody if isinstance(raw_custody, dict) else {}
+    raw_context = result.get("admission_context")
+    context = raw_context if isinstance(raw_context, dict) else {}
+    result_digest = _external_delivery_adapter_host_result_digest(result)
+    admission_ref = (
+        "external-evaluation-adapter-host-result-admission:"
+        + _stable_json_digest(
+            {
+                "result_ref": ref,
+                "result_digest": result_digest,
+                "workspace_ref": f"workspace:path:{target_root.resolve()}",
+                "nonce": nonce or str(context.get("nonce") or ""),
+            }
+        )[:24]
+    )
+    admission = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-result/v1",
+        "status": status,
+        "admission_ref": admission_ref,
+        "result_ref": ref,
+        "result_digest": result_digest,
+        "delivery_id": str(result.get("delivery_id") or ""),
+        "sink_id": str(result.get("sink_id") or ""),
+        "attempt_revision": str(result.get("attempt_revision") or ""),
+        "receipt_revision": str(result.get("receipt_revision") or ""),
+        "capability_revision": str(result.get("capability_revision") or ""),
+        "producer": str(custody.get("producer") or ""),
+        "trusted_channel": str(custody.get("trusted_channel") or ""),
+        "audience": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE,
+        "workspace_ref": f"workspace:path:{target_root.resolve()}",
+        "workspace_path": str(target_root.resolve()),
+        "issued_at": issued_at,
+        "expires_at": expires_at,
+        "nonce": nonce or str(context.get("nonce") or ""),
+        "revoked_at": revoked_at,
+        "superseded_by": superseded_by,
+        "custody": {
+            "producer": "external-evaluation-provider-host-adapter",
+            "trusted_channel": "host-admission-capability",
+            "rule": "Opaque test fixture for provider-admitted delivery result; local JSON alone is not authority.",
+        },
+    }
+    _CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS[admission_ref] = admission
+    admission_id = admission_ref.removeprefix("external-evaluation-adapter-host-result-admission:")
+    root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR
+    path = root / f"{admission_id}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(admission, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    index_path = root / "index.json"
+    index = {
+        "kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND,
+        "admissions": {
+            admission_id: {
+                "path": path.relative_to(root).as_posix(),
+                "status": admission["status"],
+                "result_ref": admission["result_ref"],
+                "result_digest": admission["result_digest"],
+                "admission_digest": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+        },
+    }
+    index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return admission
+
+
+def _load_external_delivery_adapter_host_admission(*, target_root: Path, admission_ref: str, result_ref: str) -> dict[str, Any] | None:
+    if not admission_ref.startswith("external-evaluation-adapter-host-result-admission:"):
+        return None
+    cached = _CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS.get(admission_ref)
+    if isinstance(cached, dict):
+        return cached
+    admission_id = admission_ref.removeprefix("external-evaluation-adapter-host-result-admission:")
+    root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR
+    path = root / f"{admission_id}.json"
+    try:
+        raw = path.read_bytes()
+        admission = json.loads(raw.decode("utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if (
+        not isinstance(admission, dict)
+        or admission.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-result/v1"
+        or admission.get("admission_ref") != admission_ref
+        or admission.get("result_ref") != result_ref
+    ):
+        return None
+    index = _load_json(root / "index.json", default={})
+    entries = index.get("admissions") if index.get("kind") == EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND else {}
+    entry = entries.get(admission_id) if isinstance(entries, dict) else None
+    if not isinstance(entry, dict):
+        return None
+    indexed_path = (root / str(entry.get("path") or "")).resolve()
+    if (
+        indexed_path != path.resolve()
+        or entry.get("status") != "current"
+        or entry.get("result_ref") != result_ref
+        or entry.get("result_digest") != admission.get("result_digest")
+        or entry.get("admission_digest") != hashlib.sha256(raw).hexdigest()
+    ):
+        return None
+    return admission
+
+
 def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, Any], *, target_root: Path) -> bool:
-    admission = result.get("host_admission")
+    admission_ref = str(result.get("host_admission_ref") or "")
+    if not admission_ref.startswith("external-evaluation-adapter-host-result-admission:"):
+        return False
+    admission = _load_external_delivery_adapter_host_admission(target_root=target_root, admission_ref=admission_ref, result_ref=ref)
     if not isinstance(admission, dict):
-        return False
-    signed_payload = admission.get("signed_payload")
-    if not isinstance(signed_payload, dict) or signed_payload != _external_delivery_adapter_host_admission_payload(ref, result):
-        return False
-    key = _external_adapter_public_keys_from_host().get(str(admission.get("key_id") or ""))
-    if not isinstance(key, dict):
         return False
     raw_custody = result.get("custody")
     custody: dict[str, Any] = raw_custody if isinstance(raw_custody, dict) else {}
+    raw_admission_custody = admission.get("custody")
+    admission_custody = raw_admission_custody if isinstance(raw_admission_custody, dict) else {}
     now = datetime.now(UTC)
-    issued_at = _parse_evaluation_time(signed_payload.get("issued_at"))
-    expires_at = _parse_evaluation_time(signed_payload.get("expires_at"))
-    key_not_before = _parse_evaluation_time(key.get("not_before"))
-    key_expires_at = _parse_evaluation_time(key.get("expires_at"))
-    workspace_ref = str(signed_payload.get("workspace_ref") or "")
-    key_workspace_path = str(key.get("workspace_path") or "")
+    issued_at = _parse_evaluation_time(admission.get("issued_at"))
+    expires_at = _parse_evaluation_time(admission.get("expires_at"))
+    workspace_ref = str(admission.get("workspace_ref") or "")
     if (
-        admission.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1"
+        admission.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-result/v1"
         or admission.get("status") != "current"
-        or key.get("status", "current") != "current"
-        or admission.get("algorithm") != key.get("algorithm")
-        or signed_payload.get("trusted_channel") not in {"provider-webhook", "external-operation-adapter", "delivery-provider-receipt"}
-        or signed_payload.get("producer") != str(custody.get("producer") or "")
-        or signed_payload.get("audience") != EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE
+        or admission.get("admission_ref") != admission_ref
+        or admission.get("result_ref") != ref
+        or admission.get("result_digest") != _external_delivery_adapter_host_result_digest(result)
+        or admission.get("delivery_id") != str(result.get("delivery_id") or "")
+        or admission.get("sink_id") != str(result.get("sink_id") or "")
+        or admission.get("attempt_revision") != str(result.get("attempt_revision") or "")
+        or admission.get("receipt_revision") != str(result.get("receipt_revision") or "")
+        or admission.get("capability_revision") != str(result.get("capability_revision") or "")
+        or admission.get("trusted_channel") not in {"provider-webhook", "external-operation-adapter", "delivery-provider-receipt"}
+        or admission.get("producer") != str(custody.get("producer") or "")
+        or admission.get("audience") != EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE
         or not workspace_ref
-        or workspace_ref != str(key.get("workspace_ref") or workspace_ref)
         or workspace_ref.removeprefix("workspace:path:") != str(target_root.resolve())
-        or (bool(key_workspace_path) and key_workspace_path != str(target_root.resolve()))
+        or str(admission.get("workspace_path") or "") != str(target_root.resolve())
         or issued_at is None
         or expires_at is None
         or issued_at > now
         or expires_at <= now
-        or (key_not_before is not None and key_not_before > now)
-        or (key_expires_at is not None and key_expires_at <= now)
-        or not str(signed_payload.get("nonce") or "")
+        or not str(admission.get("nonce") or "")
         or admission.get("revoked_at")
         or admission.get("superseded_by")
-        or key.get("revoked_at")
-        or key.get("superseded_by")
     ):
         return False
-    return _rsa_sha256_verify(
-        message=_evaluation_json_bytes(signed_payload),
-        signature_b64=str(admission.get("signature") or ""),
-        modulus_hex=str(key.get("n") or ""),
-        exponent=int(key.get("e") or 0),
+    return (
+        admission_custody.get("producer") == "external-evaluation-provider-host-adapter"
+        and admission_custody.get("trusted_channel") == "host-admission-capability"
     )
 
 

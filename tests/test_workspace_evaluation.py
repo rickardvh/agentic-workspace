@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -28,8 +26,7 @@ from agentic_workspace.evaluation import (
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
     WORKSPACE_LOCAL_EVALUATIONS_DIR,
-    _evaluation_json_bytes,
-    _external_delivery_adapter_host_admission_payload,
+    _install_external_evaluation_adapter_host_result_admission_for_adapter_test,
     _write_indexed_owner_receipt,
     append_observation,
     closure_authority,
@@ -88,57 +85,27 @@ def _write_external_evaluation_adapter_host_result(target_root: Path, **values: 
     result_id = hashlib.sha256(json.dumps(result, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
     result["result_id"] = result_id
     result["result_ref"] = f"external-evaluation-adapter-host-result:{result_id}"
-    signed_payload = _external_delivery_adapter_host_admission_payload(str(result["result_ref"]), result)
-    key_path = target_root / ".agentic-workspace" / "local" / "external-evaluation-test-provider-key.pem"
-    key_path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
-        capture_output=True,
-        check=True,
+    admission = _install_external_evaluation_adapter_host_result_admission_for_adapter_test(
+        target_root=target_root,
+        ref=str(result["result_ref"]),
+        result=result,
+        issued_at=admission_context["issued_at"],
+        expires_at=admission_context["expires_at"],
+        nonce=admission_context["nonce"],
     )
-    modulus = (
-        subprocess.run(
-            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-        .stdout.strip()
-        .split("=", 1)[1]
-    )
-    key_id = (
-        "external-evaluation-provider-test-"
-        + hashlib.sha256(json.dumps({"result_ref": result["result_ref"], "modulus": modulus}, sort_keys=True).encode("utf-8")).hexdigest()[
-            :12
-        ]
-    )
-    key = {
-        "algorithm": "RS256",
-        "status": str(values.get("key_status") or "current"),
-        "e": 65537,
-        "n": modulus.lower(),
-        "workspace_ref": str(values.get("key_workspace_ref") or f"workspace:path:{target_root.resolve()}"),
-        "workspace_path": str(values.get("key_workspace_path") or target_root.resolve()),
-        "not_before": str(values.get("key_not_before") or "2026-01-01T00:00:00Z"),
-        "expires_at": str(values.get("key_expires_at") or "2099-01-01T00:00:00Z"),
-    }
-    if values.get("key_revoked_at"):
-        key["revoked_at"] = str(values["key_revoked_at"])
-    os.environ["AW_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEYS"] = json.dumps({key_id: key})
-    completed = subprocess.run(
-        ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
-        input=_evaluation_json_bytes(signed_payload),
-        capture_output=True,
-        check=True,
-    )
-    result["host_admission"] = {
-        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
-        "status": "current",
-        "algorithm": "RS256",
-        "key_id": key_id,
-        "signed_payload": signed_payload,
-        "signature": base64.b64encode(completed.stdout).decode("ascii"),
-    }
+    if "audience" in values:
+        admission["audience"] = str(values["audience"])
+    if "workspace_ref" in values:
+        admission["workspace_ref"] = str(values["workspace_ref"])
+    if "key_workspace_ref" in values:
+        admission["workspace_ref"] = str(values["key_workspace_ref"])
+    if "key_workspace_path" in values:
+        admission["workspace_path"] = str(values["key_workspace_path"])
+    if "key_status" in values:
+        admission["status"] = str(values["key_status"])
+    if "key_revoked_at" in values:
+        admission["revoked_at"] = str(values["key_revoked_at"])
+    result["host_admission_ref"] = admission["admission_ref"]
     root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR
     path = root / f"{result_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -360,21 +327,18 @@ def test_external_adapter_receipt_rejects_jointly_forged_local_host_result(tmp_p
     }
     host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
     monkeypatch.setenv(
-        "AW_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS",
-        json.dumps(
-            {
-                host["result_ref"]: {
-                    "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
-                    "status": "current",
-                    "issuer": "provider-webhook",
-                    "producer": "evaluation-provider-adapter",
-                }
-            }
-        ),
+        "AW_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEYS",
+        json.dumps({"caller-key": {"status": "current"}}),
     )
     result_path = tmp_path / host["path"]
     result = json.loads(result_path.read_text(encoding="utf-8"))
-    result["host_admission"]["signature"] = "caller-forged-signature"
+    result["host_admission"] = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
+        "status": "current",
+        "key_id": "caller-key",
+        "signature": "caller-forged-signature",
+    }
+    result["host_admission_ref"] = "external-evaluation-adapter-host-result-admission:caller-forged"
     result_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     index_path = tmp_path / host["index_ref"]
     index = json.loads(index_path.read_text(encoding="utf-8"))
