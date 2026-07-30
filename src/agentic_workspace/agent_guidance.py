@@ -5,7 +5,7 @@ import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from agentic_workspace.config import (
     WORKSPACE_LOCAL_CONFIG_PATH,
@@ -24,6 +24,7 @@ TRUSTED_AUTHORITY_ADMISSION_STORE_PATH = Path(".agentic-workspace/local/trusted-
 TRUSTED_AUTHORITY_ADMISSION_INDEX_PATH = TRUSTED_AUTHORITY_ADMISSION_STORE_PATH / "index.json"
 TRUSTED_AUTHORITY_EVENT_AUDIENCE = "agentic-workspace.guidance-authority"
 _CURRENT_TRUSTED_AUTHORITY_EVENT_ADMISSIONS: dict[str, dict[str, Any]] = {}
+_TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN = object()
 
 
 def _guidance_now() -> str:
@@ -769,6 +770,90 @@ def _parse_guidance_time(value: Any) -> datetime | None:
     return parsed
 
 
+class TrustedAuthorityHostAdmissionHandle:
+    """Opaque host/adapter-issued admission result for trusted correction events."""
+
+    __slots__ = ("admission",)
+
+    def __init__(self, *, _host_boundary_token: object, admission: Mapping[str, Any]) -> None:
+        if _host_boundary_token is not _TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN:
+            raise WorkspaceUsageError("trusted authority host admission must be issued by a host adapter boundary.")
+        self.admission = dict(admission)
+
+
+def issue_trusted_authority_host_admission_for_adapter(
+    *,
+    target_root: Path,
+    event: dict[str, Any],
+    event_ref: str,
+    producer: str,
+    trusted_channel: str,
+    target_revision: str,
+    issued_at: str,
+    expires_at: str,
+    nonce: str,
+    source_ref: str,
+    status: str = "current",
+    revoked_at: str = "",
+    superseded_by: str = "",
+) -> TrustedAuthorityHostAdmissionHandle:
+    """Issue an opaque trusted-authority host admission handle.
+
+    Host adapters own this boundary. AW guidance operations consume only the
+    handle's stored admission ref; raw event files or caller-supplied channel
+    strings are never sufficient authority.
+    """
+
+    if trusted_channel not in {"github-review-webhook", "human-instruction-host", "evaluation-result-adapter"}:
+        raise WorkspaceUsageError("trusted authority host admission requires an admitted host channel.")
+    if producer in {"", "agentic-workspace.trusted-authority-host-event", "caller", "implementer"}:
+        raise WorkspaceUsageError("trusted authority host admission requires producer-owned custody.")
+    ref = str(event_ref or event.get("event_ref") or "").strip()
+    if not ref.startswith("trusted-authority-event:") or "/" in ref or "\\" in ref:
+        raise WorkspaceUsageError("trusted authority host admission requires a trusted host event ref.")
+    event_digest = _trusted_authority_event_digest(event)
+    admission_ref = (
+        "trusted-authority-admission:"
+        + _json_digest(
+            {
+                "event_ref": ref,
+                "event_digest": event_digest,
+                "workspace_ref": f"workspace:path:{target_root.resolve()}",
+                "producer": producer,
+                "trusted_channel": trusted_channel,
+                "nonce": nonce,
+            }
+        )[:24]
+    )
+    admission = {
+        "kind": "agentic-workspace/trusted-authority-host-admission-result/v1",
+        "status": status,
+        "admission_ref": admission_ref,
+        "event_ref": ref,
+        "event_digest": event_digest,
+        "authority": str(event.get("authority") or ""),
+        "producer_class": str(event.get("producer_class") or ""),
+        "producer": producer,
+        "trusted_channel": trusted_channel,
+        "source_ref": source_ref or str(event.get("source_ref") or ""),
+        "target_revision": target_revision,
+        "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        "workspace_ref": f"workspace:path:{target_root.resolve()}",
+        "workspace_path": str(target_root.resolve()),
+        "issued_at": issued_at,
+        "expires_at": expires_at,
+        "nonce": nonce,
+        "revoked_at": revoked_at,
+        "superseded_by": superseded_by,
+        "custody": {
+            "producer": "trusted-authority-host-adapter",
+            "trusted_channel": "host-admission-capability",
+            "rule": "Host adapters own admission issuance; guidance promotion consumes only this opaque current result.",
+        },
+    }
+    return TrustedAuthorityHostAdmissionHandle(_host_boundary_token=_TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN, admission=admission)
+
+
 def _install_trusted_authority_host_admission_for_adapter_test(
     *,
     target_root: Path,
@@ -790,50 +875,26 @@ def _install_trusted_authority_host_admission_for_adapter_test(
     sufficient authority without this current result.
     """
 
-    raw_custody = event.get("custody")
-    custody = raw_custody if isinstance(raw_custody, dict) else {}
     raw_context = event.get("admission_context")
     context = raw_context if isinstance(raw_context, dict) else {}
-    event_digest = _trusted_authority_event_digest(event)
-    admission_ref = (
-        "trusted-authority-admission:"
-        + _json_digest(
-            {
-                "event_ref": ref,
-                "event_digest": event_digest,
-                "workspace_ref": f"workspace:path:{target_root.resolve()}",
-                "nonce": nonce or str(context.get("nonce") or ""),
-            }
-        )[:24]
+    raw_custody = event.get("custody")
+    custody = raw_custody if isinstance(raw_custody, dict) else {}
+    handle = issue_trusted_authority_host_admission_for_adapter(
+        target_root=target_root,
+        event=event,
+        event_ref=ref,
+        producer=str(custody.get("producer") or ""),
+        trusted_channel=str(custody.get("trusted_channel") or ""),
+        target_revision=str(event.get("target_revision") or ""),
+        issued_at=issued_at,
+        expires_at=expires_at,
+        nonce=nonce or str(context.get("nonce") or ""),
+        source_ref=str(event.get("source_ref") or ""),
+        status=status,
+        revoked_at=revoked_at,
+        superseded_by=superseded_by,
     )
-    admission = {
-        "kind": "agentic-workspace/trusted-authority-host-admission-result/v1",
-        "status": status,
-        "admission_ref": admission_ref,
-        "event_ref": ref,
-        "event_digest": event_digest,
-        "authority": str(event.get("authority") or ""),
-        "producer_class": str(event.get("producer_class") or ""),
-        "producer": str(custody.get("producer") or ""),
-        "trusted_channel": str(custody.get("trusted_channel") or ""),
-        "source_ref": str(event.get("source_ref") or ""),
-        "target_revision": str(event.get("target_revision") or ""),
-        "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
-        "workspace_ref": f"workspace:path:{target_root.resolve()}",
-        "workspace_path": str(target_root.resolve()),
-        "issued_at": issued_at,
-        "expires_at": expires_at,
-        "nonce": nonce or str(context.get("nonce") or ""),
-        "revoked_at": revoked_at,
-        "superseded_by": superseded_by,
-        "custody": {
-            "producer": "trusted-authority-host-adapter",
-            "trusted_channel": "host-admission-capability",
-            "rule": "Opaque test fixture for a host-admitted authority event; event JSON alone is not authority.",
-        },
-    }
-    _CURRENT_TRUSTED_AUTHORITY_EVENT_ADMISSIONS[admission_ref] = admission
-    return _write_trusted_authority_host_admission(target_root=target_root, admission=admission)
+    return admit_trusted_authority_host_event(target_root=target_root, admission_handle=handle)["admission"]
 
 
 def _trusted_authority_admission_index(*, target_root: Path) -> dict[str, Any]:
@@ -895,78 +956,25 @@ def _write_trusted_authority_host_admission(*, target_root: Path, admission: dic
 def admit_trusted_authority_host_event(
     *,
     target_root: Path,
-    event: dict[str, Any],
-    event_ref: str,
-    producer: str,
-    trusted_channel: str,
-    target_revision: str,
-    issued_at: str,
-    expires_at: str,
-    nonce: str,
-    source_ref: str,
-    status: str = "current",
-    revoked_at: str = "",
-    superseded_by: str = "",
+    admission_handle: TrustedAuthorityHostAdmissionHandle,
 ) -> dict[str, Any]:
     """Record the host/adapter-owned admission result consumed by promotion.
 
-    This is the production boundary for host adapters: callers submit an
-    already-resolved event plus adapter custody facts and receive only an
-    opaque admission ref. Guidance promotion later re-resolves that ref from
-    the admission store and validates digest, scope, lifecycle, and custody.
+    The production caller cannot supply producer/channel/timestamp strings here;
+    it must receive an opaque handle from a host adapter boundary. Guidance
+    promotion later re-resolves the stored ref and validates digest, scope,
+    lifecycle, and custody.
     """
 
-    if trusted_channel not in {"github-review-webhook", "human-instruction-host", "evaluation-result-adapter"}:
-        raise WorkspaceUsageError("trusted authority host admission requires an admitted host channel.")
-    if producer in {"", "agentic-workspace.trusted-authority-host-event", "caller", "implementer"}:
-        raise WorkspaceUsageError("trusted authority host admission requires producer-owned custody.")
-    ref = str(event_ref or event.get("event_ref") or "").strip()
-    if not ref.startswith("trusted-authority-event:") or "/" in ref or "\\" in ref:
-        raise WorkspaceUsageError("trusted authority host admission requires a trusted host event ref.")
-    event_digest = _trusted_authority_event_digest(event)
-    admission_ref = (
-        "trusted-authority-admission:"
-        + _json_digest(
-            {
-                "event_ref": ref,
-                "event_digest": event_digest,
-                "workspace_ref": f"workspace:path:{target_root.resolve()}",
-                "producer": producer,
-                "trusted_channel": trusted_channel,
-                "nonce": nonce,
-            }
-        )[:24]
-    )
-    admission = {
-        "kind": "agentic-workspace/trusted-authority-host-admission-result/v1",
-        "status": status,
-        "admission_ref": admission_ref,
-        "event_ref": ref,
-        "event_digest": event_digest,
-        "authority": str(event.get("authority") or ""),
-        "producer_class": str(event.get("producer_class") or ""),
-        "producer": producer,
-        "trusted_channel": trusted_channel,
-        "source_ref": source_ref or str(event.get("source_ref") or ""),
-        "target_revision": target_revision,
-        "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
-        "workspace_ref": f"workspace:path:{target_root.resolve()}",
-        "workspace_path": str(target_root.resolve()),
-        "issued_at": issued_at,
-        "expires_at": expires_at,
-        "nonce": nonce,
-        "revoked_at": revoked_at,
-        "superseded_by": superseded_by,
-        "custody": {
-            "producer": "trusted-authority-host-adapter",
-            "trusted_channel": "host-admission-operation",
-            "rule": "Host adapters own admission production; guidance promotion consumes only this opaque current result.",
-        },
-    }
+    if not isinstance(admission_handle, TrustedAuthorityHostAdmissionHandle):
+        raise WorkspaceUsageError("trusted authority host admission requires an opaque host-issued admission handle.")
+    admission = dict(admission_handle.admission)
+    admission_ref = str(admission.get("admission_ref") or "")
+    ref = str(admission.get("event_ref") or "")
     stored = _write_trusted_authority_host_admission(target_root=target_root, admission=admission)
     return {
         "kind": "agentic-workspace/trusted-authority-host-admission-operation-result/v1",
-        "status": "admitted" if status == "current" else "recorded",
+        "status": "admitted" if admission.get("status") == "current" else "recorded",
         "admission_ref": admission_ref,
         "admission": stored,
         "event_ref": ref,

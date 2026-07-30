@@ -1827,6 +1827,7 @@ def test_guidance_receipts_accept_host_adapter_admission_operation(tmp_path: Pat
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
         _json_digest,
         admit_trusted_authority_host_event,
+        issue_trusted_authority_host_admission_for_adapter,
         record_trusted_authority_receipt,
     )
 
@@ -1848,7 +1849,7 @@ def test_guidance_receipts_accept_host_adapter_admission_operation(tmp_path: Pat
     }
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
-    admitted = admit_trusted_authority_host_event(
+    handle = issue_trusted_authority_host_admission_for_adapter(
         target_root=tmp_path,
         event=event,
         event_ref=event_ref,
@@ -1860,6 +1861,7 @@ def test_guidance_receipts_accept_host_adapter_admission_operation(tmp_path: Pat
         nonce="review-event-1",
         source_ref="review-1",
     )
+    admitted = admit_trusted_authority_host_event(target_root=tmp_path, admission_handle=handle)
     event["host_admission_ref"] = admitted["admission_ref"]
     path = tmp_path / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
@@ -1877,6 +1879,20 @@ def test_guidance_receipts_accept_host_adapter_admission_operation(tmp_path: Pat
     )
 
     assert receipt_result["receipt_ref"].startswith("guidance-receipt:")
+
+
+def test_guidance_host_admission_rejects_raw_caller_mapping(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import WorkspaceUsageError, admit_trusted_authority_host_event
+
+    with pytest.raises(WorkspaceUsageError, match="opaque host-issued admission handle"):
+        admit_trusted_authority_host_event(  # type: ignore[arg-type]
+            target_root=tmp_path,
+            admission_handle={
+                "kind": "agentic-workspace/trusted-authority-host-admission-result/v1",
+                "status": "current",
+                "admission_ref": "trusted-authority-admission:caller-forged",
+            },
+        )
 
 
 def test_guidance_receipts_reject_jointly_forged_local_host_event(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
