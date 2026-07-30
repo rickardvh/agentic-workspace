@@ -6,9 +6,14 @@ from tests.workspace_cli_support import *
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _write_independent_review_host_result(target_root: Path, review_result: dict[str, object]) -> str:
+def _write_independent_review_host_result(
+    target_root: Path,
+    review_result: dict[str, object],
+    *,
+    install_host_admission: bool = True,
+    caller_env_admission_keys: bool = False,
+) -> str:
     import base64
-    import os
     import subprocess
 
     from agentic_workspace.workspace_runtime_proof import (
@@ -16,6 +21,7 @@ def _write_independent_review_host_result(target_root: Path, review_result: dict
         INDEPENDENT_REVIEW_HOST_RESULT_DIR,
         INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
         _host_result_body_for_admission,
+        _install_independent_review_host_result_admission_for_adapter_test,
         _stable_review_json_bytes,
         _stable_review_json_digest,
     )
@@ -85,6 +91,7 @@ def _write_independent_review_host_result(target_root: Path, review_result: dict
     key = {
         "algorithm": "RS256",
         "status": str(result.get("key_status") or "current"),
+        "key_id": key_id,
         "e": 65537,
         "n": modulus.lower(),
         "workspace_ref": str(result.get("key_workspace_ref") or f"workspace:path:{target_root.resolve()}"),
@@ -94,7 +101,6 @@ def _write_independent_review_host_result(target_root: Path, review_result: dict
     }
     if result.get("key_revoked_at"):
         key["revoked_at"] = str(result["key_revoked_at"])
-    os.environ["AW_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEYS"] = json.dumps({key_id: key})
     completed = subprocess.run(
         ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
         input=_stable_review_json_bytes(signed_payload),
@@ -109,6 +115,16 @@ def _write_independent_review_host_result(target_root: Path, review_result: dict
         "signed_payload": signed_payload,
         "signature": base64.b64encode(completed.stdout).decode("ascii"),
     }
+    if install_host_admission:
+        _install_independent_review_host_result_admission_for_adapter_test(
+            host_result_ref=host_result_ref,
+            admission=host_result["host_admission"],
+            public_key=key,
+        )
+    if caller_env_admission_keys:
+        import os
+
+        os.environ["AW_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEYS"] = json.dumps({key_id: key})
     _write(path, json.dumps(host_result, indent=2, sort_keys=True) + "\n")
     index = {
         "kind": INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
@@ -7587,7 +7603,9 @@ certification_limits = ["does not certify production authorization safety"]
     assert "high-assurance closeout posture evidence is missing" in packet["missing_or_unresolved"]["blockers"]
 
 
-def test_trusted_independent_review_rejects_jointly_forged_local_host_result(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_trusted_independent_review_rejects_caller_controlled_environment_trust_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from agentic_workspace.workspace_runtime_proof import (
         INDEPENDENT_REVIEW_HOST_RESULT_DIR,
         WorkspaceUsageError,
@@ -7614,7 +7632,13 @@ def test_trusted_independent_review_rejects_jointly_forged_local_host_result(tmp
             "source_ref": "pull-request-review:1",
         },
     }
-    host_result_ref = _write_independent_review_host_result(tmp_path, review_result)
+    monkeypatch.delenv("AW_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEYS", raising=False)
+    host_result_ref = _write_independent_review_host_result(
+        tmp_path,
+        review_result,
+        install_host_admission=False,
+        caller_env_admission_keys=True,
+    )
     monkeypatch.setenv(
         "AW_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS",
         json.dumps(

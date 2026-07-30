@@ -152,10 +152,9 @@ INDEPENDENT_REVIEW_RESULT_DIR = Path(".agentic-workspace/local/independent-revie
 INDEPENDENT_REVIEW_RESULT_INDEX_KIND = "agentic-workspace/independent-review-result-index/v1"
 INDEPENDENT_REVIEW_HOST_RESULT_DIR = Path(".agentic-workspace/local/independent-review-host-results")
 INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-review-host-result-index/v1"
-INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEY_ID = "independent-review-host-configured"
-INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_PUBLIC_KEYS: dict[str, dict[str, Any]] = {}
 INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
+_CURRENT_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS: dict[str, dict[str, Any]] = {}
 
 
 def _proof_lifecycle_command(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -6839,21 +6838,24 @@ def _load_independent_review_host_result(*, target_root: Path, host_result_ref: 
     return imported
 
 
-def _independent_review_public_keys_from_host() -> dict[str, dict[str, Any]]:
-    keys = {key_id: dict(key) for key_id, key in INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_PUBLIC_KEYS.items()}
-    raw = os.environ.get("AW_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEYS", "").strip()
-    if not raw:
-        return keys
-    try:
-        loaded = json.loads(raw)
-    except json.JSONDecodeError:
-        return keys
-    if not isinstance(loaded, dict):
-        return keys
-    for key_id, key in loaded.items():
-        if isinstance(key, dict):
-            keys[str(key_id)] = dict(key)
-    return keys
+def _install_independent_review_host_result_admission_for_adapter_test(
+    *, host_result_ref: str, admission: Mapping[str, Any], public_key: Mapping[str, Any]
+) -> None:
+    """Install an opaque host-owned independent-review admission for adapter tests.
+
+    Runtime admission intentionally does not read caller-controlled environment
+    variables or repo-local trust roots. Real hosts/adapters are expected to
+    inject already verified/current admission material across their protected
+    process boundary; tests use this helper to model that boundary explicitly.
+    """
+
+    ref = str(host_result_ref or "").replace("\\", "/").strip()
+    if not ref:
+        raise WorkspaceUsageError("independent review host admission requires host_result_ref.")
+    _CURRENT_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS[ref] = {
+        "admission": dict(admission),
+        "public_key": dict(public_key),
+    }
 
 
 def _parse_review_time(value: Any) -> datetime | None:
@@ -6870,15 +6872,20 @@ def _parse_review_time(value: Any) -> datetime | None:
 
 
 def _host_admits_independent_review_host_result(host_result_ref: str, host_result: dict[str, Any], *, target_root: Path) -> bool:
-    admission = host_result.get("host_admission")
+    installed = _CURRENT_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSIONS.get(host_result_ref)
+    if not isinstance(installed, dict):
+        return False
+    admission = installed.get("admission")
     if not isinstance(admission, dict):
         return False
     signed_payload = admission.get("signed_payload")
     if not isinstance(signed_payload, dict):
         return False
     key_id = str(admission.get("key_id") or "")
-    public_key = _independent_review_public_keys_from_host().get(key_id)
+    public_key = installed.get("public_key")
     if not isinstance(public_key, dict):
+        return False
+    if str(public_key.get("key_id") or key_id) != key_id:
         return False
     custody = _as_dict(host_result.get("custody"))
     context = _as_dict(host_result.get("admission_context"))
