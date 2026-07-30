@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import hashlib
-import inspect
 import json
 import subprocess
 from pathlib import Path
@@ -1312,32 +1311,31 @@ def test_context_authority_owner_results_are_semantic_adapter_dispatched() -> No
 
 
 def test_context_owner_operation_admission_does_not_accept_caller_semantic_payload() -> None:
-    from agentic_workspace.context_authority_owner_operations import admit_context_owner_operation_result
+    import agentic_workspace.context_authority_owner_operations as owner_operations
 
-    parameters = set(inspect.signature(admit_context_owner_operation_result).parameters)
     operation_source = Path("src/agentic_workspace/context_authority_owner_operations.py").read_text(encoding="utf-8")
     resolver_source = Path("src/agentic_workspace/operating_decision.py").read_text(encoding="utf-8")
 
-    assert "derive_owner_result" not in parameters
-    assert "producer" not in parameters
-    assert "operation_id" not in parameters
-    assert "owner_result" not in parameters
-    assert "owner_result_handle" in parameters
-    assert "owner_result_payload" not in parameters
-    assert "structural_backing" not in parameters
-    assert "boundary" not in parameters
+    assert not hasattr(owner_operations, "admit_context_owner_operation_result")
+    assert not hasattr(owner_operations, "ContextOwnerAdapterResult")
+    assert "_CONTEXT_OWNER_ADAPTER_TOKEN" not in operation_source
+    assert "class ContextOwnerAdapterResult" not in operation_source
+    assert "def admit_context_owner_operation_result(" not in operation_source
     assert "def _issue_context_owner_adapter_result(" not in operation_source
     assert "def _owner_operation_result_base(" not in resolver_source
+    assert "def _admit_concrete_owner_adapter_result(" not in resolver_source
+    assert "_CONTEXT_OWNER_ADAPTER_TOKEN" not in resolver_source
+    assert "ContextOwnerAdapterResult" not in resolver_source
 
 
 def test_context_owner_operation_admission_rejects_forged_owner_identity(tmp_path: Path) -> None:
-    from agentic_workspace.context_authority_owner_operations import admit_context_owner_operation_result
+    from agentic_workspace.context_authority_owner_operations import _admit_context_owner_operation_result
 
     _write_context_authority_sources(tmp_path)
     chosen = tmp_path / "SYSTEM_INTENT.md"
 
-    with pytest.raises(ValueError, match="registered owner-adapter handle"):
-        admit_context_owner_operation_result(
+    with pytest.raises(ValueError, match="producer does not match"):
+        _admit_context_owner_operation_result(
             surface="system-intent",
             owner="workspace-runtime",
             root=tmp_path,
@@ -1346,7 +1344,7 @@ def test_context_owner_operation_admission_rejects_forged_owner_identity(tmp_pat
             git_head="head",
             selection={"consumer": "start"},
             adapter_id="system-intent.owner-result",
-            owner_result_handle={
+            owner_result={
                 "kind": "forged-kind",
                 "producer": "forged-producer",
                 "status": "current",

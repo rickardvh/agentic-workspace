@@ -1702,7 +1702,7 @@
     "src/agentic_workspace/composed_operation_scenarios.py": "04fb147c9e8d6944dcc6735f77c2620ea9ae448b",
     "src/agentic_workspace/config.py": "e95af5ba9c6c602eb9fe2136474144f57839bce7",
     "src/agentic_workspace/conformance.py": "9e0342787dc33e4381dfc0ba949c05eee5131ccc",
-    "src/agentic_workspace/context_authority_owner_operations.py": "52c543bb258f0fcb711aceeeb904fd8cbf805898",
+    "src/agentic_workspace/context_authority_owner_operations.py": "95bac4b794606ac8e2952c2c51938bae76a7416b",
     "src/agentic_workspace/contract_tooling.py": "42d36311e8a10127eeb22f68d598ea4923fd2c0c",
     "src/agentic_workspace/contracts/authority_markers.json": "9b033c203b61114d7ba5556d687c92ee8baa1103",
     "src/agentic_workspace/contracts/cli_commands.json": "9f9591cbbb40c676f86406b70e7704954ea84348",
@@ -2046,7 +2046,7 @@
     "src/agentic_workspace/evaluation.py": "533a55cd6ffff18c1bcd453236e92607f9c44210",
     "src/agentic_workspace/generated_operations.py": "add071271394e2471bf3477be2bf3594e4f238e5",
     "src/agentic_workspace/improvement_consequence.py": "82693a891043a25a745ab711a8a87ea2251a6134",
-    "src/agentic_workspace/operating_decision.py": "692e0c3bd81bd6abb9acdf0c208eb4ad02b61887",
+    "src/agentic_workspace/operating_decision.py": "a14f34f246eccd813bdd7b0f6d231652b77163f8",
     "src/agentic_workspace/operation_authority_admissions.py": "c6ea0788cb1bb93b91b5dc736af2d44607a531fb",
     "src/agentic_workspace/projection_reuse.py": "a74099ac3579c3e449a7cc98c2284edbbf907839",
     "src/agentic_workspace/proof_receipt_admission.py": "60893fff9ce2710f63fa7c2bf66b114d080a2d94",
@@ -2071,7 +2071,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "2aa49a57e2426e148c15b2e13038e181632939e9"
   },
-  "git_index_identity": "de3574096cbcc68134645f7ad2f6cb062183979a9edec5fbddc6870e7d504bdd",
+  "git_index_identity": "61983ee2102181a11afb531bbc20bb8fb2e9f7b389156789d3761abaf0198a99",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }

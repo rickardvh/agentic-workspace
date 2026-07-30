@@ -13,9 +13,7 @@ from typing import Any, Callable
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
 from agentic_workspace.authority_envelope import mutation_baseline_payload
 from agentic_workspace.context_authority_owner_operations import (
-    _CONTEXT_OWNER_ADAPTER_TOKEN,
-    ContextOwnerAdapterResult,
-    admit_context_owner_operation_result,
+    _admit_context_owner_operation_result,
     registered_context_owner_receipt_status,
 )
 
@@ -609,7 +607,7 @@ def _context_owner_operation_admission(
     return True, ""
 
 
-def _admit_concrete_owner_adapter_result(
+def _registered_owner_adapter_result(
     *,
     surface: str,
     item: dict[str, Any],
@@ -661,7 +659,7 @@ def _admit_concrete_owner_adapter_result(
             **(extra or {}),
         },
     )
-    return admit_context_owner_operation_result(
+    return _admit_context_owner_operation_result(
         surface=surface,
         owner=item.get("owner"),
         root=root,
@@ -670,7 +668,7 @@ def _admit_concrete_owner_adapter_result(
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
-        owner_result_handle=ContextOwnerAdapterResult(_adapter_token=_CONTEXT_OWNER_ADAPTER_TOKEN, payload=owner_result),
+        owner_result=owner_result,
     )
 
 
@@ -755,7 +753,7 @@ def _contracted_text_owner_result(
                 "population": {"status": "invalid"},
             },
         )
-    return _admit_concrete_owner_adapter_result(
+    return _registered_owner_adapter_result(
         surface=surface,
         item=item,
         root=root,
@@ -810,7 +808,7 @@ def _contracted_toml_owner_result(
                 "population": {"status": "invalid"},
             },
         )
-    return _admit_concrete_owner_adapter_result(
+    return _registered_owner_adapter_result(
         surface=surface,
         item=item,
         root=root,
@@ -1104,7 +1102,7 @@ def _module_owner_result(
                 "population": {"status": "invalid"},
             },
         )
-    return _admit_concrete_owner_adapter_result(
+    return _registered_owner_adapter_result(
         surface=surface,
         item=item,
         root=root,
@@ -1168,7 +1166,7 @@ def _planning_owner_result(
             reason=f"planning-owner-admission-{admission_status or 'missing'}",
             extra={**extra, "owner_boundary": "Planning current-work admission contract"},
         )
-    return _admit_concrete_owner_adapter_result(
+    return _registered_owner_adapter_result(
         surface=surface,
         item=item,
         root=root,
@@ -1209,7 +1207,7 @@ def _memory_owner_result(
             reason=f"memory-curation-{curation_status or 'missing'}",
             extra={"memory_curation": curation},
         )
-    return _admit_concrete_owner_adapter_result(
+    return _registered_owner_adapter_result(
         surface=surface,
         item=item,
         root=root,
@@ -1256,7 +1254,7 @@ def _mutation_baseline_owner_result(
             reason=f"mutation-baseline-admission-{status or 'missing'}",
             extra={**extra, "owner_boundary": "authority-envelope mutation baseline contract"},
         )
-    return _admit_concrete_owner_adapter_result(
+    return _registered_owner_adapter_result(
         surface=surface,
         item=item,
         root=root,
@@ -1301,7 +1299,7 @@ def _skills_owner_result(
             reason="skill-dependency-closure-unsatisfied",
             extra={"skill_dependency_closure": closure},
         )
-    return _admit_concrete_owner_adapter_result(
+    return _registered_owner_adapter_result(
         surface=surface,
         item=item,
         root=root,
@@ -1357,7 +1355,7 @@ def _generated_references_owner_result(
             reason="generated-source-manifest-stale",
             extra={"generated_source_manifest": manifest},
         )
-    return _admit_concrete_owner_adapter_result(
+    return _registered_owner_adapter_result(
         surface=surface,
         item=item,
         root=root,
