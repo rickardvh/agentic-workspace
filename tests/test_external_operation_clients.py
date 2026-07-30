@@ -46,6 +46,7 @@ def _trusted_guidance_host_event(
     producer_class: str,
     producer_id: str,
     source_ref: str,
+    host_admission_monkeypatch: pytest.MonkeyPatch | None = None,
     source: str = "",
     target_revision: str = "",
     event_id: str = "",
@@ -53,7 +54,6 @@ def _trusted_guidance_host_event(
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
-        _install_trusted_authority_host_admission_for_adapter_test,
         _json_digest,
     )
 
@@ -83,15 +83,30 @@ def _trusted_guidance_host_event(
     }
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
-    admission = _install_trusted_authority_host_admission_for_adapter_test(
-        target_root=target_root,
-        ref=event_ref,
-        event=event,
-        issued_at=str(event["admission_context"]["issued_at"]),
-        expires_at=str(event["admission_context"]["expires_at"]),
-        nonce=str(event["admission_context"]["nonce"]),
+    event["host_admission_ref"] = (
+        "trusted-authority-admission:"
+        + _json_digest(
+            {
+                "event_ref": event_ref,
+                "workspace_ref": f"workspace:path:{target_root.resolve()}",
+                "nonce": event["admission_context"]["nonce"],
+            }
+        )[:24]
     )
-    event["host_admission_ref"] = admission["admission_ref"]
+    if host_admission_monkeypatch is not None:
+        import agentic_workspace.agent_guidance as guidance_runtime
+
+        admitted_ref = event_ref
+
+        def _test_host_admits_trusted_authority_event(*, ref: str, event: dict[str, object], target_root: Path) -> bool:
+            _ = (event, target_root)
+            return ref == admitted_ref
+
+        host_admission_monkeypatch.setattr(
+            guidance_runtime,
+            "_host_admits_trusted_authority_event",
+            _test_host_admits_trusted_authority_event,
+        )
     path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(event, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -386,7 +401,9 @@ def test_assignment_lifecycle_public_contract_omits_caller_authority_inputs() ->
         assert not authority_inputs & input_names
 
 
-def test_correction_event_generated_operations_store_query_and_preserve_low_authority(tmp_path: Path) -> None:
+def test_correction_event_generated_operations_store_query_and_preserve_low_authority(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
     (tmp_path / ".agentic-workspace/config.toml").write_text(
         'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
@@ -439,6 +456,7 @@ def test_correction_event_generated_operations_store_query_and_preserve_low_auth
         producer_id="reviewer-1",
         source="github-review",
         source_ref="review-thread-1",
+        host_admission_monkeypatch=monkeypatch,
         target_revision="rev-1",
     )
     receipt_ref = record_trusted_authority_receipt(
@@ -496,7 +514,7 @@ def test_correction_event_public_contract_omits_caller_authority_inputs() -> Non
         assert "trusted_authority_receipt_ref" in input_names
 
 
-def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(tmp_path: Path) -> None:
+def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
     (tmp_path / ".agentic-workspace/config.toml").write_text(
         'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
@@ -534,6 +552,7 @@ def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(
         producer_id="reviewer-1",
         source="github-review",
         source_ref="review-thread-1",
+        host_admission_monkeypatch=monkeypatch,
         target_revision="rev-1",
     )
     receipt_ref = record_trusted_authority_receipt(

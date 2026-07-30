@@ -11,6 +11,7 @@ def _trusted_guidance_host_event(
     producer_class: str,
     producer_id: str,
     source_ref: str,
+    host_admission_monkeypatch: pytest.MonkeyPatch | None = None,
     source: str = "",
     target_revision: str = "",
     event_id: str = "",
@@ -20,9 +21,7 @@ def _trusted_guidance_host_event(
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
-        _install_trusted_authority_host_admission_for_adapter_test,
         _json_digest,
-        _write_trusted_authority_host_admission,
     )
 
     admission_context = {
@@ -54,21 +53,31 @@ def _trusted_guidance_host_event(
     }
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
-    admission = _install_trusted_authority_host_admission_for_adapter_test(
-        target_root=target_root,
-        ref=event_ref,
-        event=event,
-        issued_at=str(admission_context["issued_at"]),
-        expires_at=str(admission_context["expires_at"]),
-        nonce=str(admission_context["nonce"]),
+    event["host_admission_ref"] = (
+        "trusted-authority-admission:"
+        + _json_digest(
+            {
+                "event_ref": event_ref,
+                "workspace_ref": f"workspace:path:{target_root.resolve()}",
+                "nonce": admission_context["nonce"],
+                "overrides": {"admission_context": admission_context_overrides or {}, "key": key_overrides or {}},
+            }
+        )[:24]
     )
-    if admission_context_overrides and "audience" in admission_context_overrides:
-        admission["audience"] = str(admission_context_overrides["audience"])
-    if key_overrides:
-        admission.update(key_overrides)
-    if (admission_context_overrides and "audience" in admission_context_overrides) or key_overrides:
-        admission = _write_trusted_authority_host_admission(target_root=target_root, admission=admission)
-    event["host_admission_ref"] = admission["admission_ref"]
+    if host_admission_monkeypatch is not None:
+        import agentic_workspace.agent_guidance as guidance_runtime
+
+        admitted_ref = event_ref
+
+        def _test_host_admits_trusted_authority_event(*, ref: str, event: dict[str, object], target_root: Path) -> bool:
+            _ = (event, target_root)
+            return ref == admitted_ref
+
+        host_admission_monkeypatch.setattr(
+            guidance_runtime,
+            "_host_admits_trusted_authority_event",
+            _test_host_admits_trusted_authority_event,
+        )
     path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
     return {"event_ref": event_ref, "event": event}
@@ -1674,7 +1683,7 @@ def test_guidance_promotion_reads_only_the_canonical_correction_store(tmp_path: 
     assert decision["authority_source"]["store"] == ".agentic-workspace/local/correction-events.json"
 
 
-def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tmp_path: Path) -> None:
+def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from agentic_workspace.agent_guidance import (
         apply_guidance_promotion,
         guidance_promotion_from_store,
@@ -1696,6 +1705,7 @@ def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tm
         producer_class="human-reviewer",
         producer_id="reviewer-1",
         source_ref="remember-1",
+        host_admission_monkeypatch=monkeypatch,
         target_revision="rev-b",
     )
     remember_ref = record_guidance_remember_receipt(
@@ -1822,78 +1832,22 @@ def test_guidance_receipts_require_trusted_host_event_before_authority_storage(t
         )
 
 
-def test_guidance_receipts_accept_host_adapter_admission_operation(tmp_path: Path) -> None:
+def test_guidance_receipts_accept_protected_host_admission_boundary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from agentic_workspace.agent_guidance import (
-        _TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN,
-        TRUSTED_AUTHORITY_EVENT_AUDIENCE,
-        TRUSTED_AUTHORITY_EVENT_STORE_PATH,
-        TrustedAuthorityHostAdmissionHandle,
-        _json_digest,
-        _trusted_authority_event_digest,
-        admit_trusted_authority_host_event,
         record_trusted_authority_receipt,
     )
 
-    event = {
-        "kind": "agentic-workspace/trusted-authority-host-event/v1",
-        "status": "current",
-        "authority": "pr-review",
-        "producer_class": "human-reviewer",
-        "producer_id": "reviewer-1",
-        "source": "github-review",
-        "source_ref": "review-1",
-        "target_revision": "rev-1",
-        "event_id": "review-event-1",
-        "recorded_at": "2026-07-29T00:00:00Z",
-        "custody": {
-            "producer": "github-review-adapter",
-            "trusted_channel": "github-review-webhook",
-        },
-    }
-    event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
-    event["event_ref"] = event_ref
-    handle = TrustedAuthorityHostAdmissionHandle(
-        _host_boundary_token=_TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN,
-        admission={
-            "kind": "agentic-workspace/trusted-authority-host-admission-result/v1",
-            "status": "current",
-            "admission_ref": "trusted-authority-admission:"
-            + _json_digest(
-                {
-                    "event_ref": event_ref,
-                    "event_digest": _trusted_authority_event_digest(event),
-                    "workspace_ref": f"workspace:path:{tmp_path.resolve()}",
-                    "producer": "github-review-adapter",
-                    "trusted_channel": "github-review-webhook",
-                    "nonce": "review-event-1",
-                }
-            )[:24],
-            "event_ref": event_ref,
-            "event_digest": _trusted_authority_event_digest(event),
-            "authority": "pr-review",
-            "producer_class": "human-reviewer",
-            "producer": "github-review-adapter",
-            "trusted_channel": "github-review-webhook",
-            "source_ref": "review-1",
-            "target_revision": "rev-1",
-            "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
-            "workspace_ref": f"workspace:path:{tmp_path.resolve()}",
-            "workspace_path": str(tmp_path.resolve()),
-            "issued_at": "2026-07-29T00:00:00Z",
-            "expires_at": "2099-01-01T00:00:00Z",
-            "nonce": "review-event-1",
-            "revoked_at": "",
-            "superseded_by": "",
-            "custody": {
-                "producer": "trusted-authority-host-adapter",
-                "trusted_channel": "host-admission-capability",
-            },
-        },
+    host_event = _trusted_guidance_host_event(
+        tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref="review-1",
+        host_admission_monkeypatch=monkeypatch,
+        target_revision="rev-1",
+        event_id="review-event-1",
     )
-    admitted = admit_trusted_authority_host_event(target_root=tmp_path, admission_handle=handle)
-    event["host_admission_ref"] = admitted["admission_ref"]
-    path = tmp_path / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
-    _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
 
     receipt_result = record_trusted_authority_receipt(
         target_root=tmp_path,
@@ -1904,32 +1858,28 @@ def test_guidance_receipts_accept_host_adapter_admission_operation(tmp_path: Pat
         source_ref="review-1",
         target_revision="rev-1",
         event_id="review-event-1",
-        host_event_ref=event_ref,
+        host_event_ref=str(host_event["event_ref"]),
     )
 
     assert receipt_result["receipt_ref"].startswith("guidance-receipt:")
 
 
 def test_guidance_host_admission_rejects_raw_caller_mapping(tmp_path: Path) -> None:
-    from agentic_workspace.agent_guidance import WorkspaceUsageError, admit_trusted_authority_host_event
+    import agentic_workspace.agent_guidance as guidance_runtime
 
-    with pytest.raises(WorkspaceUsageError, match="opaque host-issued admission handle"):
-        admit_trusted_authority_host_event(  # type: ignore[arg-type]
-            target_root=tmp_path,
-            admission_handle={
-                "kind": "agentic-workspace/trusted-authority-host-admission-result/v1",
-                "status": "current",
-                "admission_ref": "trusted-authority-admission:caller-forged",
-            },
-        )
+    assert not hasattr(guidance_runtime, "admit_trusted_authority_host_event")
+    assert not hasattr(guidance_runtime, "TrustedAuthorityHostAdmissionHandle")
 
 
 def test_guidance_host_admission_issuer_is_not_public_runtime_entrypoint() -> None:
     source = (Path(__file__).resolve().parents[1] / "src/agentic_workspace/agent_guidance.py").read_text(encoding="utf-8")
 
     assert "def issue_trusted_authority_host_admission_for_adapter(" not in source
-    assert "def admit_trusted_authority_host_event(" in source
-    assert "TrustedAuthorityHostAdmissionHandle" in source
+    assert "def admit_trusted_authority_host_event(" not in source
+    assert "def _install_trusted_authority_host_admission_for_adapter_test(" not in source
+    assert "TrustedAuthorityHostAdmissionHandle" not in source
+    assert "_TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN" not in source
+    assert "_CURRENT_TRUSTED_AUTHORITY_EVENT_ADMISSIONS" not in source
 
 
 def test_guidance_receipts_reject_jointly_forged_local_host_event(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

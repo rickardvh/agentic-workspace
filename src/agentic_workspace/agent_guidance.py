@@ -5,7 +5,7 @@ import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from agentic_workspace.config import (
     WORKSPACE_LOCAL_CONFIG_PATH,
@@ -23,8 +23,6 @@ TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-auth
 TRUSTED_AUTHORITY_ADMISSION_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-admissions")
 TRUSTED_AUTHORITY_ADMISSION_INDEX_PATH = TRUSTED_AUTHORITY_ADMISSION_STORE_PATH / "index.json"
 TRUSTED_AUTHORITY_EVENT_AUDIENCE = "agentic-workspace.guidance-authority"
-_CURRENT_TRUSTED_AUTHORITY_EVENT_ADMISSIONS: dict[str, dict[str, Any]] = {}
-_TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN = object()
 
 
 def _guidance_now() -> str:
@@ -770,115 +768,6 @@ def _parse_guidance_time(value: Any) -> datetime | None:
     return parsed
 
 
-class TrustedAuthorityHostAdmissionHandle:
-    """Opaque host/adapter-issued admission result for trusted correction events."""
-
-    __slots__ = ("admission",)
-
-    def __init__(self, *, _host_boundary_token: object, admission: Mapping[str, Any]) -> None:
-        if _host_boundary_token is not _TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN:
-            raise WorkspaceUsageError("trusted authority host admission must be issued by a host adapter boundary.")
-        self.admission = dict(admission)
-
-
-def _trusted_authority_host_admission_payload(
-    *,
-    target_root: Path,
-    ref: str,
-    event: dict[str, Any],
-    status: str,
-    issued_at: str,
-    expires_at: str,
-    nonce: str,
-    revoked_at: str,
-    superseded_by: str,
-) -> dict[str, Any]:
-    raw_custody = event.get("custody")
-    custody = raw_custody if isinstance(raw_custody, dict) else {}
-    raw_context = event.get("admission_context")
-    context = raw_context if isinstance(raw_context, dict) else {}
-    producer = str(custody.get("producer") or "")
-    trusted_channel = str(custody.get("trusted_channel") or "")
-    event_digest = _trusted_authority_event_digest(event)
-    admission_ref = (
-        "trusted-authority-admission:"
-        + _json_digest(
-            {
-                "event_ref": ref,
-                "event_digest": event_digest,
-                "workspace_ref": f"workspace:path:{target_root.resolve()}",
-                "producer": producer,
-                "trusted_channel": trusted_channel,
-                "nonce": nonce or str(context.get("nonce") or ""),
-            }
-        )[:24]
-    )
-    return {
-        "kind": "agentic-workspace/trusted-authority-host-admission-result/v1",
-        "status": status,
-        "admission_ref": admission_ref,
-        "event_ref": ref,
-        "event_digest": event_digest,
-        "authority": str(event.get("authority") or ""),
-        "producer_class": str(event.get("producer_class") or ""),
-        "producer": producer,
-        "trusted_channel": trusted_channel,
-        "source_ref": str(event.get("source_ref") or ""),
-        "target_revision": str(event.get("target_revision") or ""),
-        "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
-        "workspace_ref": f"workspace:path:{target_root.resolve()}",
-        "workspace_path": str(target_root.resolve()),
-        "issued_at": issued_at,
-        "expires_at": expires_at,
-        "nonce": nonce or str(context.get("nonce") or ""),
-        "revoked_at": revoked_at,
-        "superseded_by": superseded_by,
-        "custody": {
-            "producer": "trusted-authority-host-adapter",
-            "trusted_channel": "host-admission-capability",
-            "rule": "Host adapters own admission issuance; guidance promotion consumes only this opaque current result.",
-        },
-    }
-
-
-def _install_trusted_authority_host_admission_for_adapter_test(
-    *,
-    target_root: Path,
-    ref: str,
-    event: dict[str, Any],
-    status: str = "current",
-    issued_at: str = "2026-07-29T00:00:00Z",
-    expires_at: str = "2099-01-01T00:00:00Z",
-    nonce: str = "",
-    revoked_at: str = "",
-    superseded_by: str = "",
-) -> dict[str, Any]:
-    """Install a current host-owned admission result for tests.
-
-    Production guidance code intentionally has no public operation that creates
-    trusted authority. Host/adapters authenticate external evidence outside the
-    repo runtime and may inject only the resulting opaque, current admission
-    identity into this process. Local event files are caches and are never
-    sufficient authority without this current result.
-    """
-
-    handle = TrustedAuthorityHostAdmissionHandle(
-        _host_boundary_token=_TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN,
-        admission=_trusted_authority_host_admission_payload(
-            target_root=target_root,
-            ref=ref,
-            event=event,
-            status=status,
-            issued_at=issued_at,
-            expires_at=expires_at,
-            nonce=nonce,
-            revoked_at=revoked_at,
-            superseded_by=superseded_by,
-        ),
-    )
-    return admit_trusted_authority_host_event(target_root=target_root, admission_handle=handle)["admission"]
-
-
 def _trusted_authority_admission_index(*, target_root: Path) -> dict[str, Any]:
     path = target_root / TRUSTED_AUTHORITY_ADMISSION_INDEX_PATH
     if not path.is_file():
@@ -935,35 +824,6 @@ def _write_trusted_authority_host_admission(*, target_root: Path, admission: dic
     return stored
 
 
-def admit_trusted_authority_host_event(
-    *,
-    target_root: Path,
-    admission_handle: TrustedAuthorityHostAdmissionHandle,
-) -> dict[str, Any]:
-    """Record the host/adapter-owned admission result consumed by promotion.
-
-    The production caller cannot supply producer/channel/timestamp strings here;
-    it must receive an opaque handle from a host adapter boundary. Guidance
-    promotion later re-resolves the stored ref and validates digest, scope,
-    lifecycle, and custody.
-    """
-
-    if not isinstance(admission_handle, TrustedAuthorityHostAdmissionHandle):
-        raise WorkspaceUsageError("trusted authority host admission requires an opaque host-issued admission handle.")
-    admission = dict(admission_handle.admission)
-    admission_ref = str(admission.get("admission_ref") or "")
-    ref = str(admission.get("event_ref") or "")
-    stored = _write_trusted_authority_host_admission(target_root=target_root, admission=admission)
-    return {
-        "kind": "agentic-workspace/trusted-authority-host-admission-operation-result/v1",
-        "status": "admitted" if admission.get("status") == "current" else "recorded",
-        "admission_ref": admission_ref,
-        "admission": stored,
-        "event_ref": ref,
-        "rule": "Guidance promotion re-resolves this opaque host-admission ref and rejects raw event files or process-local admission state.",
-    }
-
-
 def _trusted_authority_host_admission(*, target_root: Path, admission_ref: str) -> dict[str, Any] | None:
     try:
         index = _trusted_authority_admission_index(target_root=target_root)
@@ -991,49 +851,17 @@ def _trusted_authority_host_admission(*, target_root: Path, admission_ref: str) 
 
 
 def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any], target_root: Path) -> bool:
-    admission_ref = str(event.get("host_admission_ref") or "")
-    if not admission_ref.startswith("trusted-authority-admission:"):
-        return False
-    admitted = _trusted_authority_host_admission(target_root=target_root, admission_ref=admission_ref)
-    if not isinstance(admitted, dict):
-        return False
-    raw_event_custody = event.get("custody")
-    event_custody = raw_event_custody if isinstance(raw_event_custody, dict) else {}
-    now = datetime.now(UTC)
-    issued_at = _parse_guidance_time(admitted.get("issued_at"))
-    expires_at = _parse_guidance_time(admitted.get("expires_at"))
-    workspace_ref = str(admitted.get("workspace_ref") or "")
-    if (
-        admitted.get("kind") != "agentic-workspace/trusted-authority-host-admission-result/v1"
-        or admitted.get("status") != "current"
-        or admitted.get("admission_ref") != admission_ref
-        or admitted.get("event_ref") != ref
-        or admitted.get("event_digest") != _trusted_authority_event_digest(event)
-        or admitted.get("authority") != str(event.get("authority") or "")
-        or admitted.get("producer_class") != str(event.get("producer_class") or "")
-        or admitted.get("source_ref") != str(event.get("source_ref") or "")
-        or admitted.get("target_revision") != str(event.get("target_revision") or "")
-        or admitted.get("revoked_at")
-        or admitted.get("superseded_by")
-        or admitted.get("audience") != TRUSTED_AUTHORITY_EVENT_AUDIENCE
-        or not workspace_ref
-        or workspace_ref.removeprefix("workspace:path:") != str(target_root.resolve())
-        or str(admitted.get("workspace_path") or "") != str(target_root.resolve())
-        or issued_at is None
-        or expires_at is None
-        or issued_at > now
-        or expires_at <= now
-        or not str(admitted.get("nonce") or "")
-        or admitted.get("trusted_channel") not in {"github-review-webhook", "human-instruction-host", "evaluation-result-adapter"}
-        or admitted.get("producer") != str(event_custody.get("producer") or "")
-    ):
-        return False
-    raw_admission_custody = admitted.get("custody")
-    admission_custody = raw_admission_custody if isinstance(raw_admission_custody, dict) else {}
-    return admission_custody.get("producer") == "trusted-authority-host-adapter" and admission_custody.get("trusted_channel") in {
-        "host-admission-capability",
-        "host-admission-operation",
-    }
+    """Return whether the protected host boundary admitted this event.
+
+    Production guidance code intentionally has no token, handle constructor,
+    process-global admission registry, or caller-callable admission operation.
+    Host adapters that own correction/review custody must inject this verdict
+    from outside ordinary AW operation authority. Repo-local event and admission
+    files are caches; without the protected host boundary they fail closed.
+    """
+
+    _ = (ref, event, target_root)
+    return False
 
 
 def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[str, Any]:
