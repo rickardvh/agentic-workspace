@@ -1315,6 +1315,8 @@ def test_context_owner_operation_admission_does_not_accept_caller_semantic_paylo
     from agentic_workspace.context_authority_owner_operations import admit_context_owner_operation_result
 
     parameters = set(inspect.signature(admit_context_owner_operation_result).parameters)
+    operation_source = Path("src/agentic_workspace/context_authority_owner_operations.py").read_text(encoding="utf-8")
+    resolver_source = Path("src/agentic_workspace/operating_decision.py").read_text(encoding="utf-8")
 
     assert "derive_owner_result" not in parameters
     assert "producer" not in parameters
@@ -1324,6 +1326,8 @@ def test_context_owner_operation_admission_does_not_accept_caller_semantic_paylo
     assert "owner_result_payload" not in parameters
     assert "structural_backing" not in parameters
     assert "boundary" not in parameters
+    assert "def _issue_context_owner_adapter_result(" not in operation_source
+    assert "def _owner_operation_result_base(" not in resolver_source
 
 
 def test_context_owner_operation_admission_rejects_forged_owner_identity(tmp_path: Path) -> None:

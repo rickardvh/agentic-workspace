@@ -67,10 +67,6 @@ for _item in _as_list(_REGISTRY_CONTRACT.get("surfaces")):
     }
 
 
-def _issue_context_owner_adapter_result(payload: dict[str, Any]) -> ContextOwnerAdapterResult:
-    return ContextOwnerAdapterResult(_adapter_token=_CONTEXT_OWNER_ADAPTER_TOKEN, payload=payload)
-
-
 def admit_context_owner_operation_result(
     *,
     surface: str,
