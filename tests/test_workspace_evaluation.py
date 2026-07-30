@@ -353,6 +353,41 @@ def test_external_adapter_receipt_rejects_jointly_forged_local_host_result(tmp_p
         )
 
 
+def test_external_evaluation_host_admission_rejects_raw_caller_mapping(tmp_path: Path) -> None:
+    from agentic_workspace.evaluation import admit_external_evaluation_adapter_host_result
+
+    with pytest.raises(WorkspaceUsageError, match="opaque provider-issued admission handle"):
+        admit_external_evaluation_adapter_host_result(  # type: ignore[arg-type]
+            target_root=tmp_path,
+            admission_handle={
+                "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-result/v1",
+                "status": "current",
+                "admission_ref": "external-evaluation-adapter-host-result-admission:caller-forged",
+            },
+        )
+
+
+def test_external_adapter_receipt_reresolves_host_admission_across_process_boundary(tmp_path: Path) -> None:
+    from agentic_workspace import evaluation
+
+    receipt = {
+        "delivery_id": "delivery-1",
+        "sink_id": "#1969",
+        "producer": "github-issues-adapter",
+        "attempt_revision": "attempt-1",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "status": "delivered",
+    }
+    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
+    evaluation._CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS.clear()
+
+    recorded = record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
+
+    assert recorded["status"] == "recorded"
+    assert recorded["host_result_ref"] == host["result_ref"]
+
+
 @pytest.mark.parametrize(
     ("case_name", "overrides"),
     [

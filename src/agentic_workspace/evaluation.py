@@ -5,7 +5,7 @@ import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, mutation_baseline_payload
 from agentic_workspace.config import WorkspaceUsageError
@@ -31,6 +31,7 @@ EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND = (
 )
 EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE = "agentic-workspace.evaluation-external-delivery"
 _CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS: dict[str, dict[str, Any]] = {}
+_EXTERNAL_EVALUATION_ADAPTER_HOST_BOUNDARY_TOKEN = object()
 EVALUATION_FINDING_FOLLOWUPS_KIND = "agentic-workspace/evaluation-finding-followups/v1"
 OBSERVATION_RETENTION_CAP = 100
 OBSERVATION_BYTE_CAP = 256_000
@@ -448,7 +449,18 @@ def _parse_evaluation_time(value: Any) -> datetime | None:
     return parsed
 
 
-def admit_external_evaluation_adapter_host_result(
+class ExternalEvaluationAdapterHostResultAdmissionHandle:
+    """Opaque provider/adapter-issued admission handle for delivery results."""
+
+    __slots__ = ("admission",)
+
+    def __init__(self, *, _host_boundary_token: object, admission: Mapping[str, Any]) -> None:
+        if _host_boundary_token is not _EXTERNAL_EVALUATION_ADAPTER_HOST_BOUNDARY_TOKEN:
+            raise WorkspaceUsageError("external evaluation host result admission must be issued by a provider adapter boundary.")
+        self.admission = dict(admission)
+
+
+def issue_external_evaluation_adapter_host_result_admission_for_adapter(
     *,
     target_root: Path,
     ref: str,
@@ -459,13 +471,13 @@ def admit_external_evaluation_adapter_host_result(
     nonce: str = "",
     revoked_at: str = "",
     superseded_by: str = "",
-) -> dict[str, Any]:
-    """Install a current provider-owned host-result admission capability.
+) -> ExternalEvaluationAdapterHostResultAdmissionHandle:
+    """Issue a provider-owned host-result admission handle.
 
     A host/adapter authenticates provider evidence outside the repo runtime and
-    injects only this opaque current admission result for local receipt
-    admission. Repo-local result/admission files are caches and are not consumed
-    as authority without this live capability.
+    injects only this opaque handle for local receipt admission. Repo-local
+    result/admission files are caches and are not consumed as authority unless
+    the provider-issued admission is re-resolvable.
     """
 
     raw_custody = result.get("custody")
@@ -511,7 +523,14 @@ def admit_external_evaluation_adapter_host_result(
             "rule": "Opaque test fixture for provider-admitted delivery result; local JSON alone is not authority.",
         },
     }
-    _CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS[admission_ref] = admission
+    return ExternalEvaluationAdapterHostResultAdmissionHandle(
+        _host_boundary_token=_EXTERNAL_EVALUATION_ADAPTER_HOST_BOUNDARY_TOKEN,
+        admission=admission,
+    )
+
+
+def _write_external_evaluation_adapter_host_result_admission(*, target_root: Path, admission: dict[str, Any]) -> dict[str, Any]:
+    admission_ref = str(admission.get("admission_ref") or "")
     admission_id = admission_ref.removeprefix("external-evaluation-adapter-host-result-admission:")
     root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR
     path = root / f"{admission_id}.json"
@@ -534,10 +553,28 @@ def admit_external_evaluation_adapter_host_result(
     return admission
 
 
+def admit_external_evaluation_adapter_host_result(
+    *,
+    target_root: Path,
+    admission_handle: ExternalEvaluationAdapterHostResultAdmissionHandle,
+) -> dict[str, Any]:
+    """Install a current provider-owned host-result admission from an opaque handle."""
+
+    if not isinstance(admission_handle, ExternalEvaluationAdapterHostResultAdmissionHandle):
+        raise WorkspaceUsageError("external evaluation host result admission requires an opaque provider-issued admission handle.")
+    admission = dict(admission_handle.admission)
+    _CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS[str(admission.get("admission_ref") or "")] = admission
+    return _write_external_evaluation_adapter_host_result_admission(target_root=target_root, admission=admission)
+
+
 def _install_external_evaluation_adapter_host_result_admission_for_adapter_test(
     **kwargs: Any,
 ) -> dict[str, Any]:
-    return admit_external_evaluation_adapter_host_result(**kwargs)
+    handle = issue_external_evaluation_adapter_host_result_admission_for_adapter(**kwargs)
+    target_root = kwargs.get("target_root")
+    if not isinstance(target_root, Path):
+        raise WorkspaceUsageError("external evaluation adapter test admission requires target_root.")
+    return admit_external_evaluation_adapter_host_result(target_root=target_root, admission_handle=handle)
 
 
 def _load_external_delivery_adapter_host_admission(*, target_root: Path, admission_ref: str, result_ref: str) -> dict[str, Any] | None:
@@ -546,7 +583,32 @@ def _load_external_delivery_adapter_host_admission(*, target_root: Path, admissi
     cached = _CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS.get(admission_ref)
     if isinstance(cached, dict):
         return cached
-    return None
+    admission_id = admission_ref.removeprefix("external-evaluation-adapter-host-result-admission:")
+    root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR
+    index_path = root / "index.json"
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    entries = index.get("admissions") if index.get("kind") == EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND else {}
+    entry = entries.get(admission_id) if isinstance(entries, dict) else None
+    if not isinstance(entry, dict) or entry.get("status") != "current" or entry.get("result_ref") != result_ref:
+        return None
+    candidate = (root / str(entry.get("path") or "")).resolve()
+    try:
+        candidate.relative_to(root.resolve())
+        payload = json.loads(candidate.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("admission_ref") != admission_ref
+        or payload.get("result_ref") != result_ref
+        or hashlib.sha256(candidate.read_bytes()).hexdigest() != entry.get("admission_digest")
+    ):
+        return None
+    _CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS[admission_ref] = payload
+    return payload
 
 
 def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, Any], *, target_root: Path) -> bool:
