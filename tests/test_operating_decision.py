@@ -1188,6 +1188,33 @@ def test_context_authority_rejects_digest_only_synthesized_owner_operation(tmp_p
     assert system_intent["reason"] == "owner-operation-receipt-missing"
 
 
+def test_context_authority_rejects_replayed_owner_operation_receipt_without_current_execution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_context_authority_sources(tmp_path)
+    from agentic_workspace import context_authority_owner_operations, operating_decision
+
+    real_adapter = operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS["system-intent"]
+
+    def replayed_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+        result = real_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific)
+        context_authority_owner_operations._CURRENT_OWNER_RECEIPTS.clear()
+        return result
+
+    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "system-intent", replayed_adapter)
+
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="shape authority routing ownership skill guidance memory",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    system_intent = next(item for item in projection["excluded_authorities"] if item["surface"] == "system-intent")
+    assert system_intent["reason"] == "owner-operation-receipt-not-admitted"
+
+
 def test_context_authority_rejects_parseable_file_without_owner_boundary(tmp_path: Path) -> None:
     _write_context_authority_sources(tmp_path)
     (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
@@ -1242,9 +1269,11 @@ def test_context_authority_rejects_unknown_planning_and_mutation_statuses(tmp_pa
 def test_context_authority_owner_results_are_semantic_adapter_dispatched() -> None:
     source = Path("src/agentic_workspace/operating_decision.py").read_text(encoding="utf-8")
 
+    assert "def _execute_context_owner_operation(" not in source
     assert "def _context_owner_result(" not in source
     assert "def _file_backed_owner_result(" not in source
     assert "CONTEXT_OWNER_RESULT_ADAPTERS" in source
+    assert "context_authority_owner_operations" in source
     assert (
         'CONTEXT_OWNER_RESULT_ADAPTERS: dict[str, ContextOwnerResultAdapter] = {\n    "system-intent": _system_intent_owner_result'
         in source
