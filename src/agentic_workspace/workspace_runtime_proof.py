@@ -153,27 +153,7 @@ INDEPENDENT_REVIEW_RESULT_INDEX_KIND = "agentic-workspace/independent-review-res
 INDEPENDENT_REVIEW_HOST_RESULT_DIR = Path(".agentic-workspace/local/independent-review-host-results")
 INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-review-host-result-index/v1"
 INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
-INDEPENDENT_REVIEW_HOST_ADMISSION_KEY_ID = "agentic-workspace-independent-review-host-test-v1"
-_INDEPENDENT_REVIEW_HOST_ADMISSION_KEYS: dict[str, dict[str, Any]] = {
-    INDEPENDENT_REVIEW_HOST_ADMISSION_KEY_ID: {
-        "algorithm": "RS256",
-        "status": "current",
-        "issuer": "github-review-webhook",
-        "producer": "github-review-adapter",
-        "trusted_channel": "github-review-webhook",
-        "n": (
-            "a3619b8097fc0cfd085637dc6f07afe09929f1d4a0874dbd9e9968b899be58dc"
-            "50c3be3f030a4a6841900ecd8898d51d32dbd82a74d963929cf0daec8686b6318cf"
-            "0166f84221952fb2e1007d8c49e2faaff9e6f87f4a7b10934bc28619c18ae9821b"
-            "fb35ba371640fdb5d1db45320908e3e996acdf67d3c94d01ca39e3d5d41dbdd624"
-            "981274f4a25de691a0f0b0ed2c3587c14adf356b7904d956ed48151308fbd13d7"
-            "a0aaf53028b67d1e8c4f7bf4767fd1db3b1d3ce21626ccbae351f3cf70ae35014"
-            "c4fcdac5c67d23b8d46d66359c502bbc590ede5a0168c93a8d45dc3c70a329c97"
-            "d06fb21352c3c5cbc85cc9bf1bd95267eec08307b36a7e98d48d8b"
-        ),
-        "e": 65537,
-    }
-}
+INDEPENDENT_REVIEW_HOST_TRUST_STORE_PATH = Path(".agentic-workspace-host/trust/independent-review-admission-keys.json")
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
 
@@ -6760,6 +6740,45 @@ def _independent_review_scope_digest(changed_paths: list[str] | None) -> str:
     return hashlib.sha256(json.dumps(normalized, sort_keys=True).encode("utf-8")).hexdigest()[:20] if normalized else ""
 
 
+def _independent_review_host_trust_store_path() -> Path:
+    return Path.home() / INDEPENDENT_REVIEW_HOST_TRUST_STORE_PATH
+
+
+def _load_independent_review_host_admission_keys(*, target_root: Path) -> dict[str, dict[str, Any]]:
+    path = _independent_review_host_trust_store_path().resolve()
+    try:
+        path.relative_to(target_root.resolve())
+        return {}
+    except ValueError:
+        pass
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict) or payload.get("kind") != "agentic-workspace/host-independent-review-trust-store/v1":
+        return {}
+    keys_raw = payload.get("keys")
+    keys: dict[str, Any]
+    if isinstance(keys_raw, dict):
+        keys = keys_raw
+    elif isinstance(keys_raw, list):
+        keys = {str(item.get("key_id") or ""): item for item in keys_raw if isinstance(item, dict)}
+    else:
+        keys = {}
+    revoked_raw = payload.get("revoked_key_ids")
+    revoked = {str(item) for item in revoked_raw} if isinstance(revoked_raw, list) else set()
+    current: dict[str, dict[str, Any]] = {}
+    for key_id, key in keys.items():
+        if not key_id or key_id in revoked or not isinstance(key, dict):
+            continue
+        if key.get("status") != "current" or key.get("algorithm") != "RS256":
+            continue
+        if str(key.get("revoked_at") or "").strip() or str(key.get("superseded_by") or "").strip():
+            continue
+        current[key_id] = key
+    return current
+
+
 def _read_independent_review_receipt_index(target_root: Path) -> tuple[Path, dict[str, Any]]:
     path = target_root / INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH
     if not path.exists():
@@ -6888,7 +6907,7 @@ def _host_admits_independent_review_host_result(host_result_ref: str, host_resul
     if str(admission.get("algorithm") or "") != "RS256":
         return False
     key_id = str(admission.get("key_id") or "")
-    key = _INDEPENDENT_REVIEW_HOST_ADMISSION_KEYS.get(key_id)
+    key = _load_independent_review_host_admission_keys(target_root=target_root).get(key_id)
     if not key or key.get("status") != "current" or key.get("algorithm") != "RS256":
         return False
     payload = admission.get("signed_payload")

@@ -5,36 +5,6 @@ from tests.workspace_cli_support import *
 
 ROOT = Path(__file__).resolve().parents[1]
 
-_INDEPENDENT_REVIEW_TEST_SIGNING_KEY = """-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCjYZuAl/wM/QhW
-N9xvB6/gmSnx1KCHTb2emWi4mb5Y3FDDvj8DCkpoQZAOzYiY1R0y29gqdNljkpzw
-2uyGhrYxjPAWb4QiGVL7LhAH2MSeL6r/nm+H9KexCTS8KGGcGK6YIb+zW6NxZA/b
-XR20UyCQjj6Zas32fTyU0Byjnj1dQdvdYkmBJ09KJd5pGg8LDtLDWHwUrfNWt5BN
-lW7UgVEwj70T16Cq9TAotn0ejE979HZ/0ds7HTziFibMuuNR889wrjUBTE/NrFxn
-0juNRtZjWcUCu8WQ7eWgFoyTqNRdw8cKMpyX0G+yE1LDxcvIXMm/G9lSZ+7Agwez
-an6Y1I2LAgMBAAECggEADDZn/0bDfanawHpQeeQwAcpKvlu2D1pNfQt0+0eF8owV
-ZWxVHXV2QzDGnRsNknVrrbkmzi89CLP7rNO24zj/aXJiVLfLpeWqtEF1mICPKE8V
-dlU+rptbfy1zya5jDXeZPwa9MG6X9KPiifOXgtRfFmJR/5NiOrVfaYHc6JLgsPwn
-bDp7vhMipmOJTWPmLnfYOrXzPcrKOADwHDD9B7KAsUls5wwUWfbJvmj1qB8BfIR7
-C4OEJceeUDuiPSsbTDwFuKwtebQLgXMWYHVeCWqnQfHw359l7ejgaZedIq3ROxY/
-y6+5RvE3FWSX4ZYfUDE6oVFjcOsXZwBBGnC5/6e7sQKBgQDcq3TNQO8TnV4NEiuj
-hJdtUBol70g8osfqYMThJTnwFJytAXIBwG05mFwCQY9P8DePWQPGUpnqJhHcF8A3
-Gup2MjS1IXmqhYaz+NrELgpiTannnWg8CL8Ags61Zg6nV7IdtLImq6kG9O54rzA/
-WGNqkt7/wQLQWQUM1vPvjJrLDQKBgQC9ihSzd/F1jzwYx5lN3ZFyZua79SFm39W4
-7f2T22ii/FvXC2KJonCGcJtRWx/n7evfxekrOkxNKTz00OtDgQxMWjKGnH+I1pdr
-7ABYWkmxEcyQU/vEiST4V3PYZWfN3hEXv1aap/vzRgjBF4Kq+zO7Y7anfTIZNylG
-c8S7+Cw09wKBgDpdhxk60YFIoDWo1q37Ren9w8zAy0RucZ4GVkyOghKEASSpOzRH
-ZxxSthNKr9Me4DMkAiGUe205AIRMK+TnU5hLkzFNV1bI1mYHriUxYEG79PJz6bvn
-PE2wS2gjREDyqwO8ZVphEOXsJp75BzPZ9wGbMyxGKq5cvT82I3L6p36JAoGAW8Qo
-taOSwioxHIY20R4/NzZe7A2IuHgSz9BZ/2YxSQgJpxoaAS0mcdC/QipuTipBEzyM
-4aL+IjWfD6C+5xXp0GWzJL1MegH7mgLPP/emyhYmBpLCyKrlvV8J9XFTSrcDa431
-7jb6oxP7VRF+8C1jJIzoeDsDMHYmg7e1PpSvQo0CgYEAn00WrBgz/KJNp8mFyDgn
-wtgboNfg8ducC91aWiKE+SQmvTT0YbljsDYEtTYieT1Cj/qO6glMLS+7CiKaI1KU
-/mfbJ2dZ1dKWcDV1SwV5M3UNAsf7qABtUglZEqmvBsgbAgN4xoWuvs6w0NLkbWyg
-8yYTIMQgeEdbpZRUEAKgIYA=
------END PRIVATE KEY-----
-"""
-
 
 def _write_independent_review_host_result(
     target_root: Path,
@@ -49,11 +19,11 @@ def _write_independent_review_host_result(
     import subprocess
 
     from agentic_workspace.workspace_runtime_proof import (
-        INDEPENDENT_REVIEW_HOST_ADMISSION_KEY_ID,
         INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
         INDEPENDENT_REVIEW_HOST_RESULT_DIR,
         INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
         _host_result_body_for_admission,
+        _independent_review_host_trust_store_path,
         _stable_review_json_bytes,
         _stable_review_json_digest,
     )
@@ -106,25 +76,35 @@ def _write_independent_review_host_result(
     path = root / f"{host_id}.json"
     host_result_ref = path.relative_to(target_root).as_posix()
     signed_payload["host_result_ref"] = host_result_ref
-    key_path = target_root / ".agentic-workspace" / "local" / "independent-review-test-host-key.pem"
+    issuer_root = target_root.parent / "independent-review-host-issuer"
+    key_path = issuer_root / f"{host_id}.pem"
     key_path.parent.mkdir(parents=True, exist_ok=True)
-    key_path.write_text(_INDEPENDENT_REVIEW_TEST_SIGNING_KEY, encoding="utf-8")
-    key_id = INDEPENDENT_REVIEW_HOST_ADMISSION_KEY_ID
+    subprocess.run(
+        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
+        capture_output=True,
+        check=True,
+    )
+    modulus = (
+        subprocess.run(
+            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        .stdout.strip()
+        .split("=", 1)[1]
+        .lower()
+    )
+    key_id = "independent-review-host-test-" + _stable_review_json_digest({"host_result_ref": host_result_ref, "modulus": modulus})[:12]
     key = {
         "algorithm": "RS256",
         "status": str(result.get("key_status") or "current"),
         "key_id": key_id,
+        "issuer": "github-review-webhook",
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
         "e": 65537,
-        "n": (
-            "a3619b8097fc0cfd085637dc6f07afe09929f1d4a0874dbd9e9968b899be58dc"
-            "50c3be3f030a4a6841900ecd8898d51d32dbd82a74d963929cf0daec8686b6318cf"
-            "0166f84221952fb2e1007d8c49e2faaff9e6f87f4a7b10934bc28619c18ae9821b"
-            "fb35ba371640fdb5d1db45320908e3e996acdf67d3c94d01ca39e3d5d41dbdd624"
-            "981274f4a25de691a0f0b0ed2c3587c14adf356b7904d956ed48151308fbd13d7"
-            "a0aaf53028b67d1e8c4f7bf4767fd1db3b1d3ce21626ccbae351f3cf70ae35014"
-            "c4fcdac5c67d23b8d46d66359c502bbc590ede5a0168c93a8d45dc3c70a329c97"
-            "d06fb21352c3c5cbc85cc9bf1bd95267eec08307b36a7e98d48d8b"
-        ),
+        "n": modulus,
         "workspace_ref": str(result.get("key_workspace_ref") or f"workspace:path:{target_root.resolve()}"),
         "workspace_path": str(result.get("key_workspace_path") or target_root.resolve()),
         "not_before": str(result.get("key_not_before") or "2026-01-01T00:00:00Z"),
@@ -132,6 +112,21 @@ def _write_independent_review_host_result(
     }
     if result.get("key_revoked_at"):
         key["revoked_at"] = str(result["key_revoked_at"])
+    trust_store_path = _independent_review_host_trust_store_path()
+    trust_store_path.parent.mkdir(parents=True, exist_ok=True)
+    trust_store_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/host-independent-review-trust-store/v1",
+                "keys": {key_id: key},
+                "revoked_key_ids": [],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     completed = subprocess.run(
         ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
         input=_stable_review_json_bytes(signed_payload),
@@ -7746,9 +7741,14 @@ def test_assignment_admit_accepts_pinned_signed_host_evidence_across_process(tmp
 
 def test_assignment_admit_does_not_load_repo_or_pythonpath_host_verifiers() -> None:
     source = (ROOT / "src/agentic_workspace/workspace_runtime_proof.py").read_text(encoding="utf-8")
+    test_source = (ROOT / "tests/test_workspace_proof_cli.py").read_text(encoding="utf-8")
 
     assert "agentic_workspace_host_adapters.independent_review" not in source
     assert "importlib.import_module" not in source
+    private_key_marker = "BEGIN " + "PRIVATE KEY"
+    assert private_key_marker not in source
+    assert private_key_marker not in test_source
+    assert "_INDEPENDENT_REVIEW_HOST_ADMISSION_KEYS" not in source
 
 
 def test_assignment_admit_rejects_caller_supplied_host_trust_root(tmp_path: Path) -> None:

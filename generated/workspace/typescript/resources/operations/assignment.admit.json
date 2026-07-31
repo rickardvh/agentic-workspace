@@ -18,7 +18,7 @@
     "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
     "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
     "Independent-review admission accepts only producer-owned review result envelopes and rejects caller-authored identity packets.",
-    "Independent-review host results are admitted only by pinned host-signed evidence verified against AW-owned public trust anchors; repo-local files, PYTHONPATH modules, environment variables, and caller-supplied verifier keys/signatures are non-authoritative caches.",
+    "Independent-review host results are admitted only by pinned host-signed evidence verified against a host trust store outside the target repository; repo-local files, PYTHONPATH modules, environment variables, checked-in keys, and caller-supplied verifier keys/signatures are non-authoritative caches.",
     "Independent-review receipts are bound to changed scope and expire, revoke, or supersede fail closed at proof admission."
   ],
   "id": "assignment.admit",
