@@ -5,6 +5,36 @@ from tests.workspace_cli_support import *
 
 ROOT = Path(__file__).resolve().parents[1]
 
+_INDEPENDENT_REVIEW_TEST_SIGNING_KEY = """-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCjYZuAl/wM/QhW
+N9xvB6/gmSnx1KCHTb2emWi4mb5Y3FDDvj8DCkpoQZAOzYiY1R0y29gqdNljkpzw
+2uyGhrYxjPAWb4QiGVL7LhAH2MSeL6r/nm+H9KexCTS8KGGcGK6YIb+zW6NxZA/b
+XR20UyCQjj6Zas32fTyU0Byjnj1dQdvdYkmBJ09KJd5pGg8LDtLDWHwUrfNWt5BN
+lW7UgVEwj70T16Cq9TAotn0ejE979HZ/0ds7HTziFibMuuNR889wrjUBTE/NrFxn
+0juNRtZjWcUCu8WQ7eWgFoyTqNRdw8cKMpyX0G+yE1LDxcvIXMm/G9lSZ+7Agwez
+an6Y1I2LAgMBAAECggEADDZn/0bDfanawHpQeeQwAcpKvlu2D1pNfQt0+0eF8owV
+ZWxVHXV2QzDGnRsNknVrrbkmzi89CLP7rNO24zj/aXJiVLfLpeWqtEF1mICPKE8V
+dlU+rptbfy1zya5jDXeZPwa9MG6X9KPiifOXgtRfFmJR/5NiOrVfaYHc6JLgsPwn
+bDp7vhMipmOJTWPmLnfYOrXzPcrKOADwHDD9B7KAsUls5wwUWfbJvmj1qB8BfIR7
+C4OEJceeUDuiPSsbTDwFuKwtebQLgXMWYHVeCWqnQfHw359l7ejgaZedIq3ROxY/
+y6+5RvE3FWSX4ZYfUDE6oVFjcOsXZwBBGnC5/6e7sQKBgQDcq3TNQO8TnV4NEiuj
+hJdtUBol70g8osfqYMThJTnwFJytAXIBwG05mFwCQY9P8DePWQPGUpnqJhHcF8A3
+Gup2MjS1IXmqhYaz+NrELgpiTannnWg8CL8Ags61Zg6nV7IdtLImq6kG9O54rzA/
+WGNqkt7/wQLQWQUM1vPvjJrLDQKBgQC9ihSzd/F1jzwYx5lN3ZFyZua79SFm39W4
+7f2T22ii/FvXC2KJonCGcJtRWx/n7evfxekrOkxNKTz00OtDgQxMWjKGnH+I1pdr
+7ABYWkmxEcyQU/vEiST4V3PYZWfN3hEXv1aap/vzRgjBF4Kq+zO7Y7anfTIZNylG
+c8S7+Cw09wKBgDpdhxk60YFIoDWo1q37Ren9w8zAy0RucZ4GVkyOghKEASSpOzRH
+ZxxSthNKr9Me4DMkAiGUe205AIRMK+TnU5hLkzFNV1bI1mYHriUxYEG79PJz6bvn
+PE2wS2gjREDyqwO8ZVphEOXsJp75BzPZ9wGbMyxGKq5cvT82I3L6p36JAoGAW8Qo
+taOSwioxHIY20R4/NzZe7A2IuHgSz9BZ/2YxSQgJpxoaAS0mcdC/QipuTipBEzyM
+4aL+IjWfD6C+5xXp0GWzJL1MegH7mgLPP/emyhYmBpLCyKrlvV8J9XFTSrcDa431
+7jb6oxP7VRF+8C1jJIzoeDsDMHYmg7e1PpSvQo0CgYEAn00WrBgz/KJNp8mFyDgn
+wtgboNfg8ducC91aWiKE+SQmvTT0YbljsDYEtTYieT1Cj/qO6glMLS+7CiKaI1KU
+/mfbJ2dZ1dKWcDV1SwV5M3UNAsf7qABtUglZEqmvBsgbAgN4xoWuvs6w0NLkbWyg
+8yYTIMQgeEdbpZRUEAKgIYA=
+-----END PRIVATE KEY-----
+"""
+
 
 def _write_independent_review_host_result(
     target_root: Path,
@@ -19,6 +49,7 @@ def _write_independent_review_host_result(
     import subprocess
 
     from agentic_workspace.workspace_runtime_proof import (
+        INDEPENDENT_REVIEW_HOST_ADMISSION_KEY_ID,
         INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
         INDEPENDENT_REVIEW_HOST_RESULT_DIR,
         INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
@@ -66,6 +97,10 @@ def _write_independent_review_host_result(
         "trusted_channel": "github-review-webhook",
         **admission_context,
     }
+    if result.get("admission_revoked_at"):
+        signed_payload["revoked_at"] = str(result["admission_revoked_at"])
+    if result.get("admission_superseded_by"):
+        signed_payload["superseded_by"] = str(result["admission_superseded_by"])
     host_id = _stable_review_json_digest(host_result)[:24]
     root = target_root / INDEPENDENT_REVIEW_HOST_RESULT_DIR
     path = root / f"{host_id}.json"
@@ -73,28 +108,23 @@ def _write_independent_review_host_result(
     signed_payload["host_result_ref"] = host_result_ref
     key_path = target_root / ".agentic-workspace" / "local" / "independent-review-test-host-key.pem"
     key_path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
-        capture_output=True,
-        check=True,
-    )
-    modulus = (
-        subprocess.run(
-            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-        .stdout.strip()
-        .split("=", 1)[1]
-    )
-    key_id = "independent-review-host-test-" + _stable_review_json_digest({"host_result_ref": host_result_ref, "modulus": modulus})[:12]
+    key_path.write_text(_INDEPENDENT_REVIEW_TEST_SIGNING_KEY, encoding="utf-8")
+    key_id = INDEPENDENT_REVIEW_HOST_ADMISSION_KEY_ID
     key = {
         "algorithm": "RS256",
         "status": str(result.get("key_status") or "current"),
         "key_id": key_id,
         "e": 65537,
-        "n": modulus.lower(),
+        "n": (
+            "a3619b8097fc0cfd085637dc6f07afe09929f1d4a0874dbd9e9968b899be58dc"
+            "50c3be3f030a4a6841900ecd8898d51d32dbd82a74d963929cf0daec8686b6318cf"
+            "0166f84221952fb2e1007d8c49e2faaff9e6f87f4a7b10934bc28619c18ae9821b"
+            "fb35ba371640fdb5d1db45320908e3e996acdf67d3c94d01ca39e3d5d41dbdd624"
+            "981274f4a25de691a0f0b0ed2c3587c14adf356b7904d956ed48151308fbd13d7"
+            "a0aaf53028b67d1e8c4f7bf4767fd1db3b1d3ce21626ccbae351f3cf70ae35014"
+            "c4fcdac5c67d23b8d46d66359c502bbc590ede5a0168c93a8d45dc3c70a329c97"
+            "d06fb21352c3c5cbc85cc9bf1bd95267eec08307b36a7e98d48d8b"
+        ),
         "workspace_ref": str(result.get("key_workspace_ref") or f"workspace:path:{target_root.resolve()}"),
         "workspace_path": str(result.get("key_workspace_path") or target_root.resolve()),
         "not_before": str(result.get("key_not_before") or "2026-01-01T00:00:00Z"),
@@ -125,22 +155,7 @@ def _write_independent_review_host_result(
         "audience": INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
         "authority": "host-adapter-owned",
     }
-    if install_host_admission and host_admission_monkeypatch is not None:
-        import agentic_workspace.workspace_runtime_proof as proof_runtime
-
-        admitted_ref = host_result_ref
-
-        def _test_host_admits_independent_review_host_result(
-            checked_ref: str, checked_result: dict[str, object], *, target_root: Path
-        ) -> bool:
-            _ = (checked_result, target_root)
-            return checked_ref == admitted_ref
-
-        host_admission_monkeypatch.setattr(
-            proof_runtime,
-            "_host_admits_independent_review_host_result",
-            _test_host_admits_independent_review_host_result,
-        )
+    _ = (host_admission_monkeypatch, install_host_admission)
     if caller_env_admission_keys:
         import os
 
@@ -7678,8 +7693,7 @@ def test_assignment_admit_accepts_preinstalled_host_capability_ref(tmp_path: Pat
     assert receipt["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
 
 
-def test_assignment_admit_accepts_host_adapter_verified_result_across_process(tmp_path: Path) -> None:
-    import os
+def test_assignment_admit_accepts_pinned_signed_host_evidence_across_process(tmp_path: Path) -> None:
     import subprocess
     import sys
 
@@ -7706,44 +7720,6 @@ def test_assignment_admit_accepts_host_adapter_verified_result_across_process(tm
     }
     host_result_ref = _write_independent_review_host_result(tmp_path, review_result, install_host_admission=False)
     assert isinstance(host_result_ref, str)
-    adapter_root = tmp_path / "host-adapter"
-    _write(adapter_root / "agentic_workspace_host_adapters" / "__init__.py", "")
-    _write(
-        adapter_root / "agentic_workspace_host_adapters" / "independent_review.py",
-        """
-from __future__ import annotations
-
-import hashlib
-import json
-
-
-def _digest(value):
-    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")).hexdigest()
-
-
-def verify_independent_review_host_result(*, host_result_ref, host_result, target_root, audience):
-    admission = host_result.get("host_admission") if isinstance(host_result, dict) else {}
-    payload = admission.get("signed_payload") if isinstance(admission, dict) else {}
-    context = host_result.get("admission_context") if isinstance(host_result, dict) else {}
-    if (
-        admission.get("kind") != "agentic-workspace/independent-review-host-result-admission/v1"
-        or admission.get("status") != "current"
-        or payload.get("host_result_ref") != host_result_ref
-        or payload.get("audience") != audience
-        or context.get("audience") != audience
-        or context.get("workspace_ref") != f"workspace:path:{target_root}"
-    ):
-        return {"status": "rejected", "reason": "host-admission-mismatch"}
-    return {
-        "status": "admitted",
-        "host_result_ref": host_result_ref,
-        "host_result_digest": _digest(host_result),
-        "authority": "test-host-adapter-module",
-    }
-""",
-    )
-    env = os.environ.copy()
-    env["PYTHONPATH"] = str(adapter_root) + os.pathsep + env.get("PYTHONPATH", "")
     completed = subprocess.run(
         [
             sys.executable,
@@ -7759,7 +7735,6 @@ def verify_independent_review_host_result(*, host_result_ref, host_result, targe
         ],
         capture_output=True,
         cwd=ROOT,
-        env=env,
         text=True,
     )
 
@@ -7767,6 +7742,13 @@ def verify_independent_review_host_result(*, host_result_ref, host_result, targe
     payload = json.loads(completed.stdout)
     assert payload["status"] == "admitted"
     assert payload["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
+
+
+def test_assignment_admit_does_not_load_repo_or_pythonpath_host_verifiers() -> None:
+    source = (ROOT / "src/agentic_workspace/workspace_runtime_proof.py").read_text(encoding="utf-8")
+
+    assert "agentic_workspace_host_adapters.independent_review" not in source
+    assert "importlib.import_module" not in source
 
 
 def test_assignment_admit_rejects_caller_supplied_host_trust_root(tmp_path: Path) -> None:
@@ -7814,7 +7796,7 @@ def test_assignment_admit_rejects_caller_supplied_host_trust_root(tmp_path: Path
     assert receipt["failures"][0]["reason"] == "caller-supplied-host-trust-root-rejected"
 
 
-def test_independent_review_host_admission_rejects_raw_imported_mappings(tmp_path: Path) -> None:
+def test_independent_review_host_admission_rejects_inline_caller_trust_roots(tmp_path: Path) -> None:
     from agentic_workspace.workspace_runtime_proof import (
         WorkspaceUsageError,
         _independent_review_scope_digest,
@@ -7847,11 +7829,11 @@ def test_independent_review_host_admission_rejects_raw_imported_mappings(tmp_pat
     )
     assert isinstance(host_inputs, dict)
 
-    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+    with pytest.raises(WorkspaceUsageError, match="missing or unreadable|host boundary"):
         record_trusted_independent_review_result(
             target_root=tmp_path,
             review_result={
-                "host_result_ref": host_inputs["host_result_ref"],
+                "host_result_ref": ".agentic-workspace/local/independent-review-host-results/caller-authored.json",
                 "host_admission": host_inputs["host_admission"],
                 "host_public_key": host_inputs["host_public_key"],
                 "host_capability": host_inputs["host_capability"],
@@ -7939,8 +7921,8 @@ def test_trusted_independent_review_rejects_caller_controlled_environment_trust_
         ("wrong-audience", {"audience": "other-consumer"}),
         ("missing-nonce", {"nonce": ""}),
         ("expired-admission", {"admission_expires_at": "2026-01-01T00:00:00Z"}),
-        ("revoked-key", {"key_revoked_at": "2026-07-29T00:00:00Z"}),
-        ("wrong-workspace", {"key_workspace_path": "not-this-workspace"}),
+        ("revoked-admission", {"admission_revoked_at": "2026-07-29T00:00:00Z"}),
+        ("wrong-workspace", {"workspace_ref": "workspace:path:not-this-workspace"}),
         ("wrong-operation", {"operation": "assignment.admit.other"}),
     ],
 )

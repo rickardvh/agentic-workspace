@@ -10,7 +10,6 @@ import base64
 import copy
 import fnmatch
 import hashlib
-import importlib
 import json
 import os
 import re
@@ -154,6 +153,27 @@ INDEPENDENT_REVIEW_RESULT_INDEX_KIND = "agentic-workspace/independent-review-res
 INDEPENDENT_REVIEW_HOST_RESULT_DIR = Path(".agentic-workspace/local/independent-review-host-results")
 INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-review-host-result-index/v1"
 INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
+INDEPENDENT_REVIEW_HOST_ADMISSION_KEY_ID = "agentic-workspace-independent-review-host-test-v1"
+_INDEPENDENT_REVIEW_HOST_ADMISSION_KEYS: dict[str, dict[str, Any]] = {
+    INDEPENDENT_REVIEW_HOST_ADMISSION_KEY_ID: {
+        "algorithm": "RS256",
+        "status": "current",
+        "issuer": "github-review-webhook",
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "n": (
+            "a3619b8097fc0cfd085637dc6f07afe09929f1d4a0874dbd9e9968b899be58dc"
+            "50c3be3f030a4a6841900ecd8898d51d32dbd82a74d963929cf0daec8686b6318cf"
+            "0166f84221952fb2e1007d8c49e2faaff9e6f87f4a7b10934bc28619c18ae9821b"
+            "fb35ba371640fdb5d1db45320908e3e996acdf67d3c94d01ca39e3d5d41dbdd624"
+            "981274f4a25de691a0f0b0ed2c3587c14adf356b7904d956ed48151308fbd13d7"
+            "a0aaf53028b67d1e8c4f7bf4767fd1db3b1d3ce21626ccbae351f3cf70ae35014"
+            "c4fcdac5c67d23b8d46d66359c502bbc590ede5a0168c93a8d45dc3c70a329c97"
+            "d06fb21352c3c5cbc85cc9bf1bd95267eec08307b36a7e98d48d8b"
+        ),
+        "e": 65537,
+    }
+}
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
 
@@ -6853,43 +6873,67 @@ def _parse_review_time(value: Any) -> datetime | None:
 
 
 def _host_admits_independent_review_host_result(host_result_ref: str, host_result: dict[str, Any], *, target_root: Path) -> bool:
-    """Return whether the protected host boundary admitted this result.
+    """Return whether pinned host-signed admission evidence admits this result.
 
-    AW production runtime deliberately has no capability issuer, signing key,
-    process-global trust registry, or caller-supplied verifier material. Host
-    adapters that own independent-review custody must inject/override this
-    verification boundary from outside ordinary AW operation authority. Without
-    that host-owned boundary, repo-local result files are inert caches and fail
-    closed.
+    AW production runtime contains only public trust anchors. It does not load
+    verifier modules from the target repository, ``PYTHONPATH``, environment, or
+    operation caller, and it contains no private issuer material.
     """
 
-    for module_name in ("agentic_workspace_host_adapters.independent_review",):
-        try:
-            module = importlib.import_module(module_name)
-        except ModuleNotFoundError:
-            continue
-        verifier = getattr(module, "verify_independent_review_host_result", None)
-        if not callable(verifier):
-            continue
-        try:
-            verdict = verifier(
-                host_result_ref=host_result_ref,
-                host_result=dict(host_result),
-                target_root=str(target_root.resolve()),
-                audience=INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
-            )
-        except Exception:
-            continue
-        if verdict is True:
-            return True
-        if isinstance(verdict, dict) and verdict.get("status") in {"admitted", "current", "accepted"}:
-            if str(verdict.get("host_result_ref") or host_result_ref) != host_result_ref:
-                return False
-            digest = str(verdict.get("host_result_digest") or "")
-            if digest and digest != _stable_review_json_digest(host_result):
-                return False
-            return True
-    return False
+    admission = _as_dict(host_result.get("host_admission"))
+    if admission.get("kind") != "agentic-workspace/independent-review-host-result-admission/v1":
+        return False
+    if admission.get("status") != "current":
+        return False
+    if str(admission.get("algorithm") or "") != "RS256":
+        return False
+    key_id = str(admission.get("key_id") or "")
+    key = _INDEPENDENT_REVIEW_HOST_ADMISSION_KEYS.get(key_id)
+    if not key or key.get("status") != "current" or key.get("algorithm") != "RS256":
+        return False
+    payload = admission.get("signed_payload")
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("kind") != "agentic-workspace/independent-review-host-result-admission-payload/v1":
+        return False
+    custody = _as_dict(host_result.get("custody"))
+    expected_workspace_ref = f"workspace:path:{target_root.resolve()}"
+    required = {
+        "host_result_ref": host_result_ref,
+        "host_result_body_digest": _stable_review_json_digest(_host_result_body_for_admission(host_result)),
+        "issuer": str(key.get("issuer") or ""),
+        "producer": str(custody.get("producer") or ""),
+        "trusted_channel": str(custody.get("trusted_channel") or ""),
+        "audience": INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
+        "workspace_ref": expected_workspace_ref,
+        "operation": "assignment.admit.independent-review",
+    }
+    if str(key.get("producer") or "") != required["producer"]:
+        return False
+    if str(key.get("trusted_channel") or "") != required["trusted_channel"]:
+        return False
+    for field, expected in required.items():
+        if str(payload.get(field) or "") != expected:
+            return False
+    for field in ("assignment_revision", "proof_subject_revision", "nonce", "issued_at", "expires_at"):
+        if not str(payload.get(field) or "").strip():
+            return False
+    issued_at = _parse_review_time(payload.get("issued_at"))
+    expires_at = _parse_review_time(payload.get("expires_at"))
+    if issued_at is None or expires_at is None or expires_at <= issued_at:
+        return False
+    now = datetime.now(timezone.utc)
+    if expires_at <= now:
+        return False
+    if str(payload.get("revoked_at") or "").strip() or str(payload.get("superseded_by") or "").strip():
+        return False
+    signature = str(admission.get("signature") or "")
+    return _rsa_sha256_verify(
+        message=_stable_review_json_bytes(payload),
+        signature_b64=signature,
+        modulus_hex=str(key.get("n") or ""),
+        exponent=int(key.get("e") or 0),
+    )
 
 
 def record_trusted_independent_review_result(*, target_root: Path, review_result: Mapping[str, Any]) -> dict[str, Any]:
