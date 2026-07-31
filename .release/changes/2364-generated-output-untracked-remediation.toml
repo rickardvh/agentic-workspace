@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Report untracked generated outputs with an actionable add/regenerate remediation."
