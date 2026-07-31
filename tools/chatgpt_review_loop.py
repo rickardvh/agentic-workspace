@@ -58,6 +58,15 @@ class Review:
         return f"{self.pr}:{self.head}:{self.comment_id}"
 
 
+@dataclass(frozen=True)
+class LegacyWorktreeRetirementPlan:
+    pr: int
+    entry_key: str
+    worktree: Path
+    current_head: str
+    remove_registered_worktree: bool
+
+
 class CommandRunner:
     def run(self, command: Sequence[str], *, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -1002,7 +1011,7 @@ def _git_stdout_or_error(worktree: Path, runner: CommandRunner, command: Sequenc
     return completed.stdout.strip()
 
 
-def _require_safe_legacy_worktree_retirement(root: Path, *, pr: int, worktree: Path, runner: CommandRunner) -> None:
+def _require_safe_legacy_worktree_retirement(root: Path, *, pr: int, worktree: Path, runner: CommandRunner) -> str:
     """Fail closed unless a legacy dispatcher worktree is clean and already custodied."""
     dirty = _git_stdout_or_error(
         worktree,
@@ -1080,21 +1089,22 @@ def _require_safe_legacy_worktree_retirement(root: Path, *, pr: int, worktree: P
             f"legacy dispatcher worktree for PR #{pr} has {unpushed_count} commit(s) not reachable from origin",
             recovery=f"push, cherry-pick, or otherwise preserve `{worktree}` before rerunning migration",
         )
+    return current_head
 
 
-def _retire_legacy_dispatch_worktree(
+def _plan_legacy_dispatch_worktree_retirement(
     root: Path,
-    registry: dict[str, Any],
     *,
     pr: int,
+    entry_key: str,
     entry: dict[str, Any],
     runner: CommandRunner,
     worktree_root: Path,
-) -> bool:
-    """Remove one old dispatcher-owned detached worktree and rewrite its entry."""
+) -> LegacyWorktreeRetirementPlan | None:
+    """Validate one old dispatcher-owned detached worktree without mutating it."""
     raw_worktree = str(entry.get("worktree", "")).strip()
     if not raw_worktree:
-        return False
+        return None
     worktree = Path(raw_worktree).resolve()
     configured_root = worktree_root.resolve()
     expected_name = f"pr-{pr}"
@@ -1108,27 +1118,84 @@ def _retire_legacy_dispatch_worktree(
             ),
         )
     registered = _listed_git_worktrees(root, runner)
+    current_head = ""
     if worktree in registered:
-        _require_safe_legacy_worktree_retirement(root, pr=pr, worktree=worktree, runner=runner)
-        removed = runner.run(["git", "worktree", "remove", worktree.as_posix()], cwd=root)
-        if removed.returncode:
-            raise LoopError(
-                "legacy-worktree-migration-failed",
-                removed.stderr.strip() or f"could not remove legacy dispatcher worktree for PR #{pr}",
-                recovery=f"inspect `{worktree}` and remove it only after preserving any uncustodied work",
-            )
+        current_head = _require_safe_legacy_worktree_retirement(root, pr=pr, worktree=worktree, runner=runner)
+        remove_registered_worktree = True
     elif worktree.exists():
         raise LoopError(
             "legacy-worktree-unregistered",
             f"legacy dispatcher path for PR #{pr} exists but is not a registered Git worktree: {worktree}",
             recovery="inspect the directory and remove it manually if it is safe, then rerun the review poller",
         )
+    else:
+        remove_registered_worktree = False
+    return LegacyWorktreeRetirementPlan(
+        pr=pr,
+        entry_key=entry_key,
+        worktree=worktree,
+        current_head=current_head,
+        remove_registered_worktree=remove_registered_worktree,
+    )
+
+
+def _apply_legacy_dispatch_worktree_retirement(
+    root: Path,
+    registry: dict[str, Any],
+    *,
+    plan: LegacyWorktreeRetirementPlan,
+    runner: CommandRunner,
+) -> None:
+    """Remove one preflighted legacy worktree and rewrite only its registry entry."""
+    if plan.remove_registered_worktree:
+        removed = runner.run(["git", "worktree", "remove", plan.worktree.as_posix()], cwd=root)
+        if removed.returncode:
+            raise LoopError(
+                "legacy-worktree-migration-failed",
+                removed.stderr.strip() or f"could not remove legacy dispatcher worktree for PR #{plan.pr}",
+                recovery=f"inspect `{plan.worktree}` and remove it only after preserving any uncustodied work",
+            )
+    entry = registry["prs"][plan.entry_key]
     entry["checkout"] = root.as_posix()
     entry.pop("worktree", None)
     migrated = registry.setdefault("migrated_legacy_worktrees", [])
     if isinstance(migrated, list):
-        migrated.append({"pr_number": pr, "removed": worktree.as_posix()})
+        migrated.append({"pr_number": plan.pr, "removed": plan.worktree.as_posix()})
+
+
+def _retire_legacy_dispatch_worktree(
+    root: Path,
+    registry: dict[str, Any],
+    *,
+    pr: int,
+    entry: dict[str, Any],
+    runner: CommandRunner,
+    worktree_root: Path,
+) -> bool:
+    """Remove one old dispatcher-owned detached worktree and rewrite its entry."""
+    plan = _plan_legacy_dispatch_worktree_retirement(
+        root,
+        pr=pr,
+        entry_key=str(pr),
+        entry=entry,
+        runner=runner,
+        worktree_root=worktree_root,
+    )
+    if plan is None:
+        return False
+    _apply_legacy_dispatch_worktree_retirement(root, registry, plan=plan, runner=runner)
     return True
+
+
+def _restore_removed_legacy_dispatch_worktrees(root: Path, plans: list[LegacyWorktreeRetirementPlan], runner: CommandRunner) -> list[str]:
+    failures: list[str] = []
+    for plan in reversed(plans):
+        if not plan.remove_registered_worktree or not plan.current_head or plan.worktree.exists():
+            continue
+        restored = runner.run(["git", "worktree", "add", "--detach", plan.worktree.as_posix(), plan.current_head], cwd=root)
+        if restored.returncode:
+            failures.append(restored.stderr.strip() or f"could not restore legacy worktree for PR #{plan.pr} at {plan.worktree}")
+    return failures
 
 
 def _migrate_legacy_dispatch_worktrees(
@@ -1139,23 +1206,51 @@ def _migrate_legacy_dispatch_worktrees(
     worktree_root: Path,
 ) -> list[int]:
     entries = registry["prs"]
-    migrated: list[int] = []
+    plans: list[LegacyWorktreeRetirementPlan] = []
     for key, entry in list(entries.items()):
         if not isinstance(entry, dict) or not key.isdigit() or "worktree" not in entry:
             continue
         pr = int(key)
-        if _retire_legacy_dispatch_worktree(
+        plan = _plan_legacy_dispatch_worktree_retirement(
             root,
-            registry,
             pr=pr,
+            entry_key=key,
             entry=entry,
             runner=runner,
             worktree_root=worktree_root,
-        ):
-            migrated.append(pr)
-    if migrated:
+        )
+        if plan is not None:
+            plans.append(plan)
+    if not plans:
+        return []
+    original_registry = json.loads(json.dumps(registry, sort_keys=True, default=str))
+    applied: list[LegacyWorktreeRetirementPlan] = []
+    try:
+        for plan in plans:
+            _apply_legacy_dispatch_worktree_retirement(root, registry, plan=plan, runner=runner)
+            applied.append(plan)
         _save_dispatch(root, registry)
-    return migrated
+    except Exception as exc:
+        restore_failures = _restore_removed_legacy_dispatch_worktrees(root, applied, runner)
+        registry.clear()
+        registry.update(original_registry)
+        try:
+            _save_dispatch(root, registry)
+        except Exception as save_exc:
+            restore_failures.append(f"could not restore dispatcher registry: {save_exc}")
+        if isinstance(exc, LoopError):
+            if restore_failures:
+                exc.recovery = f"{exc.recovery}; rollback also reported: {'; '.join(restore_failures)}"
+            raise
+        raise LoopError(
+            "legacy-worktree-migration-rollback",
+            str(exc) or "legacy dispatcher worktree migration failed after partial apply",
+            recovery=(
+                "migration attempted to restore removed worktrees and the original registry; "
+                + ("rollback issues: " + "; ".join(restore_failures) if restore_failures else "rerun after inspecting dispatcher state")
+            ),
+        ) from exc
+    return [plan.pr for plan in plans]
 
 
 def _restore_checkout(root: Path, *, branch: str, head: str, runner: CommandRunner) -> str:

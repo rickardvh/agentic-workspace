@@ -523,6 +523,128 @@ def test_real_git_legacy_worktree_migration_removes_owned_open_entry(tmp_path: P
     assert unrelated.as_posix() in listed
 
 
+def test_real_git_legacy_worktree_migration_preflights_all_entries_before_removal(tmp_path: Path) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    worktree_root = clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees"
+    safe_branch = "codex/legacy-safe-before-dirty"
+    dirty_branch = "codex/legacy-dirty-after-safe"
+    safe_head = push_branch(seed, safe_branch, "safe.txt", "safe\n")
+    dirty_head = push_branch(seed, dirty_branch, "dirty.txt", "dirty\n")
+    safe_worktree = worktree_root / "pr-12"
+    dirty_worktree = worktree_root / "pr-13"
+    git(clone, "fetch", "origin", safe_branch)
+    git(clone, "fetch", "origin", dirty_branch)
+    git(clone, "worktree", "add", "--detach", safe_worktree.as_posix(), safe_head)
+    git(clone, "worktree", "add", "--detach", dirty_worktree.as_posix(), dirty_head)
+    (dirty_worktree / "dirty.txt").write_text("uncustodied\n", encoding="utf-8")
+    loop._save_dispatch(
+        clone,
+        {
+            "kind": loop.STATE_KIND,
+            "prs": {
+                "12": {"worktree": safe_worktree.as_posix(), "branch": safe_branch},
+                "13": {"worktree": dirty_worktree.as_posix(), "branch": dirty_branch},
+            },
+        },
+    )
+
+    with pytest.raises(loop.LoopError) as error:
+        loop._migrate_legacy_dispatch_worktrees(
+            clone,
+            loop._load_dispatch(clone),
+            runner=loop.CommandRunner(),
+            worktree_root=worktree_root,
+        )
+
+    assert error.value.code == "legacy-worktree-dirty"
+    listed = registered_worktrees(clone)
+    assert safe_worktree.as_posix() in listed
+    assert dirty_worktree.as_posix() in listed
+    registry = loop._load_dispatch(clone)
+    assert registry["prs"]["12"]["worktree"] == safe_worktree.as_posix()
+    assert registry["prs"]["13"]["worktree"] == dirty_worktree.as_posix()
+
+
+def test_real_git_legacy_worktree_migration_rolls_back_after_remove_failure(tmp_path: Path) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    worktree_root = clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees"
+    first_branch = "codex/legacy-first-remove"
+    second_branch = "codex/legacy-second-remove"
+    first_head = push_branch(seed, first_branch, "first.txt", "first\n")
+    second_head = push_branch(seed, second_branch, "second.txt", "second\n")
+    first_worktree = worktree_root / "pr-12"
+    second_worktree = worktree_root / "pr-13"
+    git(clone, "fetch", "origin", first_branch)
+    git(clone, "fetch", "origin", second_branch)
+    git(clone, "worktree", "add", "--detach", first_worktree.as_posix(), first_head)
+    git(clone, "worktree", "add", "--detach", second_worktree.as_posix(), second_head)
+    loop._save_dispatch(
+        clone,
+        {
+            "kind": loop.STATE_KIND,
+            "prs": {
+                "12": {"worktree": first_worktree.as_posix(), "branch": first_branch},
+                "13": {"worktree": second_worktree.as_posix(), "branch": second_branch},
+            },
+        },
+    )
+
+    class FailSecondRemoveRunner(loop.CommandRunner):
+        def run(self, command, *, cwd, env=None):
+            if list(command) == ["git", "worktree", "remove", second_worktree.as_posix()]:
+                return subprocess.CompletedProcess(command, 1, "", "simulated remove failure")
+            return super().run(command, cwd=cwd, env=env)
+
+    with pytest.raises(loop.LoopError) as error:
+        loop._migrate_legacy_dispatch_worktrees(
+            clone,
+            loop._load_dispatch(clone),
+            runner=FailSecondRemoveRunner(),
+            worktree_root=worktree_root,
+        )
+
+    assert error.value.code == "legacy-worktree-migration-failed"
+    listed = registered_worktrees(clone)
+    assert first_worktree.as_posix() in listed
+    assert second_worktree.as_posix() in listed
+    registry = loop._load_dispatch(clone)
+    assert registry["prs"]["12"]["worktree"] == first_worktree.as_posix()
+    assert registry["prs"]["13"]["worktree"] == second_worktree.as_posix()
+
+
+def test_real_git_legacy_worktree_migration_rolls_back_after_save_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    worktree_root = clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees"
+    branch = "codex/legacy-save-failure"
+    head = push_branch(seed, branch, "review.txt", "reviewed\n")
+    worktree = worktree_root / "pr-12"
+    git(clone, "fetch", "origin", branch)
+    git(clone, "worktree", "add", "--detach", worktree.as_posix(), head)
+    loop._save_dispatch(clone, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix(), "branch": branch}}})
+    original_save = loop._save_dispatch
+    save_attempts = {"count": 0}
+
+    def fail_first_save(root: Path, payload: dict[str, object]) -> None:
+        save_attempts["count"] += 1
+        if save_attempts["count"] == 1:
+            raise OSError("simulated dispatch save failure")
+        original_save(root, payload)
+
+    monkeypatch.setattr(loop, "_save_dispatch", fail_first_save)
+
+    with pytest.raises(loop.LoopError) as error:
+        loop._migrate_legacy_dispatch_worktrees(
+            clone,
+            loop._load_dispatch(clone),
+            runner=loop.CommandRunner(),
+            worktree_root=worktree_root,
+        )
+
+    assert error.value.code == "legacy-worktree-migration-rollback"
+    assert worktree.as_posix() in registered_worktrees(clone)
+    assert loop._load_dispatch(clone)["prs"]["12"]["worktree"] == worktree.as_posix()
+
+
 def test_real_git_closed_dispatch_cleanup_migrates_legacy_worktree_before_retiring_state(tmp_path: Path) -> None:
     _origin, seed, clone = real_origin_and_clone(tmp_path)
     branch = "codex/legacy-closed"
