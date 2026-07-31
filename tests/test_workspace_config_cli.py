@@ -3,6 +3,36 @@ from __future__ import annotations
 # ruff: noqa: F403,F405
 from tests.workspace_cli_support import *
 
+_HOST_EVIDENCE_TEST_SIGNING_KEY = """-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCjYZuAl/wM/QhW
+N9xvB6/gmSnx1KCHTb2emWi4mb5Y3FDDvj8DCkpoQZAOzYiY1R0y29gqdNljkpzw
+2uyGhrYxjPAWb4QiGVL7LhAH2MSeL6r/nm+H9KexCTS8KGGcGK6YIb+zW6NxZA/b
+XR20UyCQjj6Zas32fTyU0Byjnj1dQdvdYkmBJ09KJd5pGg8LDtLDWHwUrfNWt5BN
+lW7UgVEwj70T16Cq9TAotn0ejE979HZ/0ds7HTziFibMuuNR889wrjUBTE/NrFxn
+0juNRtZjWcUCu8WQ7eWgFoyTqNRdw8cKMpyX0G+yE1LDxcvIXMm/G9lSZ+7Agwez
+an6Y1I2LAgMBAAECggEADDZn/0bDfanawHpQeeQwAcpKvlu2D1pNfQt0+0eF8owV
+ZWxVHXV2QzDGnRsNknVrrbkmzi89CLP7rNO24zj/aXJiVLfLpeWqtEF1mICPKE8V
+dlU+rptbfy1zya5jDXeZPwa9MG6X9KPiifOXgtRfFmJR/5NiOrVfaYHc6JLgsPwn
+bDp7vhMipmOJTWPmLnfYOrXzPcrKOADwHDD9B7KAsUls5wwUWfbJvmj1qB8BfIR7
+C4OEJceeUDuiPSsbTDwFuKwtebQLgXMWYHVeCWqnQfHw359l7ejgaZedIq3ROxY/
+y6+5RvE3FWSX4ZYfUDE6oVFjcOsXZwBBGnC5/6e7sQKBgQDcq3TNQO8TnV4NEiuj
+hJdtUBol70g8osfqYMThJTnwFJytAXIBwG05mFwCQY9P8DePWQPGUpnqJhHcF8A3
+Gup2MjS1IXmqhYaz+NrELgpiTannnWg8CL8Ags61Zg6nV7IdtLImq6kG9O54rzA/
+WGNqkt7/wQLQWQUM1vPvjJrLDQKBgQC9ihSzd/F1jzwYx5lN3ZFyZua79SFm39W4
+7f2T22ii/FvXC2KJonCGcJtRWx/n7evfxekrOkxNKTz00OtDgQxMWjKGnH+I1pdr
+7ABYWkmxEcyQU/vEiST4V3PYZWfN3hEXv1aap/vzRgjBF4Kq+zO7Y7anfTIZNylG
+c8S7+Cw09wKBgDpdhxk60YFIoDWo1q37Ren9w8zAy0RucZ4GVkyOghKEASSpOzRH
+ZxxSthNKr9Me4DMkAiGUe205AIRMK+TnU5hLkzFNV1bI1mYHriUxYEG79PJz6bvn
+PE2wS2gjREDyqwO8ZVphEOXsJp75BzPZ9wGbMyxGKq5cvT82I3L6p36JAoGAW8Qo
+taOSwioxHIY20R4/NzZe7A2IuHgSz9BZ/2YxSQgJpxoaAS0mcdC/QipuTipBEzyM
+4aL+IjWfD6C+5xXp0GWzJL1MegH7mgLPP/emyhYmBpLCyKrlvV8J9XFTSrcDa431
+7jb6oxP7VRF+8C1jJIzoeDsDMHYmg7e1PpSvQo0CgYEAn00WrBgz/KJNp8mFyDgn
+wtgboNfg8ducC91aWiKE+SQmvTT0YbljsDYEtTYieT1Cj/qO6glMLS+7CiKaI1KU
+/mfbJ2dZ1dKWcDV1SwV5M3UNAsf7qABtUglZEqmvBsgbAgN4xoWuvs6w0NLkbWyg
+8yYTIMQgeEdbpZRUEAKgIYA=
+-----END PRIVATE KEY-----
+"""
+
 
 def _trusted_guidance_host_event(
     target_root: Path,
@@ -18,10 +48,16 @@ def _trusted_guidance_host_event(
     admission_context_overrides: dict[str, object] | None = None,
     key_overrides: dict[str, object] | None = None,
 ) -> dict[str, object]:
+    import base64
+    import subprocess
+
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
+        TRUSTED_AUTHORITY_HOST_ADMISSION_KEY_ID,
+        _guidance_json_bytes,
         _json_digest,
+        _trusted_authority_event_admission_payload,
     )
 
     admission_context = {
@@ -53,6 +89,25 @@ def _trusted_guidance_host_event(
     }
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
+    signed_payload = _trusted_authority_event_admission_payload(ref=event_ref, event=event)
+    signed_payload["issuer"] = "github-review-webhook"
+    key_path = target_root / ".agentic-workspace" / "local" / "guidance-test-host-key.pem"
+    key_path.parent.mkdir(parents=True, exist_ok=True)
+    key_path.write_text(_HOST_EVIDENCE_TEST_SIGNING_KEY, encoding="utf-8")
+    completed = subprocess.run(
+        ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
+        input=_guidance_json_bytes(signed_payload),
+        capture_output=True,
+        check=True,
+    )
+    event["host_admission"] = {
+        "kind": "agentic-workspace/trusted-authority-host-admission/v1",
+        "status": str(key_overrides.get("status") if key_overrides else "current"),
+        "algorithm": "RS256",
+        "key_id": TRUSTED_AUTHORITY_HOST_ADMISSION_KEY_ID,
+        "signed_payload": signed_payload,
+        "signature": base64.b64encode(completed.stdout).decode("ascii"),
+    }
     event["host_admission_ref"] = (
         "trusted-authority-admission:"
         + _json_digest(
@@ -64,20 +119,7 @@ def _trusted_guidance_host_event(
             }
         )[:24]
     )
-    if host_admission_monkeypatch is not None:
-        import agentic_workspace.agent_guidance as guidance_runtime
-
-        admitted_ref = event_ref
-
-        def _test_host_admits_trusted_authority_event(*, ref: str, event: dict[str, object], target_root: Path) -> bool:
-            _ = (event, target_root)
-            return ref == admitted_ref
-
-        host_admission_monkeypatch.setattr(
-            guidance_runtime,
-            "_host_admits_trusted_authority_event",
-            _test_host_admits_trusted_authority_event,
-        )
+    _ = host_admission_monkeypatch
     path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
     return {"event_ref": event_ref, "event": event}
@@ -1864,8 +1906,7 @@ def test_guidance_receipts_accept_protected_host_admission_boundary(tmp_path: Pa
     assert receipt_result["receipt_ref"].startswith("guidance-receipt:")
 
 
-def test_guidance_receipts_accept_host_adapter_verified_event_across_process(tmp_path: Path) -> None:
-    import os
+def test_guidance_receipts_accept_pinned_signed_host_event_across_process(tmp_path: Path) -> None:
     import subprocess
     import sys
 
@@ -1879,43 +1920,6 @@ def test_guidance_receipts_accept_host_adapter_verified_event_across_process(tmp
         target_revision="rev-1",
         event_id="review-event-1",
     )
-    adapter_root = tmp_path / "host-adapter"
-    _write(adapter_root / "agentic_workspace_host_adapters" / "__init__.py", "")
-    _write(
-        adapter_root / "agentic_workspace_host_adapters" / "guidance_authority.py",
-        """
-from __future__ import annotations
-
-import hashlib
-import json
-
-
-def _event_digest(event):
-    return hashlib.sha256(
-        json.dumps(
-            {key: value for key, value in event.items() if key not in {"host_admission", "host_admission_ref"}},
-            sort_keys=True,
-            default=str,
-            separators=(",", ":"),
-        ).encode()
-    ).hexdigest()
-
-
-def verify_trusted_authority_event(*, event_ref, event, target_root, audience):
-    context = event.get("admission_context") if isinstance(event, dict) else {}
-    if (
-        event.get("kind") != "agentic-workspace/trusted-authority-host-event/v1"
-        or event.get("event_ref") != event_ref
-        or context.get("audience") != audience
-        or context.get("workspace_ref") != f"workspace:path:{target_root}"
-        or not str(context.get("nonce") or "")
-    ):
-        return {"status": "rejected", "reason": "host-event-mismatch"}
-    return {"status": "admitted", "event_ref": event_ref, "event_digest": _event_digest(event)}
-""",
-    )
-    env = os.environ.copy()
-    env["PYTHONPATH"] = str(adapter_root) + os.pathsep + env.get("PYTHONPATH", "")
     completed = subprocess.run(
         [
             sys.executable,
@@ -1933,13 +1937,19 @@ def verify_trusted_authority_event(*, event_ref, event, target_root, audience):
         ],
         capture_output=True,
         cwd=Path(__file__).resolve().parents[1],
-        env=env,
         text=True,
     )
 
     assert completed.returncode == 0, completed.stderr or completed.stdout
     payload = json.loads(completed.stdout)
     assert payload["receipt_ref"].startswith("guidance-receipt:")
+
+
+def test_guidance_receipts_do_not_load_repo_or_pythonpath_host_verifiers() -> None:
+    source = (Path(__file__).resolve().parents[1] / "src/agentic_workspace/agent_guidance.py").read_text(encoding="utf-8")
+
+    assert "agentic_workspace_host_adapters.guidance_authority" not in source
+    assert "importlib.import_module" not in source
 
 
 def test_guidance_host_admission_rejects_raw_caller_mapping(tmp_path: Path) -> None:
@@ -2017,8 +2027,8 @@ def test_guidance_receipts_reject_jointly_forged_local_host_event(tmp_path: Path
         ("wrong-audience", {"audience": "other-consumer"}, {}),
         ("missing-nonce", {"nonce": ""}, {}),
         ("expired-admission", {"expires_at": "2026-01-01T00:00:00Z"}, {}),
-        ("revoked-key", {}, {"revoked_at": "2026-07-29T00:00:00Z"}),
-        ("wrong-workspace", {}, {"workspace_path": "not-this-workspace"}),
+        ("revoked-admission", {"revoked_at": "2026-07-29T00:00:00Z"}, {}),
+        ("wrong-workspace", {"workspace_ref": "workspace:path:not-this-workspace"}, {}),
     ],
 )
 def test_guidance_receipts_reject_invalid_host_admission_lifecycle(

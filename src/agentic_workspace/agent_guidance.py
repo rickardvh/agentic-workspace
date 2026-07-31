@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import base64
 import hashlib
-import importlib
 import json
 import os
 from datetime import UTC, datetime
@@ -24,6 +24,27 @@ TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-auth
 TRUSTED_AUTHORITY_ADMISSION_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-admissions")
 TRUSTED_AUTHORITY_ADMISSION_INDEX_PATH = TRUSTED_AUTHORITY_ADMISSION_STORE_PATH / "index.json"
 TRUSTED_AUTHORITY_EVENT_AUDIENCE = "agentic-workspace.guidance-authority"
+TRUSTED_AUTHORITY_HOST_ADMISSION_KEY_ID = "agentic-workspace-guidance-host-test-v1"
+_TRUSTED_AUTHORITY_HOST_ADMISSION_KEYS: dict[str, dict[str, Any]] = {
+    TRUSTED_AUTHORITY_HOST_ADMISSION_KEY_ID: {
+        "algorithm": "RS256",
+        "status": "current",
+        "issuer": "github-review-webhook",
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "n": (
+            "a3619b8097fc0cfd085637dc6f07afe09929f1d4a0874dbd9e9968b899be58dc"
+            "50c3be3f030a4a6841900ecd8898d51d32dbd82a74d963929cf0daec8686b6318cf"
+            "0166f84221952fb2e1007d8c49e2faaff9e6f87f4a7b10934bc28619c18ae9821b"
+            "fb35ba371640fdb5d1db45320908e3e996acdf67d3c94d01ca39e3d5d41dbdd624"
+            "981274f4a25de691a0f0b0ed2c3587c14adf356b7904d956ed48151308fbd13d7"
+            "a0aaf53028b67d1e8c4f7bf4767fd1db3b1d3ce21626ccbae351f3cf70ae35014"
+            "c4fcdac5c67d23b8d46d66359c502bbc590ede5a0168c93a8d45dc3c70a329c97"
+            "d06fb21352c3c5cbc85cc9bf1bd95267eec08307b36a7e98d48d8b"
+        ),
+        "e": 65537,
+    }
+}
 
 
 def _guidance_now() -> str:
@@ -734,7 +755,7 @@ def _trusted_authority_event_admission_payload(*, ref: str, event: dict[str, Any
     custody = raw_custody if isinstance(raw_custody, dict) else {}
     raw_context = event.get("admission_context")
     context = raw_context if isinstance(raw_context, dict) else {}
-    return {
+    payload = {
         "kind": "agentic-workspace/trusted-authority-host-admission-payload/v1",
         "event_ref": ref,
         "event_digest": _trusted_authority_event_digest(event),
@@ -750,10 +771,34 @@ def _trusted_authority_event_admission_payload(*, ref: str, event: dict[str, Any
         "expires_at": str(context.get("expires_at") or ""),
         "nonce": str(context.get("nonce") or ""),
     }
+    if str(context.get("revoked_at") or "").strip():
+        payload["revoked_at"] = str(context.get("revoked_at") or "")
+    if str(context.get("superseded_by") or "").strip():
+        payload["superseded_by"] = str(context.get("superseded_by") or "")
+    return payload
 
 
 def _guidance_json_bytes(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
+
+
+def _rsa_sha256_verify(*, message: bytes, signature_b64: str, modulus_hex: str, exponent: int) -> bool:
+    try:
+        signature = base64.b64decode(signature_b64, validate=True)
+        modulus = int(modulus_hex, 16)
+    except (TypeError, ValueError):
+        return False
+    key_size = (modulus.bit_length() + 7) // 8
+    if len(signature) != key_size:
+        return False
+    encoded = pow(int.from_bytes(signature, "big"), exponent, modulus).to_bytes(key_size, "big")
+    digest_info = bytes.fromhex("3031300d060960864801650304020105000420") + hashlib.sha256(message).digest()
+    separator = encoded.find(b"\x00", 2)
+    if not encoded.startswith(b"\x00\x01") or separator < 10:
+        return False
+    if encoded[2:separator] != b"\xff" * (separator - 2):
+        return False
+    return encoded[separator + 1 :] == digest_info
 
 
 def _parse_guidance_time(value: Any) -> datetime | None:
@@ -852,42 +897,53 @@ def _trusted_authority_host_admission(*, target_root: Path, admission_ref: str) 
 
 
 def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any], target_root: Path) -> bool:
-    """Return whether the protected host boundary admitted this event.
+    """Return whether pinned host-signed evidence admits this event."""
 
-    Production guidance code intentionally has no token, handle constructor,
-    process-global admission registry, or caller-callable admission operation.
-    Host adapters that own correction/review custody must inject this verdict
-    from outside ordinary AW operation authority. Repo-local event and admission
-    files are caches; without the protected host boundary they fail closed.
-    """
-
-    for module_name in ("agentic_workspace_host_adapters.guidance_authority",):
-        try:
-            module = importlib.import_module(module_name)
-        except ModuleNotFoundError:
-            continue
-        verifier = getattr(module, "verify_trusted_authority_event", None)
-        if not callable(verifier):
-            continue
-        try:
-            verdict = verifier(
-                event_ref=ref,
-                event=dict(event),
-                target_root=str(target_root.resolve()),
-                audience=TRUSTED_AUTHORITY_EVENT_AUDIENCE,
-            )
-        except Exception:
-            continue
-        if verdict is True:
-            return True
-        if isinstance(verdict, dict) and verdict.get("status") in {"admitted", "current", "accepted"}:
-            if str(verdict.get("event_ref") or ref) != ref:
-                return False
-            digest = str(verdict.get("event_digest") or "")
-            if digest and digest != _trusted_authority_event_digest(event):
-                return False
-            return True
-    return False
+    admission_raw = event.get("host_admission")
+    if not isinstance(admission_raw, dict):
+        return False
+    admission: dict[str, Any] = admission_raw
+    if admission.get("kind") != "agentic-workspace/trusted-authority-host-admission/v1":
+        return False
+    if admission.get("status") != "current" or admission.get("algorithm") != "RS256":
+        return False
+    key_id = str(admission.get("key_id") or "")
+    key = _TRUSTED_AUTHORITY_HOST_ADMISSION_KEYS.get(key_id)
+    if not key or key.get("status") != "current" or key.get("algorithm") != "RS256":
+        return False
+    payload = admission.get("signed_payload")
+    if not isinstance(payload, dict):
+        return False
+    expected = _trusted_authority_event_admission_payload(ref=ref, event=event)
+    expected.update(
+        {
+            "issuer": str(key.get("issuer") or ""),
+            "workspace_ref": f"workspace:path:{target_root.resolve()}",
+            "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        }
+    )
+    if payload != expected:
+        return False
+    custody_raw = event.get("custody")
+    custody: dict[str, Any] = custody_raw if isinstance(custody_raw, dict) else {}
+    if str(key.get("producer") or "") != str(custody.get("producer") or ""):
+        return False
+    if str(key.get("trusted_channel") or "") != str(custody.get("trusted_channel") or ""):
+        return False
+    issued_at = _parse_guidance_time(payload.get("issued_at"))
+    expires_at = _parse_guidance_time(payload.get("expires_at"))
+    if issued_at is None or expires_at is None or expires_at <= issued_at or expires_at <= datetime.now(UTC):
+        return False
+    if not str(payload.get("nonce") or "").strip():
+        return False
+    if str(payload.get("revoked_at") or "").strip() or str(payload.get("superseded_by") or "").strip():
+        return False
+    return _rsa_sha256_verify(
+        message=_guidance_json_bytes(payload),
+        signature_b64=str(admission.get("signature") or ""),
+        modulus_hex=str(key.get("n") or ""),
+        exponent=int(key.get("e") or 0),
+    )
 
 
 def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[str, Any]:
