@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,87 @@ def _as_list(value: Any) -> list[Any]:
 
 def _source_id_for(root: Path, chosen: Path) -> str:
     return chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
+
+
+def _file_digest(path: Path) -> str:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
+def _load_toml_dict(path: Path) -> dict[str, Any]:
+    try:
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _text_contract(path: Path, markers: list[str]) -> tuple[str, str, dict[str, Any], dict[str, Any]]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return (
+            "unavailable",
+            "owner-source-unreadable",
+            {"source_format": path.suffix.lower().lstrip(".") or "text", "error": str(exc)},
+            {"population": {"status": "invalid"}},
+        )
+    lowered = text.lower()
+    missing = [marker for marker in markers if marker.lower() not in lowered]
+    backing = {
+        "source_format": path.suffix.lower().lstrip(".") or "text",
+        "contract_markers": markers,
+        "matched_markers": sorted(set(markers) - set(missing)),
+        "line_count": len(text.splitlines()),
+        "population": {"status": "present" if not missing else "invalid"},
+    }
+    return ("current", "", backing, {}) if not missing else ("invalid", "owner-source-contract-marker-missing", backing, {})
+
+
+def _toml_contract(path: Path, required_keys: list[str]) -> tuple[str, str, dict[str, Any], dict[str, Any]]:
+    payload = _load_toml_dict(path)
+    missing_keys = [key for key in required_keys if key not in payload]
+    backing = {
+        "source_format": "toml",
+        "parse_status": "valid" if payload else "invalid",
+        "top_level_keys": sorted(str(key) for key in payload)[:20],
+        "required_keys": required_keys,
+        "missing_required_keys": missing_keys,
+        "population": {"status": "present" if payload and not missing_keys else "invalid"},
+    }
+    if not payload:
+        return "invalid", "owner-source-schema-invalid", backing, {}
+    if missing_keys:
+        return "invalid", "owner-source-required-key-missing", backing, {}
+    return "current", "", backing, {}
+
+
+def _module_contract(path: Path, symbols: list[str]) -> tuple[str, str, dict[str, Any], dict[str, Any]]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return (
+            "unavailable",
+            "owner-source-unreadable",
+            {"source_format": "python-module", "error": str(exc), "population": {"status": "invalid"}},
+            {},
+        )
+    missing = [symbol for symbol in symbols if symbol not in text]
+    backing = {
+        "source_format": "python-module",
+        "required_symbols": symbols,
+        "matched_symbols": sorted(set(symbols) - set(missing)),
+        "missing_symbols": missing,
+        "population": {"status": "present" if not missing else "invalid"},
+    }
+    return ("current", "", backing, {}) if not missing else ("invalid", "owner-module-symbol-missing", backing, {})
+
+
+def _reject_caller_semantic_inputs(kwargs: dict[str, Any]) -> None:
+    if "owner_evidence" in kwargs or "adapter_id" in kwargs:
+        raise ValueError("owner evidence must not carry caller-provided producer identity or receipts")
 
 
 def _load_registry_contract() -> dict[str, Any]:
@@ -217,7 +299,7 @@ def _admit_context_owner_operation_result(
     return admitted_result
 
 
-def _produce_registered_context_owner_operation(
+def _issue_context_owner_result(
     *,
     surface: str,
     owner: str | None,
@@ -226,24 +308,26 @@ def _produce_registered_context_owner_operation(
     revision: str,
     git_head: str,
     selection: dict[str, Any],
-    adapter_id: str,
-    owner_evidence: dict[str, Any],
+    status: str,
+    reason: str,
+    owner_boundary: str,
+    schema_backing: dict[str, Any],
+    surface_specific: dict[str, Any] | None = None,
+    source_specific: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     source_revision = "sha256:" + revision
     spec = _OWNER_OPERATION_SPECS.get(surface)
     if not spec or not spec.get("producer") or not spec.get("result_kind") or not spec.get("operation_id"):
         raise ValueError(f"context owner operation is not registered for surface {surface!r}")
     expected_source_id = _source_id_for(root, chosen)
-    evidence = dict(owner_evidence)
-    if evidence.get("producer") or evidence.get("kind") or evidence.get("owner_adapter_receipt"):
-        raise ValueError("owner evidence must not carry caller-provided producer identity or receipts")
-    structural_backing = _as_dict(evidence.get("schema_backing"))
-    owner_boundary = str(evidence.get("owner_boundary") or "")
+    structural_backing = _as_dict(schema_backing)
+    owner_boundary = str(owner_boundary or "")
     if not structural_backing or not owner_boundary:
-        raise ValueError("context owner operation evidence must provide owner boundary and schema backing")
-    status = str(evidence.get("status") or "current")
-    reason = str(evidence.get("reason") or "")
-    surface_specific = _as_dict(evidence.get("surface_specific"))
+        raise ValueError("context owner operation must provide owner boundary and schema backing")
+    adapter_id = f"{surface}.owner-result"
+    status = str(status or "current")
+    reason = str(reason or "")
+    surface_specific = _as_dict(surface_specific)
     semantic_evidence_revision = "sha256:" + _digest(
         {
             "status": status,
@@ -302,68 +386,277 @@ def _produce_registered_context_owner_operation(
     )
 
 
+def _contracted_text_owner_operation(
+    *,
+    surface: str,
+    markers: list[str],
+    boundary: str,
+    source_specific: dict[str, Any] | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    _reject_caller_semantic_inputs(kwargs)
+    status, reason, backing, extra = _text_contract(kwargs["chosen"], markers)
+    return _issue_context_owner_result(
+        surface=surface,
+        status=status,
+        reason=reason,
+        owner_boundary=boundary,
+        schema_backing=backing,
+        surface_specific={**extra, **_as_dict(source_specific)},
+        **kwargs,
+    )
+
+
+def _contracted_toml_owner_operation(
+    *,
+    surface: str,
+    required_keys: list[str],
+    boundary: str,
+    source_specific: dict[str, Any] | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    _reject_caller_semantic_inputs(kwargs)
+    status, reason, backing, extra = _toml_contract(kwargs["chosen"], required_keys)
+    return _issue_context_owner_result(
+        surface=surface,
+        status=status,
+        reason=reason,
+        owner_boundary=boundary,
+        schema_backing=backing,
+        surface_specific={**extra, **_as_dict(source_specific)},
+        **kwargs,
+    )
+
+
+def _contracted_module_owner_operation(
+    *,
+    surface: str,
+    symbols: list[str],
+    boundary: str,
+    source_specific: dict[str, Any] | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    _reject_caller_semantic_inputs(kwargs)
+    status, reason, backing, extra = _module_contract(kwargs["chosen"], symbols)
+    return _issue_context_owner_result(
+        surface=surface,
+        status=status,
+        reason=reason,
+        owner_boundary=boundary,
+        schema_backing=backing,
+        surface_specific={**extra, **_as_dict(source_specific)},
+        **kwargs,
+    )
+
+
 def _system_intent_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="system-intent", **kwargs)
+    return _contracted_text_owner_operation(
+        surface="system-intent",
+        markers=["# System Intent", "## Purpose", "## Governing intents"],
+        boundary="system-intent durable-purpose contract",
+        **kwargs,
+    )
 
 
 def _architecture_principles_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="architecture-principles", **kwargs)
+    return _contracted_text_owner_operation(
+        surface="architecture-principles",
+        markers=["## Governing intents", "generated", "runtime", "contract"],
+        boundary="system-intent architecture-principles section",
+        **kwargs,
+    )
 
 
 def _scoped_instructions_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="scoped-instructions", **kwargs)
+    return _contracted_text_owner_operation(
+        surface="scoped-instructions",
+        markers=["Authority marker:", "agentic-workspace:workflow:start", "Ordinary route:"],
+        boundary="AGENTS scoped-instruction managed fence",
+        **kwargs,
+    )
 
 
 def _ownership_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="ownership", **kwargs)
+    return _contracted_toml_owner_operation(
+        surface="ownership",
+        required_keys=["schema_version", "managed_surfaces", "authority_surfaces"],
+        boundary="ownership manifest schema and authority surfaces",
+        **kwargs,
+    )
 
 
 def _assignment_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="assignment", **kwargs)
+    return _contracted_toml_owner_operation(
+        surface="assignment",
+        required_keys=["schema_version", "workspace"],
+        boundary="workspace assignment/target routing config",
+        **kwargs,
+    )
 
 
 def _evaluation_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="evaluation", **kwargs)
+    return _contracted_module_owner_operation(
+        surface="evaluation",
+        symbols=["evaluation_collection_match", "record_evaluation_report_delivery_operation"],
+        boundary="evaluation runtime operation module",
+        **kwargs,
+    )
 
 
 def _proof_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="proof", **kwargs)
+    return _contracted_toml_owner_operation(
+        surface="proof",
+        required_keys=["schema_version", "scenarios"],
+        boundary="Verification manifest proof-route contract",
+        **kwargs,
+    )
 
 
 def _autopilot_executor_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="autopilot-executor", **kwargs)
+    return _contracted_module_owner_operation(
+        surface="autopilot-executor",
+        symbols=["delegated_worker_kernel", "assignment_lifecycle"],
+        boundary="workspace runtime primitive delegated-run kernel",
+        **kwargs,
+    )
 
 
 def _target_guidance_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="target-guidance", **kwargs)
+    return _contracted_toml_owner_operation(
+        surface="target-guidance",
+        required_keys=["schema_version", "workspace", "modules"],
+        boundary="workspace target guidance config",
+        **kwargs,
+    )
 
 
 def _terminal_outcome_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="terminal-outcome", **kwargs)
+    return _contracted_module_owner_operation(
+        surface="terminal-outcome",
+        symbols=["final_response", "terminal"],
+        boundary="workspace runtime primitive terminal outcome admission",
+        **kwargs,
+    )
 
 
 def _module_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="module", **kwargs)
+    return _contracted_module_owner_operation(
+        surface="module",
+        symbols=[],
+        boundary="registered module owner operation",
+        **kwargs,
+    )
 
 
 def _planning_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="planning", **kwargs)
+    _reject_caller_semantic_inputs(kwargs)
+    chosen = kwargs["chosen"]
+    try:
+        from agentic_workspace import workspace_runtime_core as runtime_core
+
+        state_data = _load_toml_dict(chosen)
+        admission = runtime_core._planning_owner_admission_payload(target_root=kwargs["root"], state_data=state_data)  # type: ignore[attr-defined]
+    except Exception as exc:  # pragma: no cover - defensive, owner adapter availability is environment-specific.
+        return _issue_context_owner_result(
+            surface="planning",
+            status="unavailable",
+            reason="planning-owner-admission-unavailable",
+            owner_boundary="Planning current-work admission contract",
+            schema_backing={"source_format": "toml", "parse_status": "unavailable"},
+            surface_specific={"error": str(exc)},
+            **kwargs,
+        )
+    admission_status = str(admission.get("status") or "")
+    accepted_statuses = {"accepted", "admitted", "current", "none"}
+    status = "current" if admission_status in accepted_statuses else "stale"
+    return _issue_context_owner_result(
+        surface="planning",
+        status=status,
+        reason="" if status == "current" else f"planning-owner-admission-{admission_status or 'missing'}",
+        owner_boundary="Planning current-work admission contract",
+        schema_backing={"source_format": "toml", "planning_owner_admission": admission, "accepted_statuses": sorted(accepted_statuses)},
+        surface_specific={"planning_owner_admission": admission, "accepted_statuses": sorted(accepted_statuses)},
+        **kwargs,
+    )
 
 
 def _memory_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="memory", **kwargs)
+    _reject_caller_semantic_inputs(kwargs)
+    curation = _as_dict(_as_dict(kwargs.get("source_specific")).get("memory_curation"))
+    curation_status = str(curation.get("status") or "")
+    current = curation_status == "selected"
+    return _issue_context_owner_result(
+        surface="memory",
+        status="current" if current else "stale",
+        reason="" if current else f"memory-curation-{curation_status or 'missing'}",
+        owner_boundary="Memory route curation contract",
+        schema_backing={"source_format": "memory-manifest", "memory_curation": curation},
+        surface_specific={"memory_curation": curation},
+        **kwargs,
+    )
 
 
 def _mutation_baseline_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="mutation-baseline", **kwargs)
+    _reject_caller_semantic_inputs(kwargs)
+    admission = _as_dict(_as_dict(kwargs.get("source_specific")).get("mutation_baseline_admission"))
+    status = str(admission.get("status") or "")
+    accepted_statuses = {"clean", "clean-scope", "dirty-accounted", "scoped-status-current", "current"}
+    current = status in accepted_statuses
+    return _issue_context_owner_result(
+        surface="mutation-baseline",
+        status="current" if current else "stale",
+        reason="" if current else f"mutation-baseline-admission-{status or 'missing'}",
+        owner_boundary="authority-envelope mutation baseline contract",
+        schema_backing={
+            "source_format": "mutation-baseline",
+            "mutation_baseline_admission": admission,
+            "accepted_statuses": sorted(accepted_statuses),
+        },
+        surface_specific={"mutation_baseline_admission": admission, "accepted_statuses": sorted(accepted_statuses)},
+        **kwargs,
+    )
 
 
 def _skills_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="skills", **kwargs)
+    _reject_caller_semantic_inputs(kwargs)
+    closure = _as_dict(_as_dict(kwargs.get("source_specific")).get("skill_dependency_closure"))
+    satisfied = closure.get("status") == "satisfied"
+    return _issue_context_owner_result(
+        surface="skills",
+        status="current" if satisfied else "stale",
+        reason="" if satisfied else "skill-dependency-closure-unsatisfied",
+        owner_boundary="workspace skill dependency closure contract",
+        schema_backing={"source_format": "skill-registry", "skill_dependency_closure": closure},
+        surface_specific={"skill_dependency_closure": closure},
+        **kwargs,
+    )
 
 
 def _generated_references_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _produce_registered_context_owner_operation(surface="generated-references", **kwargs)
+    _reject_caller_semantic_inputs(kwargs)
+    chosen = kwargs["chosen"]
+    try:
+        manifest = json.loads(chosen.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return _issue_context_owner_result(
+            surface="generated-references",
+            status="invalid",
+            reason="generated-source-manifest-invalid",
+            owner_boundary="generated command package source manifest",
+            schema_backing={"source_format": "json", "parse_status": "invalid"},
+            surface_specific={"error": str(exc)},
+            **kwargs,
+        )
+    manifest_current = manifest.get("kind") == "generated-cli-source-manifest/v1"
+    return _issue_context_owner_result(
+        surface="generated-references",
+        status="current" if manifest_current else "stale",
+        reason="" if manifest_current else "generated-source-manifest-stale",
+        owner_boundary="generated CLI source manifest contract",
+        schema_backing={"source_format": "json", "generated_source_manifest_kind": str(manifest.get("kind") or "")},
+        surface_specific={"generated_source_manifest": manifest},
+        **kwargs,
+    )
 
 
 _CONTEXT_OWNER_OPERATION_RUNNERS = {

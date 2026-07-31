@@ -589,13 +589,13 @@ def _run_registered_owner_operation(
         revision=revision,
         git_head=git_head,
         selection=selection,
-        adapter_id=adapter_id,
-        owner_evidence={
-            "status": status,
-            "reason": reason,
-            "owner_boundary": boundary,
-            "schema_backing": structural_backing,
-            "surface_specific": extra or {},
+        source_specific={
+            "legacy_adapter_id": adapter_id,
+            "legacy_status": status,
+            "legacy_reason": reason,
+            "legacy_owner_boundary": boundary,
+            "legacy_schema_backing": structural_backing,
+            **(extra or {}),
         },
     )
 
@@ -1344,23 +1344,16 @@ def _context_owner_result_from_adapter(
     selection: dict[str, Any],
     source_specific: dict[str, Any],
 ) -> dict[str, Any]:
-    adapter = CONTEXT_OWNER_RESULT_ADAPTERS.get(surface)
-    if adapter is None:
-        return _run_registered_owner_operation(
-            surface=surface,
-            item=item,
-            root=root,
-            chosen=chosen,
-            revision=revision,
-            git_head=git_head,
-            selection=selection,
-            adapter_id=f"{surface}.owner-result",
-            status="unavailable",
-            reason="owner-result-adapter-unavailable",
-            boundary="registered context owner adapter dispatch",
-            structural_backing={"source_format": "unavailable", "adapter_status": "missing"},
-        )
-    return adapter(surface, item, root, chosen, revision, git_head, selection, source_specific)
+    runner = registered_context_owner_operation_runner(surface)
+    return runner(
+        owner=item.get("owner"),
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        source_specific=source_specific,
+    )
 
 
 def _resolve_context_authority_source(
