@@ -10,7 +10,6 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import cli
-from agentic_workspace.client import AWClientError
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.contract_tooling import contract_schema
 from agentic_workspace.evaluation import (
@@ -27,6 +26,7 @@ from agentic_workspace.evaluation import (
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
     WORKSPACE_LOCAL_EVALUATIONS_DIR,
+    _external_evaluation_provider_result_store_path,
     _write_indexed_owner_receipt,
     append_observation,
     closure_authority,
@@ -153,11 +153,20 @@ def _write_external_evaluation_adapter_host_result(
             raise AssertionError(f"unexpected provider result ref: {ref}")
         return result
 
+    store_path = _external_evaluation_provider_result_store_path()
+    try:
+        store = json.loads(store_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        store = {"kind": "agentic-workspace/external-evaluation-provider-result-store/v1", "results": {}}
+    if store.get("kind") != "agentic-workspace/external-evaluation-provider-result-store/v1" or not isinstance(store.get("results"), dict):
+        store = {"kind": "agentic-workspace/external-evaluation-provider-result-store/v1", "results": {}}
+    store["results"][provider_result_ref] = result
+    store_path.write_text(json.dumps(store, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
     imported = record_external_evaluation_adapter_host_result(
         target_root=target_root,
         provider_result_ref=provider_result_ref,
         capability_revision=str(result["capability_revision"]),
-        provider_result_resolver=resolver,
     )
     return {
         **imported,
@@ -372,8 +381,14 @@ def test_external_host_result_import_is_idempotent_and_append_preserving(tmp_pat
         target_root=tmp_path,
         provider_result_ref=str(first["provider_result_ref"]),
         capability_revision="github-issues-adapter:v1",
-        provider_result_resolver=first["provider_result_resolver"],
     )
+    with pytest.raises(WorkspaceUsageError, match="caller-provided external evaluation provider result resolvers are rejected"):
+        record_external_evaluation_adapter_host_result(
+            target_root=tmp_path,
+            provider_result_ref=str(first["provider_result_ref"]),
+            capability_revision="github-issues-adapter:v1",
+            provider_result_resolver=first["provider_result_resolver"],
+        )
 
     assert replay["result_ref"] == first["result_ref"]
     result_index = json.loads((tmp_path / first["index_ref"]).read_text(encoding="utf-8"))
@@ -411,7 +426,7 @@ def test_external_host_result_import_rejects_caller_written_provider_file_withou
         encoding="utf-8",
     )
 
-    with pytest.raises(WorkspaceUsageError, match="requires a host/provider resolver"):
+    with pytest.raises(WorkspaceUsageError, match="protected provider result store"):
         record_external_evaluation_adapter_host_result(
             target_root=tmp_path,
             provider_result_ref=f"external-evaluation-provider-result:{result_id}",
@@ -1562,17 +1577,17 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
         capability_revision="github-issues-adapter:v1",
         status="failed",
     )
-    with pytest.raises(AWClientError, match="failed") as exc_info:
-        evaluation_external_host_result_import(
-            {
-                "provider_result_ref": str(host["provider_result_ref"]),
-                "expected_result_digest": str(host["provider_result_digest"]),
-                "capability_revision": "github-issues-adapter:v1",
-            },
-            target=tmp_path,
-            invocation=invocation,
-        )
-    assert "requires a host/provider resolver" in json.dumps(exc_info.value.details)
+    imported = evaluation_external_host_result_import(
+        {
+            "provider_result_ref": str(host["provider_result_ref"]),
+            "expected_result_digest": str(host["provider_result_digest"]),
+            "capability_revision": "github-issues-adapter:v1",
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert imported["status"] == "imported"
+    assert imported["result_ref"] == host["result_ref"]
     recorded = evaluation_external_adapter_receipt(
         {
             "delivery_id": request["delivery_id"],

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -67,6 +68,25 @@ LOG_OWNER_CLASSES = {"log", "transcript", "event-stream", "metric-stream"}
 
 def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _external_evaluation_provider_result_store_path() -> Path:
+    return Path(tempfile.gettempdir()) / "agentic-workspace-external-evaluation-provider-results.json"
+
+
+def _load_external_evaluation_provider_result_from_store(provider_result_ref: str) -> dict[str, Any]:
+    path = _external_evaluation_provider_result_store_path()
+    try:
+        store = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("external evaluation provider result store is missing or unreadable.") from exc
+    results = store.get("results") if store.get("kind") == "agentic-workspace/external-evaluation-provider-result-store/v1" else None
+    if not isinstance(results, dict):
+        raise WorkspaceUsageError("external evaluation provider result store is malformed.")
+    result = results.get(provider_result_ref)
+    if not isinstance(result, dict):
+        raise WorkspaceUsageError("provider_result_ref was not found in the protected provider result store.")
+    return result
 
 
 def _stable_json_digest(payload: dict[str, Any]) -> str:
@@ -446,12 +466,12 @@ def record_external_evaluation_adapter_host_result(
         )
     if not ref.startswith("external-evaluation-provider-result:") or "/" in ref or "\\" in ref:
         raise WorkspaceUsageError("provider_result_ref must be an opaque external-evaluation-provider-result reference.")
-    if provider_result_resolver is None:
+    if provider_result_resolver is not None:
         raise WorkspaceUsageError(
-            "provider_result_ref requires a host/provider resolver; AW CLI callers cannot satisfy provider authority by writing local files."
+            "caller-provided external evaluation provider result resolvers are rejected; install a protected provider result store."
         )
     provider_result_id = ref.removeprefix("external-evaluation-provider-result:")
-    result = provider_result_resolver(ref)
+    result = _load_external_evaluation_provider_result_from_store(ref)
     if not isinstance(result, dict):
         raise WorkspaceUsageError("provider_result_ref resolver did not return a provider result object.")
     raw = json.dumps(result, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
@@ -669,10 +689,10 @@ def _load_external_delivery_adapter_host_admission(*, target_root: Path, admissi
 def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, Any], *, target_root: Path) -> bool:
     """Return whether host/provider-resolved evidence admits this result.
 
-    AW verifies a verdict supplied by the host/provider resolver used by
+    AW verifies a verdict supplied by the protected provider result store used by
     ``record_external_evaluation_adapter_host_result``. It deliberately does not
-    load signing keys, verifier modules, or trust roots from the target
-    repository, Python import path, environment, or user-writable home paths.
+    accept resolver functions, verifier modules, or trust roots through operation
+    arguments.
     """
 
     verdict_raw = result.get("host_admission_verdict")
