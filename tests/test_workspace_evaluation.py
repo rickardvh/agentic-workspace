@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import subprocess
@@ -18,6 +19,7 @@ from agentic_workspace.evaluation import (
     EVALUATION_PENDING_COLLECTIONS_DIR,
     EVALUATION_SUMMARY_KIND,
     EVALUATIONS_KIND,
+    EXTERNAL_EVALUATION_ADAPTER_HOST_ADMISSION_KEY_ID,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND,
@@ -26,6 +28,8 @@ from agentic_workspace.evaluation import (
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
     WORKSPACE_LOCAL_EVALUATIONS_DIR,
+    _evaluation_json_bytes,
+    _external_delivery_adapter_host_admission_payload,
     _write_indexed_owner_receipt,
     append_observation,
     closure_authority,
@@ -49,6 +53,36 @@ from agentic_workspace.evaluation import (
 
 ROOT = Path(__file__).resolve().parents[1]
 
+_HOST_EVIDENCE_TEST_SIGNING_KEY = """-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCjYZuAl/wM/QhW
+N9xvB6/gmSnx1KCHTb2emWi4mb5Y3FDDvj8DCkpoQZAOzYiY1R0y29gqdNljkpzw
+2uyGhrYxjPAWb4QiGVL7LhAH2MSeL6r/nm+H9KexCTS8KGGcGK6YIb+zW6NxZA/b
+XR20UyCQjj6Zas32fTyU0Byjnj1dQdvdYkmBJ09KJd5pGg8LDtLDWHwUrfNWt5BN
+lW7UgVEwj70T16Cq9TAotn0ejE979HZ/0ds7HTziFibMuuNR889wrjUBTE/NrFxn
+0juNRtZjWcUCu8WQ7eWgFoyTqNRdw8cKMpyX0G+yE1LDxcvIXMm/G9lSZ+7Agwez
+an6Y1I2LAgMBAAECggEADDZn/0bDfanawHpQeeQwAcpKvlu2D1pNfQt0+0eF8owV
+ZWxVHXV2QzDGnRsNknVrrbkmzi89CLP7rNO24zj/aXJiVLfLpeWqtEF1mICPKE8V
+dlU+rptbfy1zya5jDXeZPwa9MG6X9KPiifOXgtRfFmJR/5NiOrVfaYHc6JLgsPwn
+bDp7vhMipmOJTWPmLnfYOrXzPcrKOADwHDD9B7KAsUls5wwUWfbJvmj1qB8BfIR7
+C4OEJceeUDuiPSsbTDwFuKwtebQLgXMWYHVeCWqnQfHw359l7ejgaZedIq3ROxY/
+y6+5RvE3FWSX4ZYfUDE6oVFjcOsXZwBBGnC5/6e7sQKBgQDcq3TNQO8TnV4NEiuj
+hJdtUBol70g8osfqYMThJTnwFJytAXIBwG05mFwCQY9P8DePWQPGUpnqJhHcF8A3
+Gup2MjS1IXmqhYaz+NrELgpiTannnWg8CL8Ags61Zg6nV7IdtLImq6kG9O54rzA/
+WGNqkt7/wQLQWQUM1vPvjJrLDQKBgQC9ihSzd/F1jzwYx5lN3ZFyZua79SFm39W4
+7f2T22ii/FvXC2KJonCGcJtRWx/n7evfxekrOkxNKTz00OtDgQxMWjKGnH+I1pdr
+7ABYWkmxEcyQU/vEiST4V3PYZWfN3hEXv1aap/vzRgjBF4Kq+zO7Y7anfTIZNylG
+c8S7+Cw09wKBgDpdhxk60YFIoDWo1q37Ren9w8zAy0RucZ4GVkyOghKEASSpOzRH
+ZxxSthNKr9Me4DMkAiGUe205AIRMK+TnU5hLkzFNV1bI1mYHriUxYEG79PJz6bvn
+PE2wS2gjREDyqwO8ZVphEOXsJp75BzPZ9wGbMyxGKq5cvT82I3L6p36JAoGAW8Qo
+taOSwioxHIY20R4/NzZe7A2IuHgSz9BZ/2YxSQgJpxoaAS0mcdC/QipuTipBEzyM
+4aL+IjWfD6C+5xXp0GWzJL1MegH7mgLPP/emyhYmBpLCyKrlvV8J9XFTSrcDa431
+7jb6oxP7VRF+8C1jJIzoeDsDMHYmg7e1PpSvQo0CgYEAn00WrBgz/KJNp8mFyDgn
+wtgboNfg8ducC91aWiKE+SQmvTT0YbljsDYEtTYieT1Cj/qO6glMLS+7CiKaI1KU
+/mfbJ2dZ1dKWcDV1SwV5M3UNAsf7qABtUglZEqmvBsgbAgN4xoWuvs6w0NLkbWyg
+8yYTIMQgeEdbpZRUEAKgIYA=
+-----END PRIVATE KEY-----
+"""
+
 
 def _write_external_evaluation_adapter_host_result(
     target_root: Path,
@@ -63,6 +97,10 @@ def _write_external_evaluation_adapter_host_result(
         "expires_at": str(values.get("expires_at") or "2099-01-01T00:00:00Z"),
         "nonce": str(values["nonce"] if "nonce" in values else f"{values['delivery_id']}:{values['sink_id']}:{values['attempt_revision']}"),
     }
+    if values.get("revoked_at"):
+        admission_context["revoked_at"] = str(values["revoked_at"])
+    if values.get("superseded_by"):
+        admission_context["superseded_by"] = str(values["superseded_by"])
     result = {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1",
         "status": "current",
@@ -89,6 +127,25 @@ def _write_external_evaluation_adapter_host_result(
     result_id = hashlib.sha256(json.dumps(result, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
     result["result_id"] = result_id
     result["result_ref"] = f"external-evaluation-adapter-host-result:{result_id}"
+    signed_payload = _external_delivery_adapter_host_admission_payload(str(result["result_ref"]), result)
+    signed_payload["issuer"] = "provider-webhook"
+    key_path = target_root / ".agentic-workspace" / "local" / "external-evaluation-test-host-key.pem"
+    key_path.parent.mkdir(parents=True, exist_ok=True)
+    key_path.write_text(_HOST_EVIDENCE_TEST_SIGNING_KEY, encoding="utf-8")
+    completed = subprocess.run(
+        ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
+        input=_evaluation_json_bytes(signed_payload),
+        capture_output=True,
+        check=True,
+    )
+    result["host_admission"] = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
+        "status": str(values.get("host_admission_status") or "current"),
+        "algorithm": "RS256",
+        "key_id": EXTERNAL_EVALUATION_ADAPTER_HOST_ADMISSION_KEY_ID,
+        "signed_payload": signed_payload,
+        "signature": base64.b64encode(completed.stdout).decode("ascii"),
+    }
     result["host_admission_ref"] = (
         "external-evaluation-adapter-host-result-admission:"
         + hashlib.sha256(
@@ -104,20 +161,7 @@ def _write_external_evaluation_adapter_host_result(
             ).encode("utf-8")
         ).hexdigest()[:24]
     )
-    if host_admission_monkeypatch is not None:
-        import agentic_workspace.evaluation as evaluation_runtime
-
-        admitted_ref = str(result["result_ref"])
-
-        def _test_host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, object], *, target_root: Path) -> bool:
-            _ = (result, target_root)
-            return ref == admitted_ref
-
-        host_admission_monkeypatch.setattr(
-            evaluation_runtime,
-            "_host_admits_external_delivery_adapter_host_result",
-            _test_host_admits_external_delivery_adapter_host_result,
-        )
+    _ = host_admission_monkeypatch
     root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR
     path = root / f"{result_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -328,11 +372,7 @@ def test_external_adapter_receipt_requires_matching_host_result(tmp_path: Path, 
     assert recorded["host_result_ref"] == host["result_ref"]
 
 
-def test_external_adapter_receipt_accepts_provider_adapter_verified_result_across_process(tmp_path: Path) -> None:
-    import os
-    import subprocess
-    import sys
-
+def test_external_adapter_receipt_accepts_pinned_signed_provider_result_across_process(tmp_path: Path) -> None:
     receipt = {
         "delivery_id": "delivery-1",
         "sink_id": "#1969",
@@ -343,45 +383,6 @@ def test_external_adapter_receipt_accepts_provider_adapter_verified_result_acros
         "status": "delivered",
     }
     host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
-    adapter_root = tmp_path / "host-adapter"
-    package_root = adapter_root / "agentic_workspace_host_adapters"
-    package_root.mkdir(parents=True, exist_ok=True)
-    (package_root / "__init__.py").write_text("", encoding="utf-8")
-    (package_root / "external_evaluation.py").write_text(
-        """
-from __future__ import annotations
-
-import hashlib
-import json
-
-
-def _result_digest(result):
-    return hashlib.sha256(
-        json.dumps(
-            {key: value for key, value in result.items() if key not in {"host_admission", "host_admission_ref"}},
-            sort_keys=True,
-            default=str,
-            separators=(",", ":"),
-        ).encode()
-    ).hexdigest()
-
-
-def verify_external_evaluation_host_result(*, result_ref, result, target_root, audience):
-    context = result.get("admission_context") if isinstance(result, dict) else {}
-    if (
-        result.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1"
-        or result.get("result_ref") != result_ref
-        or context.get("audience") != audience
-        or context.get("workspace_ref") != f"workspace:path:{target_root}"
-        or not str(context.get("nonce") or "")
-    ):
-        return {"status": "rejected", "reason": "provider-result-mismatch"}
-    return {"status": "admitted", "result_ref": result_ref, "result_digest": _result_digest(result)}
-""",
-        encoding="utf-8",
-    )
-    env = os.environ.copy()
-    env["PYTHONPATH"] = str(adapter_root) + os.pathsep + env.get("PYTHONPATH", "")
     completed = subprocess.run(
         [
             sys.executable,
@@ -399,7 +400,6 @@ def verify_external_evaluation_host_result(*, result_ref, result, target_root, a
         ],
         capture_output=True,
         cwd=ROOT,
-        env=env,
         text=True,
     )
 
@@ -407,6 +407,13 @@ def verify_external_evaluation_host_result(*, result_ref, result, target_root, a
     payload = json.loads(completed.stdout)
     assert payload["status"] == "recorded"
     assert payload["host_result_ref"] == host["result_ref"]
+
+
+def test_external_adapter_receipt_does_not_load_repo_or_pythonpath_host_verifiers() -> None:
+    source = (ROOT / "src/agentic_workspace/evaluation.py").read_text(encoding="utf-8")
+
+    assert "agentic_workspace_host_adapters.external_evaluation" not in source
+    assert "importlib.import_module" not in source
 
 
 def test_external_adapter_receipt_rejects_jointly_forged_local_host_result(tmp_path: Path, monkeypatch) -> None:
@@ -466,7 +473,7 @@ def test_external_evaluation_host_admission_issuer_is_not_public_runtime_entrypo
     assert "_CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS" not in source
 
 
-def test_external_adapter_receipt_rejects_local_admission_cache_across_process_boundary(tmp_path: Path) -> None:
+def test_external_adapter_receipt_accepts_signed_host_result_without_local_verifier(tmp_path: Path) -> None:
     receipt = {
         "delivery_id": "delivery-1",
         "sink_id": "#1969",
@@ -478,8 +485,10 @@ def test_external_adapter_receipt_rejects_local_admission_cache_across_process_b
     }
     host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
 
-    with pytest.raises(WorkspaceUsageError, match="host boundary"):
-        record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
+    recorded = record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
+
+    assert recorded["status"] == "recorded"
+    assert recorded["host_result_ref"] == host["result_ref"]
 
 
 @pytest.mark.parametrize(
@@ -488,8 +497,8 @@ def test_external_adapter_receipt_rejects_local_admission_cache_across_process_b
         ("wrong-audience", {"audience": "other-consumer"}),
         ("missing-nonce", {"nonce": ""}),
         ("expired-admission", {"expires_at": "2026-01-01T00:00:00Z"}),
-        ("revoked-key", {"key_revoked_at": "2026-07-29T00:00:00Z"}),
-        ("wrong-workspace", {"key_workspace_path": "not-this-workspace"}),
+        ("revoked-admission", {"revoked_at": "2026-07-29T00:00:00Z"}),
+        ("wrong-workspace", {"workspace_ref": "workspace:path:not-this-workspace"}),
     ],
 )
 def test_external_adapter_receipt_rejects_invalid_host_result_admission_lifecycle(
@@ -1436,21 +1445,19 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
         capability_revision="github-issues-adapter:v1",
         status="failed",
     )
-    from agentic_workspace import AWClientError
-
-    with pytest.raises(AWClientError) as exc_info:
-        evaluation_external_adapter_receipt(
-            {
-                "delivery_id": request["delivery_id"],
-                "sink_id": "#1969",
-                "producer": "github-issues-adapter",
-                "attempt_revision": "attempt-public-1",
-                "receipt_revision": "receipt-public-1",
-                "capability_revision": "github-issues-adapter:v1",
-                "status": "failed",
-                "host_result_ref": host["result_ref"],
-            },
-            target=tmp_path,
-            invocation=invocation,
-        )
-    assert "host boundary" in json.dumps(exc_info.value.args)
+    recorded = evaluation_external_adapter_receipt(
+        {
+            "delivery_id": request["delivery_id"],
+            "sink_id": "#1969",
+            "producer": "github-issues-adapter",
+            "attempt_revision": "attempt-public-1",
+            "receipt_revision": "receipt-public-1",
+            "capability_revision": "github-issues-adapter:v1",
+            "status": "failed",
+            "host_result_ref": host["result_ref"],
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert recorded["status"] == "recorded"
+    assert recorded["host_result_ref"] == host["result_ref"]
