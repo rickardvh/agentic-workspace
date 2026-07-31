@@ -159,6 +159,21 @@ class FakeRunner(loop.CommandRunner):
             return subprocess.CompletedProcess(command, 0, self.branch, "")
         if command[:3] == ["git", "rev-parse", "HEAD"]:
             return subprocess.CompletedProcess(command, 0, self.head, "")
+        if command == ["git", "rev-parse", "FETCH_HEAD"]:
+            return subprocess.CompletedProcess(command, 0, self.pr_head, "")
+        if command[:3] == ["git", "status", "--porcelain"]:
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command[:4] == ["git", "fetch", "--no-tags", "origin"]:
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command[:2] == ["git", "switch"]:
+            if command[2:3] == ["--create"]:
+                self.branch = command[3]
+            else:
+                self.branch = command[2]
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command[:3] == ["git", "merge", "--ff-only"]:
+            self.head = command[3]
+            return subprocess.CompletedProcess(command, 0, "", "")
         if command[:3] == ["git", "worktree", "remove"]:
             path = Path(command[-1])
             if path.exists():
@@ -319,41 +334,24 @@ def test_fresh_session_json_requires_one_durable_identity() -> None:
         loop._session_id_from_jsonl('{"session_id":"one"}\n{"thread_id":"two"}\n')
 
 
-def test_resume_reuses_owned_worktree_and_updates_it_to_recorded_handoff(tmp_path: Path) -> None:
+def test_resume_switches_serial_checkout_to_recorded_handoff(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
     existing = state(tmp_path, handoff_head=HEAD_A, cycles=1)
-    worktree = tmp_path / "worktrees" / "pr-12"
-    worktree.mkdir(parents=True)
     runner.head = HEAD_B
-    original_run = runner.run
 
-    def run(command, *, cwd, env=None):
-        command = list(command)
-        if command[:3] == ["git", "checkout", "--detach"]:
-            runner.commands.append(command)
-            assert cwd == worktree
-            assert command[-1] == HEAD_A
-            return subprocess.CompletedProcess(command, 0, "", "")
-        return original_run(command, cwd=cwd, env=env)
+    loop._switch_to_review_branch(tmp_path, branch=existing["branch"], expected_head=HEAD_A, runner=runner)
 
-    runner.run = run
-
-    loop._prepare_owned_worktree(worktree, existing, runner)
-
-    assert runner.commands[-1] == ["git", "checkout", "--detach", HEAD_A]
+    assert ["git", "merge", "--ff-only", HEAD_A] in runner.commands
     assert not any(command[:3] == ["git", "worktree", "add"] for command in runner.commands)
 
 
-def test_explicit_worktree_replacement_retires_owned_checkout_and_state(tmp_path: Path) -> None:
+def test_explicit_checkout_replacement_retires_local_state(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
-    state(tmp_path, status="recovery-required", last_event="owned-worktree-missing")
-    worktree = tmp_path / "worktrees" / "pr-12"
-    worktree.mkdir(parents=True)
-    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix()}}})
+    state(tmp_path, status="recovery-required", last_event="branch-switch-failed")
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"checkout": tmp_path.as_posix()}}})
 
-    assert loop.main(["recover", "--target", tmp_path.as_posix(), "--pr", "12", "--action", "replace-worktree"], runner=runner) == 0
+    assert loop.main(["recover", "--target", tmp_path.as_posix(), "--pr", "12", "--action", "replace-checkout"], runner=runner) == 0
 
-    assert not worktree.exists()
     assert not loop._state_path(tmp_path, 12).exists()
     assert loop._load_dispatch(tmp_path)["prs"] == {}
 
@@ -658,7 +656,7 @@ def test_global_dispatch_treats_remote_head_without_result_as_recovery_evidence(
     assert reconciled["last_event"] == "remote-head-observed-without-result"
 
 
-def test_fresh_global_dispatch_fetches_and_detaches_at_reviewed_head(tmp_path: Path, monkeypatch) -> None:
+def test_fresh_global_dispatch_switches_branch_at_reviewed_head(tmp_path: Path, monkeypatch) -> None:
     review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
     original_run = runner.run
@@ -694,9 +692,37 @@ def test_fresh_global_dispatch_fetches_and_detaches_at_reviewed_head(tmp_path: P
     )
 
     assert result["mode"] == "fresh"
-    assert ["git", "worktree", "add", "--detach"] == next(
-        command[:4] for command in runner.commands if command[:3] == ["git", "worktree", "add"]
+    assert ["git", "fetch", "--no-tags", "origin", runner.branch] in runner.commands
+    assert not any(command[:3] == ["git", "worktree", "add"] for command in runner.commands)
+
+
+def test_global_dispatch_refuses_dirty_checkout_before_branch_switch(tmp_path: Path) -> None:
+    review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        command = list(command)
+        if command[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps([{"number": 12, "headRefName": runner.branch, "headRefOid": HEAD_A, "comments": [review], "url": "u"}]),
+                "",
+            )
+        if command[:3] == ["git", "status", "--porcelain"]:
+            runner.commands.append(command)
+            return subprocess.CompletedProcess(command, 0, "M tools/chatgpt_review_loop.py\n", "")
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+    result = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=tmp_path / "worktrees", max_cycles=3, max_repeated_blockers=2
     )
+
+    assert result["event"] == "dirty-checkout"
+    assert not any(command[:2] == ["git", "switch"] for command in runner.commands)
+    assert not any(command[:3] == ["git", "worktree", "add"] for command in runner.commands)
 
 
 def test_fresh_global_dispatch_records_per_pr_resume_state_when_no_head_is_pushed(tmp_path: Path) -> None:
@@ -820,15 +846,15 @@ def test_interrupted_fresh_dispatch_is_recovered_once_then_resumes_the_recorded_
     )
     assert resumed["mode"] == "resume"
     assert attempts == [
-        ("fresh", worktree_root / "pr-12", ""),
-        ("fresh", worktree_root / "pr-12", ""),
-        ("resume", worktree_root / "pr-12", "replacement-session"),
+        ("fresh", tmp_path, ""),
+        ("fresh", tmp_path, ""),
+        ("resume", tmp_path, "replacement-session"),
     ]
-    assert sum(command[:3] == ["git", "worktree", "add"] for command in runner.commands) == 2
-    assert sum(command[:3] == ["git", "worktree", "remove"] for command in runner.commands) == 1
+    assert not any(command[:3] == ["git", "worktree", "add"] for command in runner.commands)
+    assert not any(command[:3] == ["git", "worktree", "remove"] for command in runner.commands)
 
 
-def test_global_dispatch_retains_one_owned_worktree_through_resume_then_retires_it_on_close(tmp_path: Path, monkeypatch) -> None:
+def test_global_dispatch_uses_serial_checkout_through_resume_then_retires_state_on_close(tmp_path: Path, monkeypatch) -> None:
     first_review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[first_review])
     worktree_root = tmp_path / "worktrees"
@@ -914,26 +940,23 @@ def test_global_dispatch_retains_one_owned_worktree_through_resume_then_retires_
     assert first["session_id"] == "fresh-session"
     assert loop._load_state(tmp_path, 12)["handoff_head"] == HEAD_B
     assert loop._load_state(tmp_path, 12)["terminal_result"]["disposition"] == "handoff-recorded"
-    assert worktree_root / "pr-12" == Path(loop._load_dispatch(tmp_path)["prs"]["12"]["worktree"])
-    assert (worktree_root / "pr-12").is_dir()
+    assert tmp_path == Path(loop._load_dispatch(tmp_path)["prs"]["12"]["checkout"])
 
     runner.comments = [{"id": "resume", "body": f"Fix the follow-up\n{marker(head=HEAD_B)}", "url": "u"}]
     resumed = loop.dispatch_all(
         tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
     )
     assert resumed["mode"] == "resume"
-    assert seen[0] == ("fresh", worktree_root / "pr-12")
-    assert seen[1] == ("resume", worktree_root / "pr-12")
+    assert seen[0] == ("fresh", tmp_path)
+    assert seen[1] == ("resume", tmp_path)
     assert loop._load_state(tmp_path, 12)["session_id"] == "fresh-session"
-    assert (worktree_root / "pr-12").is_dir()
-    assert len([command for command in runner.commands if command[:3] == ["git", "worktree", "add"]]) == 1
+    assert not any(command[:3] == ["git", "worktree", "add"] for command in runner.commands)
     assert not any(command[:3] == ["git", "worktree", "remove"] for command in runner.commands)
 
     runner.pr_state = "CLOSED"
     loop.dispatch_all(tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2)
     assert not loop._state_path(tmp_path, 12).exists()
     assert loop._load_dispatch(tmp_path)["prs"] == {}
-    assert not (worktree_root / "pr-12").exists()
 
 
 def test_completed_fresh_session_without_hook_binding_gets_one_safe_replacement(tmp_path: Path) -> None:
@@ -1407,9 +1430,9 @@ def test_resume_failure_gets_one_automatic_recovery_for_same_comment(tmp_path: P
     assert sum("resume" in command for command in runner.commands) == 2
 
 
-def test_orphaned_worktree_failure_gets_one_automatic_recovery(tmp_path: Path) -> None:
+def test_branch_switch_failure_gets_one_automatic_recovery(tmp_path: Path) -> None:
     recovery_key = f"12:{HEAD_A}:blocked"
-    state(tmp_path, status="recovery-required", last_event="worktree-create-failed", recovery_review_key=recovery_key)
+    state(tmp_path, status="recovery-required", last_event="branch-switch-failed", recovery_review_key=recovery_key)
 
     assert loop._queue_automatic_recovery(loop._load_state(tmp_path, 12), tmp_path, review_key=recovery_key) is True
     recovered = loop._load_state(tmp_path, 12)

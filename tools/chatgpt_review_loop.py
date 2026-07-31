@@ -660,16 +660,15 @@ def handoff(
     detached_explicit_handoff = not branch and not existing_only and pr is not None
     detached_payload: dict[str, Any] | None = None
     if detached_explicit_handoff:
-        # A review continuation intentionally runs in a detached worktree and
-        # pushes with HEAD:<known PR branch>.  An explicit PR supplies the
-        # missing branch identity without guessing from local history.
+        # Legacy/manual detached handoff is still accepted only when the caller
+        # supplies the exact PR.  The all-open dispatcher uses branch checkouts.
         detached_payload = _pr_view(root, runner, pr=pr, repo=repo)
         branch = str(detached_payload.get("headRefName", ""))
     if not branch:
         raise LoopError(
             "detached-head",
             "handoff does not guess a PR from a detached HEAD",
-            recovery="pass --pr after pushing HEAD:<the exact PR branch>, or run from the PR branch",
+            recovery="run from the PR branch, or pass --pr after pushing HEAD:<the exact PR branch>",
         )
     if existing_only:
         candidates = [
@@ -876,8 +875,7 @@ AUTO_RECOVERY_EVENTS = frozenset(
         "orphaned-resume",
         "orphaned-fresh-session",
         "fresh-session-unbound",
-        "worktree-create-failed",
-        "orphan-worktree-cleanup-failed",
+        "branch-switch-failed",
     }
 )
 
@@ -886,7 +884,7 @@ def _queue_automatic_recovery(state: dict[str, Any], root: Path, *, review_key: 
     """Re-arm one recoverable failed job for the global serial dispatcher.
 
     A bound job resumes the exact durable Codex session; an unbound fresh job
-    receives one replacement session after its owned worktree is retired. Either
+    receives one replacement session after its stale local state is retired. Either
     may retry the claimed review only once: the review key is recorded before
     re-arming, and all other recovery-required states remain human-only.
     """
@@ -937,7 +935,7 @@ def _review_prompt(review: Review, *, branch: str = "") -> str:
         f"{source} found actionable blockers for PR #{review.pr} at exact head {review.head}.\n\n"
         f"Source: {review.url or review.comment_id}\n\n"
         f"Required work:\n{review.findings}\n\n"
-        f"{'You are detached: push with git push origin HEAD:' + branch + '. ' if branch else ''}Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook record the next handoff. "
+        f"{'You are on branch ' + branch + '; push with git push origin ' + branch + '. ' if branch else ''}Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook record the next handoff. "
         "After proof and push, record their exact outcomes with `python tools/chatgpt_review_loop.py job-result --session-id $CODEX_THREAD_ID --proof-status passed|failed --proof-command \"<command>\" --proof-exit-code <exit> --push-status passed|failed`. Do not merge from this continuation."
     )
 
@@ -957,24 +955,46 @@ def _should_keep_watching(results: list[dict[str, Any]]) -> bool:
     )
 
 
-def _prepare_owned_worktree(worktree: Path, state: dict[str, Any], runner: CommandRunner) -> None:
-    """Reuse the PR-owned checkout at the exact handoff head.
-
-    The dispatcher owns this worktree for the full lifetime of the open PR.  In
-    particular, a resume must not create a throwaway checkout or inspect the
-    owner's branch checkout to find its commit.
-    """
-    if not worktree.is_dir():
-        raise LoopError("owned-worktree-missing", f"recorded worktree is missing: {worktree}")
-    expected_head = str(state["handoff_head"])
-    if _git_value(worktree, runner, "rev-parse", "HEAD") == expected_head:
-        return
-    updated = runner.run(["git", "checkout", "--detach", expected_head], cwd=worktree)
-    if updated.returncode:
+def _require_clean_checkout(root: Path, runner: CommandRunner) -> None:
+    completed = runner.run(["git", "status", "--porcelain"], cwd=root)
+    if completed.returncode:
+        raise LoopError("checkout-status-failed", completed.stderr.strip() or "could not inspect checkout status")
+    if completed.stdout.strip():
         raise LoopError(
-            "owned-worktree-update-failed",
-            updated.stderr.strip() or f"could not update owned worktree to recorded handoff {expected_head}",
+            "dirty-checkout",
+            "review dispatch requires a clean checkout before switching PR branches",
+            recovery="commit, stash, or otherwise clear local changes before running the review poller",
         )
+
+
+def _switch_to_review_branch(root: Path, *, branch: str, expected_head: str, runner: CommandRunner) -> None:
+    """Use the serial main checkout at the exact reviewed PR head."""
+    if not branch:
+        raise LoopError("missing-head-branch", "PR head branch is missing")
+    _require_clean_checkout(root, runner)
+    fetched = runner.run(["git", "fetch", "--no-tags", "origin", branch], cwd=root)
+    if fetched.returncode:
+        raise LoopError("reviewed-head-fetch-failed", fetched.stderr.strip() or f"could not fetch PR branch {branch}")
+    fetched_head = _git_value(root, runner, "rev-parse", "FETCH_HEAD")
+    if fetched_head != expected_head:
+        raise LoopError("reviewed-head-mismatch", "fetched PR branch does not equal the reviewed head")
+    current_branch = _git_value(root, runner, "branch", "--show-current")
+    if current_branch != branch:
+        switched = runner.run(["git", "switch", branch], cwd=root)
+        if switched.returncode:
+            switched = runner.run(["git", "switch", "--create", branch, "--track", f"origin/{branch}"], cwd=root)
+        if switched.returncode:
+            raise LoopError("branch-switch-failed", switched.stderr.strip() or f"could not switch to PR branch {branch}")
+    current_head = _git_value(root, runner, "rev-parse", "HEAD")
+    if current_head != expected_head:
+        fast_forwarded = runner.run(["git", "merge", "--ff-only", expected_head], cwd=root)
+        if fast_forwarded.returncode:
+            raise LoopError(
+                "branch-switch-failed",
+                fast_forwarded.stderr.strip() or f"local branch {branch} cannot fast-forward to reviewed head {expected_head}",
+            )
+    if _git_value(root, runner, "rev-parse", "HEAD") != expected_head:
+        raise LoopError("branch-switch-failed", f"checkout did not land on reviewed head {expected_head}")
 
 
 def poll_one(
@@ -985,8 +1005,6 @@ def poll_one(
     codex_command: str,
     bypass_hook_trust: bool = False,
     state_root: Path | None = None,
-    isolated_worktree: bool = False,
-    owned_worktree: Path | None = None,
 ) -> dict[str, Any]:
     owner_root = state_root or root
     pr = int(state["pr_number"])
@@ -994,8 +1012,8 @@ def poll_one(
         return {"pr_number": pr, "status": "no-op", "reason": f"state-is-{state.get('status', 'unknown')}"}
     state["hook_trust_mode"] = "automation-bypass" if bypass_hook_trust else "persisted-trust-required"
     _save_state(owner_root, state)
-    current_branch = _git_value(root, runner, "branch", "--show-current") if not isolated_worktree else ""
-    if not isolated_worktree and current_branch != state.get("branch"):
+    current_branch = _git_value(root, runner, "branch", "--show-current")
+    if current_branch != state.get("branch"):
         return _recover(state, owner_root, event="branch-changed", recovery="return to the recorded branch or stop and clean up this loop")
     payload = _pr_view(root, runner, pr=pr, repo=str(state["repository"]))
     if payload.get("state") != "OPEN":
@@ -1064,22 +1082,14 @@ def poll_one(
     fingerprints[fingerprint] = repeated
     state["cycles"] = int(state.get("cycles", 0)) + 1
     state.update(status="resume-in-progress", last_event="resume-attempt-recorded", recovery="", prompt_transport=PROMPT_TRANSPORT)
-    _begin_job_attempt(state, mode="resume", worktree=owned_worktree if isolated_worktree and owned_worktree else root, start_head=review.head)
+    _begin_job_attempt(state, mode="resume", worktree=root, start_head=review.head)
     _save_state(owner_root, state)
 
     env = os.environ.copy()
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
     worktree = root
-    if isolated_worktree:
-        if owned_worktree is None:
-            return _recover(state, owner_root, event="owned-worktree-unavailable", recovery="restore or explicitly replace the recorded PR worktree")
-        try:
-            worktree = owned_worktree
-            _prepare_owned_worktree(worktree, state, runner)
-        except LoopError as exc:
-            return _recover(state, owner_root, event=exc.code, recovery="inspect or explicitly replace the recorded PR worktree before retrying")
-        env[OWNER_ROOT_ENV] = owner_root.as_posix()
-        env[OWNER_BRANCH_ENV] = str(state["branch"])
+    env[OWNER_ROOT_ENV] = owner_root.as_posix()
+    env[OWNER_BRANCH_ENV] = str(state["branch"])
     command = [
         *shlex.split(codex_command),
         "-C",
@@ -1170,11 +1180,7 @@ def _session_id_from_jsonl(output: str) -> str:
     return candidates.pop()
 
 
-def _worktree_for(root: Path, pr: int, *, worktree_root: Path) -> Path:
-    return (worktree_root / f"pr-{pr}").resolve()
-
-
-def _cleanup_closed_dispatches(root: Path, registry: dict[str, Any], *, runner: CommandRunner, worktree_root: Path) -> list[int]:
+def _cleanup_closed_dispatches(root: Path, registry: dict[str, Any], *, runner: CommandRunner) -> list[int]:
     entries = registry["prs"]
     removed: list[int] = []
     for key, entry in list(entries.items()):
@@ -1184,11 +1190,6 @@ def _cleanup_closed_dispatches(root: Path, registry: dict[str, Any], *, runner: 
         payload = _pr_view(root, runner, pr=pr, repo=str(entry.get("repository", "")) or None)
         if payload.get("state") == "OPEN":
             continue
-        worktree = Path(str(entry.get("worktree", ""))).resolve()
-        if worktree.is_relative_to(worktree_root.resolve()) and worktree.exists():
-            completed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
-            if completed.returncode:
-                raise LoopError("worktree-cleanup-failed", completed.stderr.strip() or f"could not remove worktree for closed PR #{pr}")
         _state_path(root, pr).unlink(missing_ok=True)
         entries.pop(key)
         removed.append(pr)
@@ -1209,14 +1210,14 @@ def _dispatch_all_unlocked(
 ) -> dict[str, Any]:
     """Run at most one eligible blocked review across every open PR.
 
-    The registry is deliberately local and records the owning session/worktree per
-    PR.  Existing PRs are resumed; a first review creates one worktree and starts
-    one fresh Codex session there.  A later poll never creates a second job while
-    that PR has a recorded in-progress session.
+    The registry is deliberately local and records the owning session per PR.
+    The dispatcher holds one global lock, switches the main checkout to the
+    selected PR branch, and launches at most one Codex job at a time.
     """
+    _ = worktree_root  # Back-compatible CLI option; serial dispatch no longer creates worktrees.
     registry = _load_dispatch(root)
     entries = registry["prs"]
-    retired = _cleanup_closed_dispatches(root, registry, runner=runner, worktree_root=worktree_root)
+    retired = _cleanup_closed_dispatches(root, registry, runner=runner)
     candidates: list[tuple[dict[str, Any], Review]] = []
     recovery_candidates: list[tuple[dict[str, Any], Review]] = []
     for payload in _open_prs(root, runner):
@@ -1232,19 +1233,8 @@ def _dispatch_all_unlocked(
                 if existing.get("last_event") == "fresh-session-unbound":
                     # The completed fresh process pushed without recording a
                     # session/result. Its old review is stale, so do not replay
-                    # it; retire only the owned checkout and let a new-head
+                    # it; retire the stale local state and let a new-head
                     # review create a normal fresh session later.
-                    worktree = Path(str(entry.get("worktree", "")))
-                    if worktree.is_dir():
-                        removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
-                        if removed.returncode:
-                            existing.update(
-                                status="recovery-required",
-                                last_event="orphan-fresh-worktree-cleanup-failed",
-                                recovery="inspect or explicitly remove the orphaned fresh worktree before retrying",
-                            )
-                            _save_state(root, existing)
-                            continue
                     retired_attempts = registry.setdefault("retired_attempts", [])
                     if isinstance(retired_attempts, list):
                         retired_attempts.append(
@@ -1302,7 +1292,7 @@ def _dispatch_all_unlocked(
                 )
                 attempt = existing.get("job_attempt") if isinstance(existing.get("job_attempt"), dict) else {}
                 _record_job_terminal(
-                    existing, mode="resume", worktree=Path(str(attempt.get("worktree") or entry.get("worktree"))),
+                    existing, mode="resume", worktree=Path(str(attempt.get("worktree") or root.as_posix())),
                     start_head=str(attempt.get("starting_head") or existing.get("handoff_head", "")),
                     exit_code=-1, disposition="interrupted", event="orphaned-resume",
                     diagnostic="dispatcher lock reclaimed after an interrupted resume",
@@ -1311,26 +1301,26 @@ def _dispatch_all_unlocked(
             if existing.get("status") == "fresh-session-in-progress":
                 # A fresh job has no session identity until its Stop hook binds
                 # one.  Once the dispatcher lock has been reclaimed, that job
-                # is orphaned: retire its owned worktree and permit exactly one
+                # is orphaned: retire its state and permit exactly one
                 # replacement fresh job for the same review.
                 if review.key in existing.get("automatic_recovery_reviews", []):
                     existing.update(
                         status="recovery-required",
                         last_event="orphaned-fresh-session-recovery-exhausted",
-                        recovery="the replacement fresh job was also interrupted; inspect or explicitly recover the recorded worktree",
+                        recovery="the replacement fresh job was also interrupted; inspect or explicitly recover the recorded checkout state",
                         recovery_review_key=review.key,
                     )
                 else:
                     existing.update(
                         status="recovery-required",
                         last_event="orphaned-fresh-session",
-                        recovery="the watcher will retire the orphaned fresh worktree and launch one replacement fresh job",
+                        recovery="the watcher will retire the orphaned fresh state and launch one replacement fresh job",
                         recovery_review_key=review.key,
                         recovery_mode="fresh",
                     )
                 attempt = existing.get("job_attempt") if isinstance(existing.get("job_attempt"), dict) else {}
                 _record_job_terminal(
-                    existing, mode="fresh", worktree=Path(str(attempt.get("worktree") or entry.get("worktree"))),
+                    existing, mode="fresh", worktree=Path(str(attempt.get("worktree") or root.as_posix())),
                     start_head=str(attempt.get("starting_head") or existing.get("handoff_head", "")),
                     exit_code=-1, disposition="interrupted", event=str(existing["last_event"]),
                     diagnostic="dispatcher lock reclaimed after an interrupted fresh launch",
@@ -1356,7 +1346,6 @@ def _dispatch_all_unlocked(
     entry = entries.get(str(pr))
     fresh_recovery_reviews: list[str] = []
     if isinstance(entry, dict):
-        worktree = Path(str(entry.get("worktree", "")))
         state_path = _state_path(root, pr)
         if state_path.is_file():
             state = _load_state(root, pr)
@@ -1366,24 +1355,29 @@ def _dispatch_all_unlocked(
                 return {"status": "no-op", "reason": "automatic-recovery-unavailable", "pr_number": pr}
             state = _load_state(root, pr)
             if state.get("recovery_mode") == "fresh":
-                # No exact session exists to resume.  Remove this dispatcher-
-                # owned checkout before creating the single bounded replacement
-                # below; retain the recovery budget on the new durable state.
-                if worktree.is_dir():
-                    removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
-                    if removed.returncode:
-                        return _recover(
-                            state,
-                            root,
-                            event="orphan-fresh-worktree-cleanup-failed",
-                            recovery="inspect or explicitly remove the orphaned fresh worktree before retrying",
-                        )
+                # No exact session exists to resume.  Retire this stale local
+                # state before creating the single bounded replacement below;
+                # retain the recovery budget on the new durable state.
                 fresh_recovery_reviews = list(state.get("automatic_recovery_reviews", []))
                 state_path.unlink(missing_ok=True)
                 entries.pop(str(pr), None)
                 _save_dispatch(root, registry)
                 entry = None
             else:
+                try:
+                    _switch_to_review_branch(
+                        root,
+                        branch=str(state.get("branch", "")),
+                        expected_head=str(state.get("handoff_head", "")),
+                        runner=runner,
+                    )
+                except LoopError as exc:
+                    return _recover(
+                        state,
+                        root,
+                        event=exc.code,
+                        recovery=exc.recovery or "restore a clean checkout and rerun the review poller",
+                    )
                 _emit({"kind": STATE_KIND, "status": "job-started", "pr_number": pr, "mode": "resume"})
                 result = poll_one(
                     root,
@@ -1391,43 +1385,22 @@ def _dispatch_all_unlocked(
                     runner=runner,
                     codex_command=codex_command,
                     bypass_hook_trust=bypass_hook_trust,
-                    isolated_worktree=True,
-                    owned_worktree=worktree,
                 )
                 return {"status": "dispatched", "pr_number": pr, "mode": "resume", "result": result}
         if entry is not None:
-            # Old failed fresh sessions had no durable state/session binding.  Their
-            # detached worktree cannot be resumed safely, so retire it and start one
-            # new, recorded session below.
-            if worktree.is_dir():
-                runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+            # Old failed fresh sessions had no durable state/session binding.
+            # Retire their registry entry and start one new recorded session.
             entries.pop(str(pr), None)
             _save_dispatch(root, registry)
 
-    worktree = _worktree_for(root, pr, worktree_root=worktree_root)
-    if worktree.exists():
-        if not worktree.is_relative_to(worktree_root.resolve()):
-            return {"status": "recovery-required", "pr_number": pr, "event": "unowned-worktree-exists"}
-        removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
-        if removed.returncode:
-            try:
-                shutil.rmtree(worktree)
-            except OSError:
-                return {"status": "recovery-required", "pr_number": pr, "event": "orphan-worktree-cleanup-failed"}
     branch = str(payload.get("headRefName", ""))
-    if not branch:
-        return {"status": "recovery-required", "pr_number": pr, "event": "missing-head-branch"}
-    fetched = runner.run(["git", "fetch", "--no-tags", "origin", branch], cwd=root)
-    if fetched.returncode:
-        raise LoopError("reviewed-head-fetch-failed", fetched.stderr.strip() or f"could not fetch PR #{pr} head branch")
-    fetched_head = _git_value(root, runner, "rev-parse", "FETCH_HEAD")
-    if fetched_head != str(payload["headRefOid"]):
-        raise LoopError("reviewed-head-mismatch", f"fetched branch for PR #{pr} does not equal the reviewed head")
-    created = runner.run(["git", "worktree", "add", "--detach", worktree.as_posix(), fetched_head], cwd=root)
-    if created.returncode:
-        raise LoopError("worktree-create-failed", created.stderr.strip() or f"could not create worktree for PR #{pr}")
+    try:
+        _switch_to_review_branch(root, branch=branch, expected_head=str(payload["headRefOid"]), runner=runner)
+    except LoopError as exc:
+        return {"status": "recovery-required", "pr_number": pr, "event": exc.code, "recovery": exc.recovery}
+    worktree = root
     prompt = _review_prompt(review, branch=branch)
-    # Bind owner-local state before the detached fresh session starts. Its Stop
+    # Bind owner-local state before the fresh session starts. Its Stop
     # hook is the first point at which Codex exposes the session identity.
     fresh_state = {
         "kind": STATE_KIND, "repo_root": root.as_posix(), "repository": _repo_slug(root, runner),
@@ -1440,7 +1413,7 @@ def _dispatch_all_unlocked(
     }
     _begin_job_attempt(fresh_state, mode="fresh", worktree=worktree, start_head=review.head)
     _save_state(root, fresh_state)
-    entries[str(pr)] = {"worktree": worktree.as_posix(), "branch": branch, "repository": _repo_slug(root, runner)}
+    entries[str(pr)] = {"checkout": worktree.as_posix(), "branch": branch, "repository": _repo_slug(root, runner)}
     _save_dispatch(root, registry)
     _emit({"kind": STATE_KIND, "status": "job-started", "pr_number": pr, "mode": "fresh"})
     command = [
@@ -1479,7 +1452,7 @@ def _dispatch_all_unlocked(
         bound.update(
             status="recovery-required",
             last_event="fresh-session-unbound",
-            recovery="the watcher will retire the completed unbound fresh worktree and launch one replacement session for this exact review",
+            recovery="the watcher will retire the completed unbound fresh state and launch one replacement session for this exact review",
             recovery_review_key=review.key,
             recovery_mode="fresh",
         )
@@ -1504,7 +1477,7 @@ def _dispatch_all_unlocked(
         )
         _save_state(root, state)
         entries[str(pr)] = {
-            "worktree": worktree.as_posix(),
+            "checkout": worktree.as_posix(),
             "session_id": session_id,
             "branch": branch,
             "repository": str(payload.get("repository", "")),
@@ -1526,7 +1499,7 @@ def _dispatch_all_unlocked(
     )
     _save_state(root, state)
     entries[str(pr)] = {
-        "worktree": worktree.as_posix(),
+        "checkout": worktree.as_posix(),
         "session_id": session_id,
         "branch": branch,
         "repository": str(payload.get("repository", "")),
@@ -1669,7 +1642,7 @@ def _parser() -> argparse.ArgumentParser:
         "--worktree-root",
         type=Path,
         default=Path(".agentic-workspace/local/chatgpt-review-worktrees"),
-        help="Local root that owns one isolated worktree for each globally dispatched PR.",
+        help="Deprecated and ignored; global dispatch now uses the serial checkout and normal branch switching.",
     )
     poll_parser.add_argument("--max-cycles", type=int, default=3)
     poll_parser.add_argument("--max-repeated-blockers", type=int, default=2)
@@ -1691,9 +1664,9 @@ def _parser() -> argparse.ArgumentParser:
     recover_parser.add_argument("--pr", type=int, required=True)
     recover_parser.add_argument(
         "--action",
-        choices=["continue-waiting", "replace-worktree"],
+        choices=["continue-waiting", "replace-checkout", "replace-worktree"],
         required=True,
-        help="Rearm the session, or retire its owned checkout so the next dispatch starts a replacement session.",
+        help="Rearm the session, or retire the local state so the next dispatch starts a replacement session.",
     )
     reset_parser = sub.add_parser("reset-cycles", help="Reset attempt and repetition budgets for every open PR.")
     reset_parser.add_argument("--target", type=Path, default=Path.cwd())
@@ -1779,23 +1752,12 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
             state = _load_state(root, args.pr)
             if state.get("status") != "recovery-required":
                 raise LoopError("recovery-not-required", f"PR #{args.pr} is not in recovery-required state")
-            if args.action == "replace-worktree":
+            if args.action in {"replace-checkout", "replace-worktree"}:
                 registry = _load_dispatch(root)
-                entry = registry["prs"].get(str(args.pr))
-                worktree = Path(str(entry.get("worktree", ""))).resolve() if isinstance(entry, dict) else None
-                if worktree is not None and worktree.exists():
-                    if worktree.name != f"pr-{args.pr}":
-                        raise LoopError("unowned-worktree", f"refusing to replace unexpected worktree {worktree}")
-                    removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
-                    if removed.returncode:
-                        raise LoopError(
-                            "worktree-replacement-failed",
-                            removed.stderr.strip() or f"could not remove worktree for PR #{args.pr}",
-                        )
                 registry["prs"].pop(str(args.pr), None)
                 _save_dispatch(root, registry)
                 _state_path(root, args.pr).unlink(missing_ok=True)
-                _emit({"kind": STATE_KIND, "status": "worktree-replacement-ready", "pr_number": args.pr})
+                _emit({"kind": STATE_KIND, "status": "checkout-replacement-ready", "pr_number": args.pr})
                 return 0
             state.update(status="awaiting-review", last_event="human-recovery-confirmed", recovery="")
             _save_state(root, state)
