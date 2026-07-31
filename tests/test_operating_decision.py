@@ -1301,6 +1301,8 @@ def test_context_authority_owner_results_are_semantic_adapter_dispatched() -> No
     assert "def _execute_context_owner_operation(" not in source
     assert "def _context_owner_result(" not in source
     assert "def _file_backed_owner_result(" not in source
+    assert "def _dispatch_registered_owner_operation(" not in source
+    assert '"owner_adapter_receipt": {' not in source
     assert "CONTEXT_OWNER_RESULT_ADAPTERS" in source
     assert "context_authority_owner_operations" in source
     assert (
@@ -1330,9 +1332,6 @@ def test_context_owner_operation_admission_does_not_accept_caller_semantic_paylo
     assert "_admit_context_owner_operation_result" not in resolver_source
     assert not hasattr(owner_operations, "run_context_owner_operation")
     assert "def run_context_owner_operation(" not in operation_source
-    assert "def _owner_result_payload(" not in operation_source
-    assert "boundary: str" not in operation_source
-    assert "structural_backing: dict[str, Any]" not in operation_source
     assert "registered_context_owner_operation_runner(surface)" in resolver_source
     assert "_CONTEXT_OWNER_OPERATION_RUNNERS" in operation_source
     assert "_CONTEXT_OWNER_ADAPTER_TOKEN" not in resolver_source
@@ -1404,7 +1403,7 @@ def test_context_authority_each_owner_family_uses_concrete_adapter_output(tmp_pa
         assert owner_result["owner_boundary"]
 
 
-def test_context_owner_operation_runner_rejects_matching_payload_without_adapter_receipt(tmp_path: Path) -> None:
+def test_context_owner_operation_runner_rejects_caller_producer_identity(tmp_path: Path) -> None:
     from agentic_workspace.context_authority_owner_operations import registered_context_owner_operation_runner
 
     _write_context_authority_sources(tmp_path)
@@ -1412,7 +1411,7 @@ def test_context_owner_operation_runner_rejects_matching_payload_without_adapter
     selection = {"consumer": "start"}
     runner = registered_context_owner_operation_runner("system-intent")
 
-    with pytest.raises(ValueError, match="missing concrete adapter receipt"):
+    with pytest.raises(ValueError, match="must not carry caller-provided producer identity or receipts"):
         runner(
             owner="system-intent resolver",
             root=tmp_path,
@@ -1421,19 +1420,9 @@ def test_context_owner_operation_runner_rejects_matching_payload_without_adapter
             git_head="",
             selection=selection,
             adapter_id="system-intent.owner-result",
-            owner_result={
-                "kind": "agentic-workspace/system-intent-mirror/v1",
+            owner_evidence={
                 "producer": "agentic_workspace.workspace_runtime_core.system_intent",
                 "status": "current",
-                "surface": "system-intent",
-                "owner": "system-intent resolver",
-                "source_id": "SYSTEM_INTENT.md",
-                "source_revision": "sha256:" + _fixture_source_revision(chosen),
-                "git_head": "",
-                "selection": selection,
-                "adapter_id": "system-intent.owner-result",
-                "repair_operation_id": "system-intent.sync",
-                "revision": "sha256:caller-built",
                 "owner_boundary": "caller-built generic boundary",
                 "schema_backing": {"source_format": "markdown", "parse_status": "valid"},
             },

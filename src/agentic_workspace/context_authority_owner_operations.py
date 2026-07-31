@@ -217,7 +217,7 @@ def _admit_context_owner_operation_result(
     return admitted_result
 
 
-def _run_registered_context_owner_operation(
+def _produce_registered_context_owner_operation(
     *,
     surface: str,
     owner: str | None,
@@ -227,55 +227,67 @@ def _run_registered_context_owner_operation(
     git_head: str,
     selection: dict[str, Any],
     adapter_id: str,
-    owner_result: dict[str, Any],
+    owner_evidence: dict[str, Any],
 ) -> dict[str, Any]:
     source_revision = "sha256:" + revision
     spec = _OWNER_OPERATION_SPECS.get(surface)
     if not spec or not spec.get("producer") or not spec.get("result_kind") or not spec.get("operation_id"):
         raise ValueError(f"context owner operation is not registered for surface {surface!r}")
     expected_source_id = _source_id_for(root, chosen)
-    owner_result = dict(owner_result)
-    if owner_result.get("producer") != spec["producer"]:
-        raise ValueError("owner operation result producer does not match registered owner")
-    if owner_result.get("kind") != spec["result_kind"]:
-        raise ValueError("owner operation result kind does not match registered owner")
-    if owner_result.get("repair_operation_id") != spec["operation_id"]:
-        raise ValueError("owner operation result id does not match registered owner")
-    if owner_result.get("source_id") != expected_source_id:
-        raise ValueError("owner operation result source id does not match selected source")
-    if owner_result.get("source_revision") != source_revision:
-        raise ValueError("owner operation result source revision is stale")
-    if owner_result.get("git_head") != git_head:
-        raise ValueError("owner operation result git head is stale")
-    if owner_result.get("adapter_id") != adapter_id:
-        raise ValueError("owner operation result adapter id does not match selected owner adapter")
-    if owner_result.get("owner") != owner:
-        raise ValueError("owner operation result owner does not match registered owner")
-    if owner_result.get("selection") != selection:
-        raise ValueError("owner operation result selection does not match owner operation input")
-    if not owner_result.get("revision"):
-        raise ValueError("owner operation result revision is missing")
-    if owner_result.get("owner_operation") or owner_result.get("owner_execution_receipt"):
-        raise ValueError("owner operation result must not carry caller-provided operation receipts")
-    adapter_receipt = _as_dict(owner_result.get("owner_adapter_receipt"))
-    if adapter_receipt.get("kind") != "agentic-workspace/context-authority-owner-adapter-result/v1":
-        raise ValueError("owner operation result is missing concrete adapter receipt")
-    if adapter_receipt.get("status") != "produced":
-        raise ValueError("owner operation adapter receipt was not produced")
-    adapter_expectations = {
+    evidence = dict(owner_evidence)
+    if evidence.get("producer") or evidence.get("kind") or evidence.get("owner_adapter_receipt"):
+        raise ValueError("owner evidence must not carry caller-provided producer identity or receipts")
+    structural_backing = _as_dict(evidence.get("schema_backing"))
+    owner_boundary = str(evidence.get("owner_boundary") or "")
+    if not structural_backing or not owner_boundary:
+        raise ValueError("context owner operation evidence must provide owner boundary and schema backing")
+    status = str(evidence.get("status") or "current")
+    reason = str(evidence.get("reason") or "")
+    surface_specific = _as_dict(evidence.get("surface_specific"))
+    semantic_evidence_revision = "sha256:" + _digest(
+        {
+            "status": status,
+            "reason": reason,
+            "owner_boundary": owner_boundary,
+            "schema_backing": structural_backing,
+            "surface_specific": surface_specific,
+        }
+    )
+    adapter_receipt = {
+        "kind": "agentic-workspace/context-authority-owner-adapter-result/v1",
+        "status": "produced",
         "producer": spec["producer"],
         "surface": surface,
         "source_id": expected_source_id,
         "source_revision": source_revision,
         "git_head": git_head,
         "adapter_id": adapter_id,
-        "operation_id": spec["operation_id"],
         "selection_revision": "sha256:" + _digest(selection),
+        "semantic_evidence_revision": semantic_evidence_revision,
+        "operation_id": spec["operation_id"],
+        "rule": "Concrete owner-operation front doors produce semantic payloads and adapter receipts from their selected canonical source.",
     }
-    for key, expected in adapter_expectations.items():
-        if adapter_receipt.get(key) != expected:
-            raise ValueError(f"owner operation adapter receipt {key.replace('_', ' ')} does not match")
-    if str(owner_result.get("status") or "") != "current":
+    owner_result = _finalize_owner_result(
+        {
+            "kind": spec["result_kind"],
+            "producer": spec["producer"],
+            "status": status,
+            "surface": surface,
+            "owner": owner,
+            "source_id": expected_source_id,
+            "source_revision": source_revision,
+            "git_head": git_head,
+            "selection": selection,
+            "adapter_id": adapter_id,
+            "repair_operation_id": spec["operation_id"],
+            "owner_boundary": owner_boundary,
+            "schema_backing": structural_backing,
+            "owner_adapter_receipt": adapter_receipt,
+            **({"reason": reason} if reason else {}),
+            **surface_specific,
+        }
+    )
+    if status != "current":
         return owner_result
     return _admit_context_owner_operation_result(
         surface=surface,
@@ -291,67 +303,67 @@ def _run_registered_context_owner_operation(
 
 
 def _system_intent_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="system-intent", **kwargs)
+    return _produce_registered_context_owner_operation(surface="system-intent", **kwargs)
 
 
 def _architecture_principles_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="architecture-principles", **kwargs)
+    return _produce_registered_context_owner_operation(surface="architecture-principles", **kwargs)
 
 
 def _scoped_instructions_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="scoped-instructions", **kwargs)
+    return _produce_registered_context_owner_operation(surface="scoped-instructions", **kwargs)
 
 
 def _ownership_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="ownership", **kwargs)
+    return _produce_registered_context_owner_operation(surface="ownership", **kwargs)
 
 
 def _assignment_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="assignment", **kwargs)
+    return _produce_registered_context_owner_operation(surface="assignment", **kwargs)
 
 
 def _evaluation_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="evaluation", **kwargs)
+    return _produce_registered_context_owner_operation(surface="evaluation", **kwargs)
 
 
 def _proof_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="proof", **kwargs)
+    return _produce_registered_context_owner_operation(surface="proof", **kwargs)
 
 
 def _autopilot_executor_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="autopilot-executor", **kwargs)
+    return _produce_registered_context_owner_operation(surface="autopilot-executor", **kwargs)
 
 
 def _target_guidance_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="target-guidance", **kwargs)
+    return _produce_registered_context_owner_operation(surface="target-guidance", **kwargs)
 
 
 def _terminal_outcome_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="terminal-outcome", **kwargs)
+    return _produce_registered_context_owner_operation(surface="terminal-outcome", **kwargs)
 
 
 def _module_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="module", **kwargs)
+    return _produce_registered_context_owner_operation(surface="module", **kwargs)
 
 
 def _planning_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="planning", **kwargs)
+    return _produce_registered_context_owner_operation(surface="planning", **kwargs)
 
 
 def _memory_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="memory", **kwargs)
+    return _produce_registered_context_owner_operation(surface="memory", **kwargs)
 
 
 def _mutation_baseline_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="mutation-baseline", **kwargs)
+    return _produce_registered_context_owner_operation(surface="mutation-baseline", **kwargs)
 
 
 def _skills_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="skills", **kwargs)
+    return _produce_registered_context_owner_operation(surface="skills", **kwargs)
 
 
 def _generated_references_owner_operation(**kwargs: Any) -> dict[str, Any]:
-    return _run_registered_context_owner_operation(surface="generated-references", **kwargs)
+    return _produce_registered_context_owner_operation(surface="generated-references", **kwargs)
 
 
 _CONTEXT_OWNER_OPERATION_RUNNERS = {
