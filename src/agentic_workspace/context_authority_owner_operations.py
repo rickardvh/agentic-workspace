@@ -8,6 +8,8 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from agentic_workspace.authority_envelope import mutation_baseline_payload
+
 _CONTEXT_AUTHORITY_REGISTRY_RESOURCE = "context_authority_registry.json"
 
 
@@ -598,7 +600,21 @@ def _memory_owner_operation(**kwargs: Any) -> dict[str, Any]:
 
 def _mutation_baseline_owner_operation(**kwargs: Any) -> dict[str, Any]:
     _reject_caller_semantic_inputs(kwargs)
-    admission = _as_dict(_as_dict(kwargs.get("source_specific")).get("mutation_baseline_admission"))
+    source_specific = _as_dict(kwargs.get("source_specific"))
+    if "mutation_baseline_admission" in source_specific:
+        raise ValueError("mutation baseline owner admission must be produced by registered owner operation")
+    selection = _as_dict(kwargs.get("selection"))
+    changed_paths = [str(path) for path in _as_list(selection.get("matched_paths")) if str(path)]
+    baseline = mutation_baseline_payload(target_root=kwargs["root"], changed_paths=changed_paths)
+    admission = {
+        "kind": "agentic-workspace/context-authority-owner-admission/v1",
+        "owner_module": "agentic_workspace.authority_envelope",
+        "status": str(baseline.get("status") or ""),
+        "baseline_id": str(baseline.get("baseline_id") or ""),
+        "head": str(baseline.get("head") or ""),
+        "scope": _as_dict(baseline.get("scope")),
+        "identity": _as_dict(baseline.get("identity")),
+    }
     status = str(admission.get("status") or "")
     accepted_statuses = {"clean", "clean-scope", "dirty-accounted", "scoped-status-current", "current"}
     current = status in accepted_statuses

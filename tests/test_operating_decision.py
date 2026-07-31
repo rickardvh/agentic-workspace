@@ -5,6 +5,7 @@ import hashlib
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -1209,8 +1210,6 @@ def test_context_authority_rejects_unknown_planning_and_mutation_statuses(tmp_pa
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", "fixture"], cwd=tmp_path, check=True, capture_output=True)
 
-    from agentic_workspace import operating_decision
-
     def unknown_planning(*, target_root, state_data):
         return {"kind": "agentic-workspace/planning-owner-admission/v1", "status": "blocked", "state_data": state_data}
 
@@ -1218,7 +1217,7 @@ def test_context_authority_rejects_unknown_planning_and_mutation_statuses(tmp_pa
         return {"kind": "agentic-workspace/mutation-baseline/v1", "status": "superseded", "scope": {"allowed_paths": changed_paths}}
 
     monkeypatch.setattr("agentic_workspace.workspace_runtime_core._planning_owner_admission_payload", unknown_planning)
-    monkeypatch.setattr(operating_decision, "mutation_baseline_payload", unknown_baseline)
+    monkeypatch.setattr("agentic_workspace.context_authority_owner_operations.mutation_baseline_payload", unknown_baseline)
 
     planning_projection = resolve_context_authority_projection(
         consumer="start",
@@ -1282,6 +1281,7 @@ def test_context_owner_operation_admission_does_not_accept_caller_semantic_paylo
 
 
 def test_context_authority_each_owner_family_uses_concrete_adapter_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.context_authority_owner_operations as owner_operations
     import agentic_workspace.operating_decision as operating_decision
 
     _write_context_authority_sources(tmp_path)
@@ -1295,7 +1295,7 @@ def test_context_authority_each_owner_family_uses_concrete_adapter_output(tmp_pa
     monkeypatch.setattr(operating_decision, "_generated_fingerprint_is_current", lambda _root: True)
     monkeypatch.setattr(operating_decision, "_git_head", lambda _root: "f" * 40)
     monkeypatch.setattr(
-        operating_decision,
+        owner_operations,
         "mutation_baseline_payload",
         lambda *, target_root, changed_paths: {
             "status": "current",
@@ -1369,6 +1369,56 @@ def test_context_owner_operation_runner_rejects_caller_producer_identity(tmp_pat
                 "owner_boundary": "caller-built generic boundary",
                 "schema_backing": {"source_format": "markdown", "parse_status": "valid"},
             },
+        )
+
+
+def test_mutation_baseline_owner_operation_produces_own_admission(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace.context_authority_owner_operations import registered_context_owner_operation_runner
+
+    _write_context_authority_sources(tmp_path)
+    chosen = tmp_path / "src/agentic_workspace/operating_decision.py"
+    chosen.parent.mkdir(parents=True, exist_ok=True)
+    chosen.write_text("mutation baseline owner source\n", encoding="utf-8")
+    observed_paths: list[str] = []
+
+    def owned_baseline(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+        observed_paths.extend(changed_paths)
+        return {
+            "kind": "agentic-workspace/mutation-baseline/v1",
+            "status": "current",
+            "baseline_id": "baseline-owner-produced",
+            "head": "a" * 40,
+            "scope": {"allowed_paths": changed_paths},
+            "identity": {"fingerprint": "owned"},
+        }
+
+    monkeypatch.setattr("agentic_workspace.context_authority_owner_operations.mutation_baseline_payload", owned_baseline)
+    runner = registered_context_owner_operation_runner("mutation-baseline")
+
+    result = runner(
+        owner="mutation authority",
+        root=tmp_path,
+        chosen=chosen,
+        revision=_fixture_source_revision(chosen),
+        git_head="a" * 40,
+        selection={"matched_paths": ["src/app.py"]},
+        source_specific={},
+    )
+
+    assert result["status"] == "current"
+    assert observed_paths == ["src/app.py"]
+    admission = result["schema_backing"]["mutation_baseline_admission"]
+    assert admission["baseline_id"] == "baseline-owner-produced"
+
+    with pytest.raises(ValueError, match="must be produced by registered owner operation"):
+        runner(
+            owner="mutation authority",
+            root=tmp_path,
+            chosen=chosen,
+            revision=_fixture_source_revision(chosen),
+            git_head="a" * 40,
+            selection={"matched_paths": ["src/app.py"]},
+            source_specific={"mutation_baseline_admission": {"status": "current"}},
         )
 
 
