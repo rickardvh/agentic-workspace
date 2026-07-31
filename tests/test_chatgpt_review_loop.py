@@ -165,6 +165,8 @@ class FakeRunner(loop.CommandRunner):
             return subprocess.CompletedProcess(command, 0, self.pr_head, "")
         if command[:3] == ["git", "status", "--porcelain"]:
             return subprocess.CompletedProcess(command, 0, "", "")
+        if command[:5] == ["git", "rev-list", "--count", "HEAD", "--not"]:
+            return subprocess.CompletedProcess(command, 0, "0\n", "")
         if command[:4] == ["git", "fetch", "--no-tags", "origin"]:
             return subprocess.CompletedProcess(command, 0, "", "")
         if command[:2] == ["git", "switch"]:
@@ -322,6 +324,17 @@ def push_branch(repo: Path, branch: str, name: str, body: str) -> str:
     head = commit_file(repo, name, body)
     git(repo, "push", "-u", "origin", branch)
     return head
+
+
+def registered_worktrees(repo: Path) -> str:
+    return subprocess.run(
+        ["git", "worktree", "list", "--porcelain"],
+        cwd=repo,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
+    ).stdout
 
 
 class RealGitPrRunner(loop.CommandRunner):
@@ -502,14 +515,7 @@ def test_real_git_legacy_worktree_migration_removes_owned_open_entry(tmp_path: P
     )
 
     registry = loop._load_dispatch(clone)
-    listed = subprocess.run(
-        ["git", "worktree", "list", "--porcelain"],
-        cwd=clone,
-        text=True,
-        encoding="utf-8",
-        capture_output=True,
-        check=False,
-    ).stdout
+    listed = registered_worktrees(clone)
     assert migrated == [12]
     assert registry["prs"]["12"]["checkout"] == clone.as_posix()
     assert "worktree" not in registry["prs"]["12"]
@@ -540,14 +546,7 @@ def test_real_git_closed_dispatch_cleanup_migrates_legacy_worktree_before_retiri
         max_repeated_blockers=2,
     )
 
-    listed = subprocess.run(
-        ["git", "worktree", "list", "--porcelain"],
-        cwd=clone,
-        text=True,
-        encoding="utf-8",
-        capture_output=True,
-        check=False,
-    ).stdout
+    listed = registered_worktrees(clone)
     assert result == {"status": "no-op", "reason": "no-eligible-blocked-review", "retired": [12]}
     assert worktree.as_posix() not in listed
     assert loop._load_dispatch(clone)["prs"] == {}
@@ -569,17 +568,115 @@ def test_real_git_legacy_worktree_migration_refuses_unowned_entry(tmp_path: Path
         )
 
     assert error.value.code == "legacy-worktree-unowned"
-    assert (
-        unrelated.as_posix()
-        in subprocess.run(
-            ["git", "worktree", "list", "--porcelain"],
-            cwd=clone,
-            text=True,
-            encoding="utf-8",
-            capture_output=True,
-            check=False,
-        ).stdout
-    )
+    assert unrelated.as_posix() in registered_worktrees(clone)
+
+
+@pytest.mark.parametrize("dirty_name", ["review.txt", "untracked.txt"])
+def test_real_git_legacy_worktree_migration_preserves_dirty_worktree(tmp_path: Path, dirty_name: str) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    branch = "codex/legacy-dirty"
+    head = push_branch(seed, branch, "review.txt", "reviewed\n")
+    worktree_root = clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees"
+    worktree = worktree_root / "pr-12"
+    git(clone, "fetch", "origin", branch)
+    git(clone, "worktree", "add", "--detach", worktree.as_posix(), head)
+    (worktree / dirty_name).write_text("uncustodied\n", encoding="utf-8")
+    loop._save_dispatch(clone, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix(), "branch": branch}}})
+
+    with pytest.raises(loop.LoopError) as error:
+        loop._migrate_legacy_dispatch_worktrees(
+            clone,
+            loop._load_dispatch(clone),
+            runner=loop.CommandRunner(),
+            worktree_root=worktree_root,
+        )
+
+    assert error.value.code == "legacy-worktree-dirty"
+    assert worktree.as_posix() in registered_worktrees(clone)
+    assert loop._load_dispatch(clone)["prs"]["12"]["worktree"] == worktree.as_posix()
+
+
+def test_real_git_legacy_worktree_migration_preserves_unpushed_commit(tmp_path: Path) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    branch = "codex/legacy-unpushed"
+    head = push_branch(seed, branch, "review.txt", "reviewed\n")
+    worktree_root = clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees"
+    worktree = worktree_root / "pr-12"
+    git(clone, "fetch", "origin", branch)
+    git(clone, "worktree", "add", "--detach", worktree.as_posix(), head)
+    commit_file(worktree, "local-only.txt", "local\n")
+    loop._save_dispatch(clone, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix(), "branch": branch}}})
+
+    with pytest.raises(loop.LoopError) as error:
+        loop._migrate_legacy_dispatch_worktrees(
+            clone,
+            loop._load_dispatch(clone),
+            runner=loop.CommandRunner(),
+            worktree_root=worktree_root,
+        )
+
+    assert error.value.code == "legacy-worktree-unpushed"
+    assert worktree.as_posix() in registered_worktrees(clone)
+    assert loop._load_dispatch(clone)["prs"]["12"]["worktree"] == worktree.as_posix()
+
+
+@pytest.mark.parametrize(
+    ("status", "code"),
+    [
+        ("fresh-session-in-progress", "legacy-worktree-active"),
+        ("resume-in-progress", "legacy-worktree-active"),
+        ("recovery-required", "legacy-worktree-recovery-required"),
+    ],
+)
+def test_real_git_legacy_worktree_migration_preserves_active_or_recovery_state(tmp_path: Path, status: str, code: str) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    branch = "codex/legacy-active"
+    head = push_branch(seed, branch, "review.txt", "reviewed\n")
+    worktree_root = clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees"
+    worktree = worktree_root / "pr-12"
+    git(clone, "fetch", "origin", branch)
+    git(clone, "worktree", "add", "--detach", worktree.as_posix(), head)
+    state(clone, branch=branch, handoff_head=head, status=status)
+    loop._save_dispatch(clone, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix(), "branch": branch}}})
+
+    with pytest.raises(loop.LoopError) as error:
+        loop._migrate_legacy_dispatch_worktrees(
+            clone,
+            loop._load_dispatch(clone),
+            runner=loop.CommandRunner(),
+            worktree_root=worktree_root,
+        )
+
+    assert error.value.code == code
+    assert worktree.as_posix() in registered_worktrees(clone)
+    assert loop._state_path(clone, 12).is_file()
+    assert loop._load_dispatch(clone)["prs"]["12"]["worktree"] == worktree.as_posix()
+
+
+def test_real_git_legacy_worktree_migration_preserves_mismatched_recorded_head(tmp_path: Path) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    branch = "codex/legacy-head-mismatch"
+    handoff = push_branch(seed, branch, "review.txt", "reviewed\n")
+    updated = commit_file(seed, "next.txt", "next\n")
+    git(seed, "push", "origin", f"HEAD:{branch}")
+    worktree_root = clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees"
+    worktree = worktree_root / "pr-12"
+    git(clone, "fetch", "origin", branch)
+    git(clone, "worktree", "add", "--detach", worktree.as_posix(), updated)
+    state(clone, branch=branch, handoff_head=handoff, status="awaiting-review")
+    loop._save_dispatch(clone, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix(), "branch": branch}}})
+
+    with pytest.raises(loop.LoopError) as error:
+        loop._migrate_legacy_dispatch_worktrees(
+            clone,
+            loop._load_dispatch(clone),
+            runner=loop.CommandRunner(),
+            worktree_root=worktree_root,
+        )
+
+    assert error.value.code == "legacy-worktree-head-uncustodied"
+    assert worktree.as_posix() in registered_worktrees(clone)
+    assert loop._load_dispatch(clone)["prs"]["12"]["worktree"] == worktree.as_posix()
 
 
 def test_explicit_checkout_replacement_retires_local_state(tmp_path: Path) -> None:
@@ -593,20 +690,23 @@ def test_explicit_checkout_replacement_retires_local_state(tmp_path: Path) -> No
     assert loop._load_dispatch(tmp_path)["prs"] == {}
 
 
-def test_deprecated_worktree_replacement_removes_legacy_owned_worktree(tmp_path: Path) -> None:
-    runner = FakeRunner(tmp_path)
-    worktree_root = tmp_path / "worktrees"
+def test_deprecated_worktree_replacement_preserves_unsafe_legacy_worktree(tmp_path: Path) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    branch = "codex/legacy-recover"
+    head = push_branch(seed, branch, "review.txt", "reviewed\n")
+    worktree_root = clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees"
     worktree = worktree_root / "pr-12"
-    worktree.mkdir(parents=True)
-    state(tmp_path, status="recovery-required", last_event="branch-switch-failed")
-    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix()}}})
+    git(clone, "fetch", "origin", branch)
+    git(clone, "worktree", "add", "--detach", worktree.as_posix(), head)
+    state(clone, branch=branch, handoff_head=head, status="recovery-required", last_event="branch-switch-failed")
+    loop._save_dispatch(clone, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix(), "branch": branch}}})
 
     assert (
         loop.main(
             [
                 "recover",
                 "--target",
-                tmp_path.as_posix(),
+                clone.as_posix(),
                 "--pr",
                 "12",
                 "--action",
@@ -614,14 +714,38 @@ def test_deprecated_worktree_replacement_removes_legacy_owned_worktree(tmp_path:
                 "--worktree-root",
                 worktree_root.as_posix(),
             ],
-            runner=runner,
+            runner=loop.CommandRunner(),
         )
-        == 0
+        == 2
     )
 
-    assert not worktree.exists()
-    assert not loop._state_path(tmp_path, 12).exists()
-    assert loop._load_dispatch(tmp_path)["prs"] == {}
+    assert worktree.as_posix() in registered_worktrees(clone)
+    assert loop._state_path(clone, 12).is_file()
+    assert loop._load_dispatch(clone)["prs"]["12"]["worktree"] == worktree.as_posix()
+
+
+def test_deprecated_worktree_replacement_removes_clean_orphaned_legacy_worktree(tmp_path: Path) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    branch = "codex/legacy-clean-orphan"
+    head = push_branch(seed, branch, "review.txt", "reviewed\n")
+    worktree_root = clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees"
+    worktree = worktree_root / "pr-12"
+    git(clone, "fetch", "origin", branch)
+    git(clone, "worktree", "add", "--detach", worktree.as_posix(), head)
+    loop._save_dispatch(clone, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix(), "branch": branch}}})
+    registry = loop._load_dispatch(clone)
+
+    assert loop._retire_legacy_dispatch_worktree(
+        clone,
+        registry,
+        pr=12,
+        entry=registry["prs"]["12"],
+        runner=loop.CommandRunner(),
+        worktree_root=worktree_root,
+    )
+    assert worktree.as_posix() not in registered_worktrees(clone)
+    assert registry["prs"]["12"]["checkout"] == clone.as_posix()
+    assert "worktree" not in registry["prs"]["12"]
 
 
 def test_global_dispatch_does_not_start_when_no_exact_blocked_review(tmp_path: Path) -> None:
@@ -713,10 +837,8 @@ def test_global_dispatch_reclaims_a_dead_dispatch_lock(tmp_path: Path, monkeypat
 def test_global_dispatch_skips_pr_with_human_only_recovery(tmp_path: Path) -> None:
     review = {"id": "blocked", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
-    worktree = tmp_path / "worktrees" / "pr-12"
-    worktree.mkdir(parents=True)
     state(tmp_path, status="recovery-required", last_event="max-cycles-exceeded", prompt_transport=loop.PROMPT_TRANSPORT)
-    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix()}}})
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"checkout": tmp_path.as_posix()}}})
     original_run = runner.run
 
     def run(command, *, cwd, env=None):
@@ -745,8 +867,6 @@ def test_global_dispatch_skips_pr_with_human_only_recovery(tmp_path: Path) -> No
 def test_global_dispatch_launches_one_recovery_resume(tmp_path: Path, monkeypatch, initial_status: str, last_event: str) -> None:
     review = {"id": "blocked", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
-    worktree = tmp_path / "worktrees" / "pr-12"
-    worktree.mkdir(parents=True)
     state(
         tmp_path,
         status=initial_status,
@@ -755,7 +875,7 @@ def test_global_dispatch_launches_one_recovery_resume(tmp_path: Path, monkeypatc
         handled_reviews=[f"12:{HEAD_A}:blocked"],
         prompt_transport=loop.PROMPT_TRANSPORT,
     )
-    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix()}}})
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"checkout": tmp_path.as_posix()}}})
     original_run = runner.run
 
     def run(command, *, cwd, env=None):
@@ -1279,10 +1399,8 @@ def test_unbound_fresh_job_with_remote_movement_retires_stale_state_then_accepts
     runner = FakeRunner(tmp_path, comments=[old_review])
     runner.pr_head = HEAD_B
     worktree_root = tmp_path / "worktrees"
-    worktree = worktree_root / "pr-12"
-    worktree.mkdir(parents=True)
     state(tmp_path, status="recovery-required", last_event="fresh-session-unbound", session_id="", recovery_mode="fresh")
-    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix(), "branch": runner.branch}}})
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"checkout": tmp_path.as_posix(), "branch": runner.branch}}})
     original_run = runner.run
 
     def run(command, *, cwd, env=None):

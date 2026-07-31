@@ -982,6 +982,106 @@ def _listed_git_worktrees(root: Path, runner: CommandRunner) -> set[Path]:
     return worktrees
 
 
+def _optional_state(root: Path, pr: int) -> dict[str, Any] | None:
+    try:
+        return _load_state(root, pr)
+    except LoopError as exc:
+        if exc.code == "state-missing":
+            return None
+        raise
+
+
+def _git_stdout_or_error(worktree: Path, runner: CommandRunner, command: Sequence[str], *, code: str, message: str) -> str:
+    completed = runner.run(command, cwd=worktree)
+    if completed.returncode:
+        raise LoopError(
+            code,
+            completed.stderr.strip() or completed.stdout.strip() or message,
+            recovery=f"inspect `{worktree}` manually; preserve any work before rerunning review-loop recovery",
+        )
+    return completed.stdout.strip()
+
+
+def _require_safe_legacy_worktree_retirement(root: Path, *, pr: int, worktree: Path, runner: CommandRunner) -> None:
+    """Fail closed unless a legacy dispatcher worktree is clean and already custodied."""
+    dirty = _git_stdout_or_error(
+        worktree,
+        runner,
+        ["git", "status", "--porcelain"],
+        code="legacy-worktree-status-failed",
+        message=f"could not inspect legacy dispatcher worktree for PR #{pr}",
+    )
+    if dirty:
+        raise LoopError(
+            "legacy-worktree-dirty",
+            f"legacy dispatcher worktree for PR #{pr} has uncommitted changes: {worktree}",
+            recovery=(
+                f"inspect `{worktree}`, commit/stash/preserve the changes, then rerun review-loop recovery; "
+                "the registry and local state were left unchanged"
+            ),
+        )
+
+    state = _optional_state(root, pr)
+    if state is not None:
+        status = str(state.get("status", ""))
+        if status in {"fresh-session-in-progress", "resume-in-progress"}:
+            raise LoopError(
+                "legacy-worktree-active",
+                f"legacy dispatcher worktree for PR #{pr} belongs to an interrupted active review job",
+                recovery=f"inspect `{worktree}` and the PR state before choosing explicit recovery; nothing was removed",
+            )
+        if status == "recovery-required":
+            raise LoopError(
+                "legacy-worktree-recovery-required",
+                f"legacy dispatcher worktree for PR #{pr} is already in human recovery custody",
+                recovery=f"complete or explicitly replace recovery for PR #{pr}; `{worktree}` was preserved",
+            )
+        if status not in {"awaiting-review", "stopped", "merge-ready"}:
+            raise LoopError(
+                "legacy-worktree-state-unsupported",
+                f"legacy dispatcher worktree for PR #{pr} has unsupported local state `{status}`",
+                recovery=f"inspect `{worktree}` and {_state_path(root, pr).relative_to(root).as_posix()} before manual recovery",
+            )
+
+    current_head = _git_stdout_or_error(
+        worktree,
+        runner,
+        ["git", "rev-parse", "HEAD"],
+        code="legacy-worktree-head-failed",
+        message=f"could not inspect legacy dispatcher worktree HEAD for PR #{pr}",
+    )
+    if state is not None:
+        handoff_head = str(state.get("handoff_head", ""))
+        if handoff_head and current_head != handoff_head:
+            raise LoopError(
+                "legacy-worktree-head-uncustodied",
+                f"legacy dispatcher worktree for PR #{pr} is at {current_head}, not recorded handoff {handoff_head}",
+                recovery=f"inspect `{worktree}` and record or preserve the uncustodied head before retrying",
+            )
+
+    unpushed = _git_stdout_or_error(
+        worktree,
+        runner,
+        ["git", "rev-list", "--count", "HEAD", "--not", "--remotes=origin"],
+        code="legacy-worktree-reachability-failed",
+        message=f"could not verify remote reachability for legacy dispatcher worktree PR #{pr}",
+    )
+    try:
+        unpushed_count = int(unpushed or "0")
+    except ValueError as exc:
+        raise LoopError(
+            "legacy-worktree-reachability-invalid",
+            f"could not parse remote reachability for legacy dispatcher worktree PR #{pr}: {unpushed!r}",
+            recovery=f"inspect `{worktree}` manually; nothing was removed",
+        ) from exc
+    if unpushed_count:
+        raise LoopError(
+            "legacy-worktree-unpushed",
+            f"legacy dispatcher worktree for PR #{pr} has {unpushed_count} commit(s) not reachable from origin",
+            recovery=f"push, cherry-pick, or otherwise preserve `{worktree}` before rerunning migration",
+        )
+
+
 def _retire_legacy_dispatch_worktree(
     root: Path,
     registry: dict[str, Any],
@@ -1009,12 +1109,13 @@ def _retire_legacy_dispatch_worktree(
         )
     registered = _listed_git_worktrees(root, runner)
     if worktree in registered:
-        removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+        _require_safe_legacy_worktree_retirement(root, pr=pr, worktree=worktree, runner=runner)
+        removed = runner.run(["git", "worktree", "remove", worktree.as_posix()], cwd=root)
         if removed.returncode:
             raise LoopError(
                 "legacy-worktree-migration-failed",
                 removed.stderr.strip() or f"could not remove legacy dispatcher worktree for PR #{pr}",
-                recovery=f"inspect `{worktree}` and remove it with `git worktree remove --force` before retrying",
+                recovery=f"inspect `{worktree}` and remove it only after preserving any uncustodied work",
             )
     elif worktree.exists():
         raise LoopError(
