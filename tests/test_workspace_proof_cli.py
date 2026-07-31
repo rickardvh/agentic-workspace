@@ -29,6 +29,7 @@ def _write_independent_review_host_result(
     )
 
     result = dict(review_result)
+    result.setdefault("proof_subject_revision", "proof-subject-rev-1")
     custody = dict(result.get("custody") if isinstance(result.get("custody"), dict) else {})
     custody.update({"producer": "github-review-adapter", "trusted_channel": "github-review-webhook"})
     result["custody"] = custody
@@ -58,9 +59,13 @@ def _write_independent_review_host_result(
         },
         "review_result": result,
     }
+    host_id = _stable_review_json_digest(host_result)[:24]
+    host_result_ref = f"independent-review-host-result:{host_id}"
+    host_result["host_result_id"] = host_id
+    host_result["host_result_ref"] = host_result_ref
     signed_payload = {
         "kind": "agentic-workspace/independent-review-host-result-admission-payload/v1",
-        "host_result_ref": "",
+        "host_result_ref": host_result_ref,
         "host_result_body_digest": _stable_review_json_digest(_host_result_body_for_admission(host_result)),
         "issuer": "github-review-webhook",
         "producer": "github-review-adapter",
@@ -71,11 +76,8 @@ def _write_independent_review_host_result(
         signed_payload["revoked_at"] = str(result["admission_revoked_at"])
     if result.get("admission_superseded_by"):
         signed_payload["superseded_by"] = str(result["admission_superseded_by"])
-    host_id = _stable_review_json_digest(host_result)[:24]
     root = target_root / INDEPENDENT_REVIEW_HOST_RESULT_DIR
     path = root / f"{host_id}.json"
-    host_result_ref = path.relative_to(target_root).as_posix()
-    signed_payload["host_result_ref"] = host_result_ref
     issuer_root = target_root.parent / "independent-review-host-issuer"
     key_path = issuer_root / f"{host_id}.pem"
     key_path.parent.mkdir(parents=True, exist_ok=True)
@@ -114,17 +116,17 @@ def _write_independent_review_host_result(
         key["revoked_at"] = str(result["key_revoked_at"])
     trust_store_path = _independent_review_host_trust_store_path()
     trust_store_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        trust_store = json.loads(trust_store_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        trust_store = {"kind": "agentic-workspace/host-independent-review-trust-store/v1", "keys": {}, "revoked_key_ids": []}
+    if trust_store.get("kind") != "agentic-workspace/host-independent-review-trust-store/v1" or not isinstance(
+        trust_store.get("keys"), dict
+    ):
+        trust_store = {"kind": "agentic-workspace/host-independent-review-trust-store/v1", "keys": {}, "revoked_key_ids": []}
+    trust_store["keys"][key_id] = key
     trust_store_path.write_text(
-        json.dumps(
-            {
-                "kind": "agentic-workspace/host-independent-review-trust-store/v1",
-                "keys": {key_id: key},
-                "revoked_key_ids": [],
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
+        json.dumps(trust_store, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     completed = subprocess.run(
@@ -156,20 +158,22 @@ def _write_independent_review_host_result(
 
         os.environ["AW_INDEPENDENT_REVIEW_HOST_RESULT_ADMISSION_KEYS"] = json.dumps({key_id: key})
     _write(path, json.dumps(host_result, indent=2, sort_keys=True) + "\n")
-    index = {
-        "kind": INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
-        "results": {
-            host_id: {
-                "path": path.relative_to(root).as_posix(),
-                "status": "current",
-                "producer": "github-review-adapter",
-                "trusted_channel": "github-review-webhook",
-                "host_result_digest": _stable_review_json_digest(host_result),
-                "review_result_digest": _stable_review_json_digest(result),
-            }
-        },
+    index_path = root / "index.json"
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        index = {"kind": INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND, "results": {}}
+    if index.get("kind") != INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND or not isinstance(index.get("results"), dict):
+        index = {"kind": INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND, "results": {}}
+    index["results"][host_id] = {
+        "path": path.relative_to(root).as_posix(),
+        "status": "current",
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "host_result_digest": _stable_review_json_digest(host_result),
+        "review_result_digest": _stable_review_json_digest(result),
     }
-    _write(root / "index.json", json.dumps(index, indent=2, sort_keys=True) + "\n")
+    _write(index_path, json.dumps(index, indent=2, sort_keys=True) + "\n")
     if return_capability_inputs:
         return {
             "host_result_ref": host_result_ref,
@@ -7829,7 +7833,7 @@ def test_independent_review_host_admission_rejects_inline_caller_trust_roots(tmp
     )
     assert isinstance(host_inputs, dict)
 
-    with pytest.raises(WorkspaceUsageError, match="missing or unreadable|host boundary"):
+    with pytest.raises(WorkspaceUsageError, match="opaque independent-review-host-result reference"):
         record_trusted_independent_review_result(
             target_root=tmp_path,
             review_result={
@@ -7901,13 +7905,13 @@ def test_trusted_independent_review_rejects_caller_controlled_environment_trust_
             }
         ),
     )
-    host_path = tmp_path / host_result_ref
+    host_id = host_result_ref.removeprefix("independent-review-host-result:")
+    host_path = tmp_path / INDEPENDENT_REVIEW_HOST_RESULT_DIR / f"{host_id}.json"
     host_result = json.loads(host_path.read_text(encoding="utf-8"))
     host_result["host_admission"]["signature"] = "caller-forged-signature"
     _write(host_path, json.dumps(host_result, indent=2, sort_keys=True) + "\n")
     index_path = tmp_path / INDEPENDENT_REVIEW_HOST_RESULT_DIR / "index.json"
     index = json.loads(index_path.read_text(encoding="utf-8"))
-    host_id = host_path.stem
     index["results"][host_id]["host_result_digest"] = _stable_review_json_digest(host_result)
     _write(index_path, json.dumps(index, indent=2, sort_keys=True) + "\n")
 

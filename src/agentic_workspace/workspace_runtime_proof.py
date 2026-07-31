@@ -6,6 +6,7 @@ monolith keeps compatibility re-exports for legacy private import names.
 
 from __future__ import annotations
 
+import base64
 import copy
 import fnmatch
 import hashlib
@@ -14,6 +15,7 @@ import os
 import re
 import shlex
 import subprocess
+import tempfile
 import tomllib
 from contextlib import contextmanager
 from datetime import date, datetime, timezone
@@ -6700,7 +6702,11 @@ def _separation_of_duty_gate(*, required_mode: str, implementer: dict[str, Any],
 
 
 def _stable_review_json_digest(value: Any) -> str:
-    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return hashlib.sha256(_stable_review_json_bytes(value)).hexdigest()
+
+
+def _stable_review_json_bytes(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
 
 
 def _load_review_json_file(path: Path, default: dict[str, Any]) -> dict[str, Any]:
@@ -6748,6 +6754,126 @@ def _host_result_body_for_admission(host_result: dict[str, Any]) -> dict[str, An
     body.pop("host_admission_ref", None)
     body.pop("host_admission_verdict", None)
     return body
+
+
+def _independent_review_host_trust_store_path() -> Path:
+    return Path(tempfile.gettempdir()) / "agentic-workspace-independent-review-host-trust-store.json"
+
+
+def _load_independent_review_host_trust_store() -> dict[str, Any]:
+    path = _independent_review_host_trust_store_path()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("independent review host trust store is missing or unreadable; install host adapter keys first.") from exc
+    if payload.get("kind") != "agentic-workspace/host-independent-review-trust-store/v1" or not isinstance(payload.get("keys"), dict):
+        raise WorkspaceUsageError("independent review host trust store is malformed; reinstall host adapter keys.")
+    return payload
+
+
+def _rsa_sha256_signature_valid(*, signature_b64: str, payload: dict[str, Any], key: dict[str, Any]) -> bool:
+    try:
+        signature = base64.b64decode(signature_b64, validate=True)
+        modulus = int(str(key.get("n") or ""), 16)
+        exponent = int(key.get("e") or 0)
+    except (ValueError, TypeError):
+        return False
+    if modulus <= 0 or exponent <= 0:
+        return False
+    size = (modulus.bit_length() + 7) // 8
+    if len(signature) != size:
+        return False
+    decoded = pow(int.from_bytes(signature, "big"), exponent, modulus).to_bytes(size, "big")
+    digest_info = bytes.fromhex("3031300d060960864801650304020105000420") + hashlib.sha256(_stable_review_json_bytes(payload)).digest()
+    if not decoded.startswith(b"\x00\x01"):
+        return False
+    separator = decoded.find(b"\x00", 2)
+    if separator < 10:
+        return False
+    return decoded[2:separator] == b"\xff" * (separator - 2) and decoded[separator + 1 :] == digest_info
+
+
+def _signed_independent_review_host_verdict(*, host_result_ref: str, host_result: dict[str, Any], target_root: Path) -> dict[str, Any]:
+    admission = _as_dict(host_result.get("host_admission"))
+    signed_payload = _as_dict(admission.get("signed_payload"))
+    key_id = str(admission.get("key_id") or "").strip()
+    if admission.get("kind") != "agentic-workspace/independent-review-host-result-admission/v1":
+        return {}
+    if admission.get("status") != "current" or admission.get("algorithm") != "RS256":
+        return {}
+    if not key_id:
+        return {}
+    trust_store = _load_independent_review_host_trust_store()
+    key = _as_dict(_as_dict(trust_store.get("keys")).get(key_id))
+    if not key or key.get("status") != "current":
+        return {}
+    revoked_key_ids = {str(item) for item in _list_payload(trust_store.get("revoked_key_ids"))}
+    if key_id in revoked_key_ids or str(key.get("revoked_at") or "").strip():
+        return {}
+    if key.get("algorithm") != "RS256":
+        return {}
+    if str(key.get("workspace_ref") or "") != f"workspace:path:{target_root.resolve()}":
+        return {}
+    if str(key.get("workspace_path") or "") != str(target_root.resolve()):
+        return {}
+    now = datetime.now(timezone.utc)
+    not_before = _parse_review_time(key.get("not_before"))
+    key_expires_at = _parse_review_time(key.get("expires_at"))
+    if not_before is None or key_expires_at is None or not_before > now or key_expires_at <= now:
+        return {}
+    if not _rsa_sha256_signature_valid(signature_b64=str(admission.get("signature") or ""), payload=signed_payload, key=key):
+        return {}
+    if signed_payload.get("kind") != "agentic-workspace/independent-review-host-result-admission-payload/v1":
+        return {}
+    expected_payload = {
+        "host_result_ref": host_result_ref,
+        "host_result_body_digest": _stable_review_json_digest(_host_result_body_for_admission(host_result)),
+        "producer": str(_as_dict(host_result.get("custody")).get("producer") or ""),
+        "trusted_channel": str(_as_dict(host_result.get("custody")).get("trusted_channel") or ""),
+        "audience": INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
+        "workspace_ref": f"workspace:path:{target_root.resolve()}",
+        "operation": "assignment.admit.independent-review",
+        "assignment_revision": str(_as_dict(host_result.get("review_result")).get("assignment_revision") or ""),
+        "proof_subject_revision": str(_as_dict(host_result.get("review_result")).get("proof_subject_revision") or ""),
+    }
+    for field, expected in expected_payload.items():
+        if str(signed_payload.get(field) or "") != expected:
+            return {}
+    return {
+        "kind": "agentic-workspace/independent-review-host-result-verdict/v1",
+        "status": "admitted",
+        "authority": "host-adapter-resolver",
+        "verifier_revision": key_id,
+        "nonce": str(signed_payload.get("nonce") or ""),
+        "issued_at": str(signed_payload.get("issued_at") or ""),
+        "expires_at": str(signed_payload.get("expires_at") or ""),
+        "revoked_at": str(signed_payload.get("revoked_at") or ""),
+        "superseded_by": str(signed_payload.get("superseded_by") or ""),
+        **expected_payload,
+    }
+
+
+def _load_indexed_independent_review_host_result(*, target_root: Path, host_result_ref: str) -> dict[str, Any]:
+    host_id = host_result_ref.removeprefix("independent-review-host-result:")
+    host_root = target_root / INDEPENDENT_REVIEW_HOST_RESULT_DIR
+    index = _load_review_json_file(host_root / "index.json", {"kind": INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND, "results": {}})
+    results = index.get("results") if isinstance(index, dict) else None
+    if index.get("kind") != INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND or not isinstance(results, dict):
+        raise WorkspaceUsageError("independent review host result index is malformed; repair it before admission.")
+    record = _as_dict(results.get(host_id))
+    if not record:
+        raise WorkspaceUsageError("independent review host result ref was not found in the protected host-result index.")
+    relative_path = str(record.get("path") or f"{host_id}.json")
+    if "/" in relative_path or "\\" in relative_path or relative_path.startswith("."):
+        raise WorkspaceUsageError("independent review host result index path is invalid.")
+    path = host_root / relative_path
+    host_result = _load_review_json_file(path, {})
+    if not host_result:
+        raise WorkspaceUsageError("independent review host result is missing or unreadable.")
+    expected_digest = str(record.get("host_result_digest") or "")
+    if expected_digest and _stable_review_json_digest(host_result) != expected_digest:
+        raise WorkspaceUsageError("independent review host result digest does not match the protected host-result index.")
+    return host_result
 
 
 def _independent_review_scope_digest(changed_paths: list[str] | None) -> str:
@@ -6802,11 +6928,11 @@ def _load_independent_review_host_result(
         raise WorkspaceUsageError("trusted independent review import requires host_result_ref.")
     if not ref.startswith("independent-review-host-result:") or "/" in ref or "\\" in ref:
         raise WorkspaceUsageError("independent review host result ref must be an opaque independent-review-host-result reference.")
-    if host_result_resolver is None:
+    if host_result_resolver is not None:
         raise WorkspaceUsageError(
-            "independent review host_result_ref requires a host/adapter resolver; AW callers cannot satisfy review authority by writing local files."
+            "caller-provided independent review host result resolvers are rejected; install a protected host/adapter trust store."
         )
-    host_result = host_result_resolver(ref)
+    host_result = _load_indexed_independent_review_host_result(target_root=target_root, host_result_ref=ref)
     if not isinstance(host_result, dict) or host_result.get("kind") != "agentic-workspace/independent-review-host-result/v1":
         raise WorkspaceUsageError("independent review host result has the wrong kind.")
     if host_result.get("status") != "current":
@@ -6859,7 +6985,11 @@ def _host_admits_independent_review_host_result(host_result_ref: str, host_resul
     that the verdict is bound to this workspace and result body.
     """
 
-    verdict = _as_dict(host_result.get("host_admission_verdict"))
+    verdict = _as_dict(host_result.get("host_admission_verdict")) or _signed_independent_review_host_verdict(
+        host_result_ref=host_result_ref,
+        host_result=host_result,
+        target_root=target_root,
+    )
     if verdict.get("kind") != "agentic-workspace/independent-review-host-result-verdict/v1":
         return False
     if verdict.get("status") != "admitted" or verdict.get("authority") != "host-adapter-resolver":
