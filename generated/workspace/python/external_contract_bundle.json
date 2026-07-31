@@ -1,27 +1,27 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:bf10ef565d6b778ae95c288a0bc506c88261f2a9f77680d44c25adaffb0376ff",
+  "profile_fingerprint": "sha256:5080782c865d9a7eda238439a5fe4ab1915985a7a27a98fa47d4970f20366754",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.36.1",
+    "client_package": "0.36.2",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.36.1"
+      "version": "0.36.2"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.36.1"
+      "version": "0.36.2"
     }
   },
   "operations": {
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f8fba80e228c09d6f4241a69aa3a984c62c721159efc520c0722b9a83ad4f0a1",
-      "compatibility_fingerprint": "sha256:379c6ddff2990ac7b4c8da6c39319092153f9e4a0155d330426f02c78b111f2b",
+      "fingerprint": "sha256:30dcb6381476aa2d5169957c3ba1024afa20cf2ee60f8864bc94213b96bde976",
+      "compatibility_fingerprint": "sha256:2f99f3c59fcffce240823cb6dd8d133f870ee8f4f74579ee8a6d0a87369b6fda",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -42,7 +42,7 @@
           "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
           "Independent-review admission accepts only producer-owned review result envelopes and rejects caller-authored identity packets.",
-          "Independent-review host results are admitted only through a pre-installed host/adapter-owned capability; repo-local files, environment variables, and caller-supplied verifier keys/signatures are non-authoritative caches.",
+          "Independent-review host results are admitted only through an opaque host_result_ref resolved by a protected host/adapter resolver; repo-local files, user-home trust stores, PYTHONPATH modules, environment variables, checked-in keys, and caller-supplied verifier keys/signatures are non-authoritative caches.",
           "Independent-review receipts are bound to changed scope and expire, revoke, or supersede fail closed at proof admission."
         ],
         "id": "assignment.admit",
@@ -193,7 +193,7 @@
           "assignment.admit.process",
           "generated external clients expose and negotiate the operation family as runtime-backed",
           "operation contract validates against operation.schema.json",
-          "assignment.admit admits independent-review host capabilities and results through the same generated public operation used by external clients",
+          "assignment.admit admits independent-review host results through the same generated public operation used by external clients while requiring protected host/adapter verdict custody outside the caller path",
           "proof decision rejects expired, revoked, superseded, wrong-scope, same-actor, or caller-shaped independent-review evidence"
         ],
         "reads": [
@@ -485,7 +485,7 @@
             "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
             "Independent-review admission accepts only producer-owned review result envelopes and rejects caller-authored identity packets.",
-            "Independent-review host results are admitted only through a pre-installed host/adapter-owned capability; repo-local files, environment variables, and caller-supplied verifier keys/signatures are non-authoritative caches.",
+            "Independent-review host results are admitted only through an opaque host_result_ref resolved by a protected host/adapter resolver; repo-local files, user-home trust stores, PYTHONPATH modules, environment variables, checked-in keys, and caller-supplied verifier keys/signatures are non-authoritative caches.",
             "Independent-review receipts are bound to changed scope and expire, revoke, or supersede fail closed at proof admission."
           ]
         },

@@ -23,6 +23,7 @@ from agentic_workspace import (
     require_operations,
     resolve_invocation,
 )
+from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.generated_operations import (
     assignment_admit,
     assignment_export,
@@ -35,8 +36,84 @@ from agentic_workspace.generated_operations import (
     correction_event_submit,
     delegation_outcome_append,
 )
+from agentic_workspace.workspace_runtime_proof import (
+    INDEPENDENT_REVIEW_HOST_RESULT_DIR,
+    INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
+    INDEPENDENT_REVIEW_RESULT_DIR,
+    INDEPENDENT_REVIEW_RESULT_INDEX_KIND,
+    _host_result_body_for_admission,
+    _independent_review_scope_digest,
+    _stable_review_json_digest,
+    admit_independent_review_result_operation,
+    record_trusted_independent_review_result,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _independent_review_host_result_fixture(tmp_path: Path, *, changed_paths: list[str] | None = None, **overrides: object):
+    changed = changed_paths or ["src/feature.py"]
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "separate-actor",
+        "assignment_id": str(overrides.get("assignment_id") or "assign-1"),
+        "assignment_revision": str(overrides.get("assignment_revision") or "assignment-rev-1"),
+        "proof_subject_revision": str(overrides.get("proof_subject_revision") or "proof-rev-1"),
+        "review_revision": str(overrides.get("review_revision") or "review-rev-1"),
+        "scope_digest": _independent_review_scope_digest(changed),
+        "changed_paths": changed,
+        "implementer": {"actor_id": "codex-implementer", "provider": "openai", "role": "implementer"},
+        "reviewer": {"actor_id": "human-reviewer", "provider": "github", "role": "reviewer", "fresh_context": True},
+        "reviewed_at": "2026-07-31T00:00:00Z",
+        "expires_at": str(overrides.get("expires_at") or "2099-01-01T00:00:00Z"),
+        "custody": {
+            "producer": "github-review-adapter",
+            "trusted_channel": "github-review-webhook",
+            "authority_ref": "github-pr-review:1",
+        },
+    }
+    host_result = {
+        "kind": "agentic-workspace/independent-review-host-result/v1",
+        "status": "current",
+        "review_result": review_result,
+        "custody": {
+            "producer": "github-review-adapter",
+            "trusted_channel": "github-review-webhook",
+            "authority_ref": "github-pr-review:1",
+        },
+    }
+    host_result_id = _stable_review_json_digest(host_result)[:24]
+    host_result_ref = f"independent-review-host-result:{host_result_id}"
+    host_result["host_result_id"] = host_result_id
+    host_result["host_result_ref"] = host_result_ref
+    host_result["host_admission_verdict"] = {
+        "kind": "agentic-workspace/independent-review-host-result-verdict/v1",
+        "status": str(overrides.get("verdict_status") or "admitted"),
+        "authority": "host-adapter-resolver",
+        "host_result_ref": host_result_ref,
+        "host_result_body_digest": _stable_review_json_digest(_host_result_body_for_admission(host_result)),
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "audience": "agentic-workspace.independent-review",
+        "workspace_ref": f"workspace:path:{tmp_path.resolve()}",
+        "operation": "assignment.admit.independent-review",
+        "assignment_revision": review_result["assignment_revision"],
+        "proof_subject_revision": review_result["proof_subject_revision"],
+        "nonce": str(overrides.get("nonce") if "nonce" in overrides else f"{host_result_id}:nonce"),
+        "issued_at": "2026-07-31T00:00:00Z",
+        "expires_at": str(overrides.get("verdict_expires_at") or "2099-01-01T00:00:00Z"),
+        "verifier_revision": "host-adapter-resolver:test:v1",
+    }
+    if overrides.get("revoked_at"):
+        host_result["host_admission_verdict"]["revoked_at"] = str(overrides["revoked_at"])
+
+    def resolver(ref: str) -> dict[str, object]:
+        if ref != host_result_ref:
+            raise AssertionError(f"unexpected host result ref: {ref}")
+        return host_result
+
+    return host_result_ref, host_result, resolver
 
 
 def _python_client():
@@ -325,6 +402,74 @@ def test_assignment_lifecycle_public_contract_omits_caller_authority_inputs() ->
             continue
         input_names = {entry["name"] for entry in operation["contract"]["inputs"]}
         assert not authority_inputs & input_names
+
+
+def test_independent_review_import_uses_host_resolver_and_append_preserves_indexes(tmp_path: Path) -> None:
+    first_ref, _first_host, first_resolver = _independent_review_host_result_fixture(tmp_path)
+    second_ref, _second_host, second_resolver = _independent_review_host_result_fixture(
+        tmp_path,
+        changed_paths=["src/other.py"],
+        assignment_id="assign-2",
+        assignment_revision="assignment-rev-2",
+        proof_subject_revision="proof-rev-2",
+        review_revision="review-rev-2",
+    )
+
+    first = record_trusted_independent_review_result(
+        target_root=tmp_path,
+        review_result={"host_result_ref": first_ref},
+        host_result_resolver=first_resolver,
+    )
+    second = record_trusted_independent_review_result(
+        target_root=tmp_path,
+        review_result={"host_result_ref": second_ref},
+        host_result_resolver=second_resolver,
+    )
+    replay = record_trusted_independent_review_result(
+        target_root=tmp_path,
+        review_result={"host_result_ref": first_ref},
+        host_result_resolver=first_resolver,
+    )
+
+    assert replay["result_ref"] == first["result_ref"]
+    host_index = json.loads((tmp_path / INDEPENDENT_REVIEW_HOST_RESULT_DIR / "index.json").read_text(encoding="utf-8"))
+    trusted_index = json.loads((tmp_path / INDEPENDENT_REVIEW_RESULT_DIR / "index.json").read_text(encoding="utf-8"))
+    assert host_index["kind"] == INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND
+    assert set(host_index["results"]) == {
+        first_ref.removeprefix("independent-review-host-result:"),
+        second_ref.removeprefix("independent-review-host-result:"),
+    }
+    assert trusted_index["kind"] == INDEPENDENT_REVIEW_RESULT_INDEX_KIND
+    assert len(trusted_index["results"]) == 2
+    assert first["status"] == "stored"
+    assert second["status"] == "stored"
+
+
+def test_independent_review_import_rejects_caller_written_host_file_without_resolver(tmp_path: Path) -> None:
+    host_ref, host_result, _resolver = _independent_review_host_result_fixture(tmp_path)
+    host_id = host_ref.removeprefix("independent-review-host-result:")
+    old_path = tmp_path / ".agentic-workspace/local/independent-review-host-results" / f"{host_id}.json"
+    old_path.parent.mkdir(parents=True, exist_ok=True)
+    old_path.write_text(json.dumps(host_result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    with pytest.raises(WorkspaceUsageError, match="requires a host/adapter resolver"):
+        record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_ref})
+
+    assert not (tmp_path / INDEPENDENT_REVIEW_RESULT_DIR / "index.json").exists()
+
+
+def test_assignment_admit_host_result_ref_fails_closed_without_host_resolver(tmp_path: Path) -> None:
+    host_ref, _host_result, _resolver = _independent_review_host_result_fixture(tmp_path)
+
+    admitted = admit_independent_review_result_operation(
+        target_root=tmp_path,
+        values={"host_result_ref": host_ref, "required_mode": "separate-actor"},
+        changed_paths=["src/feature.py"],
+    )
+
+    assert admitted["status"] == "rejected"
+    assert admitted["failures"][0]["reason"] == "host-capability-admission-rejected"
+    assert "requires a host/adapter resolver" in admitted["failures"][0]["detail"]
 
 
 def test_correction_event_generated_operations_store_query_and_preserve_low_authority(tmp_path: Path) -> None:

@@ -4200,7 +4200,7 @@
                     "flags": [
                       "--host-result-ref"
                     ],
-                    "help": "Opaque host/adapter independent-review result ref to import and admit; host trust material must be installed outside this caller path."
+                    "help": "Opaque host/adapter independent-review result ref to import and admit; a protected host/adapter resolver must supply the admission verdict."
                   },
                   {
                     "name": "required_mode",
