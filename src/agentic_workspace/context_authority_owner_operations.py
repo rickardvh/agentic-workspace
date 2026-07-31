@@ -365,39 +365,11 @@ _CONTEXT_OWNER_OPERATION_RUNNERS = {
 }
 
 
-def run_context_owner_operation(
-    *,
-    surface: str,
-    owner: str | None,
-    root: Path,
-    chosen: Path,
-    revision: str,
-    git_head: str,
-    selection: dict[str, Any],
-    adapter_id: str,
-    boundary: str,
-    structural_backing: dict[str, Any],
-    status: str = "current",
-    reason: str = "",
-    extra: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+def registered_context_owner_operation_runner(surface: str):
     runner = _CONTEXT_OWNER_OPERATION_RUNNERS.get(surface)
     if runner is None:
         raise ValueError(f"context owner operation is not registered for surface {surface!r}")
-    return runner(
-        owner=owner,
-        root=root,
-        chosen=chosen,
-        revision=revision,
-        git_head=git_head,
-        selection=selection,
-        adapter_id=adapter_id,
-        boundary=boundary,
-        structural_backing=structural_backing,
-        status=status,
-        reason=reason,
-        extra=extra,
-    )
+    return runner
 
 
 def registered_context_owner_receipt_status(

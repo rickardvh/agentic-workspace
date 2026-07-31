@@ -13,8 +13,8 @@ from typing import Any, Callable
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
 from agentic_workspace.authority_envelope import mutation_baseline_payload
 from agentic_workspace.context_authority_owner_operations import (
+    registered_context_owner_operation_runner,
     registered_context_owner_receipt_status,
-    run_context_owner_operation,
 )
 
 BLOCKER_PRECEDENCE = [
@@ -579,8 +579,8 @@ def _dispatch_registered_owner_operation(
     reason: str = "",
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return run_context_owner_operation(
-        surface=surface,
+    runner = registered_context_owner_operation_runner(surface)
+    return runner(
         owner=item.get("owner"),
         root=root,
         chosen=chosen,
