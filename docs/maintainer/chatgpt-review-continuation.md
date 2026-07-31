@@ -27,7 +27,7 @@ Use the opt-in global mode to scan every open PR and dispatch at most one eligib
 uv run python tools/chatgpt_review_loop.py poll --all-open --watch
 ```
 
-It retains one Codex session per PR and uses the main checkout serially. A first eligible review fetches the PR branch, verifies the fetched SHA equals the reviewed SHA, requires a clean checkout, switches to the PR branch, and fast-forwards it to that exact commit; a later eligible review switches back to the same branch and resumes the recorded session. A local exclusive lock keeps two poller invocations from starting concurrent jobs. The watcher stays active after empty scans and dispatches, and retires registry entries when their PR closes. The dispatcher preserves the exact-head marker, duplicate-review, branch-ownership, and bounded-recovery checks; stale comments never become jobs. Existing `poll` behaviour remains scoped to explicit local handoffs.
+It retains one Codex session per PR and uses the main checkout serially. A first eligible review fetches the PR branch into an explicit `origin/<branch>` ref, verifies the fetched SHA equals the reviewed SHA, requires a clean checkout, switches to the PR branch, and fast-forwards it to that exact commit; a later eligible review switches back to the same branch and resumes the recorded session. Any pre-launch switch failure restores the checkout that the maintainer started from. A local exclusive lock keeps two poller invocations from starting concurrent jobs. The watcher stays active after empty scans and dispatches, and retires registry entries when their PR closes. The dispatcher preserves the exact-head marker, duplicate-review, branch-ownership, and bounded-recovery checks; stale comments never become jobs. Existing `poll` behaviour remains scoped to explicit local handoffs.
 
 ## Start a loop
 
@@ -77,7 +77,7 @@ Polling uses `gh` only. A review is eligible only when its comment contains exac
 
 For `blocked`, the controller records `(PR, reviewed SHA, comment ID)` as attempted before starting the non-interactive continuation `codex -C <repo> exec resume <exact-session> <verbatim-findings>`. That exact review cannot automatically resume twice, including after a resume failure. The resumed Codex process inherits a transport guard, while its Stop hook only records a newly pushed handoff; neither termination path starts another poller. A successful cycle therefore requires a corrective push with a new head.
 
-The all-open controller fetches and verifies the reviewed SHA before fresh execution, then runs fresh and later resume jobs from the serial checkout after switching to the PR branch. Owner-local state is pre-bound before the first Stop hook. A fresh job that exits nonzero or never receives that binding remains in terminal local recovery and suppresses redispatch of the same review until a human explicitly recovers or cleans it up. Closing a tracked PR also retires its local state.
+The all-open controller fetches and verifies the reviewed SHA before fresh execution, then runs fresh and later resume jobs from the serial checkout after switching to the PR branch. Owner-local state is pre-bound before the first Stop hook. A fresh job that exits nonzero or never receives that binding remains in terminal local recovery and suppresses redispatch of the same review until a human explicitly recovers or cleans it up. On startup, legacy registry entries with a `worktree` field are migrated by verifying the path against `git worktree list --porcelain` and the configured `--worktree-root`, removing only dispatcher-owned `pr-<number>` worktrees, and rewriting the entry to `checkout`. Closing a tracked PR also retires its local state.
 
 For `merge-ready`, the controller records readiness and stops. It never invokes `gh pr merge` or changes ready/draft state; the human retains merge authority.
 
@@ -96,6 +96,8 @@ uv run python tools/chatgpt_review_loop.py cleanup --pr 123
 ```
 
 Use `recover` only after a human has fixed the reported malformed or ambiguous GitHub state. It does not remove a handled-review key or retry a failed exact review. After a resume failure or a session that ended without a corrective push, inspect the exact session, push a new head, and run a new handoff. `stop` or `cleanup` also ends a bounded watcher on its next poll; `cleanup` removes only the gitignored local state record and does not change the PR or its comments.
+
+`recover --action replace-worktree` remains as a deprecated alias for older state. It still verifies and removes a legacy dispatcher-owned worktree before retiring the state; if the recorded path is outside the configured worktree root or is not a registered Git worktree, it fails with a manual recovery route instead of deleting an unrelated checkout.
 
 The controller reports explicit recovery for a closed PR, changed local or remote branch, an unrecorded remote head, a missing/ambiguous session, malformed or multiple matching markers, missing blocked findings, resume failure, no new handoff, maximum cycles, and repeated identical blockers. Stale-SHA reviews are visible no-ops and never resume Codex.
 

@@ -967,34 +967,159 @@ def _require_clean_checkout(root: Path, runner: CommandRunner) -> None:
         )
 
 
+def _listed_git_worktrees(root: Path, runner: CommandRunner) -> set[Path]:
+    completed = runner.run(["git", "worktree", "list", "--porcelain"], cwd=root)
+    if completed.returncode:
+        raise LoopError(
+            "worktree-list-failed",
+            completed.stderr.strip() or "could not inspect registered Git worktrees",
+            recovery="inspect `git worktree list --porcelain` and remove legacy dispatcher worktrees manually before retrying",
+        )
+    worktrees: set[Path] = set()
+    for line in completed.stdout.splitlines():
+        if line.startswith("worktree "):
+            worktrees.add(Path(line.removeprefix("worktree ")).resolve())
+    return worktrees
+
+
+def _retire_legacy_dispatch_worktree(
+    root: Path,
+    registry: dict[str, Any],
+    *,
+    pr: int,
+    entry: dict[str, Any],
+    runner: CommandRunner,
+    worktree_root: Path,
+) -> bool:
+    """Remove one old dispatcher-owned detached worktree and rewrite its entry."""
+    raw_worktree = str(entry.get("worktree", "")).strip()
+    if not raw_worktree:
+        return False
+    worktree = Path(raw_worktree).resolve()
+    configured_root = worktree_root.resolve()
+    expected_name = f"pr-{pr}"
+    if not worktree.is_relative_to(configured_root) or worktree.name != expected_name:
+        raise LoopError(
+            "legacy-worktree-unowned",
+            f"refusing to migrate unexpected legacy worktree for PR #{pr}: {worktree}",
+            recovery=(
+                "rerun with the original --worktree-root if this path is dispatcher-owned, "
+                "or remove/migrate it manually and then use recover --action replace-checkout"
+            ),
+        )
+    registered = _listed_git_worktrees(root, runner)
+    if worktree in registered:
+        removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+        if removed.returncode:
+            raise LoopError(
+                "legacy-worktree-migration-failed",
+                removed.stderr.strip() or f"could not remove legacy dispatcher worktree for PR #{pr}",
+                recovery=f"inspect `{worktree}` and remove it with `git worktree remove --force` before retrying",
+            )
+    elif worktree.exists():
+        raise LoopError(
+            "legacy-worktree-unregistered",
+            f"legacy dispatcher path for PR #{pr} exists but is not a registered Git worktree: {worktree}",
+            recovery="inspect the directory and remove it manually if it is safe, then rerun the review poller",
+        )
+    entry["checkout"] = root.as_posix()
+    entry.pop("worktree", None)
+    migrated = registry.setdefault("migrated_legacy_worktrees", [])
+    if isinstance(migrated, list):
+        migrated.append({"pr_number": pr, "removed": worktree.as_posix()})
+    return True
+
+
+def _migrate_legacy_dispatch_worktrees(
+    root: Path,
+    registry: dict[str, Any],
+    *,
+    runner: CommandRunner,
+    worktree_root: Path,
+) -> list[int]:
+    entries = registry["prs"]
+    migrated: list[int] = []
+    for key, entry in list(entries.items()):
+        if not isinstance(entry, dict) or not key.isdigit() or "worktree" not in entry:
+            continue
+        pr = int(key)
+        if _retire_legacy_dispatch_worktree(
+            root,
+            registry,
+            pr=pr,
+            entry=entry,
+            runner=runner,
+            worktree_root=worktree_root,
+        ):
+            migrated.append(pr)
+    if migrated:
+        _save_dispatch(root, registry)
+    return migrated
+
+
+def _restore_checkout(root: Path, *, branch: str, head: str, runner: CommandRunner) -> str:
+    command = ["git", "switch", branch] if branch else ["git", "switch", "--detach", head]
+    restored = runner.run(command, cwd=root)
+    if restored.returncode:
+        return restored.stderr.strip() or f"could not restore checkout to {branch or head}"
+    current_head = runner.run(["git", "rev-parse", "HEAD"], cwd=root)
+    if current_head.returncode:
+        return current_head.stderr.strip() or "could not verify restored checkout head"
+    if current_head.stdout.strip() != head:
+        return f"restored checkout did not return to original head {head}"
+    return ""
+
+
 def _switch_to_review_branch(root: Path, *, branch: str, expected_head: str, runner: CommandRunner) -> None:
     """Use the serial main checkout at the exact reviewed PR head."""
     if not branch:
         raise LoopError("missing-head-branch", "PR head branch is missing")
+    original_branch = _git_value(root, runner, "branch", "--show-current")
+    original_head = _git_value(root, runner, "rev-parse", "HEAD")
     _require_clean_checkout(root, runner)
-    fetched = runner.run(["git", "fetch", "--no-tags", "origin", branch], cwd=root)
+    remote_ref = f"refs/remotes/origin/{branch}"
+    fetch_refspec = f"+refs/heads/{branch}:{remote_ref}"
+
+    def fail(exc: LoopError) -> None:
+        current_branch = _git_value(root, runner, "branch", "--show-current")
+        current_head = _git_value(root, runner, "rev-parse", "HEAD")
+        if current_branch != original_branch or current_head != original_head:
+            restore_error = _restore_checkout(root, branch=original_branch, head=original_head, runner=runner)
+            if restore_error:
+                raise LoopError(
+                    exc.code,
+                    f"{exc}; rollback failed: {restore_error}",
+                    recovery=f"{exc.recovery or 'restore the checkout manually'}; restore checkout to {original_branch or original_head}",
+                ) from exc
+        raise exc
+
+    fetched = runner.run(["git", "fetch", "--no-tags", "origin", fetch_refspec], cwd=root)
     if fetched.returncode:
         raise LoopError("reviewed-head-fetch-failed", fetched.stderr.strip() or f"could not fetch PR branch {branch}")
-    fetched_head = _git_value(root, runner, "rev-parse", "FETCH_HEAD")
+    fetched_head = _git_value(root, runner, "rev-parse", remote_ref)
     if fetched_head != expected_head:
         raise LoopError("reviewed-head-mismatch", "fetched PR branch does not equal the reviewed head")
-    current_branch = _git_value(root, runner, "branch", "--show-current")
-    if current_branch != branch:
-        switched = runner.run(["git", "switch", branch], cwd=root)
-        if switched.returncode:
-            switched = runner.run(["git", "switch", "--create", branch, "--track", f"origin/{branch}"], cwd=root)
-        if switched.returncode:
-            raise LoopError("branch-switch-failed", switched.stderr.strip() or f"could not switch to PR branch {branch}")
-    current_head = _git_value(root, runner, "rev-parse", "HEAD")
-    if current_head != expected_head:
-        fast_forwarded = runner.run(["git", "merge", "--ff-only", expected_head], cwd=root)
-        if fast_forwarded.returncode:
-            raise LoopError(
-                "branch-switch-failed",
-                fast_forwarded.stderr.strip() or f"local branch {branch} cannot fast-forward to reviewed head {expected_head}",
-            )
-    if _git_value(root, runner, "rev-parse", "HEAD") != expected_head:
-        raise LoopError("branch-switch-failed", f"checkout did not land on reviewed head {expected_head}")
+    try:
+        current_branch = _git_value(root, runner, "branch", "--show-current")
+        if current_branch != branch:
+            switched = runner.run(["git", "switch", branch], cwd=root)
+            if switched.returncode:
+                switched = runner.run(["git", "switch", "--create", branch, "--track", remote_ref], cwd=root)
+            if switched.returncode:
+                raise LoopError("branch-switch-failed", switched.stderr.strip() or f"could not switch to PR branch {branch}")
+        current_head = _git_value(root, runner, "rev-parse", "HEAD")
+        if current_head != expected_head:
+            fast_forwarded = runner.run(["git", "merge", "--ff-only", remote_ref], cwd=root)
+            if fast_forwarded.returncode:
+                raise LoopError(
+                    "branch-switch-failed",
+                    fast_forwarded.stderr.strip() or f"local branch {branch} cannot fast-forward to reviewed head {expected_head}",
+                    recovery=f"inspect or replace local branch {branch}, then rerun the review poller",
+                )
+        if _git_value(root, runner, "rev-parse", "HEAD") != expected_head:
+            raise LoopError("branch-switch-failed", f"checkout did not land on reviewed head {expected_head}")
+    except LoopError as exc:
+        fail(exc)
 
 
 def poll_one(
@@ -1214,9 +1339,9 @@ def _dispatch_all_unlocked(
     The dispatcher holds one global lock, switches the main checkout to the
     selected PR branch, and launches at most one Codex job at a time.
     """
-    _ = worktree_root  # Back-compatible CLI option; serial dispatch no longer creates worktrees.
     registry = _load_dispatch(root)
     entries = registry["prs"]
+    _migrate_legacy_dispatch_worktrees(root, registry, runner=runner, worktree_root=worktree_root)
     retired = _cleanup_closed_dispatches(root, registry, runner=runner)
     candidates: list[tuple[dict[str, Any], Review]] = []
     recovery_candidates: list[tuple[dict[str, Any], Review]] = []
@@ -1663,6 +1788,12 @@ def _parser() -> argparse.ArgumentParser:
     recover_parser.add_argument("--target", type=Path, default=Path.cwd())
     recover_parser.add_argument("--pr", type=int, required=True)
     recover_parser.add_argument(
+        "--worktree-root",
+        type=Path,
+        default=Path(".agentic-workspace/local/chatgpt-review-worktrees"),
+        help="Deprecated legacy dispatcher worktree root used only to retire old replace-worktree state safely.",
+    )
+    recover_parser.add_argument(
         "--action",
         choices=["continue-waiting", "replace-checkout", "replace-worktree"],
         required=True,
@@ -1754,6 +1885,17 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                 raise LoopError("recovery-not-required", f"PR #{args.pr} is not in recovery-required state")
             if args.action in {"replace-checkout", "replace-worktree"}:
                 registry = _load_dispatch(root)
+                entry = registry["prs"].get(str(args.pr))
+                if isinstance(entry, dict) and "worktree" in entry:
+                    worktree_root = args.worktree_root if args.worktree_root.is_absolute() else root / args.worktree_root
+                    _retire_legacy_dispatch_worktree(
+                        root,
+                        registry,
+                        pr=args.pr,
+                        entry=entry,
+                        runner=runner,
+                        worktree_root=worktree_root,
+                    )
                 registry["prs"].pop(str(args.pr), None)
                 _save_dispatch(root, registry)
                 _state_path(root, args.pr).unlink(missing_ok=True)

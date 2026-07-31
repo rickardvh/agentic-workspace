@@ -161,6 +161,8 @@ class FakeRunner(loop.CommandRunner):
             return subprocess.CompletedProcess(command, 0, self.head, "")
         if command == ["git", "rev-parse", "FETCH_HEAD"]:
             return subprocess.CompletedProcess(command, 0, self.pr_head, "")
+        if command == ["git", "rev-parse", f"refs/remotes/origin/{self.pr_branch}"]:
+            return subprocess.CompletedProcess(command, 0, self.pr_head, "")
         if command[:3] == ["git", "status", "--porcelain"]:
             return subprocess.CompletedProcess(command, 0, "", "")
         if command[:4] == ["git", "fetch", "--no-tags", "origin"]:
@@ -168,12 +170,22 @@ class FakeRunner(loop.CommandRunner):
         if command[:2] == ["git", "switch"]:
             if command[2:3] == ["--create"]:
                 self.branch = command[3]
+                self.head = self.pr_head
             else:
                 self.branch = command[2]
             return subprocess.CompletedProcess(command, 0, "", "")
         if command[:3] == ["git", "merge", "--ff-only"]:
-            self.head = command[3]
+            self.head = self.pr_head if command[3].startswith("refs/remotes/") else command[3]
             return subprocess.CompletedProcess(command, 0, "", "")
+        if command == ["git", "worktree", "list", "--porcelain"]:
+            worktrees = [self.root]
+            worktrees.extend(path for path in self.root.rglob("pr-*") if path.is_dir())
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                "\n\n".join(f"worktree {path.resolve()}" for path in worktrees) + "\n",
+                "",
+            )
         if command[:3] == ["git", "worktree", "remove"]:
             path = Path(command[-1])
             if path.exists():
@@ -265,6 +277,69 @@ def passed_result(runner: FakeRunner) -> None:
     runner.next_job_result = {"proof_status": "passed", "proof_command": "pytest -q", "proof_exit_code": 0, "push_status": "passed"}
 
 
+def git(cwd: Path, *args: str) -> str:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    return completed.stdout.strip()
+
+
+def commit_file(repo: Path, name: str, body: str) -> str:
+    (repo / name).write_text(body, encoding="utf-8")
+    git(repo, "add", name)
+    git(repo, "commit", "-m", f"update {name}")
+    return git(repo, "rev-parse", "HEAD")
+
+
+def real_origin_and_clone(tmp_path: Path) -> tuple[Path, Path, Path]:
+    origin = tmp_path / "origin.git"
+    seed = tmp_path / "seed"
+    clone = tmp_path / "clone"
+    git(tmp_path, "init", "--bare", origin.as_posix())
+    git(tmp_path, "init", seed.as_posix())
+    git(seed, "config", "user.email", "test@example.test")
+    git(seed, "config", "user.name", "Test User")
+    commit_file(seed, "README.md", "base\n")
+    git(seed, "branch", "-M", "master")
+    git(seed, "remote", "add", "origin", origin.as_posix())
+    git(seed, "push", "-u", "origin", "master")
+    git(tmp_path, "clone", origin.as_posix(), clone.as_posix())
+    git(clone, "config", "user.email", "test@example.test")
+    git(clone, "config", "user.name", "Test User")
+    return origin, seed, clone
+
+
+def push_branch(repo: Path, branch: str, name: str, body: str) -> str:
+    git(repo, "switch", "master")
+    git(repo, "switch", "-C", branch)
+    head = commit_file(repo, name, body)
+    git(repo, "push", "-u", "origin", branch)
+    return head
+
+
+class RealGitPrRunner(loop.CommandRunner):
+    def __init__(self, *, pr_payloads: list[dict[str, object]] | None = None, pr_state: str = "OPEN") -> None:
+        self.pr_payloads = pr_payloads or []
+        self.pr_state = pr_state
+
+    def run(self, command, *, cwd, env=None):
+        command = list(command)
+        if command[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(command, 0, json.dumps(self.pr_payloads), "")
+        if command[:3] == ["gh", "pr", "view"]:
+            return subprocess.CompletedProcess(command, 0, json.dumps({"number": 12, "state": self.pr_state}), "")
+        if command[:3] == ["gh", "repo", "view"]:
+            return subprocess.CompletedProcess(command, 0, json.dumps({"nameWithOwner": "owner/repo"}), "")
+        return super().run(command, cwd=cwd, env=env)
+
+
 def test_marker_parser_accepts_only_exact_pr_and_full_sha() -> None:
     comments = [
         {"id": "IC_exact", "body": f"Fix A\n{marker()}", "url": "u1"},
@@ -341,8 +416,170 @@ def test_resume_switches_serial_checkout_to_recorded_handoff(tmp_path: Path) -> 
 
     loop._switch_to_review_branch(tmp_path, branch=existing["branch"], expected_head=HEAD_A, runner=runner)
 
-    assert ["git", "merge", "--ff-only", HEAD_A] in runner.commands
+    assert ["git", "merge", "--ff-only", f"refs/remotes/origin/{existing['branch']}"] in runner.commands
     assert not any(command[:3] == ["git", "worktree", "add"] for command in runner.commands)
+
+
+def test_real_git_switch_creates_absent_local_branch_from_explicit_remote_ref(tmp_path: Path) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    branch = "codex/review-branch"
+    expected = push_branch(seed, branch, "review.txt", "reviewed\n")
+    original = git(clone, "rev-parse", "HEAD")
+
+    loop._switch_to_review_branch(clone, branch=branch, expected_head=expected, runner=loop.CommandRunner())
+
+    assert git(clone, "branch", "--show-current") == branch
+    assert git(clone, "rev-parse", "HEAD") == expected
+    assert original != expected
+
+
+def test_real_git_switch_restores_original_checkout_after_divergent_branch_failure(tmp_path: Path) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    branch = "codex/diverged"
+    expected = push_branch(seed, branch, "remote.txt", "remote\n")
+    original_branch = git(clone, "branch", "--show-current")
+    original_head = git(clone, "rev-parse", "HEAD")
+    git(clone, "switch", "-c", branch)
+    commit_file(clone, "local.txt", "local\n")
+    git(clone, "switch", original_branch)
+
+    with pytest.raises(loop.LoopError) as error:
+        loop._switch_to_review_branch(clone, branch=branch, expected_head=expected, runner=loop.CommandRunner())
+
+    assert error.value.code == "branch-switch-failed"
+    assert git(clone, "branch", "--show-current") == original_branch
+    assert git(clone, "rev-parse", "HEAD") == original_head
+
+
+def test_real_git_switch_keeps_checkout_when_branch_is_checked_out_elsewhere(tmp_path: Path) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    branch = "codex/in-other-worktree"
+    expected = push_branch(seed, branch, "remote.txt", "remote\n")
+    git(clone, "fetch", "origin", branch)
+    git(clone, "switch", "-c", branch, f"origin/{branch}")
+    git(clone, "switch", "master")
+    original_head = git(clone, "rev-parse", "HEAD")
+    git(clone, "worktree", "add", (tmp_path / "other-checkout").as_posix(), branch)
+
+    with pytest.raises(loop.LoopError) as error:
+        loop._switch_to_review_branch(clone, branch=branch, expected_head=expected, runner=loop.CommandRunner())
+
+    assert error.value.code == "branch-switch-failed"
+    assert git(clone, "branch", "--show-current") == "master"
+    assert git(clone, "rev-parse", "HEAD") == original_head
+
+
+def test_real_git_switch_keeps_checkout_when_remote_branch_is_deleted(tmp_path: Path) -> None:
+    _origin, _seed, clone = real_origin_and_clone(tmp_path)
+    original_branch = git(clone, "branch", "--show-current")
+    original_head = git(clone, "rev-parse", "HEAD")
+
+    with pytest.raises(loop.LoopError) as error:
+        loop._switch_to_review_branch(clone, branch="codex/deleted", expected_head="1" * 40, runner=loop.CommandRunner())
+
+    assert error.value.code == "reviewed-head-fetch-failed"
+    assert git(clone, "branch", "--show-current") == original_branch
+    assert git(clone, "rev-parse", "HEAD") == original_head
+
+
+def test_real_git_legacy_worktree_migration_removes_owned_open_entry(tmp_path: Path) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    branch = "codex/legacy-open"
+    head = push_branch(seed, branch, "review.txt", "reviewed\n")
+    worktree_root = clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees"
+    worktree = worktree_root / "pr-12"
+    unrelated = tmp_path / "manual-worktree"
+    git(clone, "fetch", "origin", branch)
+    git(clone, "worktree", "add", "--detach", worktree.as_posix(), head)
+    git(clone, "worktree", "add", "--detach", unrelated.as_posix(), "HEAD")
+    loop._save_dispatch(clone, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix(), "branch": branch}}})
+
+    migrated = loop._migrate_legacy_dispatch_worktrees(
+        clone,
+        loop._load_dispatch(clone),
+        runner=loop.CommandRunner(),
+        worktree_root=worktree_root,
+    )
+
+    registry = loop._load_dispatch(clone)
+    listed = subprocess.run(
+        ["git", "worktree", "list", "--porcelain"],
+        cwd=clone,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
+    ).stdout
+    assert migrated == [12]
+    assert registry["prs"]["12"]["checkout"] == clone.as_posix()
+    assert "worktree" not in registry["prs"]["12"]
+    assert worktree.as_posix() not in listed
+    assert unrelated.as_posix() in listed
+
+
+def test_real_git_closed_dispatch_cleanup_migrates_legacy_worktree_before_retiring_state(tmp_path: Path) -> None:
+    _origin, seed, clone = real_origin_and_clone(tmp_path)
+    branch = "codex/legacy-closed"
+    head = push_branch(seed, branch, "review.txt", "reviewed\n")
+    worktree_root = clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees"
+    worktree = worktree_root / "pr-12"
+    git(clone, "fetch", "origin", branch)
+    git(clone, "worktree", "add", "--detach", worktree.as_posix(), head)
+    state(clone, branch=branch, handoff_head=head)
+    loop._save_dispatch(
+        clone,
+        {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix(), "branch": branch, "repository": "owner/repo"}}},
+    )
+
+    result = loop.dispatch_all(
+        clone,
+        runner=RealGitPrRunner(pr_state="CLOSED"),
+        codex_command="codex -m gpt-5.5",
+        worktree_root=worktree_root,
+        max_cycles=3,
+        max_repeated_blockers=2,
+    )
+
+    listed = subprocess.run(
+        ["git", "worktree", "list", "--porcelain"],
+        cwd=clone,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
+    ).stdout
+    assert result == {"status": "no-op", "reason": "no-eligible-blocked-review", "retired": [12]}
+    assert worktree.as_posix() not in listed
+    assert loop._load_dispatch(clone)["prs"] == {}
+    assert not loop._state_path(clone, 12).exists()
+
+
+def test_real_git_legacy_worktree_migration_refuses_unowned_entry(tmp_path: Path) -> None:
+    _origin, _seed, clone = real_origin_and_clone(tmp_path)
+    unrelated = tmp_path / "manual-worktree"
+    git(clone, "worktree", "add", "--detach", unrelated.as_posix(), "HEAD")
+    registry = {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": unrelated.as_posix(), "branch": "codex/manual"}}}
+
+    with pytest.raises(loop.LoopError) as error:
+        loop._migrate_legacy_dispatch_worktrees(
+            clone,
+            registry,
+            runner=loop.CommandRunner(),
+            worktree_root=clone / ".agentic-workspace" / "local" / "chatgpt-review-worktrees",
+        )
+
+    assert error.value.code == "legacy-worktree-unowned"
+    assert (
+        unrelated.as_posix()
+        in subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            cwd=clone,
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+            check=False,
+        ).stdout
+    )
 
 
 def test_explicit_checkout_replacement_retires_local_state(tmp_path: Path) -> None:
@@ -352,6 +589,37 @@ def test_explicit_checkout_replacement_retires_local_state(tmp_path: Path) -> No
 
     assert loop.main(["recover", "--target", tmp_path.as_posix(), "--pr", "12", "--action", "replace-checkout"], runner=runner) == 0
 
+    assert not loop._state_path(tmp_path, 12).exists()
+    assert loop._load_dispatch(tmp_path)["prs"] == {}
+
+
+def test_deprecated_worktree_replacement_removes_legacy_owned_worktree(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    worktree_root = tmp_path / "worktrees"
+    worktree = worktree_root / "pr-12"
+    worktree.mkdir(parents=True)
+    state(tmp_path, status="recovery-required", last_event="branch-switch-failed")
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix()}}})
+
+    assert (
+        loop.main(
+            [
+                "recover",
+                "--target",
+                tmp_path.as_posix(),
+                "--pr",
+                "12",
+                "--action",
+                "replace-worktree",
+                "--worktree-root",
+                worktree_root.as_posix(),
+            ],
+            runner=runner,
+        )
+        == 0
+    )
+
+    assert not worktree.exists()
     assert not loop._state_path(tmp_path, 12).exists()
     assert loop._load_dispatch(tmp_path)["prs"] == {}
 
@@ -540,7 +808,7 @@ def test_global_scan_consumes_recovery_only_for_selected_pr(tmp_path: Path, monk
     loop._save_state(tmp_path, second)
     loop._save_dispatch(
         tmp_path,
-        {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": "unused-12"}, "13": {"worktree": "unused-13"}}},
+        {"kind": loop.STATE_KIND, "prs": {"12": {"checkout": tmp_path.as_posix()}, "13": {"checkout": tmp_path.as_posix()}}},
     )
     original_run = runner.run
 
@@ -583,7 +851,7 @@ def test_global_dispatch_rearms_legacy_truncated_prompt_without_charging_budget(
         automatic_recovery_reviews=[f"12:{HEAD_A}:blocked"],
         blocker_fingerprints={"old": 2},
     )
-    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": "unused"}}})
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"checkout": tmp_path.as_posix()}}})
     original_run = runner.run
 
     def run(command, *, cwd, env=None):
@@ -620,7 +888,7 @@ def test_global_dispatch_treats_remote_head_without_result_as_recovery_evidence(
     runner = FakeRunner(tmp_path, comments=[old_review])
     runner.pr_head = HEAD_B
     state(tmp_path, status="recovery-required", last_event="resume-ended-without-new-handoff", handoff_head=HEAD_A)
-    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": "unused"}}})
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"checkout": tmp_path.as_posix()}}})
     original_run = runner.run
 
     def run(command, *, cwd, env=None):
@@ -692,7 +960,7 @@ def test_fresh_global_dispatch_switches_branch_at_reviewed_head(tmp_path: Path, 
     )
 
     assert result["mode"] == "fresh"
-    assert ["git", "fetch", "--no-tags", "origin", runner.branch] in runner.commands
+    assert ["git", "fetch", "--no-tags", "origin", f"+refs/heads/{runner.branch}:refs/remotes/origin/{runner.branch}"] in runner.commands
     assert not any(command[:3] == ["git", "worktree", "add"] for command in runner.commands)
 
 
