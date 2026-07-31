@@ -53,8 +53,9 @@ def _trusted_guidance_host_event(
 ) -> dict[str, object]:
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
-        TRUSTED_AUTHORITY_EVENT_STORE_PATH,
         _json_digest,
+        _trusted_authority_event_digest,
+        record_trusted_authority_host_event,
     )
 
     event = {
@@ -83,34 +84,41 @@ def _trusted_guidance_host_event(
     }
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
-    event["host_admission_ref"] = (
-        "trusted-authority-admission:"
-        + _json_digest(
-            {
-                "event_ref": event_ref,
-                "workspace_ref": f"workspace:path:{target_root.resolve()}",
-                "nonce": event["admission_context"]["nonce"],
-            }
-        )[:24]
+    event["host_admission_verdict"] = {
+        "kind": "agentic-workspace/trusted-authority-host-event-verdict/v1",
+        "status": "admitted",
+        "admission_authority": "host-adapter-resolver",
+        "event_ref": event_ref,
+        "event_digest": _trusted_authority_event_digest(event),
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "correction_authority": authority,
+        "producer_class": producer_class,
+        "source_ref": source_ref,
+        "target_revision": target_revision,
+        "event_id": event_id,
+        "workspace_ref": f"workspace:path:{target_root.resolve()}",
+        "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        "issued_at": "2026-07-29T00:00:00Z",
+        "expires_at": "2099-01-01T00:00:00Z",
+        "nonce": f"{source_ref}:{event_id or 'event'}",
+        "verifier_revision": "guidance-host-test-verifier:1",
+    }
+    _ = host_admission_monkeypatch
+    imported = record_trusted_authority_host_event(
+        target_root=target_root,
+        authority=authority,
+        producer_class=producer_class,
+        producer_id=producer_id,
+        source_ref=source_ref,
+        source=source or authority,
+        target_revision=target_revision,
+        event_id=event_id,
+        trusted_channel="github-review-webhook",
+        host_event_ref=event_ref,
+        host_event_resolver=lambda ref: event if ref == event_ref else {},
     )
-    if host_admission_monkeypatch is not None:
-        import agentic_workspace.agent_guidance as guidance_runtime
-
-        admitted_ref = event_ref
-
-        def _test_host_admits_trusted_authority_event(*, ref: str, event: dict[str, object], target_root: Path) -> bool:
-            _ = (event, target_root)
-            return ref == admitted_ref
-
-        host_admission_monkeypatch.setattr(
-            guidance_runtime,
-            "_host_admits_trusted_authority_event",
-            _test_host_admits_trusted_authority_event,
-        )
-    path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(event, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return {"event_ref": event_ref, "event": event}
+    return {"event_ref": event_ref, "event": imported["event"]}
 
 
 def _python_client():

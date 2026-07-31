@@ -18,16 +18,12 @@ def _trusted_guidance_host_event(
     admission_context_overrides: dict[str, object] | None = None,
     key_overrides: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    import base64
-    import subprocess
-
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
-        _guidance_json_bytes,
         _json_digest,
-        _trusted_authority_event_admission_payload,
-        _trusted_authority_host_trust_store_path,
+        _trusted_authority_event_digest,
+        record_trusted_authority_host_event,
     )
 
     admission_context = {
@@ -59,82 +55,56 @@ def _trusted_guidance_host_event(
     }
     event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
     event["event_ref"] = event_ref
-    signed_payload = _trusted_authority_event_admission_payload(ref=event_ref, event=event)
-    signed_payload["issuer"] = "github-review-webhook"
-    issuer_root = target_root.parent / "guidance-host-issuer"
-    key_path = issuer_root / f"{event_ref.removeprefix('trusted-authority-event:')}.pem"
-    key_path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
-        capture_output=True,
-        check=True,
-    )
-    modulus = (
-        subprocess.run(
-            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-        .stdout.strip()
-        .split("=", 1)[1]
-        .lower()
-    )
-    key_id = "guidance-host-test-" + _json_digest({"event_ref": event_ref, "modulus": modulus})[:12]
-    key = {
-        "algorithm": "RS256",
-        "status": "current",
-        "key_id": key_id,
-        "issuer": "github-review-webhook",
+    event["host_admission_verdict"] = {
+        "kind": "agentic-workspace/trusted-authority-host-event-verdict/v1",
+        "status": str(key_overrides.get("status") if key_overrides else "admitted"),
+        "admission_authority": "host-adapter-resolver",
+        "event_ref": event_ref,
+        "event_digest": _trusted_authority_event_digest(event),
         "producer": "github-review-adapter",
         "trusted_channel": "github-review-webhook",
-        "e": 65537,
-        "n": modulus,
+        "correction_authority": authority,
+        "producer_class": producer_class,
+        "source_ref": source_ref,
+        "target_revision": target_revision,
+        "event_id": event_id,
+        "workspace_ref": str(admission_context["workspace_ref"]),
+        "audience": str(admission_context["audience"]),
+        "issued_at": str(admission_context["issued_at"]),
+        "expires_at": str(admission_context["expires_at"]),
+        "nonce": str(admission_context["nonce"]),
+        "verifier_revision": "guidance-host-test-verifier:1",
     }
-    trust_store_path = _trusted_authority_host_trust_store_path()
-    trust_store_path.parent.mkdir(parents=True, exist_ok=True)
-    trust_store_path.write_text(
-        json.dumps(
-            {
-                "kind": "agentic-workspace/host-guidance-authority-trust-store/v1",
-                "keys": {key_id: key},
-                "revoked_key_ids": [],
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    completed = subprocess.run(
-        ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
-        input=_guidance_json_bytes(signed_payload),
-        capture_output=True,
-        check=True,
-    )
-    event["host_admission"] = {
-        "kind": "agentic-workspace/trusted-authority-host-admission/v1",
-        "status": str(key_overrides.get("status") if key_overrides else "current"),
-        "algorithm": "RS256",
-        "key_id": key_id,
-        "signed_payload": signed_payload,
-        "signature": base64.b64encode(completed.stdout).decode("ascii"),
-    }
-    event["host_admission_ref"] = (
-        "trusted-authority-admission:"
-        + _json_digest(
-            {
-                "event_ref": event_ref,
-                "workspace_ref": f"workspace:path:{target_root.resolve()}",
-                "nonce": admission_context["nonce"],
-                "overrides": {"admission_context": admission_context_overrides or {}, "key": key_overrides or {}},
-            }
-        )[:24]
-    )
+    if "revoked_at" in admission_context:
+        event["host_admission_verdict"]["revoked_at"] = admission_context["revoked_at"]
+    if "superseded_by" in admission_context:
+        event["host_admission_verdict"]["superseded_by"] = admission_context["superseded_by"]
     _ = host_admission_monkeypatch
-    path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
-    _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
-    return {"event_ref": event_ref, "event": event}
+    if admission_context_overrides or key_overrides:
+        event["import_custody"] = {
+            "kind": "agentic-workspace/trusted-authority-host-event-import/v1",
+            "importer": "agentic-workspace.guidance-authority-import",
+            "source": "protected-host-event-resolver",
+            "event_digest": _trusted_authority_event_digest(event),
+        }
+        event["revision"] = event["import_custody"]["event_digest"]
+        path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
+        _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
+        return {"event_ref": event_ref, "event": event}
+    imported = record_trusted_authority_host_event(
+        target_root=target_root,
+        authority=authority,
+        producer_class=producer_class,
+        producer_id=producer_id,
+        source_ref=source_ref,
+        source=source or authority,
+        target_revision=target_revision,
+        event_id=event_id,
+        trusted_channel="github-review-webhook",
+        host_event_ref=event_ref,
+        host_event_resolver=lambda ref: event if ref == event_ref else {},
+    )
+    return {"event_ref": event_ref, "event": imported["event"]}
 
 
 def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
@@ -1486,7 +1456,10 @@ def test_config_command_reports_target_identity_and_guidance_storage(tmp_path: P
     assert "correction-event.submit" in {item["operation_id"] for item in correction["operations"]}
     assert "agent-guidance.promote" in {item["operation_id"] for item in correction["operations"]}
     assert "agent-guidance.split" in {item["operation_id"] for item in correction["operations"]}
-    assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in correction["operations"])
+    correction_operations = [item for item in correction["operations"] if item["operation_id"].startswith("correction-event.")]
+    guidance_operations = [item for item in correction["operations"] if item["operation_id"].startswith("agent-guidance.")]
+    assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in correction_operations)
+    assert all(item["public"] and not item["generated_operation"] and not item["external_contract"] for item in guidance_operations)
     assert correction["storage"]["retention_cap"] == 20
     assert correction["storage"]["retention_operations"] == ["correction-event.prune-compact"]
     assert identity["storage"]["layers"][0]["id"] == "user-local-target-guidance"
@@ -1861,13 +1834,14 @@ def test_guidance_receipts_require_trusted_host_event_before_authority_storage(t
     )
     from agentic_workspace.config import WorkspaceUsageError
 
-    with pytest.raises(WorkspaceUsageError, match="adapter-owned evidence"):
+    with pytest.raises(WorkspaceUsageError, match="protected host_event_resolver"):
         record_trusted_authority_host_event(
             target_root=tmp_path,
             authority="pr-review",
             producer_class="human-reviewer",
             producer_id="reviewer-1",
             source_ref="review-1",
+            host_event_ref="trusted-authority-event:review-1",
         )
     with pytest.raises(WorkspaceUsageError, match="trusted host event ref"):
         record_trusted_authority_receipt(
@@ -1888,6 +1862,7 @@ def test_guidance_receipts_require_trusted_host_event_before_authority_storage(t
 
 def test_guidance_receipts_accept_protected_host_admission_boundary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from agentic_workspace.agent_guidance import (
+        TRUSTED_AUTHORITY_EVENT_INDEX_PATH,
         record_trusted_authority_receipt,
     )
 
@@ -1916,6 +1891,19 @@ def test_guidance_receipts_accept_protected_host_admission_boundary(tmp_path: Pa
     )
 
     assert receipt_result["receipt_ref"].startswith("guidance-receipt:")
+    second_host_event = _trusted_guidance_host_event(
+        tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-2",
+        source="github-review",
+        source_ref="review-2",
+        host_admission_monkeypatch=monkeypatch,
+        target_revision="rev-2",
+        event_id="review-event-2",
+    )
+    index = json.loads((tmp_path / TRUSTED_AUTHORITY_EVENT_INDEX_PATH).read_text(encoding="utf-8"))
+    assert {entry["event_ref"] for entry in index["events"]} == {host_event["event_ref"], second_host_event["event_ref"]}
 
 
 def test_guidance_receipts_accept_pinned_signed_host_event_across_process(tmp_path: Path) -> None:
@@ -1983,6 +1971,7 @@ def test_guidance_host_admission_issuer_is_not_public_runtime_entrypoint() -> No
     assert "TrustedAuthorityHostAdmissionHandle" not in source
     assert "_TRUSTED_AUTHORITY_HOST_BOUNDARY_TOKEN" not in source
     assert "_CURRENT_TRUSTED_AUTHORITY_EVENT_ADMISSIONS" not in source
+    assert ".agentic-workspace-host/trust/guidance-authority-admission-keys.json" not in source
 
 
 def test_guidance_receipts_reject_jointly_forged_local_host_event(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2031,6 +2020,70 @@ def test_guidance_receipts_reject_jointly_forged_local_host_event(tmp_path: Path
             producer_id="reviewer-1",
             source="github-review",
             source_ref="review-1",
+            target_revision="rev-1",
+            host_event_ref=event_ref,
+        )
+
+
+def test_guidance_receipts_reject_caller_written_verdict_without_protected_import(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import (
+        TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        TRUSTED_AUTHORITY_EVENT_STORE_PATH,
+        _json_digest,
+        _trusted_authority_event_digest,
+        record_trusted_authority_receipt,
+    )
+    from agentic_workspace.config import WorkspaceUsageError
+
+    event = {
+        "kind": "agentic-workspace/trusted-authority-host-event/v1",
+        "status": "current",
+        "authority": "pr-review",
+        "producer_class": "human-reviewer",
+        "producer_id": "reviewer-1",
+        "source": "github-review",
+        "source_ref": "review-raw-verdict",
+        "target_revision": "rev-1",
+        "event_id": "",
+        "recorded_at": "2026-07-29T00:00:00Z",
+        "custody": {
+            "producer": "github-review-adapter",
+            "trusted_channel": "github-review-webhook",
+        },
+    }
+    event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
+    event["event_ref"] = event_ref
+    event["host_admission_verdict"] = {
+        "kind": "agentic-workspace/trusted-authority-host-event-verdict/v1",
+        "status": "admitted",
+        "admission_authority": "host-adapter-resolver",
+        "event_ref": event_ref,
+        "event_digest": _trusted_authority_event_digest(event),
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "correction_authority": "pr-review",
+        "producer_class": "human-reviewer",
+        "source_ref": "review-raw-verdict",
+        "target_revision": "rev-1",
+        "event_id": "",
+        "workspace_ref": f"workspace:path:{tmp_path.resolve()}",
+        "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        "issued_at": "2026-07-29T00:00:00Z",
+        "expires_at": "2099-01-01T00:00:00Z",
+        "nonce": "review-raw-verdict:event",
+        "verifier_revision": "guidance-host-test-verifier:1",
+    }
+    path = tmp_path / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
+    _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
+
+    with pytest.raises(WorkspaceUsageError, match="protected host boundary"):
+        record_trusted_authority_receipt(
+            target_root=tmp_path,
+            authority="pr-review",
+            producer_class="human-reviewer",
+            producer_id="reviewer-1",
+            source="github-review",
+            source_ref="review-raw-verdict",
             target_revision="rev-1",
             host_event_ref=event_ref,
         )
@@ -2363,6 +2416,45 @@ def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_
     receipt_index = json.loads((target / ".agentic-workspace/local/guidance-receipts.json").read_text(encoding="utf-8"))
     mutation_receipts = [item for item in receipt_index["receipts"] if item.get("receipt_type") == "guidance-mutation"]
     assert {item["operation"] for item in mutation_receipts} >= {"promote", "edit", "merge", "split", "supersede"}
+
+
+def test_guidance_lifecycle_multi_file_transaction_rolls_back_prior_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace.agent_guidance import _json_digest, _write_guidance_json_transaction
+
+    first = tmp_path / "first.json"
+    second = tmp_path / "second.json"
+    before = {"kind": "test/store/v1", "value": "before"}
+    _write(first, json.dumps(before, indent=2, sort_keys=True) + "\n")
+    original_replace = Path.replace
+
+    def fail_second_replace(self: Path, target: Path) -> Path:
+        if Path(target) == second:
+            raise OSError("simulated receipt-index failure")
+        return original_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", fail_second_replace)
+
+    with pytest.raises(OSError, match="simulated receipt-index failure"):
+        _write_guidance_json_transaction(
+            [
+                (first, {"kind": "test/store/v1", "value": "after"}, _json_digest(before)),
+                (second, {"kind": "test/receipt-index/v1"}, None),
+            ]
+        )
+
+    assert json.loads(first.read_text(encoding="utf-8")) == before
+    assert not second.exists()
+
+
+def test_guidance_lifecycle_contract_does_not_claim_missing_generated_operations() -> None:
+    from agentic_workspace.agent_guidance import _guidance_public_operation_entries
+
+    entries = _guidance_public_operation_entries()
+
+    assert entries
+    assert all(entry["generated_operation"] is False for entry in entries)
+    assert all(entry["external_contract"] is False for entry in entries)
+    assert all(entry["generated_parity"] == "not-claimed" for entry in entries)
 
 
 def test_correction_event_lifecycle_rejects_delivery_replay_separately_from_recurrence() -> None:

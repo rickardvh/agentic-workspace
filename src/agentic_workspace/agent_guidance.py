@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from agentic_workspace.config import (
     WORKSPACE_LOCAL_CONFIG_PATH,
@@ -21,10 +20,9 @@ from agentic_workspace.config import (
 CORRECTION_EVENT_RETENTION_CAP = 20
 GUIDANCE_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/guidance-receipts.json")
 TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-events")
-TRUSTED_AUTHORITY_ADMISSION_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-admissions")
-TRUSTED_AUTHORITY_ADMISSION_INDEX_PATH = TRUSTED_AUTHORITY_ADMISSION_STORE_PATH / "index.json"
+TRUSTED_AUTHORITY_EVENT_INDEX_PATH = TRUSTED_AUTHORITY_EVENT_STORE_PATH / "index.json"
 TRUSTED_AUTHORITY_EVENT_AUDIENCE = "agentic-workspace.guidance-authority"
-TRUSTED_AUTHORITY_HOST_TRUST_STORE_PATH = Path(".agentic-workspace-host/trust/guidance-authority-admission-keys.json")
+TrustedAuthorityHostEventResolver = Callable[[str], dict[str, Any]]
 
 
 def _guidance_now() -> str:
@@ -646,6 +644,69 @@ def _write_correction_event_store(path: Path, store: dict[str, Any], *, expected
             pass
 
 
+def _write_guidance_json_transaction(
+    writes: list[tuple[Path, dict[str, Any], str | None]],
+    *,
+    stale_message: str = "store changed before guidance lifecycle mutation could be applied; retry with fresh revision.",
+) -> None:
+    """Apply several guidance JSON writes as one rollback-capable local transaction."""
+    if not writes:
+        return
+    unique: dict[Path, tuple[dict[str, Any], str | None]] = {}
+    for path, payload, expected_digest in writes:
+        unique[path.resolve()] = (payload, expected_digest)
+    lock_handles: list[tuple[Path, int]] = []
+    snapshots: dict[Path, tuple[bool, bytes]] = {}
+    written: list[Path] = []
+    tmp_paths: list[Path] = []
+    try:
+        for path in sorted(unique):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            lock_path = path.with_name(f".{path.name}.lock")
+            try:
+                lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except FileExistsError as exc:
+                raise WorkspaceUsageError("store is locked by another guidance lifecycle mutation; retry after it completes.") from exc
+            os.write(lock_fd, str(os.getpid()).encode("utf-8"))
+            lock_handles.append((lock_path, lock_fd))
+        for path, (_payload, expected_digest) in unique.items():
+            existed = path.exists()
+            snapshots[path] = (existed, path.read_bytes() if existed else b"")
+            if expected_digest is not None and existed:
+                current = _json_digest(json.loads(path.read_text(encoding="utf-8")))
+                if current != expected_digest:
+                    raise WorkspaceUsageError(stale_message)
+        for path, (payload, _expected_digest) in unique.items():
+            tmp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+            tmp_paths.append(tmp_path)
+            tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
+            tmp_path.replace(path)
+            written.append(path)
+    except Exception:
+        for path in reversed(written):
+            existed, content = snapshots[path]
+            if existed:
+                path.write_bytes(content)
+            else:
+                try:
+                    path.unlink()
+                except FileNotFoundError:
+                    pass
+        raise
+    finally:
+        for tmp_path in tmp_paths:
+            try:
+                tmp_path.unlink()
+            except FileNotFoundError:
+                pass
+        for lock_path, lock_fd in lock_handles:
+            os.close(lock_fd)
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
+
+
 def _write_correction_receipt(*, target_root: Path, receipt: dict[str, Any]) -> Path:
     receipt_id = hashlib.sha256(json.dumps(receipt, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:16]
     path = target_root / ".agentic-workspace/local/correction-event-receipts" / f"{receipt_id}.json"
@@ -671,7 +732,12 @@ def _guidance_receipt_ref(receipt: dict[str, Any]) -> str:
     return "guidance-receipt:" + _json_digest({key: value for key, value in receipt.items() if key != "receipt_ref"})[:24]
 
 
-def _store_guidance_receipt(*, target_root: Path, receipt: dict[str, Any], operation_id: str) -> dict[str, Any]:
+def _guidance_receipt_write_plan(
+    *,
+    target_root: Path,
+    receipt: dict[str, Any],
+    operation_id: str,
+) -> tuple[dict[str, Any], list[tuple[Path, dict[str, Any], str | None]]]:
     path, index = _guidance_receipt_index(target_root)
     receipt = {
         "kind": "agentic-workspace/guidance-receipt/v1",
@@ -688,16 +754,19 @@ def _store_guidance_receipt(*, target_root: Path, receipt: dict[str, Any], opera
     receipt["receipt_ref"] = _guidance_receipt_ref(receipt)
     receipts = [item for item in index.get("receipts", []) if isinstance(item, dict)]
     existing = next((item for item in receipts if item.get("receipt_ref") == receipt["receipt_ref"]), None)
+    writes: list[tuple[Path, dict[str, Any], str | None]] = []
     if existing is None:
-        _write_correction_event_store(
-            path,
-            {"kind": "agentic-workspace/guidance-receipt-index/v1", "receipts": [*receipts, receipt]},
-            expected_digest=_json_digest(index) if path.exists() else None,
+        writes.append(
+            (
+                path,
+                {"kind": "agentic-workspace/guidance-receipt-index/v1", "receipts": [*receipts, receipt]},
+                _json_digest(index) if path.exists() else None,
+            )
         )
         stored = receipt
     else:
         stored = existing
-    return {
+    result = {
         "kind": "agentic-workspace/guidance-receipt-operation-result/v1",
         "operation_id": operation_id,
         "status": "stored",
@@ -706,6 +775,13 @@ def _store_guidance_receipt(*, target_root: Path, receipt: dict[str, Any], opera
         "store": GUIDANCE_RECEIPT_INDEX_PATH.as_posix(),
         "rule": "Correction and guidance authority receipts resolve only through this producer-owned index; arbitrary JSON paths are not authority.",
     }
+    return result, writes
+
+
+def _store_guidance_receipt(*, target_root: Path, receipt: dict[str, Any], operation_id: str) -> dict[str, Any]:
+    result, writes = _guidance_receipt_write_plan(target_root=target_root, receipt=receipt, operation_id=operation_id)
+    _write_guidance_json_transaction(writes)
+    return result
 
 
 def record_trusted_authority_host_event(
@@ -719,66 +795,107 @@ def record_trusted_authority_host_event(
     target_revision: str = "",
     event_id: str = "",
     trusted_channel: str = "host-trusted-authority-event",
+    host_event_ref: str = "",
+    host_event_resolver: TrustedAuthorityHostEventResolver | None = None,
 ) -> dict[str, Any]:
-    raise WorkspaceUsageError(
-        "trusted authority host events are adapter-owned evidence and cannot be minted by repo-local guidance code; "
-        "import a current host event into .agentic-workspace/local/trusted-authority-events and pass its host_event_ref."
+    ref = str(host_event_ref or "").strip()
+    if not ref.startswith("trusted-authority-event:") or "/" in ref or "\\" in ref:
+        raise WorkspaceUsageError("trusted authority host event imports require an opaque host_event_ref.")
+    if host_event_resolver is None:
+        raise WorkspaceUsageError(
+            "trusted authority host events require a protected host_event_resolver; repo-local files and user-home trust stores are not authority."
+        )
+    event = json.loads(json.dumps(host_event_resolver(ref), sort_keys=True, default=str))
+    if not isinstance(event, dict):
+        raise WorkspaceUsageError("trusted authority host resolver returned the wrong contract.")
+    if event.get("kind") != "agentic-workspace/trusted-authority-host-event/v1" or event.get("event_ref") != ref:
+        raise WorkspaceUsageError("trusted authority host resolver returned the wrong contract.")
+    expected_inputs = {
+        "authority": authority,
+        "producer_class": producer_class,
+        "producer_id": producer_id,
+        "source": source or authority,
+        "source_ref": source_ref,
+        "target_revision": target_revision,
+        "event_id": event_id,
+    }
+    if any(str(event.get(key) or "") != expected for key, expected in expected_inputs.items() if expected):
+        raise WorkspaceUsageError("trusted authority host event inputs do not match the protected resolver result.")
+    custody = event.get("custody") if isinstance(event.get("custody"), dict) else {}
+    if trusted_channel and str(custody.get("trusted_channel") or "") != trusted_channel:
+        raise WorkspaceUsageError("trusted authority host event channel does not match the requested trusted_channel.")
+    if not _host_admits_trusted_authority_event(ref=ref, event=event, target_root=target_root):
+        raise WorkspaceUsageError("trusted authority host event was not admitted by the host boundary.")
+    path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{ref.removeprefix('trusted-authority-event:')}.json"
+    index_path = target_root / TRUSTED_AUTHORITY_EVENT_INDEX_PATH
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8")) if index_path.exists() else {}
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("trusted authority host event index is unreadable; repair it before importing evidence.") from exc
+    if not isinstance(index, dict) or (index and index.get("kind") != "agentic-workspace/trusted-authority-host-event-index/v1"):
+        raise WorkspaceUsageError("trusted authority host event index has the wrong contract.")
+    events = [entry for entry in index.get("events", []) if isinstance(entry, dict)]
+    event_digest = _trusted_authority_event_digest(event)
+    stored = {
+        **event,
+        "import_custody": {
+            "kind": "agentic-workspace/trusted-authority-host-event-import/v1",
+            "importer": "agentic-workspace.guidance-authority-import",
+            "source": "protected-host-event-resolver",
+            "event_digest": event_digest,
+        },
+        "event_path": path.relative_to(target_root).as_posix(),
+        "revision": event_digest,
+    }
+    entries = [entry for entry in events if entry.get("event_ref") != ref]
+    entries.append(
+        {
+            "event_ref": ref,
+            "path": stored["event_path"],
+            "revision": event_digest,
+            "status": str(stored.get("status") or ""),
+            "authority": str(stored.get("authority") or ""),
+            "producer_class": str(stored.get("producer_class") or ""),
+            "source_ref": str(stored.get("source_ref") or ""),
+        }
     )
+    _write_guidance_json_transaction(
+        [
+            (path, stored, _json_digest(json.loads(path.read_text(encoding="utf-8"))) if path.exists() else None),
+            (
+                index_path,
+                {"kind": "agentic-workspace/trusted-authority-host-event-index/v1", "events": entries},
+                _json_digest(index) if index_path.exists() else None,
+            ),
+        ]
+    )
+    return {
+        "kind": "agentic-workspace/trusted-authority-host-event-import-result/v1",
+        "status": "imported",
+        "event_ref": ref,
+        "event": stored,
+        "event_store": TRUSTED_AUTHORITY_EVENT_STORE_PATH.as_posix(),
+        "event_index": TRUSTED_AUTHORITY_EVENT_INDEX_PATH.as_posix(),
+        "rule": "Repo-local guidance code imports opaque producer-owned host events; it does not mint host authority or read user-home trust stores.",
+    }
 
 
 def _trusted_authority_event_digest(event: dict[str, Any]) -> str:
-    return _json_digest({key: value for key, value in event.items() if key not in {"host_admission", "host_admission_ref"}})
-
-
-def _trusted_authority_event_admission_payload(*, ref: str, event: dict[str, Any]) -> dict[str, Any]:
-    raw_custody = event.get("custody")
-    custody = raw_custody if isinstance(raw_custody, dict) else {}
-    raw_context = event.get("admission_context")
-    context = raw_context if isinstance(raw_context, dict) else {}
-    payload = {
-        "kind": "agentic-workspace/trusted-authority-host-admission-payload/v1",
-        "event_ref": ref,
-        "event_digest": _trusted_authority_event_digest(event),
-        "authority": str(event.get("authority") or ""),
-        "producer_class": str(event.get("producer_class") or ""),
-        "producer": str(custody.get("producer") or ""),
-        "trusted_channel": str(custody.get("trusted_channel") or ""),
-        "source_ref": str(event.get("source_ref") or ""),
-        "target_revision": str(event.get("target_revision") or ""),
-        "audience": str(context.get("audience") or ""),
-        "workspace_ref": str(context.get("workspace_ref") or ""),
-        "issued_at": str(context.get("issued_at") or ""),
-        "expires_at": str(context.get("expires_at") or ""),
-        "nonce": str(context.get("nonce") or ""),
-    }
-    if str(context.get("revoked_at") or "").strip():
-        payload["revoked_at"] = str(context.get("revoked_at") or "")
-    if str(context.get("superseded_by") or "").strip():
-        payload["superseded_by"] = str(context.get("superseded_by") or "")
-    return payload
-
-
-def _guidance_json_bytes(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
-
-
-def _rsa_sha256_verify(*, message: bytes, signature_b64: str, modulus_hex: str, exponent: int) -> bool:
-    try:
-        signature = base64.b64decode(signature_b64, validate=True)
-        modulus = int(modulus_hex, 16)
-    except (TypeError, ValueError):
-        return False
-    key_size = (modulus.bit_length() + 7) // 8
-    if len(signature) != key_size:
-        return False
-    encoded = pow(int.from_bytes(signature, "big"), exponent, modulus).to_bytes(key_size, "big")
-    digest_info = bytes.fromhex("3031300d060960864801650304020105000420") + hashlib.sha256(message).digest()
-    separator = encoded.find(b"\x00", 2)
-    if not encoded.startswith(b"\x00\x01") or separator < 10:
-        return False
-    if encoded[2:separator] != b"\xff" * (separator - 2):
-        return False
-    return encoded[separator + 1 :] == digest_info
+    return _json_digest(
+        {
+            key: value
+            for key, value in event.items()
+            if key
+            not in {
+                "event_path",
+                "host_admission",
+                "host_admission_ref",
+                "host_admission_verdict",
+                "import_custody",
+                "revision",
+            }
+        }
+    )
 
 
 def _parse_guidance_time(value: Any) -> datetime | None:
@@ -794,174 +911,47 @@ def _parse_guidance_time(value: Any) -> datetime | None:
     return parsed
 
 
-def _trusted_authority_host_trust_store_path() -> Path:
-    return Path.home() / TRUSTED_AUTHORITY_HOST_TRUST_STORE_PATH
-
-
-def _load_trusted_authority_host_admission_keys(*, target_root: Path) -> dict[str, dict[str, Any]]:
-    path = _trusted_authority_host_trust_store_path().resolve()
-    try:
-        path.relative_to(target_root.resolve())
-        return {}
-    except ValueError:
-        pass
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    if not isinstance(payload, dict) or payload.get("kind") != "agentic-workspace/host-guidance-authority-trust-store/v1":
-        return {}
-    keys_raw = payload.get("keys")
-    if isinstance(keys_raw, dict):
-        keys = keys_raw
-    elif isinstance(keys_raw, list):
-        keys = {str(item.get("key_id") or ""): item for item in keys_raw if isinstance(item, dict)}
-    else:
-        keys = {}
-    revoked_raw = payload.get("revoked_key_ids")
-    revoked = {str(item) for item in revoked_raw} if isinstance(revoked_raw, list) else set()
-    current: dict[str, dict[str, Any]] = {}
-    for key_id, key in keys.items():
-        if not key_id or key_id in revoked or not isinstance(key, dict):
-            continue
-        if key.get("status") != "current" or key.get("algorithm") != "RS256":
-            continue
-        if str(key.get("revoked_at") or "").strip() or str(key.get("superseded_by") or "").strip():
-            continue
-        current[key_id] = key
-    return current
-
-
-def _trusted_authority_admission_index(*, target_root: Path) -> dict[str, Any]:
-    path = target_root / TRUSTED_AUTHORITY_ADMISSION_INDEX_PATH
-    if not path.is_file():
-        return {"kind": "agentic-workspace/trusted-authority-host-admission-index/v1", "admissions": []}
-    try:
-        loaded = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise WorkspaceUsageError("trusted authority host admission index is missing or unreadable.") from exc
-    if not isinstance(loaded, dict) or loaded.get("kind") != "agentic-workspace/trusted-authority-host-admission-index/v1":
-        raise WorkspaceUsageError("trusted authority host admission index has the wrong contract.")
-    admissions = loaded.get("admissions")
-    if not isinstance(admissions, list):
-        raise WorkspaceUsageError("trusted authority host admission index has the wrong contract.")
-    return loaded
-
-
-def _trusted_authority_admission_path(*, target_root: Path, admission_ref: str) -> Path:
-    if not admission_ref.startswith("trusted-authority-admission:") or "/" in admission_ref or "\\" in admission_ref:
-        raise WorkspaceUsageError("trusted authority host admission ref has the wrong contract.")
-    return target_root / TRUSTED_AUTHORITY_ADMISSION_STORE_PATH / f"{admission_ref.removeprefix('trusted-authority-admission:')}.json"
-
-
-def _write_trusted_authority_host_admission(*, target_root: Path, admission: dict[str, Any]) -> dict[str, Any]:
-    admission_ref = str(admission.get("admission_ref") or "")
-    path = _trusted_authority_admission_path(target_root=target_root, admission_ref=admission_ref)
-    index_path = target_root / TRUSTED_AUTHORITY_ADMISSION_INDEX_PATH
-    index = _trusted_authority_admission_index(target_root=target_root)
-    revision = _json_digest(admission)
-    stored = {**admission, "revision": revision, "admission_path": path.relative_to(target_root).as_posix()}
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(stored, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    entries = [entry for entry in index.get("admissions", []) if isinstance(entry, dict)]
-    entries = [entry for entry in entries if entry.get("admission_ref") != admission_ref]
-    entries.append(
-        {
-            "admission_ref": admission_ref,
-            "path": stored["admission_path"],
-            "revision": revision,
-            "status": str(stored.get("status") or ""),
-            "event_ref": str(stored.get("event_ref") or ""),
-            "event_digest": str(stored.get("event_digest") or ""),
-        }
-    )
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    index_path.write_text(
-        json.dumps(
-            {"kind": "agentic-workspace/trusted-authority-host-admission-index/v1", "admissions": entries},
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    return stored
-
-
-def _trusted_authority_host_admission(*, target_root: Path, admission_ref: str) -> dict[str, Any] | None:
-    try:
-        index = _trusted_authority_admission_index(target_root=target_root)
-        entry = next(
-            (
-                item
-                for item in index.get("admissions", [])
-                if isinstance(item, dict) and item.get("admission_ref") == admission_ref and item.get("status") == "current"
-            ),
-            None,
-        )
-        if entry is None:
-            return None
-        path = _trusted_authority_admission_path(target_root=target_root, admission_ref=admission_ref)
-        admission = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, WorkspaceUsageError):
-        return None
-    if not isinstance(admission, dict):
-        return None
-    if admission.get("revision") and admission.get("revision") != _json_digest(
-        {key: value for key, value in admission.items() if key not in {"revision", "admission_path"}}
-    ):
-        return None
-    return admission
-
-
 def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any], target_root: Path) -> bool:
-    """Return whether pinned host-signed evidence admits this event."""
+    """Return whether a protected host resolver admitted this event."""
 
-    admission_raw = event.get("host_admission")
-    if not isinstance(admission_raw, dict):
+    verdict_raw = event.get("host_admission_verdict")
+    if not isinstance(verdict_raw, dict):
         return False
-    admission: dict[str, Any] = admission_raw
-    if admission.get("kind") != "agentic-workspace/trusted-authority-host-admission/v1":
+    verdict: dict[str, Any] = verdict_raw
+    if verdict.get("kind") != "agentic-workspace/trusted-authority-host-event-verdict/v1":
         return False
-    if admission.get("status") != "current" or admission.get("algorithm") != "RS256":
+    if verdict.get("status") != "admitted" or verdict.get("admission_authority") != "host-adapter-resolver":
         return False
-    key_id = str(admission.get("key_id") or "")
-    key = _load_trusted_authority_host_admission_keys(target_root=target_root).get(key_id)
-    if not key or key.get("status") != "current" or key.get("algorithm") != "RS256":
-        return False
-    payload = admission.get("signed_payload")
-    if not isinstance(payload, dict):
-        return False
-    expected = _trusted_authority_event_admission_payload(ref=ref, event=event)
-    expected.update(
-        {
-            "issuer": str(key.get("issuer") or ""),
-            "workspace_ref": f"workspace:path:{target_root.resolve()}",
-            "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
-        }
-    )
-    if payload != expected:
+    if str(verdict.get("event_ref") or "") != ref or str(verdict.get("event_digest") or "") != _trusted_authority_event_digest(event):
         return False
     custody_raw = event.get("custody")
     custody: dict[str, Any] = custody_raw if isinstance(custody_raw, dict) else {}
-    if str(key.get("producer") or "") != str(custody.get("producer") or ""):
+    if str(verdict.get("producer") or "") != str(custody.get("producer") or ""):
         return False
-    if str(key.get("trusted_channel") or "") != str(custody.get("trusted_channel") or ""):
+    if str(verdict.get("trusted_channel") or "") != str(custody.get("trusted_channel") or ""):
         return False
-    issued_at = _parse_guidance_time(payload.get("issued_at"))
-    expires_at = _parse_guidance_time(payload.get("expires_at"))
+    if str(verdict.get("workspace_ref") or "") != f"workspace:path:{target_root.resolve()}":
+        return False
+    if str(verdict.get("audience") or "") != TRUSTED_AUTHORITY_EVENT_AUDIENCE:
+        return False
+    for verdict_field, event_field in (
+        ("correction_authority", "authority"),
+        ("producer_class", "producer_class"),
+        ("source_ref", "source_ref"),
+        ("target_revision", "target_revision"),
+        ("event_id", "event_id"),
+    ):
+        if str(verdict.get(verdict_field) or "") != str(event.get(event_field) or ""):
+            return False
+    issued_at = _parse_guidance_time(verdict.get("issued_at"))
+    expires_at = _parse_guidance_time(verdict.get("expires_at"))
     if issued_at is None or expires_at is None or expires_at <= issued_at or expires_at <= datetime.now(UTC):
         return False
-    if not str(payload.get("nonce") or "").strip():
+    if not str(verdict.get("nonce") or "").strip() or not str(verdict.get("verifier_revision") or "").strip():
         return False
-    if str(payload.get("revoked_at") or "").strip() or str(payload.get("superseded_by") or "").strip():
+    if str(verdict.get("revoked_at") or "").strip() or str(verdict.get("superseded_by") or "").strip():
         return False
-    return _rsa_sha256_verify(
-        message=_guidance_json_bytes(payload),
-        signature_b64=str(admission.get("signature") or ""),
-        modulus_hex=str(key.get("n") or ""),
-        exponent=int(key.get("e") or 0),
-    )
+    return True
 
 
 def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[str, Any]:
@@ -977,6 +967,13 @@ def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[
         raise WorkspaceUsageError("trusted authority host event has the wrong contract.")
     if event.get("status") != "current":
         raise WorkspaceUsageError("trusted authority host event is not current.")
+    import_custody = event.get("import_custody") if isinstance(event.get("import_custody"), dict) else {}
+    if (
+        import_custody.get("kind") != "agentic-workspace/trusted-authority-host-event-import/v1"
+        or import_custody.get("source") != "protected-host-event-resolver"
+        or import_custody.get("event_digest") != _trusted_authority_event_digest(event)
+    ):
+        raise WorkspaceUsageError("trusted authority host event was not imported through the protected host boundary.")
     if not _host_admits_trusted_authority_event(ref=ref, event=event, target_root=target_root):
         raise WorkspaceUsageError("trusted authority host event was not admitted by the host boundary.")
     custody = event.get("custody") if isinstance(event.get("custody"), dict) else {}
@@ -1609,6 +1606,32 @@ def _record_guidance_mutation_receipt(
     postconditions: list[str],
     owner_admission: dict[str, Any],
 ) -> dict[str, Any]:
+    mutation, receipt_result, writes = _guidance_mutation_receipt_write_plan(
+        operation=operation,
+        target_root=target_root,
+        store_path=store_path,
+        store_pre_digest=store_pre_digest,
+        records=records,
+        affected_records=affected_records,
+        postconditions=postconditions,
+        owner_admission=owner_admission,
+    )
+    _ = mutation
+    _write_guidance_json_transaction(writes)
+    return receipt_result
+
+
+def _guidance_mutation_receipt_write_plan(
+    *,
+    operation: str,
+    target_root: Path,
+    store_path: Path,
+    store_pre_digest: str,
+    records: list[dict[str, Any]],
+    affected_records: list[dict[str, Any]],
+    postconditions: list[str],
+    owner_admission: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], list[tuple[Path, dict[str, Any], str | None]]]:
     mutation = _guidance_mutation_receipt(
         operation=operation,
         target_root=target_root,
@@ -1619,7 +1642,7 @@ def _record_guidance_mutation_receipt(
         postconditions=postconditions,
         owner_admission=owner_admission,
     )
-    stored = _store_guidance_receipt(
+    stored, writes = _guidance_receipt_write_plan(
         target_root=target_root,
         operation_id=f"agent-guidance.{operation}",
         receipt={
@@ -1631,13 +1654,14 @@ def _record_guidance_mutation_receipt(
             "idempotency_key": mutation["idempotency_key"],
         },
     )
-    return {
+    result = {
         **mutation,
         "receipt_ref": stored["receipt_ref"],
         "receipt_store": stored["store"],
         "receipt_custody": stored["receipt"]["custody"],
         "receipt_status": stored["status"],
     }
+    return mutation, result, writes
 
 
 def _guidance_owner_admission(*, destination: dict[str, Any], store_digest: str, store_path: Path, target_root: Path) -> dict[str, Any]:
@@ -1734,26 +1758,33 @@ def apply_guidance_promotion(
         "schema_revision": hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest()[:20],
     }
     next_records = [*records, record]
-    _write_correction_event_store(
-        path,
-        {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": next_records},
-        expected_digest=store_digest if path.exists() else None,
+    mutation, receipt_result, receipt_writes = _guidance_mutation_receipt_write_plan(
+        operation="promote",
+        target_root=target_root,
+        store_path=path,
+        store_pre_digest=store_digest,
+        records=next_records,
+        affected_records=[record],
+        postconditions=["single-canonical-destination", "active-guidance-created", "promotion-authority-retained"],
+        owner_admission=owner_admission,
+    )
+    _ = mutation
+    _write_guidance_json_transaction(
+        [
+            (
+                path,
+                {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": next_records},
+                store_digest if path.exists() else None,
+            ),
+            *receipt_writes,
+        ]
     )
     return {
         "kind": "agentic-workspace/guidance-lifecycle-result/v1",
         "status": "promoted",
         "record": record,
         "store": _repo_relative(path, root=target_root),
-        "mutation_receipt": _record_guidance_mutation_receipt(
-            operation="promote",
-            target_root=target_root,
-            store_path=path,
-            store_pre_digest=store_digest,
-            records=next_records,
-            affected_records=[record],
-            postconditions=["single-canonical-destination", "active-guidance-created", "promotion-authority-retained"],
-            owner_admission=owner_admission,
-        ),
+        "mutation_receipt": receipt_result,
     }
 
 
@@ -1937,38 +1968,42 @@ def transition_guidance(
             "owner_admission": owner_admission,
             "record": record,
         }
-    _write_correction_event_store(
-        path,
-        {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": records},
-        expected_digest=store_digest,
-    )
     affected = [record]
     if operation == "merge":
         affected.extend(item for item in records if item.get("guidance_id") in set(merge_guidance_ids or []))
     if operation == "split":
         affected.extend(item for item in records if item.get("guidance_id") in set(record.get("split_replacement_ids", [])))
+    postconditions = [
+        "revision-guard-satisfied",
+        "lineage-preserved",
+        "no-duplicate-active-authority"
+        if operation in {"merge", "split", "supersede", "retire", "delete"}
+        else "single-record-postcondition",
+    ]
+    mutation, receipt_result, receipt_writes = _guidance_mutation_receipt_write_plan(
+        operation=operation,
+        target_root=target_root,
+        store_path=path,
+        store_pre_digest=store_digest,
+        records=records,
+        affected_records=affected,
+        postconditions=postconditions,
+        owner_admission=owner_admission,
+    )
+    _ = mutation
+    _write_guidance_json_transaction(
+        [
+            (path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": records}, store_digest),
+            *receipt_writes,
+        ]
+    )
     return {
         "kind": "agentic-workspace/guidance-lifecycle-result/v1",
         "status": "transitioned",
         "record": record,
         "records": affected,
         "store": _repo_relative(path, root=target_root),
-        "mutation_receipt": _record_guidance_mutation_receipt(
-            operation=operation,
-            target_root=target_root,
-            store_path=path,
-            store_pre_digest=store_digest,
-            records=records,
-            affected_records=affected,
-            postconditions=[
-                "revision-guard-satisfied",
-                "lineage-preserved",
-                "no-duplicate-active-authority"
-                if operation in {"merge", "split", "supersede", "retire", "delete"}
-                else "single-record-postcondition",
-            ],
-            owner_admission=owner_admission,
-        ),
+        "mutation_receipt": receipt_result,
     }
 
 
@@ -2096,8 +2131,9 @@ def _guidance_public_operation_entries() -> list[dict[str, Any]]:
             "operation": operation_id.removeprefix("agent-guidance."),
             "operation_id": operation_id,
             "public": True,
-            "generated_operation": True,
-            "external_contract": True,
+            "generated_operation": False,
+            "external_contract": False,
+            "generated_parity": "not-claimed",
             "schema": "agentic-workspace/guidance-lifecycle-record/v1",
             "result_schema": "agentic-workspace/guidance-lifecycle-result/v1",
             "receipt_schema": "agentic-workspace/guidance-mutation-receipt/v1",
@@ -2105,6 +2141,7 @@ def _guidance_public_operation_entries() -> list[dict[str, Any]]:
             if operation_id == "agent-guidance.promote"
             else "agentic_workspace.agent_guidance.transition_guidance",
             "admission": lifecycle_requirements[operation_id.removeprefix("agent-guidance.")],
+            "remaining_gap": "Lifecycle operations are supported Python authority routines only; no generated command IR operation is advertised for this family.",
         }
         for operation_id in GUIDANCE_LIFECYCLE_OPERATIONS
     ]
