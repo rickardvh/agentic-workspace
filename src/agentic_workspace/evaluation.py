@@ -31,26 +31,7 @@ EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND = (
     "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-index/v1"
 )
 EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE = "agentic-workspace.evaluation-external-delivery"
-EXTERNAL_EVALUATION_ADAPTER_HOST_ADMISSION_KEY_ID = "agentic-workspace-external-evaluation-host-test-v1"
-_EXTERNAL_EVALUATION_ADAPTER_HOST_ADMISSION_KEYS: dict[str, dict[str, Any]] = {
-    EXTERNAL_EVALUATION_ADAPTER_HOST_ADMISSION_KEY_ID: {
-        "algorithm": "RS256",
-        "status": "current",
-        "issuer": "provider-webhook",
-        "trusted_channel": "provider-webhook",
-        "n": (
-            "a3619b8097fc0cfd085637dc6f07afe09929f1d4a0874dbd9e9968b899be58dc"
-            "50c3be3f030a4a6841900ecd8898d51d32dbd82a74d963929cf0daec8686b6318cf"
-            "0166f84221952fb2e1007d8c49e2faaff9e6f87f4a7b10934bc28619c18ae9821b"
-            "fb35ba371640fdb5d1db45320908e3e996acdf67d3c94d01ca39e3d5d41dbdd624"
-            "981274f4a25de691a0f0b0ed2c3587c14adf356b7904d956ed48151308fbd13d7"
-            "a0aaf53028b67d1e8c4f7bf4767fd1db3b1d3ce21626ccbae351f3cf70ae35014"
-            "c4fcdac5c67d23b8d46d66359c502bbc590ede5a0168c93a8d45dc3c70a329c97"
-            "d06fb21352c3c5cbc85cc9bf1bd95267eec08307b36a7e98d48d8b"
-        ),
-        "e": 65537,
-    }
-}
+EXTERNAL_EVALUATION_ADAPTER_HOST_TRUST_STORE_PATH = Path(".agentic-workspace-host/trust/external-evaluation-admission-keys.json")
 EVALUATION_FINDING_FOLLOWUPS_KIND = "agentic-workspace/evaluation-finding-followups/v1"
 OBSERVATION_RETENTION_CAP = 100
 OBSERVATION_BYTE_CAP = 256_000
@@ -492,6 +473,44 @@ def _parse_evaluation_time(value: Any) -> datetime | None:
     return parsed
 
 
+def _external_evaluation_host_trust_store_path() -> Path:
+    return Path.home() / EXTERNAL_EVALUATION_ADAPTER_HOST_TRUST_STORE_PATH
+
+
+def _load_external_evaluation_host_admission_keys(*, target_root: Path) -> dict[str, dict[str, Any]]:
+    path = _external_evaluation_host_trust_store_path().resolve()
+    try:
+        path.relative_to(target_root.resolve())
+        return {}
+    except ValueError:
+        pass
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict) or payload.get("kind") != "agentic-workspace/host-external-evaluation-trust-store/v1":
+        return {}
+    keys_raw = payload.get("keys")
+    if isinstance(keys_raw, dict):
+        keys = keys_raw
+    elif isinstance(keys_raw, list):
+        keys = {str(item.get("key_id") or ""): item for item in keys_raw if isinstance(item, dict)}
+    else:
+        keys = {}
+    revoked_raw = payload.get("revoked_key_ids")
+    revoked = {str(item) for item in revoked_raw} if isinstance(revoked_raw, list) else set()
+    current: dict[str, dict[str, Any]] = {}
+    for key_id, key in keys.items():
+        if not key_id or key_id in revoked or not isinstance(key, dict):
+            continue
+        if key.get("status") != "current" or key.get("algorithm") != "RS256":
+            continue
+        if str(key.get("revoked_at") or "").strip() or str(key.get("superseded_by") or "").strip():
+            continue
+        current[key_id] = key
+    return current
+
+
 def _write_external_evaluation_adapter_host_result_admission(*, target_root: Path, admission: dict[str, Any]) -> dict[str, Any]:
     admission_ref = str(admission.get("admission_ref") or "")
     admission_id = admission_ref.removeprefix("external-evaluation-adapter-host-result-admission:")
@@ -558,7 +577,7 @@ def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[st
     if admission.get("status") != "current" or admission.get("algorithm") != "RS256":
         return False
     key_id = str(admission.get("key_id") or "")
-    key = _EXTERNAL_EVALUATION_ADAPTER_HOST_ADMISSION_KEYS.get(key_id)
+    key = _load_external_evaluation_host_admission_keys(target_root=target_root).get(key_id)
     if not key or key.get("status") != "current" or key.get("algorithm") != "RS256":
         return False
     payload = admission.get("signed_payload")
