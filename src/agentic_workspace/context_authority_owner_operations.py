@@ -79,6 +79,7 @@ def _admit_context_owner_operation_result(
     producer = spec["producer"]
     result_kind = spec["result_kind"]
     operation_id = spec["operation_id"]
+    source_id = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
     owner_result = dict(owner_result)
     if owner_result.get("producer") != producer:
         raise ValueError("owner operation result producer does not match registered owner")
@@ -94,13 +95,31 @@ def _admit_context_owner_operation_result(
         raise ValueError("owner operation result adapter id does not match selected owner adapter")
     if owner_result.get("owner_operation") or owner_result.get("owner_execution_receipt"):
         raise ValueError("owner operation result must not carry caller-provided operation receipts")
+    adapter_receipt = _as_dict(owner_result.get("owner_adapter_receipt"))
+    if adapter_receipt.get("kind") != "agentic-workspace/context-authority-owner-adapter-result/v1":
+        raise ValueError("owner operation result is missing concrete adapter receipt")
+    if adapter_receipt.get("status") != "produced":
+        raise ValueError("owner operation adapter receipt was not produced")
+    adapter_expectations = {
+        "producer": producer,
+        "surface": surface,
+        "source_id": source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "adapter_id": adapter_id,
+        "operation_id": operation_id,
+        "selection_revision": "sha256:" + _digest(selection),
+    }
+    for key, expected in adapter_expectations.items():
+        if adapter_receipt.get(key) != expected:
+            raise ValueError(f"owner operation adapter receipt {key.replace('_', ' ')} does not match")
     structural_backing = _as_dict(owner_result.get("schema_backing"))
     boundary = str(owner_result.get("owner_boundary") or "")
     if not structural_backing or not boundary:
         raise ValueError("context owner operation payload must provide owner boundary and schema backing")
-    source_id = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
     result_payload_revision = str(owner_result.get("revision") or "")
     schema_backing_revision = "sha256:" + _digest(structural_backing)
+    adapter_receipt_revision = "sha256:" + _digest(adapter_receipt)
     operation_identity = {
         "operation_id": operation_id,
         "producer": producer,
@@ -112,6 +131,7 @@ def _admit_context_owner_operation_result(
         "adapter_id": adapter_id,
         "selection_revision": "sha256:" + _digest(selection),
         "schema_backing_revision": schema_backing_revision,
+        "adapter_receipt_revision": adapter_receipt_revision,
         "result_payload_revision": result_payload_revision,
     }
     run_id = "sha256:" + _digest(operation_identity)
@@ -138,6 +158,7 @@ def _admit_context_owner_operation_result(
         "adapter_id": adapter_id,
         "selection_revision": operation_identity["selection_revision"],
         "schema_backing_revision": schema_backing_revision,
+        "adapter_receipt_revision": adapter_receipt_revision,
         "result_payload_revision": result_payload_revision,
         "executor": receipt_identity["executor"],
         "receipt_schema": receipt_identity["receipt_schema"],
@@ -156,6 +177,7 @@ def _admit_context_owner_operation_result(
                 "git_head",
                 "selection_revision",
                 "schema_backing_revision",
+                "adapter_receipt_revision",
                 "result_payload_revision",
             ],
             "rule": "Receipt currentness is re-resolved from producer-owned operation identity and current source revision; no process-local map is authoritative.",
@@ -176,6 +198,7 @@ def _admit_context_owner_operation_result(
         "adapter_id": adapter_id,
         "selection_revision": operation_identity["selection_revision"],
         "schema_backing_revision": schema_backing_revision,
+        "adapter_receipt_revision": adapter_receipt_revision,
         "result_payload_revision": result_payload_revision,
         "admission_rule": (
             "Context authority admits current results only from a registered owner-operation front-door receipt. "
@@ -194,46 +217,6 @@ def _admit_context_owner_operation_result(
     return admitted_result
 
 
-def _owner_result_payload(
-    *,
-    surface: str,
-    owner: str | None,
-    root: Path,
-    chosen: Path,
-    source_revision: str,
-    git_head: str,
-    selection: dict[str, Any],
-    adapter_id: str,
-    status: str,
-    reason: str,
-    boundary: str,
-    structural_backing: dict[str, Any],
-    extra: dict[str, Any] | None,
-) -> dict[str, Any]:
-    spec = _OWNER_OPERATION_SPECS.get(surface)
-    if not spec or not spec.get("producer") or not spec.get("result_kind") or not spec.get("operation_id"):
-        raise ValueError(f"context owner operation is not registered for surface {surface!r}")
-    payload: dict[str, Any] = {
-        "kind": spec["result_kind"],
-        "producer": spec["producer"],
-        "status": status,
-        "surface": surface,
-        "owner": owner,
-        "source_id": _source_id_for(root, chosen),
-        "source_revision": source_revision,
-        "git_head": git_head,
-        "selection": selection,
-        "adapter_id": adapter_id,
-        "repair_operation_id": spec["operation_id"],
-        "owner_boundary": boundary,
-        "schema_backing": structural_backing,
-    }
-    if reason:
-        payload["reason"] = reason
-    payload.update(extra or {})
-    return _finalize_owner_result(payload)
-
-
 def _run_registered_context_owner_operation(
     *,
     surface: str,
@@ -244,29 +227,55 @@ def _run_registered_context_owner_operation(
     git_head: str,
     selection: dict[str, Any],
     adapter_id: str,
-    boundary: str,
-    structural_backing: dict[str, Any],
-    status: str = "current",
-    reason: str = "",
-    extra: dict[str, Any] | None = None,
+    owner_result: dict[str, Any],
 ) -> dict[str, Any]:
     source_revision = "sha256:" + revision
-    owner_result = _owner_result_payload(
-        surface=surface,
-        owner=owner,
-        root=root,
-        chosen=chosen,
-        source_revision=source_revision,
-        git_head=git_head,
-        selection=selection,
-        adapter_id=adapter_id,
-        status=status,
-        reason=reason,
-        boundary=boundary,
-        structural_backing=structural_backing,
-        extra=extra,
-    )
-    if status != "current":
+    spec = _OWNER_OPERATION_SPECS.get(surface)
+    if not spec or not spec.get("producer") or not spec.get("result_kind") or not spec.get("operation_id"):
+        raise ValueError(f"context owner operation is not registered for surface {surface!r}")
+    expected_source_id = _source_id_for(root, chosen)
+    owner_result = dict(owner_result)
+    if owner_result.get("producer") != spec["producer"]:
+        raise ValueError("owner operation result producer does not match registered owner")
+    if owner_result.get("kind") != spec["result_kind"]:
+        raise ValueError("owner operation result kind does not match registered owner")
+    if owner_result.get("repair_operation_id") != spec["operation_id"]:
+        raise ValueError("owner operation result id does not match registered owner")
+    if owner_result.get("source_id") != expected_source_id:
+        raise ValueError("owner operation result source id does not match selected source")
+    if owner_result.get("source_revision") != source_revision:
+        raise ValueError("owner operation result source revision is stale")
+    if owner_result.get("git_head") != git_head:
+        raise ValueError("owner operation result git head is stale")
+    if owner_result.get("adapter_id") != adapter_id:
+        raise ValueError("owner operation result adapter id does not match selected owner adapter")
+    if owner_result.get("owner") != owner:
+        raise ValueError("owner operation result owner does not match registered owner")
+    if owner_result.get("selection") != selection:
+        raise ValueError("owner operation result selection does not match owner operation input")
+    if not owner_result.get("revision"):
+        raise ValueError("owner operation result revision is missing")
+    if owner_result.get("owner_operation") or owner_result.get("owner_execution_receipt"):
+        raise ValueError("owner operation result must not carry caller-provided operation receipts")
+    adapter_receipt = _as_dict(owner_result.get("owner_adapter_receipt"))
+    if adapter_receipt.get("kind") != "agentic-workspace/context-authority-owner-adapter-result/v1":
+        raise ValueError("owner operation result is missing concrete adapter receipt")
+    if adapter_receipt.get("status") != "produced":
+        raise ValueError("owner operation adapter receipt was not produced")
+    adapter_expectations = {
+        "producer": spec["producer"],
+        "surface": surface,
+        "source_id": expected_source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "adapter_id": adapter_id,
+        "operation_id": spec["operation_id"],
+        "selection_revision": "sha256:" + _digest(selection),
+    }
+    for key, expected in adapter_expectations.items():
+        if adapter_receipt.get(key) != expected:
+            raise ValueError(f"owner operation adapter receipt {key.replace('_', ' ')} does not match")
+    if str(owner_result.get("status") or "") != "current":
         return owner_result
     return _admit_context_owner_operation_result(
         surface=surface,
@@ -398,6 +407,7 @@ def registered_context_owner_receipt_status(
         "adapter_id": receipt.get("adapter_id"),
         "selection_revision": receipt.get("selection_revision"),
         "schema_backing_revision": receipt.get("schema_backing_revision"),
+        "adapter_receipt_revision": receipt.get("adapter_receipt_revision"),
         "result_payload_revision": receipt.get("result_payload_revision"),
     }
     expected_run_id = "sha256:" + _digest(operation_identity)
@@ -412,6 +422,8 @@ def registered_context_owner_receipt_status(
         return False, "owner-operation-current-run-mismatch"
     if receipt_id != expected_receipt_id or owner_operation.get("receipt_id") != expected_receipt_id:
         return False, "owner-operation-current-receipt-mismatch"
+    if owner_operation.get("adapter_receipt_revision") != receipt.get("adapter_receipt_revision"):
+        return False, "owner-operation-adapter-receipt-revision-mismatch"
     if owner_operation.get("result_payload_revision") != receipt.get("result_payload_revision"):
         return False, "owner-operation-current-result-mismatch"
     if root is not None:

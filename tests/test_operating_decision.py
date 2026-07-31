@@ -1330,10 +1330,114 @@ def test_context_owner_operation_admission_does_not_accept_caller_semantic_paylo
     assert "_admit_context_owner_operation_result" not in resolver_source
     assert not hasattr(owner_operations, "run_context_owner_operation")
     assert "def run_context_owner_operation(" not in operation_source
+    assert "def _owner_result_payload(" not in operation_source
+    assert "boundary: str" not in operation_source
+    assert "structural_backing: dict[str, Any]" not in operation_source
     assert "registered_context_owner_operation_runner(surface)" in resolver_source
     assert "_CONTEXT_OWNER_OPERATION_RUNNERS" in operation_source
     assert "_CONTEXT_OWNER_ADAPTER_TOKEN" not in resolver_source
     assert "ContextOwnerAdapterResult" not in resolver_source
+
+
+def test_context_authority_each_owner_family_uses_concrete_adapter_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.operating_decision as operating_decision
+
+    _write_context_authority_sources(tmp_path)
+    (tmp_path / "generated").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "src/agentic_workspace/contracts").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json").write_text("{}\n", encoding="utf-8")
+    (tmp_path / "generated/.agentic-workspace-cli-fingerprint.json").write_text(
+        json.dumps({"kind": "generated-cli-source-manifest/v1", "source_hashes": {}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(operating_decision, "_generated_fingerprint_is_current", lambda _root: True)
+    monkeypatch.setattr(operating_decision, "_git_head", lambda _root: "f" * 40)
+    monkeypatch.setattr(
+        operating_decision,
+        "mutation_baseline_payload",
+        lambda *, target_root, changed_paths: {
+            "status": "current",
+            "baseline_id": "baseline-1",
+            "head": "f" * 40,
+            "scope": {"paths": changed_paths},
+            "identity": {"fingerprint": "baseline"},
+        },
+    )
+    paths_by_surface = {
+        "system-intent": ["SYSTEM_INTENT.md"],
+        "architecture-principles": ["SYSTEM_INTENT.md"],
+        "scoped-instructions": ["AGENTS.md"],
+        "ownership": ["src/app.py"],
+        "planning": [".agentic-workspace/planning/state.toml"],
+        "memory": ["src/app.py"],
+        "assignment": ["src/app.py"],
+        "evaluation": ["src/agentic_workspace/evaluation.py"],
+        "proof": ["tests/test_operating_decision.py"],
+        "mutation-baseline": ["src/app.py"],
+        "autopilot-executor": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+        "skills": [".agentic-workspace/skills/workspace-startup/SKILL.md"],
+        "target-guidance": ["src/app.py"],
+        "terminal-outcome": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+        "generated-references": ["generated/client.py"],
+    }
+
+    for item in context_authority_declarations():
+        surface = item["surface"]
+        consumer = str(item["consumer"]).split(",")[0].strip()
+        record = _resolve_context_authority_source(
+            item=item,
+            target_root=tmp_path,
+            consumer=consumer,
+            task=f"exercise {surface} owner adapter",
+            paths=paths_by_surface[surface],
+        )
+
+        assert record["status"] == "current", surface
+        owner_result = record["admission"]["owner_result"]
+        adapter_receipt = owner_result["owner_adapter_receipt"]
+        operation = owner_result["owner_operation"]
+        execution_receipt = owner_result["owner_execution_receipt"]
+        assert adapter_receipt["kind"] == "agentic-workspace/context-authority-owner-adapter-result/v1"
+        assert adapter_receipt["surface"] == operation["surface"] == execution_receipt["surface"] == surface
+        assert operation["adapter_receipt_revision"] == execution_receipt["adapter_receipt_revision"]
+        assert owner_result["schema_backing"]
+        assert owner_result["owner_boundary"]
+
+
+def test_context_owner_operation_runner_rejects_matching_payload_without_adapter_receipt(tmp_path: Path) -> None:
+    from agentic_workspace.context_authority_owner_operations import registered_context_owner_operation_runner
+
+    _write_context_authority_sources(tmp_path)
+    chosen = tmp_path / "SYSTEM_INTENT.md"
+    selection = {"consumer": "start"}
+    runner = registered_context_owner_operation_runner("system-intent")
+
+    with pytest.raises(ValueError, match="missing concrete adapter receipt"):
+        runner(
+            owner="system-intent resolver",
+            root=tmp_path,
+            chosen=chosen,
+            revision=_fixture_source_revision(chosen),
+            git_head="",
+            selection=selection,
+            adapter_id="system-intent.owner-result",
+            owner_result={
+                "kind": "agentic-workspace/system-intent-mirror/v1",
+                "producer": "agentic_workspace.workspace_runtime_core.system_intent",
+                "status": "current",
+                "surface": "system-intent",
+                "owner": "system-intent resolver",
+                "source_id": "SYSTEM_INTENT.md",
+                "source_revision": "sha256:" + _fixture_source_revision(chosen),
+                "git_head": "",
+                "selection": selection,
+                "adapter_id": "system-intent.owner-result",
+                "repair_operation_id": "system-intent.sync",
+                "revision": "sha256:caller-built",
+                "owner_boundary": "caller-built generic boundary",
+                "schema_backing": {"source_format": "markdown", "parse_status": "valid"},
+            },
+        )
 
 
 def test_context_owner_operation_admission_rejects_forged_owner_identity(tmp_path: Path) -> None:

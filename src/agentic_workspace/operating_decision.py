@@ -538,6 +538,8 @@ def _context_owner_operation_admission(
         return False, "owner-operation-selection-revision-mismatch"
     if owner_operation.get("schema_backing_revision") != receipt.get("schema_backing_revision"):
         return False, "owner-operation-schema-backing-revision-mismatch"
+    if owner_operation.get("adapter_receipt_revision") != receipt.get("adapter_receipt_revision"):
+        return False, "owner-operation-adapter-receipt-revision-mismatch"
     if owner_operation.get("result_payload_revision") != receipt.get("result_payload_revision"):
         return False, "owner-operation-result-payload-revision-mismatch"
     if receipt.get("supersedes"):
@@ -580,6 +582,54 @@ def _dispatch_registered_owner_operation(
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     runner = registered_context_owner_operation_runner(surface)
+    producer, result_kind, operation_id = _owner_contract_result_identity(surface)
+    source_revision = "sha256:" + revision
+    selection_revision = "sha256:" + _digest(selection)
+    semantic_evidence_revision = "sha256:" + _digest(
+        {
+            "status": status,
+            "reason": reason,
+            "owner_boundary": boundary,
+            "schema_backing": structural_backing,
+            "surface_specific": extra or {},
+        }
+    )
+    source_id = chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
+    owner_result: dict[str, Any] = {
+        "kind": result_kind,
+        "producer": producer,
+        "status": status,
+        "surface": surface,
+        "owner": item.get("owner"),
+        "source_id": source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "selection": selection,
+        "adapter_id": adapter_id,
+        "repair_operation_id": operation_id,
+        "owner_boundary": boundary,
+        "schema_backing": structural_backing,
+        "owner_adapter_receipt": {
+            "kind": "agentic-workspace/context-authority-owner-adapter-result/v1",
+            "status": "produced",
+            "producer": producer,
+            "surface": surface,
+            "source_id": source_id,
+            "source_revision": source_revision,
+            "git_head": git_head,
+            "adapter_id": adapter_id,
+            "selection_revision": selection_revision,
+            "semantic_evidence_revision": semantic_evidence_revision,
+            "operation_id": operation_id,
+            "rule": "Concrete owner-result adapters produce semantic payloads; the shared owner-operation module only admits and receipts them.",
+        },
+    }
+    if reason:
+        owner_result["reason"] = reason
+    owner_result.update(extra or {})
+    owner_result["revision"] = "sha256:" + _digest(
+        {key: value for key, value in owner_result.items() if key != "revision" and not str(key).endswith("_debug")}
+    )
     return runner(
         owner=item.get("owner"),
         root=root,
@@ -588,11 +638,7 @@ def _dispatch_registered_owner_operation(
         git_head=git_head,
         selection=selection,
         adapter_id=adapter_id,
-        boundary=boundary,
-        structural_backing=structural_backing,
-        status=status,
-        reason=reason,
-        extra=extra,
+        owner_result=owner_result,
     )
 
 
