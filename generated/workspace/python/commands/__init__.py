@@ -35,6 +35,7 @@ from . import doctor_report as _command_doctor_report
 from . import evaluation_delivery_status as _command_evaluation_delivery_status
 from . import evaluation_external_adapter_receipt as _command_evaluation_external_adapter_receipt
 from . import evaluation_external_delivery as _command_evaluation_external_delivery
+from . import evaluation_external_host_result_import as _command_evaluation_external_host_result_import
 from . import evaluation_external_request as _command_evaluation_external_request
 from . import evaluation_local_delivery as _command_evaluation_local_delivery
 from . import evaluation_observe as _command_evaluation_observe
@@ -101,6 +102,7 @@ GENERATED_COMMAND_HANDLERS = {
     'evaluation.delivery-status': _command_evaluation_delivery_status.run,
     'evaluation.external-adapter-receipt': _command_evaluation_external_adapter_receipt.run,
     'evaluation.external-delivery': _command_evaluation_external_delivery.run,
+    'evaluation.external-host-result-import': _command_evaluation_external_host_result_import.run,
     'evaluation.external-request': _command_evaluation_external_request.run,
     'evaluation.local-delivery': _command_evaluation_local_delivery.run,
     'evaluation.observe': _command_evaluation_observe.run,

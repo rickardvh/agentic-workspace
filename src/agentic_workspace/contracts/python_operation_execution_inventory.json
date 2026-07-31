@@ -407,9 +407,31 @@
       "primitive_refs": [
         "runtime_module_handler:evaluation.external-adapter-receipt"
       ]
-    },
-    {
-      "operation_id": "evaluation.external-delivery",
+      },
+      {
+        "operation_id": "evaluation.external-host-result-import",
+        "program": "agentic-workspace",
+        "command": "evaluation",
+        "generated_transport": "generated/workspace/python/cli.py",
+        "operation_contract": "operations/evaluation.external-host-result-import.json",
+        "primitive_executor": "command_generation/argparse_function_call",
+        "hand_owned_runtime_code": [
+          "evaluation.report.external_host_result_import",
+          "output emission mechanics"
+        ],
+        "status": "generated-runtime-handler",
+        "conformance_ref": "evaluation.lifecycle.process",
+        "runtime_boundary_class": "generated-runtime-handler",
+        "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns opaque provider-result import, host admission verification, transactional result/admission indexing, and rollback/idempotency policy.",
+        "what_would_make_portable_later": "Represent external host-result import as schema-backed generated operation steps once provider-result references, host admission custody, and transaction recovery schemas are stable portable primitives.",
+        "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific provider result import and host admission semantics.",
+        "completion_blockers": [],
+        "primitive_refs": [
+          "runtime_module_handler:evaluation.external-host-result-import"
+        ]
+      },
+      {
+        "operation_id": "evaluation.external-delivery",
       "program": "agentic-workspace",
       "command": "evaluation",
       "generated_transport": "generated/workspace/python/cli.py",

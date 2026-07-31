@@ -1643,10 +1643,22 @@
       "migration_path": "Split deterministic request rendering into Tier 1 after request, sink, and stale-recovery schemas stabilize.",
       "generic_behavior_audit": "Not counted as portable codegen completion; external requests are runtime-backed because stale detection depends on current AW report authority."
     },
-    {
-      "id": "evaluation.delivery.adapter-receipt.record",
-      "summary": "Record a provider-owned external adapter attempt/result receipt in the local producer index.",
-      "kind": "workspace-runtime",
+      {
+        "id": "evaluation.delivery.host-result.import",
+        "summary": "Import provider-owned external adapter host results by opaque reference after host admission verification.",
+        "kind": "workspace-runtime",
+        "portability": "domain-runtime",
+        "taxonomy_tier": "tier-2-package-domain",
+        "tier_owner": "workspace evaluation external adapter boundary",
+        "tier_reason": "Host result import enforces provider custody, host admission signatures, capability revision/status, supersession, revocation, and transactional local index recovery semantics.",
+        "conformance_ref": "evaluation.lifecycle.process plus workspace evaluation report/delivery tests",
+        "migration_path": "Split deterministic import/index transaction mechanics into Tier 1 after provider-result reference and host-admission schemas stabilize.",
+        "generic_behavior_audit": "Not counted as portable codegen completion; provider custody and host admission verification remain AW workspace runtime policy."
+      },
+      {
+        "id": "evaluation.delivery.adapter-receipt.record",
+        "summary": "Record a provider-owned external adapter attempt/result receipt in the local producer index.",
+        "kind": "workspace-runtime",
       "portability": "domain-runtime",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "workspace evaluation external adapter boundary",

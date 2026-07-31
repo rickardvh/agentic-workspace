@@ -3157,6 +3157,56 @@
           ]
         },
         {
+          "help": "Import a provider-owned external adapter host result by opaque reference.",
+          "name": "external-host-result-import",
+          "operation_ref": {
+            "id": "evaluation.external-host-result-import",
+            "path": "operations/evaluation.external-host-result-import.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--provider-result-ref"
+              ],
+              "name": "provider_result_ref",
+              "required": true
+            },
+            {
+              "default": "",
+              "flags": [
+                "--expected-result-digest"
+              ],
+              "name": "expected_result_digest"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--capability-revision"
+              ],
+              "name": "capability_revision"
+            }
+          ]
+        },
+        {
           "help": "Record a producer-owned external adapter attempt/result receipt.",
           "name": "external-adapter-receipt",
           "operation_ref": {

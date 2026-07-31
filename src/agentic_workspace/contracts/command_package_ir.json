@@ -821,14 +821,19 @@
             "import_module": "agentic_workspace.evaluation",
             "function": "_run_evaluation_adapter"
           },
-          {
-            "operation_id": "evaluation.external-request",
-            "import_module": "agentic_workspace.evaluation",
-            "function": "_run_evaluation_adapter"
-          },
-          {
-            "operation_id": "evaluation.external-adapter-receipt",
-            "import_module": "agentic_workspace.evaluation",
+            {
+              "operation_id": "evaluation.external-request",
+              "import_module": "agentic_workspace.evaluation",
+              "function": "_run_evaluation_adapter"
+            },
+            {
+              "operation_id": "evaluation.external-host-result-import",
+              "import_module": "agentic_workspace.evaluation",
+              "function": "_run_evaluation_adapter"
+            },
+            {
+              "operation_id": "evaluation.external-adapter-receipt",
+              "import_module": "agentic_workspace.evaluation",
             "function": "_run_evaluation_adapter"
           },
           {
@@ -5306,9 +5311,9 @@
                   }
                 ]
               },
-              {
-                "name": "external-request",
-                "help": "Create the current per-sink external delivery request.",
+                {
+                  "name": "external-request",
+                  "help": "Create the current per-sink external delivery request.",
                 "operation_ref": {
                   "id": "evaluation.external-request",
                   "path": "operations/evaluation.external-request.json"
@@ -5346,13 +5351,63 @@
                       "--explicit"
                     ],
                     "action": "store_true",
-                    "default": false
-                  }
-                ]
-              },
-              {
-                "name": "external-adapter-receipt",
-                "help": "Record a producer-owned external adapter attempt/result receipt.",
+                      "default": false
+                    }
+                  ]
+                },
+                {
+                  "name": "external-host-result-import",
+                  "help": "Import a provider-owned external adapter host result by opaque reference.",
+                  "operation_ref": {
+                    "id": "evaluation.external-host-result-import",
+                    "path": "operations/evaluation.external-host-result-import.json"
+                  },
+                  "options": [
+                    {
+                      "name": "target",
+                      "flags": [
+                        "--target"
+                      ],
+                      "help": "Repository path."
+                    },
+                    {
+                      "name": "format",
+                      "flags": [
+                        "--format"
+                      ],
+                      "choices": [
+                        "text",
+                        "json"
+                      ],
+                      "default": "text",
+                      "help": "Output format."
+                    },
+                    {
+                      "name": "provider_result_ref",
+                      "flags": [
+                        "--provider-result-ref"
+                      ],
+                      "required": true
+                    },
+                    {
+                      "name": "expected_result_digest",
+                      "flags": [
+                        "--expected-result-digest"
+                      ],
+                      "default": ""
+                    },
+                    {
+                      "name": "capability_revision",
+                      "flags": [
+                        "--capability-revision"
+                      ],
+                      "default": ""
+                    }
+                  ]
+                },
+                {
+                  "name": "external-adapter-receipt",
+                  "help": "Record a producer-owned external adapter attempt/result receipt.",
                 "operation_ref": {
                   "id": "evaluation.external-adapter-receipt",
                   "path": "operations/evaluation.external-adapter-receipt.json"

@@ -217,6 +217,18 @@ def evaluation_external_delivery(
     )
 
 
+def evaluation_external_host_result_import(
+    values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None
+) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.external-host-result-import",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
 def evaluation_external_request(
     values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None
 ) -> dict[str, Any]:

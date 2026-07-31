@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 import subprocess
@@ -11,6 +10,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import cli
+from agentic_workspace.client import AWClientError
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.contract_tooling import contract_schema
 from agentic_workspace.evaluation import (
@@ -19,7 +19,7 @@ from agentic_workspace.evaluation import (
     EVALUATION_PENDING_COLLECTIONS_DIR,
     EVALUATION_SUMMARY_KIND,
     EVALUATIONS_KIND,
-    EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE,
+    EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND,
     EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
@@ -27,9 +27,6 @@ from agentic_workspace.evaluation import (
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
     WORKSPACE_LOCAL_EVALUATIONS_DIR,
-    _evaluation_json_bytes,
-    _external_delivery_adapter_host_admission_payload,
-    _external_evaluation_host_trust_store_path,
     _write_indexed_owner_receipt,
     append_observation,
     closure_authority,
@@ -60,17 +57,9 @@ def _write_external_evaluation_adapter_host_result(
     host_admission_monkeypatch: pytest.MonkeyPatch | None = None,
     **values: object,
 ) -> dict[str, object]:
-    admission_context = {
-        "audience": str(values.get("audience") or EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE),
-        "workspace_ref": str(values.get("workspace_ref") or f"workspace:path:{target_root.resolve()}"),
-        "issued_at": str(values.get("issued_at") or "2026-07-29T00:00:00Z"),
-        "expires_at": str(values.get("expires_at") or "2099-01-01T00:00:00Z"),
-        "nonce": str(values["nonce"] if "nonce" in values else f"{values['delivery_id']}:{values['sink_id']}:{values['attempt_revision']}"),
-    }
-    if values.get("revoked_at"):
-        admission_context["revoked_at"] = str(values["revoked_at"])
-    if values.get("superseded_by"):
-        admission_context["superseded_by"] = str(values["superseded_by"])
+    _ = host_admission_monkeypatch
+    workspace_ref = str(values.get("workspace_ref") or f"workspace:path:{target_root.resolve()}")
+    audience = str(values.get("audience") or "agentic-workspace.evaluation-external-delivery")
     result = {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1",
         "status": "current",
@@ -87,7 +76,15 @@ def _write_external_evaluation_adapter_host_result(
         "supersedes": str(values.get("supersedes") or ""),
         "request_revision": str(values.get("request_revision") or ""),
         "recorded_at": "2026-07-29T00:00:00Z",
-        "admission_context": admission_context,
+        "admission_context": {
+            "audience": audience,
+            "workspace_ref": workspace_ref,
+            "issued_at": str(values.get("issued_at") or "2026-07-29T00:00:00Z"),
+            "expires_at": str(values.get("expires_at") or "2099-01-01T00:00:00Z"),
+            "nonce": str(
+                values["nonce"] if "nonce" in values else f"{values['delivery_id']}:{values['sink_id']}:{values['attempt_revision']}"
+            ),
+        },
         "custody": {
             "producer": "evaluation-provider-adapter",
             "trusted_channel": "provider-webhook",
@@ -97,68 +94,19 @@ def _write_external_evaluation_adapter_host_result(
     result_id = hashlib.sha256(json.dumps(result, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
     result["result_id"] = result_id
     result["result_ref"] = f"external-evaluation-adapter-host-result:{result_id}"
-    signed_payload = _external_delivery_adapter_host_admission_payload(str(result["result_ref"]), result)
-    signed_payload["issuer"] = "provider-webhook"
-    issuer_root = target_root.parent / "external-evaluation-host-issuer"
-    key_path = issuer_root / f"{result_id}.pem"
-    key_path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
-        capture_output=True,
-        check=True,
-    )
-    modulus = (
-        subprocess.run(
-            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-        .stdout.strip()
-        .split("=", 1)[1]
-        .lower()
-    )
-    key_id = (
-        "external-evaluation-host-test-"
-        + hashlib.sha256(json.dumps({"result_ref": result["result_ref"], "modulus": modulus}, sort_keys=True).encode()).hexdigest()[:12]
-    )
-    key = {
-        "algorithm": "RS256",
-        "status": "current",
-        "key_id": key_id,
-        "issuer": "provider-webhook",
-        "trusted_channel": "provider-webhook",
-        "e": 65537,
-        "n": modulus,
-    }
-    trust_store_path = _external_evaluation_host_trust_store_path()
-    trust_store_path.parent.mkdir(parents=True, exist_ok=True)
-    trust_store_path.write_text(
+    result_digest = hashlib.sha256(
         json.dumps(
-            {
-                "kind": "agentic-workspace/host-external-evaluation-trust-store/v1",
-                "keys": {key_id: key},
-                "revoked_key_ids": [],
-            },
-            indent=2,
+            {key: value for key, value in result.items() if key not in {"host_admission", "host_admission_ref", "host_admission_verdict"}},
             sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    completed = subprocess.run(
-        ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
-        input=_evaluation_json_bytes(signed_payload),
-        capture_output=True,
-        check=True,
-    )
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
     result["host_admission"] = {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
         "status": str(values.get("host_admission_status") or "current"),
-        "algorithm": "RS256",
-        "key_id": key_id,
-        "signed_payload": signed_payload,
-        "signature": base64.b64encode(completed.stdout).decode("ascii"),
+        "authority": "host-provider-resolver",
+        "result_ref": result["result_ref"],
+        "result_digest": result_digest,
     }
     result["host_admission_ref"] = (
         "external-evaluation-adapter-host-result-admission:"
@@ -166,8 +114,8 @@ def _write_external_evaluation_adapter_host_result(
             json.dumps(
                 {
                     "result_ref": result["result_ref"],
-                    "workspace_ref": f"workspace:path:{target_root.resolve()}",
-                    "nonce": admission_context["nonce"],
+                    "workspace_ref": workspace_ref,
+                    "nonce": result["admission_context"]["nonce"],
                     "overrides": values,
                 },
                 sort_keys=True,
@@ -175,37 +123,50 @@ def _write_external_evaluation_adapter_host_result(
             ).encode("utf-8")
         ).hexdigest()[:24]
     )
-    _ = host_admission_monkeypatch
-    root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR
-    path = root / f"{result_id}.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    index_path = root / "index.json"
-    index = {
-        "kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND,
-        "results": {
-            result_id: {
-                "path": path.relative_to(root).as_posix(),
-                "status": "current",
-                "producer": result["producer"],
-                "receipt_revision": result["receipt_revision"],
-                "capability_revision": result["capability_revision"],
-                "delivery_id": result["delivery_id"],
-                "sink_id": result["sink_id"],
-                "attempt_revision": result["attempt_revision"],
-                "result_digest": hashlib.sha256(path.read_bytes()).hexdigest(),
-            }
-        },
-    }
-    index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return {
-        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-record/v1",
-        "status": "stored",
-        "result_id": result_id,
+    result["host_admission_verdict"] = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-verdict/v1",
+        "status": str(values.get("verdict_status") or "admitted"),
+        "authority": "host-provider-resolver",
+        "producer": result["producer"],
+        "delivery_id": result["delivery_id"],
+        "sink_id": result["sink_id"],
+        "attempt_revision": result["attempt_revision"],
+        "capability_revision": result["capability_revision"],
         "result_ref": result["result_ref"],
-        "path": path.relative_to(target_root).as_posix(),
-        "index_ref": index_path.relative_to(target_root).as_posix(),
+        "result_digest": result_digest,
+        "workspace_ref": workspace_ref,
+        "audience": audience,
+        "nonce": result["admission_context"]["nonce"],
+        "issued_at": str(values.get("issued_at") or "2026-07-29T00:00:00Z"),
+        "expires_at": str(values.get("expires_at") or "2099-01-01T00:00:00Z"),
+        "verifier_revision": str(values.get("verifier_revision") or "host-provider-resolver:test:v1"),
+    }
+    if values.get("revoked_at"):
+        result["host_admission_verdict"]["revoked_at"] = str(values["revoked_at"])
+    if values.get("superseded_by"):
+        result["host_admission_verdict"]["superseded_by"] = str(values["superseded_by"])
+
+    provider_result_ref = f"external-evaluation-provider-result:{result_id}"
+
+    def resolver(ref: str) -> dict[str, object]:
+        if ref != provider_result_ref:
+            raise AssertionError(f"unexpected provider result ref: {ref}")
+        return result
+
+    imported = record_external_evaluation_adapter_host_result(
+        target_root=target_root,
+        provider_result_ref=provider_result_ref,
+        capability_revision=str(result["capability_revision"]),
+        provider_result_resolver=resolver,
+    )
+    return {
+        **imported,
         "result": result,
+        "provider_result_ref": provider_result_ref,
+        "provider_result_resolver": resolver,
+        "provider_result_digest": hashlib.sha256(
+            json.dumps(result, sort_keys=True, default=str, separators=(",", ":")).encode()
+        ).hexdigest(),
     }
 
 
@@ -386,7 +347,109 @@ def test_external_adapter_receipt_requires_matching_host_result(tmp_path: Path, 
     assert recorded["host_result_ref"] == host["result_ref"]
 
 
-def test_external_adapter_receipt_accepts_pinned_signed_provider_result_across_process(tmp_path: Path) -> None:
+def test_external_host_result_import_is_idempotent_and_append_preserving(tmp_path: Path) -> None:
+    first = _write_external_evaluation_adapter_host_result(
+        tmp_path,
+        delivery_id="delivery-1",
+        sink_id="#1969",
+        producer="github-issues-adapter",
+        attempt_revision="attempt-1",
+        receipt_revision="receipt-1",
+        capability_revision="github-issues-adapter:v1",
+        status="delivered",
+    )
+    second = _write_external_evaluation_adapter_host_result(
+        tmp_path,
+        delivery_id="delivery-2",
+        sink_id="#1970",
+        producer="github-issues-adapter",
+        attempt_revision="attempt-1",
+        receipt_revision="receipt-2",
+        capability_revision="github-issues-adapter:v1",
+        status="failed",
+    )
+    replay = record_external_evaluation_adapter_host_result(
+        target_root=tmp_path,
+        provider_result_ref=str(first["provider_result_ref"]),
+        capability_revision="github-issues-adapter:v1",
+        provider_result_resolver=first["provider_result_resolver"],
+    )
+
+    assert replay["result_ref"] == first["result_ref"]
+    result_index = json.loads((tmp_path / first["index_ref"]).read_text(encoding="utf-8"))
+    admission_index = json.loads((tmp_path / first["admission_index_ref"]).read_text(encoding="utf-8"))
+    assert result_index["kind"] == EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND
+    assert set(result_index["results"]) == {first["result_id"], second["result_id"]}
+    assert admission_index["kind"] == EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND
+    assert len(admission_index["admissions"]) == 2
+
+
+def test_external_host_result_import_rejects_caller_written_provider_file_without_resolver(tmp_path: Path) -> None:
+    result_id = "caller-written-result"
+    provider_path = tmp_path / ".agentic-workspace/local/evaluations/external-provider-results" / f"{result_id}.json"
+    provider_path.parent.mkdir(parents=True, exist_ok=True)
+    provider_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1",
+                "status": "current",
+                "result_id": result_id,
+                "result_ref": f"external-evaluation-adapter-host-result:{result_id}",
+                "delivery_id": "delivery-1",
+                "sink_id": "#1969",
+                "producer": "github-issues-adapter",
+                "attempt_revision": "attempt-1",
+                "receipt_revision": "receipt-1",
+                "capability_revision": "github-issues-adapter:v1",
+                "capability_status": "current",
+                "custody": {"producer": "evaluation-provider-adapter", "trusted_channel": "provider-webhook"},
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="requires a host/provider resolver"):
+        record_external_evaluation_adapter_host_result(
+            target_root=tmp_path,
+            provider_result_ref=f"external-evaluation-provider-result:{result_id}",
+        )
+
+    assert not (tmp_path / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR / f"{result_id}.json").exists()
+
+
+def test_external_host_result_import_rolls_back_partial_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    original_replace = Path.replace
+    replace_count = 0
+
+    def fail_second_replace(self: Path, target: Path) -> Path:
+        nonlocal replace_count
+        replace_count += 1
+        if replace_count == 2:
+            raise OSError("simulated partial import failure")
+        return original_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", fail_second_replace)
+    with pytest.raises(OSError, match="simulated partial import failure"):
+        _write_external_evaluation_adapter_host_result(
+            tmp_path,
+            delivery_id="delivery-rollback",
+            sink_id="#1969",
+            producer="github-issues-adapter",
+            attempt_revision="attempt-1",
+            receipt_revision="receipt-1",
+            capability_revision="github-issues-adapter:v1",
+            status="delivered",
+        )
+
+    host_root = tmp_path / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR
+    assert not list(host_root.glob("*.json"))
+    assert not (host_root / "index.json").exists()
+
+
+def test_external_adapter_receipt_accepts_host_provider_verdict_across_process(tmp_path: Path) -> None:
     receipt = {
         "delivery_id": "delivery-1",
         "sink_id": "#1969",
@@ -431,6 +494,8 @@ def test_external_adapter_receipt_does_not_load_repo_or_pythonpath_host_verifier
     assert "importlib.import_module" not in source
     assert "BEGIN " + "PRIVATE KEY" not in test_source
     assert "_EXTERNAL_EVALUATION_ADAPTER_HOST_ADMISSION_KEYS" not in source
+    assert "Path.home()" not in source
+    assert "external-evaluation-admission-keys" not in source
 
 
 def test_external_adapter_receipt_rejects_jointly_forged_local_host_result(tmp_path: Path, monkeypatch) -> None:
@@ -490,7 +555,7 @@ def test_external_evaluation_host_admission_issuer_is_not_public_runtime_entrypo
     assert "_CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS" not in source
 
 
-def test_external_adapter_receipt_accepts_signed_host_result_without_local_verifier(tmp_path: Path) -> None:
+def test_external_adapter_receipt_accepts_resolver_imported_host_result_without_local_verifier(tmp_path: Path) -> None:
     receipt = {
         "delivery_id": "delivery-1",
         "sink_id": "#1969",
@@ -506,6 +571,46 @@ def test_external_adapter_receipt_accepts_signed_host_result_without_local_verif
 
     assert recorded["status"] == "recorded"
     assert recorded["host_result_ref"] == host["result_ref"]
+
+
+def test_external_adapter_receipt_is_idempotent_and_rolls_back_partial_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    receipt = {
+        "delivery_id": "delivery-1",
+        "sink_id": "#1969",
+        "producer": "github-issues-adapter",
+        "attempt_revision": "attempt-1",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "status": "delivered",
+    }
+    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
+    first = record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
+    replay = record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
+
+    assert first["receipt_ref"] == replay["receipt_ref"]
+    assert replay["idempotency"] == "replayed"
+
+    failing_receipt = {**receipt, "delivery_id": "delivery-2", "receipt_revision": "receipt-2"}
+    failing_host = _write_external_evaluation_adapter_host_result(tmp_path, **failing_receipt)
+    original_replace = Path.replace
+    replace_count = 0
+
+    def fail_second_replace(self: Path, target: Path) -> Path:
+        nonlocal replace_count
+        replace_count += 1
+        if replace_count == 2:
+            raise OSError("simulated partial receipt failure")
+        return original_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", fail_second_replace)
+    with pytest.raises(OSError, match="simulated partial receipt failure"):
+        record_external_evaluation_adapter_receipt(target_root=tmp_path, **failing_receipt, host_result_ref=failing_host["result_ref"])
+
+    receipt_root = tmp_path / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR
+    persisted = [path for path in receipt_root.glob("*.json") if path.name != "index.json"]
+    assert persisted == [tmp_path / first["receipt_ref"]]
+    index = json.loads((receipt_root / "index.json").read_text(encoding="utf-8"))
+    assert set(index["receipts"]) == {first["receipt_id"]}
 
 
 @pytest.mark.parametrize(
@@ -530,14 +635,8 @@ def test_external_adapter_receipt_rejects_invalid_host_result_admission_lifecycl
         "capability_revision": "github-issues-adapter:v1",
         "status": "delivered",
     }
-    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt, **overrides)
-
     with pytest.raises(WorkspaceUsageError, match="host boundary"):
-        record_external_evaluation_adapter_receipt(
-            target_root=tmp_path,
-            **receipt,
-            host_result_ref=host["result_ref"],
-        )
+        _write_external_evaluation_adapter_host_result(tmp_path, **receipt, **overrides)
 
 
 def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(tmp_path: Path) -> None:
@@ -1423,6 +1522,7 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
     from agentic_workspace.generated_operations import (
         evaluation_delivery_status,
         evaluation_external_adapter_receipt,
+        evaluation_external_host_result_import,
         evaluation_external_request,
         evaluation_local_delivery,
         evaluation_report_preview,
@@ -1462,6 +1562,17 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
         capability_revision="github-issues-adapter:v1",
         status="failed",
     )
+    with pytest.raises(AWClientError, match="failed") as exc_info:
+        evaluation_external_host_result_import(
+            {
+                "provider_result_ref": str(host["provider_result_ref"]),
+                "expected_result_digest": str(host["provider_result_digest"]),
+                "capability_revision": "github-issues-adapter:v1",
+            },
+            target=tmp_path,
+            invocation=invocation,
+        )
+    assert "requires a host/provider resolver" in json.dumps(exc_info.value.details)
     recorded = evaluation_external_adapter_receipt(
         {
             "delivery_id": request["delivery_id"],

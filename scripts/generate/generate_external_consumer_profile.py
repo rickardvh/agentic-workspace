@@ -45,6 +45,7 @@ EVALUATION_OPERATION_IDS = (
     "evaluation.report-preview",
     "evaluation.local-delivery",
     "evaluation.external-request",
+    "evaluation.external-host-result-import",
     "evaluation.external-adapter-receipt",
     "evaluation.external-delivery",
     "evaluation.delivery-status",

@@ -2276,6 +2276,47 @@
           "mutates_state": false
         },
         {
+          "name": "external-host-result-import",
+          "help": "Import a provider-owned external adapter host result by opaque reference.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "provider_result_ref",
+              "flags": [
+                "--provider-result-ref"
+              ],
+              "required": true
+            },
+            {
+              "name": "expected_result_digest",
+              "flags": [
+                "--expected-result-digest"
+              ],
+              "default": ""
+            },
+            {
+              "name": "capability_revision",
+              "flags": [
+                "--capability-revision"
+              ],
+              "default": ""
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "advanced_host_repo",
+          "classification_note": "provider-owned host result import/admission by opaque reference",
+          "mutates_state": true
+        },
+        {
           "name": "external-adapter-receipt",
           "help": "Record a producer-owned external adapter attempt/result receipt.",
           "uses_option_groups": [

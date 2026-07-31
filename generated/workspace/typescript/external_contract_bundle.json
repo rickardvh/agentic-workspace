@@ -1,19 +1,19 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:c6fc2299fef9276e4cedddfd09121ef1c66930c5b51dbbd5ba1f18b5b2c740a6",
+  "profile_fingerprint": "sha256:3e8ea8671bacf6ef340464fea22f6ceb2f1c9d5928a28b8ee8cf7911b0e0b150",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.36.1",
+    "client_package": "0.36.2",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.36.1"
+      "version": "0.36.2"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.36.1"
+      "version": "0.36.2"
     }
   },
   "operations": {
@@ -11478,6 +11478,334 @@
             "Current request is recomputed at admission time.",
             "Arbitrary inline dictionaries and success flags are ignored.",
             "Superseded, revoked, stale, unindexed, or wrong-sink receipts fail closed."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_report_delivery_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_report_delivery_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "evaluation.external-host-result-import": {
+      "identity": "evaluation.external-host-result-import",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:3ac74dcc74528488f0f7426ba767331dac5602d3edae8fe6fc6a145b6e46bbd0",
+      "compatibility_fingerprint": "sha256:bc391020b8d61b6c4a05043787178b70aba776ea8dd69abb6aba2446f7aafcd6",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.external-host-result-import",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "external-host-result-import"
+        },
+        "summary": "Import one provider-owned external evaluation host result by opaque reference after host admission verification.",
+        "classification": "local-record-append",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+          },
+          {
+            "name": "provider_result_ref",
+            "source": "cli-option",
+            "required": true,
+            "description": "Opaque provider result reference resolved by the host/provider boundary."
+          },
+          {
+            "name": "expected_result_digest",
+            "source": "cli-option",
+            "required": false,
+            "description": "Optional sha256 digest guard for the provider-owned result artifact."
+          },
+          {
+            "name": "capability_revision",
+            "source": "cli-option",
+            "required": false,
+            "description": "Optional provider capability revision guard."
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+          "description": "Imported host result reference and append-preserving admission/index receipts."
+        },
+        "effects": {
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "allowed",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": "host/provider result resolver for opaque external-evaluation-provider-result:<id>",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-results/index.json",
+            "required": false
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-result-admissions/index.json",
+            "required": false
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-results/<result-id>.json",
+            "required": true,
+            "when": "new result import"
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-results/index.json",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-result-admissions/<admission-id>.json",
+            "required": true,
+            "when": "new admission import"
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-result-admissions/index.json",
+            "required": true
+          }
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "import_result",
+            "uses": "evaluation.delivery.host-result.import",
+            "description": "Resolve the opaque provider result reference through the host/provider boundary, verify the returned host-admission verdict, and transactionally append result/admission indexes."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit import result."
+          }
+        ],
+        "guards": [
+          "Callers pass an opaque provider_result_ref, not a raw host result mapping.",
+          "The default AW CLI fails closed unless a protected host/provider resolver supplies the provider result and admission verdict.",
+          "Host admission verdict, capability revision/status, result digest, supersession, and revocation are re-resolved immediately before import.",
+          "Result and admission file/index writes are append-preserving, locally locked, idempotent, and rolled back together on partial failure.",
+          "Adapter receipt recording consumes only imported host_result_ref values."
+        ],
+        "proof": [
+          "evaluation unit tests",
+          "operation contract validates against operation.schema.json",
+          "generated external consumer profile includes the operation"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "evaluation_report_delivery_input.schema.json",
+        "evaluation_report_delivery_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_report_delivery_input.schema.json"
+        ],
+        "output": [
+          "evaluation_report_delivery_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.external-host-result-import",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+            },
+            {
+              "name": "provider_result_ref",
+              "source": "cli-option",
+              "required": true,
+              "description": "Opaque provider result reference resolved by the host/provider boundary."
+            },
+            {
+              "name": "expected_result_digest",
+              "source": "cli-option",
+              "required": false,
+              "description": "Optional sha256 digest guard for the provider-owned result artifact."
+            },
+            {
+              "name": "capability_revision",
+              "source": "cli-option",
+              "required": false,
+              "description": "Optional provider capability revision guard."
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+            "description": "Imported host result reference and append-preserving admission/index receipts."
+          },
+          "effects": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Callers pass an opaque provider_result_ref, not a raw host result mapping.",
+            "The default AW CLI fails closed unless a protected host/provider resolver supplies the provider result and admission verdict.",
+            "Host admission verdict, capability revision/status, result digest, supersession, and revocation are re-resolved immediately before import.",
+            "Result and admission file/index writes are append-preserving, locally locked, idempotent, and rolled back together on partial failure.",
+            "Adapter receipt recording consumes only imported host_result_ref values."
           ]
         },
         "schemas": {

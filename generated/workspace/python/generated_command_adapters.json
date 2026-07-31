@@ -305,6 +305,7 @@
           "register",
           "observe",
           "status",
+          "external-host-result-import",
           "transition"
         ]
       },

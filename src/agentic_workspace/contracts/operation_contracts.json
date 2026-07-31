@@ -135,6 +135,12 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "evaluation.external-host-result-import",
+      "path": "operations/evaluation.external-host-result-import.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "evaluation.external-adapter-receipt",
       "path": "operations/evaluation.external-adapter-receipt.json",
       "command": "evaluation",

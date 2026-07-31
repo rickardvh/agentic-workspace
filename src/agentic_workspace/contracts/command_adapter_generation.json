@@ -5973,11 +5973,12 @@
         "command_manifest": "cli_commands.json",
         "option_group_manifest": "cli_option_groups.json",
         "subcommands": [
-          "register",
-          "observe",
-          "status",
-          "transition"
-        ]
+            "register",
+            "observe",
+            "status",
+            "external-host-result-import",
+            "transition"
+          ]
       },
       "operation_ref": {
         "id": "evaluation.register",
