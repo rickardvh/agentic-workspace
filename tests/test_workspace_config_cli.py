@@ -3,36 +3,6 @@ from __future__ import annotations
 # ruff: noqa: F403,F405
 from tests.workspace_cli_support import *
 
-_HOST_EVIDENCE_TEST_SIGNING_KEY = """-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCjYZuAl/wM/QhW
-N9xvB6/gmSnx1KCHTb2emWi4mb5Y3FDDvj8DCkpoQZAOzYiY1R0y29gqdNljkpzw
-2uyGhrYxjPAWb4QiGVL7LhAH2MSeL6r/nm+H9KexCTS8KGGcGK6YIb+zW6NxZA/b
-XR20UyCQjj6Zas32fTyU0Byjnj1dQdvdYkmBJ09KJd5pGg8LDtLDWHwUrfNWt5BN
-lW7UgVEwj70T16Cq9TAotn0ejE979HZ/0ds7HTziFibMuuNR889wrjUBTE/NrFxn
-0juNRtZjWcUCu8WQ7eWgFoyTqNRdw8cKMpyX0G+yE1LDxcvIXMm/G9lSZ+7Agwez
-an6Y1I2LAgMBAAECggEADDZn/0bDfanawHpQeeQwAcpKvlu2D1pNfQt0+0eF8owV
-ZWxVHXV2QzDGnRsNknVrrbkmzi89CLP7rNO24zj/aXJiVLfLpeWqtEF1mICPKE8V
-dlU+rptbfy1zya5jDXeZPwa9MG6X9KPiifOXgtRfFmJR/5NiOrVfaYHc6JLgsPwn
-bDp7vhMipmOJTWPmLnfYOrXzPcrKOADwHDD9B7KAsUls5wwUWfbJvmj1qB8BfIR7
-C4OEJceeUDuiPSsbTDwFuKwtebQLgXMWYHVeCWqnQfHw359l7ejgaZedIq3ROxY/
-y6+5RvE3FWSX4ZYfUDE6oVFjcOsXZwBBGnC5/6e7sQKBgQDcq3TNQO8TnV4NEiuj
-hJdtUBol70g8osfqYMThJTnwFJytAXIBwG05mFwCQY9P8DePWQPGUpnqJhHcF8A3
-Gup2MjS1IXmqhYaz+NrELgpiTannnWg8CL8Ags61Zg6nV7IdtLImq6kG9O54rzA/
-WGNqkt7/wQLQWQUM1vPvjJrLDQKBgQC9ihSzd/F1jzwYx5lN3ZFyZua79SFm39W4
-7f2T22ii/FvXC2KJonCGcJtRWx/n7evfxekrOkxNKTz00OtDgQxMWjKGnH+I1pdr
-7ABYWkmxEcyQU/vEiST4V3PYZWfN3hEXv1aap/vzRgjBF4Kq+zO7Y7anfTIZNylG
-c8S7+Cw09wKBgDpdhxk60YFIoDWo1q37Ren9w8zAy0RucZ4GVkyOghKEASSpOzRH
-ZxxSthNKr9Me4DMkAiGUe205AIRMK+TnU5hLkzFNV1bI1mYHriUxYEG79PJz6bvn
-PE2wS2gjREDyqwO8ZVphEOXsJp75BzPZ9wGbMyxGKq5cvT82I3L6p36JAoGAW8Qo
-taOSwioxHIY20R4/NzZe7A2IuHgSz9BZ/2YxSQgJpxoaAS0mcdC/QipuTipBEzyM
-4aL+IjWfD6C+5xXp0GWzJL1MegH7mgLPP/emyhYmBpLCyKrlvV8J9XFTSrcDa431
-7jb6oxP7VRF+8C1jJIzoeDsDMHYmg7e1PpSvQo0CgYEAn00WrBgz/KJNp8mFyDgn
-wtgboNfg8ducC91aWiKE+SQmvTT0YbljsDYEtTYieT1Cj/qO6glMLS+7CiKaI1KU
-/mfbJ2dZ1dKWcDV1SwV5M3UNAsf7qABtUglZEqmvBsgbAgN4xoWuvs6w0NLkbWyg
-8yYTIMQgeEdbpZRUEAKgIYA=
------END PRIVATE KEY-----
-"""
-
 
 def _trusted_guidance_host_event(
     target_root: Path,
@@ -54,10 +24,10 @@ def _trusted_guidance_host_event(
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
-        TRUSTED_AUTHORITY_HOST_ADMISSION_KEY_ID,
         _guidance_json_bytes,
         _json_digest,
         _trusted_authority_event_admission_payload,
+        _trusted_authority_host_trust_store_path,
     )
 
     admission_context = {
@@ -91,9 +61,51 @@ def _trusted_guidance_host_event(
     event["event_ref"] = event_ref
     signed_payload = _trusted_authority_event_admission_payload(ref=event_ref, event=event)
     signed_payload["issuer"] = "github-review-webhook"
-    key_path = target_root / ".agentic-workspace" / "local" / "guidance-test-host-key.pem"
+    issuer_root = target_root.parent / "guidance-host-issuer"
+    key_path = issuer_root / f"{event_ref.removeprefix('trusted-authority-event:')}.pem"
     key_path.parent.mkdir(parents=True, exist_ok=True)
-    key_path.write_text(_HOST_EVIDENCE_TEST_SIGNING_KEY, encoding="utf-8")
+    subprocess.run(
+        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
+        capture_output=True,
+        check=True,
+    )
+    modulus = (
+        subprocess.run(
+            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        .stdout.strip()
+        .split("=", 1)[1]
+        .lower()
+    )
+    key_id = "guidance-host-test-" + _json_digest({"event_ref": event_ref, "modulus": modulus})[:12]
+    key = {
+        "algorithm": "RS256",
+        "status": "current",
+        "key_id": key_id,
+        "issuer": "github-review-webhook",
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "e": 65537,
+        "n": modulus,
+    }
+    trust_store_path = _trusted_authority_host_trust_store_path()
+    trust_store_path.parent.mkdir(parents=True, exist_ok=True)
+    trust_store_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/host-guidance-authority-trust-store/v1",
+                "keys": {key_id: key},
+                "revoked_key_ids": [],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     completed = subprocess.run(
         ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
         input=_guidance_json_bytes(signed_payload),
@@ -104,7 +116,7 @@ def _trusted_guidance_host_event(
         "kind": "agentic-workspace/trusted-authority-host-admission/v1",
         "status": str(key_overrides.get("status") if key_overrides else "current"),
         "algorithm": "RS256",
-        "key_id": TRUSTED_AUTHORITY_HOST_ADMISSION_KEY_ID,
+        "key_id": key_id,
         "signed_payload": signed_payload,
         "signature": base64.b64encode(completed.stdout).decode("ascii"),
     }
@@ -1947,9 +1959,12 @@ def test_guidance_receipts_accept_pinned_signed_host_event_across_process(tmp_pa
 
 def test_guidance_receipts_do_not_load_repo_or_pythonpath_host_verifiers() -> None:
     source = (Path(__file__).resolve().parents[1] / "src/agentic_workspace/agent_guidance.py").read_text(encoding="utf-8")
+    test_source = (Path(__file__).resolve().parents[1] / "tests/test_workspace_config_cli.py").read_text(encoding="utf-8")
 
     assert "agentic_workspace_host_adapters.guidance_authority" not in source
     assert "importlib.import_module" not in source
+    assert "BEGIN " + "PRIVATE KEY" not in test_source
+    assert "_TRUSTED_AUTHORITY_HOST_ADMISSION_KEYS" not in source
 
 
 def test_guidance_host_admission_rejects_raw_caller_mapping(tmp_path: Path) -> None:
