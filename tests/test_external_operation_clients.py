@@ -55,6 +55,7 @@ def _trusted_guidance_host_event(
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
         _json_digest,
         _trusted_authority_event_digest,
+        _trusted_authority_protected_host_event_store_path,
         record_trusted_authority_host_event,
     )
 
@@ -105,6 +106,15 @@ def _trusted_guidance_host_event(
         "verifier_revision": "guidance-host-test-verifier:1",
     }
     _ = host_admission_monkeypatch
+    store_path = _trusted_authority_protected_host_event_store_path()
+    try:
+        store = json.loads(store_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        store = {"kind": "agentic-workspace/trusted-authority-host-event-store/v1", "events": {}}
+    if store.get("kind") != "agentic-workspace/trusted-authority-host-event-store/v1" or not isinstance(store.get("events"), dict):
+        store = {"kind": "agentic-workspace/trusted-authority-host-event-store/v1", "events": {}}
+    store["events"][event_ref] = event
+    store_path.write_text(json.dumps(store, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     imported = record_trusted_authority_host_event(
         target_root=target_root,
         authority=authority,
@@ -116,7 +126,6 @@ def _trusted_guidance_host_event(
         event_id=event_id,
         trusted_channel="github-review-webhook",
         host_event_ref=event_ref,
-        host_event_resolver=lambda ref: event if ref == event_ref else {},
     )
     return {"event_ref": event_ref, "event": imported["event"]}
 

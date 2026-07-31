@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -27,6 +28,25 @@ TrustedAuthorityHostEventResolver = Callable[[str], dict[str, Any]]
 
 def _guidance_now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _trusted_authority_protected_host_event_store_path() -> Path:
+    return Path(tempfile.gettempdir()) / "agentic-workspace-trusted-authority-host-events.json"
+
+
+def _load_trusted_authority_host_event_from_store(host_event_ref: str) -> dict[str, Any]:
+    path = _trusted_authority_protected_host_event_store_path()
+    try:
+        store = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("trusted authority protected host event store is missing or unreadable.") from exc
+    events = store.get("events") if store.get("kind") == "agentic-workspace/trusted-authority-host-event-store/v1" else None
+    if not isinstance(events, dict):
+        raise WorkspaceUsageError("trusted authority protected host event store is malformed.")
+    event = events.get(host_event_ref)
+    if not isinstance(event, dict):
+        raise WorkspaceUsageError("host_event_ref was not found in the trusted authority protected host event store.")
+    return json.loads(json.dumps(event, sort_keys=True, default=str))
 
 
 CORRECTION_EVENT_OPERATIONS = (
@@ -801,11 +821,11 @@ def record_trusted_authority_host_event(
     ref = str(host_event_ref or "").strip()
     if not ref.startswith("trusted-authority-event:") or "/" in ref or "\\" in ref:
         raise WorkspaceUsageError("trusted authority host event imports require an opaque host_event_ref.")
-    if host_event_resolver is None:
+    if host_event_resolver is not None:
         raise WorkspaceUsageError(
-            "trusted authority host events require a protected host_event_resolver; repo-local files and user-home trust stores are not authority."
+            "caller-provided trusted authority host event resolvers are rejected; install a protected host event store."
         )
-    event = json.loads(json.dumps(host_event_resolver(ref), sort_keys=True, default=str))
+    event = _load_trusted_authority_host_event_from_store(ref)
     if not isinstance(event, dict):
         raise WorkspaceUsageError("trusted authority host resolver returned the wrong contract.")
     if event.get("kind") != "agentic-workspace/trusted-authority-host-event/v1" or event.get("event_ref") != ref:
@@ -821,7 +841,8 @@ def record_trusted_authority_host_event(
     }
     if any(str(event.get(key) or "") != expected for key, expected in expected_inputs.items() if expected):
         raise WorkspaceUsageError("trusted authority host event inputs do not match the protected resolver result.")
-    custody = event.get("custody") if isinstance(event.get("custody"), dict) else {}
+    custody_raw = event.get("custody")
+    custody: dict[str, Any] = custody_raw if isinstance(custody_raw, dict) else {}
     if trusted_channel and str(custody.get("trusted_channel") or "") != trusted_channel:
         raise WorkspaceUsageError("trusted authority host event channel does not match the requested trusted_channel.")
     if not _host_admits_trusted_authority_event(ref=ref, event=event, target_root=target_root):
@@ -841,7 +862,7 @@ def record_trusted_authority_host_event(
         "import_custody": {
             "kind": "agentic-workspace/trusted-authority-host-event-import/v1",
             "importer": "agentic-workspace.guidance-authority-import",
-            "source": "protected-host-event-resolver",
+            "source": "protected-host-event-store",
             "event_digest": event_digest,
         },
         "event_path": path.relative_to(target_root).as_posix(),
@@ -876,7 +897,7 @@ def record_trusted_authority_host_event(
         "event": stored,
         "event_store": TRUSTED_AUTHORITY_EVENT_STORE_PATH.as_posix(),
         "event_index": TRUSTED_AUTHORITY_EVENT_INDEX_PATH.as_posix(),
-        "rule": "Repo-local guidance code imports opaque producer-owned host events; it does not mint host authority or read user-home trust stores.",
+        "rule": "Repo-local guidance code imports opaque producer-owned host events from a protected host store; it does not mint host authority or read user-home trust stores.",
     }
 
 
@@ -970,7 +991,7 @@ def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[
     import_custody = event.get("import_custody") if isinstance(event.get("import_custody"), dict) else {}
     if (
         import_custody.get("kind") != "agentic-workspace/trusted-authority-host-event-import/v1"
-        or import_custody.get("source") != "protected-host-event-resolver"
+        or import_custody.get("source") != "protected-host-event-store"
         or import_custody.get("event_digest") != _trusted_authority_event_digest(event)
     ):
         raise WorkspaceUsageError("trusted authority host event was not imported through the protected host boundary.")

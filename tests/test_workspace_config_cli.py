@@ -23,6 +23,7 @@ def _trusted_guidance_host_event(
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
         _json_digest,
         _trusted_authority_event_digest,
+        _trusted_authority_protected_host_event_store_path,
         record_trusted_authority_host_event,
     )
 
@@ -84,13 +85,22 @@ def _trusted_guidance_host_event(
         event["import_custody"] = {
             "kind": "agentic-workspace/trusted-authority-host-event-import/v1",
             "importer": "agentic-workspace.guidance-authority-import",
-            "source": "protected-host-event-resolver",
+            "source": "protected-host-event-store",
             "event_digest": _trusted_authority_event_digest(event),
         }
         event["revision"] = event["import_custody"]["event_digest"]
         path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
         _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
         return {"event_ref": event_ref, "event": event}
+    store_path = _trusted_authority_protected_host_event_store_path()
+    try:
+        store = json.loads(store_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        store = {"kind": "agentic-workspace/trusted-authority-host-event-store/v1", "events": {}}
+    if store.get("kind") != "agentic-workspace/trusted-authority-host-event-store/v1" or not isinstance(store.get("events"), dict):
+        store = {"kind": "agentic-workspace/trusted-authority-host-event-store/v1", "events": {}}
+    store["events"][event_ref] = event
+    store_path.write_text(json.dumps(store, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     imported = record_trusted_authority_host_event(
         target_root=target_root,
         authority=authority,
@@ -102,7 +112,6 @@ def _trusted_guidance_host_event(
         event_id=event_id,
         trusted_channel="github-review-webhook",
         host_event_ref=event_ref,
-        host_event_resolver=lambda ref: event if ref == event_ref else {},
     )
     return {"event_ref": event_ref, "event": imported["event"]}
 
@@ -1834,7 +1843,7 @@ def test_guidance_receipts_require_trusted_host_event_before_authority_storage(t
     )
     from agentic_workspace.config import WorkspaceUsageError
 
-    with pytest.raises(WorkspaceUsageError, match="protected host_event_resolver"):
+    with pytest.raises(WorkspaceUsageError, match="protected host event store"):
         record_trusted_authority_host_event(
             target_root=tmp_path,
             authority="pr-review",
@@ -1842,6 +1851,16 @@ def test_guidance_receipts_require_trusted_host_event_before_authority_storage(t
             producer_id="reviewer-1",
             source_ref="review-1",
             host_event_ref="trusted-authority-event:review-1",
+        )
+    with pytest.raises(WorkspaceUsageError, match="caller-provided trusted authority host event resolvers are rejected"):
+        record_trusted_authority_host_event(
+            target_root=tmp_path,
+            authority="pr-review",
+            producer_class="human-reviewer",
+            producer_id="reviewer-1",
+            source_ref="review-1",
+            host_event_ref="trusted-authority-event:review-1",
+            host_event_resolver=lambda _ref: {},
         )
     with pytest.raises(WorkspaceUsageError, match="trusted host event ref"):
         record_trusted_authority_receipt(
