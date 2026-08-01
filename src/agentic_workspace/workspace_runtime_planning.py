@@ -1733,6 +1733,66 @@ def validate_planning_route_action_invocation(
     }
 
 
+def _apply_planning_front_door_reconciliation_proposal(
+    *,
+    target_root: Path,
+    live_route_decision: Mapping[str, Any],
+    action_identity: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Apply a live route reconciliation only through the Planning CAS transaction."""
+
+    proposal = _as_dict(_as_dict(live_route_decision).get("reconciliation_proposal"))
+    proposal_id = str(proposal.get("proposal_id") or proposal.get("identity") or "")
+    expected_planning_revision = str(_as_dict(action_identity).get("planning_revision") or "")
+    if proposal.get("status") != "current":
+        return {
+            "mutation_outcome": "blocked",
+            "claim_outcome": "blocked",
+            "reconciliation_apply": {
+                "kind": "agentic-planning/reconciliation-front-door-apply/v1",
+                "status": "blocked",
+                "reason": "current-proposal-required",
+            },
+        }
+    if not proposal_id or not expected_planning_revision:
+        return {
+            "mutation_outcome": "blocked",
+            "claim_outcome": "blocked",
+            "reconciliation_apply": {
+                "kind": "agentic-planning/reconciliation-front-door-apply/v1",
+                "status": "blocked",
+                "reason": "proposal-identity-and-planning-revision-required",
+                "proposal_id": proposal_id,
+                "expected_planning_revision": expected_planning_revision,
+            },
+        }
+    try:
+        from repo_planning_bootstrap.installer import planning_reconcile
+
+        transaction = planning_reconcile(
+            target=target_root,
+            apply=True,
+            proposal=proposal_id,
+            expected_planning_revision=expected_planning_revision,
+        )
+    except Exception as exc:  # pragma: no cover - defensive runtime boundary.
+        transaction = {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "status": "rolled-back",
+            "reason": str(exc),
+        }
+    transaction = _as_dict(transaction)
+    transaction_status = str(transaction.get("status") or "")
+    receipt = _as_dict(transaction.get("receipt"))
+    applied = transaction_status in {"applied", "already-applied"} and bool(receipt)
+    return {
+        "mutation_outcome": "applied" if applied else "blocked",
+        "claim_outcome": "available-after-proof" if applied else "blocked",
+        "mutation_receipt": receipt,
+        "reconciliation_apply": transaction,
+    }
+
+
 def execute_planning_front_door_route_action(values: Mapping[str, Any]) -> dict[str, Any]:
     """Runtime admission boundary for the generated ``planning.front-door`` operation.
 
@@ -1776,12 +1836,21 @@ def execute_planning_front_door_route_action(values: Mapping[str, Any]) -> dict[
         "inspect-current-task-scope": "no-op",
         "choose-task-switch-route": "rejected",
         "archive-or-retire-completed-plan": "rejected",
-        "apply-planning-reconciliation-proposal": "applied"
-        if _as_dict(live_route_decision.get("reconciliation_proposal")).get("status") == "current"
-        else "rejected",
     }
     admitted = admission["status"] == "admitted"
-    outcome = dispatch_table.get(route_action, "rejected") if admitted else "rejected"
+    action_result: dict[str, Any] = {}
+    if admitted and route_action == "apply-planning-reconciliation-proposal":
+        action_result = _apply_planning_front_door_reconciliation_proposal(
+            target_root=target_root,
+            live_route_decision=live_route_decision,
+            action_identity=action_identity,
+        )
+        outcome = str(action_result.get("mutation_outcome") or "blocked")
+    else:
+        outcome = dispatch_table.get(route_action, "rejected") if admitted else "rejected"
+    claim_outcome = str(
+        action_result.get("claim_outcome") or ("available-after-proof" if admitted and outcome in {"no-op", "applied"} else "blocked")
+    )
     return {
         "kind": "agentic-planning/front-door-route-action-result/v1",
         "status": "admitted" if admitted else "rejected",
@@ -1792,10 +1861,12 @@ def execute_planning_front_door_route_action(values: Mapping[str, Any]) -> dict[
         "changed_path_count": len(changed_paths),
         "route_action": route_action,
         "mutation_outcome": outcome,
-        "claim_outcome": "available-after-proof" if admitted and outcome in {"no-op", "applied"} else "blocked",
+        "claim_outcome": claim_outcome,
         "admission": admission,
         "live_route_decision": live_route_decision,
         "next_safe_action": live_action,
+        **({"mutation_receipt": action_result["mutation_receipt"]} if "mutation_receipt" in action_result else {}),
+        **({"reconciliation_apply": action_result["reconciliation_apply"]} if "reconciliation_apply" in action_result else {}),
         "rule": "planning.front-door recomputes and admits the live route decision before any Planning transition, mutation, proof, or claim effect.",
     }
 

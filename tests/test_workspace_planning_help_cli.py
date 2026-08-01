@@ -168,6 +168,104 @@ def test_planning_front_door_invoke_enforces_live_route_action_admission(tmp_pat
     assert "input_revision" in rejected["admission"]["revision_failures"]
 
 
+def _current_reconciliation_front_door_decision() -> dict:
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    return _planning_route_decision_payload(
+        {
+            "task_relation": "continues-selected-owner",
+            "owner_posture": "external-conflict",
+            "active_execplan": ".agentic-workspace/planning/execplans/active.plan.json",
+            "route_inputs": {
+                "task_binding": {"mode": "mutation", "identity": "task-a", "allowed_paths": ["README.md"]},
+                "owner": {
+                    "ref": ".agentic-workspace/planning/execplans/active.plan.json",
+                    "revision": "owner-a",
+                    "lifecycle": "active",
+                    "projection_status": "clean",
+                },
+                "mutation_baseline": {"baseline_id": "baseline-a", "scope": {"allowed_paths": ["README.md"]}},
+            },
+        },
+        planning_revision={"revision_id": "planning-a"},
+        reconciliation_proposal={
+            "status": "current",
+            "proposal_id": "a" * 20,
+            "revision": "proposal-rev-a",
+            "apply_command": "agentic-workspace planning reconcile --apply --proposal " + "a" * 20,
+        },
+    )
+
+
+def test_planning_front_door_applies_current_reconciliation_through_cas(tmp_path, monkeypatch) -> None:
+    import repo_planning_bootstrap.installer as planning_installer
+
+    import agentic_workspace.workspace_runtime_planning as runtime_planning
+
+    decision = _current_reconciliation_front_door_decision()
+    invocation = decision["next_safe_action"]["operation_invocation"]
+    calls = []
+
+    monkeypatch.setattr(runtime_planning, "_planning_safety_gate_payload", lambda **_kwargs: {"route_decision": decision})
+
+    def fake_reconcile(**kwargs):
+        calls.append(kwargs)
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "status": "applied",
+            "receipt": {
+                "kind": "agentic-planning/reconciliation-receipt/v1",
+                "proposal_id": kwargs["proposal"],
+                "planning_revision_before": kwargs["expected_planning_revision"],
+            },
+        }
+
+    monkeypatch.setattr(planning_installer, "planning_reconcile", fake_reconcile)
+
+    result = planning_front_door.invoke(
+        {"target": str(tmp_path), "task": "apply proposal", "changed_paths": ["README.md"], "operation_invocation": invocation}
+    )
+
+    assert result["status"] == "admitted"
+    assert result["route_action"] == "apply-planning-reconciliation-proposal"
+    assert result["mutation_outcome"] == "applied"
+    assert result["claim_outcome"] == "available-after-proof"
+    assert result["mutation_receipt"]["proposal_id"] == "a" * 20
+    assert result["reconciliation_apply"]["status"] == "applied"
+    assert calls == [{"target": tmp_path.resolve(), "apply": True, "proposal": "a" * 20, "expected_planning_revision": "planning-a"}]
+
+
+def test_planning_front_door_does_not_report_blocked_reconciliation_as_applied(tmp_path, monkeypatch) -> None:
+    import repo_planning_bootstrap.installer as planning_installer
+
+    import agentic_workspace.workspace_runtime_planning as runtime_planning
+
+    decision = _current_reconciliation_front_door_decision()
+    invocation = decision["next_safe_action"]["operation_invocation"]
+
+    monkeypatch.setattr(runtime_planning, "_planning_safety_gate_payload", lambda **_kwargs: {"route_decision": decision})
+    monkeypatch.setattr(
+        planning_installer,
+        "planning_reconcile",
+        lambda **_kwargs: {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "status": "blocked",
+            "reason": "planning-revision-mismatch",
+        },
+    )
+
+    result = planning_front_door.invoke(
+        {"target": str(tmp_path), "task": "apply proposal", "changed_paths": ["README.md"], "operation_invocation": invocation}
+    )
+
+    assert result["status"] == "admitted"
+    assert result["mutation_outcome"] == "blocked"
+    assert result["claim_outcome"] == "blocked"
+    assert result["mutation_receipt"] == {}
+    assert result["reconciliation_apply"]["status"] == "blocked"
+    assert result["reconciliation_apply"]["reason"] == "planning-revision-mismatch"
+
+
 def test_planning_front_door_runs_lane_create_operation(tmp_path, capsys) -> None:
     assert (
         cli.main(
