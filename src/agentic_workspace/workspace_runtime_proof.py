@@ -6978,7 +6978,7 @@ def _host_admits_independent_review_host_result(host_result_ref: str, host_resul
     that the verdict is bound to this workspace and result body.
     """
 
-    verdict = _as_dict(host_result.get("host_admission_verdict")) or _signed_independent_review_host_verdict(
+    verdict = _signed_independent_review_host_verdict(
         host_result_ref=host_result_ref,
         host_result=host_result,
         target_root=target_root,
