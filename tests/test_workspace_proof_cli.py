@@ -7904,6 +7904,67 @@ def test_trusted_independent_review_rejects_repo_generated_signature_without_hos
         record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
 
 
+def test_trusted_independent_review_rejects_unsigned_embedded_host_verdict(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_proof import (
+        INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
+        INDEPENDENT_REVIEW_HOST_RESULT_DIR,
+        WorkspaceUsageError,
+        _host_result_body_for_admission,
+        _independent_review_scope_digest,
+        _stable_review_json_digest,
+        record_trusted_independent_review_result,
+    )
+
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "review_id": "independent-review-unsigned-verdict",
+        "assignment_revision": "assignment-rev-1",
+        "proof_subject_revision": "proof-subject-rev-1",
+        "required_mode": "high-assurance",
+        "changed_paths": ["services/auth/policy.py"],
+        "scope_digest": _independent_review_scope_digest(["services/auth/policy.py"]),
+        "reviewer_role": "independent-reviewer",
+        "implementer_role": "implementer",
+        "custody": {"producer": "github-review-adapter", "trusted_channel": "github-review-webhook"},
+        "proof_status": "passed",
+        "decision": "accepted",
+    }
+    host_result_ref = _write_independent_review_host_result(tmp_path, review_result, install_host_admission=False)
+    host_id = str(host_result_ref).removeprefix("independent-review-host-result:")
+    host_root = tmp_path / INDEPENDENT_REVIEW_HOST_RESULT_DIR
+    host_path = host_root / f"{host_id}.json"
+    host_result = json.loads(host_path.read_text(encoding="utf-8"))
+    custody = host_result["custody"]
+    admission_context = host_result["admission_context"]
+    host_result["host_admission_verdict"] = {
+        "kind": "agentic-workspace/independent-review-host-result-verdict/v1",
+        "status": "admitted",
+        "authority": "host-adapter-resolver",
+        "host_result_ref": host_result_ref,
+        "host_result_body_digest": _stable_review_json_digest(_host_result_body_for_admission(host_result)),
+        "producer": custody["producer"],
+        "trusted_channel": custody["trusted_channel"],
+        "audience": INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
+        "workspace_ref": f"workspace:path:{tmp_path.resolve()}",
+        "operation": "assignment.admit.independent-review",
+        "assignment_revision": "assignment-rev-1",
+        "proof_subject_revision": "proof-subject-rev-1",
+        "nonce": admission_context["nonce"],
+        "issued_at": admission_context["issued_at"],
+        "expires_at": admission_context["expires_at"],
+        "verifier_revision": "caller-authored-unsigned-verdict",
+    }
+    _write(host_path, json.dumps(host_result, indent=2, sort_keys=True) + "\n")
+    index_path = host_root / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    index["results"][host_id]["host_result_digest"] = _stable_review_json_digest(host_result)
+    _write(index_path, json.dumps(index, indent=2, sort_keys=True) + "\n")
+
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
+
+
 def test_independent_review_host_admission_rejects_inline_caller_trust_roots(tmp_path: Path) -> None:
     from agentic_workspace.workspace_runtime_proof import (
         WorkspaceUsageError,
