@@ -5,15 +5,15 @@
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.36.1",
+    "client_package": "0.36.2",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.36.1"
+      "version": "0.36.2"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.36.1"
+      "version": "0.36.2"
     }
   },
   "operations": {

@@ -925,7 +925,7 @@ def test_context_authority_projection_rejects_skill_dependency_owner_diagnostics
     assert repair["repair_owner"] == "workspace skill registry"
 
 
-def test_context_authority_projection_ignores_consumer_local_adapter_forgery(
+def test_context_authority_projection_rejects_consumer_local_runner_forgery(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -933,19 +933,21 @@ def test_context_authority_projection_ignores_consumer_local_adapter_forgery(
 
     from agentic_workspace import operating_decision
 
-    def forged_skill_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+    def forged_skill_runner(**_kwargs):
         return {
             "kind": "agentic-workspace/skill-dependency-closure/v1",
             "producer": "forged.producer",
             "status": "current",
-            "surface": surface,
-            "owner": item["owner"],
+            "surface": "skills",
+            "owner": "workspace skill registry",
             "source_id": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+            "source_revision": "sha256:forged-source",
+            "git_head": "",
             "revision": "sha256:forged-skill-owner",
             "adapter_id": "skills.owner-result",
         }
 
-    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "skills", forged_skill_adapter)
+    monkeypatch.setattr(operating_decision, "registered_context_owner_operation_runner", lambda _surface: forged_skill_runner)
 
     projection = resolve_context_authority_projection(
         consumer="skills",
@@ -953,11 +955,9 @@ def test_context_authority_projection_ignores_consumer_local_adapter_forgery(
         target_root=tmp_path,
     )
 
-    assert projection["status"] == "admitted"
-    skills = next(item for item in projection["authorities"] if item["surface"] == "skills")
-    owner_result = skills["source"]["admission"]["owner_result"]
-    assert owner_result["producer"] == "agentic_workspace.workspace_runtime_core.skill_dependency_resolver"
-    assert owner_result["producer"] != "forged.producer"
+    assert projection["status"] == "repair-required"
+    skills = next(item for item in projection["excluded_authorities"] if item["surface"] == "skills")
+    assert skills["reason"] in {"owner-operation-missing", "owner-result-identity-mismatch"}
 
 
 def test_context_authority_owner_result_revisions_bind_selection_and_schema_backing(tmp_path: Path) -> None:
@@ -1031,18 +1031,20 @@ def test_context_authority_ignores_checked_in_owner_result_receipts(
     assert "owner_receipt_ref" not in system_intent["source"]["admission"]["owner_result"]
 
 
-def test_context_authority_ignores_digest_only_consumer_adapter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_context_authority_rejects_digest_only_consumer_runner(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _write_context_authority_sources(tmp_path)
     from agentic_workspace import operating_decision
 
-    def digest_only_adapter(surface, item, root, chosen, revision, git_head, selection, source_specific):
+    def digest_only_runner(**kwargs):
+        chosen = kwargs["chosen"]
+        git_head = kwargs["git_head"]
         source_revision = "sha256:" + _fixture_source_revision(chosen)
         return {
             "kind": "agentic-workspace/system-intent-mirror/v1",
             "producer": "agentic_workspace.system_intent",
             "status": "current",
-            "surface": surface,
-            "owner": item["owner"],
+            "surface": "system-intent",
+            "owner": "workspace-runtime",
             "source_id": "SYSTEM_INTENT.md",
             "source_revision": source_revision,
             "git_head": git_head,
@@ -1055,7 +1057,7 @@ def test_context_authority_ignores_digest_only_consumer_adapter(tmp_path: Path, 
                 "run_id": "sha256:" + operating_decision._digest({"source_revision": source_revision}),
                 "receipt_id": "sha256:" + operating_decision._digest({"source_revision": source_revision, "receipt": True}),
                 "producer": "agentic_workspace.system_intent",
-                "surface": surface,
+                "surface": "system-intent",
                 "source_id": "SYSTEM_INTENT.md",
                 "source_revision": source_revision,
                 "git_head": git_head,
@@ -1063,7 +1065,7 @@ def test_context_authority_ignores_digest_only_consumer_adapter(tmp_path: Path, 
             },
         }
 
-    monkeypatch.setitem(operating_decision.CONTEXT_OWNER_RESULT_ADAPTERS, "system-intent", digest_only_adapter)
+    monkeypatch.setattr(operating_decision, "registered_context_owner_operation_runner", lambda _surface: digest_only_runner)
 
     projection = resolve_context_authority_projection(
         consumer="start",
@@ -1071,9 +1073,9 @@ def test_context_authority_ignores_digest_only_consumer_adapter(tmp_path: Path, 
         target_root=tmp_path,
     )
 
-    assert projection["status"] == "admitted"
-    system_intent = next(item for item in projection["authorities"] if item["surface"] == "system-intent")
-    assert system_intent["source"]["admission"]["owner_result"]["revision"] != "sha256:caller-current"
+    assert projection["status"] == "repair-required"
+    system_intent = next(item for item in projection["excluded_authorities"] if item["surface"] == "system-intent")
+    assert system_intent["reason"] in {"owner-operation-receipt-missing", "owner-operation-receipt-id-mismatch"}
 
 
 def test_context_authority_owner_operation_receipt_currentness_is_recomputable_across_processes(tmp_path: Path) -> None:
@@ -1148,13 +1150,11 @@ def test_context_authority_owner_results_are_semantic_adapter_dispatched() -> No
     assert "def _context_owner_result(" not in source
     assert "def _file_backed_owner_result(" not in source
     assert "def _dispatch_registered_owner_operation(" not in source
+    assert "def _run_registered_owner_operation(" not in source
     assert '"owner_adapter_receipt": {' not in source
-    assert "CONTEXT_OWNER_RESULT_ADAPTERS" in source
+    assert "CONTEXT_OWNER_RESULT_ADAPTERS" not in source
     assert "context_authority_owner_operations" in source
-    assert (
-        'CONTEXT_OWNER_RESULT_ADAPTERS: dict[str, ContextOwnerResultAdapter] = {\n    "system-intent": _system_intent_owner_result'
-        in source
-    )
+    assert "registered_context_owner_operation_runner(surface)" in source
     assert "parseability alone" not in source
 
 
@@ -1170,11 +1170,13 @@ def test_context_owner_operation_admission_does_not_accept_caller_semantic_paylo
     assert "class ContextOwnerAdapterResult" not in operation_source
     assert "def admit_context_owner_operation_result(" not in operation_source
     assert "def _issue_context_owner_adapter_result(" not in operation_source
+    assert "def _issue_context_owner_result(" not in operation_source
     assert "def _owner_operation_result_base(" not in resolver_source
     assert "def _admit_concrete_owner_adapter_result(" not in resolver_source
     assert "def _registered_owner_adapter_result(" not in resolver_source
     assert "def _owner_result_base(" not in resolver_source
     assert "def _finalize_owner_result(" not in resolver_source
+    assert "def _run_registered_owner_operation(" not in resolver_source
     assert "_admit_context_owner_operation_result" not in resolver_source
     assert not hasattr(owner_operations, "run_context_owner_operation")
     assert "def run_context_owner_operation(" not in operation_source

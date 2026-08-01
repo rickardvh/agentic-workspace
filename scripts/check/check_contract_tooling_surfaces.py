@@ -2705,8 +2705,8 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
         errors.append("operating decision must use explicit context owner-result adapters, not the generic owner-result factory")
     if "owner-source-parse-failed" in resolver_body:
         errors.append("authority resolver must not admit owner currentness from generic parseability/digest evidence")
-    if "CONTEXT_OWNER_RESULT_ADAPTERS" not in operating_decision_source:
-        errors.append("operating decision must declare explicit context owner-result adapter dispatch")
+    if "registered_context_owner_operation_runner(surface)" not in operating_decision_source:
+        errors.append("operating decision must dispatch context authority through registered owner-operation runners")
 
     generated = resolve_context_authority_projection(
         consumer="contract-checks",
