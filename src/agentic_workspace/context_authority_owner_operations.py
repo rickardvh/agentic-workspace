@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import json
 import tomllib
@@ -114,6 +115,93 @@ def _module_contract(path: Path, symbols: list[str]) -> tuple[str, str, dict[str
 def _reject_caller_semantic_inputs(kwargs: dict[str, Any]) -> None:
     if "owner_evidence" in kwargs or "adapter_id" in kwargs:
         raise ValueError("owner evidence must not carry caller-provided producer identity or receipts")
+
+
+def _reject_caller_source_specific(surface: str, kwargs: dict[str, Any]) -> None:
+    if _as_dict(kwargs.get("source_specific")):
+        raise ValueError(f"{surface} owner operation derives semantic evidence from its canonical subsystem")
+
+
+def _path_matches_any(path: str, patterns: list[str]) -> bool:
+    normalized = path.replace("\\", "/")
+    return any(fnmatch.fnmatch(normalized, pattern) for pattern in patterns)
+
+
+def _memory_route_curation(root: Path, *, task: str, paths: list[str]) -> dict[str, Any]:
+    manifest_path = root / ".agentic-workspace/memory/repo/manifest.toml"
+    manifest = _load_toml_dict(manifest_path)
+    notes = _as_dict(manifest.get("notes"))
+    selected: list[dict[str, Any]] = []
+    stale_match_count = 0
+    review_only_excluded_count = 0
+    routing_index = ".agentic-workspace/memory/repo/index.md"
+    task_terms = {term.strip("#.,:;()[]{}").lower() for term in task.split() if len(term.strip("#.,:;()[]{}")) > 2}
+    for note_path, raw_note in notes.items():
+        if not isinstance(raw_note, dict):
+            continue
+        if str(raw_note.get("task_relevance") or "").strip() == "review-only":
+            review_only_excluded_count += 1
+            continue
+        canonical_home = str(raw_note.get("canonical_home") or note_path)
+        routes_from = [str(pattern) for pattern in _as_list(raw_note.get("routes_from")) if str(pattern)]
+        stale_when = [str(pattern) for pattern in _as_list(raw_note.get("stale_when")) if str(pattern)]
+        matched_paths = [path for path in paths if _path_matches_any(path, routes_from)]
+        stale_paths = [path for path in paths if _path_matches_any(path, stale_when)]
+        note_terms = {
+            str(value).lower()
+            for value in [
+                raw_note.get("note_type"),
+                *[str(item) for item in _as_list(raw_note.get("subsystems"))],
+                *[str(item) for item in _as_list(raw_note.get("surfaces"))],
+            ]
+            if str(value)
+        }
+        task_matched = bool(task_terms & {part for term in note_terms for part in term.replace("-", " ").split()})
+        routing_only = bool(raw_note.get("routing_only")) or canonical_home == routing_index
+        if routing_only or matched_paths or task_matched:
+            if stale_paths:
+                stale_match_count += 1
+            selected.append(
+                {
+                    "path": canonical_home,
+                    "note_type": str(raw_note.get("note_type") or ""),
+                    "authority": str(raw_note.get("authority") or ""),
+                    "task_relevance": str(raw_note.get("task_relevance") or ""),
+                    "routing_only": routing_only,
+                    "matched_paths": sorted(matched_paths),
+                    "stale_when_matched_paths": sorted(stale_paths),
+                }
+            )
+    if not selected and (root / routing_index).exists():
+        selected.append(
+            {
+                "path": routing_index,
+                "note_type": "routing",
+                "authority": "canonical",
+                "task_relevance": "required",
+                "routing_only": True,
+                "matched_paths": [],
+                "stale_when_matched_paths": [],
+                "fallback": "legacy-manifest-routing-index",
+            }
+        )
+    selected = sorted(selected, key=lambda item: (not bool(item.get("routing_only")), str(item.get("path") or "")))[:12]
+    return {
+        "kind": "agentic-workspace/memory-route-curation/v1",
+        "status": "stale-review-required" if stale_match_count else "selected" if selected else "empty",
+        "manifest": ".agentic-workspace/memory/repo/manifest.toml",
+        "total_note_count": len(notes),
+        "selected_note_count": len(selected),
+        "selected_notes": selected,
+        "stale_when_match_count": stale_match_count,
+        "review_only_excluded_count": review_only_excluded_count,
+        "context_budget": {"max_selected_notes": 12, "actual_selected_notes": len(selected)},
+        "repair_operation_id": "memory.route.report",
+        "rule": (
+            "Memory authority is admitted as a compact manifest-routed note set. A selected note with stale_when matches is "
+            "review-required and must not be admitted as current context until the Memory owner refreshes or excludes it."
+        ),
+    }
 
 
 def _load_registry_contract() -> dict[str, Any]:
@@ -312,9 +400,12 @@ def _complete_owner_operation_result(
     reason: str,
     owner_boundary: str,
     schema_backing: dict[str, Any],
+    task: str = "",
+    paths: list[str] | None = None,
     surface_specific: dict[str, Any] | None = None,
     source_specific: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    _ = (task, paths)
     source_revision = "sha256:" + revision
     spec = _OWNER_OPERATION_SPECS.get(surface)
     if not spec or not spec.get("producer") or not spec.get("result_kind") or not spec.get("operation_id"):
@@ -578,7 +669,9 @@ def _planning_owner_operation(**kwargs: Any) -> dict[str, Any]:
 
 def _memory_owner_operation(**kwargs: Any) -> dict[str, Any]:
     _reject_caller_semantic_inputs(kwargs)
-    curation = _as_dict(_as_dict(kwargs.get("source_specific")).get("memory_curation"))
+    _reject_caller_source_specific("memory", kwargs)
+    paths = [str(path) for path in _as_list(kwargs.get("paths")) if str(path)]
+    curation = _memory_route_curation(kwargs["root"], task=str(kwargs.get("task") or ""), paths=paths)
     curation_status = str(curation.get("status") or "")
     current = curation_status == "selected"
     return _complete_owner_operation_result(
@@ -594,7 +687,28 @@ def _memory_owner_operation(**kwargs: Any) -> dict[str, Any]:
 
 def _mutation_baseline_owner_operation(**kwargs: Any) -> dict[str, Any]:
     _reject_caller_semantic_inputs(kwargs)
-    admission = _as_dict(_as_dict(kwargs.get("source_specific")).get("mutation_baseline_admission"))
+    _reject_caller_source_specific("mutation-baseline", kwargs)
+    paths = [str(path) for path in _as_list(kwargs.get("paths")) if str(path)]
+    try:
+        from agentic_workspace.authority_envelope import mutation_baseline_payload
+
+        baseline = mutation_baseline_payload(target_root=kwargs["root"], changed_paths=paths)
+        admission = {
+            "kind": "agentic-workspace/context-authority-owner-admission/v1",
+            "owner_module": "agentic_workspace.authority_envelope",
+            "status": str(baseline.get("status") or ""),
+            "baseline_id": str(baseline.get("baseline_id") or ""),
+            "head": str(baseline.get("head") or ""),
+            "scope": _as_dict(baseline.get("scope")),
+            "identity": _as_dict(baseline.get("identity")),
+        }
+    except Exception as exc:  # pragma: no cover - defensive, exercised by runtime integration.
+        admission = {
+            "kind": "agentic-workspace/context-authority-owner-admission/v1",
+            "owner_module": "agentic_workspace.authority_envelope",
+            "status": "baseline-observation-failed",
+            "error": str(exc),
+        }
     status = str(admission.get("status") or "")
     accepted_statuses = {"clean", "clean-scope", "dirty-accounted", "scoped-status-current", "current"}
     current = status in accepted_statuses
@@ -615,7 +729,20 @@ def _mutation_baseline_owner_operation(**kwargs: Any) -> dict[str, Any]:
 
 def _skills_owner_operation(**kwargs: Any) -> dict[str, Any]:
     _reject_caller_semantic_inputs(kwargs)
-    closure = _as_dict(_as_dict(kwargs.get("source_specific")).get("skill_dependency_closure"))
+    _reject_caller_source_specific("skills", kwargs)
+    try:
+        from agentic_workspace import workspace_runtime_core as runtime_core
+
+        diagnostics = runtime_core._skill_dependency_diagnostics(target_root=kwargs["root"])  # type: ignore[attr-defined]
+    except Exception as exc:  # pragma: no cover - defensive, exercised by runtime integration.
+        diagnostics = [{"reason_code": "skill-dependency-resolution-failed", "message": str(exc)}]
+    closure = {
+        "kind": "agentic-workspace/skill-dependency-closure/v1",
+        "status": "satisfied" if not diagnostics else "unsatisfied",
+        "diagnostic_count": len(diagnostics),
+        "diagnostics": diagnostics[:5],
+        "resolver": "agentic_workspace.workspace_runtime_core._skill_dependency_diagnostics",
+    }
     satisfied = closure.get("status") == "satisfied"
     return _complete_owner_operation_result(
         surface="skills",

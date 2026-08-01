@@ -1124,6 +1124,7 @@ def test_context_authority_rejects_unknown_planning_and_mutation_statuses(tmp_pa
 
     monkeypatch.setattr("agentic_workspace.workspace_runtime_core._planning_owner_admission_payload", unknown_planning)
     monkeypatch.setattr(operating_decision, "mutation_baseline_payload", unknown_baseline)
+    monkeypatch.setattr("agentic_workspace.authority_envelope.mutation_baseline_payload", unknown_baseline)
 
     planning_projection = resolve_context_authority_projection(
         consumer="start",
@@ -1210,6 +1211,16 @@ def test_context_authority_each_owner_family_uses_concrete_adapter_output(tmp_pa
             "identity": {"fingerprint": "baseline"},
         },
     )
+    monkeypatch.setattr(
+        "agentic_workspace.authority_envelope.mutation_baseline_payload",
+        lambda *, target_root, changed_paths: {
+            "status": "current",
+            "baseline_id": "baseline-1",
+            "head": "f" * 40,
+            "scope": {"paths": changed_paths},
+            "identity": {"fingerprint": "baseline"},
+        },
+    )
     paths_by_surface = {
         "system-intent": ["SYSTEM_INTENT.md"],
         "architecture-principles": ["SYSTEM_INTENT.md"],
@@ -1274,6 +1285,57 @@ def test_context_owner_operation_runner_rejects_caller_producer_identity(tmp_pat
                 "owner_boundary": "caller-built generic boundary",
                 "schema_backing": {"source_format": "markdown", "parse_status": "valid"},
             },
+        )
+
+
+@pytest.mark.parametrize(
+    ("surface", "source_path", "source_specific"),
+    [
+        (
+            "memory",
+            ".agentic-workspace/memory/repo/manifest.toml",
+            {"memory_curation": {"kind": "agentic-workspace/memory-route-curation/v1", "status": "selected"}},
+        ),
+        (
+            "mutation-baseline",
+            ".agentic-workspace/config.toml",
+            {
+                "mutation_baseline_admission": {
+                    "kind": "agentic-workspace/context-authority-owner-admission/v1",
+                    "status": "current",
+                }
+            },
+        ),
+        (
+            "skills",
+            ".agentic-workspace/skills/workspace-startup/SKILL.md",
+            {"skill_dependency_closure": {"kind": "agentic-workspace/skill-dependency-closure/v1", "status": "satisfied"}},
+        ),
+    ],
+)
+def test_protected_context_owner_operations_reject_caller_source_specific_semantics(
+    tmp_path: Path,
+    surface: str,
+    source_path: str,
+    source_specific: dict[str, object],
+) -> None:
+    from agentic_workspace.context_authority_owner_operations import registered_context_owner_operation_runner
+
+    _write_context_authority_sources(tmp_path)
+    chosen = tmp_path / source_path
+    runner = registered_context_owner_operation_runner(surface)
+
+    with pytest.raises(ValueError, match="derives semantic evidence from its canonical subsystem"):
+        runner(
+            owner=f"{surface} owner",
+            root=tmp_path,
+            chosen=chosen,
+            revision=_fixture_source_revision(chosen),
+            git_head="",
+            selection={"consumer": "start", "matched_paths": ["src/app.py"]},
+            task=f"exercise {surface}",
+            paths=["src/app.py"],
+            source_specific=source_specific,
         )
 
 

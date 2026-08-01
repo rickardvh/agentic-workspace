@@ -535,6 +535,8 @@ def _context_owner_result_from_adapter(
     revision: str,
     git_head: str,
     selection: dict[str, Any],
+    task: str,
+    paths: list[str],
     source_specific: dict[str, Any],
 ) -> dict[str, Any]:
     runner = registered_context_owner_operation_runner(surface)
@@ -545,6 +547,8 @@ def _context_owner_result_from_adapter(
         revision=revision,
         git_head=git_head,
         selection=selection,
+        task=task,
+        paths=paths,
         source_specific=source_specific,
     )
 
@@ -666,8 +670,7 @@ def _resolve_context_authority_source(
                 "selection": {**selection, "memory_curation": memory_curation},
             }
         else:
-            selection = {**selection, "applicable": True, "selected_required": True}
-        source_specific["memory_curation"] = memory_curation
+            selection = {**selection, "applicable": True, "selected_required": True, "memory_curation": memory_curation}
     elif surface == "mutation-baseline":
         baseline = mutation_baseline_payload(target_root=root, changed_paths=paths)
         if baseline.get("status") == "baseline-observation-failed":
@@ -679,15 +682,6 @@ def _resolve_context_authority_source(
                 "source_id": chosen.relative_to(root).as_posix(),
                 "selection": selection,
             }
-        source_specific["mutation_baseline_admission"] = {
-            "kind": "agentic-workspace/context-authority-owner-admission/v1",
-            "owner_module": "agentic_workspace.authority_envelope",
-            "status": str(baseline.get("status") or ""),
-            "baseline_id": str(baseline.get("baseline_id") or ""),
-            "head": str(baseline.get("head") or ""),
-            "scope": _as_dict(baseline.get("scope")),
-            "identity": _as_dict(baseline.get("identity")),
-        }
     elif surface == "skills":
         try:
             from agentic_workspace import workspace_runtime_core as runtime_core
@@ -705,12 +699,6 @@ def _resolve_context_authority_source(
                 "selection": selection,
                 "dependency_diagnostics": diagnostics[:5],
             }
-        source_specific["skill_dependency_closure"] = {
-            "kind": "agentic-workspace/skill-dependency-closure/v1",
-            "status": "satisfied",
-            "diagnostic_count": 0,
-            "resolver": "agentic_workspace.workspace_runtime_core._skill_dependency_diagnostics",
-        }
     owner_result = _context_owner_result_from_adapter(
         surface=surface,
         item=item,
@@ -719,6 +707,8 @@ def _resolve_context_authority_source(
         revision=revision,
         git_head=git_head,
         selection=selection,
+        task=task,
+        paths=paths,
         source_specific=source_specific,
     )
     if owner_result.get("status") != "current":
@@ -778,6 +768,7 @@ def _resolve_context_authority_source(
             "task_matched": selection["task_matched"],
             "baseline_selected": selection["baseline_selected"],
             "rule": "source-specific owner adapter resolved current source identity; caller supplied records are diagnostics only",
+            **({"memory_curation": selection["memory_curation"]} if surface == "memory" and "memory_curation" in selection else {}),
             **source_specific,
         },
         "freshness_enforcement": freshness_enforcement,
