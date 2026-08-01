@@ -156,7 +156,7 @@ INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
 INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS = {
-    "github-review-adapter:test-v1": {
+    "github-review-adapter:host-v1": {
         "algorithm": "RS256",
         "issuer": "github-review-webhook",
         "producer": "github-review-adapter",
