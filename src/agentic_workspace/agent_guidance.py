@@ -28,7 +28,7 @@ TRUSTED_AUTHORITY_EVENT_AUDIENCE = "agentic-workspace.guidance-authority"
 TrustedAuthorityHostEventResolver = Callable[[str], dict[str, Any]]
 _RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
 _TRUSTED_AUTHORITY_HOST_PUBLIC_KEYS = {
-    "github-review-adapter:test-v1": {
+    "github-review-adapter:host-v1": {
         "algorithm": "RS256",
         "issuer": "github-review-adapter",
         "trusted_channel": "github-review-webhook",

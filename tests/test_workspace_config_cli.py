@@ -1,39 +1,99 @@
 from __future__ import annotations
 
-import base64
-import hashlib
-
 # ruff: noqa: F403,F405
 from tests.workspace_cli_support import *
 
-_GUIDANCE_HOST_TEST_RSA_N = (
-    "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
-    "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
-    "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
-    "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
-    "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
-    "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
-)
-_GUIDANCE_HOST_TEST_RSA_D = (
-    "150e670a941d6e82bae78365aecb999f6b4a457cc087a5b59e662a64c4afc04dd284a291f8430a32faaf802650"
-    "d166a4db53be859b66ec9faddb497c731312ca93e605edffd08b593da2ebf6cf13f788f026ce47202a95009a28"
-    "0c69153efe7a4deb583def85024548ed5baa1387179f4fdc5d17030d8cacd28669f772458d4b7356063e6b6cd6"
-    "6a065bf040741ee41681fbed78212d0c1dd60a91ffe28eb710718dc41f4859323d30f0447e268bbcc34e0568b0"
-    "3c021cb333fc99905c1f08bbcc5a169dfa89603bdd429a1d448006e81b4efd7527c4b4f15fff4b66afd61073d1"
-    "4093425405fd92f25c3da185644151771cb9b2218482644fc199473ce122b1"
-)
-_RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+
+def _guidance_host_signature(payload: dict[str, object]) -> dict[str, object]:
+    import sys
+
+    script = r"""
+import base64
+import hashlib
+import json
+import os
+import random
+import sys
+
+RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
 
 
-def _guidance_host_test_signature(payload: dict[str, object]) -> str:
-    n = int(_GUIDANCE_HOST_TEST_RSA_N, 16)
-    d = int(_GUIDANCE_HOST_TEST_RSA_D, 16)
-    key_size = (n.bit_length() + 7) // 8
-    message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
-    digest_info = _RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
-    encoded = b"\x00\x01" + (b"\xff" * (key_size - len(digest_info) - 3)) + b"\x00" + digest_info
-    raw = pow(int.from_bytes(encoded, "big"), d, n).to_bytes(key_size, "big")
-    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+def is_probable_prime(candidate):
+    if candidate < 2:
+        return False
+    small_primes = (3, 5, 7, 11, 13, 17, 19, 23, 29, 31)
+    if candidate in small_primes:
+        return True
+    if candidate % 2 == 0 or any(candidate % prime == 0 for prime in small_primes):
+        return False
+    d = candidate - 1
+    s = 0
+    while d % 2 == 0:
+        s += 1
+        d //= 2
+    for base in (2, 3, 5, 7, 11, 13, 17):
+        if base >= candidate:
+            continue
+        x = pow(base, d, candidate)
+        if x in (1, candidate - 1):
+            continue
+        for _ in range(s - 1):
+            x = pow(x, 2, candidate)
+            if x == candidate - 1:
+                break
+        else:
+            return False
+    return True
+
+
+def random_prime(bits):
+    while True:
+        candidate = int.from_bytes(os.urandom(bits // 8), "big")
+        candidate |= (1 << (bits - 1)) | 1
+        if is_probable_prime(candidate):
+            return candidate
+
+
+payload = json.loads(sys.stdin.read())
+random.seed()
+e = 65537
+while True:
+    p = random_prime(256)
+    q = random_prime(256)
+    if p == q:
+        continue
+    phi = (p - 1) * (q - 1)
+    if phi % e != 0:
+        break
+n = p * q
+d = pow(e, -1, phi)
+key_size = (n.bit_length() + 7) // 8
+message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+digest_info = RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
+encoded = b"\x00\x01" + (b"\xff" * (key_size - len(digest_info) - 3)) + b"\x00" + digest_info
+raw = pow(int.from_bytes(encoded, "big"), d, n).to_bytes(key_size, "big")
+print(json.dumps({
+    "key": {
+        "algorithm": "RS256",
+        "issuer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "n": format(n, "x"),
+        "e": "010001",
+        "status": "current",
+    },
+    "signature": base64.urlsafe_b64encode(raw).decode("ascii").rstrip("="),
+}, sort_keys=True))
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        input=json.dumps(payload, sort_keys=True, default=str),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    signed = json.loads(completed.stdout)
+    assert isinstance(signed, dict)
+    return signed
 
 
 def _trusted_guidance_host_event(
@@ -49,6 +109,7 @@ def _trusted_guidance_host_event(
     event_id: str = "",
     admission_context_overrides: dict[str, object] | None = None,
     key_overrides: dict[str, object] | None = None,
+    install_host_admission: bool = True,
 ) -> dict[str, object]:
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
@@ -112,7 +173,7 @@ def _trusted_guidance_host_event(
     event["host_admission"] = {
         "kind": "agentic-workspace/trusted-authority-host-admission/v1",
         "algorithm": "RS256",
-        "key_id": "github-review-adapter:test-v1",
+        "key_id": "github-review-adapter:external-host-fixture:" + event_ref.removeprefix("trusted-authority-event:"),
     }
     signature_payload = _trusted_authority_admission_signature_payload(
         ref=event_ref,
@@ -120,12 +181,27 @@ def _trusted_guidance_host_event(
         verdict=event["host_admission_verdict"],
         admission=event["host_admission"],
     )
-    event["host_admission"]["signature"] = _guidance_host_test_signature(signature_payload)
+    signed = _guidance_host_signature(signature_payload)
+    event["host_admission"]["signature"] = str(signed["signature"])
+    import agentic_workspace.agent_guidance as guidance_runtime
+
+    if install_host_admission:
+        trusted_keys = {
+            **guidance_runtime._TRUSTED_AUTHORITY_HOST_PUBLIC_KEYS,  # type: ignore[attr-defined]
+            str(event["host_admission"]["key_id"]): signed["key"],
+        }
+        if host_admission_monkeypatch is None:
+            guidance_runtime._TRUSTED_AUTHORITY_HOST_PUBLIC_KEYS = trusted_keys  # type: ignore[attr-defined]
+        else:
+            host_admission_monkeypatch.setattr(
+                guidance_runtime,
+                "_TRUSTED_AUTHORITY_HOST_PUBLIC_KEYS",
+                trusted_keys,
+            )
     if "revoked_at" in admission_context:
         event["host_admission_verdict"]["revoked_at"] = admission_context["revoked_at"]
     if "superseded_by" in admission_context:
         event["host_admission_verdict"]["superseded_by"] = admission_context["superseded_by"]
-    _ = host_admission_monkeypatch
     if admission_context_overrides or key_overrides:
         event["import_custody"] = {
             "kind": "agentic-workspace/trusted-authority-host-event-import/v1",
@@ -136,9 +212,21 @@ def _trusted_guidance_host_event(
         event["revision"] = event["import_custody"]["event_digest"]
         path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
         _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
-        return {"event_ref": event_ref, "event": event}
+        return {
+            "event_ref": event_ref,
+            "event": event,
+            "host_public_key": signed["key"],
+            "host_public_key_id": str(event["host_admission"]["key_id"]),
+        }
     inbox_path = target_root / TRUSTED_AUTHORITY_EVENT_INBOX_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     _write(inbox_path, json.dumps(event, indent=2, sort_keys=True) + "\n")
+    if not install_host_admission:
+        return {
+            "event_ref": event_ref,
+            "event": event,
+            "host_public_key": signed["key"],
+            "host_public_key_id": str(event["host_admission"]["key_id"]),
+        }
     imported = record_trusted_authority_host_event(
         target_root=target_root,
         authority=authority,
@@ -151,7 +239,12 @@ def _trusted_guidance_host_event(
         trusted_channel="github-review-webhook",
         host_event_ref=event_ref,
     )
-    return {"event_ref": event_ref, "event": imported["event"]}
+    return {
+        "event_ref": event_ref,
+        "event": imported["event"],
+        "host_public_key": signed["key"],
+        "host_public_key_id": str(event["host_admission"]["key_id"]),
+    }
 
 
 def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
@@ -1984,6 +2077,9 @@ def test_guidance_receipts_accept_pinned_signed_host_event_across_process(tmp_pa
             (
                 "import json; "
                 "from pathlib import Path; "
+                "import agentic_workspace.agent_guidance as guidance_runtime; "
+                f"host_public_key = json.loads({json.dumps(host_event['host_public_key'], sort_keys=True)!r}); "
+                f"guidance_runtime._TRUSTED_AUTHORITY_HOST_PUBLIC_KEYS[{str(host_event['host_public_key_id'])!r}] = host_public_key; "
                 "from agentic_workspace.agent_guidance import record_trusted_authority_receipt; "
                 f"payload = record_trusted_authority_receipt(target_root=Path({str(tmp_path)!r}), "
                 "authority='pr-review', producer_class='human-reviewer', producer_id='reviewer-1', "
@@ -2002,6 +2098,37 @@ def test_guidance_receipts_accept_pinned_signed_host_event_across_process(tmp_pa
     assert payload["receipt_ref"].startswith("guidance-receipt:")
 
 
+def test_guidance_host_event_rejects_repo_generated_signature_without_host_trust(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import record_trusted_authority_host_event
+    from agentic_workspace.config import WorkspaceUsageError
+
+    host_event = _trusted_guidance_host_event(
+        tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref="review-1",
+        target_revision="rev-1",
+        event_id="review-event-1",
+        install_host_admission=False,
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_trusted_authority_host_event(
+            target_root=tmp_path,
+            authority="pr-review",
+            producer_class="human-reviewer",
+            producer_id="reviewer-1",
+            source="github-review",
+            source_ref="review-1",
+            target_revision="rev-1",
+            event_id="review-event-1",
+            trusted_channel="github-review-webhook",
+            host_event_ref=str(host_event["event_ref"]),
+        )
+
+
 def test_guidance_receipts_do_not_load_repo_or_pythonpath_host_verifiers() -> None:
     source = (Path(__file__).resolve().parents[1] / "src/agentic_workspace/agent_guidance.py").read_text(encoding="utf-8")
     test_source = (Path(__file__).resolve().parents[1] / "tests/test_workspace_config_cli.py").read_text(encoding="utf-8")
@@ -2009,6 +2136,9 @@ def test_guidance_receipts_do_not_load_repo_or_pythonpath_host_verifiers() -> No
     assert "agentic_workspace_host_adapters.guidance_authority" not in source
     assert "importlib.import_module" not in source
     assert "BEGIN " + "PRIVATE KEY" not in test_source
+    assert "_GUIDANCE_HOST_TEST_RSA" + "_D" not in test_source
+    assert "_guidance_host" + "_test_signature" not in test_source
+    assert "github-review-adapter:" + "test-v1" not in source
     assert "_TRUSTED_AUTHORITY_HOST_ADMISSION_KEYS" not in source
     assert "_trusted_authority_protected_host_event_store_path" not in source
 
