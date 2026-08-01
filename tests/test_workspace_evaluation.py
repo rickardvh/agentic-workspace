@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 import subprocess
@@ -51,34 +50,96 @@ from agentic_workspace.evaluation import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-_EXTERNAL_EVALUATION_PROVIDER_TEST_RSA_N = (
-    "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
-    "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
-    "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
-    "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
-    "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
-    "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
-)
-_EXTERNAL_EVALUATION_PROVIDER_TEST_RSA_D = (
-    "150e670a941d6e82bae78365aecb999f6b4a457cc087a5b59e662a64c4afc04dd284a291f8430a32faaf802650"
-    "d166a4db53be859b66ec9faddb497c731312ca93e605edffd08b593da2ebf6cf13f788f026ce47202a95009a28"
-    "0c69153efe7a4deb583def85024548ed5baa1387179f4fdc5d17030d8cacd28669f772458d4b7356063e6b6cd6"
-    "6a065bf040741ee41681fbed78212d0c1dd60a91ffe28eb710718dc41f4859323d30f0447e268bbcc34e0568b0"
-    "3c021cb333fc99905c1f08bbcc5a169dfa89603bdd429a1d448006e81b4efd7527c4b4f15fff4b66afd61073d1"
-    "4093425405fd92f25c3da185644151771cb9b2218482644fc199473ce122b1"
-)
-_RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
 
 
-def _external_evaluation_provider_test_signature(payload: dict[str, object]) -> str:
-    n = int(_EXTERNAL_EVALUATION_PROVIDER_TEST_RSA_N, 16)
-    d = int(_EXTERNAL_EVALUATION_PROVIDER_TEST_RSA_D, 16)
-    key_size = (n.bit_length() + 7) // 8
-    message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
-    digest_info = _RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
-    encoded = b"\x00\x01" + (b"\xff" * (key_size - len(digest_info) - 3)) + b"\x00" + digest_info
-    raw = pow(int.from_bytes(encoded, "big"), d, n).to_bytes(key_size, "big")
-    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+def _external_evaluation_provider_host_signature(payload: dict[str, object]) -> dict[str, object]:
+    script = r"""
+import base64
+import hashlib
+import json
+import os
+import random
+import sys
+
+RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+
+
+def is_probable_prime(candidate):
+    if candidate < 2:
+        return False
+    small_primes = (3, 5, 7, 11, 13, 17, 19, 23, 29, 31)
+    if candidate in small_primes:
+        return True
+    if candidate % 2 == 0 or any(candidate % prime == 0 for prime in small_primes):
+        return False
+    d = candidate - 1
+    s = 0
+    while d % 2 == 0:
+        s += 1
+        d //= 2
+    for base in (2, 3, 5, 7, 11, 13, 17):
+        if base >= candidate:
+            continue
+        x = pow(base, d, candidate)
+        if x in (1, candidate - 1):
+            continue
+        for _ in range(s - 1):
+            x = pow(x, 2, candidate)
+            if x == candidate - 1:
+                break
+        else:
+            return False
+    return True
+
+
+def random_prime(bits):
+    while True:
+        candidate = int.from_bytes(os.urandom(bits // 8), "big")
+        candidate |= (1 << (bits - 1)) | 1
+        if is_probable_prime(candidate):
+            return candidate
+
+
+payload = json.loads(sys.stdin.read())
+random.seed()
+e = 65537
+while True:
+    p = random_prime(256)
+    q = random_prime(256)
+    if p == q:
+        continue
+    phi = (p - 1) * (q - 1)
+    if phi % e != 0:
+        break
+n = p * q
+d = pow(e, -1, phi)
+key_size = (n.bit_length() + 7) // 8
+message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+digest_info = RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
+encoded = b"\x00\x01" + (b"\xff" * (key_size - len(digest_info) - 3)) + b"\x00" + digest_info
+raw = pow(int.from_bytes(encoded, "big"), d, n).to_bytes(key_size, "big")
+print(json.dumps({
+    "key": {
+        "algorithm": "RS256",
+        "issuer": "evaluation-provider-adapter",
+        "trusted_channel": "provider-webhook",
+        "n": format(n, "x"),
+        "e": format(e, "x"),
+        "status": "current",
+    },
+    "signature": base64.urlsafe_b64encode(raw).decode("ascii").rstrip("="),
+}, sort_keys=True))
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        input=json.dumps(payload, sort_keys=True, default=str),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    signed = json.loads(completed.stdout)
+    assert isinstance(signed, dict)
+    return signed
 
 
 def _write_external_evaluation_adapter_host_result(
@@ -86,9 +147,9 @@ def _write_external_evaluation_adapter_host_result(
     *,
     host_admission_monkeypatch: pytest.MonkeyPatch | None = None,
     import_result: bool = True,
+    trust_host_key: bool = True,
     **values: object,
 ) -> dict[str, object]:
-    _ = host_admission_monkeypatch
     workspace_ref = str(values.get("workspace_ref") or f"workspace:path:{target_root.resolve()}")
     audience = str(values.get("audience") or "agentic-workspace.evaluation-external-delivery")
     result = {
@@ -125,6 +186,7 @@ def _write_external_evaluation_adapter_host_result(
     result_id = hashlib.sha256(json.dumps(result, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:24]
     result["result_id"] = result_id
     result["result_ref"] = f"external-evaluation-adapter-host-result:{result_id}"
+    key_id = f"evaluation-provider-adapter:external-host-fixture:{result_id}"
     result_digest = hashlib.sha256(
         json.dumps(
             {key: value for key, value in result.items() if key not in {"host_admission", "host_admission_ref", "host_admission_verdict"}},
@@ -136,7 +198,7 @@ def _write_external_evaluation_adapter_host_result(
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
         "status": str(values.get("host_admission_status") or "current"),
         "algorithm": "RS256",
-        "key_id": "evaluation-provider-adapter:test-v1",
+        "key_id": key_id,
         "result_ref": result["result_ref"],
         "result_digest": result_digest,
     }
@@ -177,22 +239,69 @@ def _write_external_evaluation_adapter_host_result(
         result["host_admission_verdict"]["revoked_at"] = str(values["revoked_at"])
     if values.get("superseded_by"):
         result["host_admission_verdict"]["superseded_by"] = str(values["superseded_by"])
+    provider_result_ref = f"external-evaluation-provider-result:{result_id}"
+    inbox_path = target_root / EXTERNAL_EVALUATION_PROVIDER_RESULT_INBOX_DIR / f"{result_id}.json"
+    if inbox_path.exists():
+        result = json.loads(inbox_path.read_text(encoding="utf-8"))
+        imported = (
+            record_external_evaluation_adapter_host_result(
+                target_root=target_root,
+                provider_result_ref=provider_result_ref,
+                capability_revision=str(result["capability_revision"]),
+            )
+            if import_result
+            else {}
+        )
+
+        def resolver(ref: str) -> dict[str, object]:
+            if ref != provider_result_ref:
+                raise AssertionError(f"unexpected provider result ref: {ref}")
+            return result
+
+        return {
+            **imported,
+            "result": result,
+            "result_id": result_id,
+            "result_ref": result["result_ref"],
+            "provider_result_ref": provider_result_ref,
+            "provider_result_resolver": resolver,
+            "host_public_key": {},
+            "host_public_key_id": str(result.get("host_admission", {}).get("key_id") or key_id)
+            if isinstance(result.get("host_admission"), dict)
+            else key_id,
+            "provider_result_digest": hashlib.sha256(
+                json.dumps(result, sort_keys=True, default=str, separators=(",", ":")).encode()
+            ).hexdigest(),
+        }
     signature_payload = _external_delivery_adapter_host_admission_signature_payload(
         ref=str(result["result_ref"]),
         result=result,
         verdict=result["host_admission_verdict"],
         admission=result["host_admission"],
     )
-    result["host_admission"]["signature"] = _external_evaluation_provider_test_signature(signature_payload)
+    signed = _external_evaluation_provider_host_signature(signature_payload)
+    result["host_admission"]["signature"] = str(signed["signature"])
+    if trust_host_key:
+        import agentic_workspace.evaluation as evaluation_runtime
 
-    provider_result_ref = f"external-evaluation-provider-result:{result_id}"
+        trusted_keys = {
+            **evaluation_runtime._EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS,  # type: ignore[attr-defined]
+            str(result["host_admission"]["key_id"]): signed["key"],
+        }
+        if host_admission_monkeypatch is None:
+            evaluation_runtime._EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS = trusted_keys  # type: ignore[attr-defined]
+        else:
+            host_admission_monkeypatch.setattr(
+                evaluation_runtime,
+                "_EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS",
+                trusted_keys,
+            )
 
     def resolver(ref: str) -> dict[str, object]:
         if ref != provider_result_ref:
             raise AssertionError(f"unexpected provider result ref: {ref}")
         return result
 
-    inbox_path = target_root / EXTERNAL_EVALUATION_PROVIDER_RESULT_INBOX_DIR / f"{result_id}.json"
     inbox_path.parent.mkdir(parents=True, exist_ok=True)
     inbox_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -212,10 +321,29 @@ def _write_external_evaluation_adapter_host_result(
         "result_ref": result["result_ref"],
         "provider_result_ref": provider_result_ref,
         "provider_result_resolver": resolver,
+        "host_public_key": signed["key"],
+        "host_public_key_id": key_id,
         "provider_result_digest": hashlib.sha256(
             json.dumps(result, sort_keys=True, default=str, separators=(",", ":")).encode()
         ).hexdigest(),
     }
+
+
+def _external_evaluation_host_trusted_invocation(host: dict[str, object]) -> list[str]:
+    script = (
+        "import json, sys; "
+        "import agentic_workspace.evaluation as evaluation_runtime; "
+        "from scripts.run_agentic_workspace import main; "
+        "evaluation_runtime._EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS[sys.argv[1]] = json.loads(sys.argv[2]); "
+        "raise SystemExit(main(sys.argv[3:]))"
+    )
+    return [
+        sys.executable,
+        "-c",
+        script,
+        str(host["host_public_key_id"]),
+        json.dumps(host["host_public_key"], sort_keys=True),
+    ]
 
 
 def _init_git_repo(target_root: Path) -> None:
@@ -521,6 +649,10 @@ def test_external_adapter_receipt_accepts_host_provider_verdict_across_process(t
             (
                 "import json; "
                 "from pathlib import Path; "
+                "import agentic_workspace.evaluation as evaluation_runtime; "
+                f"host_public_key = json.loads({json.dumps(host['host_public_key'], sort_keys=True)!r}); "
+                f"evaluation_runtime._EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS[{str(host['host_public_key_id'])!r}] = "
+                "host_public_key; "
                 "from agentic_workspace.evaluation import record_external_evaluation_adapter_receipt; "
                 f"payload = record_external_evaluation_adapter_receipt(target_root=Path({str(tmp_path)!r}), "
                 "delivery_id='delivery-1', sink_id='#1969', producer='github-issues-adapter', "
@@ -547,6 +679,9 @@ def test_external_adapter_receipt_does_not_load_repo_or_pythonpath_host_verifier
     assert "agentic_workspace_host_adapters.external_evaluation" not in source
     assert "importlib.import_module" not in source
     assert "BEGIN " + "PRIVATE KEY" not in test_source
+    assert "_EXTERNAL_EVALUATION_PROVIDER_TEST_RSA" + "_D" not in test_source
+    assert "_external_evaluation_provider" + "_test_signature" not in test_source
+    assert "evaluation-provider-adapter:test-v1" not in source
     assert "_EXTERNAL_EVALUATION_ADAPTER_HOST_ADMISSION_KEYS" not in source
     assert "_external_evaluation_provider_result_store_path" not in source
     assert "tempfile.gettempdir()" not in source
@@ -590,6 +725,23 @@ def test_external_adapter_receipt_rejects_jointly_forged_local_host_result(tmp_p
             **receipt,
             host_result_ref=host["result_ref"],
         )
+
+
+def test_external_host_result_import_rejects_repo_generated_signature_without_host_trust(tmp_path: Path) -> None:
+    receipt = {
+        "delivery_id": "delivery-1",
+        "sink_id": "#1969",
+        "producer": "github-issues-adapter",
+        "attempt_revision": "attempt-1",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "status": "delivered",
+    }
+
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        _write_external_evaluation_adapter_host_result(tmp_path, import_result=True, trust_host_key=False, **receipt)
+
+    assert not any((tmp_path / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR).glob("*.json"))
 
 
 def test_external_evaluation_host_admission_rejects_raw_caller_mapping(tmp_path: Path) -> None:
@@ -1619,6 +1771,7 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
         status="failed",
         import_result=False,
     )
+    host_invocation = _external_evaluation_host_trusted_invocation(host)
     imported = evaluation_external_host_result_import(
         {
             "provider_result_ref": str(host["provider_result_ref"]),
@@ -1626,7 +1779,7 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
             "capability_revision": "github-issues-adapter:v1",
         },
         target=tmp_path,
-        invocation=invocation,
+        invocation=host_invocation,
     )
     assert imported["status"] == "imported"
     assert imported["result_ref"] == host["result_ref"]
@@ -1642,7 +1795,7 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
             "host_result_ref": host["result_ref"],
         },
         target=tmp_path,
-        invocation=invocation,
+        invocation=host_invocation,
     )
     assert recorded["status"] == "recorded"
     assert recorded["host_result_ref"] == host["result_ref"]

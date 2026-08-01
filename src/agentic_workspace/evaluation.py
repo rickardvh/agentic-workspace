@@ -41,7 +41,7 @@ OBSERVATION_BYTE_CAP = 256_000
 ExternalEvaluationProviderResultResolver = Callable[[str], dict[str, Any]]
 _RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
 _EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS = {
-    "evaluation-provider-adapter:test-v1": {
+    "evaluation-provider-adapter:host-v1": {
         "algorithm": "RS256",
         "issuer": "evaluation-provider-adapter",
         "trusted_channel": "provider-webhook",
