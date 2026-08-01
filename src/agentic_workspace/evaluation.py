@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import base64
 import hashlib
+import hmac
 import json
 import os
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -21,6 +22,7 @@ EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / 
 EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-host-result-admissions"
 EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-receipts"
 EXTERNAL_EVALUATION_PROVIDER_RESULT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-provider-results"
+EXTERNAL_EVALUATION_PROVIDER_RESULT_INBOX_DIR = EXTERNAL_EVALUATION_PROVIDER_RESULT_DIR / "inbox"
 EVALUATION_PENDING_COLLECTIONS_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "pending-collections"
 ASSIGNMENT_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/planning/assignment-receipts")
 PROOF_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/proof/receipts")
@@ -37,6 +39,24 @@ OBSERVATION_RETENTION_CAP = 100
 OBSERVATION_BYTE_CAP = 256_000
 
 ExternalEvaluationProviderResultResolver = Callable[[str], dict[str, Any]]
+_RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+_EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS = {
+    "evaluation-provider-adapter:test-v1": {
+        "algorithm": "RS256",
+        "issuer": "evaluation-provider-adapter",
+        "trusted_channel": "provider-webhook",
+        "n": (
+            "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
+            "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
+            "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
+            "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
+            "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
+            "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
+        ),
+        "e": "010001",
+        "status": "current",
+    }
+}
 
 EVALUATION_LIFECYCLES = (
     "collecting",
@@ -70,23 +90,20 @@ def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
-def _external_evaluation_provider_result_store_path() -> Path:
-    return Path(tempfile.gettempdir()) / "agentic-workspace-external-evaluation-provider-results.json"
+def _external_evaluation_provider_result_inbox_path(target_root: Path, provider_result_ref: str) -> Path:
+    result_id = provider_result_ref.removeprefix("external-evaluation-provider-result:")
+    return target_root / EXTERNAL_EVALUATION_PROVIDER_RESULT_INBOX_DIR / f"{result_id}.json"
 
 
-def _load_external_evaluation_provider_result_from_store(provider_result_ref: str) -> dict[str, Any]:
-    path = _external_evaluation_provider_result_store_path()
+def _load_external_evaluation_provider_result_from_inbox(*, target_root: Path, provider_result_ref: str) -> dict[str, Any]:
+    path = _external_evaluation_provider_result_inbox_path(target_root, provider_result_ref)
     try:
-        store = json.loads(path.read_text(encoding="utf-8"))
+        result = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise WorkspaceUsageError("external evaluation provider result store is missing or unreadable.") from exc
-    results = store.get("results") if store.get("kind") == "agentic-workspace/external-evaluation-provider-result-store/v1" else None
-    if not isinstance(results, dict):
-        raise WorkspaceUsageError("external evaluation provider result store is malformed.")
-    result = results.get(provider_result_ref)
+        raise WorkspaceUsageError("external evaluation signed provider result inbox is missing or unreadable.") from exc
     if not isinstance(result, dict):
-        raise WorkspaceUsageError("provider_result_ref was not found in the protected provider result store.")
-    return result
+        raise WorkspaceUsageError("external evaluation signed provider result inbox entry has the wrong contract.")
+    return json.loads(json.dumps(result, sort_keys=True, default=str))
 
 
 def _stable_json_digest(payload: dict[str, Any]) -> str:
@@ -468,10 +485,10 @@ def record_external_evaluation_adapter_host_result(
         raise WorkspaceUsageError("provider_result_ref must be an opaque external-evaluation-provider-result reference.")
     if provider_result_resolver is not None:
         raise WorkspaceUsageError(
-            "caller-provided external evaluation provider result resolvers are rejected; install a protected provider result store."
+            "caller-provided external evaluation provider result resolvers are rejected; import a signed provider result envelope."
         )
     provider_result_id = ref.removeprefix("external-evaluation-provider-result:")
-    result = _load_external_evaluation_provider_result_from_store(ref)
+    result = _load_external_evaluation_provider_result_from_inbox(target_root=target_root, provider_result_ref=ref)
     if not isinstance(result, dict):
         raise WorkspaceUsageError("provider_result_ref resolver did not return a provider result object.")
     raw = json.dumps(result, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
@@ -643,6 +660,55 @@ def _external_delivery_adapter_host_admission_payload(ref: str, result: dict[str
     return payload
 
 
+def _external_delivery_adapter_host_admission_signature_payload(
+    *,
+    ref: str,
+    result: dict[str, Any],
+    verdict: dict[str, Any],
+    admission: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-signature-payload/v1",
+        "algorithm": str(admission.get("algorithm") or ""),
+        "key_id": str(admission.get("key_id") or ""),
+        "result_ref": ref,
+        "result_digest": _external_delivery_adapter_host_result_digest(result),
+        "verdict_digest": _stable_json_digest(verdict),
+        "audience": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE,
+    }
+
+
+def _base64url_decode(value: str) -> bytes:
+    text = value.strip()
+    padding = "=" * (-len(text) % 4)
+    return base64.urlsafe_b64decode((text + padding).encode("ascii"))
+
+
+def _verify_rs256_signature(*, key: dict[str, str], payload: dict[str, Any], signature: str) -> bool:
+    try:
+        n = int(str(key.get("n") or ""), 16)
+        e = int(str(key.get("e") or ""), 16)
+        raw_signature = _base64url_decode(signature)
+    except (ValueError, TypeError):
+        return False
+    key_size = (n.bit_length() + 7) // 8
+    if len(raw_signature) != key_size:
+        return False
+    message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    digest_info = _RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
+    encoded = pow(int.from_bytes(raw_signature, "big"), e, n).to_bytes(key_size, "big")
+    minimum_padding = 8
+    if not (encoded.startswith(b"\x00\x01") and b"\x00" in encoded[2 + minimum_padding :]):
+        return False
+    separator = encoded.find(b"\x00", 2)
+    if separator < 2 + minimum_padding:
+        return False
+    padding = encoded[2:separator]
+    if len(padding) < minimum_padding or any(byte != 0xFF for byte in padding):
+        return False
+    return hmac.compare_digest(encoded[separator + 1 :], digest_info)
+
+
 def _parse_evaluation_time(value: Any) -> datetime | None:
     text = str(value or "").strip()
     if not text:
@@ -687,9 +753,9 @@ def _load_external_delivery_adapter_host_admission(*, target_root: Path, admissi
 
 
 def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, Any], *, target_root: Path) -> bool:
-    """Return whether host/provider-resolved evidence admits this result.
+    """Return whether a pinned host/provider signature admits this result.
 
-    AW verifies a verdict supplied by the protected provider result store used by
+    AW verifies a signed verdict supplied by the provider result inbox used by
     ``record_external_evaluation_adapter_host_result``. It deliberately does not
     accept resolver functions, verifier modules, or trust roots through operation
     arguments.
@@ -699,13 +765,29 @@ def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[st
     verdict: dict[str, Any] = verdict_raw if isinstance(verdict_raw, dict) else {}
     if not verdict:
         return False
+    admission_raw = result.get("host_admission")
+    admission: dict[str, Any] = admission_raw if isinstance(admission_raw, dict) else {}
+    key_id = str(admission.get("key_id") or "")
+    key = _EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS.get(key_id)
+    if not isinstance(key, dict) or key.get("status") != "current":
+        return False
+    if admission.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1":
+        return False
+    if admission.get("algorithm") != "RS256" or key.get("algorithm") != "RS256":
+        return False
     if verdict.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-verdict/v1":
         return False
-    if verdict.get("status") != "admitted" or verdict.get("authority") != "host-provider-resolver":
+    if verdict.get("status") != "admitted" or verdict.get("authority") != "signed-provider-adapter":
         return False
     if verdict.get("result_ref") != ref:
         return False
     if verdict.get("result_digest") != _external_delivery_adapter_host_result_digest(result):
+        return False
+    custody_raw = result.get("custody")
+    custody: dict[str, Any] = custody_raw if isinstance(custody_raw, dict) else {}
+    if str(key.get("issuer") or "") != str(custody.get("producer") or ""):
+        return False
+    if str(key.get("trusted_channel") or "") != str(custody.get("trusted_channel") or ""):
         return False
     if str(verdict.get("producer") or "") != str(result.get("producer") or ""):
         return False
@@ -731,7 +813,13 @@ def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[st
         return False
     if str(verdict.get("revoked_at") or "").strip() or str(verdict.get("superseded_by") or "").strip():
         return False
-    return True
+    payload = _external_delivery_adapter_host_admission_signature_payload(
+        ref=ref,
+        result=result,
+        verdict=verdict,
+        admission=admission,
+    )
+    return _verify_rs256_signature(key=key, payload=payload, signature=str(admission.get("signature") or ""))
 
 
 def _load_external_delivery_adapter_host_result(*, target_root: Path, result_ref: str) -> dict[str, Any]:

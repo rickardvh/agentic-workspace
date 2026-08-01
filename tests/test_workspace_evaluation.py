@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import subprocess
@@ -22,11 +23,12 @@ from agentic_workspace.evaluation import (
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR,
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND,
     EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
+    EXTERNAL_EVALUATION_PROVIDER_RESULT_INBOX_DIR,
     OBSERVATION_RETENTION_CAP,
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
     WORKSPACE_LOCAL_EVALUATIONS_DIR,
-    _external_evaluation_provider_result_store_path,
+    _external_delivery_adapter_host_admission_signature_payload,
     _write_indexed_owner_receipt,
     append_observation,
     closure_authority,
@@ -49,12 +51,41 @@ from agentic_workspace.evaluation import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+_EXTERNAL_EVALUATION_PROVIDER_TEST_RSA_N = (
+    "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
+    "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
+    "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
+    "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
+    "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
+    "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
+)
+_EXTERNAL_EVALUATION_PROVIDER_TEST_RSA_D = (
+    "150e670a941d6e82bae78365aecb999f6b4a457cc087a5b59e662a64c4afc04dd284a291f8430a32faaf802650"
+    "d166a4db53be859b66ec9faddb497c731312ca93e605edffd08b593da2ebf6cf13f788f026ce47202a95009a28"
+    "0c69153efe7a4deb583def85024548ed5baa1387179f4fdc5d17030d8cacd28669f772458d4b7356063e6b6cd6"
+    "6a065bf040741ee41681fbed78212d0c1dd60a91ffe28eb710718dc41f4859323d30f0447e268bbcc34e0568b0"
+    "3c021cb333fc99905c1f08bbcc5a169dfa89603bdd429a1d448006e81b4efd7527c4b4f15fff4b66afd61073d1"
+    "4093425405fd92f25c3da185644151771cb9b2218482644fc199473ce122b1"
+)
+_RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+
+
+def _external_evaluation_provider_test_signature(payload: dict[str, object]) -> str:
+    n = int(_EXTERNAL_EVALUATION_PROVIDER_TEST_RSA_N, 16)
+    d = int(_EXTERNAL_EVALUATION_PROVIDER_TEST_RSA_D, 16)
+    key_size = (n.bit_length() + 7) // 8
+    message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    digest_info = _RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
+    encoded = b"\x00\x01" + (b"\xff" * (key_size - len(digest_info) - 3)) + b"\x00" + digest_info
+    raw = pow(int.from_bytes(encoded, "big"), d, n).to_bytes(key_size, "big")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
 def _write_external_evaluation_adapter_host_result(
     target_root: Path,
     *,
     host_admission_monkeypatch: pytest.MonkeyPatch | None = None,
+    import_result: bool = True,
     **values: object,
 ) -> dict[str, object]:
     _ = host_admission_monkeypatch
@@ -104,7 +135,8 @@ def _write_external_evaluation_adapter_host_result(
     result["host_admission"] = {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1",
         "status": str(values.get("host_admission_status") or "current"),
-        "authority": "host-provider-resolver",
+        "algorithm": "RS256",
+        "key_id": "evaluation-provider-adapter:test-v1",
         "result_ref": result["result_ref"],
         "result_digest": result_digest,
     }
@@ -126,7 +158,7 @@ def _write_external_evaluation_adapter_host_result(
     result["host_admission_verdict"] = {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-verdict/v1",
         "status": str(values.get("verdict_status") or "admitted"),
-        "authority": "host-provider-resolver",
+        "authority": "signed-provider-adapter",
         "producer": result["producer"],
         "delivery_id": result["delivery_id"],
         "sink_id": result["sink_id"],
@@ -145,6 +177,13 @@ def _write_external_evaluation_adapter_host_result(
         result["host_admission_verdict"]["revoked_at"] = str(values["revoked_at"])
     if values.get("superseded_by"):
         result["host_admission_verdict"]["superseded_by"] = str(values["superseded_by"])
+    signature_payload = _external_delivery_adapter_host_admission_signature_payload(
+        ref=str(result["result_ref"]),
+        result=result,
+        verdict=result["host_admission_verdict"],
+        admission=result["host_admission"],
+    )
+    result["host_admission"]["signature"] = _external_evaluation_provider_test_signature(signature_payload)
 
     provider_result_ref = f"external-evaluation-provider-result:{result_id}"
 
@@ -153,24 +192,24 @@ def _write_external_evaluation_adapter_host_result(
             raise AssertionError(f"unexpected provider result ref: {ref}")
         return result
 
-    store_path = _external_evaluation_provider_result_store_path()
-    try:
-        store = json.loads(store_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        store = {"kind": "agentic-workspace/external-evaluation-provider-result-store/v1", "results": {}}
-    if store.get("kind") != "agentic-workspace/external-evaluation-provider-result-store/v1" or not isinstance(store.get("results"), dict):
-        store = {"kind": "agentic-workspace/external-evaluation-provider-result-store/v1", "results": {}}
-    store["results"][provider_result_ref] = result
-    store_path.write_text(json.dumps(store, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    inbox_path = target_root / EXTERNAL_EVALUATION_PROVIDER_RESULT_INBOX_DIR / f"{result_id}.json"
+    inbox_path.parent.mkdir(parents=True, exist_ok=True)
+    inbox_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    imported = record_external_evaluation_adapter_host_result(
-        target_root=target_root,
-        provider_result_ref=provider_result_ref,
-        capability_revision=str(result["capability_revision"]),
+    imported = (
+        record_external_evaluation_adapter_host_result(
+            target_root=target_root,
+            provider_result_ref=provider_result_ref,
+            capability_revision=str(result["capability_revision"]),
+        )
+        if import_result
+        else {}
     )
     return {
         **imported,
         "result": result,
+        "result_id": result_id,
+        "result_ref": result["result_ref"],
         "provider_result_ref": provider_result_ref,
         "provider_result_resolver": resolver,
         "provider_result_digest": hashlib.sha256(
@@ -399,7 +438,7 @@ def test_external_host_result_import_is_idempotent_and_append_preserving(tmp_pat
     assert len(admission_index["admissions"]) == 2
 
 
-def test_external_host_result_import_rejects_caller_written_provider_file_without_resolver(tmp_path: Path) -> None:
+def test_external_host_result_import_rejects_caller_written_provider_file_without_signed_inbox(tmp_path: Path) -> None:
     result_id = "caller-written-result"
     provider_path = tmp_path / ".agentic-workspace/local/evaluations/external-provider-results" / f"{result_id}.json"
     provider_path.parent.mkdir(parents=True, exist_ok=True)
@@ -426,7 +465,7 @@ def test_external_host_result_import_rejects_caller_written_provider_file_withou
         encoding="utf-8",
     )
 
-    with pytest.raises(WorkspaceUsageError, match="protected provider result store"):
+    with pytest.raises(WorkspaceUsageError, match="signed provider result inbox"):
         record_external_evaluation_adapter_host_result(
             target_root=tmp_path,
             provider_result_ref=f"external-evaluation-provider-result:{result_id}",
@@ -509,6 +548,8 @@ def test_external_adapter_receipt_does_not_load_repo_or_pythonpath_host_verifier
     assert "importlib.import_module" not in source
     assert "BEGIN " + "PRIVATE KEY" not in test_source
     assert "_EXTERNAL_EVALUATION_ADAPTER_HOST_ADMISSION_KEYS" not in source
+    assert "_external_evaluation_provider_result_store_path" not in source
+    assert "tempfile.gettempdir()" not in source
     assert "Path.home()" not in source
     assert "external-evaluation-admission-keys" not in source
 
@@ -1576,6 +1617,7 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
         receipt_revision="receipt-public-1",
         capability_revision="github-issues-adapter:v1",
         status="failed",
+        import_result=False,
     )
     imported = evaluation_external_host_result_import(
         {
