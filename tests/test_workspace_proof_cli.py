@@ -1,41 +1,102 @@
 from __future__ import annotations
 
-import base64
-import hashlib
+import sys
 
 # ruff: noqa: F403,F405
 from tests.workspace_cli_support import *
 
 ROOT = Path(__file__).resolve().parents[1]
-_INDEPENDENT_REVIEW_HOST_TEST_RSA_N = (
-    "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
-    "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
-    "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
-    "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
-    "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
-    "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
-)
-_INDEPENDENT_REVIEW_HOST_TEST_RSA_D = (
-    "150e670a941d6e82bae78365aecb999f6b4a457cc087a5b59e662a64c4afc04dd284a291f8430a32faaf802650"
-    "d166a4db53be859b66ec9faddb497c731312ca93e605edffd08b593da2ebf6cf13f788f026ce47202a95009a28"
-    "0c69153efe7a4deb583def85024548ed5baa1387179f4fdc5d17030d8cacd28669f772458d4b7356063e6b6cd6"
-    "6a065bf040741ee41681fbed78212d0c1dd60a91ffe28eb710718dc41f4859323d30f0447e268bbcc34e0568b0"
-    "3c021cb333fc99905c1f08bbcc5a169dfa89603bdd429a1d448006e81b4efd7527c4b4f15fff4b66afd61073d1"
-    "4093425405fd92f25c3da185644151771cb9b2218482644fc199473ce122b1"
-)
-_RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
 
 
-def _independent_review_host_test_signature(payload: dict[str, object]) -> str:
-    n = int(_INDEPENDENT_REVIEW_HOST_TEST_RSA_N, 16)
-    d = int(_INDEPENDENT_REVIEW_HOST_TEST_RSA_D, 16)
-    key_size = (n.bit_length() + 7) // 8
-    digest_info = (
-        _RSA_SHA256_DER_PREFIX + hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()).digest()
+def _independent_review_host_signature(payload: dict[str, object]) -> dict[str, object]:
+    script = r"""
+import base64
+import hashlib
+import json
+import os
+import random
+import sys
+
+RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+
+
+def is_probable_prime(candidate):
+    if candidate < 2:
+        return False
+    small_primes = (3, 5, 7, 11, 13, 17, 19, 23, 29, 31)
+    if candidate in small_primes:
+        return True
+    if candidate % 2 == 0 or any(candidate % prime == 0 for prime in small_primes):
+        return False
+    d = candidate - 1
+    s = 0
+    while d % 2 == 0:
+        s += 1
+        d //= 2
+    for base in (2, 3, 5, 7, 11, 13, 17):
+        if base >= candidate:
+            continue
+        x = pow(base, d, candidate)
+        if x in (1, candidate - 1):
+            continue
+        for _ in range(s - 1):
+            x = pow(x, 2, candidate)
+            if x == candidate - 1:
+                break
+        else:
+            return False
+    return True
+
+
+def random_prime(bits):
+    while True:
+        candidate = int.from_bytes(os.urandom(bits // 8), "big")
+        candidate |= (1 << (bits - 1)) | 1
+        if is_probable_prime(candidate):
+            return candidate
+
+
+payload = json.loads(sys.stdin.read())
+random.seed()
+e = 65537
+while True:
+    p = random_prime(256)
+    q = random_prime(256)
+    if p == q:
+        continue
+    phi = (p - 1) * (q - 1)
+    if phi % e != 0:
+        break
+n = p * q
+d = pow(e, -1, phi)
+key_size = (n.bit_length() + 7) // 8
+message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+digest_info = RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
+encoded = b"\x00\x01" + (b"\xff" * (key_size - len(digest_info) - 3)) + b"\x00" + digest_info
+raw = pow(int.from_bytes(encoded, "big"), d, n).to_bytes(key_size, "big")
+print(json.dumps({
+    "key": {
+        "algorithm": "RS256",
+        "issuer": "github-review-webhook",
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "n": format(n, "x"),
+        "e": 65537,
+        "status": "current",
+    },
+    "signature": base64.b64encode(raw).decode("ascii"),
+}, sort_keys=True))
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        input=json.dumps(payload, sort_keys=True, default=str),
+        capture_output=True,
+        text=True,
+        check=True,
     )
-    encoded = b"\x00\x01" + (b"\xff" * (key_size - len(digest_info) - 3)) + b"\x00" + digest_info
-    raw = pow(int.from_bytes(encoded, "big"), d, n).to_bytes(key_size, "big")
-    return base64.b64encode(raw).decode("ascii")
+    signed = json.loads(completed.stdout)
+    assert isinstance(signed, dict)
+    return signed
 
 
 def _write_independent_review_host_result(
@@ -105,21 +166,19 @@ def _write_independent_review_host_result(
         signed_payload["superseded_by"] = str(result["admission_superseded_by"])
     root = target_root / INDEPENDENT_REVIEW_HOST_RESULT_DIR
     path = root / f"{host_id}.json"
-    key_id = "github-review-adapter:test-v1"
-    key = {
-        "algorithm": "RS256",
-        "status": str(result.get("key_status") or "current"),
-        "key_id": key_id,
-        "issuer": "github-review-webhook",
-        "producer": "github-review-adapter",
-        "trusted_channel": "github-review-webhook",
-        "e": 65537,
-        "n": _INDEPENDENT_REVIEW_HOST_TEST_RSA_N,
-        "workspace_ref": str(result.get("key_workspace_ref") or f"workspace:path:{target_root.resolve()}"),
-        "workspace_path": str(result.get("key_workspace_path") or target_root.resolve()),
-        "not_before": str(result.get("key_not_before") or "2026-01-01T00:00:00Z"),
-        "expires_at": str(result.get("key_expires_at") or "2099-01-01T00:00:00Z"),
-    }
+    key_id = f"github-review-adapter:external-host-fixture:{host_id}"
+    signed = _independent_review_host_signature(signed_payload)
+    key = dict(signed["key"]) if isinstance(signed.get("key"), dict) else {}
+    key.update(
+        {
+            "status": str(result.get("key_status") or "current"),
+            "key_id": key_id,
+            "workspace_ref": str(result.get("key_workspace_ref") or f"workspace:path:{target_root.resolve()}"),
+            "workspace_path": str(result.get("key_workspace_path") or target_root.resolve()),
+            "not_before": str(result.get("key_not_before") or "2026-01-01T00:00:00Z"),
+            "expires_at": str(result.get("key_expires_at") or "2099-01-01T00:00:00Z"),
+        }
+    )
     if result.get("key_revoked_at"):
         key["revoked_at"] = str(result["key_revoked_at"])
     host_result["host_admission"] = {
@@ -128,7 +187,7 @@ def _write_independent_review_host_result(
         "algorithm": "RS256",
         "key_id": key_id,
         "signed_payload": signed_payload,
-        "signature": _independent_review_host_test_signature(signed_payload),
+        "signature": str(signed["signature"]),
     }
     capability = {
         "kind": "agentic-workspace/independent-review-host-admission-capability/v1",
@@ -139,7 +198,21 @@ def _write_independent_review_host_result(
         "audience": INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
         "authority": "host-adapter-owned",
     }
-    _ = (host_admission_monkeypatch, install_host_admission)
+    if install_host_admission:
+        import agentic_workspace.workspace_runtime_proof as proof_runtime
+
+        trusted_keys = {
+            **proof_runtime.INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS,  # type: ignore[attr-defined]
+            key_id: key,
+        }
+        if host_admission_monkeypatch is None:
+            proof_runtime.INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS = trusted_keys  # type: ignore[attr-defined]
+        else:
+            host_admission_monkeypatch.setattr(
+                proof_runtime,
+                "INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS",
+                trusted_keys,
+            )
     if caller_env_admission_keys:
         import os
 
@@ -7704,8 +7777,14 @@ def test_assignment_admit_accepts_pinned_signed_host_evidence_across_process(tmp
             "source_ref": "pull-request-review:1",
         },
     }
-    host_result_ref = _write_independent_review_host_result(tmp_path, review_result, install_host_admission=False)
-    assert isinstance(host_result_ref, str)
+    host_inputs = _write_independent_review_host_result(
+        tmp_path,
+        review_result,
+        install_host_admission=False,
+        return_capability_inputs=True,
+    )
+    assert isinstance(host_inputs, dict)
+    host_result_ref = str(host_inputs["host_result_ref"])
     completed = subprocess.run(
         [
             sys.executable,
@@ -7713,6 +7792,9 @@ def test_assignment_admit_accepts_pinned_signed_host_evidence_across_process(tmp
             (
                 "import json; "
                 "from pathlib import Path; "
+                "import agentic_workspace.workspace_runtime_proof as proof_runtime; "
+                f"host_public_key = json.loads({json.dumps(host_inputs['host_public_key'], sort_keys=True)!r}); "
+                f"proof_runtime.INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS[{str(host_inputs['host_public_key']['key_id'])!r}] = host_public_key; "
                 "from agentic_workspace.workspace_runtime_proof import admit_independent_review_result_operation; "
                 f"payload = admit_independent_review_result_operation(target_root=Path({str(tmp_path)!r}), "
                 f"values={{'host_result_ref': {host_result_ref!r}, 'required_mode': 'human', 'changed': ['services/auth/policy.py']}}); "
@@ -7739,6 +7821,9 @@ def test_assignment_admit_does_not_load_repo_or_pythonpath_host_verifiers() -> N
     private_key_marker = "BEGIN " + "PRIVATE KEY"
     assert private_key_marker not in source
     assert private_key_marker not in test_source
+    assert "_INDEPENDENT_REVIEW_HOST_TEST_RSA" + "_D" not in test_source
+    assert "_independent_review_host" + "_test_signature" not in test_source
+    assert "github-review-adapter:" + "test-v1" not in source
     assert "_INDEPENDENT_REVIEW_HOST_ADMISSION_KEYS" not in source
 
 
@@ -7785,6 +7870,38 @@ def test_assignment_admit_rejects_caller_supplied_host_trust_root(tmp_path: Path
 
     assert receipt["status"] == "rejected"
     assert receipt["failures"][0]["reason"] == "caller-supplied-host-trust-root-rejected"
+
+
+def test_trusted_independent_review_rejects_repo_generated_signature_without_host_trust(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_proof import (
+        WorkspaceUsageError,
+        _independent_review_scope_digest,
+        record_trusted_independent_review_result,
+    )
+
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "human",
+        "assignment_id": "critical-access-review",
+        "assignment_revision": "assignment-rev-1",
+        "review_revision": "review-rev-1",
+        "reviewed_at": "2026-07-26T13:22:00Z",
+        "changed_paths": ["services/auth/policy.py"],
+        "scope_digest": _independent_review_scope_digest(["services/auth/policy.py"]),
+        "implementer": {"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
+        "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+        "custody": {
+            "producer": "github-review-adapter",
+            "authority_ref": "SECURITY.md#critical-access",
+            "source_ref": "pull-request-review:1",
+        },
+    }
+    host_result_ref = _write_independent_review_host_result(tmp_path, review_result, install_host_admission=False)
+    assert isinstance(host_result_ref, str)
+
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
 
 
 def test_independent_review_host_admission_rejects_inline_caller_trust_roots(tmp_path: Path) -> None:
