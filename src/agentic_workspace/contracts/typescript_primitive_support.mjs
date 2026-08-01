@@ -1658,6 +1658,7 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'workspace.selection.resolve') return { selected_modules: values.modules ?? values.module ?? [], target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'assignment.lifecycle.apply') return assignmentLifecycleApply(values, operationId);
   if (primitive === 'correction.event.apply') return correctionEventApply(values, operationId);
+  if (primitive === 'guidance.lifecycle.apply') return guidanceLifecycleApply(values, operationId);
   if (primitive === 'toml.table.counts') return tomlTableCounts(values, args);
   throw new RuntimeError(`unsupported native TypeScript primitive: ${primitive}`);
 }
@@ -1995,6 +1996,50 @@ function correctionEventApply(values, operationId) {
       || Array.isArray(value)
     ) continue;
     args.push(`--${key.replaceAll('_', '-')}`, String(value));
+  }
+  const completed = spawnSync('uv', args, { cwd: targetRoot, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  const text = completed.stdout || completed.stderr || '';
+  try {
+    const payload = JSON.parse(text);
+    return completed.status === 0
+      ? payload
+      : blocked('authoritative-python-boundary-failed', JSON.stringify(payload).slice(0, 500));
+  } catch {
+    return blocked('authoritative-python-boundary-non-json', text.slice(0, 500) || 'Install uv/python and retry through AW.');
+  }
+}
+
+function guidanceLifecycleApply(values, operationId) {
+  const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
+  const scriptPath = resolve(process.cwd(), 'scripts/run_agentic_workspace.py');
+  const blocked = (reason, recovery) => ({
+    kind: 'agentic-workspace/guidance-lifecycle-result/v1',
+    operation_id: operationId,
+    status: 'blocked',
+    mutation_applied: false,
+    failures: [{ reason, field: 'agent-guidance', recovery }],
+    rule: 'TypeScript agent-guidance lifecycle operations delegate to the Python AW authority boundary; reduced TypeScript mutation admission is fail-closed.',
+  });
+  if (!existsSync(scriptPath)) return blocked('authoritative-python-boundary-unavailable', 'Run agent-guidance through the Agentic Workspace Python host boundary.');
+  const operation = String(operationId).replace(/^agent-guidance\./, '');
+  const args = ['run', 'python', scriptPath, 'agent-guidance', operation, '--target', targetRoot, '--format', 'json'];
+  for (const [key, value] of Object.entries(values)) {
+    if (
+      ['target', 'target_root', 'format', 'operation_id', 'agent_guidance_command'].includes(key)
+      || key.endsWith('_command')
+      || value === undefined
+      || value === null
+      || value === ''
+      || value === false
+      || Array.isArray(value)
+    ) continue;
+    args.push(`--${key.replaceAll('_', '-')}`, String(value));
+  }
+  for (const key of ['merge_guidance_ids', 'split_instructions']) {
+    const value = values[key];
+    if (Array.isArray(value)) {
+      for (const item of value) args.push(`--${key.replaceAll('_', '-')}`, String(item));
+    }
   }
   const completed = spawnSync('uv', args, { cwd: targetRoot, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
   const text = completed.stdout || completed.stderr || '';

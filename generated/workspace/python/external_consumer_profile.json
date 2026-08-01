@@ -3,11 +3,1891 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:b0b88d1540253077122d66012434103605f4f89b390ac40cb9ef7deb6b11b043",
+    "fingerprint": "sha256:d53ee0b09bd65770cb6dd42dceda176d7472984b2b9e766ffc9948877e9ebb3a",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
   "operations": [
+    {
+      "id": "agent-guidance.delete",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/agent-guidance.delete.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:a15d69b629b34fe3fd84b59225b8f911142ad72638ef71ccedf617f1a73dc094"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/agent-guidance.delete.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/agent-guidance.delete.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "guidance_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "guidance_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "agent-guidance.promote.process",
+        "agent-guidance.edit.process",
+        "agent-guidance.merge.process",
+        "agent-guidance.split.process",
+        "agent-guidance.suppress.process",
+        "agent-guidance.revalidate.process",
+        "agent-guidance.weaken.process",
+        "agent-guidance.supersede.process",
+        "agent-guidance.retire.process",
+        "agent-guidance.delete.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "guidance lifecycle store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "promotion authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "revision guard enforcement",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "mutation receipt emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "agent-guidance.edit",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/agent-guidance.edit.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:5691ead29a97fa79abfc7761f1aa79c93b7c15f4d72cfa12e20fef8b6f4e1f4c"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/agent-guidance.edit.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/agent-guidance.edit.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "guidance_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "guidance_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "agent-guidance.promote.process",
+        "agent-guidance.edit.process",
+        "agent-guidance.merge.process",
+        "agent-guidance.split.process",
+        "agent-guidance.suppress.process",
+        "agent-guidance.revalidate.process",
+        "agent-guidance.weaken.process",
+        "agent-guidance.supersede.process",
+        "agent-guidance.retire.process",
+        "agent-guidance.delete.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "guidance lifecycle store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "promotion authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "revision guard enforcement",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "mutation receipt emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "agent-guidance.merge",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/agent-guidance.merge.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:4cd1de8a58d009da5d099f42b1a58fc3e9b7d69c105c6d33162b6e1c0f74b652"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/agent-guidance.merge.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/agent-guidance.merge.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "guidance_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "guidance_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "agent-guidance.promote.process",
+        "agent-guidance.edit.process",
+        "agent-guidance.merge.process",
+        "agent-guidance.split.process",
+        "agent-guidance.suppress.process",
+        "agent-guidance.revalidate.process",
+        "agent-guidance.weaken.process",
+        "agent-guidance.supersede.process",
+        "agent-guidance.retire.process",
+        "agent-guidance.delete.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "guidance lifecycle store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "promotion authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "revision guard enforcement",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "mutation receipt emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "agent-guidance.promote",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/agent-guidance.promote.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:856f77d1c256d66f9bb5cceb877d7cd873d466f5d21ffd33d551a9abb47b662a"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/agent-guidance.promote.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/agent-guidance.promote.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "guidance_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "guidance_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "agent-guidance.promote.process",
+        "agent-guidance.edit.process",
+        "agent-guidance.merge.process",
+        "agent-guidance.split.process",
+        "agent-guidance.suppress.process",
+        "agent-guidance.revalidate.process",
+        "agent-guidance.weaken.process",
+        "agent-guidance.supersede.process",
+        "agent-guidance.retire.process",
+        "agent-guidance.delete.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "guidance lifecycle store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "promotion authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "revision guard enforcement",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "mutation receipt emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "agent-guidance.retire",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/agent-guidance.retire.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:986037bcf321b6f9d8ce26aff43739060e4c88df8ac32f1cb79f440c61e2d0a4"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/agent-guidance.retire.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/agent-guidance.retire.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "guidance_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "guidance_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "agent-guidance.promote.process",
+        "agent-guidance.edit.process",
+        "agent-guidance.merge.process",
+        "agent-guidance.split.process",
+        "agent-guidance.suppress.process",
+        "agent-guidance.revalidate.process",
+        "agent-guidance.weaken.process",
+        "agent-guidance.supersede.process",
+        "agent-guidance.retire.process",
+        "agent-guidance.delete.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "guidance lifecycle store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "promotion authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "revision guard enforcement",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "mutation receipt emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "agent-guidance.revalidate",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/agent-guidance.revalidate.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:f99dcd338bea82817f16f482a47dddce9f69982d0608b3cd9934b798ef46ce1d"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/agent-guidance.revalidate.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/agent-guidance.revalidate.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "guidance_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "guidance_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "agent-guidance.promote.process",
+        "agent-guidance.edit.process",
+        "agent-guidance.merge.process",
+        "agent-guidance.split.process",
+        "agent-guidance.suppress.process",
+        "agent-guidance.revalidate.process",
+        "agent-guidance.weaken.process",
+        "agent-guidance.supersede.process",
+        "agent-guidance.retire.process",
+        "agent-guidance.delete.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "guidance lifecycle store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "promotion authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "revision guard enforcement",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "mutation receipt emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "agent-guidance.split",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/agent-guidance.split.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:b1188e764d0b264433988cf62bc4c8cba87a4348682ea619fdfc5c75c485d0e3"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/agent-guidance.split.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/agent-guidance.split.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "guidance_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "guidance_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "agent-guidance.promote.process",
+        "agent-guidance.edit.process",
+        "agent-guidance.merge.process",
+        "agent-guidance.split.process",
+        "agent-guidance.suppress.process",
+        "agent-guidance.revalidate.process",
+        "agent-guidance.weaken.process",
+        "agent-guidance.supersede.process",
+        "agent-guidance.retire.process",
+        "agent-guidance.delete.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "guidance lifecycle store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "promotion authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "revision guard enforcement",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "mutation receipt emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "agent-guidance.supersede",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/agent-guidance.supersede.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:72aad39cc4df0c120fcbf89d56a91019bc2a00aa3f10f27134044c1c6fd6e2ab"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/agent-guidance.supersede.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/agent-guidance.supersede.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "guidance_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "guidance_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "agent-guidance.promote.process",
+        "agent-guidance.edit.process",
+        "agent-guidance.merge.process",
+        "agent-guidance.split.process",
+        "agent-guidance.suppress.process",
+        "agent-guidance.revalidate.process",
+        "agent-guidance.weaken.process",
+        "agent-guidance.supersede.process",
+        "agent-guidance.retire.process",
+        "agent-guidance.delete.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "guidance lifecycle store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "promotion authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "revision guard enforcement",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "mutation receipt emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "agent-guidance.suppress",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/agent-guidance.suppress.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:742233dd6a061950343e18b51b5ef5b9e38a6e19f87a6c4e16a7b744a7d78988"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/agent-guidance.suppress.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/agent-guidance.suppress.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "guidance_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "guidance_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "agent-guidance.promote.process",
+        "agent-guidance.edit.process",
+        "agent-guidance.merge.process",
+        "agent-guidance.split.process",
+        "agent-guidance.suppress.process",
+        "agent-guidance.revalidate.process",
+        "agent-guidance.weaken.process",
+        "agent-guidance.supersede.process",
+        "agent-guidance.retire.process",
+        "agent-guidance.delete.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "guidance lifecycle store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "promotion authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "revision guard enforcement",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "mutation receipt emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "agent-guidance.weaken",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/agent-guidance.weaken.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:c21eefaf978e745686f21896b6ac5d72427ff6c23ac9bd724cf2ee312ac2391e"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/agent-guidance.weaken.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/agent-guidance.weaken.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "guidance_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "guidance_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "agent-guidance.promote.process",
+        "agent-guidance.edit.process",
+        "agent-guidance.merge.process",
+        "agent-guidance.split.process",
+        "agent-guidance.suppress.process",
+        "agent-guidance.revalidate.process",
+        "agent-guidance.weaken.process",
+        "agent-guidance.supersede.process",
+        "agent-guidance.retire.process",
+        "agent-guidance.delete.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "guidance lifecycle store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "promotion authority resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "revision guard enforcement",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "mutation receipt emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "agent-guidance.promote.process",
+              "agent-guidance.edit.process",
+              "agent-guidance.merge.process",
+              "agent-guidance.split.process",
+              "agent-guidance.suppress.process",
+              "agent-guidance.revalidate.process",
+              "agent-guidance.weaken.process",
+              "agent-guidance.supersede.process",
+              "agent-guidance.retire.process",
+              "agent-guidance.delete.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
     {
       "id": "assignment.admit",
       "owner": "root-workspace",
@@ -1555,11 +3435,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": true
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -1669,11 +3549,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -1767,11 +3647,11 @@
         ]
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2512,11 +4392,11 @@
         ]
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2720,11 +4600,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2836,11 +4716,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -2943,11 +4823,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3050,11 +4930,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3157,11 +5037,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3264,11 +5144,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3367,11 +5247,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -3469,11 +5349,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": true
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3572,11 +5452,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -3675,11 +5555,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3778,11 +5658,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3881,11 +5761,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3963,11 +5843,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4045,11 +5925,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -4127,11 +6007,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4209,11 +6089,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -4295,11 +6175,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -4379,11 +6259,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4473,11 +6353,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4555,11 +6435,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4637,11 +6517,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -4719,11 +6599,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -4801,11 +6681,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4883,11 +6763,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -4965,11 +6845,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5038,11 +6918,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5120,11 +7000,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5202,11 +7082,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5284,11 +7164,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5366,11 +7246,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5448,11 +7328,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5530,11 +7410,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5612,11 +7492,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -5694,11 +7574,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -5776,11 +7656,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5858,11 +7738,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5961,11 +7841,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -6064,11 +7944,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -6146,11 +8026,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -6228,11 +8108,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -6310,11 +8190,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -6392,11 +8272,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -6474,11 +8354,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -6547,11 +8427,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -6629,11 +8509,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -6713,11 +8593,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -6807,11 +8687,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -6880,11 +8760,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -6962,11 +8842,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7044,11 +8924,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7128,11 +9008,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7212,11 +9092,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7296,11 +9176,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7387,11 +9267,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7460,11 +9340,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7533,11 +9413,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7606,11 +9486,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7679,11 +9559,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7752,11 +9632,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -7825,11 +9705,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7909,11 +9789,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -8000,11 +9880,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -8082,11 +9962,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -8155,11 +10035,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -8237,11 +10117,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -8319,11 +10199,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -8401,11 +10281,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -8483,11 +10363,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -8565,11 +10445,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -8647,11 +10527,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -8729,11 +10609,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -8832,11 +10712,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -8934,11 +10814,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -9036,11 +10916,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -9138,11 +11018,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -9250,11 +11130,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -9362,11 +11242,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -9483,11 +11363,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -9577,11 +11457,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -9680,11 +11560,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -9785,11 +11665,11 @@
         ]
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -9888,11 +11768,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -10000,11 +11880,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -10103,11 +11983,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -10206,11 +12086,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": true
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -10314,11 +12194,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": true
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -10422,11 +12302,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -10491,11 +12371,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -10642,11 +12522,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -10793,11 +12673,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -10944,11 +12824,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -11095,11 +12975,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {

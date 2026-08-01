@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/guidance-lifecycle-result.schema.json",
+  "title": "Agent guidance lifecycle operation result",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "kind",
+    "status"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/guidance-lifecycle-result/v1"
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^agent-guidance\\."
+    },
+    "status": {
+      "type": "string"
+    },
+    "mutation_applied": {
+      "type": "boolean"
+    },
+    "guidance_id": {
+      "type": "string"
+    },
+    "store": {
+      "type": "string"
+    },
+    "record": {
+      "type": "object"
+    },
+    "records": {
+      "type": "array"
+    },
+    "mutation_receipt": {
+      "type": "object"
+    },
+    "failures": {
+      "type": "array"
+    }
+  }
+}

@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["assignment", "autopilot", "checkpoint", "config", "correction-event", "defaults", "doctor", "evaluation", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["assignment.admit", "assignment.cleanup", "assignment.close", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.report", "correction-event.correct-dispute", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.status", "evaluation.transition", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
+const supportedCommands = new Set(["agent-guidance", "assignment", "autopilot", "checkpoint", "config", "correction-event", "defaults", "doctor", "evaluation", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
+const nativeOperationIds = new Set(["agent-guidance.delete", "agent-guidance.edit", "agent-guidance.merge", "agent-guidance.promote", "agent-guidance.retire", "agent-guidance.revalidate", "agent-guidance.split", "agent-guidance.supersede", "agent-guidance.suppress", "agent-guidance.weaken", "assignment.admit", "assignment.cleanup", "assignment.close", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.report", "correction-event.correct-dispute", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.status", "evaluation.transition", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -5953,6 +5953,1211 @@ const commandDefinitions = [
     "operation_ref": {
       "id": "uninstall.lifecycle",
       "path": "operations/uninstall.lifecycle.json"
+    }
+  },
+  {
+    "interface": {
+      "help": "Promote and mutate local target guidance through generated operations.",
+      "name": "agent-guidance",
+      "options": [],
+      "subcommand_dest": "agent_guidance_command",
+      "subcommands": [
+        {
+          "help": "Promote one authorised guidance candidate into its lifecycle store.",
+          "name": "promote",
+          "operation_ref": {
+            "id": "agent-guidance.promote",
+            "path": "operations/agent-guidance.promote.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--guidance-id"
+              ],
+              "help": "Guidance lifecycle record id.",
+              "name": "guidance_id"
+            },
+            {
+              "flags": [
+                "--expected-revision"
+              ],
+              "help": "Expected current record revision for transition operations.",
+              "name": "expected_revision"
+            },
+            {
+              "flags": [
+                "--expected-record-revisions-json"
+              ],
+              "help": "JSON object of related guidance ids to expected revisions.",
+              "name": "expected_record_revisions_json"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable lifecycle transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--instruction"
+              ],
+              "help": "Replacement instruction for edit operations.",
+              "name": "instruction"
+            },
+            {
+              "flags": [
+                "--replacement-guidance-id"
+              ],
+              "help": "Replacement guidance id for supersede operations.",
+              "name": "replacement_guidance_id"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--merge-guidance-id"
+              ],
+              "help": "Guidance id to merge into the selected record. Repeat for multiple ids.",
+              "name": "merge_guidance_ids"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--split-instruction"
+              ],
+              "help": "Replacement instruction for split operations. Repeat at least twice.",
+              "name": "split_instructions"
+            },
+            {
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Promotion task class filter.",
+              "name": "task_class"
+            },
+            {
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Promotion scope class filter.",
+              "name": "scope_class"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--explicit-remember"
+              ],
+              "help": "Request immediate remember promotion; ignored without a trusted remember receipt.",
+              "name": "explicit_remember"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report without mutation.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Edit one guidance record while preserving provenance and revision history.",
+          "name": "edit",
+          "operation_ref": {
+            "id": "agent-guidance.edit",
+            "path": "operations/agent-guidance.edit.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--guidance-id"
+              ],
+              "help": "Guidance lifecycle record id.",
+              "name": "guidance_id"
+            },
+            {
+              "flags": [
+                "--expected-revision"
+              ],
+              "help": "Expected current record revision for transition operations.",
+              "name": "expected_revision"
+            },
+            {
+              "flags": [
+                "--expected-record-revisions-json"
+              ],
+              "help": "JSON object of related guidance ids to expected revisions.",
+              "name": "expected_record_revisions_json"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable lifecycle transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--instruction"
+              ],
+              "help": "Replacement instruction for edit operations.",
+              "name": "instruction"
+            },
+            {
+              "flags": [
+                "--replacement-guidance-id"
+              ],
+              "help": "Replacement guidance id for supersede operations.",
+              "name": "replacement_guidance_id"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--merge-guidance-id"
+              ],
+              "help": "Guidance id to merge into the selected record. Repeat for multiple ids.",
+              "name": "merge_guidance_ids"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--split-instruction"
+              ],
+              "help": "Replacement instruction for split operations. Repeat at least twice.",
+              "name": "split_instructions"
+            },
+            {
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Promotion task class filter.",
+              "name": "task_class"
+            },
+            {
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Promotion scope class filter.",
+              "name": "scope_class"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--explicit-remember"
+              ],
+              "help": "Request immediate remember promotion; ignored without a trusted remember receipt.",
+              "name": "explicit_remember"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report without mutation.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Merge guidance records and preserve source lineage.",
+          "name": "merge",
+          "operation_ref": {
+            "id": "agent-guidance.merge",
+            "path": "operations/agent-guidance.merge.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--guidance-id"
+              ],
+              "help": "Guidance lifecycle record id.",
+              "name": "guidance_id"
+            },
+            {
+              "flags": [
+                "--expected-revision"
+              ],
+              "help": "Expected current record revision for transition operations.",
+              "name": "expected_revision"
+            },
+            {
+              "flags": [
+                "--expected-record-revisions-json"
+              ],
+              "help": "JSON object of related guidance ids to expected revisions.",
+              "name": "expected_record_revisions_json"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable lifecycle transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--instruction"
+              ],
+              "help": "Replacement instruction for edit operations.",
+              "name": "instruction"
+            },
+            {
+              "flags": [
+                "--replacement-guidance-id"
+              ],
+              "help": "Replacement guidance id for supersede operations.",
+              "name": "replacement_guidance_id"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--merge-guidance-id"
+              ],
+              "help": "Guidance id to merge into the selected record. Repeat for multiple ids.",
+              "name": "merge_guidance_ids"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--split-instruction"
+              ],
+              "help": "Replacement instruction for split operations. Repeat at least twice.",
+              "name": "split_instructions"
+            },
+            {
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Promotion task class filter.",
+              "name": "task_class"
+            },
+            {
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Promotion scope class filter.",
+              "name": "scope_class"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--explicit-remember"
+              ],
+              "help": "Request immediate remember promotion; ignored without a trusted remember receipt.",
+              "name": "explicit_remember"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report without mutation.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Split one guidance record into replacement records.",
+          "name": "split",
+          "operation_ref": {
+            "id": "agent-guidance.split",
+            "path": "operations/agent-guidance.split.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--guidance-id"
+              ],
+              "help": "Guidance lifecycle record id.",
+              "name": "guidance_id"
+            },
+            {
+              "flags": [
+                "--expected-revision"
+              ],
+              "help": "Expected current record revision for transition operations.",
+              "name": "expected_revision"
+            },
+            {
+              "flags": [
+                "--expected-record-revisions-json"
+              ],
+              "help": "JSON object of related guidance ids to expected revisions.",
+              "name": "expected_record_revisions_json"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable lifecycle transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--instruction"
+              ],
+              "help": "Replacement instruction for edit operations.",
+              "name": "instruction"
+            },
+            {
+              "flags": [
+                "--replacement-guidance-id"
+              ],
+              "help": "Replacement guidance id for supersede operations.",
+              "name": "replacement_guidance_id"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--merge-guidance-id"
+              ],
+              "help": "Guidance id to merge into the selected record. Repeat for multiple ids.",
+              "name": "merge_guidance_ids"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--split-instruction"
+              ],
+              "help": "Replacement instruction for split operations. Repeat at least twice.",
+              "name": "split_instructions"
+            },
+            {
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Promotion task class filter.",
+              "name": "task_class"
+            },
+            {
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Promotion scope class filter.",
+              "name": "scope_class"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--explicit-remember"
+              ],
+              "help": "Request immediate remember promotion; ignored without a trusted remember receipt.",
+              "name": "explicit_remember"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report without mutation.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Suppress guidance without deleting provenance.",
+          "name": "suppress",
+          "operation_ref": {
+            "id": "agent-guidance.suppress",
+            "path": "operations/agent-guidance.suppress.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--guidance-id"
+              ],
+              "help": "Guidance lifecycle record id.",
+              "name": "guidance_id"
+            },
+            {
+              "flags": [
+                "--expected-revision"
+              ],
+              "help": "Expected current record revision for transition operations.",
+              "name": "expected_revision"
+            },
+            {
+              "flags": [
+                "--expected-record-revisions-json"
+              ],
+              "help": "JSON object of related guidance ids to expected revisions.",
+              "name": "expected_record_revisions_json"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable lifecycle transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--instruction"
+              ],
+              "help": "Replacement instruction for edit operations.",
+              "name": "instruction"
+            },
+            {
+              "flags": [
+                "--replacement-guidance-id"
+              ],
+              "help": "Replacement guidance id for supersede operations.",
+              "name": "replacement_guidance_id"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--merge-guidance-id"
+              ],
+              "help": "Guidance id to merge into the selected record. Repeat for multiple ids.",
+              "name": "merge_guidance_ids"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--split-instruction"
+              ],
+              "help": "Replacement instruction for split operations. Repeat at least twice.",
+              "name": "split_instructions"
+            },
+            {
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Promotion task class filter.",
+              "name": "task_class"
+            },
+            {
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Promotion scope class filter.",
+              "name": "scope_class"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--explicit-remember"
+              ],
+              "help": "Request immediate remember promotion; ignored without a trusted remember receipt.",
+              "name": "explicit_remember"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report without mutation.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Revalidate guidance against the current target identity.",
+          "name": "revalidate",
+          "operation_ref": {
+            "id": "agent-guidance.revalidate",
+            "path": "operations/agent-guidance.revalidate.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--guidance-id"
+              ],
+              "help": "Guidance lifecycle record id.",
+              "name": "guidance_id"
+            },
+            {
+              "flags": [
+                "--expected-revision"
+              ],
+              "help": "Expected current record revision for transition operations.",
+              "name": "expected_revision"
+            },
+            {
+              "flags": [
+                "--expected-record-revisions-json"
+              ],
+              "help": "JSON object of related guidance ids to expected revisions.",
+              "name": "expected_record_revisions_json"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable lifecycle transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--instruction"
+              ],
+              "help": "Replacement instruction for edit operations.",
+              "name": "instruction"
+            },
+            {
+              "flags": [
+                "--replacement-guidance-id"
+              ],
+              "help": "Replacement guidance id for supersede operations.",
+              "name": "replacement_guidance_id"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--merge-guidance-id"
+              ],
+              "help": "Guidance id to merge into the selected record. Repeat for multiple ids.",
+              "name": "merge_guidance_ids"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--split-instruction"
+              ],
+              "help": "Replacement instruction for split operations. Repeat at least twice.",
+              "name": "split_instructions"
+            },
+            {
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Promotion task class filter.",
+              "name": "task_class"
+            },
+            {
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Promotion scope class filter.",
+              "name": "scope_class"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--explicit-remember"
+              ],
+              "help": "Request immediate remember promotion; ignored without a trusted remember receipt.",
+              "name": "explicit_remember"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report without mutation.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Weaken guidance to advisory-only routing.",
+          "name": "weaken",
+          "operation_ref": {
+            "id": "agent-guidance.weaken",
+            "path": "operations/agent-guidance.weaken.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--guidance-id"
+              ],
+              "help": "Guidance lifecycle record id.",
+              "name": "guidance_id"
+            },
+            {
+              "flags": [
+                "--expected-revision"
+              ],
+              "help": "Expected current record revision for transition operations.",
+              "name": "expected_revision"
+            },
+            {
+              "flags": [
+                "--expected-record-revisions-json"
+              ],
+              "help": "JSON object of related guidance ids to expected revisions.",
+              "name": "expected_record_revisions_json"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable lifecycle transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--instruction"
+              ],
+              "help": "Replacement instruction for edit operations.",
+              "name": "instruction"
+            },
+            {
+              "flags": [
+                "--replacement-guidance-id"
+              ],
+              "help": "Replacement guidance id for supersede operations.",
+              "name": "replacement_guidance_id"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--merge-guidance-id"
+              ],
+              "help": "Guidance id to merge into the selected record. Repeat for multiple ids.",
+              "name": "merge_guidance_ids"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--split-instruction"
+              ],
+              "help": "Replacement instruction for split operations. Repeat at least twice.",
+              "name": "split_instructions"
+            },
+            {
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Promotion task class filter.",
+              "name": "task_class"
+            },
+            {
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Promotion scope class filter.",
+              "name": "scope_class"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--explicit-remember"
+              ],
+              "help": "Request immediate remember promotion; ignored without a trusted remember receipt.",
+              "name": "explicit_remember"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report without mutation.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Supersede guidance with a replacement record.",
+          "name": "supersede",
+          "operation_ref": {
+            "id": "agent-guidance.supersede",
+            "path": "operations/agent-guidance.supersede.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--guidance-id"
+              ],
+              "help": "Guidance lifecycle record id.",
+              "name": "guidance_id"
+            },
+            {
+              "flags": [
+                "--expected-revision"
+              ],
+              "help": "Expected current record revision for transition operations.",
+              "name": "expected_revision"
+            },
+            {
+              "flags": [
+                "--expected-record-revisions-json"
+              ],
+              "help": "JSON object of related guidance ids to expected revisions.",
+              "name": "expected_record_revisions_json"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable lifecycle transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--instruction"
+              ],
+              "help": "Replacement instruction for edit operations.",
+              "name": "instruction"
+            },
+            {
+              "flags": [
+                "--replacement-guidance-id"
+              ],
+              "help": "Replacement guidance id for supersede operations.",
+              "name": "replacement_guidance_id"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--merge-guidance-id"
+              ],
+              "help": "Guidance id to merge into the selected record. Repeat for multiple ids.",
+              "name": "merge_guidance_ids"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--split-instruction"
+              ],
+              "help": "Replacement instruction for split operations. Repeat at least twice.",
+              "name": "split_instructions"
+            },
+            {
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Promotion task class filter.",
+              "name": "task_class"
+            },
+            {
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Promotion scope class filter.",
+              "name": "scope_class"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--explicit-remember"
+              ],
+              "help": "Request immediate remember promotion; ignored without a trusted remember receipt.",
+              "name": "explicit_remember"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report without mutation.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Retire guidance from future routing.",
+          "name": "retire",
+          "operation_ref": {
+            "id": "agent-guidance.retire",
+            "path": "operations/agent-guidance.retire.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--guidance-id"
+              ],
+              "help": "Guidance lifecycle record id.",
+              "name": "guidance_id"
+            },
+            {
+              "flags": [
+                "--expected-revision"
+              ],
+              "help": "Expected current record revision for transition operations.",
+              "name": "expected_revision"
+            },
+            {
+              "flags": [
+                "--expected-record-revisions-json"
+              ],
+              "help": "JSON object of related guidance ids to expected revisions.",
+              "name": "expected_record_revisions_json"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable lifecycle transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--instruction"
+              ],
+              "help": "Replacement instruction for edit operations.",
+              "name": "instruction"
+            },
+            {
+              "flags": [
+                "--replacement-guidance-id"
+              ],
+              "help": "Replacement guidance id for supersede operations.",
+              "name": "replacement_guidance_id"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--merge-guidance-id"
+              ],
+              "help": "Guidance id to merge into the selected record. Repeat for multiple ids.",
+              "name": "merge_guidance_ids"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--split-instruction"
+              ],
+              "help": "Replacement instruction for split operations. Repeat at least twice.",
+              "name": "split_instructions"
+            },
+            {
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Promotion task class filter.",
+              "name": "task_class"
+            },
+            {
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Promotion scope class filter.",
+              "name": "scope_class"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--explicit-remember"
+              ],
+              "help": "Request immediate remember promotion; ignored without a trusted remember receipt.",
+              "name": "explicit_remember"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report without mutation.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Delete guidance routing while retaining mutation receipt provenance.",
+          "name": "delete",
+          "operation_ref": {
+            "id": "agent-guidance.delete",
+            "path": "operations/agent-guidance.delete.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--guidance-id"
+              ],
+              "help": "Guidance lifecycle record id.",
+              "name": "guidance_id"
+            },
+            {
+              "flags": [
+                "--expected-revision"
+              ],
+              "help": "Expected current record revision for transition operations.",
+              "name": "expected_revision"
+            },
+            {
+              "flags": [
+                "--expected-record-revisions-json"
+              ],
+              "help": "JSON object of related guidance ids to expected revisions.",
+              "name": "expected_record_revisions_json"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable lifecycle transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--instruction"
+              ],
+              "help": "Replacement instruction for edit operations.",
+              "name": "instruction"
+            },
+            {
+              "flags": [
+                "--replacement-guidance-id"
+              ],
+              "help": "Replacement guidance id for supersede operations.",
+              "name": "replacement_guidance_id"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--merge-guidance-id"
+              ],
+              "help": "Guidance id to merge into the selected record. Repeat for multiple ids.",
+              "name": "merge_guidance_ids"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--split-instruction"
+              ],
+              "help": "Replacement instruction for split operations. Repeat at least twice.",
+              "name": "split_instructions"
+            },
+            {
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Promotion task class filter.",
+              "name": "task_class"
+            },
+            {
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Promotion scope class filter.",
+              "name": "scope_class"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--explicit-remember"
+              ],
+              "help": "Request immediate remember promotion; ignored without a trusted remember receipt.",
+              "name": "explicit_remember"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report without mutation.",
+              "name": "dry_run"
+            }
+          ]
+        }
+      ]
+    },
+    "name": "agent-guidance",
+    "operation_ref": {
+      "id": "agent-guidance.promote",
+      "path": "operations/agent-guidance.promote.json"
     }
   },
   {

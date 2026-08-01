@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import copy
+import hashlib
 import importlib.util
 import json
 import shutil
@@ -24,6 +26,16 @@ from agentic_workspace import (
     resolve_invocation,
 )
 from agentic_workspace.generated_operations import (
+    agent_guidance_delete,
+    agent_guidance_edit,
+    agent_guidance_merge,
+    agent_guidance_promote,
+    agent_guidance_retire,
+    agent_guidance_revalidate,
+    agent_guidance_split,
+    agent_guidance_supersede,
+    agent_guidance_suppress,
+    agent_guidance_weaken,
     assignment_admit,
     assignment_export,
     assignment_import,
@@ -37,6 +49,34 @@ from agentic_workspace.generated_operations import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+_GUIDANCE_HOST_TEST_RSA_N = (
+    "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
+    "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
+    "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
+    "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
+    "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
+    "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
+)
+_GUIDANCE_HOST_TEST_RSA_D = (
+    "150e670a941d6e82bae78365aecb999f6b4a457cc087a5b59e662a64c4afc04dd284a291f8430a32faaf802650"
+    "d166a4db53be859b66ec9faddb497c731312ca93e605edffd08b593da2ebf6cf13f788f026ce47202a95009a28"
+    "0c69153efe7a4deb583def85024548ed5baa1387179f4fdc5d17030d8cacd28669f772458d4b7356063e6b6cd6"
+    "6a065bf040741ee41681fbed78212d0c1dd60a91ffe28eb710718dc41f4859323d30f0447e268bbcc34e0568b0"
+    "3c021cb333fc99905c1f08bbcc5a169dfa89603bdd429a1d448006e81b4efd7527c4b4f15fff4b66afd61073d1"
+    "4093425405fd92f25c3da185644151771cb9b2218482644fc199473ce122b1"
+)
+_RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+
+
+def _guidance_host_test_signature(payload: dict[str, object]) -> str:
+    n = int(_GUIDANCE_HOST_TEST_RSA_N, 16)
+    d = int(_GUIDANCE_HOST_TEST_RSA_D, 16)
+    key_size = (n.bit_length() + 7) // 8
+    message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    digest_info = _RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
+    encoded = b"\x00\x01" + (b"\xff" * (key_size - len(digest_info) - 3)) + b"\x00" + digest_info
+    raw = pow(int.from_bytes(encoded, "big"), d, n).to_bytes(key_size, "big")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
 def _trusted_guidance_host_event(
@@ -53,9 +93,10 @@ def _trusted_guidance_host_event(
 ) -> dict[str, object]:
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        TRUSTED_AUTHORITY_EVENT_INBOX_PATH,
         _json_digest,
+        _trusted_authority_admission_signature_payload,
         _trusted_authority_event_digest,
-        _trusted_authority_protected_host_event_store_path,
         record_trusted_authority_host_event,
     )
 
@@ -88,7 +129,7 @@ def _trusted_guidance_host_event(
     event["host_admission_verdict"] = {
         "kind": "agentic-workspace/trusted-authority-host-event-verdict/v1",
         "status": "admitted",
-        "admission_authority": "host-adapter-resolver",
+        "admission_authority": "signed-host-adapter",
         "event_ref": event_ref,
         "event_digest": _trusted_authority_event_digest(event),
         "producer": "github-review-adapter",
@@ -105,16 +146,22 @@ def _trusted_guidance_host_event(
         "nonce": f"{source_ref}:{event_id or 'event'}",
         "verifier_revision": "guidance-host-test-verifier:1",
     }
+    event["host_admission"] = {
+        "kind": "agentic-workspace/trusted-authority-host-admission/v1",
+        "algorithm": "RS256",
+        "key_id": "github-review-adapter:test-v1",
+    }
+    signature_payload = _trusted_authority_admission_signature_payload(
+        ref=event_ref,
+        event=event,
+        verdict=event["host_admission_verdict"],
+        admission=event["host_admission"],
+    )
+    event["host_admission"]["signature"] = _guidance_host_test_signature(signature_payload)
     _ = host_admission_monkeypatch
-    store_path = _trusted_authority_protected_host_event_store_path()
-    try:
-        store = json.loads(store_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        store = {"kind": "agentic-workspace/trusted-authority-host-event-store/v1", "events": {}}
-    if store.get("kind") != "agentic-workspace/trusted-authority-host-event-store/v1" or not isinstance(store.get("events"), dict):
-        store = {"kind": "agentic-workspace/trusted-authority-host-event-store/v1", "events": {}}
-    store["events"][event_ref] = event
-    store_path.write_text(json.dumps(store, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    inbox_path = target_root / TRUSTED_AUTHORITY_EVENT_INBOX_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
+    inbox_path.parent.mkdir(parents=True, exist_ok=True)
+    inbox_path.write_text(json.dumps(event, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     imported = record_trusted_authority_host_event(
         target_root=target_root,
         authority=authority,
@@ -529,6 +576,98 @@ def test_correction_event_public_contract_omits_caller_authority_inputs() -> Non
         input_names = {entry["name"] for entry in operation["contract"]["inputs"]}
         assert not caller_authority_inputs & input_names
         assert "trusted_authority_receipt_ref" in input_names
+
+
+def test_agent_guidance_generated_lifecycle_operations_are_external_runtime_backed(tmp_path: Path) -> None:
+    operation_wrappers = {
+        "agent-guidance.delete": agent_guidance_delete,
+        "agent-guidance.edit": agent_guidance_edit,
+        "agent-guidance.merge": agent_guidance_merge,
+        "agent-guidance.promote": agent_guidance_promote,
+        "agent-guidance.retire": agent_guidance_retire,
+        "agent-guidance.revalidate": agent_guidance_revalidate,
+        "agent-guidance.split": agent_guidance_split,
+        "agent-guidance.supersede": agent_guidance_supersede,
+        "agent-guidance.suppress": agent_guidance_suppress,
+        "agent-guidance.weaken": agent_guidance_weaken,
+    }
+    profile_entries = external_contract_bundle()["operations"]
+    for operation_id in operation_wrappers:
+        assert profile_entries[operation_id]["external_consumption"]["status"] == "runtime-backed"
+        assert profile_entries[operation_id]["contract"]["ir_plan"]["steps"][1]["uses"] == "guidance.lifecycle.apply"
+
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'current_target = "user-local:fast-worker"',
+                "",
+                "[local_memory]",
+                "target_guidance_enabled = true",
+                'target_guidance_overlay_path = ".agentic-workspace/local/guidance-lifecycle.json"',
+                "",
+                "[delegation_targets.fast_worker]",
+                'target_id = "user-local:fast-worker"',
+                'target_revision = "rev-1"',
+                'aliases = ["fast"]',
+                'revision_policy = "preserve"',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    store_path = tmp_path / ".agentic-workspace/local/guidance-lifecycle.json"
+    store_path.parent.mkdir(parents=True)
+    store_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/guidance-lifecycle-store/v1",
+                "records": [
+                    {
+                        "kind": "agentic-workspace/guidance-lifecycle-record/v1",
+                        "guidance_id": "guidance:generated-edit",
+                        "status": "active",
+                        "instruction": "Prefer broad edits.",
+                        "applicability": {"target_identity_ref": "user-local:fast-worker"},
+                        "destination": {
+                            "owner": "repo-local-target-guidance-overlay",
+                            "owner_operation_id": "agent-guidance.promote.target-guidance",
+                            "store": ".agentic-workspace/local/guidance-lifecycle.json",
+                        },
+                        "provenance": {"source_event_refs": ["review-1"]},
+                        "transitions": [{"operation": "promote", "reason": "fixture"}],
+                        "revision": 1,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    invocation = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
+
+    edited = agent_guidance_edit(
+        {
+            "guidance_id": "guidance:generated-edit",
+            "expected_revision": 1,
+            "reason": "generated external edit",
+            "instruction": "Prefer narrow edits.",
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+
+    assert edited["status"] == "transitioned"
+    assert edited["mutation_applied"] is True
+    assert edited["record"]["revision"] == 2
+    assert edited["record"]["instruction"] == "Prefer narrow edits."
 
 
 def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

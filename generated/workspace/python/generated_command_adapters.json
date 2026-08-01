@@ -1,5 +1,63 @@
 {
   "adapters_by_command": {
+    "agent-guidance": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "agent-guidance",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommands": [
+          "promote",
+          "edit",
+          "merge",
+          "split",
+          "suppress",
+          "revalidate",
+          "weaken",
+          "supersede",
+          "retire",
+          "delete"
+        ]
+      },
+      "conformance_refs": [
+        "agent-guidance.promote.process",
+        "agent-guidance.edit.process",
+        "agent-guidance.merge.process",
+        "agent-guidance.split.process",
+        "agent-guidance.suppress.process",
+        "agent-guidance.revalidate.process",
+        "agent-guidance.weaken.process",
+        "agent-guidance.supersede.process",
+        "agent-guidance.retire.process",
+        "agent-guidance.delete.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "agent-guidance.lifecycle.cli",
+      "operation_id": "agent-guidance.promote",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "guidance.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [
+          "guidance_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "guidance_lifecycle_result.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
     "assignment": {
       "command": {
         "command_manifest": "cli_commands.json",

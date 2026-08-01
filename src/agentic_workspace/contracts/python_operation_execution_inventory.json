@@ -2295,6 +2295,236 @@
       "what_would_make_portable_later": "Split packet rendering, local artifact IO, and transition validation into schema-backed portable primitives after the assignment/run lifecycle schema is stable."
     },
     {
+      "command": "agent-guidance",
+      "conformance_ref": "agent-guidance.delete.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "guidance.lifecycle.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; guidance.lifecycle.apply remains a package-domain lifecycle primitive for local guidance record mutation, revision guards, and promotion admission.",
+      "hand_owned_runtime_code": [
+        "workspace target guidance lifecycle admission",
+        "agent guidance local record lifecycle mutation"
+      ],
+      "operation_contract": "operations/agent-guidance.delete.json",
+      "operation_id": "agent-guidance.delete",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but mutates local guidance lifecycle state through package-specific revision, replacement, and deletion policy.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split guidance record storage, revision validation, and lifecycle transition rules into schema-backed portable primitives after guidance lifecycle semantics stabilize."
+    },
+    {
+      "command": "agent-guidance",
+      "conformance_ref": "agent-guidance.edit.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "guidance.lifecycle.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; guidance.lifecycle.apply remains a package-domain lifecycle primitive for local guidance record mutation, revision guards, and promotion admission.",
+      "hand_owned_runtime_code": [
+        "workspace target guidance lifecycle admission",
+        "agent guidance local record lifecycle mutation"
+      ],
+      "operation_contract": "operations/agent-guidance.edit.json",
+      "operation_id": "agent-guidance.edit",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but mutates local guidance lifecycle state through package-specific revision and instruction update policy.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split guidance record storage, revision validation, and lifecycle transition rules into schema-backed portable primitives after guidance lifecycle semantics stabilize."
+    },
+    {
+      "command": "agent-guidance",
+      "conformance_ref": "agent-guidance.merge.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "guidance.lifecycle.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; guidance.lifecycle.apply remains a package-domain lifecycle primitive for local guidance record mutation, revision guards, and promotion admission.",
+      "hand_owned_runtime_code": [
+        "workspace target guidance lifecycle admission",
+        "agent guidance local record lifecycle mutation"
+      ],
+      "operation_contract": "operations/agent-guidance.merge.json",
+      "operation_id": "agent-guidance.merge",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but mutates local guidance lifecycle state through package-specific multi-record merge and revision policy.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split guidance record storage, revision validation, and lifecycle transition rules into schema-backed portable primitives after guidance lifecycle semantics stabilize."
+    },
+    {
+      "command": "agent-guidance",
+      "conformance_ref": "agent-guidance.promote.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "guidance.lifecycle.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; guidance.lifecycle.apply remains a package-domain lifecycle primitive for local guidance record mutation, revision guards, and promotion admission.",
+      "hand_owned_runtime_code": [
+        "workspace target guidance lifecycle admission",
+        "agent guidance promotion admission"
+      ],
+      "operation_contract": "operations/agent-guidance.promote.json",
+      "operation_id": "agent-guidance.promote",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but promotion remains package-specific guidance admission, source classification, and remember-policy judgment.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split guidance promotion admission, durable file updates, and remember-policy validation into schema-backed portable primitives after guidance lifecycle semantics stabilize."
+    },
+    {
+      "command": "agent-guidance",
+      "conformance_ref": "agent-guidance.retire.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "guidance.lifecycle.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; guidance.lifecycle.apply remains a package-domain lifecycle primitive for local guidance record mutation, revision guards, and promotion admission.",
+      "hand_owned_runtime_code": [
+        "workspace target guidance lifecycle admission",
+        "agent guidance local record lifecycle mutation"
+      ],
+      "operation_contract": "operations/agent-guidance.retire.json",
+      "operation_id": "agent-guidance.retire",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but mutates local guidance lifecycle state through package-specific retirement and revision policy.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split guidance record storage, revision validation, and lifecycle transition rules into schema-backed portable primitives after guidance lifecycle semantics stabilize."
+    },
+    {
+      "command": "agent-guidance",
+      "conformance_ref": "agent-guidance.revalidate.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "guidance.lifecycle.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; guidance.lifecycle.apply remains a package-domain lifecycle primitive for local guidance record mutation, revision guards, and promotion admission.",
+      "hand_owned_runtime_code": [
+        "workspace target guidance lifecycle admission",
+        "agent guidance local record lifecycle mutation"
+      ],
+      "operation_contract": "operations/agent-guidance.revalidate.json",
+      "operation_id": "agent-guidance.revalidate",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but mutates local guidance lifecycle state through package-specific revalidation and revision policy.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split guidance record storage, revision validation, and lifecycle transition rules into schema-backed portable primitives after guidance lifecycle semantics stabilize."
+    },
+    {
+      "command": "agent-guidance",
+      "conformance_ref": "agent-guidance.split.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "guidance.lifecycle.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; guidance.lifecycle.apply remains a package-domain lifecycle primitive for local guidance record mutation, revision guards, and promotion admission.",
+      "hand_owned_runtime_code": [
+        "workspace target guidance lifecycle admission",
+        "agent guidance local record lifecycle mutation"
+      ],
+      "operation_contract": "operations/agent-guidance.split.json",
+      "operation_id": "agent-guidance.split",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but mutates local guidance lifecycle state through package-specific split and replacement policy.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split guidance record storage, revision validation, and lifecycle transition rules into schema-backed portable primitives after guidance lifecycle semantics stabilize."
+    },
+    {
+      "command": "agent-guidance",
+      "conformance_ref": "agent-guidance.supersede.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "guidance.lifecycle.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; guidance.lifecycle.apply remains a package-domain lifecycle primitive for local guidance record mutation, revision guards, and promotion admission.",
+      "hand_owned_runtime_code": [
+        "workspace target guidance lifecycle admission",
+        "agent guidance local record lifecycle mutation"
+      ],
+      "operation_contract": "operations/agent-guidance.supersede.json",
+      "operation_id": "agent-guidance.supersede",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but mutates local guidance lifecycle state through package-specific supersession and replacement policy.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split guidance record storage, revision validation, and lifecycle transition rules into schema-backed portable primitives after guidance lifecycle semantics stabilize."
+    },
+    {
+      "command": "agent-guidance",
+      "conformance_ref": "agent-guidance.suppress.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "guidance.lifecycle.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; guidance.lifecycle.apply remains a package-domain lifecycle primitive for local guidance record mutation, revision guards, and promotion admission.",
+      "hand_owned_runtime_code": [
+        "workspace target guidance lifecycle admission",
+        "agent guidance local record lifecycle mutation"
+      ],
+      "operation_contract": "operations/agent-guidance.suppress.json",
+      "operation_id": "agent-guidance.suppress",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but mutates local guidance lifecycle state through package-specific suppression and revision policy.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split guidance record storage, revision validation, and lifecycle transition rules into schema-backed portable primitives after guidance lifecycle semantics stabilize."
+    },
+    {
+      "command": "agent-guidance",
+      "conformance_ref": "agent-guidance.weaken.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "guidance.lifecycle.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; guidance.lifecycle.apply remains a package-domain lifecycle primitive for local guidance record mutation, revision guards, and promotion admission.",
+      "hand_owned_runtime_code": [
+        "workspace target guidance lifecycle admission",
+        "agent guidance local record lifecycle mutation"
+      ],
+      "operation_contract": "operations/agent-guidance.weaken.json",
+      "operation_id": "agent-guidance.weaken",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but mutates local guidance lifecycle state through package-specific weakening and revision policy.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split guidance record storage, revision validation, and lifecycle transition rules into schema-backed portable primitives after guidance lifecycle semantics stabilize."
+    },
+    {
       "command": "correction-event",
       "conformance_ref": "correction-event.submit.process",
       "domain_runtime_primitive_refs": [

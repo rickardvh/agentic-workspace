@@ -1,7 +1,39 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+
 # ruff: noqa: F403,F405
 from tests.workspace_cli_support import *
+
+_GUIDANCE_HOST_TEST_RSA_N = (
+    "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
+    "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
+    "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
+    "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
+    "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
+    "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
+)
+_GUIDANCE_HOST_TEST_RSA_D = (
+    "150e670a941d6e82bae78365aecb999f6b4a457cc087a5b59e662a64c4afc04dd284a291f8430a32faaf802650"
+    "d166a4db53be859b66ec9faddb497c731312ca93e605edffd08b593da2ebf6cf13f788f026ce47202a95009a28"
+    "0c69153efe7a4deb583def85024548ed5baa1387179f4fdc5d17030d8cacd28669f772458d4b7356063e6b6cd6"
+    "6a065bf040741ee41681fbed78212d0c1dd60a91ffe28eb710718dc41f4859323d30f0447e268bbcc34e0568b0"
+    "3c021cb333fc99905c1f08bbcc5a169dfa89603bdd429a1d448006e81b4efd7527c4b4f15fff4b66afd61073d1"
+    "4093425405fd92f25c3da185644151771cb9b2218482644fc199473ce122b1"
+)
+_RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+
+
+def _guidance_host_test_signature(payload: dict[str, object]) -> str:
+    n = int(_GUIDANCE_HOST_TEST_RSA_N, 16)
+    d = int(_GUIDANCE_HOST_TEST_RSA_D, 16)
+    key_size = (n.bit_length() + 7) // 8
+    message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    digest_info = _RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
+    encoded = b"\x00\x01" + (b"\xff" * (key_size - len(digest_info) - 3)) + b"\x00" + digest_info
+    raw = pow(int.from_bytes(encoded, "big"), d, n).to_bytes(key_size, "big")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
 def _trusted_guidance_host_event(
@@ -20,10 +52,11 @@ def _trusted_guidance_host_event(
 ) -> dict[str, object]:
     from agentic_workspace.agent_guidance import (
         TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        TRUSTED_AUTHORITY_EVENT_INBOX_PATH,
         TRUSTED_AUTHORITY_EVENT_STORE_PATH,
         _json_digest,
+        _trusted_authority_admission_signature_payload,
         _trusted_authority_event_digest,
-        _trusted_authority_protected_host_event_store_path,
         record_trusted_authority_host_event,
     )
 
@@ -59,7 +92,7 @@ def _trusted_guidance_host_event(
     event["host_admission_verdict"] = {
         "kind": "agentic-workspace/trusted-authority-host-event-verdict/v1",
         "status": str(key_overrides.get("status") if key_overrides else "admitted"),
-        "admission_authority": "host-adapter-resolver",
+        "admission_authority": "signed-host-adapter",
         "event_ref": event_ref,
         "event_digest": _trusted_authority_event_digest(event),
         "producer": "github-review-adapter",
@@ -76,6 +109,18 @@ def _trusted_guidance_host_event(
         "nonce": str(admission_context["nonce"]),
         "verifier_revision": "guidance-host-test-verifier:1",
     }
+    event["host_admission"] = {
+        "kind": "agentic-workspace/trusted-authority-host-admission/v1",
+        "algorithm": "RS256",
+        "key_id": "github-review-adapter:test-v1",
+    }
+    signature_payload = _trusted_authority_admission_signature_payload(
+        ref=event_ref,
+        event=event,
+        verdict=event["host_admission_verdict"],
+        admission=event["host_admission"],
+    )
+    event["host_admission"]["signature"] = _guidance_host_test_signature(signature_payload)
     if "revoked_at" in admission_context:
         event["host_admission_verdict"]["revoked_at"] = admission_context["revoked_at"]
     if "superseded_by" in admission_context:
@@ -85,22 +130,15 @@ def _trusted_guidance_host_event(
         event["import_custody"] = {
             "kind": "agentic-workspace/trusted-authority-host-event-import/v1",
             "importer": "agentic-workspace.guidance-authority-import",
-            "source": "protected-host-event-store",
+            "source": "signed-host-event-inbox",
             "event_digest": _trusted_authority_event_digest(event),
         }
         event["revision"] = event["import_custody"]["event_digest"]
         path = target_root / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
         _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
         return {"event_ref": event_ref, "event": event}
-    store_path = _trusted_authority_protected_host_event_store_path()
-    try:
-        store = json.loads(store_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        store = {"kind": "agentic-workspace/trusted-authority-host-event-store/v1", "events": {}}
-    if store.get("kind") != "agentic-workspace/trusted-authority-host-event-store/v1" or not isinstance(store.get("events"), dict):
-        store = {"kind": "agentic-workspace/trusted-authority-host-event-store/v1", "events": {}}
-    store["events"][event_ref] = event
-    store_path.write_text(json.dumps(store, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    inbox_path = target_root / TRUSTED_AUTHORITY_EVENT_INBOX_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
+    _write(inbox_path, json.dumps(event, indent=2, sort_keys=True) + "\n")
     imported = record_trusted_authority_host_event(
         target_root=target_root,
         authority=authority,
@@ -1843,7 +1881,7 @@ def test_guidance_receipts_require_trusted_host_event_before_authority_storage(t
     )
     from agentic_workspace.config import WorkspaceUsageError
 
-    with pytest.raises(WorkspaceUsageError, match="protected host event store"):
+    with pytest.raises(WorkspaceUsageError, match="signed host event inbox"):
         record_trusted_authority_host_event(
             target_root=tmp_path,
             authority="pr-review",
@@ -1972,6 +2010,7 @@ def test_guidance_receipts_do_not_load_repo_or_pythonpath_host_verifiers() -> No
     assert "importlib.import_module" not in source
     assert "BEGIN " + "PRIVATE KEY" not in test_source
     assert "_TRUSTED_AUTHORITY_HOST_ADMISSION_KEYS" not in source
+    assert "_trusted_authority_protected_host_event_store_path" not in source
 
 
 def test_guidance_host_admission_rejects_raw_caller_mapping(tmp_path: Path) -> None:
@@ -2075,7 +2114,7 @@ def test_guidance_receipts_reject_caller_written_verdict_without_protected_impor
     event["host_admission_verdict"] = {
         "kind": "agentic-workspace/trusted-authority-host-event-verdict/v1",
         "status": "admitted",
-        "admission_authority": "host-adapter-resolver",
+        "admission_authority": "signed-host-adapter",
         "event_ref": event_ref,
         "event_digest": _trusted_authority_event_digest(event),
         "producer": "github-review-adapter",
@@ -2095,7 +2134,7 @@ def test_guidance_receipts_reject_caller_written_verdict_without_protected_impor
     path = tmp_path / TRUSTED_AUTHORITY_EVENT_STORE_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
     _write(path, json.dumps(event, indent=2, sort_keys=True) + "\n")
 
-    with pytest.raises(WorkspaceUsageError, match="protected host boundary"):
+    with pytest.raises(WorkspaceUsageError, match="signed host boundary"):
         record_trusted_authority_receipt(
             target_root=tmp_path,
             authority="pr-review",
@@ -2465,15 +2504,27 @@ def test_guidance_lifecycle_multi_file_transaction_rolls_back_prior_write(tmp_pa
     assert not second.exists()
 
 
-def test_guidance_lifecycle_contract_does_not_claim_missing_generated_operations() -> None:
+def test_guidance_lifecycle_contract_claims_generated_external_operations() -> None:
     from agentic_workspace.agent_guidance import _guidance_public_operation_entries
 
     entries = _guidance_public_operation_entries()
 
     assert entries
-    assert all(entry["generated_operation"] is False for entry in entries)
-    assert all(entry["external_contract"] is False for entry in entries)
-    assert all(entry["generated_parity"] == "not-claimed" for entry in entries)
+    assert all(entry["generated_operation"] is True for entry in entries)
+    assert all(entry["external_contract"] is True for entry in entries)
+    assert all(entry["generated_parity"] == "runtime-backed-python-typescript" for entry in entries)
+    assert {entry["operation_id"] for entry in entries} == {
+        "agent-guidance.promote",
+        "agent-guidance.edit",
+        "agent-guidance.merge",
+        "agent-guidance.split",
+        "agent-guidance.suppress",
+        "agent-guidance.revalidate",
+        "agent-guidance.weaken",
+        "agent-guidance.supersede",
+        "agent-guidance.retire",
+        "agent-guidance.delete",
+    }
 
 
 def test_correction_event_lifecycle_rejects_delivery_replay_separately_from_recurrence() -> None:

@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/guidance-lifecycle-input.schema.json",
+  "title": "Agent guidance lifecycle operation input",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "target": {
+      "type": "string"
+    },
+    "format": {
+      "type": "string",
+      "enum": [
+        "text",
+        "json"
+      ]
+    },
+    "guidance_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expected_revision": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        }
+      ]
+    },
+    "expected_record_revisions_json": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "instruction": {
+      "type": "string"
+    },
+    "replacement_guidance_id": {
+      "type": "string"
+    },
+    "merge_guidance_ids": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "split_instructions": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "task_class": {
+      "type": "string"
+    },
+    "scope_class": {
+      "type": "string"
+    },
+    "explicit_remember": {
+      "type": "boolean"
+    },
+    "dry_run": {
+      "type": "boolean"
+    }
+  }
+}

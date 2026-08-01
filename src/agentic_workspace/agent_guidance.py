@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import base64
 import hashlib
+import hmac
 import json
 import os
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -22,30 +23,46 @@ CORRECTION_EVENT_RETENTION_CAP = 20
 GUIDANCE_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/guidance-receipts.json")
 TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-events")
 TRUSTED_AUTHORITY_EVENT_INDEX_PATH = TRUSTED_AUTHORITY_EVENT_STORE_PATH / "index.json"
+TRUSTED_AUTHORITY_EVENT_INBOX_PATH = TRUSTED_AUTHORITY_EVENT_STORE_PATH / "inbox"
 TRUSTED_AUTHORITY_EVENT_AUDIENCE = "agentic-workspace.guidance-authority"
 TrustedAuthorityHostEventResolver = Callable[[str], dict[str, Any]]
+_RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+_TRUSTED_AUTHORITY_HOST_PUBLIC_KEYS = {
+    "github-review-adapter:test-v1": {
+        "algorithm": "RS256",
+        "issuer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "n": (
+            "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
+            "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
+            "bad a671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
+            "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
+            "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
+            "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
+        ).replace(" ", ""),
+        "e": "010001",
+        "status": "current",
+    }
+}
 
 
 def _guidance_now() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def _trusted_authority_protected_host_event_store_path() -> Path:
-    return Path(tempfile.gettempdir()) / "agentic-workspace-trusted-authority-host-events.json"
+def _trusted_authority_host_event_inbox_path(target_root: Path, host_event_ref: str) -> Path:
+    fragment = host_event_ref.removeprefix("trusted-authority-event:")
+    return target_root / TRUSTED_AUTHORITY_EVENT_INBOX_PATH / f"{fragment}.json"
 
 
-def _load_trusted_authority_host_event_from_store(host_event_ref: str) -> dict[str, Any]:
-    path = _trusted_authority_protected_host_event_store_path()
+def _load_trusted_authority_host_event_from_inbox(*, target_root: Path, host_event_ref: str) -> dict[str, Any]:
+    path = _trusted_authority_host_event_inbox_path(target_root, host_event_ref)
     try:
-        store = json.loads(path.read_text(encoding="utf-8"))
+        event = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise WorkspaceUsageError("trusted authority protected host event store is missing or unreadable.") from exc
-    events = store.get("events") if store.get("kind") == "agentic-workspace/trusted-authority-host-event-store/v1" else None
-    if not isinstance(events, dict):
-        raise WorkspaceUsageError("trusted authority protected host event store is malformed.")
-    event = events.get(host_event_ref)
+        raise WorkspaceUsageError("trusted authority signed host event inbox is missing or unreadable.") from exc
     if not isinstance(event, dict):
-        raise WorkspaceUsageError("host_event_ref was not found in the trusted authority protected host event store.")
+        raise WorkspaceUsageError("trusted authority signed host event inbox entry has the wrong contract.")
     return json.loads(json.dumps(event, sort_keys=True, default=str))
 
 
@@ -823,9 +840,9 @@ def record_trusted_authority_host_event(
         raise WorkspaceUsageError("trusted authority host event imports require an opaque host_event_ref.")
     if host_event_resolver is not None:
         raise WorkspaceUsageError(
-            "caller-provided trusted authority host event resolvers are rejected; install a protected host event store."
+            "caller-provided trusted authority host event resolvers are rejected; import a signed host event envelope."
         )
-    event = _load_trusted_authority_host_event_from_store(ref)
+    event = _load_trusted_authority_host_event_from_inbox(target_root=target_root, host_event_ref=ref)
     if not isinstance(event, dict):
         raise WorkspaceUsageError("trusted authority host resolver returned the wrong contract.")
     if event.get("kind") != "agentic-workspace/trusted-authority-host-event/v1" or event.get("event_ref") != ref:
@@ -840,7 +857,7 @@ def record_trusted_authority_host_event(
         "event_id": event_id,
     }
     if any(str(event.get(key) or "") != expected for key, expected in expected_inputs.items() if expected):
-        raise WorkspaceUsageError("trusted authority host event inputs do not match the protected resolver result.")
+        raise WorkspaceUsageError("trusted authority host event inputs do not match the signed host event.")
     custody_raw = event.get("custody")
     custody: dict[str, Any] = custody_raw if isinstance(custody_raw, dict) else {}
     if trusted_channel and str(custody.get("trusted_channel") or "") != trusted_channel:
@@ -862,8 +879,11 @@ def record_trusted_authority_host_event(
         "import_custody": {
             "kind": "agentic-workspace/trusted-authority-host-event-import/v1",
             "importer": "agentic-workspace.guidance-authority-import",
-            "source": "protected-host-event-store",
+            "source": "signed-host-event-inbox",
             "event_digest": event_digest,
+            "signature_key_id": str(event.get("host_admission", {}).get("key_id") or "")
+            if isinstance(event.get("host_admission"), dict)
+            else "",
         },
         "event_path": path.relative_to(target_root).as_posix(),
         "revision": event_digest,
@@ -897,7 +917,7 @@ def record_trusted_authority_host_event(
         "event": stored,
         "event_store": TRUSTED_AUTHORITY_EVENT_STORE_PATH.as_posix(),
         "event_index": TRUSTED_AUTHORITY_EVENT_INDEX_PATH.as_posix(),
-        "rule": "Repo-local guidance code imports opaque producer-owned host events from a protected host store; it does not mint host authority or read user-home trust stores.",
+        "rule": "Repo-local guidance code imports signed producer-owned host events; local transport JSON is untrusted until a pinned host signature admits it.",
     }
 
 
@@ -919,6 +939,55 @@ def _trusted_authority_event_digest(event: dict[str, Any]) -> str:
     )
 
 
+def _trusted_authority_admission_signature_payload(
+    *,
+    ref: str,
+    event: dict[str, Any],
+    verdict: dict[str, Any],
+    admission: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/trusted-authority-host-admission-signature-payload/v1",
+        "algorithm": str(admission.get("algorithm") or ""),
+        "key_id": str(admission.get("key_id") or ""),
+        "event_ref": ref,
+        "event_digest": _trusted_authority_event_digest(event),
+        "verdict_digest": _json_digest(verdict),
+        "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+    }
+
+
+def _base64url_decode(value: str) -> bytes:
+    text = value.strip()
+    padding = "=" * (-len(text) % 4)
+    return base64.urlsafe_b64decode((text + padding).encode("ascii"))
+
+
+def _verify_rs256_signature(*, key: dict[str, str], payload: dict[str, Any], signature: str) -> bool:
+    try:
+        n = int(str(key.get("n") or ""), 16)
+        e = int(str(key.get("e") or ""), 16)
+        raw_signature = _base64url_decode(signature)
+    except (ValueError, TypeError):
+        return False
+    key_size = (n.bit_length() + 7) // 8
+    if len(raw_signature) != key_size:
+        return False
+    message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    digest_info = _RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
+    encoded = pow(int.from_bytes(raw_signature, "big"), e, n).to_bytes(key_size, "big")
+    minimum_padding = 8
+    if not (encoded.startswith(b"\x00\x01") and b"\x00" in encoded[2 + minimum_padding :]):
+        return False
+    separator = encoded.find(b"\x00", 2)
+    if separator < 2 + minimum_padding:
+        return False
+    padding = encoded[2:separator]
+    if len(padding) < minimum_padding or any(byte != 0xFF for byte in padding):
+        return False
+    return hmac.compare_digest(encoded[separator + 1 :], digest_info)
+
+
 def _parse_guidance_time(value: Any) -> datetime | None:
     text = str(value or "").strip()
     if not text:
@@ -933,20 +1002,36 @@ def _parse_guidance_time(value: Any) -> datetime | None:
 
 
 def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any], target_root: Path) -> bool:
-    """Return whether a protected host resolver admitted this event."""
+    """Return whether a pinned host signature admitted this event."""
 
     verdict_raw = event.get("host_admission_verdict")
     if not isinstance(verdict_raw, dict):
         return False
     verdict: dict[str, Any] = verdict_raw
+    admission_raw = event.get("host_admission")
+    if not isinstance(admission_raw, dict):
+        return False
+    admission: dict[str, Any] = admission_raw
+    key_id = str(admission.get("key_id") or "")
+    key = _TRUSTED_AUTHORITY_HOST_PUBLIC_KEYS.get(key_id)
+    if not isinstance(key, dict) or key.get("status") != "current":
+        return False
+    if admission.get("kind") != "agentic-workspace/trusted-authority-host-admission/v1":
+        return False
+    if admission.get("algorithm") != "RS256" or key.get("algorithm") != "RS256":
+        return False
     if verdict.get("kind") != "agentic-workspace/trusted-authority-host-event-verdict/v1":
         return False
-    if verdict.get("status") != "admitted" or verdict.get("admission_authority") != "host-adapter-resolver":
+    if verdict.get("status") != "admitted" or verdict.get("admission_authority") != "signed-host-adapter":
         return False
     if str(verdict.get("event_ref") or "") != ref or str(verdict.get("event_digest") or "") != _trusted_authority_event_digest(event):
         return False
     custody_raw = event.get("custody")
     custody: dict[str, Any] = custody_raw if isinstance(custody_raw, dict) else {}
+    if str(key.get("issuer") or "") != str(custody.get("producer") or ""):
+        return False
+    if str(key.get("trusted_channel") or "") != str(custody.get("trusted_channel") or ""):
+        return False
     if str(verdict.get("producer") or "") != str(custody.get("producer") or ""):
         return False
     if str(verdict.get("trusted_channel") or "") != str(custody.get("trusted_channel") or ""):
@@ -972,7 +1057,8 @@ def _host_admits_trusted_authority_event(*, ref: str, event: dict[str, Any], tar
         return False
     if str(verdict.get("revoked_at") or "").strip() or str(verdict.get("superseded_by") or "").strip():
         return False
-    return True
+    payload = _trusted_authority_admission_signature_payload(ref=ref, event=event, verdict=verdict, admission=admission)
+    return _verify_rs256_signature(key=key, payload=payload, signature=str(admission.get("signature") or ""))
 
 
 def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[str, Any]:
@@ -991,10 +1077,10 @@ def _trusted_authority_host_event(*, target_root: Path, event_ref: str) -> dict[
     import_custody = event.get("import_custody") if isinstance(event.get("import_custody"), dict) else {}
     if (
         import_custody.get("kind") != "agentic-workspace/trusted-authority-host-event-import/v1"
-        or import_custody.get("source") != "protected-host-event-store"
+        or import_custody.get("source") != "signed-host-event-inbox"
         or import_custody.get("event_digest") != _trusted_authority_event_digest(event)
     ):
-        raise WorkspaceUsageError("trusted authority host event was not imported through the protected host boundary.")
+        raise WorkspaceUsageError("trusted authority host event was not imported through the signed host boundary.")
     if not _host_admits_trusted_authority_event(ref=ref, event=event, target_root=target_root):
         raise WorkspaceUsageError("trusted authority host event was not admitted by the host boundary.")
     custody = event.get("custody") if isinstance(event.get("custody"), dict) else {}
@@ -1809,6 +1895,102 @@ def apply_guidance_promotion(
     }
 
 
+def _guidance_int_value(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise WorkspaceUsageError("guidance lifecycle expected revisions must be integers.") from exc
+
+
+def _guidance_json_mapping(value: Any) -> dict[str, int] | None:
+    if value in (None, ""):
+        return None
+    loaded = value
+    if isinstance(value, str):
+        try:
+            loaded = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise WorkspaceUsageError("expected_record_revisions_json must be valid JSON.") from exc
+    if not isinstance(loaded, dict):
+        raise WorkspaceUsageError("expected_record_revisions_json must be a JSON object.")
+    return {str(key): int(raw) for key, raw in loaded.items()}
+
+
+def _guidance_string_list(value: Any) -> list[str]:
+    if value in (None, ""):
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, tuple):
+        return [str(item).strip() for item in value if str(item).strip()]
+    text = str(value).strip()
+    if not text:
+        return []
+    try:
+        loaded = json.loads(text)
+    except json.JSONDecodeError:
+        loaded = None
+    if isinstance(loaded, list):
+        return [str(item).strip() for item in loaded if str(item).strip()]
+    return [item.strip() for item in text.split(",") if item.strip()]
+
+
+def apply_guidance_lifecycle_operation(
+    *,
+    target_root: Path,
+    operation_id: str,
+    values: dict[str, Any],
+) -> dict[str, Any]:
+    """Apply a generated agent-guidance lifecycle operation through the public command boundary."""
+
+    operation = operation_id.removeprefix("agent-guidance.")
+    guidance_id = str(values.get("guidance_id") or "").strip()
+    if not guidance_id:
+        return {
+            "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+            "operation_id": operation_id,
+            "status": "missing-guidance-id",
+            "mutation_applied": False,
+        }
+    if operation == "promote":
+        result = apply_guidance_promotion(
+            target_root=target_root,
+            guidance_id=guidance_id,
+            task_class=str(values.get("task_class") or "") or None,
+            scope_class=str(values.get("scope_class") or "") or None,
+            explicit_remember=_truthy(values.get("explicit_remember")),
+        )
+    else:
+        result = transition_guidance(
+            target_root=target_root,
+            guidance_id=guidance_id,
+            operation=operation,
+            reason=str(values.get("reason") or "").strip(),
+            expected_revision=_guidance_int_value(values.get("expected_revision")),
+            expected_record_revisions=_guidance_json_mapping(
+                values.get("expected_record_revisions_json") or values.get("expected_record_revisions")
+            ),
+            replacement_guidance_id=str(values.get("replacement_guidance_id") or "").strip(),
+            instruction=str(values.get("instruction") or "") if values.get("instruction") is not None else None,
+            merge_guidance_ids=_guidance_string_list(values.get("merge_guidance_ids")),
+            split_instructions=_guidance_string_list(values.get("split_instructions")),
+        )
+    mutation_applied = result.get("status") in {"promoted", "transitioned"}
+    return json.loads(
+        json.dumps(
+            {
+                "operation_id": operation_id,
+                "mutation_applied": mutation_applied,
+                **result,
+            },
+            sort_keys=True,
+            default=str,
+        )
+    )
+
+
 def transition_guidance(
     *,
     target_root: Path,
@@ -2152,17 +2334,15 @@ def _guidance_public_operation_entries() -> list[dict[str, Any]]:
             "operation": operation_id.removeprefix("agent-guidance."),
             "operation_id": operation_id,
             "public": True,
-            "generated_operation": False,
-            "external_contract": False,
-            "generated_parity": "not-claimed",
-            "schema": "agentic-workspace/guidance-lifecycle-record/v1",
+            "generated_operation": True,
+            "external_contract": True,
+            "generated_parity": "runtime-backed-python-typescript",
+            "schema": "schemas/guidance_lifecycle_input.schema.json",
             "result_schema": "agentic-workspace/guidance-lifecycle-result/v1",
             "receipt_schema": "agentic-workspace/guidance-mutation-receipt/v1",
-            "callable": "agentic_workspace.agent_guidance.apply_guidance_promotion"
-            if operation_id == "agent-guidance.promote"
-            else "agentic_workspace.agent_guidance.transition_guidance",
+            "callable": "agentic_workspace.agent_guidance.apply_guidance_lifecycle_operation",
             "admission": lifecycle_requirements[operation_id.removeprefix("agent-guidance.")],
-            "remaining_gap": "Lifecycle operations are supported Python authority routines only; no generated command IR operation is advertised for this family.",
+            "operation_contract": f"src/agentic_workspace/contracts/operations/{operation_id}.json",
         }
         for operation_id in GUIDANCE_LIFECYCLE_OPERATIONS
     ]

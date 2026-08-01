@@ -41,10 +41,22 @@ CORRECTION_OPERATION_IDS = (
     "correction-event.submit",
     "correction-event.withdraw-supersede",
 )
+GUIDANCE_OPERATION_IDS = (
+    "agent-guidance.delete",
+    "agent-guidance.edit",
+    "agent-guidance.merge",
+    "agent-guidance.promote",
+    "agent-guidance.retire",
+    "agent-guidance.revalidate",
+    "agent-guidance.split",
+    "agent-guidance.supersede",
+    "agent-guidance.suppress",
+    "agent-guidance.weaken",
+)
 OPERATION_RESOURCE_OUTPUTS = {
     REPO_ROOT / f"generated/workspace/python/operations/{operation_id}.json": REPO_ROOT
     / f"src/agentic_workspace/contracts/operations/{operation_id}.json"
-    for operation_id in (*ASSIGNMENT_OPERATION_IDS, *CORRECTION_OPERATION_IDS)
+    for operation_id in (*ASSIGNMENT_OPERATION_IDS, *CORRECTION_OPERATION_IDS, *GUIDANCE_OPERATION_IDS)
 }
 SCHEMA_RESOURCE_OUTPUTS = {
     REPO_ROOT / "generated/workspace/python/_contracts/operation_failure.schema.json": REPO_ROOT
@@ -63,6 +75,10 @@ SCHEMA_RESOURCE_OUTPUTS = {
     / "src/agentic_workspace/contracts/schemas/correction_event_input.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/correction_event_result.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/correction_event_result.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/guidance_lifecycle_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/guidance_lifecycle_input.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/guidance_lifecycle_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/guidance_lifecycle_result.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/config_report_input.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/config_report_input.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/workspace_config.schema.json": REPO_ROOT
@@ -87,6 +103,10 @@ SCHEMA_RESOURCE_OUTPUTS = {
     / "src/agentic_workspace/contracts/schemas/correction_event_input.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/correction_event_result.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/correction_event_result.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/guidance_lifecycle_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/guidance_lifecycle_input.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/guidance_lifecycle_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/guidance_lifecycle_result.schema.json",
 }
 
 USABLE_MATURITY_LEVELS = {
