@@ -13,10 +13,26 @@ export class AWClientError extends Error {
   constructor(kind, message, details = {}) { super(message); this.name = 'AWClientError'; this.kind = kind; this.details = details; }
 }
 export function externalConsumerProfile() { return JSON.parse(readFileSync(profileUrl, 'utf8')); }
+function receiptPublicationPayload(payload) {
+  const copy = { ...payload };
+  delete copy.mirror_publication;
+  return copy;
+}
+function sortedJson(value) {
+  if (Array.isArray(value)) return `[${value.map(sortedJson).join(',')}]`;
+  if (value && typeof value === 'object') return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${sortedJson(value[key])}`).join(',')}}`;
+  return JSON.stringify(value);
+}
+function validReceiptPublication(payload) {
+  const publication = payload?.mirror_publication ?? {};
+  if (publication.kind !== 'agentic-workspace/external-operation-conformance-mirror-publication/v1' || publication.status !== 'published') return false;
+  const digest = createHash('sha256').update(sortedJson(receiptPublicationPayload(payload))).digest('hex');
+  return publication.payload_digest === `sha256:${digest}`;
+}
 export function externalOperationConformanceReceipts() {
   try {
     const payload = JSON.parse(readFileSync(conformanceReceiptsUrl, 'utf8'));
-    return payload?.kind === 'agentic-workspace/external-operation-conformance-receipt-store/v1' ? payload : { kind: 'agentic-workspace/external-operation-conformance-receipt-store/v1', receipts: [] };
+    return payload?.kind === 'agentic-workspace/external-operation-conformance-receipt-store/v1' && validReceiptPublication(payload) ? payload : { kind: 'agentic-workspace/external-operation-conformance-receipt-store/v1', receipts: [], status: 'invalid-publication' };
   } catch {
     return { kind: 'agentic-workspace/external-operation-conformance-receipt-store/v1', receipts: [] };
   }
@@ -31,8 +47,7 @@ function conformanceReceipt(entry, profile, receiptStore) {
       && receipt.profile_fingerprint === profile.compatibility?.fingerprint
       && !['revoked', 'superseded', 'stale'].includes(receipt.status)
       && !receipt.revoked_at
-      && !receipt.superseded_by
-      && (!receipt.expires_at || Date.now() < Date.parse(receipt.expires_at));
+      && !receipt.superseded_by;
   });
   return candidates.sort((left, right) => String(left.executed_at ?? left.receipt_ref ?? '').localeCompare(String(right.executed_at ?? right.receipt_ref ?? ''))).at(-1);
 }
@@ -124,17 +139,22 @@ export function compatibilitySurfaceSatisfied(required, available) {
   return compare(oldContract, newContract) && Object.entries(required.schemas ?? {}).every(([role, schemas]) => compare(schemas, available.schemas?.[role], role));
 }
 export function detectWorkspace(target) {
-  const root = resolve(target); const path = join(root, '.agentic-workspace', 'config.toml');
-  try { const text = readFileSync(path, 'utf8'); return { status: /enabled\s*=\s*false/.test(text) ? 'disabled' : 'enabled', target: root }; }
-  catch (error) { if (error.code === 'ENOENT') return { status: 'absent', target: root }; throw error; }
+  const root = resolve(target);
+  for (const name of ['config.local.toml', 'config.toml']) {
+    const path = join(root, '.agentic-workspace', name);
+    try { const text = readFileSync(path, 'utf8'); return { status: /enabled\s*=\s*false/.test(text) ? 'disabled' : 'enabled', target: root, config: name }; }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
+  return { status: 'absent', target: root };
 }
 export function resolveInvocation(target, override) {
   if (Array.isArray(override) && override.length) return [...override];
+  const unquoteTomlString = (value) => value.replace(/^["']|["']$/g, '').replace(/\\\\/g, '\\').replace(/\\"/g, '"');
   for (const name of ['config.local.toml', 'config.toml']) {
     try {
       const text = readFileSync(join(resolve(target), '.agentic-workspace', name), 'utf8');
       const match = text.match(/^cli_invoke\s*=\s*["'](.+)["']\s*$/m);
-      if (match) return match[1].match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g).map((part) => part.replace(/^["']|["']$/g, ''));
+      if (match) return match[1].match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g).map((part) => unquoteTomlString(part));
     } catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
   return ['agentic-workspace'];

@@ -481,8 +481,9 @@ def render_python_client() -> str:
 from __future__ import annotations
 
 import json
+import shlex
 import subprocess
-from datetime import datetime, timezone
+import tomllib
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Sequence
@@ -500,7 +501,21 @@ def external_operation_conformance_receipts() -> dict[str, Any]:
     if not resource.is_file():
         return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []}
     payload = json.loads(resource.read_text(encoding="utf-8"))
-    return payload if isinstance(payload, dict) and payload.get("kind") == "agentic-workspace/external-operation-conformance-receipt-store/v1" else {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []}
+    if not isinstance(payload, dict) or payload.get("kind") != "agentic-workspace/external-operation-conformance-receipt-store/v1":
+        return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []}
+    return payload if _valid_receipt_publication(payload) else {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": [], "status": "invalid-publication"}
+
+
+def _receipt_publication_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in payload.items() if key != "mirror_publication"}
+
+
+def _valid_receipt_publication(payload: dict[str, Any]) -> bool:
+    publication = payload.get("mirror_publication", {})
+    if not isinstance(publication, dict) or publication.get("status") != "published":
+        return False
+    digest = __import__("hashlib").sha256(json.dumps(_receipt_publication_payload(payload), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return publication.get("payload_digest") == f"sha256:{digest}"
 
 
 def _conformance_receipt(entry: dict[str, Any], profile: dict[str, Any], receipt_store: dict[str, Any]) -> dict[str, Any] | None:
@@ -517,12 +532,6 @@ def _conformance_receipt(entry: dict[str, Any], profile: dict[str, Any], receipt
         if receipt.get("profile_fingerprint") != profile_fingerprint: continue
         if receipt.get("status") in {"revoked", "superseded", "stale"}: continue
         if receipt.get("revoked_at") or receipt.get("superseded_by"): continue
-        expires_at = str(receipt.get("expires_at") or "")
-        if expires_at:
-            try: parsed_expires_at = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
-            except ValueError: continue
-            if parsed_expires_at.tzinfo is None: parsed_expires_at = parsed_expires_at.replace(tzinfo=timezone.utc)
-            if datetime.now(timezone.utc) >= parsed_expires_at: continue
         candidates.append(receipt)
     return sorted(candidates, key=lambda item: str(item.get("executed_at") or item.get("receipt_ref") or ""))[-1] if candidates else None
 
@@ -582,8 +591,26 @@ def require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bo
     if failures: raise ValueError("incompatible operation requirements: " + ", ".join(failures))
 
 
-def invoke_json(argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] = ("agentic-workspace",)) -> dict[str, Any]:
-    command = [*executable, *argv]
+def resolve_invocation(target: str | Path, override: Sequence[str] | None = None) -> list[str]:
+    if override:
+        return [str(item) for item in override]
+    root = Path(target).resolve()
+    for name in ("config.local.toml", "config.toml"):
+        path = root / ".agentic-workspace" / name
+        if not path.is_file():
+            continue
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+        workspace = payload.get("workspace", {}) if isinstance(payload, dict) else {}
+        command = workspace.get("cli_invoke") if isinstance(workspace, dict) else None
+        if isinstance(command, str) and command.strip():
+            return shlex.split(command, posix=False)
+    return ["agentic-workspace"]
+
+
+def invoke_json(
+    argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] | None = None
+) -> dict[str, Any]:
+    command = [*(resolve_invocation(target or ".", executable)), *argv]
     if target is not None and "--target" not in command: command.extend(["--target", str(target)])
     if "--format" not in command: command.extend(["--format", "json"])
     completed = subprocess.run(command, text=True, capture_output=True, check=False)
@@ -653,11 +680,9 @@ def main() -> int:
     args = parser.parse_args()
     profile = build_profile(json.loads(IR_PATH.read_text(encoding="utf-8")), repo_root=REPO_ROOT)
     expected = json.dumps(profile, indent=2) + "\n"
-    conformance_receipts = render_conformance_receipts(profile)
     bundle = render_bundle(profile)
     rendered = {
         **{path: expected for path in OUTPUTS},
-        **{path: conformance_receipts for path in CONFORMANCE_RECEIPT_OUTPUTS},
         **{path: bundle for path in BUNDLE_OUTPUTS},
         **{output: source.read_text(encoding="utf-8") for output, source in OPERATION_RESOURCE_OUTPUTS.items()},
         **{output: source.read_text(encoding="utf-8") for output, source in SCHEMA_RESOURCE_OUTPUTS.items()},

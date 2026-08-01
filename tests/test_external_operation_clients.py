@@ -221,23 +221,26 @@ def test_packaged_conformance_receipt_store_fails_closed_without_full_external_e
     assert store["status"] == "recorded"
     receipts = {receipt["operation_id"]: receipt for receipt in store["receipts"]}
     assert {"config.report", "delegation-outcome.append"}.issubset(receipts)
-    for operation_id in ("config.report", "delegation-outcome.append"):
-        receipt = receipts[operation_id]
-        assert receipt["status"] == "failed"
-        assert receipt["runtime_exception_revision"] == ""
-        assert receipt["runtime_exception_admission"]["reason"] == "missing-operation-specific-runtime-exception-revision"
-        assert receipt["transports"]["vendor-neutral"]["status"] == "not-run"
-        assert receipt["cases"]["absent"]["status"] == "not-run"
-        assert receipt["operation_result_evidence"]
+    config_receipt = receipts["config.report"]
+    assert config_receipt["status"] == "failed"
+    assert config_receipt["transports"]["vendor-neutral"]["status"] == "passed"
+    assert config_receipt["cases"]["absent"]["status"] == "not-run"
+    assert config_receipt["freshness"]["strategy"] == "revision-bound-explicit-revocation"
+    delegation_receipt = receipts["delegation-outcome.append"]
+    assert delegation_receipt["status"] == "failed"
+    assert delegation_receipt["runtime_exception_revision"] == ""
+    assert delegation_receipt["runtime_exception_admission"]["reason"] == "missing-operation-specific-runtime-exception-revision"
+    assert delegation_receipt["transports"]["vendor-neutral"]["status"] == "not-run"
+    assert delegation_receipt["operation_result_evidence"]
 
 
-def test_external_readiness_report_rejects_revoked_superseded_and_expired_receipts(monkeypatch) -> None:
+def test_external_readiness_report_rejects_explicitly_revoked_and_superseded_receipts(monkeypatch) -> None:
     profile = copy.deepcopy(public_client.external_consumer_profile())
     candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
     candidate["external_consumption"]["status"] = "supported"
     base_receipt = _readiness_conformance_receipt_store(profile, candidate)["receipts"][0]
     monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
-    for marker in ({"revoked_at": "2026-07-29T00:00:00Z"}, {"superseded_by": "newer"}, {"expires_at": "2026-07-26T00:00:00Z"}):
+    for marker in ({"revoked_at": "2026-07-29T00:00:00Z"}, {"superseded_by": "newer"}, {"status": "stale"}):
         stale = {**base_receipt, **marker}
         monkeypatch.setattr(
             public_client,
@@ -247,6 +250,14 @@ def test_external_readiness_report_rejects_revoked_superseded_and_expired_receip
         report = external_readiness_report(["assignment.export"])
         assert report["status"] == "not-ready"
         assert "executed-conformance-receipt" in report["excluded_operations"][0]["missing_evidence"]
+    expired_only = {**base_receipt, "expires_at": "2026-07-26T00:00:00Z"}
+    monkeypatch.setattr(
+        public_client,
+        "external_operation_conformance_receipts",
+        lambda: {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": [expired_only]},
+    )
+    report = external_readiness_report(["assignment.export"])
+    assert report["status"] == "ready"
 
 
 def _python_client():
@@ -270,6 +281,27 @@ def test_python_client_negotiates_and_invokes_json() -> None:
         executable=[sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")],
     )
     assert payload
+
+
+def test_generated_python_client_resolves_config_local_cli_invoke(tmp_path: Path) -> None:
+    client = _python_client()
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    config_dir = tmp_path / ".agentic-workspace"
+    config_dir.mkdir()
+    (config_dir / "config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        encoding="utf-8",
+    )
+    local_command = f"{Path(sys.executable).as_posix()} {(ROOT / 'scripts/run_agentic_workspace.py').as_posix()}"
+    (config_dir / "config.local.toml").write_text(
+        "schema_version = 1\n[workspace]\ncli_invoke = " + json.dumps(local_command) + "\n",
+        encoding="utf-8",
+    )
+
+    assert client.resolve_invocation(tmp_path) == [Path(sys.executable).as_posix(), (ROOT / "scripts/run_agentic_workspace.py").as_posix()]
+    payload = client.invoke_json(["config", "--verbose"], target=tmp_path)
+
+    assert local_command in json.dumps(payload)
 
 
 def test_python_client_fails_closed_for_unknown_operation() -> None:
@@ -393,6 +425,31 @@ console.log(JSON.stringify({ status: state.status, kind }));
     completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True, check=False)
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout) == {"status": "enabled", "kind": "incompatible"}
+
+
+def test_typescript_client_resolves_config_local_cli_invoke(tmp_path: Path) -> None:
+    config_dir = tmp_path / ".agentic-workspace"
+    config_dir.mkdir()
+    (config_dir / "config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        encoding="utf-8",
+    )
+    local_command = f"{Path(sys.executable).as_posix()} {(ROOT / 'scripts/run_agentic_workspace.py').as_posix()}"
+    (config_dir / "config.local.toml").write_text(
+        "schema_version = 1\n[workspace]\ncli_invoke = " + json.dumps(local_command) + "\n",
+        encoding="utf-8",
+    )
+    script = f"""
+import {{ detectWorkspace, resolveInvocation }} from './generated/workspace/typescript/src/client.mjs';
+const target = {json.dumps(str(tmp_path))};
+console.log(JSON.stringify({{ state: detectWorkspace(target), command: resolveInvocation(target) }}));
+"""
+    completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["state"]["status"] == "enabled"
+    assert payload["state"]["config"] == "config.local.toml"
+    assert payload["command"] == [Path(sys.executable).as_posix(), (ROOT / "scripts/run_agentic_workspace.py").as_posix()]
 
 
 def test_typescript_invokes_same_schema_valid_operation_as_python() -> None:

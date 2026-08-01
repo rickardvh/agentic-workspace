@@ -2068,12 +2068,12 @@
     "src/agentic_workspace/workspace_runtime_planning.py": "83eb3f8b07cfd1d13ec8edabd3a779ad31859de5",
     "src/agentic_workspace/workspace_runtime_primitives.py": "1e52ec4ea574e3f63fa6343c964ac6e245bb15e3",
     "src/agentic_workspace/workspace_runtime_projection.py": "8db623c90efe888f5a6bba8a75bb96d253d1f707",
-    "src/agentic_workspace/workspace_runtime_proof.py": "c87db183c9a520248f2a9389f29edae7cd0daddb",
+    "src/agentic_workspace/workspace_runtime_proof.py": "c3f645b3154116d9983a5ae068330d4276baf6eb",
     "src/agentic_workspace/workspace_runtime_startup.py": "239cb5515bc42ffb3d0daeacc05b04dff15a607b",
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "2aa49a57e2426e148c15b2e13038e181632939e9"
   },
-  "git_index_identity": "44668ba760ccfd760d792f3b911f8cf724c60d72f3e4e3b2ad32f6169238dff2",
+  "git_index_identity": "9b0ef91d58cfb1066992c293c73f3d0b793c184a3a7d3056a5bd63d41299e7ee",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }

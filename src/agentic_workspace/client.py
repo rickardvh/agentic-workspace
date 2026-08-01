@@ -6,7 +6,6 @@ import shlex
 import subprocess
 import tomllib
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Mapping, Sequence, cast
@@ -71,7 +70,32 @@ def external_operation_conformance_receipts() -> dict[str, Any]:
         return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []}
     if not isinstance(payload, dict) or payload.get("kind") != "agentic-workspace/external-operation-conformance-receipt-store/v1":
         return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []}
+    if not _valid_external_receipt_publication(payload):
+        return {
+            "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
+            "receipts": [],
+            "status": "invalid-publication",
+            "rule": "Receipt stores must carry one self-verifiable publication generation.",
+        }
     return payload
+
+
+def _external_receipt_publication_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): value for key, value in payload.items() if key != "mirror_publication"}
+
+
+def _valid_external_receipt_publication(payload: Mapping[str, Any]) -> bool:
+    publication = payload.get("mirror_publication")
+    if not isinstance(publication, Mapping):
+        return False
+    if publication.get("kind") != "agentic-workspace/external-operation-conformance-mirror-publication/v1":
+        return False
+    if publication.get("status") != "published":
+        return False
+    payload_digest = hashlib.sha256(
+        json.dumps(_external_receipt_publication_payload(payload), sort_keys=True, default=str, separators=(",", ":")).encode()
+    ).hexdigest()
+    return publication.get("payload_digest") == f"sha256:{payload_digest}"
 
 
 def _external_conformance_receipt(
@@ -99,16 +123,6 @@ def _external_conformance_receipt(
             continue
         if str(receipt.get("revoked_at") or receipt.get("superseded_by") or "").strip():
             continue
-        expires_at = str(receipt.get("expires_at") or "").strip()
-        if expires_at:
-            try:
-                parsed = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
-            except ValueError:
-                continue
-            if parsed.tzinfo is None:
-                parsed = parsed.replace(tzinfo=timezone.utc)
-            if datetime.now(timezone.utc) >= parsed:
-                continue
         candidates.append(receipt)
     return sorted(candidates, key=lambda item: str(item.get("executed_at") or item.get("receipt_ref") or ""))[-1] if candidates else None
 

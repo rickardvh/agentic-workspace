@@ -10,7 +10,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Mapping
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -55,8 +55,6 @@ READINESS_CASES = (
     "mutation-rejected",
     "mutation-failed",
 )
-CONFORMANCE_RECEIPT_EXPIRES_AT = "2026-12-31T00:00:00Z"
-CONFORMANCE_RECEIPT_TTL_DAYS = 14
 EXTERNAL_CONFORMANCE_RECEIPT_PATHS = (
     REPO_ROOT / "src/agentic_workspace/contracts/external_operation_conformance_receipts.json",
     REPO_ROOT / "generated/workspace/python/external_operation_conformance_receipts.json",
@@ -70,13 +68,6 @@ def _stable_json_digest(value: object) -> str:
 
 def _utc_timestamp() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def _expires_from(executed_at: str) -> str:
-    parsed = datetime.fromisoformat(executed_at.replace("Z", "+00:00"))
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=UTC)
-    return (parsed + timedelta(days=CONFORMANCE_RECEIPT_TTL_DAYS)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _runner_revision() -> str:
@@ -269,7 +260,7 @@ def _readiness_transport_statuses(operation_results: list[dict[str, object]]) ->
     vendor_results = [
         result
         for result in operation_results
-        if result.get("target") == "vendor-neutral" or str(result.get("adapter_id") or "").startswith("vendor-neutral")
+        if result.get("target") == "vendor-neutral" and str(result.get("adapter_id") or "").startswith("vendor-neutral")
     ]
     transports["vendor-neutral"] = _status_for(
         vendor_results,
@@ -313,7 +304,6 @@ def build_external_operation_conformance_receipts(
     *,
     conformance_result: Mapping[str, object] | None = None,
     executed_at: str | None = None,
-    expires_at: str | None = None,
     runner_revision: str | None = None,
     invocation_id: str | None = None,
 ) -> dict[str, object]:
@@ -336,7 +326,6 @@ def build_external_operation_conformance_receipts(
 
     receipts: list[dict[str, object]] = []
     actual_executed_at = executed_at or _utc_timestamp()
-    actual_expires_at = expires_at or _expires_from(actual_executed_at)
     actual_runner_revision = runner_revision or _runner_revision()
     profile_fingerprint = (
         str((profile.get("compatibility") or {}).get("fingerprint", "")) if isinstance(profile.get("compatibility"), Mapping) else ""
@@ -418,7 +407,10 @@ def build_external_operation_conformance_receipts(
                 "profile_fingerprint": profile_fingerprint,
                 "status": receipt_status,
                 "executed_at": actual_executed_at,
-                "expires_at": actual_expires_at,
+                "freshness": {
+                    "strategy": "revision-bound-explicit-revocation",
+                    "rule": "Receipts remain current while operation/profile fingerprints match and no stale, revoked, or superseded marker is present.",
+                },
                 "runtime_exception_revision": runtime_exception_revision,
                 "runtime_exception_admission": runtime_exception_admission,
                 "conformance_result_digest": result_digest,
@@ -441,7 +433,10 @@ def build_external_operation_conformance_receipts(
         "receipts": receipts,
         "producer": "scripts/check/run_operation_conformance_tests.py",
         "executed_at": actual_executed_at,
-        "expires_at": actual_expires_at,
+        "freshness": {
+            "strategy": "revision-bound-explicit-revocation",
+            "rule": "Publication currentness is tied to profile and operation fingerprints plus explicit stale/revoked/superseded markers.",
+        },
         "result_identity": result_identity,
         "status": "recorded" if receipts else "no-operation-results",
         "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored.",
@@ -458,6 +453,35 @@ def _existing_mirror_digests(paths: tuple[Path, ...]) -> dict[Path, str]:
         if path.exists():
             digests[path] = hashlib.sha256(path.read_bytes()).hexdigest()
     return digests
+
+
+def _published_payload_digest(path: Path) -> str:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    publication = payload.get("mirror_publication") if isinstance(payload, Mapping) else None
+    if not isinstance(publication, Mapping) or publication.get("status") != "published":
+        return ""
+    return str(publication.get("payload_digest") or "")
+
+
+def _existing_receipt_identity_for_result(conformance_result: Mapping[str, object]) -> tuple[str | None, str | None]:
+    path = EXTERNAL_CONFORMANCE_RECEIPT_PATHS[0]
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None, None
+    if not isinstance(payload, Mapping):
+        return None, None
+    identity = payload.get("result_identity") if isinstance(payload.get("result_identity"), Mapping) else {}
+    if identity.get("runner_revision") != _runner_revision():
+        return None, None
+    if identity.get("result_digest") != _stable_json_digest(conformance_result):
+        return None, None
+    executed_at = str(identity.get("executed_at") or payload.get("executed_at") or "").strip()
+    invocation_id = str(identity.get("invocation_id") or "").strip()
+    return executed_at or None, invocation_id or None
 
 
 def write_external_operation_conformance_receipts(
@@ -500,13 +524,28 @@ def write_external_operation_conformance_receipts(
             )
         )
     store = dict(receipt_store)
+    payload_digest = hashlib.sha256(
+        json.dumps(store, sort_keys=True, default=str, separators=(",", ":")).encode()
+    ).hexdigest()
+    if existing_digests and all(_published_payload_digest(path) == f"sha256:{payload_digest}" for path in selected_paths):
+        return {
+            "kind": "agentic-workspace/external-operation-conformance-receipt-write/v1",
+            "status": "unchanged",
+            "receipt_count": len(store.get("receipts", [])) if isinstance(store.get("receipts"), list) else 0,
+            "publication_digest": f"sha256:{payload_digest}",
+            "paths": [],
+            "reason": "Existing receipt mirrors already publish the same payload generation.",
+        }
     store["mirror_publication"] = {
         "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
-        "status": "locked-staged-mirror-publication",
+        "status": "published",
+        "generation_id": f"external-conformance-publication:{payload_digest[:24]}",
+        "payload_digest": f"sha256:{payload_digest}",
         "previous_digest": expected_existing_digest or "",
         "publisher_pid": os.getpid(),
+        "paths": [_path_label(path) for path in selected_paths],
         "path_count": len(selected_paths),
-        "mixed_read_boundary": "Readers may rely only on matching publication_digest across all mirrors; this is not a single-filesystem atomic multi-path transaction.",
+        "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
     }
     text = json.dumps(store, indent=2, sort_keys=True) + "\n"
     publication_digest = hashlib.sha256(text.encode()).hexdigest()
@@ -647,6 +686,184 @@ def _typescript_command_for_package(package: Mapping[str, object]) -> tuple[str,
     return "target-unavailable", None
 
 
+def _prepare_vendor_neutral_consumer(temp_root: Path, *, require_node: bool) -> tuple[str, Path | None]:
+    npm = shutil.which("npm") or shutil.which("npm.cmd")
+    if npm is None:
+        return ("node-unavailable" if require_node else "node-unavailable"), None
+    packed_root = temp_root / "vendor-neutral-consumer"
+    packed_root.mkdir(parents=True, exist_ok=True)
+    completed = subprocess.run(
+        [npm, "pack", "--json", "--pack-destination", str(packed_root)],
+        cwd=REPO_ROOT / "generated/workspace/typescript",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return f"npm-pack-failed: {completed.stderr.strip()}", None
+    try:
+        filename = json.loads(completed.stdout)[0]["filename"]
+    except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+        return "npm-pack-returned-malformed-json", None
+    unpacked = packed_root / "unpacked"
+    shutil.unpack_archive(packed_root / str(filename), unpacked, "gztar")
+    client = unpacked / "package/src/client.mjs"
+    if not client.is_file():
+        return "packed-client-missing", None
+    return "available", client
+
+
+def _write_local_invoke_config(fixture_root: Path) -> None:
+    config_dir = fixture_root / ".agentic-workspace"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    local_config = config_dir / "config.local.toml"
+    command = f"{Path(sys.executable).as_posix()} {(REPO_ROOT / 'scripts/run_agentic_workspace.py').as_posix()}"
+    local_config.write_text(
+        "schema_version = 1\n[workspace]\ncli_invoke = " + json.dumps(command) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    config = config_dir / "config.toml"
+    if not config.is_file():
+        config.write_text("schema_version = 1\n[workspace]\ncli_invoke = \"agentic-workspace\"\n", encoding="utf-8", newline="\n")
+
+
+def _external_consumption_status(operation_id: str) -> str:
+    try:
+        profile = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/external_consumer_profile.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "unknown"
+    for entry in profile.get("operations", []):
+        if isinstance(entry, Mapping) and entry.get("id") == operation_id:
+            consumption = entry.get("external_consumption") if isinstance(entry.get("external_consumption"), Mapping) else {}
+            return str(consumption.get("status") or "unknown")
+    return "unknown"
+
+
+def _run_vendor_neutral_consumer_case(
+    *,
+    case: Mapping[str, object],
+    temp_root: Path,
+    client_path: Path | None,
+    client_status: str,
+    require_node: bool,
+) -> dict[str, object]:
+    node = shutil.which("node")
+    if node is None or client_path is None:
+        state = "fail" if require_node else "unavailable"
+        return _result(case=case, artifact_registry={}, target_kind="vendor-neutral", state=state, message=client_status)
+    operation_ref = case.get("operation_ref", {})
+    if not isinstance(operation_ref, Mapping):
+        return _result(case=case, artifact_registry={}, target_kind="vendor-neutral", state="fail", message="malformed operation_ref")
+    operation_id = str(operation_ref.get("operation_id") or "")
+    if _external_consumption_status(operation_id) not in {"supported", "runtime-backed"}:
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="skipped",
+            message="operation is not advertised for external consumer invocation",
+        )
+    case_input = case.get("input", {})
+    if not isinstance(case_input, Mapping) or not isinstance(case_input.get("json"), Mapping):
+        return _result(case=case, artifact_registry={}, target_kind="vendor-neutral", state="skipped", message="no JSON input for packaged consumer")
+    json_values = dict(case_input.get("json", {}))
+    expected = case.get("expected", {})
+    expected_mapping = expected if isinstance(expected, Mapping) else {}
+    expected_error = expected_mapping.get("error") if isinstance(expected_mapping.get("error"), Mapping) else None
+    artifacts = [item for item in case.get("artifacts", []) if isinstance(item, Mapping)]
+    if expected_error is None and artifacts and all(str(item.get("adapter_id") or "") == "cli.process" for item in artifacts):
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="skipped",
+            message="case is wrapper-only and has no operation-shaped generic client artifact",
+        )
+    if expected_error is None and (json_values.get("format") not in {None, "json"} or json_values.get("select")):
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="skipped",
+            message="case exercises selected/text wrapper projection rather than generic operation JSON",
+        )
+    process_case = _case_process_fixture(case)
+    fixture_root = materialize_case_fixture(
+        case=process_case,
+        root=temp_root / str(case.get("id", "case")).replace(".", "-") / "vendor-neutral",
+    )
+    _write_local_invoke_config(fixture_root)
+    script = f"""
+import {{ invokeOperation, AWClientError }} from {json.dumps(client_path.as_uri())};
+const operationId = {json.dumps(str(operation_ref.get("operation_id", "")))};
+const values = {json.dumps(json_values, sort_keys=True)};
+const target = {json.dumps(str(fixture_root))};
+try {{
+  const payload = invokeOperation(operationId, values, {{ target, allowRuntimeBacked: true }});
+  console.log(JSON.stringify({{ ok: true, payload }}));
+}} catch (error) {{
+  const details = error && typeof error === 'object' ? (error.details ?? {{}}) : {{}};
+  console.log(JSON.stringify({{
+    ok: false,
+    kind: error instanceof AWClientError ? error.kind : (error?.kind ?? error?.name ?? 'error'),
+    message: String(error?.message ?? error),
+    details,
+  }}));
+}}
+"""
+    completed = subprocess.run([node, "--input-type=module", "--eval", script], text=True, capture_output=True, check=False)
+    if completed.returncode != 0:
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="fail",
+            message=f"external consumer process failed: {completed.stderr.strip()}",
+        )
+    try:
+        envelope = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="fail",
+            message=f"external consumer returned malformed JSON: {exc}; stdout={completed.stdout!r}",
+        )
+    failures: list[str] = []
+    selected_fields: dict[str, object] = {}
+    if expected_error is not None:
+        if envelope.get("ok") is not False:
+            failures.append("expected external consumer error")
+        else:
+            if expected_error.get("kind") and envelope.get("kind") not in {expected_error.get("kind"), "malformed"}:
+                failures.append(f"expected error kind {expected_error.get('kind')!r}, got {envelope.get('kind')!r}")
+            details = envelope.get("details") if isinstance(envelope.get("details"), Mapping) else {}
+            if envelope.get("kind") != "malformed":
+                for key in ("field", "value"):
+                    if key in expected_error and details.get(key) != expected_error.get(key):
+                        failures.append(f"expected error detail {key}={expected_error.get(key)!r}, got {details.get(key)!r}")
+    else:
+        if envelope.get("ok") is not True:
+            failures.append(f"external consumer error: {envelope.get('kind')} {envelope.get('message')}")
+        else:
+            result_fields = expected_mapping.get("result", {}).get("selected_fields", {}) if isinstance(expected_mapping.get("result"), Mapping) else {}
+            if isinstance(result_fields, Mapping) and result_fields:
+                try:
+                    selected_fields = _select_expected_result_fields(envelope.get("payload", {}), result_fields)
+                except KeyError as exc:
+                    failures.append(f"result selected fields unavailable: {exc}")
+                else:
+                    if selected_fields != dict(result_fields):
+                        failures.append(f"expected selected fields {dict(result_fields)!r}, got {selected_fields!r}")
+    result = _result(case=case, artifact_registry={}, target_kind="vendor-neutral", state="fail" if failures else "pass", message="; ".join(failures))
+    result["adapter_id"] = "vendor-neutral.packaged-consumer"
+    result["artifact_id"] = "packed:@agentic-workspace/workspace-cli"
+    result["selected_fields"] = selected_fields
+    return result
+
+
 def _run_case_target(
     *,
     case: Mapping[str, object],
@@ -654,10 +871,26 @@ def _run_case_target(
     target_kind: str,
     temp_root: Path,
     require_node: bool,
+    vendor_neutral_client: Path | None = None,
+    vendor_neutral_status: str = "not-prepared",
 ) -> dict[str, object]:
     operation_ref = case.get("operation_ref", {})
     if not isinstance(operation_ref, Mapping):
-        return _result(case=case, target_kind=target_kind, state="fail", message="malformed operation_ref")
+        return _result(
+            case=case,
+            artifact_registry=artifact_registry,
+            target_kind=target_kind,
+            state="fail",
+            message="malformed operation_ref",
+        )
+    if target_kind == "vendor-neutral":
+        return _run_vendor_neutral_consumer_case(
+            case=case,
+            temp_root=temp_root,
+            client_path=vendor_neutral_client,
+            client_status=vendor_neutral_status,
+            require_node=require_node,
+        )
     artifact = _artifact_for_target(case, target_kind, artifact_registry)
     if artifact is None:
         return _result(
@@ -953,7 +1186,9 @@ def _result(
 def _case_targets(case: Mapping[str, object], target_selection: str) -> list[str]:
     declared = [str(target.get("kind", "")) for target in case.get("targets", []) if isinstance(target, Mapping)]
     if target_selection == "all":
-        return declared
+        return [*declared, "vendor-neutral"]
+    if target_selection == "vendor-neutral":
+        return ["vendor-neutral"]
     if target_selection == "parity":
         return declared if case.get("behavioral_class") == "cross-target-parity" else []
     return [target_selection] if target_selection in declared else []
@@ -968,7 +1203,8 @@ def _append_parity_results(
     if case.get("behavioral_class") != "cross-target-parity" or len(selected_targets) < 2:
         return
     case_id = str(case.get("id", ""))
-    target_results = [result for result in results if result.get("case_id") == case_id and result.get("target") in selected_targets]
+    parity_targets = [target for target in selected_targets if target != "vendor-neutral"]
+    target_results = [result for result in results if result.get("case_id") == case_id and result.get("target") in parity_targets]
     if any(result.get("state") == "fail" for result in target_results):
         results.append(
             _result(
@@ -1019,6 +1255,11 @@ def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: 
     results: list[dict[str, object]] = []
     with tempfile.TemporaryDirectory(prefix="agentic-workspace-operation-conformance-test-ir-") as tmp:
         temp_root = Path(tmp)
+        vendor_neutral_status, vendor_neutral_client = (
+            _prepare_vendor_neutral_consumer(temp_root, require_node=require_node)
+            if target_selection in {"all", "vendor-neutral"}
+            else ("not-selected", None)
+        )
         for case in cases:
             selected_targets = _case_targets(case, target_selection)
             if not selected_targets:
@@ -1040,6 +1281,8 @@ def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: 
                         target_kind=target_kind,
                         temp_root=temp_root,
                         require_node=require_node,
+                        vendor_neutral_client=vendor_neutral_client,
+                        vendor_neutral_status=vendor_neutral_status,
                     )
                 )
             _append_parity_results(results, case, selected_targets, artifact_registry)
@@ -1081,7 +1324,7 @@ def _print_text(payload: Mapping[str, object]) -> None:
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run operation conformance tests.")
-    parser.add_argument("--target", choices=["all", "python", "typescript", "parity"], default="all")
+    parser.add_argument("--target", choices=["all", "python", "typescript", "vendor-neutral", "parity"], default="all")
     parser.add_argument("--case", action="append", default=[], help="Run only a specific IR case id. May be repeated.")
     parser.add_argument("--require-node", action="store_true", help="Fail when TypeScript cases are selected but Node is unavailable.")
     parser.add_argument("--format", choices=["text", "json"], default="text")
@@ -1092,8 +1335,23 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     payload = run_ir_cases(target_selection=str(args.target), case_filter=set(args.case), require_node=bool(args.require_node))
     profile = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/external_consumer_profile.json").read_text(encoding="utf-8"))
-    receipt_store = build_external_operation_conformance_receipts(profile, conformance_result=payload)
-    payload["external_operation_conformance_receipts"] = write_external_operation_conformance_receipts(receipt_store)
+    reuse_executed_at, reuse_invocation_id = _existing_receipt_identity_for_result(payload)
+    receipt_store = build_external_operation_conformance_receipts(
+        profile,
+        conformance_result=payload,
+        executed_at=reuse_executed_at,
+        invocation_id=reuse_invocation_id,
+    )
+    complete_publication = not args.case and args.target == "all" and payload.get("summary", {}).get("state") == "pass"
+    if complete_publication:
+        payload["external_operation_conformance_receipts"] = write_external_operation_conformance_receipts(receipt_store)
+    else:
+        payload["external_operation_conformance_receipts"] = {
+            "kind": "agentic-workspace/external-operation-conformance-receipt-write/v1",
+            "status": "not-published",
+            "receipt_count": len(receipt_store.get("receipts", [])) if isinstance(receipt_store.get("receipts"), list) else 0,
+            "reason": "Only a complete --target all invocation with no case filter and a passing summary may publish release readiness mirrors.",
+        }
     if args.format == "json":
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:

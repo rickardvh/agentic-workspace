@@ -786,7 +786,7 @@ def test_external_conformance_receipts_pass_only_from_complete_result_vectors() 
     assert all(item["status"] == "passed" for item in receipt["cases"].values())
     assert receipt["conformance_result_digest"]
     assert receipt["executed_at"] == "2026-07-30T10:00:00Z"
-    assert receipt["expires_at"] == "2026-08-13T10:00:00Z"
+    assert receipt["freshness"]["strategy"] == "revision-bound-explicit-revocation"
     assert receipt["result_identity"]["runner_revision"] == "abc123"
     assert receipt["result_identity"]["invocation_id"] == "operation-conformance:test-invocation"
     assert receipt["result_identity"]["result_digest"] == receipt["conformance_result_digest"]
@@ -912,7 +912,8 @@ def test_operation_conformance_main_writes_authoritative_receipt_mirrors(tmp_pat
     stores = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
     assert stores[0] == stores[1] == stores[2]
     assert stores[0]["status"] == "recorded"
-    assert stores[0]["mirror_publication"]["status"] == "locked-staged-mirror-publication"
+    assert stores[0]["mirror_publication"]["status"] == "published"
+    assert stores[0]["mirror_publication"]["payload_digest"].startswith("sha256:")
     assert any(receipt["operation_id"] == "assignment.export" for receipt in stores[0]["receipts"])
 
 
