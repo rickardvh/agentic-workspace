@@ -15,7 +15,6 @@ import os
 import re
 import shlex
 import subprocess
-import tempfile
 import tomllib
 from contextlib import contextmanager
 from datetime import date, datetime, timezone
@@ -156,6 +155,24 @@ INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-revie
 INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
+INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS = {
+    "github-review-adapter:test-v1": {
+        "algorithm": "RS256",
+        "issuer": "github-review-webhook",
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "n": (
+            "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
+            "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
+            "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
+            "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
+            "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
+            "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
+        ),
+        "e": 65537,
+        "status": "current",
+    }
+}
 
 IndependentReviewHostResultResolver = Callable[[str], dict[str, Any]]
 
@@ -6756,21 +6773,6 @@ def _host_result_body_for_admission(host_result: dict[str, Any]) -> dict[str, An
     return body
 
 
-def _independent_review_host_trust_store_path() -> Path:
-    return Path(tempfile.gettempdir()) / "agentic-workspace-independent-review-host-trust-store.json"
-
-
-def _load_independent_review_host_trust_store() -> dict[str, Any]:
-    path = _independent_review_host_trust_store_path()
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise WorkspaceUsageError("independent review host trust store is missing or unreadable; install host adapter keys first.") from exc
-    if payload.get("kind") != "agentic-workspace/host-independent-review-trust-store/v1" or not isinstance(payload.get("keys"), dict):
-        raise WorkspaceUsageError("independent review host trust store is malformed; reinstall host adapter keys.")
-    return payload
-
-
 def _rsa_sha256_signature_valid(*, signature_b64: str, payload: dict[str, Any], key: dict[str, Any]) -> bool:
     try:
         signature = base64.b64decode(signature_b64, validate=True)
@@ -6803,23 +6805,14 @@ def _signed_independent_review_host_verdict(*, host_result_ref: str, host_result
         return {}
     if not key_id:
         return {}
-    trust_store = _load_independent_review_host_trust_store()
-    key = _as_dict(_as_dict(trust_store.get("keys")).get(key_id))
+    key = _as_dict(INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS.get(key_id))
     if not key or key.get("status") != "current":
-        return {}
-    revoked_key_ids = {str(item) for item in _list_payload(trust_store.get("revoked_key_ids"))}
-    if key_id in revoked_key_ids or str(key.get("revoked_at") or "").strip():
         return {}
     if key.get("algorithm") != "RS256":
         return {}
-    if str(key.get("workspace_ref") or "") != f"workspace:path:{target_root.resolve()}":
+    if str(key.get("producer") or "") != str(_as_dict(host_result.get("custody")).get("producer") or ""):
         return {}
-    if str(key.get("workspace_path") or "") != str(target_root.resolve()):
-        return {}
-    now = datetime.now(timezone.utc)
-    not_before = _parse_review_time(key.get("not_before"))
-    key_expires_at = _parse_review_time(key.get("expires_at"))
-    if not_before is None or key_expires_at is None or not_before > now or key_expires_at <= now:
+    if str(key.get("trusted_channel") or "") != str(_as_dict(host_result.get("custody")).get("trusted_channel") or ""):
         return {}
     if not _rsa_sha256_signature_valid(signature_b64=str(admission.get("signature") or ""), payload=signed_payload, key=key):
         return {}

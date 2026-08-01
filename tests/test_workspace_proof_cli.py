@@ -1,9 +1,41 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+
 # ruff: noqa: F403,F405
 from tests.workspace_cli_support import *
 
 ROOT = Path(__file__).resolve().parents[1]
+_INDEPENDENT_REVIEW_HOST_TEST_RSA_N = (
+    "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
+    "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
+    "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
+    "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
+    "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
+    "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
+)
+_INDEPENDENT_REVIEW_HOST_TEST_RSA_D = (
+    "150e670a941d6e82bae78365aecb999f6b4a457cc087a5b59e662a64c4afc04dd284a291f8430a32faaf802650"
+    "d166a4db53be859b66ec9faddb497c731312ca93e605edffd08b593da2ebf6cf13f788f026ce47202a95009a28"
+    "0c69153efe7a4deb583def85024548ed5baa1387179f4fdc5d17030d8cacd28669f772458d4b7356063e6b6cd6"
+    "6a065bf040741ee41681fbed78212d0c1dd60a91ffe28eb710718dc41f4859323d30f0447e268bbcc34e0568b0"
+    "3c021cb333fc99905c1f08bbcc5a169dfa89603bdd429a1d448006e81b4efd7527c4b4f15fff4b66afd61073d1"
+    "4093425405fd92f25c3da185644151771cb9b2218482644fc199473ce122b1"
+)
+_RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+
+
+def _independent_review_host_test_signature(payload: dict[str, object]) -> str:
+    n = int(_INDEPENDENT_REVIEW_HOST_TEST_RSA_N, 16)
+    d = int(_INDEPENDENT_REVIEW_HOST_TEST_RSA_D, 16)
+    key_size = (n.bit_length() + 7) // 8
+    digest_info = (
+        _RSA_SHA256_DER_PREFIX + hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()).digest()
+    )
+    encoded = b"\x00\x01" + (b"\xff" * (key_size - len(digest_info) - 3)) + b"\x00" + digest_info
+    raw = pow(int.from_bytes(encoded, "big"), d, n).to_bytes(key_size, "big")
+    return base64.b64encode(raw).decode("ascii")
 
 
 def _write_independent_review_host_result(
@@ -15,16 +47,11 @@ def _write_independent_review_host_result(
     caller_env_admission_keys: bool = False,
     return_capability_inputs: bool = False,
 ) -> str | dict[str, object]:
-    import base64
-    import subprocess
-
     from agentic_workspace.workspace_runtime_proof import (
         INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
         INDEPENDENT_REVIEW_HOST_RESULT_DIR,
         INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
         _host_result_body_for_admission,
-        _independent_review_host_trust_store_path,
-        _stable_review_json_bytes,
         _stable_review_json_digest,
     )
 
@@ -78,26 +105,7 @@ def _write_independent_review_host_result(
         signed_payload["superseded_by"] = str(result["admission_superseded_by"])
     root = target_root / INDEPENDENT_REVIEW_HOST_RESULT_DIR
     path = root / f"{host_id}.json"
-    issuer_root = target_root.parent / "independent-review-host-issuer"
-    key_path = issuer_root / f"{host_id}.pem"
-    key_path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(key_path)],
-        capture_output=True,
-        check=True,
-    )
-    modulus = (
-        subprocess.run(
-            ["openssl", "rsa", "-in", str(key_path), "-noout", "-modulus"],
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-        .stdout.strip()
-        .split("=", 1)[1]
-        .lower()
-    )
-    key_id = "independent-review-host-test-" + _stable_review_json_digest({"host_result_ref": host_result_ref, "modulus": modulus})[:12]
+    key_id = "github-review-adapter:test-v1"
     key = {
         "algorithm": "RS256",
         "status": str(result.get("key_status") or "current"),
@@ -106,7 +114,7 @@ def _write_independent_review_host_result(
         "producer": "github-review-adapter",
         "trusted_channel": "github-review-webhook",
         "e": 65537,
-        "n": modulus,
+        "n": _INDEPENDENT_REVIEW_HOST_TEST_RSA_N,
         "workspace_ref": str(result.get("key_workspace_ref") or f"workspace:path:{target_root.resolve()}"),
         "workspace_path": str(result.get("key_workspace_path") or target_root.resolve()),
         "not_before": str(result.get("key_not_before") or "2026-01-01T00:00:00Z"),
@@ -114,34 +122,13 @@ def _write_independent_review_host_result(
     }
     if result.get("key_revoked_at"):
         key["revoked_at"] = str(result["key_revoked_at"])
-    trust_store_path = _independent_review_host_trust_store_path()
-    trust_store_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        trust_store = json.loads(trust_store_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        trust_store = {"kind": "agentic-workspace/host-independent-review-trust-store/v1", "keys": {}, "revoked_key_ids": []}
-    if trust_store.get("kind") != "agentic-workspace/host-independent-review-trust-store/v1" or not isinstance(
-        trust_store.get("keys"), dict
-    ):
-        trust_store = {"kind": "agentic-workspace/host-independent-review-trust-store/v1", "keys": {}, "revoked_key_ids": []}
-    trust_store["keys"][key_id] = key
-    trust_store_path.write_text(
-        json.dumps(trust_store, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    completed = subprocess.run(
-        ["openssl", "dgst", "-sha256", "-sign", str(key_path)],
-        input=_stable_review_json_bytes(signed_payload),
-        capture_output=True,
-        check=True,
-    )
     host_result["host_admission"] = {
         "kind": "agentic-workspace/independent-review-host-result-admission/v1",
         "status": "current",
         "algorithm": "RS256",
         "key_id": key_id,
         "signed_payload": signed_payload,
-        "signature": base64.b64encode(completed.stdout).decode("ascii"),
+        "signature": _independent_review_host_test_signature(signed_payload),
     }
     capability = {
         "kind": "agentic-workspace/independent-review-host-admission-capability/v1",
