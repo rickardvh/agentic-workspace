@@ -7088,8 +7088,18 @@ def test_planning_route_action_admission_rejects_stale_authority_inputs() -> Non
         "implementation_allowed": True,
         "route_inputs": {
             "task_binding": {"mode": "mutation", "identity": "task-a", "allowed_paths": ["README.md"]},
-            "owner": {"ref": ".agentic-workspace/planning/execplans/active.plan.json", "revision": "owner-a"},
-            "mutation_baseline": {"baseline_id": "baseline-a", "scope": {"allowed_paths": ["README.md"]}},
+            "owner": {
+                "ref": ".agentic-workspace/planning/execplans/active.plan.json",
+                "revision": "owner-a",
+                "lifecycle": "active",
+                "projection_status": "clean",
+            },
+            "mutation_baseline": {
+                "baseline_id": "baseline-a",
+                "scope": {"allowed_paths": ["README.md"]},
+                "allowed_effects": ["repo-mutation"],
+                "overlap_claim": {"status": "scoped-to-requested-paths", "allowed_paths": ["README.md"]},
+            },
             "reconciliation_proposal": {"status": "absent"},
         },
     }
@@ -7103,11 +7113,31 @@ def test_planning_route_action_admission_rejects_stale_authority_inputs() -> Non
     admitted = validate_planning_route_action_invocation(invocation=invocation, live_route_decision=live)
     assert admitted["status"] == "admitted"
     assert invocation["operation_path"] == "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.front-door.json"
+    identity = invocation["input_identity"]
+    assert identity["selected_owner_lifecycle"] == "active"
+    assert identity["selected_owner_projection_status"] == "clean"
+    assert identity["task_binding_mode"] == "mutation"
+    assert identity["implementation_allowed"] is False
+    assert identity["mutation_authority"] == "reconciliation-proposal"
+    assert identity["state_update_policy"] == "reconciliation-apply-required"
+    assert identity["allowed_claims"] == []
+    assert identity["blocked_claims"] == ["claim-route-transition-complete-without-receipt"]
+    assert identity["allowed_claims"] == live["allowed_claims"]
+    assert identity["blocked_claims"] == live["blocked_claims"]
+    assert identity["mutation_allowed_paths_digest"]
+    assert identity["allowed_effects_digest"]
+    assert identity["overlap_claim_digest"]
 
     for field, route_patch, proposal_patch in [
         ("selected_owner_revision", {"route_inputs": {"owner": {"revision": "owner-b"}}}, {}),
+        ("selected_owner_lifecycle", {"route_inputs": {"owner": {"lifecycle": "archived"}}}, {}),
+        ("selected_owner_projection_status", {"route_inputs": {"owner": {"projection_status": "drifted"}}}, {}),
         ("task_binding_identity", {"route_inputs": {"task_binding": {"identity": "task-b"}}}, {}),
+        ("task_binding_mode", {"route_inputs": {"task_binding": {"mode": "read-only"}}}, {}),
         ("mutation_baseline_id", {"route_inputs": {"mutation_baseline": {"baseline_id": "baseline-b"}}}, {}),
+        ("mutation_allowed_paths_digest", {"route_inputs": {"task_binding": {"allowed_paths": ["src/app.py"]}}}, {}),
+        ("allowed_effects_digest", {"route_inputs": {"mutation_baseline": {"allowed_effects": ["planning-transition"]}}}, {}),
+        ("overlap_claim_digest", {"route_inputs": {"mutation_baseline": {"overlap_claim": {"status": "overlap-drift"}}}}, {}),
         ("reconciliation_proposal_revision", {}, {"revision": "proposal-rev-b"}),
     ]:
         changed = json.loads(json.dumps(route_evidence))

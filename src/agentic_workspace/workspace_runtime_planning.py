@@ -1321,7 +1321,13 @@ def _planning_route_decision_payload(
         planning_revision=planning_revision,
     )
     action_identity = _as_dict(next_packet.get("operation_invocation")).get("input_identity", {})
-    allowed_claims = ["bounded-task-progress"] if bounded else ["active-plan-progress"] if continuing else []
+    allowed_claims = (
+        ["bounded-task-progress"]
+        if transition == "none" and bounded
+        else ["active-plan-progress"]
+        if transition == "none" and continuing
+        else []
+    )
     blocked_claims = _route_decision_blocked_claims(task_relation=task_relation, owner_posture=owner_posture, transition=transition)
     decision = {
         "kind": "agentic-planning/route-decision/v1",
@@ -1390,6 +1396,9 @@ def _planning_route_decision_payload(
     if proposal.get("status") == "current":
         proposal_posture = str(proposal.get("owner_posture") or "reconciliation-pending")
         proposal_transition = str(proposal.get("required_transition") or "reconcile")
+        proposal_blocked_claims = _route_decision_blocked_claims(
+            task_relation=task_relation, owner_posture=proposal_posture, transition=proposal_transition
+        )
         proposal_next_packet = _route_decision_next_action_packet(
             route_evidence={**route_evidence, "reconciliation_proposal": proposal},
             task_relation=task_relation,
@@ -1403,6 +1412,8 @@ def _planning_route_decision_payload(
                 "required_transition": proposal_transition,
                 "implementation_allowed": False,
                 "mutation_authority": "reconciliation-proposal",
+                "allowed_claims": [],
+                "blocked_claims": proposal_blocked_claims,
                 "proof_expectation": "apply the current reconciliation proposal and retain its mutation receipt",
                 "state_update_policy": "reconciliation-apply-required",
                 "next_safe_action": proposal_next_packet,
@@ -1473,8 +1484,14 @@ def _route_decision_next_action_packet(
         or _as_dict(owner_admission.get("selected_owner_identity")).get("revision")
         or ""
     )
+    selected_owner_lifecycle = str(owner_facts.get("lifecycle") or selected_owner.get("lifecycle") or "")
+    selected_owner_projection_status = str(owner_facts.get("projection_status") or selected_owner.get("projection_status") or "")
     mutation_baseline = _as_dict(route_inputs.get("mutation_baseline"))
     mutation_scope = _as_dict(mutation_baseline.get("scope"))
+    allowed_paths = [str(path) for path in task_binding.get("allowed_paths", []) if isinstance(task_binding.get("allowed_paths"), list)]
+    allowed_effects = [
+        str(effect) for effect in mutation_baseline.get("allowed_effects", []) if isinstance(mutation_baseline.get("allowed_effects"), list)
+    ]
     route_proposal = _as_dict(route_evidence.get("reconciliation_proposal")) or _as_dict(route_inputs.get("reconciliation_proposal"))
     if owner_posture == "completed-residue":
         completed_plan = _as_dict(route_evidence.get("completed_active_plan"))
@@ -1515,6 +1532,44 @@ def _route_decision_next_action_packet(
         proof = "apply the current reconciliation proposal and retain its mutation receipt"
         required_inputs = ["current proposal identity", "Planning revision", "compare-and-swap receipt"]
         risk = "planning-reconciliation-required"
+    continuing = task_relation == "continues-selected-owner"
+    bounded = task_relation == "bounded-independent"
+    ambiguous = task_relation == "ambiguous"
+    task_mode = str(task_binding.get("mode") or "")
+    proposal_current = required_transition == "reconcile" and route_proposal.get("status") == "current"
+    implementation_allowed = False if ambiguous or required_transition != "none" else bool(continuing or bounded)
+    mutation_authority = (
+        "reconciliation-proposal"
+        if proposal_current
+        else "none"
+        if ambiguous or required_transition != "none"
+        else "current-task"
+        if bounded and task_mode != "read-only"
+        else "none"
+        if bounded
+        else "selected-owner"
+        if continuing
+        else "none"
+    )
+    state_update_policy = (
+        "reconciliation-apply-required"
+        if proposal_current
+        else "pre-write-revalidation-required"
+        if required_transition == "none" and bounded and task_mode == "mutation"
+        else "read-only"
+        if required_transition == "none"
+        else "explicit-transition-required"
+    )
+    allowed_claims = (
+        ["bounded-task-progress"]
+        if required_transition == "none" and bounded
+        else ["active-plan-progress"]
+        if required_transition == "none" and continuing
+        else []
+    )
+    blocked_claims = _route_decision_blocked_claims(
+        task_relation=task_relation, owner_posture=owner_posture, transition=required_transition
+    )
     action_contract = {
         "kind": "agentic-planning/route-action-input/v1",
         "route_action": action,
@@ -1524,10 +1579,22 @@ def _route_decision_next_action_packet(
         "planning_revision": revision,
         "selected_owner_ref": selected_owner_ref,
         "selected_owner_revision": selected_owner_revision,
+        "selected_owner_lifecycle": selected_owner_lifecycle,
+        "selected_owner_projection_status": selected_owner_projection_status,
         "task_binding_identity": str(task_binding.get("identity") or task_binding.get("task_digest") or ""),
         "task_binding_mode": str(task_binding.get("mode") or ""),
         "mutation_baseline_id": str(mutation_baseline.get("baseline_id") or ""),
         "mutation_scope_digest": _stable_revision(mutation_scope) if mutation_scope else "",
+        "mutation_allowed_paths_digest": _stable_revision(sorted(allowed_paths)) if allowed_paths else "",
+        "allowed_effects_digest": _stable_revision(sorted(allowed_effects)) if allowed_effects else "",
+        "overlap_claim_digest": _stable_revision(_as_dict(mutation_baseline.get("overlap_claim")))
+        if mutation_baseline.get("overlap_claim")
+        else "",
+        "implementation_allowed": implementation_allowed,
+        "mutation_authority": mutation_authority,
+        "state_update_policy": state_update_policy,
+        "allowed_claims": allowed_claims,
+        "blocked_claims": blocked_claims,
         "reconciliation_proposal_id": str(route_proposal.get("proposal_id") or route_proposal.get("identity") or ""),
         "reconciliation_proposal_revision": str(route_proposal.get("revision") or route_proposal.get("proposal_revision") or ""),
         "expected_claim_effect": {
@@ -1560,9 +1627,20 @@ def _route_decision_next_action_packet(
                 "reject_when_changed": [
                     "planning_revision",
                     "selected_owner_revision",
+                    "selected_owner_lifecycle",
+                    "selected_owner_projection_status",
                     "task_binding_identity",
+                    "task_binding_mode",
                     "mutation_baseline_id",
                     "mutation_scope_digest",
+                    "mutation_allowed_paths_digest",
+                    "allowed_effects_digest",
+                    "overlap_claim_digest",
+                    "implementation_allowed",
+                    "mutation_authority",
+                    "state_update_policy",
+                    "allowed_claims",
+                    "blocked_claims",
                     "reconciliation_proposal_id",
                     "reconciliation_proposal_revision",
                 ],
@@ -1615,9 +1693,20 @@ def validate_planning_route_action_invocation(
         for field in [
             "planning_revision",
             "selected_owner_revision",
+            "selected_owner_lifecycle",
+            "selected_owner_projection_status",
             "task_binding_identity",
+            "task_binding_mode",
             "mutation_baseline_id",
             "mutation_scope_digest",
+            "mutation_allowed_paths_digest",
+            "allowed_effects_digest",
+            "overlap_claim_digest",
+            "implementation_allowed",
+            "mutation_authority",
+            "state_update_policy",
+            "allowed_claims",
+            "blocked_claims",
             "reconciliation_proposal_id",
             "reconciliation_proposal_revision",
         ]

@@ -54,7 +54,7 @@
       "source": "derived",
       "command_visibility": "runtime-only",
       "required": false,
-      "description": "agentic-planning/route-action-input/v1 identity containing route_action, task_relation, owner_posture, expected_transition, planning_revision, selected_owner_ref, selected_owner_revision, task_binding_identity, task_binding_mode, mutation_baseline_id, mutation_scope_digest, reconciliation_proposal_id, reconciliation_proposal_revision, and idempotency_key."
+      "description": "agentic-planning/route-action-input/v1 identity containing route_action, task_relation, owner_posture, expected_transition, planning_revision, selected owner identity/lifecycle/projection, task binding identity/mode, mutation baseline/scope/effects/overlap, implementation permission, mutation authority, state-update policy, claim policy, reconciliation proposal identity/revision, and idempotency_key."
     },
     {
       "name": "input_revision",
