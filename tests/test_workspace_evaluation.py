@@ -23,6 +23,8 @@ from agentic_workspace.evaluation import (
     EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND,
     EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
     EXTERNAL_EVALUATION_PROVIDER_RESULT_INBOX_DIR,
+    EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_DIR,
+    EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_INDEX_KIND,
     OBSERVATION_RETENTION_CAP,
     PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
@@ -142,6 +144,39 @@ print(json.dumps({
     return signed
 
 
+def _write_external_evaluation_provider_trust_root(
+    target_root: Path,
+    *,
+    key_id: str,
+    key: dict[str, object],
+    status: str = "current",
+    key_revision: str = "fixture-key-rev-1",
+    compatibility_status: str = "compatible",
+    revoked_at: str = "",
+    superseded_by: str = "",
+) -> None:
+    root = target_root / EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_DIR
+    root.mkdir(parents=True, exist_ok=True)
+    index_path = root / "index.json"
+    index = (
+        json.loads(index_path.read_text(encoding="utf-8"))
+        if index_path.exists()
+        else {"kind": EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_INDEX_KIND, "keys": {}}
+    )
+    keys = index.setdefault("keys", {})
+    keys[key_id] = {
+        **key,
+        "status": status,
+        "key_revision": key_revision,
+        "compatibility_status": compatibility_status,
+    }
+    if revoked_at:
+        keys[key_id]["revoked_at"] = revoked_at
+    if superseded_by:
+        keys[key_id]["superseded_by"] = superseded_by
+    index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def _write_external_evaluation_adapter_host_result(
     target_root: Path,
     *,
@@ -150,6 +185,7 @@ def _write_external_evaluation_adapter_host_result(
     trust_host_key: bool = True,
     **values: object,
 ) -> dict[str, object]:
+    _ = host_admission_monkeypatch
     workspace_ref = str(values.get("workspace_ref") or f"workspace:path:{target_root.resolve()}")
     audience = str(values.get("audience") or "agentic-workspace.evaluation-external-delivery")
     result = {
@@ -282,20 +318,11 @@ def _write_external_evaluation_adapter_host_result(
     signed = _external_evaluation_provider_host_signature(signature_payload)
     result["host_admission"]["signature"] = str(signed["signature"])
     if trust_host_key:
-        import agentic_workspace.evaluation as evaluation_runtime
-
-        trusted_keys = {
-            **evaluation_runtime._EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS,  # type: ignore[attr-defined]
-            str(result["host_admission"]["key_id"]): signed["key"],
-        }
-        if host_admission_monkeypatch is None:
-            evaluation_runtime._EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS = trusted_keys  # type: ignore[attr-defined]
-        else:
-            host_admission_monkeypatch.setattr(
-                evaluation_runtime,
-                "_EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS",
-                trusted_keys,
-            )
+        _write_external_evaluation_provider_trust_root(
+            target_root,
+            key_id=str(result["host_admission"]["key_id"]),
+            key=signed["key"],
+        )
 
     def resolver(ref: str) -> dict[str, object]:
         if ref != provider_result_ref:
@@ -330,20 +357,8 @@ def _write_external_evaluation_adapter_host_result(
 
 
 def _external_evaluation_host_trusted_invocation(host: dict[str, object]) -> list[str]:
-    script = (
-        "import json, sys; "
-        "import agentic_workspace.evaluation as evaluation_runtime; "
-        "from scripts.run_agentic_workspace import main; "
-        "evaluation_runtime._EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS[sys.argv[1]] = json.loads(sys.argv[2]); "
-        "raise SystemExit(main(sys.argv[3:]))"
-    )
-    return [
-        sys.executable,
-        "-c",
-        script,
-        str(host["host_public_key_id"]),
-        json.dumps(host["host_public_key"], sort_keys=True),
-    ]
+    _ = host
+    return [sys.executable, str(ROOT / "scripts" / "run_agentic_workspace.py")]
 
 
 def _init_git_repo(target_root: Path) -> None:
@@ -649,10 +664,6 @@ def test_external_adapter_receipt_accepts_host_provider_verdict_across_process(t
             (
                 "import json; "
                 "from pathlib import Path; "
-                "import agentic_workspace.evaluation as evaluation_runtime; "
-                f"host_public_key = json.loads({json.dumps(host['host_public_key'], sort_keys=True)!r}); "
-                f"evaluation_runtime._EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS[{str(host['host_public_key_id'])!r}] = "
-                "host_public_key; "
                 "from agentic_workspace.evaluation import record_external_evaluation_adapter_receipt; "
                 f"payload = record_external_evaluation_adapter_receipt(target_root=Path({str(tmp_path)!r}), "
                 "delivery_id='delivery-1', sink_id='#1969', producer='github-issues-adapter', "
@@ -681,6 +692,7 @@ def test_external_adapter_receipt_does_not_load_repo_or_pythonpath_host_verifier
     assert "BEGIN " + "PRIVATE KEY" not in test_source
     assert "_EXTERNAL_EVALUATION_PROVIDER_TEST_RSA" + "_D" not in test_source
     assert "_external_evaluation_provider" + "_test_signature" not in test_source
+    assert "_EXTERNAL_EVALUATION_PROVIDER" + "_PUBLIC_KEYS" not in test_source
     assert "evaluation-provider-adapter:test-v1" not in source
     assert "_EXTERNAL_EVALUATION_ADAPTER_HOST_ADMISSION_KEYS" not in source
     assert "_external_evaluation_provider_result_store_path" not in source
@@ -742,6 +754,77 @@ def test_external_host_result_import_rejects_repo_generated_signature_without_ho
         _write_external_evaluation_adapter_host_result(tmp_path, import_result=True, trust_host_key=False, **receipt)
 
     assert not any((tmp_path / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR).glob("*.json"))
+
+
+def test_external_host_result_import_rejects_revoked_local_trust_root(tmp_path: Path) -> None:
+    receipt = {
+        "delivery_id": "delivery-1",
+        "sink_id": "#1969",
+        "producer": "github-issues-adapter",
+        "attempt_revision": "attempt-1",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "status": "delivered",
+    }
+    host = _write_external_evaluation_adapter_host_result(tmp_path, import_result=False, **receipt)
+    _write_external_evaluation_provider_trust_root(
+        tmp_path,
+        key_id=str(host["host_public_key_id"]),
+        key=host["host_public_key"],
+        status="current",
+        revoked_at="2026-07-29T00:01:00Z",
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_external_evaluation_adapter_host_result(
+            target_root=tmp_path,
+            provider_result_ref=str(host["provider_result_ref"]),
+            capability_revision="github-issues-adapter:v1",
+        )
+
+
+def test_external_host_result_import_rejects_stale_index_before_commit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.evaluation as evaluation_runtime
+
+    receipt = {
+        "delivery_id": "delivery-1",
+        "sink_id": "#1969",
+        "producer": "github-issues-adapter",
+        "attempt_revision": "attempt-1",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "status": "delivered",
+    }
+    host = _write_external_evaluation_adapter_host_result(tmp_path, import_result=False, **receipt)
+    original_transaction = evaluation_runtime._transactional_json_writes  # type: ignore[attr-defined]
+
+    def mutate_index_before_commit(
+        writes: list[tuple[Path, dict[str, object]]],
+        *,
+        expected_revisions: dict[Path, str] | None = None,
+    ) -> dict[Path, str]:
+        if expected_revisions:
+            host_index_path = tmp_path / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR / "index.json"
+            host_index_path.parent.mkdir(parents=True, exist_ok=True)
+            host_index_path.write_text(
+                json.dumps(
+                    {"kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND, "results": {"raced": {"status": "current"}}},
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+        return original_transaction(writes, expected_revisions=expected_revisions)
+
+    monkeypatch.setattr(evaluation_runtime, "_transactional_json_writes", mutate_index_before_commit)
+
+    with pytest.raises(WorkspaceUsageError, match="index changed before import commit"):
+        record_external_evaluation_adapter_host_result(
+            target_root=tmp_path,
+            provider_result_ref=str(host["provider_result_ref"]),
+            capability_revision="github-issues-adapter:v1",
+        )
 
 
 def test_external_evaluation_host_admission_rejects_raw_caller_mapping(tmp_path: Path) -> None:

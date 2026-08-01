@@ -23,6 +23,7 @@ EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR = WORKSPACE_LOCAL_EVALUATI
 EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-receipts"
 EXTERNAL_EVALUATION_PROVIDER_RESULT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-provider-results"
 EXTERNAL_EVALUATION_PROVIDER_RESULT_INBOX_DIR = EXTERNAL_EVALUATION_PROVIDER_RESULT_DIR / "inbox"
+EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-provider-trust-roots"
 EVALUATION_PENDING_COLLECTIONS_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "pending-collections"
 ASSIGNMENT_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/planning/assignment-receipts")
 PROOF_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/proof/receipts")
@@ -33,6 +34,7 @@ EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND = "agentic-workspace/evaluati
 EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND = (
     "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-index/v1"
 )
+EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_INDEX_KIND = "agentic-workspace/evaluation-external-provider-trust-root-index/v1"
 EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE = "agentic-workspace.evaluation-external-delivery"
 EVALUATION_FINDING_FOLLOWUPS_KIND = "agentic-workspace/evaluation-finding-followups/v1"
 OBSERVATION_RETENTION_CAP = 100
@@ -55,6 +57,7 @@ _EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS = {
         ),
         "e": "010001",
         "status": "current",
+        "key_revision": "host-v1",
     }
 }
 
@@ -141,11 +144,19 @@ def _json_file_revision(path: Path) -> str:
         return "missing"
 
 
-def _transactional_json_writes(writes: list[tuple[Path, dict[str, Any]]]) -> None:
+def _transactional_json_writes(
+    writes: list[tuple[Path, dict[str, Any]]],
+    *,
+    expected_revisions: dict[Path, str] | None = None,
+) -> dict[Path, str]:
     backups: dict[Path, bytes | None] = {}
     written: list[Path] = []
     tmp_paths: list[Path] = []
+    expected = {path.resolve(): revision for path, revision in (expected_revisions or {}).items()}
     try:
+        for path, expected_revision in expected.items():
+            if _json_file_revision(path) != expected_revision:
+                raise WorkspaceUsageError("external evaluation provider result index changed before import commit.")
         for path, payload in writes:
             resolved = path.resolve()
             if resolved not in backups:
@@ -154,6 +165,8 @@ def _transactional_json_writes(writes: list[tuple[Path, dict[str, Any]]]) -> Non
             tmp_path = resolved.with_suffix(resolved.suffix + ".tmp")
             tmp_paths.append(tmp_path)
             tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+            if resolved in expected and _json_file_revision(resolved) != expected[resolved]:
+                raise WorkspaceUsageError("external evaluation provider result index changed before import commit.")
             tmp_path.replace(resolved)
             written.append(resolved)
     except Exception:
@@ -166,6 +179,7 @@ def _transactional_json_writes(writes: list[tuple[Path, dict[str, Any]]]) -> Non
         for tmp_path in tmp_paths:
             tmp_path.unlink(missing_ok=True)
         raise
+    return {path.resolve(): _json_file_revision(path.resolve()) for path, _payload in writes}
 
 
 class _LocalFileLock:
@@ -609,7 +623,13 @@ def record_external_evaluation_adapter_host_result(
                 ),
             ]
         )
-        _transactional_json_writes(writes)
+        committed_revisions = _transactional_json_writes(
+            writes,
+            expected_revisions={
+                host_index_path: result_index_revision,
+                admission_index_path: admission_index_revision,
+            },
+        )
     return {
         "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-import/v1",
         "status": "imported",
@@ -620,8 +640,10 @@ def record_external_evaluation_adapter_host_result(
         "index_ref": host_index_path.relative_to(target_root).as_posix(),
         "admission_ref": host_admission_ref,
         "admission_index_ref": admission_index_path.relative_to(target_root).as_posix(),
-        "result_index_revision": result_index_revision,
-        "admission_index_revision": admission_index_revision,
+        "result_index_revision": committed_revisions[host_index_path.resolve()],
+        "admission_index_revision": committed_revisions[admission_index_path.resolve()],
+        "observed_result_index_revision": result_index_revision,
+        "observed_admission_index_revision": admission_index_revision,
     }
 
 
@@ -709,6 +731,30 @@ def _verify_rs256_signature(*, key: dict[str, str], payload: dict[str, Any], sig
     return hmac.compare_digest(encoded[separator + 1 :], digest_info)
 
 
+def _load_external_evaluation_provider_public_key(*, target_root: Path, key_id: str) -> dict[str, str] | None:
+    key = _EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS.get(key_id)
+    if key is None:
+        index_path = target_root / EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_DIR / "index.json"
+        try:
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            index = {}
+        entries = index.get("keys") if index.get("kind") == EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_INDEX_KIND else {}
+        candidate = entries.get(key_id) if isinstance(entries, dict) else None
+        key = candidate if isinstance(candidate, dict) else None
+    if not isinstance(key, dict) or key.get("status") != "current":
+        return None
+    if key.get("revoked_at") or key.get("superseded_by"):
+        return None
+    if key.get("compatibility_status") not in {None, "", "current", "compatible"}:
+        return None
+    if not str(key.get("key_revision") or "").strip():
+        return None
+    if key.get("algorithm") != "RS256":
+        return None
+    return {str(item_key): str(item_value) for item_key, item_value in key.items()}
+
+
 def _parse_evaluation_time(value: Any) -> datetime | None:
     text = str(value or "").strip()
     if not text:
@@ -768,8 +814,8 @@ def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[st
     admission_raw = result.get("host_admission")
     admission: dict[str, Any] = admission_raw if isinstance(admission_raw, dict) else {}
     key_id = str(admission.get("key_id") or "")
-    key = _EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS.get(key_id)
-    if not isinstance(key, dict) or key.get("status") != "current":
+    key = _load_external_evaluation_provider_public_key(target_root=target_root, key_id=key_id)
+    if key is None:
         return False
     if admission.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1":
         return False
