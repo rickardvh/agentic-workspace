@@ -2882,43 +2882,6 @@
       "status": "generated"
     },
     {
-      "command": {
-        "command_manifest": "package:planning:cli",
-        "name": "close-item",
-        "option_group_manifest": "package:planning:cli",
-        "program": "agentic-planning"
-      },
-      "conformance_refs": [
-        "planning.close-item.process"
-      ],
-      "effect_hints": {
-        "destructive": false,
-        "idempotent": false,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
-      },
-      "generation_boundary": {
-        "contract_owns": [
-          "visible package command name",
-          "operation id",
-          "effect/read/write hints",
-          "conformance refs"
-        ],
-        "generated_adapter_owns": [
-          "dispatch wiring from command id to runtime binding"
-        ],
-        "runtime_owns": [
-          "package-local lifecycle primitive implementation",
-          "module result assembly",
-          "output emission mechanics"
-        ]
-      },
-      "conformance_refs": [
-        "planning.closeout.lifecycle.dry-run.process"
-      ]
-    },
-    {
       "id": "planning.targeted-write.cli",
       "status": "generated",
       "command": {
@@ -2999,6 +2962,38 @@
       ]
     },
     {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "close-item",
+        "option_group_manifest": "package:planning:cli",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.close-item.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible package command name",
+          "operation id",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "package-local lifecycle primitive implementation",
+          "module result assembly",
+          "output emission mechanics"
+        ]
+      },
       "id": "planning.close-item.cli",
       "operation_ref": {
         "id": "planning.close-item.lifecycle",

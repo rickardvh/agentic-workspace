@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:d6cf11adecda7aad0251cb4e1f24ec12ceb8944e37ad629ea7549dc9b064b7b9",
+    "fingerprint": "sha256:a9d79f7085e012eaccce910e3dd33146bdec218263fbb561d7fd9501c91e520f",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -6211,7 +6211,7 @@
         "destructive": true,
         "idempotent": false,
         "read_only": false,
-        "requires_preflight_gate": false,
+        "requires_preflight_gate": true,
         "writes_repo_state": true
       },
       "targets": {
@@ -11227,7 +11227,7 @@
         "destructive": false,
         "idempotent": true,
         "read_only": false,
-        "requires_preflight_gate": true,
+        "requires_preflight_gate": false,
         "writes_repo_state": true
       },
       "targets": {

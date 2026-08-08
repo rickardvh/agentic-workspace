@@ -3915,7 +3915,7 @@
         "destructive": true,
         "idempotent": false,
         "read_only": false,
-        "requires_preflight_gate": false,
+        "requires_preflight_gate": true,
         "writes_repo_state": true
       },
       "interface": {

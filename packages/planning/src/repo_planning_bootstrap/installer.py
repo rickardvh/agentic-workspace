@@ -16898,9 +16898,8 @@ def targeted_execplan_write(
     if unknown or not patch:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch", "unknown_fields": unknown}
     unsupported_projection_fields = sorted(field for field in patch if field in {"parent"})
-    phase_value = str(patch.get("phase") or "").strip().lower()
     lifecycle_value = str(patch.get("lifecycle") or "").strip().lower()
-    terminal_lifecycle = (lifecycle_value or phase_value) in {"completed", "complete", "closed", "archived", "superseded"}
+    terminal_lifecycle = lifecycle_value in {"completed", "complete", "closed", "archived", "superseded"}
     if "phase" in patch and not terminal_lifecycle:
         unsupported_projection_fields.append("phase")
     if unsupported_projection_fields:

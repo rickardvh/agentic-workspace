@@ -1949,7 +1949,7 @@ def test_checked_in_1969_evaluation_disposition_is_parseable_and_honest() -> Non
     assert evaluation["selectors"]["issue_refs"] == ["#1969"]
     assert evaluation["action_policy"]["material_negative_finding"] == "create-or-reopen-bounded-follow-up"
     disposition = json.loads((ROOT / ".agentic-workspace/evaluations/issue-1969-disposition.json").read_text(encoding="utf-8"))
-    assert disposition["status"] == "migrated-to-longitudinal-evaluation"
+    assert disposition["status"] == "implementation-closed-evaluation-open"
     assert disposition["implementation_disposition"]["present_tense_status"] == "implemented-in-archived-closeout"
     assert disposition["evaluation_disposition"]["definition_ref"].endswith("#state-delta-operating-loop-1969")
-    assert disposition["future_evidence_audit"]["status"] == "bounded-audit-recorded"
+    assert disposition["future_evidence_audit"]["status"] == "bounded-audit-seed-recorded"

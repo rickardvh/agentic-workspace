@@ -681,7 +681,7 @@ def test_targeted_execplan_writer_lifecycle_updates_lane_projection(tmp_path: Pa
     preview = installer_mod.targeted_execplan_write(
         target=tmp_path,
         plan="lane-plan",
-        patch={"phase": "complete"},
+        patch={"lifecycle": "closed", "phase": "complete"},
         expected_planning_revision=revision,
         expected_owner_revision=1,
         expected_lane_revision=lane_revision,
@@ -690,7 +690,7 @@ def test_targeted_execplan_writer_lifecycle_updates_lane_projection(tmp_path: Pa
     applied = installer_mod.targeted_execplan_write(
         target=tmp_path,
         plan="lane-plan",
-        patch={"phase": "complete"},
+        patch={"lifecycle": "closed", "phase": "complete"},
         expected_planning_revision=revision,
         expected_owner_revision=1,
         expected_lane_revision=lane_revision,
@@ -732,7 +732,6 @@ def test_targeted_execplan_writer_rejects_phase_only_terminal_projection(tmp_pat
         expected_owner_revision=1,
         expected_lane_revision=lane_revision,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
 
     assert result["status"] == "unsupported-projection-patch"
