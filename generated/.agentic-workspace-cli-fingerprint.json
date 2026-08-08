@@ -1952,7 +1952,7 @@
     "src/agentic_workspace/contracts/context_templates.json": "688cb00968cff4131bf5f2eb8c004e8adfe5d8a3",
     "src/agentic_workspace/contracts/contract_inventory.json": "5d2154d2353a62dd5c25815de9def22783318e1f",
     "src/agentic_workspace/contracts/external_consumer_profile.json": "523a137f12357f36b790f5aadd7fd431b0be9c45",
-    "src/agentic_workspace/contracts/external_operation_conformance_receipts.json": "a2a2f21931b3c726eadcd94a3e03b30ea0b11ba5",
+    "src/agentic_workspace/contracts/external_operation_conformance_receipts.json": "bae83a27675f902eb79775ea7f9a511638453157",
     "src/agentic_workspace/contracts/generated_behavior_stratification.json": "71a107210f80ea6a69b593482c488dd81c4ec3ec",
     "src/agentic_workspace/contracts/generated_command_check_inventory.json": "44bdf3318e24c1b0b09f6a5917b77d04d7a06fb2",
     "src/agentic_workspace/contracts/improvement_latitude_policy.json": "f8f8b1b0d848a8b9272dff809239d17f6a38670c",
@@ -2201,7 +2201,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "2aa49a57e2426e148c15b2e13038e181632939e9"
   },
-  "git_index_identity": "330aacae6c2e1e031b95b89fadaa6255ef0d7d7362a496af00e20796e6c86c54",
+  "git_index_identity": "186d4ce0ec48d44e0385372fe1dbfc3a41203611b1c416ea00361dc64dfa805a",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
