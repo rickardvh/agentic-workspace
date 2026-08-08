@@ -189,6 +189,8 @@ def _write_independent_review_host_result(
     root = target_root / INDEPENDENT_REVIEW_HOST_RESULT_DIR
     path = root / f"{host_id}.json"
     key_id = f"github-review-adapter:external-host-fixture:{host_id}"
+    key_revision = f"fixture-key:{host_id}"
+    signed_payload["key_revision"] = key_revision
     signed = _independent_review_host_signature(signed_payload)
     key = dict(signed["key"]) if isinstance(signed.get("key"), dict) else {}
     key.update(
@@ -196,6 +198,7 @@ def _write_independent_review_host_result(
             "authority": "pinned-host-runtime",
             "status": str(result.get("key_status") or "current"),
             "key_id": key_id,
+            "key_revision": key_revision,
             "workspace_ref": str(result.get("key_workspace_ref") or f"workspace:path:{target_root.resolve()}"),
             "workspace_path": str(result.get("key_workspace_path") or target_root.resolve()),
             "not_before": str(result.get("key_not_before") or "2026-01-01T00:00:00Z"),
@@ -7764,6 +7767,73 @@ def test_assignment_admit_accepts_preinstalled_host_capability_ref(tmp_path: Pat
     assert receipt["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
 
 
+def test_assignment_admit_accepts_release_pinned_provider_envelope_across_process(tmp_path: Path) -> None:
+    import subprocess
+    import sys
+
+    from agentic_workspace.workspace_runtime_proof import (
+        INDEPENDENT_REVIEW_HOST_RESULT_DIR,
+        INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
+        _stable_review_json_digest,
+    )
+
+    subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "-C", str(tmp_path), "remote", "add", "origin", "https://github.com/rickardvh/agentic-workspace.git"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+    fixture_path = ROOT / "tests/fixtures/independent_review/github_review_adapter_release_2026_08.json"
+    host_result = json.loads(fixture_path.read_text(encoding="utf-8"))
+    host_result_ref = str(host_result["host_result_ref"])
+    host_id = str(host_result["host_result_id"])
+    host_root = tmp_path / INDEPENDENT_REVIEW_HOST_RESULT_DIR
+    _write(host_root / f"{host_id}.json", json.dumps(host_result, indent=2, sort_keys=True) + "\n")
+    _write(
+        host_root / "index.json",
+        json.dumps(
+            {
+                "kind": INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND,
+                "results": {
+                    host_id: {
+                        "path": f"{host_id}.json",
+                        "status": "current",
+                        "producer": "github-review-adapter",
+                        "trusted_channel": "github-review-webhook",
+                        "host_result_digest": _stable_review_json_digest(host_result),
+                    }
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+    )
+    script = f"""
+import json
+from pathlib import Path
+from agentic_workspace.workspace_runtime_proof import admit_independent_review_result_operation
+
+payload = admit_independent_review_result_operation(
+    target_root=Path({str(tmp_path)!r}),
+    values={{
+        "host_result_ref": {host_result_ref!r},
+        "required_mode": "human",
+        "changed": ["services/auth/policy.py"],
+    }},
+)
+print(json.dumps(payload, sort_keys=True))
+"""
+    completed = subprocess.run([sys.executable, "-c", script], capture_output=True, cwd=ROOT, text=True)
+
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    payload = json.loads(completed.stdout)
+    assert payload["status"] == "admitted", payload
+    assert payload["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
+
+
 def test_assignment_admit_rejects_unpinned_signed_host_evidence_across_process(tmp_path: Path) -> None:
     import subprocess
     import sys
@@ -7827,6 +7897,44 @@ print(json.dumps(payload, sort_keys=True))
     payload = json.loads(completed.stdout)
     assert payload["status"] == "rejected"
     assert payload["failures"][0]["reason"] == "host-capability-admission-rejected"
+
+
+def test_independent_review_rejects_nonce_replay_across_distinct_host_results(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace.workspace_runtime_proof import (
+        WorkspaceUsageError,
+        _independent_review_scope_digest,
+        record_trusted_independent_review_result,
+    )
+
+    base_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "human",
+        "assignment_id": "critical-access-review",
+        "assignment_revision": "assignment-rev-1",
+        "proof_subject_revision": "proof-subject-rev-1",
+        "review_revision": "review-rev-1",
+        "reviewed_at": "2026-08-08T12:00:00Z",
+        "changed_paths": ["services/auth/policy.py"],
+        "scope_digest": _independent_review_scope_digest(["services/auth/policy.py"]),
+        "nonce": "provider-nonce-replay-1",
+        "implementer": {"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
+        "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+        "custody": {
+            "producer": "github-review-adapter",
+            "authority_ref": "SECURITY.md#critical-access",
+            "source_ref": "pull-request-review:1",
+        },
+    }
+    first_ref = _write_independent_review_host_result(tmp_path, {**base_result, "review_id": "review-first"})
+    second_ref = _write_independent_review_host_result(tmp_path, {**base_result, "review_id": "review-second"})
+    assert isinstance(first_ref, str)
+    assert isinstance(second_ref, str)
+
+    with _verified_host_fixture(monkeypatch, first_ref):
+        record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": first_ref})
+    with _verified_host_fixture(monkeypatch, second_ref), pytest.raises(WorkspaceUsageError, match="nonce was already used"):
+        record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": second_ref})
 
 
 def test_assignment_admit_does_not_load_repo_or_pythonpath_host_verifiers() -> None:
