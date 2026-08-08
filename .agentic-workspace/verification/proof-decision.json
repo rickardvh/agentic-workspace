@@ -9,6 +9,6 @@
     "narrowest_evidence": "One configured-adapter process fixture plus focused caller-mapping, stale contract/runtime, replay/idempotency, producer, receipt, and live-postcondition rejection cases.",
     "prune_or_replacement_condition": "Replace only when generated operation conformance executes the same front-door destination bindings and preserves the full negative receipt matrix.",
     "confidence": "high",
-    "residual_risk": "Hosted CI is intentionally skipped while the PR is draft; exact-head local Planning, contract, generated, and type proof is required before review handoff."
+    "residual_risk": "The bounded route-authority slice does not claim the broader completion of #2277 or #2275; exact-head hosted checks remain the final integration proof after restacking."
   }
 }
