@@ -1332,3 +1332,63 @@ def authority_envelope_payload(*, target_root: Path, changed_paths: list[str], t
         },
         "detail_route": "agentic-workspace implement --target . --changed <paths> --verbose --format json",
     }
+
+
+def mutation_baseline_context_authority_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    """Issue the authority-envelope-owned mutation-baseline context result."""
+
+    if kwargs.get("owner_evidence") is not None or kwargs.get("adapter_id") is not None:
+        raise ValueError("owner evidence must not carry caller-provided producer identity or receipts")
+    if kwargs.get("source_specific"):
+        raise ValueError("mutation-baseline owner operation derives semantic evidence from its canonical subsystem")
+    from agentic_workspace._context_authority_owner_protocol import _issue_owner_result
+
+    baseline = mutation_baseline_payload(target_root=kwargs["root"], changed_paths=list(kwargs.get("paths") or []))
+    baseline_status = str(baseline.get("status") or "")
+    accepted = {"clean", "clean-scope", "dirty-accounted", "scoped-status-current", "current"}
+    current = baseline_status in accepted
+    status = "current" if current else "stale"
+    reason = "" if current else f"mutation-baseline-admission-{baseline_status or 'missing'}"
+    producer = "agentic_workspace.authority_envelope"
+    operation_id = "authority-envelope.mutation-baseline"
+    boundary = "Authority-envelope mutation baseline contract"
+    population = {"status": "present" if current else "invalid"}
+    schema = {
+        "source_format": "mutation-baseline",
+        "parse_status": "valid" if current else "invalid",
+        "mutation_baseline_admission": baseline,
+        "accepted_statuses": sorted(accepted),
+        "population": population,
+    }
+    return _issue_owner_result(
+        surface="mutation-baseline",
+        producer=producer,
+        result_kind="agentic-workspace/mutation-baseline/v1",
+        operation_id=operation_id,
+        owner=kwargs.get("owner"),
+        root=kwargs["root"],
+        chosen=kwargs["chosen"],
+        revision=kwargs["revision"],
+        git_head=kwargs["git_head"],
+        selection=kwargs["selection"],
+        status=status,
+        reason=reason,
+        owner_boundary=boundary,
+        schema_backing=schema,
+        lifecycle={
+            "status": "current" if current else "repair-required",
+            "reason": reason,
+            "owner_boundary": boundary,
+            "repair_operation_id": operation_id,
+            "repair_owner": producer,
+        },
+        population=population,
+        supersession={
+            "status": "not-superseded" if current else "unknown-until-repair",
+            "supersedes": "",
+            "superseded_by": "",
+            "currentness_basis": "live authority-envelope target/head/scope baseline",
+        },
+        surface_specific={"mutation_baseline_admission": baseline, "accepted_statuses": sorted(accepted)},
+        executor="agentic_workspace.authority_envelope.mutation_baseline_context_authority_owner_operation",
+    )

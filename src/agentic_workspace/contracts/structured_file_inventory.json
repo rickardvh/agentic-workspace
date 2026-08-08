@@ -203,6 +203,18 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": ".agentic-workspace/evaluations.json",
+      "format": "json",
+      "owner": "evaluation runtime",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic_workspace.evaluation._load_definitions lifecycle parser and tests/test_workspace_evaluation.py",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Checked-in longitudinal evaluation definitions and admission policies consumed by startup, proof, and closeout routing.",
+      "storage_class": "non-reconstructable-decision",
+      "checked_in_justification": "Evaluation criteria and admission policy are durable product decisions that cannot be reconstructed safely from prior runs."
+    },
+    {
       "pattern": ".agentic-workspace/OWNERSHIP.toml",
       "format": "toml",
       "owner": "workspace-lifecycle",
@@ -371,6 +383,18 @@
       "notes": "Optional compact evidence handoff records satisfied Assurance/Verification labels after proof or review without storing raw transcripts.",
       "storage_class": "non-reconstructable-decision",
       "checked_in_justification": "Compact agent-recorded evidence labels preserve proof/review handoff decisions that would otherwise be lossy in chat or PR prose."
+    },
+    {
+      "pattern": ".agentic-workspace/verification/proof-decision.json",
+      "format": "json",
+      "owner": "verification",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "repo_verification_bootstrap.runtime_primitives._proof_decision_payload",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Optional live agent-authored decision for the current material test-evidence change, including trust question, evidence owner, durability, replacement condition, and residual risk.",
+      "storage_class": "non-reconstructable-decision",
+      "checked_in_justification": "The live test-evidence ownership decision would otherwise be lost in chat or PR prose and is required by the configured Verification manual boundary."
     },
     {
       "pattern": ".agentic-workspace/verification/reasoning-economy-evidence.json",
@@ -1164,9 +1188,9 @@
       "schema_or_validator": "scripts/run_agentic_workspace.py and command package generation checks",
       "editable_by_agents": false,
       "generated": true,
-      "notes": "Generated source manifest used by the source-checkout launcher to detect stale generated CLI artifacts.",
+      "notes": "Generated source manifest used by the source-checkout launcher and package checks to detect stale generated CLI artifacts.",
       "storage_class": "generated-required-adapter",
-      "checked_in_justification": "Checked in so source-checkout launcher behavior can validate generated command package freshness without regenerating first.",
+      "checked_in_justification": "Checked in so source-checkout launcher behavior, CI, and local package checks can validate generated command package freshness without regenerating first.",
       "reconstructable_from": [
         "uv run python scripts/generate/generate_command_packages.py",
         "generated command package inputs"
@@ -1834,11 +1858,11 @@
     {
       "pattern": "generated/.agentic-workspace-cli-fingerprint.json",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",
-      "named_consumer": "source-checkout launcher generated CLI freshness check",
-      "checked_in_justification": "The source-checkout launcher needs a checked-in source manifest to decide whether the local generated CLI cache is stale.",
+      "named_consumer": "source-checkout launcher and generated command package freshness checks",
+      "checked_in_justification": "The source-checkout launcher, CI, and local package checks need a checked-in source manifest to decide whether generated CLI artifacts are stale.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
       "ordinary_agent_route": "launcher freshness drill-down only; not an ordinary startup surface",
-      "removal_or_demotion_path": "remove only if the source-checkout launcher no longer needs checked-in generated CLI freshness evidence",
+      "removal_or_demotion_path": "remove only if the source-checkout launcher and package checks no longer need checked-in generated CLI freshness evidence",
       "max_bytes": 1000000
     },
     {
