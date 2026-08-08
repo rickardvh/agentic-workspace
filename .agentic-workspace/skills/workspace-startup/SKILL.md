@@ -19,11 +19,6 @@ Use the configured AW invocation exposed by the repo adapter, config, or compact
 1. Run the configured invocation with `start --target . --task "<task>" --format json` for ordinary first contact.
 2. If changed paths are already known, run the configured invocation with `implement --target . --changed <paths> --task "<task>" --format json`.
 3. Preserve `module_slot`, `next_safe_action`, `allowed_actions`, `forbidden_actions`, `proof_required`, and `completion_claim_allowed`.
-   A binding assignment and action-safety gate are authoritative for the current
-   slice: the current agent is a candidate target, never the default owner. Do
-   not reinterpret a forbidden local route as advisory. Route an assigned
-   orchestrator to `planning-orchestrator-workflow`; route worker/manual/return
-   work only through its assigned packet and narrower lifecycle skill.
 4. Follow `next_safe_action` before opening raw `.agentic-workspace/` files or running drill-down commands.
 5. Keep direct work direct when the router allows no-artifact work; do not create Planning, Memory, review, or handoff artifacts just to show work.
 6. Load specialized subskills only for routed intent/shape, proof, setup, or fallback/reference needs.
@@ -52,10 +47,6 @@ This skill is the hand-authored startup pilot for the `startup-router` SkillSpec
 - Interpreted fields: `workflow_participation`, `immediate_next_allowed_action`, `next_safe_action`, `planning_safety_gate`, `skill_routing.preferred_routes`, and `detail_commands`.
 - Direct work: if compact startup does not require planning and proof is obvious, keep the work direct and avoid planning, review, Memory, or handoff artifacts.
 - Planning work: if `planning_safety_gate.implementation_allowed` is false, run the named planning command before implementation.
-- Binding delegation: structured assignment role/state, not prompt wording,
-  selects orchestrator, worker, explorer/reviewer, manual transport, returned
-  result, or authorised override routing. Human chat does not override a gate;
-  use the dedicated override operation and preserve its claim effects.
 - No-CLI fallback: continue from this startup skill and `.agentic-workspace/docs/module-map.md` only far enough to preserve the same forbidden actions and no-artifact-by-default rule.
 
 ## Module Map

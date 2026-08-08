@@ -1044,6 +1044,17 @@ def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -
     assert memory_skills.expected_fields == {"mode": "skills"}
 
 
+def test_generated_typescript_pr_shard_reuses_authoritative_registry() -> None:
+    checker = _load_checker()
+
+    cases, errors = checker._runnable_typescript_conformance_cases(conformance_refs=checker.TYPESCRIPT_PR_CONFORMANCE_REFS)
+
+    assert errors == []
+    selected_refs = {case.case.conformance_ref for case in cases}
+    assert selected_refs == checker.TYPESCRIPT_PR_CONFORMANCE_REFS
+    assert {case.package_id for case in cases} == {"root-workspace", "planning-bootstrap", "memory-bootstrap"}
+
+
 def test_generated_python_conformance_uses_contract_artifacts() -> None:
     checker = _load_checker()
 

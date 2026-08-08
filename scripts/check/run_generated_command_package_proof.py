@@ -2,20 +2,219 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
+import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 import time
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, TypedDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPACT_RUNNER = REPO_ROOT / "scripts" / "check" / "run_compact_command.py"
 GENERATED_PACKAGE_CHECK = REPO_ROOT / "scripts" / "check" / "check_generated_command_packages.py"
+COMMAND_PACKAGE_IR = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json"
+CONFORMANCE_REGISTRY = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "conformance_contracts.json"
 
 
 class ProofStep(NamedTuple):
     label: str
     args: list[str]
+
+
+class TypescriptPackage(TypedDict):
+    id: str
+    generated_root: str
+    name: str
+    runnable: bool
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _registry_fingerprint() -> str:
+    registry = json.loads(CONFORMANCE_REGISTRY.read_text(encoding="utf-8"))
+    paths = [COMMAND_PACKAGE_IR, CONFORMANCE_REGISTRY]
+    contract_roots = [
+        REPO_ROOT / "src" / "agentic_workspace" / "contracts",
+        REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "contracts",
+        REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "contracts",
+        REPO_ROOT / "packages" / "verification" / "src" / "repo_verification_bootstrap" / "contracts",
+    ]
+    for item in registry["contracts"]:
+        relative = Path(str(item["path"]))
+        matches = [root / relative for root in contract_roots if (root / relative).is_file()]
+        if not matches:
+            raise RuntimeError(f"registered conformance contract is missing: {relative.as_posix()}")
+        paths.extend(matches)
+    digest = hashlib.sha256()
+    for path in sorted(paths):
+        digest.update(path.relative_to(REPO_ROOT).as_posix().encode())
+        digest.update(path.read_bytes())
+    return f"sha256:{digest.hexdigest()}"
+
+
+def _typescript_packages() -> list[TypescriptPackage]:
+    ir = json.loads(COMMAND_PACKAGE_IR.read_text(encoding="utf-8"))
+    packages: list[dict[str, str]] = []
+    for package in ir["packages"]:
+        for target in package.get("targets", []):
+            if target.get("kind") != "typescript":
+                continue
+            root = REPO_ROOT / str(target["generated_root"])
+            metadata = json.loads((root / "package.json").read_text(encoding="utf-8"))
+            packages.append(
+                {
+                    "id": str(package["id"]),
+                    "generated_root": str(target["generated_root"]),
+                    "name": str(metadata["name"]),
+                    "runnable": target.get("maturity_level_ref")
+                    in {"runnable-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"},
+                }
+            )
+    return packages
+
+
+def _pack_packages(destination: Path) -> None:
+    destination.mkdir(parents=True, exist_ok=True)
+    npm = shutil.which("npm")
+    if npm is None:
+        raise RuntimeError("npm is required to pack generated TypeScript artifacts")
+    for package in _typescript_packages():
+        subprocess.run(
+            [npm, "pack", "--pack-destination", str(destination.resolve())],
+            cwd=REPO_ROOT / package["generated_root"],
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+
+
+def _tarball_for_package(artifact_dir: Path, package_name: str) -> Path:
+    prefix = package_name.split("/")[-1].replace("_", "-")
+    matches = sorted(artifact_dir.glob(f"*{prefix}-*.tgz"))
+    if len(matches) != 1:
+        raise RuntimeError(f"expected exactly one packed artifact for {package_name}, found {len(matches)} in {artifact_dir}")
+    return matches[0]
+
+
+def _extract_tarball(tarball: Path, destination: Path) -> None:
+    destination.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(tarball, "r:gz") as archive:
+        for member in archive.getmembers():
+            parts = Path(member.name).parts
+            if not parts or parts[0] != "package" or len(parts) == 1:
+                continue
+            relative = Path(*parts[1:])
+            target = (destination / relative).resolve()
+            if destination.resolve() not in target.parents:
+                raise RuntimeError(f"unsafe tar member in {tarball.name}: {member.name}")
+            if member.isdir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            if not member.isfile():
+                raise RuntimeError(f"unsupported non-file tar member in {tarball.name}: {member.name}")
+            source = archive.extractfile(member)
+            if source is None:
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(source.read())
+
+
+def _run_packed_conformance(*, artifact_dir: Path, receipt_out: Path | None) -> int:
+    packages = _typescript_packages()
+    if not artifact_dir.exists() or not any(artifact_dir.glob("*.tgz")):
+        _pack_packages(artifact_dir)
+    with tempfile.TemporaryDirectory(prefix="aw-packed-typescript-conformance-") as tmp:
+        extracted = Path(tmp)
+        artifact_records = []
+        for package in packages:
+            tarball = _tarball_for_package(artifact_dir, package["name"])
+            _extract_tarball(tarball, extracted / package["generated_root"])
+            artifact_records.append(
+                {
+                    "package_id": package["id"],
+                    "package_name": package["name"],
+                    "asset": tarball.name,
+                    "sha256": _sha256(tarball),
+                    "runnable": package["runnable"],
+                    "conformance_status": "passed" if package["runnable"] else "not-required-not-runnable",
+                }
+            )
+        command = [
+            sys.executable,
+            str(GENERATED_PACKAGE_CHECK),
+            "--conformance",
+            "--require-node",
+            "--typescript-artifact-root",
+            str(extracted),
+        ]
+        completed = subprocess.run(command, cwd=REPO_ROOT, check=False)
+        if completed.returncode:
+            return completed.returncode
+    node_version = subprocess.run(["node", "--version"], check=True, text=True, capture_output=True).stdout.strip()
+    registry_fingerprint = _registry_fingerprint()
+    subject = {"artifacts": artifact_records, "registry_fingerprint": registry_fingerprint, "node_version": node_version}
+    receipt_id = f"sha256:{hashlib.sha256(json.dumps(subject, sort_keys=True, separators=(',', ':')).encode()).hexdigest()}"
+    receipt = {
+        "kind": "agentic-workspace/generated-command-semantic-conformance-receipt/v1",
+        "status": "passed",
+        "receipt_id": receipt_id,
+        "subject": subject,
+        "proof": {"command": "scripts/check/run_generated_command_package_proof.py --packed-conformance", "exact_packed_artifacts": True, "complete_registry": True},
+    }
+    if receipt_out is not None:
+        receipt_out.parent.mkdir(parents=True, exist_ok=True)
+        receipt_out.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(json.dumps(receipt, sort_keys=True))
+    return 0
+
+
+def _verify_receipt(path: Path, *, artifact_dir: Path) -> int:
+    if not path.is_file():
+        print(f"missing semantic-conformance receipt: {path}", file=sys.stderr)
+        return 1
+    receipt = json.loads(path.read_text(encoding="utf-8"))
+    if receipt.get("kind") != "agentic-workspace/generated-command-semantic-conformance-receipt/v1" or receipt.get("status") != "passed":
+        print(f"failed or unsupported semantic-conformance receipt: {path}", file=sys.stderr)
+        return 1
+    subject = receipt.get("subject", {})
+    expected_receipt_id = f"sha256:{hashlib.sha256(json.dumps(subject, sort_keys=True, separators=(',', ':')).encode()).hexdigest()}"
+    if receipt.get("receipt_id") != expected_receipt_id:
+        print(f"semantic-conformance receipt identity mismatch: {path}", file=sys.stderr)
+        return 1
+    if subject.get("registry_fingerprint") != _registry_fingerprint():
+        print(f"stale semantic-conformance registry fingerprint: {path}", file=sys.stderr)
+        return 1
+    artifacts = subject.get("artifacts", [])
+    if not isinstance(artifacts, list):
+        print(f"semantic-conformance receipt artifact inventory is invalid: {path}", file=sys.stderr)
+        return 1
+    expected_packages = {package["name"]: package for package in _typescript_packages()}
+    actual_packages = {str(artifact.get("package_name", "")): artifact for artifact in artifacts}
+    if actual_packages.keys() != expected_packages.keys():
+        print(f"semantic-conformance receipt package inventory mismatch: {path}", file=sys.stderr)
+        return 1
+    for package_name, artifact in actual_packages.items():
+        package = expected_packages[package_name]
+        expected_status = "passed" if package["runnable"] else "not-required-not-runnable"
+        if artifact.get("runnable") is not package["runnable"] or artifact.get("conformance_status") != expected_status:
+            print(f"semantic-conformance support status mismatch for {package_name}: {path}", file=sys.stderr)
+            return 1
+        tarball = artifact_dir / str(artifact.get("asset", ""))
+        if not tarball.is_file() or _sha256(tarball) != artifact.get("sha256"):
+            print(f"semantic-conformance artifact mismatch: {tarball}", file=sys.stderr)
+            return 1
+    print(f"[ok] semantic-conformance receipt {receipt['receipt_id']}")
+    return 0
 
 
 def _format_duration(duration_seconds: float) -> str:
@@ -109,6 +308,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Run static, Python conformance, Python Docker conformance, primitive conformance, primitive Docker conformance, local Node conformance, Docker, and Docker conformance proof.",
     )
+    parser.add_argument("--packed-conformance", action="store_true", help="Run complete conformance against exact npm tarballs and emit a receipt.")
+    parser.add_argument("--artifact-dir", type=Path, help="Directory containing or receiving exact npm tarballs.")
+    parser.add_argument("--receipt-out", type=Path, help="Write the packed-artifact conformance receipt to this path.")
+    parser.add_argument("--verify-receipt", type=Path, help="Fail closed unless this receipt matches the current registry and exact artifacts.")
     parser.add_argument(
         "--timeout-seconds",
         type=_positive_float,
@@ -126,6 +329,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.verify_receipt:
+        if args.artifact_dir is None:
+            raise SystemExit("--verify-receipt requires --artifact-dir")
+        return _verify_receipt(args.verify_receipt.resolve(), artifact_dir=args.artifact_dir.resolve())
+    if args.packed_conformance:
+        if args.artifact_dir is not None:
+            return _run_packed_conformance(
+                artifact_dir=args.artifact_dir.resolve(),
+                receipt_out=args.receipt_out.resolve() if args.receipt_out else None,
+            )
+        with tempfile.TemporaryDirectory(prefix="aw-command-package-artifacts-") as tmp:
+            return _run_packed_conformance(
+                artifact_dir=Path(tmp),
+                receipt_out=args.receipt_out.resolve() if args.receipt_out else None,
+            )
     started = time.perf_counter()
     steps = _proof_steps(args)
     for step in steps:

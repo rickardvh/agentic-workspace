@@ -10,6 +10,26 @@
   },
   "skills": [
     {
+      "id": "planning-manual-delegation",
+      "path": "planning-manual-delegation/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "delegate through canonical assignment export and import without trusting worker claims",
+      "activation_hints": {"verbs": ["delegate", "export", "import", "handoff"], "nouns": ["manual delegation", "manual transport", "assignment packet"], "when": ["manual transport admitted"]}
+    },
+    {
+      "id": "planning-returned-result",
+      "path": "planning-returned-result/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "admit or route a returned delegated result through authoritative assignment operations",
+      "activation_hints": {
+        "verbs": ["admit", "integrate", "reject", "repair", "reassign"],
+        "nouns": ["returned result", "worker return", "delegated return", "assignment result"],
+        "when": ["delegated run returned", "assignment admission required"]
+      }
+    },
+    {
       "id": "bootstrap-upgrade",
       "path": "bootstrap-upgrade/SKILL.md",
       "scope": "bundled",

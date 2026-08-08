@@ -1,0 +1,150 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2449-semantic-conformance",
+  "title": "Issue 2449 generated-target semantic conformance",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 2,
+  "intent": {
+    "outcome": "Require current complete semantic-conformance proof for every generated target advertised as runnable, and make failed, missing, stale, or unsupported proof block support-bearing promotion for the exact packed artifacts.",
+    "non_goals": [
+      "Do not redesign the operation contracts or generated-command architecture beyond changes required by reproduced conformance gaps.",
+      "Do not duplicate the authoritative conformance registry in TypeScript-only fixtures, CI prose, or release metadata.",
+      "Do not absorb the broader release-composition, runtime-matrix, distribution, license, or security outcomes owned by sibling issues under #2448."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2448-release-promotion",
+    "contribution": "Supply the runnable-target semantic-conformance receipt and fail-closed promotion input required by the #2448 release lane.",
+    "closure_boundary": "Issue #2449 only; #2448 remains open until all release-critical receipts compose into the support-bearing promotion decision."
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
+      "scripts/check/check_generated_command_packages.py",
+      "scripts/check/run_operation_conformance_tests.py",
+      "scripts/check/run_generated_command_package_proof.py",
+      "scripts/generate/generate_command_packages.py",
+      "scripts/generate/workspace_command_generation.py",
+      "generated/{workspace,planning,memory,verification}/{python,typescript}/** generated only from canonical sources",
+      "tests/test_generated_tool_conformance.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      "tests/test_command_generation_release_promotion.py",
+      ".github/workflows/ci.yml",
+      ".github/workflows/release.yml",
+      ".agentic-workspace/planning/execplans/issue-2449-semantic-conformance.plan.json",
+      ".agentic-workspace/planning/lanes/issue-2448-release-promotion.lane.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "effects": [
+      "Changes to canonical command-package contracts or generators may refresh checked-in Python and TypeScript generated packages.",
+      "PR validation gains a bounded representative semantic-conformance shard; support-bearing release validation gains complete exact-packed-artifact conformance.",
+      "Runnable or publishable status fails closed when the required conformance receipt is missing, stale, mismatched, failed, or unsupported."
+    ]
+  },
+  "relationships": {
+    "selection": {
+        "state": "selected",
+        "owner": "issue-2448-release-promotion"
+    },
+    "proof_posture": {
+        "state": "selected",
+        "refs": [
+          "generated command package conformance",
+          "packed-artifact promotion proof",
+          "focused generator and release tests"
+        ]
+    },
+    "external_posture": {
+        "state": "observed",
+        "refs": [
+          "https://github.com/rickardvh/agentic-workspace/issues/2449",
+          "https://github.com/rickardvh/agentic-workspace/issues/2448"
+        ]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2449",
+      "label": "GitHub issue #2449",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Reproduce and classify the current TypeScript semantic-conformance failures with the complete authoritative registry, then repair the narrowest canonical contract/generator boundary before wiring bounded PR and exact-packed-artifact release proof.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "The full authoritative TypeScript semantic-conformance registry passes with zero adapter failures on the declared minimum and current Node majors.",
+      "Every runnable generated target has current proof bound to the exact packed artifact and runtime, and support-bearing promotion fails closed for missing, stale, mismatched, failed, or unsupported receipts.",
+      "PR CI exercises a bounded representative semantic shard while release proof exercises the complete registry without creating a second conformance authority."
+    ],
+    "requirements": [
+      "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node",
+      "uv run pytest tests/test_generated_tool_conformance.py tests/test_generated_command_package_proof_runner.py tests/test_command_generation_release_promotion.py -q",
+      "uv run --active python scripts/check/check_generated_command_packages.py --require-node",
+      "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json",
+      "Inspect packed npm tarball conformance and the promotion refusal fixture for one intentionally invalid or stale receipt."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "issue-2448-release-promotion",
+    "residual_intent": "After #2449 closes, continue the remaining Phase 0 release-critical slices and compose their receipts under #2448."
+  },
+  "specialist_contracts": [],
+  "execution_bounds": {
+    "allowed paths": "Only the scope.owned paths above and regenerated outputs attributable to an edited canonical source.",
+    "max changed files": "Keep the implementation to the smallest conformance, generator, focused-test, CI, release-proof, and Planning surfaces that satisfy #2449; generated refreshes may expand the mechanical file count.",
+    "required validation commands": "Run the complete Node-backed conformance registry, focused conformance/proof/promotion tests, generated-package freshness, and AW changed-path proof.",
+    "ask-before-refactor threshold": "Stop before redesigning operation semantics, replacing the command-package IR, widening the supported runtime matrix, or creating a new release framework.",
+    "stop before touching": "Do not hand-edit generated outputs, publish packages, change repository protection, choose distribution names/licenses, or weaken runnable claims to hide a failing supported target."
+  },
+  "touched_paths": [
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/schemas/command_package_ir.schema.json",
+    "scripts/check/check_generated_command_packages.py",
+    "scripts/check/run_operation_conformance_tests.py",
+    "scripts/check/run_generated_command_package_proof.py",
+    "scripts/generate/generate_command_packages.py",
+    "scripts/generate/workspace_command_generation.py",
+    "generated/workspace/typescript/**",
+    "generated/planning/typescript/**",
+    "generated/memory/typescript/**",
+    "generated/verification/typescript/**",
+    "tests/test_generated_tool_conformance.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "tests/test_command_generation_release_promotion.py",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    ".agentic-workspace/planning/execplans/issue-2449-semantic-conformance.plan.json",
+    ".agentic-workspace/planning/lanes/issue-2448-release-promotion.lane.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "validation_commands": [
+    "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    "uv run pytest tests/test_generated_tool_conformance.py tests/test_generated_command_package_proof_runner.py tests/test_command_generation_release_promotion.py -q",
+    "uv run --active python scripts/check/check_generated_command_packages.py --require-node",
+    "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json",
+    "git diff --check"
+  ],
+  "completion_criteria": [
+    "The complete semantic registry passes with zero adapter failures for the declared minimum and current Node majors.",
+    "Invalid-option, unsupported-command, mutation-refusal, dry-run, output-shape, required-field, and exit-code cases remain sourced from the authoritative conformance contract.",
+    "A bounded PR shard catches representative drift and release proof runs the complete registry against the exact packed npm artifacts.",
+    "Runnable/publishable status and #2448 promotion reject missing, stale, mismatched, failed, or unsupported conformance receipts.",
+    "The conformance subject fingerprint and receipt identity are available to the release manifest/promotion result without duplicating authority.",
+    "Focused tests, generated freshness, changed-path proof, and the #2449 closeout/intent review pass."
+  ],
+  "stop_conditions": {
+    "stop when": "A generated output would need a hand edit that cannot be reproduced from a canonical source.",
+    "escalate when boundary reached": "The reproduced failures require changing operation semantics rather than repairing a projection, adapter, generator, or conformance fixture.",
+    "escalate on scope drift": "The fix would widen the declared Node/runtime support matrix or change distribution, license, repository-protection, or security policy owned by sibling #2448 issues.",
+    "escalate on proof failure": "Packed-artifact proof cannot identify an exact artifact fingerprint or current authoritative receipt without first implementing a separate #2448 promotion compiler."
+  }
+}
