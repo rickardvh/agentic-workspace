@@ -32,6 +32,65 @@ def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
+def _source_owner_authority_contract(
+    *,
+    surface: str,
+    producer: str,
+    operation_id: str,
+    source_id: str,
+    source_revision: str,
+    git_head: str,
+    status: str,
+    reason: str,
+    owner_boundary: str,
+    schema_backing: dict[str, Any],
+    selection: dict[str, Any],
+) -> dict[str, Any]:
+    population = _as_dict(schema_backing.get("population"))
+    if not population:
+        population = {"status": "present" if status == "current" else "invalid"}
+    schema_status = "valid" if status == "current" else "invalid"
+    if schema_backing.get("parse_status") in {"valid", "invalid"}:
+        schema_status = str(schema_backing.get("parse_status"))
+    lifecycle_status = "current" if status == "current" else "repair-required"
+    return {
+        "kind": "agentic-workspace/context-authority-source-owner-contract/v1",
+        "surface": surface,
+        "producer": producer,
+        "operation_id": operation_id,
+        "source_id": source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "selection_revision": "sha256:" + _digest(selection),
+        "status": "admitted" if status == "current" else "not-admitted",
+        "schema": {
+            "status": schema_status,
+            "backing_revision": "sha256:" + _digest(schema_backing),
+            "source_format": str(schema_backing.get("source_format") or ""),
+            "missing_required_keys": [str(item) for item in _as_list(schema_backing.get("missing_required_keys"))],
+            "missing_symbols": [str(item) for item in _as_list(schema_backing.get("missing_symbols"))],
+        },
+        "lifecycle": {
+            "status": lifecycle_status,
+            "reason": reason,
+            "owner_boundary": owner_boundary,
+            "repair_operation_id": operation_id,
+            "repair_owner": producer,
+        },
+        "population": population,
+        "supersession": {
+            "status": "not-superseded" if status == "current" else "unknown-until-repair",
+            "supersedes": "",
+            "superseded_by": "",
+            "currentness_basis": "selected source id + source revision + git head + selection revision",
+        },
+        "source_owner_rule": (
+            "Every registered context-authority surface must publish schema, lifecycle, population, and supersession "
+            "evidence from its producer-owned operation before ordinary consumers may treat it as current."
+        ),
+    }
+
+
 def _source_id_for(root: Path, chosen: Path) -> str:
     return chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix()
 
@@ -287,9 +346,33 @@ def _admit_context_owner_operation_result(
     boundary = str(owner_result.get("owner_boundary") or "")
     if not structural_backing or not boundary:
         raise ValueError("context owner operation payload must provide owner boundary and schema backing")
+    source_owner_contract = _as_dict(owner_result.get("source_owner_contract"))
+    if source_owner_contract.get("kind") != "agentic-workspace/context-authority-source-owner-contract/v1":
+        raise ValueError("owner operation result is missing source owner authority contract")
+    contract_expectations = {
+        "surface": surface,
+        "producer": producer,
+        "operation_id": operation_id,
+        "source_id": source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "selection_revision": "sha256:" + _digest(selection),
+    }
+    for key, expected in contract_expectations.items():
+        if source_owner_contract.get(key) != expected:
+            raise ValueError(f"source owner authority contract {key.replace('_', ' ')} does not match")
+    if source_owner_contract.get("status") != "admitted":
+        raise ValueError("source owner authority contract was not admitted")
+    if not _as_dict(source_owner_contract.get("schema")) or not _as_dict(source_owner_contract.get("lifecycle")):
+        raise ValueError("source owner authority contract must carry schema and lifecycle evidence")
+    if not _as_dict(source_owner_contract.get("population")) or not _as_dict(source_owner_contract.get("supersession")):
+        raise ValueError("source owner authority contract must carry population and supersession evidence")
+    if adapter_receipt.get("source_owner_contract_revision") != "sha256:" + _digest(source_owner_contract):
+        raise ValueError("owner operation adapter receipt source owner contract revision does not match")
     result_payload_revision = str(owner_result.get("revision") or "")
     schema_backing_revision = "sha256:" + _digest(structural_backing)
     adapter_receipt_revision = "sha256:" + _digest(adapter_receipt)
+    source_owner_contract_revision = "sha256:" + _digest(source_owner_contract)
     operation_identity = {
         "operation_id": operation_id,
         "producer": producer,
@@ -302,6 +385,7 @@ def _admit_context_owner_operation_result(
         "selection_revision": "sha256:" + _digest(selection),
         "schema_backing_revision": schema_backing_revision,
         "adapter_receipt_revision": adapter_receipt_revision,
+        "source_owner_contract_revision": source_owner_contract_revision,
         "result_payload_revision": result_payload_revision,
     }
     run_id = "sha256:" + _digest(operation_identity)
@@ -329,6 +413,7 @@ def _admit_context_owner_operation_result(
         "selection_revision": operation_identity["selection_revision"],
         "schema_backing_revision": schema_backing_revision,
         "adapter_receipt_revision": adapter_receipt_revision,
+        "source_owner_contract_revision": source_owner_contract_revision,
         "result_payload_revision": result_payload_revision,
         "executor": receipt_identity["executor"],
         "receipt_schema": receipt_identity["receipt_schema"],
@@ -348,6 +433,7 @@ def _admit_context_owner_operation_result(
                 "selection_revision",
                 "schema_backing_revision",
                 "adapter_receipt_revision",
+                "source_owner_contract_revision",
                 "result_payload_revision",
             ],
             "rule": "Receipt currentness is re-resolved from producer-owned operation identity and current source revision; no process-local map is authoritative.",
@@ -369,6 +455,7 @@ def _admit_context_owner_operation_result(
         "selection_revision": operation_identity["selection_revision"],
         "schema_backing_revision": schema_backing_revision,
         "adapter_receipt_revision": adapter_receipt_revision,
+        "source_owner_contract_revision": source_owner_contract_revision,
         "result_payload_revision": result_payload_revision,
         "admission_rule": (
             "Context authority admits current results only from a registered owner-operation front-door receipt. "
@@ -380,6 +467,7 @@ def _admit_context_owner_operation_result(
             **owner_result,
             "owner_boundary": boundary,
             "schema_backing": structural_backing,
+            "source_owner_contract": source_owner_contract,
             "owner_operation": owner_operation,
             "owner_execution_receipt": owner_execution_receipt,
         }
@@ -428,6 +516,19 @@ def _complete_owner_operation_result(
             "surface_specific": surface_specific,
         }
     )
+    source_owner_contract = _source_owner_authority_contract(
+        surface=surface,
+        producer=spec["producer"],
+        operation_id=spec["operation_id"],
+        source_id=expected_source_id,
+        source_revision=source_revision,
+        git_head=git_head,
+        status=status,
+        reason=reason,
+        owner_boundary=owner_boundary,
+        schema_backing=structural_backing,
+        selection=selection,
+    )
     adapter_receipt = {
         "kind": "agentic-workspace/context-authority-owner-adapter-result/v1",
         "status": "produced",
@@ -439,6 +540,7 @@ def _complete_owner_operation_result(
         "adapter_id": adapter_id,
         "selection_revision": "sha256:" + _digest(selection),
         "semantic_evidence_revision": semantic_evidence_revision,
+        "source_owner_contract_revision": "sha256:" + _digest(source_owner_contract),
         "operation_id": spec["operation_id"],
         "rule": "Concrete owner-operation front doors produce semantic payloads and adapter receipts from their selected canonical source.",
     }
@@ -457,6 +559,7 @@ def _complete_owner_operation_result(
             "repair_operation_id": spec["operation_id"],
             "owner_boundary": owner_boundary,
             "schema_backing": structural_backing,
+            "source_owner_contract": source_owner_contract,
             "owner_adapter_receipt": adapter_receipt,
             **({"reason": reason} if reason else {}),
             **surface_specific,
@@ -836,6 +939,7 @@ def registered_context_owner_receipt_status(
         "selection_revision": receipt.get("selection_revision"),
         "schema_backing_revision": receipt.get("schema_backing_revision"),
         "adapter_receipt_revision": receipt.get("adapter_receipt_revision"),
+        "source_owner_contract_revision": receipt.get("source_owner_contract_revision"),
         "result_payload_revision": receipt.get("result_payload_revision"),
     }
     expected_run_id = "sha256:" + _digest(operation_identity)
@@ -852,6 +956,8 @@ def registered_context_owner_receipt_status(
         return False, "owner-operation-current-receipt-mismatch"
     if owner_operation.get("adapter_receipt_revision") != receipt.get("adapter_receipt_revision"):
         return False, "owner-operation-adapter-receipt-revision-mismatch"
+    if owner_operation.get("source_owner_contract_revision") != receipt.get("source_owner_contract_revision"):
+        return False, "owner-operation-source-owner-contract-revision-mismatch"
     if owner_operation.get("result_payload_revision") != receipt.get("result_payload_revision"):
         return False, "owner-operation-current-result-mismatch"
     if root is not None:

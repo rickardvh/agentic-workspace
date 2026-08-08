@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Make legacy review-worktree migration fail closed and transactional, preserving dirty, active, mismatched, and unpushed worktrees."
