@@ -41,6 +41,27 @@
       "name": "subcommand",
       "source": "derived",
       "required": false
+    },
+    {
+      "name": "operation_action",
+      "source": "derived",
+      "command_visibility": "runtime-only",
+      "required": false,
+      "description": "Runtime-only action discriminator; route-decision-next-action is admitted by agentic_workspace.workspace_runtime_planning.validate_planning_route_action_invocation."
+    },
+    {
+      "name": "input_identity",
+      "source": "derived",
+      "command_visibility": "runtime-only",
+      "required": false,
+      "description": "agentic-planning/route-action-input/v1 identity containing route_action, task_relation, owner_posture, expected_transition, planning_revision, selected owner identity/lifecycle/projection, task binding identity/mode, mutation baseline/scope/effects/overlap, implementation permission, mutation authority, state-update policy, claim policy, reconciliation proposal identity/revision, and idempotency_key."
+    },
+    {
+      "name": "input_revision",
+      "source": "derived",
+      "command_visibility": "runtime-only",
+      "required": false,
+      "description": "sha256 revision of the route action input identity; stale execution is rejected when it differs from the live route decision."
     }
   ],
   "output": {
@@ -83,12 +104,106 @@
     }
   ],
   "guards": [
-    "Generated code owns parser/help/dispatch shape; module runtime owns package policy and command effects."
+    "Generated code owns parser/help/dispatch shape; module runtime owns package policy and command effects.",
+    "The route-decision-next-action path must pass route-action admission before mutation or claim advancement.",
+    "Finite owner transitions compile from route_action_bindings and must not use hand-maintained command strings.",
+    "The front door executes the destination through the configured operation adapter and admits only its sealed, revision-bound execution receipt before route advancement; caller-supplied result mappings are never authority."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
     "generated command package parser accepts the root front-door command",
-    "runtime adapter boundary remains thin"
+    "runtime adapter boundary remains thin",
+    "route-action admission rejects stale owner, task binding, mutation baseline, and reconciliation proposal identity",
+    "host-action admission rejects caller mappings, stale contract/invocation/runtime revisions, wrong operations, failed postconditions, replays, and missing receipts"
   ],
-  "migration_status": "draft-contract-only"
+  "route_action_bindings": {
+    "archive-or-retire-completed-plan": {
+      "operation_path": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.archive-plan.lifecycle.json",
+      "arguments": {
+        "target": {"from": "runtime.target"},
+        "plan": {"from": "route.selected_owner_ref"},
+        "expect_planning_revision": {"from": "route.planning_revision"},
+        "format": {"literal": "json"}
+      },
+      "result_admission": {
+        "kind": "agentic-planning/front-door-host-action-result/v1",
+        "accepted_statuses": ["applied", "already-applied", "no-op"]
+      }
+    },
+    "refresh-mutation-baseline": {
+      "operation_path": "src/agentic_workspace/contracts/operations/implement.context.json",
+      "arguments": {
+          "target": {"from": "runtime.target"},
+          "changed": {"from": "runtime.changed_paths"},
+          "task": {"from": "runtime.task"},
+          "select": {"literal": "next"},
+          "format": {"literal": "json"}
+      },
+      "result_admission": {
+        "kind": "agentic-planning/front-door-host-action-result/v1",
+        "accepted_statuses": ["reported", "current", "no-op"]
+      }
+    },
+    "repair-planning-projection": {
+      "operation_path": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.front-door-report.report.json",
+      "arguments": {
+        "target": {"from": "runtime.target"},
+        "format": {"literal": "json"}
+      },
+      "result_admission": {
+        "kind": "agentic-planning/front-door-host-action-result/v1",
+        "accepted_statuses": ["reported", "current", "no-op"]
+      }
+    },
+    "complete-selected-proof": {
+      "operation_path": "src/agentic_workspace/contracts/operations/proof.report.json",
+      "arguments": {
+        "target": {"from": "runtime.target"},
+        "changed": {"from": "runtime.changed_paths"},
+        "format": {"literal": "json"}
+      },
+      "result_admission": {
+        "kind": "agentic-planning/front-door-host-action-result/v1",
+        "accepted_statuses": ["passed", "already-passed", "no-op"]
+      }
+    },
+    "promote-or-create-planning-owner": {
+      "operation_path": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.promote-to-plan.lifecycle.json",
+      "arguments": {
+        "target": {"from": "runtime.target"},
+        "item_id": {"from": "route.selected_owner_ref"},
+        "expect_planning_revision": {"from": "route.planning_revision"},
+        "format": {"literal": "json"}
+      },
+      "result_admission": {
+        "kind": "agentic-planning/front-door-host-action-result/v1",
+        "accepted_statuses": ["applied", "already-applied", "no-op"]
+      }
+    },
+    "select-planning-owner": {
+      "operation_path": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.owner-select.lifecycle.json",
+      "arguments": {
+        "target": {"from": "runtime.target"},
+        "owner_ref": {"from": "route.selected_owner_ref"},
+        "expect_planning_revision": {"from": "route.planning_revision"},
+        "format": {"literal": "json"}
+      },
+      "result_admission": {
+        "kind": "agentic-planning/front-door-host-action-result/v1",
+        "accepted_statuses": ["applied", "already-applied", "no-op"]
+      }
+    },
+    "refresh-planning-reconciliation-proposal": {
+      "operation_path": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.reconcile.report.json",
+      "arguments": {
+        "target": {"from": "runtime.target"},
+        "format": {"literal": "json"}
+      },
+      "result_admission": {
+        "kind": "agentic-planning/front-door-host-action-result/v1",
+        "accepted_statuses": ["reported", "current", "no-op"]
+      }
+    }
+  },
+  "migration_status": "runtime-consumed"
 }

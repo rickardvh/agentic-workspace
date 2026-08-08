@@ -3833,8 +3833,8 @@ candidates = []
     assert payload["strict_closeout_gate"]["blocking"] is True
     current = payload["current_task_closeout"]
     assert current["status"] == "active"
-    assert current["scope"]["relationship"] == "bounded-task-switch"
-    assert current["scope"]["planning_safety_gate"]["gate_result"] == "current-task-route-acknowledged"
+    assert current["scope"]["relationship"] == "bounded-current-task"
+    assert current["scope"]["planning_safety_gate"]["gate_result"] == "mutation-baseline-required"
     switch = current["scope"]["planning_safety_gate"]["task_switch_reconciliation"]
     assert switch["status"] == "current-task-route-acknowledged"
     assert switch["route_acknowledgement"]["status"] == "acknowledged"
@@ -3955,10 +3955,10 @@ candidates = []
     assert (route["task_relation"], route["owner_posture"], route["required_transition"]) == (
         "bounded-independent",
         "current",
-        "none",
+        "refresh-mutation-baseline",
     )
-    assert route["mutation_authority"] == "current-task"
-    assert route["next_safe_action"]["action"] == "prove-current-task"
+    assert route["mutation_authority"] == "none"
+    assert route["next_safe_action"]["action"] == "refresh-mutation-baseline"
 
 
 def test_closeout_trust_preserves_current_task_manual_proof_obligations(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -4508,8 +4508,8 @@ def test_start_exposes_workflow_sufficiency_and_continuation_selectors(tmp_path:
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["values"]["workflow_sufficiency"]["kind"] == "agentic-workspace/workflow-sufficiency/v1"
-    assert payload["values"]["workflow_sufficiency"]["sufficiency_result"] == "direct-work-allowed"
-    assert payload["values"]["workflow_sufficiency"]["required_next_action"] == "continue-direct"
+    assert payload["values"]["workflow_sufficiency"]["sufficiency_result"] == "enough-for-first-contact-routing"
+    assert payload["values"]["workflow_sufficiency"]["required_next_action"] == "choose-smallest-workflow-shape"
     continuation = payload["values"]["continuation_state"]
     assert continuation["kind"] == "agentic-workspace/compact-continuation-state/v1"
     assert continuation["fields"] == [
@@ -4763,6 +4763,7 @@ def test_start_embeds_active_planning_orientation_without_immediate_summary_reru
             "active-planning-summary-needed",
             "delegation-decision-required",
             "planning-backed",
+            "current-task-scope-inspection-required",
         }
     assert "summary --target . --format json" not in payload["decision_packet"]["detail_routes"]["active_plan"]
 
@@ -6386,8 +6387,8 @@ candidates = []
     route = payload["context"]["planning_safety_gate"]["route_decision"]
 
     assert route["task_relation"] == "bounded-independent"
-    assert route["required_transition"] == "none"
-    assert route["next_safe_action"]["action"] == "prove-current-task"
+    assert route["required_transition"] == "refresh-mutation-baseline"
+    assert route["next_safe_action"]["action"] == "refresh-mutation-baseline"
     assert "claim-active-plan-progress" in route["blocked_claims"]
 
 
@@ -7008,7 +7009,96 @@ def test_route_decision_fails_closed_for_genuine_ambiguity() -> None:
     assert decision["required_transition"] == "ask-for-route-decision"
     assert decision["implementation_allowed"] is False
     assert decision["mutation_authority"] == "none"
-    assert decision["blocked_claims"] == ["claim-active-plan-progress", "silently-abandon-active-plan"]
+    assert decision["blocked_claims"] == [
+        "claim-active-plan-progress",
+        "claim-active-plan-complete",
+        "silently-abandon-active-plan",
+    ]
+
+
+def test_route_safety_projection_ignores_legacy_task_switch_status() -> None:
+    from agentic_workspace.workspace_runtime_planning import _route_safety_outcome
+
+    outcome = _route_safety_outcome(
+        {
+            # This legacy label intentionally conflicts with the canonical
+            # route contract.  Gate consumers must use the latter.
+            "legacy_status": "active",
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "required_transition": "none",
+            "selected_owner_identity": {"ref": "current-task", "revision": "owner-a"},
+            "state_update_policy": "no-active-plan-state-update",
+            "next_safe_action": {"action": "prove-current-task"},
+            "mutation_baseline_admission": {
+                "status": "current",
+                "source": "canonical-route-decision",
+                "baseline_id": "baseline-a",
+                "reason": "current live mutation baseline admitted into the canonical route decision",
+            },
+            "structured_inputs": {
+                "task_binding": {"mode": "mutation", "allowed_paths": ["README.md"]},
+                "mutation_baseline": {
+                    "kind": "agentic-workspace/mutation-baseline/v1",
+                    "status": "clean-scope",
+                    "revalidation_status": "current",
+                    "baseline_id": "baseline-a",
+                    "head": "abc123",
+                    "scope": {"allowed_paths": ["README.md"]},
+                    "observation": {"ok": True},
+                    "observed_state": {"enforcement_fingerprint": "fingerprint-a", "entry_count": 0},
+                    "boundary_enforcement": {"status": "fail-closed-contract"},
+                    "stale_revalidation": {"status": "required"},
+                    "ownership": {"owner": "current-agent-session"},
+                },
+            },
+        }
+    )
+
+    assert outcome["status"] == "satisfied"
+    assert outcome["decision"] == "current-task-route-acknowledged"
+    assert outcome["action_safety"]["effect_scope"] == ["README.md"]
+    assert outcome["action_safety"]["mutation_baseline"]["baseline_id"] == "baseline-a"
+
+
+def test_route_safety_projection_fails_closed_for_unbaselined_bounded_mutation() -> None:
+    from agentic_workspace.workspace_runtime_planning import _route_safety_outcome
+
+    outcome = _route_safety_outcome(
+        {
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "required_transition": "none",
+            "selected_owner_identity": {"ref": "current-task", "revision": "owner-a"},
+            "state_update_policy": "no-active-plan-state-update",
+            "next_safe_action": {"action": "prove-current-task"},
+            "structured_inputs": {"task_binding": {"mode": "mutation", "allowed_paths": ["README.md"]}},
+        }
+    )
+
+    assert outcome["status"] == "blocked"
+    assert outcome["workflow_sufficient"] is False
+    assert outcome["decision"] == "route-authority-inconsistent"
+    assert outcome["required_next_action"] == "refresh-planning-route-decision"
+
+
+def test_route_safety_projection_fails_closed_for_unsupported_transition() -> None:
+    from agentic_workspace.workspace_runtime_planning import _route_safety_outcome
+
+    outcome = _route_safety_outcome(
+        {
+            "task_relation": "continues-selected-owner",
+            "owner_posture": "current",
+            "required_transition": "reconcile",
+            "selected_owner_identity": {"ref": "issue-1", "revision": "owner-a"},
+            "state_update_policy": "fresh-reconciliation-proposal-required",
+            "next_safe_action": {"action": "refresh-proposal"},
+        }
+    )
+
+    assert outcome["status"] == "attention"
+    assert outcome["decision"] == "route-transition-required"
+    assert outcome["action_safety"]["repair_owner"] == "planning-route-decision"
 
 
 def test_route_decision_uses_current_reconciliation_proposal_without_recompiling_it() -> None:
@@ -7065,6 +7155,348 @@ def test_route_decision_requires_fresh_proposal_instead_of_applying_stale_one() 
     assert decision["mutation_authority"] == "none"
 
 
+def test_planning_route_action_admission_rejects_stale_authority_inputs() -> None:
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload, validate_planning_route_action_invocation
+
+    route_evidence = {
+        "task_relation": "bounded-independent",
+        "owner_posture": "current",
+        "active_execplan": ".agentic-workspace/planning/execplans/active.plan.json",
+        "implementation_allowed": True,
+        "route_inputs": {
+            "task_binding": {"mode": "mutation", "identity": "task-a", "allowed_paths": ["README.md"]},
+            "owner": {
+                "ref": ".agentic-workspace/planning/execplans/active.plan.json",
+                "revision": "owner-a",
+                "lifecycle": "active",
+                "projection_status": "clean",
+            },
+            "mutation_baseline": {
+                "baseline_id": "baseline-a",
+                "scope": {"allowed_paths": ["README.md"]},
+                "allowed_effects": ["repo-mutation"],
+                "overlap_claim": {"status": "scoped-to-requested-paths", "allowed_paths": ["README.md"]},
+            },
+            "reconciliation_proposal": {"status": "absent"},
+        },
+    }
+    live = _planning_route_decision_payload(
+        route_evidence,
+        planning_revision={"revision_id": "planning-a"},
+        reconciliation_proposal={"status": "current", "proposal_id": "proposal-a", "revision": "proposal-rev-a"},
+    )
+    invocation = live["next_safe_action"]["operation_invocation"]
+
+    admitted = validate_planning_route_action_invocation(invocation=invocation, live_route_decision=live)
+    assert admitted["status"] == "admitted"
+    assert invocation["operation_path"] == "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.front-door.json"
+    identity = invocation["input_identity"]
+    assert identity["selected_owner_lifecycle"] == "active"
+    assert identity["selected_owner_projection_status"] == "clean"
+    assert identity["task_binding_mode"] == "mutation"
+    assert identity["implementation_allowed"] is False
+    assert identity["mutation_authority"] == "reconciliation-proposal"
+    assert identity["state_update_policy"] == "reconciliation-apply-required"
+    assert identity["allowed_claims"] == []
+    assert identity["blocked_claims"] == [
+        "claim-active-plan-progress",
+        "claim-active-plan-complete",
+        "silently-abandon-active-plan",
+        "claim-route-transition-complete-without-receipt",
+    ]
+    assert identity["allowed_claims"] == live["allowed_claims"]
+    assert identity["blocked_claims"] == live["blocked_claims"]
+    assert identity["mutation_allowed_paths_digest"]
+    assert identity["allowed_effects_digest"]
+    assert identity["overlap_claim_digest"]
+
+    for field, route_patch, proposal_patch in [
+        ("selected_owner_revision", {"route_inputs": {"owner": {"revision": "owner-b"}}}, {}),
+        ("selected_owner_lifecycle", {"route_inputs": {"owner": {"lifecycle": "archived"}}}, {}),
+        ("selected_owner_projection_status", {"route_inputs": {"owner": {"projection_status": "drifted"}}}, {}),
+        ("task_binding_identity", {"route_inputs": {"task_binding": {"identity": "task-b"}}}, {}),
+        ("task_binding_mode", {"route_inputs": {"task_binding": {"mode": "read-only"}}}, {}),
+        ("mutation_baseline_id", {"route_inputs": {"mutation_baseline": {"baseline_id": "baseline-b"}}}, {}),
+        ("mutation_allowed_paths_digest", {"route_inputs": {"task_binding": {"allowed_paths": ["src/app.py"]}}}, {}),
+        ("allowed_effects_digest", {"route_inputs": {"mutation_baseline": {"allowed_effects": ["planning-transition"]}}}, {}),
+        ("overlap_claim_digest", {"route_inputs": {"mutation_baseline": {"overlap_claim": {"status": "overlap-drift"}}}}, {}),
+        ("reconciliation_proposal_revision", {}, {"revision": "proposal-rev-b"}),
+    ]:
+        changed = json.loads(json.dumps(route_evidence))
+        for group, values in route_patch.get("route_inputs", {}).items():
+            changed["route_inputs"][group].update(values)
+        stale_live = _planning_route_decision_payload(
+            changed,
+            planning_revision={"revision_id": "planning-a"},
+            reconciliation_proposal={"status": "current", "proposal_id": "proposal-a", "revision": "proposal-rev-a", **proposal_patch},
+        )
+
+        rejected = validate_planning_route_action_invocation(invocation=invocation, live_route_decision=stale_live)
+
+        assert rejected["status"] == "rejected"
+        assert field in rejected["changed_authority_fields"]
+        assert rejected["rejection"]["status"] == "reject-on-input-revision-mismatch"
+
+
+def test_planning_route_front_door_admits_finite_route_action_matrix() -> None:
+    from agentic_workspace.workspace_runtime_planning import (
+        _planning_front_door_projection_outcome,
+        _planning_route_decision_payload,
+        validate_planning_route_action_invocation,
+    )
+
+    cases = [
+        (
+            "continuation",
+            {"task_relation": "continues-selected-owner", "owner_posture": "current"},
+            {},
+            "continue-active-plan",
+            "no-op",
+        ),
+        (
+            "bounded-read-only",
+            {"task_relation": "bounded-independent", "owner_posture": "current", "route_inputs": {"task_binding": {"mode": "read-only"}}},
+            {},
+            "prove-current-task",
+            "no-op",
+        ),
+        (
+            "bounded-mutation-baseline",
+            {"task_relation": "bounded-independent", "owner_posture": "current", "route_inputs": {"task_binding": {"mode": "mutation"}}},
+            {},
+            "refresh-mutation-baseline",
+            "host-action-required",
+        ),
+        (
+            "completed-residue",
+            {"task_relation": "bounded-independent", "owner_posture": "completed-residue"},
+            {},
+            "archive-or-retire-completed-plan",
+            "host-action-required",
+        ),
+        (
+            "external-conflict",
+            {"task_relation": "continues-selected-owner", "owner_posture": "external-conflict"},
+            {},
+            "refresh-planning-reconciliation-proposal",
+            "host-action-required",
+        ),
+        (
+            "projection-drift",
+            {"task_relation": "continues-selected-owner", "owner_posture": "projection-drifted"},
+            {},
+            "repair-planning-projection",
+            "host-action-required",
+        ),
+        (
+            "proof-incomplete",
+            {"task_relation": "continues-selected-owner", "owner_posture": "proof-incomplete"},
+            {},
+            "complete-selected-proof",
+            "host-action-required",
+        ),
+        (
+            "promotion",
+            {"task_relation": "owner-promotion-required", "owner_posture": "missing"},
+            {},
+            "promote-or-create-planning-owner",
+            "host-action-required",
+        ),
+        (
+            "missing-owner",
+            {"task_relation": "continues-selected-owner", "owner_posture": "missing"},
+            {},
+            "select-planning-owner",
+            "host-action-required",
+        ),
+        (
+            "ambiguous",
+            {"task_relation": "ambiguous", "owner_posture": "current"},
+            {},
+            "choose-task-switch-route",
+            "blocked",
+        ),
+        (
+            "current-proposal",
+            {"task_relation": "continues-selected-owner", "owner_posture": "external-conflict"},
+            {"status": "current", "proposal_id": "proposal-a", "revision": "proposal-rev-a"},
+            "apply-planning-reconciliation-proposal",
+            "applied-by-specialized-transaction",
+        ),
+    ]
+
+    for name, evidence, proposal, route_action, mutation_outcome in cases:
+        decision = _planning_route_decision_payload(
+            {"implementation_allowed": True, "route_inputs": {"owner": {"ref": f"owner-{name}", "revision": "owner-a"}}, **evidence},
+            planning_revision={"revision_id": "planning-a"},
+            reconciliation_proposal=proposal,
+        )
+        invocation = decision["next_safe_action"]["operation_invocation"]
+
+        admitted = validate_planning_route_action_invocation(invocation=invocation, live_route_decision=decision)
+
+        assert admitted["status"] == "admitted", name
+        assert invocation["operation_id"] == "planning.front-door"
+        assert invocation["input_identity"]["route_action"] == route_action
+        if route_action != "apply-planning-reconciliation-proposal":
+            outcome = _planning_front_door_projection_outcome(
+                route_action,
+                invocation["input_identity"],
+                target_root=Path(".").resolve(),
+                task_text=f"exercise {name}",
+                changed_paths=["src/example.py"],
+            )
+            assert outcome["mutation_outcome"] == mutation_outcome
+            assert outcome["route_transition"]["route_action"] == route_action
+            assert outcome["route_transition"]["status"] != "unsupported-route-action"
+            if mutation_outcome == "host-action-required":
+                host_invocation = outcome["host_action_invocation"]
+                assert host_invocation["status"] == "ready"
+                assert host_invocation["operation_id"]
+                assert host_invocation["idempotency_key"] == invocation["input_identity"]["idempotency_key"]
+                assert host_invocation["operation_contract_revision"].startswith("sha256:")
+                assert host_invocation["operation_schema_version"] == "agentic-workspace/operation/v1"
+                assert "command" not in host_invocation
+                assert outcome["route_transition"]["dispatch_status"] == "ready"
+
+
+def test_planning_front_door_executes_and_admits_only_destination_issued_results(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_planning as planning_runtime
+
+    operation_path = "src/agentic_workspace/contracts/operations/proof.report.json"
+    destination = {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "proof.report",
+        "command_surface": {"command": "proof", "format_option": "format"},
+    }
+    destination_path = tmp_path / operation_path
+    destination_path.parent.mkdir(parents=True)
+    destination_path.write_text(json.dumps(destination), encoding="utf-8")
+    adapter = tmp_path / "configured_operation_adapter.py"
+    adapter.write_text(
+        "import json, sys\nprint(json.dumps({'status': 'passed', 'argv': sys.argv[1:]}))\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("agentic_workspace.client.resolve_invocation", lambda _target: [sys.executable, str(adapter)])
+    monkeypatch.setattr(
+        planning_runtime,
+        "_planning_revision_payload",
+        lambda *, target_root: {"revision_id": "planning-before"},
+    )
+    identity = {
+        "route_action": "complete-selected-proof",
+        "front_door_operation_id": "planning.front-door",
+        "front_door_contract_revision": "sha256:front-door",
+        "operation_id": "proof.report",
+        "operation_path": operation_path,
+        "operation_contract_revision": "sha256:" + planning_runtime._stable_revision(destination),
+        "operation_schema_version": "agentic-workspace/operation/v1",
+        "arguments": {"target": tmp_path.as_posix(), "changed": ["src/example.py"], "format": "json"},
+        "route_input_revision": "sha256:route-input",
+        "planning_revision": "planning-before",
+        "selected_owner_revision": "owner-before",
+        "idempotency_key": "route-once",
+        "result_admission": {
+            "kind": "agentic-planning/front-door-host-action-result/v1",
+            "accepted_statuses": ["passed", "already-passed", "no-op"],
+        },
+    }
+    invocation = {
+        "kind": "agentic-planning/front-door-host-action-invocation/v1",
+        "status": "ready",
+        **identity,
+        "invocation_revision": "sha256:" + planning_runtime._stable_revision(identity),
+    }
+
+    execute_host_action = planning_runtime._execute_planning_front_door_host_action
+    executed = execute_host_action(invocation=invocation)
+    admitted = planning_runtime.admit_planning_front_door_host_action_result(invocation=invocation, result=executed)
+
+    assert admitted["status"] == "admitted"
+    assert admitted["receipt"]["producer"] == "agentic-workspace.configured-operation-executor"
+    assert admitted["receipt"]["postcondition_status"] == "verified"
+    assert executed.payload["result"]["argv"] == [
+        "proof",
+        "--target",
+        tmp_path.as_posix(),
+        "--changed",
+        "src/example.py",
+        "--format",
+        "json",
+    ]
+    forged_mapping = copy.deepcopy(executed.payload)
+    assert planning_runtime.admit_planning_front_door_host_action_result(invocation=invocation, result=forged_mapping)["failures"] == [
+        "producer-owned-result"
+    ]
+
+    def reseal(payload: dict[str, Any]) -> object:
+        receipt = payload["receipt"]
+        receipt["receipt_id"] = "sha256:" + planning_runtime._stable_revision(
+            {key: value for key, value in receipt.items() if key not in {"kind", "receipt_id"}}
+        )
+        return planning_runtime._ExecutedPlanningHostActionResult(payload=payload, seal=executed.seal)
+
+    for field, value in [
+        ("producer", "caller"),
+        ("executor_revision", "sha256:stale-runtime"),
+        ("idempotency_key", "replayed-key"),
+        ("postcondition_status", "failed"),
+    ]:
+        tampered = copy.deepcopy(executed.payload)
+        tampered["receipt"][field] = value
+        assert (
+            planning_runtime.admit_planning_front_door_host_action_result(invocation=invocation, result=reseal(tampered))["status"]
+            == "rejected"
+        )
+
+    decision = planning_runtime._planning_route_decision_payload(
+        {
+            "task_relation": "continues-selected-owner",
+            "owner_posture": "proof-incomplete",
+            "implementation_allowed": False,
+            "route_inputs": {"owner": {"ref": "owner-a", "revision": "owner-before"}},
+        },
+        planning_revision={"revision_id": "planning-before"},
+    )
+    route_invocation = decision["next_safe_action"]["operation_invocation"]
+    monkeypatch.setattr(planning_runtime, "_planning_safety_gate_payload", lambda **_kwargs: {"route_decision": decision})
+    monkeypatch.setattr(
+        planning_runtime,
+        "_planning_front_door_projection_outcome",
+        lambda *_args, **_kwargs: {
+            "mutation_outcome": "host-action-required",
+            "claim_outcome": "blocked",
+            "host_action_invocation": invocation,
+            "route_transition": {"status": "complete-selected-proof", "dispatch_status": "ready"},
+        },
+    )
+    execution_count = 0
+
+    def execute_bound_destination(*, invocation: dict[str, Any]) -> object:
+        nonlocal execution_count
+        execution_count += 1
+        return executed
+
+    monkeypatch.setattr(planning_runtime, "_execute_planning_front_door_host_action", execute_bound_destination)
+    routed = planning_runtime.execute_planning_front_door_route_action(
+        {
+            "target": tmp_path.as_posix(),
+            "task": "complete selected proof",
+            "changed_paths": ["src/example.py"],
+            "operation_invocation": route_invocation,
+            "host_action_result": forged_mapping,
+        }
+    )
+    assert execution_count == 1
+    assert routed["claim_outcome"] == "available-after-proof"
+    assert routed["mutation_receipt"]["producer"] == "agentic-workspace.configured-operation-executor"
+
+    destination_path.write_text(json.dumps({**destination, "summary": "changed"}), encoding="utf-8")
+    stale = execute_host_action(invocation=invocation)
+    assert stale.payload["reason"] == "destination-operation-contract-stale"
+    assert planning_runtime.admit_planning_front_door_host_action_result(invocation=invocation, result=stale)["status"] == "rejected"
+
+
 def test_structured_route_inputs_cover_bounded_work_owner_lifecycle_and_missing_owner(tmp_path: Path) -> None:
     from agentic_workspace.workspace_runtime_planning import _structured_route_inputs
 
@@ -7102,6 +7534,9 @@ def test_structured_route_inputs_cover_bounded_work_owner_lifecycle_and_missing_
 
     assert (read_only["task_relation"], read_only["owner_posture"]) == ("bounded-independent", "current")
     assert mutation["route_inputs"]["task_binding"]["mutation_scope_acknowledged"] is True
+    assert mutation["route_inputs"]["mutation_baseline"]["source"] == "authority-envelope-live-observation"
+    assert mutation["route_inputs"]["mutation_baseline"]["kind"] == "agentic-workspace/mutation-baseline/v1"
+    assert mutation["route_inputs"]["mutation_baseline"].get("baseline_id") != "planning-revision-a"
     assert (missing["task_relation"], missing["owner_posture"]) == ("not-applicable", "not-applicable")
 
 
@@ -7121,7 +7556,7 @@ def test_route_decision_transition_matrix_is_compositional() -> None:
             "bounded-mutation",
             {"task_relation": "bounded-independent", "owner_posture": "current", "route_inputs": {"task_binding": {"mode": "mutation"}}},
             {},
-            "none",
+            "refresh-mutation-baseline",
             "current",
         ),
         (
@@ -7169,8 +7604,32 @@ def test_route_decision_transition_matrix_is_compositional() -> None:
             "route_inputs": {"task_binding": {"mode": "mutation"}},
         }
     )
+    mutation_current = _planning_route_decision_payload(
+        {
+            "implementation_allowed": True,
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "route_inputs": {
+                "task_binding": {"mode": "mutation", "allowed_paths": ["README.md"]},
+                "mutation_baseline": {
+                    "kind": "agentic-workspace/mutation-baseline/v1",
+                    "status": "clean-scope",
+                    "revalidation_status": "current",
+                    "baseline_id": "baseline-a",
+                    "head": "abc123",
+                    "scope": {"allowed_paths": ["README.md"]},
+                    "observation": {"ok": True},
+                    "observed_state": {"enforcement_fingerprint": "fingerprint-a"},
+                    "boundary_enforcement": {"status": "fail-closed-contract"},
+                    "stale_revalidation": {"status": "required"},
+                    "ownership": {"owner": "current-agent-session"},
+                },
+            },
+        }
+    )
     assert read_only["mutation_authority"] == "none"
-    assert mutation["mutation_authority"] == "current-task"
+    assert mutation["mutation_authority"] == "none"
+    assert mutation_current["mutation_authority"] == "current-task"
 
 
 def test_selector_first_gate_projects_authoritative_route_decision() -> None:
@@ -7527,6 +7986,10 @@ def test_start_compiles_session_improvement_pressure_into_task_posture(tmp_path:
     assert packet["improvement_pressure_evaluation"]["status"] == "active"
     assert packet["improvement_pressure_evaluation"]["source_intake"] == "session_improvement_intake"
     assert packet["improvement_pressure_evaluation"]["active_obligation_count"] == 1
+    consequence = packet["improvement_pressure_evaluation"]["primary_consequence"]
+    assert consequence["consequence"] == "create-task-posture-obligation"
+    assert consequence["claim_effect"] == "blocks"
+    assert consequence["next_allowed_action"] == "route active improvement pressure or record accepted-risk"
     assert packet["improvement_obligations"][0]["source"] == "improvement-pressure"
     assert packet["next_allowed_action"] == "route active improvement pressure or record accepted-risk"
     assert "claim improvement pressure resolved without owner, dismissal, or accepted-risk state" in packet["forbidden_actions"]

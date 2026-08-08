@@ -426,7 +426,7 @@
       "id": "planning.front-door",
       "path": "operations/planning.front-door.json",
       "command": "planning",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "planning.front-door-report.report",
