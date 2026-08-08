@@ -8,7 +8,7 @@
   },
   "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
   "mirror_publication": {
-    "generation_id": "external-conformance-publication:be3ca4b9bf7860c0ee0c8d97",
+    "generation_id": "external-conformance-publication:b776e35a624a888d64bd715e",
     "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
     "path_count": 3,
     "paths": [
@@ -16,9 +16,9 @@
       "generated/workspace/python/external_operation_conformance_receipts.json",
       "generated/workspace/typescript/external_operation_conformance_receipts.json"
     ],
-    "payload_digest": "sha256:be3ca4b9bf7860c0ee0c8d97ea8778529fa2bbced2c41d7d899b266930fd3465",
-    "previous_digest": "12dd5bceaddda967f3606d0009998114ef444167683eb94c29a5984636a20b03",
-    "publisher_pid": 56048,
+    "payload_digest": "sha256:b776e35a624a888d64bd715ed1c761873dcac4013c4e35e9f7073d528fd4a648",
+    "previous_digest": "afc9ad7e9bcce4171b7585f30cce33289fbc6b51679e5c2c4785d6426de4621d",
+    "publisher_pid": 16744,
     "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
     "status": "published"
   },
@@ -113,8 +113,8 @@
         "config.report:config.selected-output.success:typescript:typescript.function@sha256:5e7d326f7bd694b7",
         "config.report:config.selected-output.success:vendor-neutral:@sha256:7ca9472b6b8ef20e"
       ],
-      "profile_fingerprint": "sha256:e82762ad50e99f3aad7a7e6f14cb348dcecd3f072b94d9242abe1560d2f2df4f",
-      "receipt_ref": "external-conformance:config.report:0fe727c7e391d4d851f6f609",
+      "profile_fingerprint": "sha256:a0d8df2f08da12957dcf8e016fcbc6e44aadc6515491cae0048a55e092f02be5",
+      "receipt_ref": "external-conformance:config.report:7e4e7139bb74df61dba17a6e",
       "result_identity": {
         "client_semantics_revision": "sha256:fc8414af141f49fb7d18752cc757c8f265c7b82671183dc9dc225705380d9e83",
         "executed_at": "2026-08-08T14:07:06Z",
@@ -233,8 +233,8 @@
         "delegation-outcome.append:delegation-outcome.append-write.boundary:python:cli.process@sha256:3fd7c63647106d7c",
         "delegation-outcome.append:delegation-outcome.append-write.boundary:vendor-neutral:@sha256:7d94d37a097921f0"
       ],
-      "profile_fingerprint": "sha256:e82762ad50e99f3aad7a7e6f14cb348dcecd3f072b94d9242abe1560d2f2df4f",
-      "receipt_ref": "external-conformance:delegation-outcome.append:2678e1b7cd81d653e5c80482",
+      "profile_fingerprint": "sha256:a0d8df2f08da12957dcf8e016fcbc6e44aadc6515491cae0048a55e092f02be5",
+      "receipt_ref": "external-conformance:delegation-outcome.append:e9fff3e4cb0568926fd36698",
       "result_identity": {
         "client_semantics_revision": "sha256:fc8414af141f49fb7d18752cc757c8f265c7b82671183dc9dc225705380d9e83",
         "executed_at": "2026-08-08T14:07:06Z",
