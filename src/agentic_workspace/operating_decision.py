@@ -13,6 +13,7 @@ from agentic_workspace.actionability import invocation_decision_input_revision, 
 from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_operation_runner,
     registered_context_owner_receipt_status,
+    registered_context_owner_result_status,
 )
 
 BLOCKER_PRECEDENCE = [
@@ -344,6 +345,9 @@ def _context_owner_operation_admission(
         or owner_result.get("adapter_id") != expected_adapter_id
     ):
         return False, "owner-result-identity-mismatch"
+    issued, reason = registered_context_owner_result_status(owner_result)
+    if not issued:
+        return False, reason
     registered, reason = registered_context_owner_receipt_status(
         owner_operation=owner_operation,
         receipt=receipt,
