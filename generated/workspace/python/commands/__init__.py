@@ -11,6 +11,16 @@ from __future__ import annotations
 # Command module changes belong in src/agentic_workspace/contracts/command_package_ir.json.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
+from . import agent_guidance_delete as _command_agent_guidance_delete
+from . import agent_guidance_edit as _command_agent_guidance_edit
+from . import agent_guidance_merge as _command_agent_guidance_merge
+from . import agent_guidance_promote as _command_agent_guidance_promote
+from . import agent_guidance_retire as _command_agent_guidance_retire
+from . import agent_guidance_revalidate as _command_agent_guidance_revalidate
+from . import agent_guidance_split as _command_agent_guidance_split
+from . import agent_guidance_supersede as _command_agent_guidance_supersede
+from . import agent_guidance_suppress as _command_agent_guidance_suppress
+from . import agent_guidance_weaken as _command_agent_guidance_weaken
 from . import assignment_admit as _command_assignment_admit
 from . import assignment_cleanup as _command_assignment_cleanup
 from . import assignment_close as _command_assignment_close
@@ -70,6 +80,16 @@ from . import work_thread_select as _command_work_thread_select
 
 
 GENERATED_COMMAND_HANDLERS = {
+    'agent-guidance.delete': _command_agent_guidance_delete.run,
+    'agent-guidance.edit': _command_agent_guidance_edit.run,
+    'agent-guidance.merge': _command_agent_guidance_merge.run,
+    'agent-guidance.promote': _command_agent_guidance_promote.run,
+    'agent-guidance.retire': _command_agent_guidance_retire.run,
+    'agent-guidance.revalidate': _command_agent_guidance_revalidate.run,
+    'agent-guidance.split': _command_agent_guidance_split.run,
+    'agent-guidance.supersede': _command_agent_guidance_supersede.run,
+    'agent-guidance.suppress': _command_agent_guidance_suppress.run,
+    'agent-guidance.weaken': _command_agent_guidance_weaken.run,
     'assignment.admit': _command_assignment_admit.run,
     'assignment.cleanup': _command_assignment_cleanup.run,
     'assignment.close': _command_assignment_close.run,

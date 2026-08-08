@@ -28,6 +28,16 @@ from agentic_workspace import (
 )
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.generated_operations import (
+    agent_guidance_delete,
+    agent_guidance_edit,
+    agent_guidance_merge,
+    agent_guidance_promote,
+    agent_guidance_retire,
+    agent_guidance_revalidate,
+    agent_guidance_split,
+    agent_guidance_supersede,
+    agent_guidance_suppress,
+    agent_guidance_weaken,
     assignment_admit,
     assignment_export,
     assignment_import,
@@ -50,6 +60,208 @@ from agentic_workspace.workspace_runtime_proof import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _guidance_host_signature(payload: dict[str, object]) -> dict[str, object]:
+    script = r"""
+import base64
+import hashlib
+import json
+import os
+import random
+import sys
+
+RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+
+
+def is_probable_prime(candidate):
+    if candidate < 2:
+        return False
+    small_primes = (3, 5, 7, 11, 13, 17, 19, 23, 29, 31)
+    if candidate in small_primes:
+        return True
+    if candidate % 2 == 0 or any(candidate % prime == 0 for prime in small_primes):
+        return False
+    d = candidate - 1
+    s = 0
+    while d % 2 == 0:
+        s += 1
+        d //= 2
+    for base in (2, 3, 5, 7, 11, 13, 17):
+        if base >= candidate:
+            continue
+        x = pow(base, d, candidate)
+        if x in (1, candidate - 1):
+            continue
+        for _ in range(s - 1):
+            x = pow(x, 2, candidate)
+            if x == candidate - 1:
+                break
+        else:
+            return False
+    return True
+
+
+def random_prime(bits):
+    while True:
+        candidate = int.from_bytes(os.urandom(bits // 8), "big")
+        candidate |= (1 << (bits - 1)) | 1
+        if is_probable_prime(candidate):
+            return candidate
+
+
+payload = json.loads(sys.stdin.read())
+random.seed()
+e = 65537
+while True:
+    p = random_prime(256)
+    q = random_prime(256)
+    if p == q:
+        continue
+    phi = (p - 1) * (q - 1)
+    if phi % e != 0:
+        break
+n = p * q
+d = pow(e, -1, phi)
+key_size = (n.bit_length() + 7) // 8
+message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+digest_info = RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
+encoded = b"\x00\x01" + (b"\xff" * (key_size - len(digest_info) - 3)) + b"\x00" + digest_info
+raw = pow(int.from_bytes(encoded, "big"), d, n).to_bytes(key_size, "big")
+print(json.dumps({
+    "key": {
+        "algorithm": "RS256",
+        "issuer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "n": format(n, "x"),
+        "e": "010001",
+        "status": "current",
+    },
+    "signature": base64.urlsafe_b64encode(raw).decode("ascii").rstrip("="),
+}, sort_keys=True))
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        input=json.dumps(payload, sort_keys=True, default=str),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    signed = json.loads(completed.stdout)
+    assert isinstance(signed, dict)
+    return signed
+
+
+def _trusted_guidance_host_event(
+    target_root: Path,
+    *,
+    authority: str,
+    producer_class: str,
+    producer_id: str,
+    source_ref: str,
+    host_admission_monkeypatch: pytest.MonkeyPatch | None = None,
+    source: str = "",
+    target_revision: str = "",
+    event_id: str = "",
+) -> dict[str, object]:
+    from agentic_workspace.agent_guidance import (
+        TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        TRUSTED_AUTHORITY_EVENT_INBOX_PATH,
+        _json_digest,
+        _trusted_authority_admission_signature_payload,
+        _trusted_authority_event_digest,
+        record_trusted_authority_host_event,
+    )
+
+    event = {
+        "kind": "agentic-workspace/trusted-authority-host-event/v1",
+        "status": "current",
+        "authority": authority,
+        "producer_class": producer_class,
+        "producer_id": producer_id,
+        "source": source or authority,
+        "source_ref": source_ref,
+        "target_revision": target_revision,
+        "event_id": event_id,
+        "recorded_at": "2026-07-29T00:00:00Z",
+        "admission_context": {
+            "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+            "workspace_ref": f"workspace:path:{target_root.resolve()}",
+            "issued_at": "2026-07-29T00:00:00Z",
+            "expires_at": "2099-01-01T00:00:00Z",
+            "nonce": f"{source_ref}:{event_id or 'event'}",
+        },
+        "custody": {
+            "producer": "github-review-adapter",
+            "trusted_channel": "github-review-webhook",
+            "rule": "Fixture for an adapter-owned host event; repo-local guidance code only imports it.",
+        },
+    }
+    event_ref = "trusted-authority-event:" + _json_digest(event)[:24]
+    event["event_ref"] = event_ref
+    event["host_admission_verdict"] = {
+        "kind": "agentic-workspace/trusted-authority-host-event-verdict/v1",
+        "status": "admitted",
+        "admission_authority": "signed-host-adapter",
+        "event_ref": event_ref,
+        "event_digest": _trusted_authority_event_digest(event),
+        "producer": "github-review-adapter",
+        "trusted_channel": "github-review-webhook",
+        "correction_authority": authority,
+        "producer_class": producer_class,
+        "source_ref": source_ref,
+        "target_revision": target_revision,
+        "event_id": event_id,
+        "workspace_ref": f"workspace:path:{target_root.resolve()}",
+        "audience": TRUSTED_AUTHORITY_EVENT_AUDIENCE,
+        "issued_at": "2026-07-29T00:00:00Z",
+        "expires_at": "2099-01-01T00:00:00Z",
+        "nonce": f"{source_ref}:{event_id or 'event'}",
+        "verifier_revision": "guidance-host-test-verifier:1",
+    }
+    event["host_admission"] = {
+        "kind": "agentic-workspace/trusted-authority-host-admission/v1",
+        "algorithm": "RS256",
+        "key_id": "github-review-adapter:external-host-fixture:" + event_ref.removeprefix("trusted-authority-event:"),
+    }
+    signature_payload = _trusted_authority_admission_signature_payload(
+        ref=event_ref,
+        event=event,
+        verdict=event["host_admission_verdict"],
+        admission=event["host_admission"],
+    )
+    signed = _guidance_host_signature(signature_payload)
+    event["host_admission"]["signature"] = str(signed["signature"])
+    import agentic_workspace.agent_guidance as guidance_runtime
+
+    trusted_keys = {
+        **guidance_runtime._TRUSTED_AUTHORITY_HOST_PUBLIC_KEYS,  # type: ignore[attr-defined]
+        str(event["host_admission"]["key_id"]): signed["key"],
+    }
+    if host_admission_monkeypatch is None:
+        guidance_runtime._TRUSTED_AUTHORITY_HOST_PUBLIC_KEYS = trusted_keys  # type: ignore[attr-defined]
+    else:
+        host_admission_monkeypatch.setattr(
+            guidance_runtime,
+            "_TRUSTED_AUTHORITY_HOST_PUBLIC_KEYS",
+            trusted_keys,
+        )
+    inbox_path = target_root / TRUSTED_AUTHORITY_EVENT_INBOX_PATH / f"{event_ref.removeprefix('trusted-authority-event:')}.json"
+    inbox_path.parent.mkdir(parents=True, exist_ok=True)
+    inbox_path.write_text(json.dumps(event, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    imported = record_trusted_authority_host_event(
+        target_root=target_root,
+        authority=authority,
+        producer_class=producer_class,
+        producer_id=producer_id,
+        source_ref=source_ref,
+        source=source or authority,
+        target_revision=target_revision,
+        event_id=event_id,
+        trusted_channel="github-review-webhook",
+        host_event_ref=event_ref,
+    )
+    return {"event_ref": event_ref, "event": imported["event"]}
 
 
 def _independent_review_host_result_fixture(tmp_path: Path, *, changed_paths: list[str] | None = None, **overrides: object):
@@ -891,7 +1103,9 @@ def test_assignment_admit_host_result_ref_succeeds_with_protected_host_store(tmp
     assert admitted["receipt"]["review_result"]["custody"]["host_result_ref"] == host_ref
 
 
-def test_correction_event_generated_operations_store_query_and_preserve_low_authority(tmp_path: Path) -> None:
+def test_correction_event_generated_operations_store_query_and_preserve_low_authority(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
     (tmp_path / ".agentic-workspace/config.toml").write_text(
         'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
@@ -935,17 +1149,28 @@ def test_correction_event_generated_operations_store_query_and_preserve_low_auth
         "evidence_hash": "sha256:review-thread-1",
         "route_decisions": ["target-guidance", "target-suitability"],
     }
-    trusted_receipt = {
-        "authority": "pr-review",
-        "producer_class": "human-reviewer",
-        "producer_id": "reviewer-1",
-        "source": "github-review",
-        "source_ref": "review-thread-1",
-        "status": "current",
-    }
-    receipt_ref = ".agentic-workspace/local/correction-authority-receipts/review-thread-1.json"
-    (tmp_path / receipt_ref).parent.mkdir(parents=True)
-    (tmp_path / receipt_ref).write_text(json.dumps(trusted_receipt), encoding="utf-8")
+    from agentic_workspace.agent_guidance import record_trusted_authority_receipt
+
+    host_event = _trusted_guidance_host_event(
+        tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref="review-thread-1",
+        host_admission_monkeypatch=monkeypatch,
+        target_revision="rev-1",
+    )
+    receipt_ref = record_trusted_authority_receipt(
+        target_root=tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref="review-thread-1",
+        target_revision="rev-1",
+        host_event_ref=host_event["event_ref"],
+    )["receipt_ref"]
 
     submitted = correction_event_submit(
         {"event_json": json.dumps(event), "trusted_authority_receipt_ref": receipt_ref},
@@ -991,7 +1216,249 @@ def test_correction_event_public_contract_omits_caller_authority_inputs() -> Non
         assert "trusted_authority_receipt_ref" in input_names
 
 
-def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(tmp_path: Path) -> None:
+def test_agent_guidance_generated_lifecycle_operations_are_external_runtime_backed(tmp_path: Path) -> None:
+    operation_wrappers = {
+        "agent-guidance.delete": agent_guidance_delete,
+        "agent-guidance.edit": agent_guidance_edit,
+        "agent-guidance.merge": agent_guidance_merge,
+        "agent-guidance.promote": agent_guidance_promote,
+        "agent-guidance.retire": agent_guidance_retire,
+        "agent-guidance.revalidate": agent_guidance_revalidate,
+        "agent-guidance.split": agent_guidance_split,
+        "agent-guidance.supersede": agent_guidance_supersede,
+        "agent-guidance.suppress": agent_guidance_suppress,
+        "agent-guidance.weaken": agent_guidance_weaken,
+    }
+    profile_entries = external_contract_bundle()["operations"]
+    for operation_id in operation_wrappers:
+        assert profile_entries[operation_id]["external_consumption"]["status"] == "runtime-backed"
+        assert profile_entries[operation_id]["contract"]["ir_plan"]["steps"][1]["uses"] == "guidance.lifecycle.apply"
+
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'current_target = "user-local:fast-worker"',
+                "",
+                "[local_memory]",
+                "target_guidance_enabled = true",
+                'target_guidance_overlay_path = ".agentic-workspace/local/guidance-lifecycle.json"',
+                "",
+                "[delegation_targets.fast_worker]",
+                'target_id = "user-local:fast-worker"',
+                'target_revision = "rev-1"',
+                'aliases = ["fast"]',
+                'revision_policy = "preserve"',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    store_path = tmp_path / ".agentic-workspace/local/guidance-lifecycle.json"
+    store_path.parent.mkdir(parents=True)
+
+    def lifecycle_record(guidance_id: str, instruction: str) -> dict[str, object]:
+        return {
+            "kind": "agentic-workspace/guidance-lifecycle-record/v1",
+            "guidance_id": guidance_id,
+            "status": "active",
+            "instruction": instruction,
+            "applicability": {"target_identity_ref": "user-local:fast-worker"},
+            "destination": {
+                "owner": "repo-local-target-guidance-overlay",
+                "owner_operation_id": "agent-guidance.promote.target-guidance",
+                "store": ".agentic-workspace/local/guidance-lifecycle.json",
+            },
+            "provenance": {"source_event_refs": [guidance_id]},
+            "transitions": [{"operation": "promote", "reason": "fixture"}],
+            "revision": 1,
+        }
+
+    store_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/guidance-lifecycle-store/v1",
+                "records": [
+                    lifecycle_record("guidance:generated-edit", "Prefer broad edits."),
+                    lifecycle_record("guidance:generated-merge-target", "Prefer precise edits."),
+                    lifecycle_record("guidance:generated-merge-source", "Prefer precise edits too."),
+                    lifecycle_record("guidance:generated-split", "Prefer precise edits and proof."),
+                    lifecycle_record("guidance:generated-suppress", "Prefer temporary guidance."),
+                    lifecycle_record("guidance:generated-revalidate", "Prefer current target guidance."),
+                    lifecycle_record("guidance:generated-weaken", "Prefer advisory guidance."),
+                    lifecycle_record("guidance:generated-supersede", "Prefer old guidance."),
+                    lifecycle_record("guidance:generated-replacement", "Prefer replacement guidance."),
+                    lifecycle_record("guidance:generated-retire", "Prefer retiring guidance."),
+                    lifecycle_record("guidance:generated-delete", "Prefer deleting guidance."),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    correction_store = tmp_path / ".agentic-workspace/local/correction-events.json"
+    correction_store.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/correction-event-store/v1",
+                "events": [
+                    {
+                        "target_identity_ref": "fast",
+                        "target_revision": "rev-1",
+                        "task_class": "mechanical-follow-through",
+                        "scope_class": "narrow-code-change",
+                        "invariant_id": "generated-promote",
+                        "behavior_class": "edit-scope",
+                        "desired_behavior": "Prefer generated promotion.",
+                        "replaced_behavior": "Manual promotion.",
+                        "authority": "explicit-user-correction",
+                        "source": "pr-review",
+                        "source_ref": "generated-promote-1",
+                        "producer_class": "human-reviewer",
+                        "producer_id": "reviewer-1",
+                        "evidence_hash": "sha256:generated-promote-1",
+                        "route_decisions": ["target-guidance", "target-suitability"],
+                    },
+                    {
+                        "target_identity_ref": "fast",
+                        "target_revision": "rev-1",
+                        "task_class": "mechanical-follow-through",
+                        "scope_class": "narrow-code-change",
+                        "invariant_id": "generated-promote",
+                        "behavior_class": "edit-scope",
+                        "desired_behavior": "Prefer generated promotion.",
+                        "replaced_behavior": "Manual promotion.",
+                        "authority": "explicit-user-correction",
+                        "source": "pr-review",
+                        "source_ref": "generated-promote-2",
+                        "producer_class": "human-reviewer",
+                        "producer_id": "reviewer-1",
+                        "evidence_hash": "sha256:generated-promote-2",
+                        "route_decisions": ["target-guidance", "target-suitability"],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    invocation = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
+
+    edited = agent_guidance_edit(
+        {
+            "guidance_id": "guidance:generated-edit",
+            "expected_revision": 1,
+            "reason": "generated external edit",
+            "instruction": "Prefer narrow edits.",
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+
+    assert edited["status"] == "transitioned"
+    assert edited["mutation_applied"] is True
+    assert edited["record"]["revision"] == 2
+    assert edited["record"]["instruction"] == "Prefer narrow edits."
+    merged = agent_guidance_merge(
+        {
+            "guidance_id": "guidance:generated-merge-target",
+            "expected_revision": 1,
+            "expected_record_revisions_json": json.dumps({"guidance:generated-merge-source": 1}),
+            "merge_guidance_ids": ["guidance:generated-merge-source"],
+            "reason": "generated external merge",
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    split = agent_guidance_split(
+        {
+            "guidance_id": "guidance:generated-split",
+            "expected_revision": 1,
+            "split_instructions": ["Prefer precise edits.", "Prefer precise proof."],
+            "reason": "generated external split",
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    suppressed = agent_guidance_suppress(
+        {"guidance_id": "guidance:generated-suppress", "expected_revision": 1, "reason": "generated external suppress"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    revalidated = agent_guidance_revalidate(
+        {"guidance_id": "guidance:generated-revalidate", "expected_revision": 1, "reason": "generated external revalidate"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    weakened = agent_guidance_weaken(
+        {"guidance_id": "guidance:generated-weaken", "expected_revision": 1, "reason": "generated external weaken"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    superseded = agent_guidance_supersede(
+        {
+            "guidance_id": "guidance:generated-supersede",
+            "expected_revision": 1,
+            "expected_record_revisions_json": json.dumps({"guidance:generated-replacement": 1}),
+            "replacement_guidance_id": "guidance:generated-replacement",
+            "reason": "generated external supersede",
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    retired = agent_guidance_retire(
+        {"guidance_id": "guidance:generated-retire", "expected_revision": 1, "reason": "generated external retire"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    deleted = agent_guidance_delete(
+        {"guidance_id": "guidance:generated-delete", "expected_revision": 1, "reason": "generated external delete"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    from agentic_workspace.agent_guidance import guidance_promotion_from_store
+
+    promotion_decision = guidance_promotion_from_store(target_root=tmp_path)
+    promoted = agent_guidance_promote(
+        {"guidance_id": promotion_decision["guidance"][0]["guidance_id"]},
+        target=tmp_path,
+        invocation=invocation,
+    )
+
+    assert merged["status"] == "transitioned"
+    assert "guidance:generated-merge-source" in merged["record"]["merged_guidance_ids"]
+    assert split["status"] == "transitioned"
+    assert split["record"]["status"] == "split-retired"
+    assert suppressed["record"]["status"] == "suppressed"
+    assert revalidated["record"]["authority_revalidation"]["status"] == "current"
+    assert weakened["record"]["claim_effect"] == "advisory-only"
+    assert superseded["record"]["status"] == "superseded"
+    assert retired["record"]["status"] == "retired"
+    assert deleted["record"]["status"] == "deleted"
+    assert promoted["status"] == "promoted"
+    receipt_index = json.loads((tmp_path / ".agentic-workspace/local/guidance-receipts.json").read_text(encoding="utf-8"))
+    mutation_receipts = [item for item in receipt_index["receipts"] if item.get("receipt_type") == "guidance-mutation"]
+    assert {item["operation"] for item in mutation_receipts} >= {
+        "promote",
+        "edit",
+        "merge",
+        "split",
+        "suppress",
+        "revalidate",
+        "weaken",
+        "supersede",
+        "retire",
+        "delete",
+    }
+
+
+def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
     (tmp_path / ".agentic-workspace/config.toml").write_text(
         'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
@@ -1020,21 +1487,28 @@ def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(
         ),
         encoding="utf-8",
     )
-    receipt_ref = ".agentic-workspace/local/correction-authority-receipts/review-thread-1.json"
-    (tmp_path / receipt_ref).parent.mkdir(parents=True)
-    (tmp_path / receipt_ref).write_text(
-        json.dumps(
-            {
-                "authority": "pr-review",
-                "producer_class": "human-reviewer",
-                "producer_id": "reviewer-1",
-                "source": "github-review",
-                "source_ref": "review-thread-1",
-                "status": "current",
-            }
-        ),
-        encoding="utf-8",
+    from agentic_workspace.agent_guidance import record_trusted_authority_receipt
+
+    host_event = _trusted_guidance_host_event(
+        tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref="review-thread-1",
+        host_admission_monkeypatch=monkeypatch,
+        target_revision="rev-1",
     )
+    receipt_ref = record_trusted_authority_receipt(
+        target_root=tmp_path,
+        authority="pr-review",
+        producer_class="human-reviewer",
+        producer_id="reviewer-1",
+        source="github-review",
+        source_ref="review-thread-1",
+        target_revision="rev-1",
+        host_event_ref=host_event["event_ref"],
+    )["receipt_ref"]
     event = {
         "delivery_id": "delivery-ts-1",
         "target_identity_ref": "fast",

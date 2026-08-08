@@ -40,6 +40,8 @@ def execute_host_primitive(
         return _independent_review_admission_apply(values=values, arguments=arguments, context=context)
     if primitive == "correction.event.apply":
         return _correction_event_apply(values=values, arguments=arguments, context=context)
+    if primitive == "guidance.lifecycle.apply":
+        return _guidance_lifecycle_apply(values=values, arguments=arguments, context=context)
     raise PrimitiveExecutionError(f"unsupported AW host primitive: {primitive!r}")
 
 
@@ -1449,6 +1451,29 @@ def _correction_event_apply(*, values: dict[str, Any], arguments: dict[str, Any]
                     "reason": "correction-event-operation-error",
                     "field": "correction-event",
                     "recovery": f"Repair correction event input or local store before retrying: {exc}",
+                }
+            ],
+        }
+
+
+def _guidance_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:
+    target_root = Path(str(values.get("target_root") or values.get("target") or ".")).resolve()
+    operation_id = str(values.get("operation_id") or arguments.get("operation_id") or "")
+    try:
+        from agentic_workspace.agent_guidance import apply_guidance_lifecycle_operation
+
+        return apply_guidance_lifecycle_operation(target_root=target_root, operation_id=operation_id, values=values)
+    except Exception as exc:  # pragma: no cover - surfaced as structured operation failure.
+        return {
+            "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+            "operation_id": operation_id or "agent-guidance.unknown",
+            "status": "blocked",
+            "mutation_applied": False,
+            "failures": [
+                {
+                    "reason": "guidance-lifecycle-operation-error",
+                    "field": "agent-guidance",
+                    "recovery": f"Repair guidance lifecycle input or local store before retrying: {exc}",
                 }
             ],
         }

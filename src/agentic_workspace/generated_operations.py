@@ -7,6 +7,106 @@ from typing import Any, Mapping, Sequence
 from .client import invoke_operation
 
 
+def agent_guidance_delete(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "agent-guidance.delete",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def agent_guidance_edit(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "agent-guidance.edit",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def agent_guidance_merge(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "agent-guidance.merge",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def agent_guidance_promote(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "agent-guidance.promote",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def agent_guidance_retire(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "agent-guidance.retire",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def agent_guidance_revalidate(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "agent-guidance.revalidate",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def agent_guidance_split(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "agent-guidance.split",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def agent_guidance_supersede(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "agent-guidance.supersede",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def agent_guidance_suppress(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "agent-guidance.suppress",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def agent_guidance_weaken(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "agent-guidance.weaken",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
 def assignment_admit(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
     return invoke_operation(
         "assignment.admit",
