@@ -374,6 +374,77 @@ def _load_checker():
     return module
 
 
+@pytest.mark.parametrize(
+    ("failure_class", "rejected_token"),
+    [
+        ("usage-error", "--definitely-invalid"),
+        ("invalid-command", "__unsupported__"),
+    ],
+)
+def test_semantic_usage_refusal_rejects_unrelated_exit_two_stderr(failure_class: str, rejected_token: str) -> None:
+    checker = _load_checker()
+    process = subprocess.CompletedProcess(args=[], returncode=2, stdout="", stderr="arbitrary failure text")
+
+    assert not checker._is_semantic_usage_refusal(
+        process,
+        failure_class=failure_class,
+        rejected_token=rejected_token,
+    )
+
+
+@pytest.mark.parametrize(
+    ("failure_class", "rejected_token", "safe_to_retry", "message", "stderr"),
+    [
+        (
+            "usage-error",
+            "--definitely-invalid",
+            True,
+            "unknown option --definitely-invalid for start",
+            "TypeScript CLI validation failed: unknown option --definitely-invalid for start\nRecovery: run tool --help",
+        ),
+        (
+            "invalid-command",
+            "__unsupported__",
+            False,
+            "unknown command __unsupported__",
+            "Unsupported generated command: __unsupported__\nRecovery: run tool --help",
+        ),
+    ],
+)
+def test_semantic_usage_refusal_accepts_canonical_stderr_and_structured_json(
+    failure_class: str,
+    rejected_token: str,
+    safe_to_retry: bool,
+    message: str,
+    stderr: str,
+) -> None:
+    checker = _load_checker()
+    stderr_process = subprocess.CompletedProcess(args=[], returncode=2, stdout="", stderr=stderr)
+    structured_process = subprocess.CompletedProcess(
+        args=[],
+        returncode=2,
+        stdout=json.dumps(
+            {
+                "kind": "agentic-workspace/retryable-cli-error/v1",
+                "exit_status": 2,
+                "failure_class": failure_class,
+                "safe_to_retry": safe_to_retry,
+                "message": message,
+                "suggested_command": "",
+                "alternatives": [],
+            }
+        ),
+        stderr="",
+    )
+
+    for process in (stderr_process, structured_process):
+        assert checker._is_semantic_usage_refusal(
+            process,
+            failure_class=failure_class,
+            rejected_token=rejected_token,
+        )
+
+
 def _load_test_ir_runner():
     spec = importlib.util.spec_from_file_location("run_operation_conformance_tests", TEST_IR_RUNNER_PATH)
     assert spec is not None

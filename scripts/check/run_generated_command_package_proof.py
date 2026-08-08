@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -169,7 +170,11 @@ def _run_packed_conformance(*, artifact_dir: Path, receipt_out: Path | None) -> 
         "status": "passed",
         "receipt_id": receipt_id,
         "subject": subject,
-        "proof": {"command": "scripts/check/run_generated_command_package_proof.py --packed-conformance", "exact_packed_artifacts": True, "complete_registry": True},
+        "proof": {
+            "command": "scripts/check/run_generated_command_package_proof.py --packed-conformance",
+            "exact_packed_artifacts": True,
+            "complete_registry": True,
+        },
     }
     if receipt_out is not None:
         receipt_out.parent.mkdir(parents=True, exist_ok=True)
@@ -178,7 +183,12 @@ def _run_packed_conformance(*, artifact_dir: Path, receipt_out: Path | None) -> 
     return 0
 
 
-def _verify_receipt(path: Path, *, artifact_dir: Path) -> int:
+def _node_major(version: object) -> int | None:
+    match = re.fullmatch(r"v(?P<major>[1-9][0-9]*)\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?", str(version or "").strip())
+    return int(match.group("major")) if match else None
+
+
+def _verify_receipt(path: Path, *, artifact_dir: Path, expected_node_major: int) -> int:
     if not path.is_file():
         print(f"missing semantic-conformance receipt: {path}", file=sys.stderr)
         return 1
@@ -193,6 +203,13 @@ def _verify_receipt(path: Path, *, artifact_dir: Path) -> int:
         return 1
     if subject.get("registry_fingerprint") != _registry_fingerprint():
         print(f"stale semantic-conformance registry fingerprint: {path}", file=sys.stderr)
+        return 1
+    actual_node_major = _node_major(subject.get("node_version"))
+    if actual_node_major != expected_node_major:
+        print(
+            f"semantic-conformance runtime mismatch: {path} proves Node {actual_node_major!r}, expected Node {expected_node_major}",
+            file=sys.stderr,
+        )
         return 1
     artifacts = subject.get("artifacts", [])
     if not isinstance(artifacts, list):
@@ -291,6 +308,13 @@ def _positive_float(value: str) -> float:
     return parsed
 
 
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("must be greater than zero")
+    return parsed
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run generated command package proof through compact command wrappers.",
@@ -308,10 +332,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Run static, Python conformance, Python Docker conformance, primitive conformance, primitive Docker conformance, local Node conformance, Docker, and Docker conformance proof.",
     )
-    parser.add_argument("--packed-conformance", action="store_true", help="Run complete conformance against exact npm tarballs and emit a receipt.")
+    parser.add_argument(
+        "--packed-conformance", action="store_true", help="Run complete conformance against exact npm tarballs and emit a receipt."
+    )
     parser.add_argument("--artifact-dir", type=Path, help="Directory containing or receiving exact npm tarballs.")
     parser.add_argument("--receipt-out", type=Path, help="Write the packed-artifact conformance receipt to this path.")
-    parser.add_argument("--verify-receipt", type=Path, help="Fail closed unless this receipt matches the current registry and exact artifacts.")
+    parser.add_argument(
+        "--verify-receipt", type=Path, help="Fail closed unless this receipt matches the current registry and exact artifacts."
+    )
+    parser.add_argument(
+        "--expected-node-major",
+        type=_positive_int,
+        help="Required Node major that a verified semantic-conformance receipt must prove.",
+    )
     parser.add_argument(
         "--timeout-seconds",
         type=_positive_float,
@@ -332,7 +365,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.verify_receipt:
         if args.artifact_dir is None:
             raise SystemExit("--verify-receipt requires --artifact-dir")
-        return _verify_receipt(args.verify_receipt.resolve(), artifact_dir=args.artifact_dir.resolve())
+        if args.expected_node_major is None:
+            raise SystemExit("--verify-receipt requires --expected-node-major")
+        return _verify_receipt(
+            args.verify_receipt.resolve(),
+            artifact_dir=args.artifact_dir.resolve(),
+            expected_node_major=args.expected_node_major,
+        )
     if args.packed_conformance:
         if args.artifact_dir is not None:
             return _run_packed_conformance(

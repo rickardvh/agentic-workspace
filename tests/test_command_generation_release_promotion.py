@@ -200,17 +200,37 @@ def test_semantic_receipt_verification_fails_closed_for_stale_or_mismatched_subj
     receipt_path = tmp_path / "receipt.json"
     receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
 
-    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path) == 1
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24) == 1
 
     receipt["subject"]["registry_fingerprint"] = "sha256:current"
     receipt["receipt_id"] = (
         "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     )
     receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
-    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path) == 0
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24) == 0
+
+    receipt["subject"]["node_version"] = "v25.0.0"
+    receipt["receipt_id"] = (
+        "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=20) == 1
+
+    receipt["subject"]["node_version"] = "24"
+    receipt["receipt_id"] = (
+        "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24) == 1
+
+    receipt["subject"]["node_version"] = "v24.0.0"
+    receipt["receipt_id"] = (
+        "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
 
     artifact.write_bytes(b"drifted-artifact")
-    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path) == 1
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24) == 1
 
 
 def test_release_workflow_requires_exact_artifact_semantic_receipts() -> None:
@@ -220,6 +240,7 @@ def test_release_workflow_requires_exact_artifact_semantic_receipts() -> None:
     assert ownership["semantic_conformance"]["required_for_support_bearing_typescript_release"] is True
     assert ownership["semantic_conformance"]["runtime_majors"] == [20, 24, 25]
     assert workflow.count("--packed-conformance --artifact-dir dist --receipt-out") == 3
-    assert '--verify-receipt "$receipt" --artifact-dir dist' in workflow
+    assert '--verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major"' in workflow
+    assert 'runtime_match.group("major")' in workflow
     assert '"semantic_conformance": {' in workflow
     assert "dist/generated-command-conformance-node*.json" in workflow

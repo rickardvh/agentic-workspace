@@ -116,8 +116,9 @@ jobs:
 
       - name: Verify semantic-conformance promotion receipts
         run: |
-          for receipt in dist/generated-command-conformance-node{20,24,25}.json; do
-            uv run python scripts/check/run_generated_command_package_proof.py --verify-receipt "$receipt" --artifact-dir dist
+          for runtime_major in 20 24 25; do
+            receipt="dist/generated-command-conformance-node${runtime_major}.json"
+            uv run python scripts/check/run_generated_command_package_proof.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major"
           done
 
       - name: Generate checksums and release manifest
@@ -208,6 +209,12 @@ jobs:
               receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
               if receipt.get("kind") != ownership["semantic_conformance"]["receipt_kind"] or receipt.get("status") != "passed":
                   raise SystemExit(f"Failed or unsupported semantic-conformance receipt: {receipt_path}")
+              node_version = str(receipt.get("subject", {}).get("node_version", ""))
+              runtime_match = re.fullmatch(r"v(?P<major>[1-9][0-9]*)\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?", node_version)
+              if runtime_match is None or int(runtime_match.group("major")) != runtime_major:
+                  raise SystemExit(
+                      f"Semantic-conformance receipt runtime mismatch: {receipt_path} proves {node_version!r}, expected Node {runtime_major}"
+                  )
               receipt_assets = {item["asset"] for item in receipt["subject"]["artifacts"]}
               expected_assets = {entry["tarball"]["asset"] for entry in package_entries if entry["ecosystem"] == "npm"}
               if receipt_assets != expected_assets:

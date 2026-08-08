@@ -685,6 +685,47 @@ def _capture(command: list[str], *, cwd: Path, env: dict[str, str]) -> subproces
     return subprocess.run(command, cwd=cwd, env=env, text=True, capture_output=True, check=False)
 
 
+def _is_semantic_usage_refusal(process: subprocess.CompletedProcess[str], *, failure_class: str, rejected_token: str) -> bool:
+    if process.returncode != 2:
+        return False
+    stdout = process.stdout.strip()
+    stderr = process.stderr.strip()
+    semantic_markers = {
+        "usage-error": ("unrecognized argument", "unknown option", "no such option"),
+        "invalid-command": ("invalid choice", "unknown command", "unsupported generated command"),
+    }.get(failure_class, ())
+    if not semantic_markers:
+        return False
+    if stderr:
+        lowered = stderr.lower()
+        return (
+            not stdout
+            and rejected_token.lower() in lowered
+            and ("usage:" in lowered or "recovery:" in lowered)
+            and any(marker in lowered for marker in semantic_markers)
+        )
+    if not stdout:
+        return False
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    message = str(payload.get("message", "")).lower()
+    expected_safe_to_retry = failure_class == "usage-error"
+    return (
+        str(payload.get("kind", "")).endswith("/retryable-cli-error/v1")
+        and payload.get("exit_status") == 2
+        and payload.get("failure_class") == failure_class
+        and payload.get("safe_to_retry") is expected_safe_to_retry
+        and rejected_token.lower() in message
+        and any(marker in message for marker in semantic_markers)
+        and isinstance(payload.get("suggested_command"), str)
+        and isinstance(payload.get("alternatives"), list)
+    )
+
+
 def _generated_adapter_proof_surface(*, language: str) -> str:
     container = os.environ.get("AGENTIC_GENERATED_CONFORMANCE_CONTAINER")
     if container:
@@ -4644,11 +4685,7 @@ def _line_ending_only_generated_output_paths(ir: dict[str, object]) -> list[str]
         for output in render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT)
     }
     status = _run_git_output(["status", "--porcelain=v1", "--", "generated"])
-    dirty_paths = [
-        _git_dirty_path_from_porcelain_line(line)
-        for line in status.splitlines()
-        if line.strip() and not line.startswith("?? ")
-    ]
+    dirty_paths = [_git_dirty_path_from_porcelain_line(line) for line in status.splitlines() if line.strip() and not line.startswith("?? ")]
     classified: list[str] = []
     for relative_path in dirty_paths:
         expected = rendered.get(relative_path)
@@ -5196,22 +5233,6 @@ def _run_adapter_conformance(
         def materialize_fixture(case: AdapterConformanceCase) -> Path:
             return materialize_case_fixture(case=case, root=temp_root)
 
-        def structured_usage_error(process: subprocess.CompletedProcess[str]) -> bool:
-            if process.returncode != 2:
-                return False
-            if process.stderr.strip():
-                return True
-            try:
-                payload = json.loads(process.stdout)
-            except json.JSONDecodeError:
-                return False
-            return (
-                isinstance(payload, dict)
-                and str(payload.get("kind", "")).endswith("/retryable-cli-error/v1")
-                and payload.get("exit_status") == 2
-                and payload.get("safe_to_retry") is not None
-            )
-
         def compare_adapter(runnable_case: RunnableTypescriptConformanceCase) -> None:
             if not runnable_case.cli.is_file():
                 errors.append(
@@ -5239,7 +5260,11 @@ def _run_adapter_conformance(
                     cwd=fixture_root,
                     env=_conformance_env(runtime=""),
                 )
-                if not structured_usage_error(adapter_invalid_process):
+                if not _is_semantic_usage_refusal(
+                    adapter_invalid_process,
+                    failure_class="usage-error",
+                    rejected_token="--definitely-invalid",
+                ):
                     errors.append(
                         f"adapter failure: {runnable_case.package_id} {case.label} invalid-option was not rejected by native TypeScript parser"
                     )
@@ -5272,7 +5297,11 @@ def _run_adapter_conformance(
                 cwd=fixture_root,
                 env=_conformance_env(runtime=runtime_for_package(runnable_case.package_id)),
             )
-            if not structured_usage_error(unsupported):
+            if not _is_semantic_usage_refusal(
+                unsupported,
+                failure_class="invalid-command",
+                rejected_token="__unsupported__",
+            ):
                 errors.append(
                     f"adapter failure: {runnable_case.package_id} unsupported command refusal drifted; "
                     f"exit={unsupported.returncode}, stdout={unsupported.stdout!r}, stderr={unsupported.stderr!r}"
