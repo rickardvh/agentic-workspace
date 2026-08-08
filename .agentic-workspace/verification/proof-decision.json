@@ -1,0 +1,14 @@
+{
+  "proof_decision": {
+    "selected_decision": "add",
+    "trust_question": "Can a shared user-local guidance transaction recover after any write boundary from a different repository without deleting unknown locks or accepting divergent state?",
+    "host_strategy_source": "docs/maintainer/testing-strategy.md",
+    "proof_owner": "guidance-lifecycle-contract",
+    "proof_intent": "cross-repository-recovery",
+    "evidence_durability": "permanent",
+    "narrowest_evidence": "Two-repository promotion and transition fixtures at the store, owner-registry, and receipt boundaries, plus unknown-lock and concurrent-divergence negatives.",
+    "prune_or_replacement_condition": "Replace only when the guidance lifecycle contract generates equivalent cross-process, cross-repository recovery and negative lock-admission conformance cases.",
+    "confidence": "high",
+    "residual_risk": "Full #2220 promotion, routing, conflict, hygiene, and evidence-boundary closure remains broader than this recovery slice."
+  }
+}
