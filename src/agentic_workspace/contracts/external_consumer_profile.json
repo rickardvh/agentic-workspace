@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:5080782c865d9a7eda238439a5fe4ab1915985a7a27a98fa47d4970f20366754",
+    "fingerprint": "sha256:2e3f8759c90e0cb321b6ad7a45647aaa516e138e105a8ed481f29bbcc2c3d98c",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -14,7 +14,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.admit.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:310b50491996172a7b5223c36ece38bc3cb252a3deede6a053a75f86da8a067a"
+        "fingerprint": "sha256:8677546a1de9edac86cc251b62f75afb9d6f877efafb546b1c980d1eb15c24e7"
       },
       "operation_resources": {
         "python": {

@@ -11,7 +11,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from tests.test_workspace_proof_cli import _write_independent_review_host_result
+from tests.test_workspace_proof_cli import _host_runtime_for_review_ref, _write_independent_review_host_result
 
 import agentic_workspace.client as public_client
 from agentic_workspace import (
@@ -387,18 +387,20 @@ def test_independent_review_import_uses_protected_host_store_and_append_preserve
         review_revision="review-rev-2",
     )
 
-    first = record_trusted_independent_review_result(
-        target_root=tmp_path,
-        review_result={"host_result_ref": first_ref},
-    )
-    second = record_trusted_independent_review_result(
-        target_root=tmp_path,
-        review_result={"host_result_ref": second_ref},
-    )
-    replay = record_trusted_independent_review_result(
-        target_root=tmp_path,
-        review_result={"host_result_ref": first_ref},
-    )
+    with _host_runtime_for_review_ref(first_ref):
+        first = record_trusted_independent_review_result(
+            target_root=tmp_path,
+            review_result={"host_result_ref": first_ref},
+        )
+        replay = record_trusted_independent_review_result(
+            target_root=tmp_path,
+            review_result={"host_result_ref": first_ref},
+        )
+    with _host_runtime_for_review_ref(second_ref):
+        second = record_trusted_independent_review_result(
+            target_root=tmp_path,
+            review_result={"host_result_ref": second_ref},
+        )
     with pytest.raises(WorkspaceUsageError, match="caller-provided independent review host result resolvers are rejected"):
         record_trusted_independent_review_result(
             target_root=tmp_path,
@@ -437,11 +439,12 @@ def test_independent_review_import_rejects_caller_written_host_file_without_reso
 def test_assignment_admit_host_result_ref_succeeds_with_protected_host_store(tmp_path: Path) -> None:
     host_ref, _host_result, _resolver = _independent_review_host_result_fixture(tmp_path)
 
-    admitted = admit_independent_review_result_operation(
-        target_root=tmp_path,
-        values={"host_result_ref": host_ref, "required_mode": "separate-actor"},
-        changed_paths=["src/feature.py"],
-    )
+    with _host_runtime_for_review_ref(host_ref):
+        admitted = admit_independent_review_result_operation(
+            target_root=tmp_path,
+            values={"host_result_ref": host_ref, "required_mode": "separate-actor"},
+            changed_paths=["src/feature.py"],
+        )
 
     assert admitted["status"] == "admitted"
     assert admitted["receipt"]["review_result"]["custody"]["host_result_ref"] == host_ref
