@@ -204,6 +204,29 @@ def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path,
     }
 
 
+def _compact_start_route_action(value: Any) -> dict[str, Any]:
+    action = _as_dict(value)
+    compact = {
+        key: copy.deepcopy(action[key])
+        for key in ("action", "summary", "command", "run", "risk", "required_inputs", "next_proof", "read_first")
+        if action.get(key) not in (None, "", [], {})
+    }
+    invocation = _as_dict(action.get("operation_invocation"))
+    identity = _as_dict(invocation.get("input_identity"))
+    if invocation:
+        compact["operation_invocation"] = {
+            key: copy.deepcopy(invocation[key])
+            for key in ("operation_id", "operation_action", "adapter_id", "authority", "input_revision")
+            if invocation.get(key) not in (None, "", [], {})
+        }
+        compact_identity = {
+            key: copy.deepcopy(identity[key]) for key in ("route_action", "idempotency_key") if identity.get(key) not in (None, "", [], {})
+        }
+        if compact_identity:
+            compact["operation_invocation"]["input_identity"] = compact_identity
+    return compact
+
+
 def _compact_start_route_decision(value: Any) -> dict[str, Any]:
     route = _as_dict(value)
     if route.get("kind") != "agentic-planning/route-decision/v1":
@@ -250,6 +273,15 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
                 for key in ("status", "expected_fingerprint", "on_mismatch")
                 if guard.get(key) not in (None, "", [], {})
             }
+    if route.get("next_safe_action"):
+        compact["next_safe_action"] = _compact_start_route_action(route["next_safe_action"])
+    action_identity = _as_dict(route.get("action_identity"))
+    if action_identity:
+        compact["action_identity"] = {
+            key: copy.deepcopy(action_identity[key])
+            for key in ("route_action", "idempotency_key")
+            if action_identity.get(key) not in (None, "", [], {})
+        }
     return compact
 
 
@@ -1041,7 +1073,10 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
         )
         planning_safety_gate["route_decision"] = route_decision
-        payload["route_decision"] = route_decision
+        if route_decision.get("task_relation") != "not-applicable":
+            payload["route_decision"] = route_decision
+        else:
+            payload.pop("route_decision", None)
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
     task_switch_visible_by_default = route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"}
@@ -1052,13 +1087,18 @@ def _start_payload(
         or owner_admission_rejected
     ):
         payload["planning_safety_gate"] = planning_safety_gate
-    if isinstance(route_decision, dict) and route_transition in {
-        "closeout-or-archive",
-        "ask-for-route-decision",
-        "inspect-current-task-scope",
-        "reconcile",
-        "none",
-    }:
+    if (
+        route_relation != "not-applicable"
+        and isinstance(route_decision, dict)
+        and route_transition
+        in {
+            "closeout-or-archive",
+            "ask-for-route-decision",
+            "inspect-current-task-scope",
+            "reconcile",
+            "none",
+        }
+    ):
         next_packet = route_decision.get("next_safe_action", {})
         if isinstance(next_packet, dict):
             evidence_required = (
@@ -1873,10 +1913,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             if compact_workflow.get(key) not in (None, "", [], {})
         }
     context: dict[str, Any] = {
-        "primary_action": {
-            **payload["immediate_next_allowed_action"],
-            "read_first": payload["immediate_next_allowed_action"].get("read_first", []),
-        },
+        "primary_action": _compact_start_route_action(payload["immediate_next_allowed_action"]),
         **({"route_decision": _compact_start_route_decision(payload.get("route_decision"))} if payload.get("route_decision") else {}),
         "active_state": _active_state_with_orientation_delta(payload.get("active_state_summary", {}), cli_invoke=cli_invoke),
         "skill_routing": {

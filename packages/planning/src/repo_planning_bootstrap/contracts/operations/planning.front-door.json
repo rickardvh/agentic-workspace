@@ -62,13 +62,6 @@
       "command_visibility": "runtime-only",
       "required": false,
       "description": "sha256 revision of the route action input identity; stale execution is rejected when it differs from the live route decision."
-    },
-    {
-      "name": "host_action_result",
-      "source": "derived",
-      "command_visibility": "runtime-only",
-      "required": false,
-      "description": "Bound result envelope from the exact destination operation contract; planning.front-door re-admits it before advancing the transition."
     }
   ],
   "output": {
@@ -114,14 +107,14 @@
     "Generated code owns parser/help/dispatch shape; module runtime owns package policy and command effects.",
     "The route-decision-next-action path must pass route-action admission before mutation or claim advancement.",
     "Finite owner transitions compile from route_action_bindings and must not use hand-maintained command strings.",
-    "A host action result must match the destination operation id, contract revision, invocation revision, accepted status, and receipt before route advancement."
+    "The front door executes the destination through the configured operation adapter and admits only its sealed, revision-bound execution receipt before route advancement; caller-supplied result mappings are never authority."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
     "generated command package parser accepts the root front-door command",
     "runtime adapter boundary remains thin",
     "route-action admission rejects stale owner, task binding, mutation baseline, and reconciliation proposal identity",
-    "host-action admission rejects stale contract/invocation revisions, wrong operations, failed status, and missing receipts"
+    "host-action admission rejects caller mappings, stale contract/invocation/runtime revisions, wrong operations, failed postconditions, replays, and missing receipts"
   ],
   "route_action_bindings": {
     "archive-or-retire-completed-plan": {
@@ -140,10 +133,11 @@
     "refresh-mutation-baseline": {
       "operation_path": "src/agentic_workspace/contracts/operations/implement.context.json",
       "arguments": {
-        "target": {"from": "runtime.target"},
-        "changed": {"from": "runtime.changed_paths"},
-        "task": {"from": "runtime.task"},
-        "format": {"literal": "json"}
+          "target": {"from": "runtime.target"},
+          "changed": {"from": "runtime.changed_paths"},
+          "task": {"from": "runtime.task"},
+          "select": {"literal": "next"},
+          "format": {"literal": "json"}
       },
       "result_admission": {
         "kind": "agentic-planning/front-door-host-action-result/v1",

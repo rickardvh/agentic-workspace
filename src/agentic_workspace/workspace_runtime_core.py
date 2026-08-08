@@ -21906,9 +21906,10 @@ def _report_closeout_trust_payload(
         ):
             scope_gate["gate_result"] = "current-task-route-acknowledged"
             scope_gate["status"] = "satisfied"
+            scope_gate["workflow_sufficient"] = True
             scope_gate["required_next_action"] = "prove-current-task"
-        if planning_safety_gate.get("workflow_sufficient") is not True or (
-            str(planning_safety_gate.get("gate_result") or "")
+        if scope_gate.get("workflow_sufficient") is not True or (
+            str(scope_gate.get("gate_result") or "")
             not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
             and str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
         ):
@@ -30831,10 +30832,15 @@ def _start_tiny_payload_fast(
     route_decision = planning_safety_gate.get("route_decision", {})
     if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
         route_decision = copy.deepcopy(route_decision)
-        payload["route_decision"] = route_decision
+        if route_decision.get("task_relation") != "not-applicable":
+            payload["route_decision"] = route_decision
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
-    route_applies = isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1"
+    route_applies = (
+        isinstance(route_decision, dict)
+        and route_decision.get("kind") == "agentic-planning/route-decision/v1"
+        and route_relation != "not-applicable"
+    )
     task_switch_visible_by_default = (
         route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"} if route_applies else False
     )

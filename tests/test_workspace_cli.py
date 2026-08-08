@@ -7284,51 +7284,141 @@ def test_planning_route_front_door_admits_finite_route_action_matrix() -> None:
                 assert outcome["route_transition"]["dispatch_status"] == "ready"
 
 
-def test_planning_front_door_rejects_unbound_or_stale_host_action_results() -> None:
-    from agentic_workspace.workspace_runtime_planning import (
-        _planning_front_door_projection_outcome,
-        _planning_route_decision_payload,
-        admit_planning_front_door_host_action_result,
-    )
+def test_planning_front_door_executes_and_admits_only_destination_issued_results(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_planning as planning_runtime
 
-    decision = _planning_route_decision_payload(
+    operation_path = "src/agentic_workspace/contracts/operations/proof.report.json"
+    destination = {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "proof.report",
+        "command_surface": {"command": "proof", "format_option": "format"},
+    }
+    destination_path = tmp_path / operation_path
+    destination_path.parent.mkdir(parents=True)
+    destination_path.write_text(json.dumps(destination), encoding="utf-8")
+    adapter = tmp_path / "configured_operation_adapter.py"
+    adapter.write_text(
+        "import json, sys\nprint(json.dumps({'status': 'passed', 'argv': sys.argv[1:]}))\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("agentic_workspace.client.resolve_invocation", lambda _target: [sys.executable, str(adapter)])
+    monkeypatch.setattr(
+        planning_runtime,
+        "_planning_revision_payload",
+        lambda *, target_root: {"revision_id": "planning-before"},
+    )
+    identity = {
+        "route_action": "complete-selected-proof",
+        "front_door_operation_id": "planning.front-door",
+        "front_door_contract_revision": "sha256:front-door",
+        "operation_id": "proof.report",
+        "operation_path": operation_path,
+        "operation_contract_revision": "sha256:" + planning_runtime._stable_revision(destination),
+        "operation_schema_version": "agentic-workspace/operation/v1",
+        "arguments": {"target": tmp_path.as_posix(), "changed": ["src/example.py"], "format": "json"},
+        "route_input_revision": "sha256:route-input",
+        "planning_revision": "planning-before",
+        "selected_owner_revision": "owner-before",
+        "idempotency_key": "route-once",
+        "result_admission": {
+            "kind": "agentic-planning/front-door-host-action-result/v1",
+            "accepted_statuses": ["passed", "already-passed", "no-op"],
+        },
+    }
+    invocation = {
+        "kind": "agentic-planning/front-door-host-action-invocation/v1",
+        "status": "ready",
+        **identity,
+        "invocation_revision": "sha256:" + planning_runtime._stable_revision(identity),
+    }
+
+    execute_host_action = planning_runtime._execute_planning_front_door_host_action
+    executed = execute_host_action(invocation=invocation)
+    admitted = planning_runtime.admit_planning_front_door_host_action_result(invocation=invocation, result=executed)
+
+    assert admitted["status"] == "admitted"
+    assert admitted["receipt"]["producer"] == "agentic-workspace.configured-operation-executor"
+    assert admitted["receipt"]["postcondition_status"] == "verified"
+    assert executed.payload["result"]["argv"] == [
+        "proof",
+        "--target",
+        tmp_path.as_posix(),
+        "--changed",
+        "src/example.py",
+        "--format",
+        "json",
+    ]
+    forged_mapping = copy.deepcopy(executed.payload)
+    assert planning_runtime.admit_planning_front_door_host_action_result(invocation=invocation, result=forged_mapping)["failures"] == [
+        "producer-owned-result"
+    ]
+
+    def reseal(payload: dict[str, Any]) -> object:
+        receipt = payload["receipt"]
+        receipt["receipt_id"] = "sha256:" + planning_runtime._stable_revision(
+            {key: value for key, value in receipt.items() if key not in {"kind", "receipt_id"}}
+        )
+        return planning_runtime._ExecutedPlanningHostActionResult(payload=payload, seal=executed.seal)
+
+    for field, value in [
+        ("producer", "caller"),
+        ("executor_revision", "sha256:stale-runtime"),
+        ("idempotency_key", "replayed-key"),
+        ("postcondition_status", "failed"),
+    ]:
+        tampered = copy.deepcopy(executed.payload)
+        tampered["receipt"][field] = value
+        assert (
+            planning_runtime.admit_planning_front_door_host_action_result(invocation=invocation, result=reseal(tampered))["status"]
+            == "rejected"
+        )
+
+    decision = planning_runtime._planning_route_decision_payload(
         {
             "task_relation": "continues-selected-owner",
             "owner_posture": "proof-incomplete",
             "implementation_allowed": False,
-            "route_inputs": {"owner": {"ref": "owner-a", "revision": "owner-rev-a"}},
+            "route_inputs": {"owner": {"ref": "owner-a", "revision": "owner-before"}},
         },
-        planning_revision={"revision_id": "planning-a"},
+        planning_revision={"revision_id": "planning-before"},
     )
-    identity = decision["next_safe_action"]["operation_invocation"]["input_identity"]
-    outcome = _planning_front_door_projection_outcome(
-        "complete-selected-proof",
-        identity,
-        target_root=Path(".").resolve(),
-        task_text="complete selected proof",
-        changed_paths=["src/example.py"],
+    route_invocation = decision["next_safe_action"]["operation_invocation"]
+    monkeypatch.setattr(planning_runtime, "_planning_safety_gate_payload", lambda **_kwargs: {"route_decision": decision})
+    monkeypatch.setattr(
+        planning_runtime,
+        "_planning_front_door_projection_outcome",
+        lambda *_args, **_kwargs: {
+            "mutation_outcome": "host-action-required",
+            "claim_outcome": "blocked",
+            "host_action_invocation": invocation,
+            "route_transition": {"status": "complete-selected-proof", "dispatch_status": "ready"},
+        },
     )
-    invocation = outcome["host_action_invocation"]
-    valid = {
-        "kind": "agentic-planning/front-door-host-action-result/v1",
-        "status": "passed",
-        "operation_id": invocation["operation_id"],
-        "invocation_revision": invocation["invocation_revision"],
-        "operation_contract_revision": invocation["operation_contract_revision"],
-        "receipt": {"operation_id": invocation["operation_id"], "status": "passed"},
-    }
+    execution_count = 0
 
-    assert admit_planning_front_door_host_action_result(invocation=invocation, result=valid)["status"] == "admitted"
+    def execute_bound_destination(*, invocation: dict[str, Any]) -> object:
+        nonlocal execution_count
+        execution_count += 1
+        return executed
 
-    for patch in [
-        {"invocation_revision": "sha256:stale"},
-        {"operation_contract_revision": "sha256:stale"},
-        {"operation_id": "proof.forged"},
-        {"status": "failed"},
-        {"receipt": {}},
-    ]:
-        result = {**valid, **patch}
-        assert admit_planning_front_door_host_action_result(invocation=invocation, result=result)["status"] == "rejected"
+    monkeypatch.setattr(planning_runtime, "_execute_planning_front_door_host_action", execute_bound_destination)
+    routed = planning_runtime.execute_planning_front_door_route_action(
+        {
+            "target": tmp_path.as_posix(),
+            "task": "complete selected proof",
+            "changed_paths": ["src/example.py"],
+            "operation_invocation": route_invocation,
+            "host_action_result": forged_mapping,
+        }
+    )
+    assert execution_count == 1
+    assert routed["claim_outcome"] == "available-after-proof"
+    assert routed["mutation_receipt"]["producer"] == "agentic-workspace.configured-operation-executor"
+
+    destination_path.write_text(json.dumps({**destination, "summary": "changed"}), encoding="utf-8")
+    stale = execute_host_action(invocation=invocation)
+    assert stale.payload["reason"] == "destination-operation-contract-stale"
+    assert planning_runtime.admit_planning_front_door_host_action_result(invocation=invocation, result=stale)["status"] == "rejected"
 
 
 def test_structured_route_inputs_cover_bounded_work_owner_lifecycle_and_missing_owner(tmp_path: Path) -> None:
