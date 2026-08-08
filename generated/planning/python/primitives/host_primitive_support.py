@@ -47,6 +47,8 @@ def execute_host_primitive(
         return _emit_output(values=values, arguments=arguments)
     if primitive == "assignment.lifecycle.apply":
         return _assignment_lifecycle_apply(values=values, arguments=arguments, context=context)
+    if primitive == "independent-review.admission.apply":
+        return _independent_review_admission_apply(values=values, arguments=arguments, context=context)
     if primitive == "correction.event.apply":
         return _correction_event_apply(values=values, arguments=arguments, context=context)
     if primitive == "guidance.lifecycle.apply":
@@ -644,6 +646,27 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
 
     def artifact(relative: str) -> Path:
         return _resolve_inside(run_dir, relative)
+
+    if transition == "admit" and (values.get("review_result_json") or values.get("review_result") or values.get("review_result_ref")):
+        admission = _independent_review_admission_apply(values=values, arguments={}, context=context)
+        return {
+            "kind": "agentic-workspace/assignment-lifecycle-result/v1",
+            "operation_id": "assignment.admit",
+            "transition": "admit",
+            "status": str(admission.get("status") or ""),
+            "outcome": "applied" if admission.get("admitted") else "blocked",
+            "mutation_applied": bool(admission.get("admitted")),
+            "run_id": run_id,
+            "artifact_refs": [str(admission.get("store") or "")] if admission.get("store") else [],
+            "state": {"independent_review_receipt": admission.get("receipt")},
+            "independent_review_admission": admission,
+            "reason_code": ""
+            if admission.get("admitted")
+            else str((admission.get("failures") or [{"reason": "independent-review-admission-rejected"}])[0].get("reason")),
+            "recovery_command": "assignment admit --review-result-json <json> --changed <path> --format json"
+            if not admission.get("admitted")
+            else None,
+        }
 
     if transition == "export":
         assignment_id = require("assignment_id")
@@ -1513,6 +1536,14 @@ def _plain_output_result(result: Any) -> Any:
     if callable(to_dict):
         return _plain_output_result(to_dict())
     return result
+
+
+def _independent_review_admission_apply(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:
+    del arguments
+    target_root = Path(str(values.get("target_root") or values.get("target") or context.cwd)).resolve()
+    from agentic_workspace.workspace_runtime_proof import admit_independent_review_result_operation
+
+    return admit_independent_review_result_operation(target_root=target_root, values=values)
 
 
 def _emit_install_result_text(result: dict[str, Any]) -> str:
