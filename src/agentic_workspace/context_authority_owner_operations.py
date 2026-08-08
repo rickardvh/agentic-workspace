@@ -9,6 +9,11 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from agentic_workspace.context_authority_producer_operations import (
+    admit_registered_producer_result,
+    registered_producer_operation_runner,
+)
+
 _CONTEXT_AUTHORITY_REGISTRY_RESOURCE = "context_authority_registry.json"
 
 
@@ -1042,10 +1047,27 @@ _CONTEXT_OWNER_OPERATION_RUNNERS = {
 
 
 def registered_context_owner_operation_runner(surface: str):
-    runner = _CONTEXT_OWNER_OPERATION_RUNNERS.get(surface)
-    if runner is None:
+    if surface not in _CONTEXT_OWNER_OPERATION_RUNNERS:
         raise ValueError(f"context owner operation is not registered for surface {surface!r}")
-    return runner
+    producer_runner = registered_producer_operation_runner(surface)
+
+    def run(**kwargs: Any) -> dict[str, Any]:
+        owner_result = admit_registered_producer_result(producer_runner(**kwargs))
+        if owner_result.get("status") != "current":
+            return owner_result
+        return _admit_context_owner_operation_result(
+            surface=surface,
+            owner=kwargs.get("owner"),
+            root=kwargs["root"],
+            chosen=kwargs["chosen"],
+            source_revision="sha256:" + str(kwargs["revision"]),
+            git_head=str(kwargs.get("git_head") or ""),
+            selection=_as_dict(kwargs.get("selection")),
+            adapter_id=f"{surface}.owner-result",
+            owner_result=owner_result,
+        )
+
+    return run
 
 
 def registered_context_owner_receipt_status(
