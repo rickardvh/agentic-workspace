@@ -3,6 +3,7 @@
   "$id": "agentic-workspace/evaluation_report_delivery_input.schema.json",
   "title": "Evaluation report and delivery operation input",
   "description": "Common generated-client input envelope for evaluation report preview, local delivery, external request, adapter receipt, status, and retry operations. Runtime handlers enforce per-command required fields.",
+  "x-agentic-workspace-doc-role": "contract-reference",
   "type": "object",
   "additionalProperties": true
 }

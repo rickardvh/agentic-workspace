@@ -1051,6 +1051,13 @@ def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(t
     assert quiet["status"] == "not-applicable"
     assert quiet["actions"] == []
 
+    summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")["summaries"][0]
+    loop = summary["operating_loop"]
+    assert loop["matching"]["startup_implement_handoff_surfaces"] == ["start", "implement", "handoff"]
+    assert loop["matching"]["quiet_non_match"] is True
+    assert loop["observe_admission"]["typed_boundary"] == "assignment authority + mutation baseline + proof receipt + definition revision"
+    assert loop["specialist_authority"]["specialist_domains"][0]["domain"] == "dogfooding-feedback"
+
 
 def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
@@ -1146,6 +1153,11 @@ def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path, m
     )
     delivery_status = evaluation_report_delivery_status(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", explicit=True)
     assert delivery_status["status"] == "delivered"
+    loop = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")["summaries"][0]["operating_loop"]
+    assert loop["external_delivery"]["request_operation"] == "evaluation.external-request"
+    assert loop["external_delivery"]["adapter_receipt_operation"] == "evaluation.external-adapter-receipt"
+    assert loop["external_delivery"]["retry_operation"] == "evaluation.retry"
+    assert loop["claim_boundary"].startswith("Evaluation compiles owner reports")
     assert delivery_status["sink_statuses"] == [
         {
             "sink_id": "#1969",
@@ -1235,6 +1247,16 @@ def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path
     assert item["fresh_result_admission"]["local_retention"]["max_current_results_per_criterion"] == 1
     assert item["conclusion_readiness"] == {"ready": True, "reason_code": "ready"}
     assert item["next_collection_action"] == "owner-review-or-conclude"
+    operating_loop = item["operating_loop"]
+    assert operating_loop["kind"] == "agentic-workspace/evaluation-operating-loop/v1"
+    assert operating_loop["status"] == "ready-for-owner-review"
+    assert operating_loop["observe_admission"]["operation_id"] == "evaluation.observe"
+    assert operating_loop["observe_admission"]["current_result_owner"] == "current_evaluation_results"
+    assert operating_loop["observe_admission"]["coverage"]["decision_observation_count"] == 1
+    assert operating_loop["reporting"]["transition_driven"] is True
+    assert operating_loop["external_delivery"]["delivery_claim_rule"].startswith("transport delivery receipts do not change")
+    assert operating_loop["next_safe_action"] == "owner-review-report-and-transition"
+    assert "universal_lifecycle_authority" in operating_loop["specialist_authority"]
 
 
 def test_evaluation_update_increments_revision_without_rewriting_observations(tmp_path: Path) -> None:

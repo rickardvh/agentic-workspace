@@ -2191,6 +2191,130 @@ def current_evaluation_results(
     }
 
 
+def _evaluation_specialist_authority(definition: dict[str, Any]) -> dict[str, Any]:
+    evidence_classes = sorted(
+        {
+            str(source.get("class") or "")
+            for source in definition.get("evidence_sources", [])
+            if isinstance(source, dict) and str(source.get("class") or "").strip()
+        }
+    )
+    subject_type = str(definition.get("subject", {}).get("type") or "")
+    specialist_domains: list[dict[str, Any]] = []
+    if any(item in {"dogfooding-feedback", "dogfooding", "session-log", "log"} for item in evidence_classes):
+        specialist_domains.append(
+            {
+                "domain": "dogfooding-feedback",
+                "authority": "evidence-source",
+                "allowed_role": "produce observations and findings",
+                "not_authorized": "does not conclude evaluation or deliver owner reports",
+            }
+        )
+    if any(item in {"long-horizon-evaluation", "long-horizon", "evaluation-run"} for item in evidence_classes):
+        specialist_domains.append(
+            {
+                "domain": "long-horizon-evaluation",
+                "authority": "evidence-source",
+                "allowed_role": "produce longitudinal observations",
+                "not_authorized": "does not own lifecycle transitions or closure",
+            }
+        )
+    if subject_type in {"delegation", "assignment", "delegated-run"}:
+        specialist_domains.append(
+            {
+                "domain": "delegation-outcome",
+                "authority": "subject-specialist",
+                "allowed_role": "provide delegated-run evidence",
+                "not_authorized": "does not bypass evaluation admission or report delivery",
+            }
+        )
+    if not specialist_domains:
+        specialist_domains.append(
+            {
+                "domain": "universal-evaluation",
+                "authority": "shared-lifecycle",
+                "allowed_role": "own matching, admission, coverage, reporting, delivery status, and conclusion boundaries",
+                "not_authorized": "does not replace declared decision owner review",
+            }
+        )
+    return {
+        "kind": "agentic-workspace/evaluation-specialist-authority/v1",
+        "universal_lifecycle_authority": "evaluation.register/observe/status/report-preview/local-delivery/external-request/external-delivery/delivery-status/retry/transition",
+        "decision_owner": definition.get("decision_owner", {}),
+        "specialist_domains": specialist_domains,
+        "convergence_rule": (
+            "Specialists produce evidence through the shared observe/admission path; the universal Evaluation lifecycle "
+            "owns result currentness, coverage, reporting, delivery status, and conclusion projection."
+        ),
+    }
+
+
+def _evaluation_operating_loop_projection(
+    *, definition: dict[str, Any], summary: dict[str, Any], finding_followup: dict[str, Any]
+) -> dict[str, Any]:
+    lifecycle = str(definition.get("lifecycle") or "")
+    conclusion = summary.get("conclusion_readiness", {}) if isinstance(summary.get("conclusion_readiness"), dict) else {}
+    coverage = summary.get("coverage", {}) if isinstance(summary.get("coverage"), dict) else {}
+    sinks = summary.get("sinks", []) if isinstance(summary.get("sinks"), list) else []
+    external_sinks = [
+        sink for sink in sinks if isinstance(sink, dict) and str(sink.get("class") or "") in {"issue-or-report", "closed-issue"}
+    ]
+    material_followup_status = str(finding_followup.get("status") or "none")
+    if material_followup_status == "unresolved":
+        next_action = "create-or-reopen-material-finding-follow-up"
+    elif conclusion.get("ready") is True and lifecycle == "collecting":
+        next_action = "owner-review-report-and-transition"
+    elif external_sinks and conclusion.get("ready") is True:
+        next_action = "request-or-retry-external-delivery"
+    else:
+        next_action = str(summary.get("next_collection_action") or "append-observation")
+    return {
+        "kind": "agentic-workspace/evaluation-operating-loop/v1",
+        "status": "ready-for-owner-review" if conclusion.get("ready") is True else "collecting",
+        "evaluation_id": definition.get("id"),
+        "definition_revision": definition.get("revision"),
+        "lifecycle": lifecycle,
+        "matching": {
+            "operation": "evaluation_collection_actions",
+            "startup_implement_handoff_surfaces": ["start", "implement", "handoff"],
+            "quiet_non_match": True,
+            "selector_source": "structured issue_refs/operation_ids/phases/surfaces",
+        },
+        "observe_admission": {
+            "operation_id": "evaluation.observe",
+            "typed_boundary": "assignment authority + mutation baseline + proof receipt + definition revision",
+            "current_result_owner": "current_evaluation_results",
+            "coverage": coverage,
+        },
+        "reporting": {
+            "preview_operation": "evaluation.report-preview",
+            "local_delivery_operation": "evaluation.local-delivery",
+            "transition_operation": "evaluation.transition",
+            "transition_driven": True,
+            "conclusion": conclusion,
+            "material_negative_followup": {
+                "status": material_followup_status,
+                "required_action": finding_followup.get("required_action", "none"),
+            },
+        },
+        "external_delivery": {
+            "request_operation": "evaluation.external-request",
+            "adapter_receipt_operation": "evaluation.external-adapter-receipt",
+            "delivery_operation": "evaluation.external-delivery",
+            "status_operation": "evaluation.delivery-status",
+            "retry_operation": "evaluation.retry",
+            "external_sink_count": len(external_sinks),
+            "delivery_claim_rule": "transport delivery receipts do not change evaluation conclusion or issue-closure authority",
+        },
+        "specialist_authority": _evaluation_specialist_authority(definition),
+        "next_safe_action": next_action,
+        "claim_boundary": (
+            "Evaluation compiles owner reports and delivery status; it does not claim external sink delivery without adapter "
+            "receipts and does not close issues without fresh-bound conclusion readiness plus owner policy."
+        ),
+    }
+
+
 def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -> dict[str, Any]:
     definitions = _definitions_payload(target_root)
     selected = [
@@ -2260,76 +2384,80 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
             current_result_identity.update(
                 {key: current_identity[key] for key in ("id", "result", "proof_revision") if key in current_identity}
             )
-        summaries.append(
-            {
-                "evaluation_id": definition["id"],
-                "revision": definition["revision"],
-                "lifecycle": definition["lifecycle"],
-                "coverage": {
-                    "criterion_count": len(criteria),
-                    "observed_criterion_count": len([item for item in criteria if item["observation_count"]]),
-                    "observation_count": len(admitted_observations),
-                    "decision_observation_count": len(current_bound_observations),
-                    "historical_observation_count": len(historical_observations),
-                    "legacy_unbound_count": legacy_unbound_count,
-                    "stale_revision_count": stale_revision_count,
-                    "stale_authority_count": len(stale_observations),
-                    "superseded_result_count": superseded_count,
-                    "minimum_observations": min_observations,
+        summary_item = {
+            "evaluation_id": definition["id"],
+            "revision": definition["revision"],
+            "lifecycle": definition["lifecycle"],
+            "coverage": {
+                "criterion_count": len(criteria),
+                "observed_criterion_count": len([item for item in criteria if item["observation_count"]]),
+                "observation_count": len(admitted_observations),
+                "decision_observation_count": len(current_bound_observations),
+                "historical_observation_count": len(historical_observations),
+                "legacy_unbound_count": legacy_unbound_count,
+                "stale_revision_count": stale_revision_count,
+                "stale_authority_count": len(stale_observations),
+                "superseded_result_count": superseded_count,
+                "minimum_observations": min_observations,
+            },
+            "criterion_status": criteria,
+            "contradictions": contradictions,
+            "latest_material_changes": current_bound_observations[-3:],
+            "fresh_result_admission": {
+                "status": freshness_status,
+                "bound_observation_count": len(current_bound_observations),
+                "historical_observation_count": len(historical_observations),
+                "ignored_statuses": ["legacy-unbound", "stale-definition-revision", "rejected"],
+                "superseded_result_ids": sorted(superseded_ids),
+                "current_result_identity": current_result_identity,
+                "current_result_resolution": {
+                    "status": current_results["status"],
+                    "recovery": current_results["recovery"],
+                    "freshness_records": current_results["freshness_records"],
+                    "stale_count": len(stale_observations),
+                    "consumer_rule": current_results["consumer_rule"],
                 },
-                "criterion_status": criteria,
-                "contradictions": contradictions,
-                "latest_material_changes": current_bound_observations[-3:],
-                "fresh_result_admission": {
-                    "status": freshness_status,
-                    "bound_observation_count": len(current_bound_observations),
-                    "historical_observation_count": len(historical_observations),
-                    "ignored_statuses": ["legacy-unbound", "stale-definition-revision", "rejected"],
-                    "superseded_result_ids": sorted(superseded_ids),
-                    "current_result_identity": current_result_identity,
-                    "current_result_resolution": {
-                        "status": current_results["status"],
-                        "recovery": current_results["recovery"],
-                        "freshness_records": current_results["freshness_records"],
-                        "stale_count": len(stale_observations),
-                        "consumer_rule": current_results["consumer_rule"],
-                    },
-                    "finding_followup": finding_followup,
-                    "local_retention": {
-                        "status": "within-cap"
-                        if len(observations) <= OBSERVATION_RETENTION_CAP
-                        and len(json.dumps(observations, sort_keys=True).encode("utf-8")) <= OBSERVATION_BYTE_CAP
-                        else "prune-or-compact-required",
-                        "max_current_results_per_criterion": 1,
-                        "record_cap": OBSERVATION_RETENTION_CAP,
-                        "byte_cap": OBSERVATION_BYTE_CAP,
-                        "current_record_count": len(observations),
-                        "current_byte_count": len(json.dumps(observations, sort_keys=True).encode("utf-8")),
-                        "historical_record_count": len(historical_observations),
-                        "cleanup_operation": "evaluation.prune",
-                        "cleanup_proof": "dry-run reports removable superseded or legacy local JSONL records before apply",
-                    },
-                    "admission_contract": definition.get("admission_contract", _evaluation_admission_contract()),
-                    "consumer_rule": (
-                        "status, doctor, operating-decision, proof-selection, and closure consumers use only current "
-                        "definition-revision observations admitted with bound assignment, authority, baseline, and proof context"
-                    ),
+                "finding_followup": finding_followup,
+                "local_retention": {
+                    "status": "within-cap"
+                    if len(observations) <= OBSERVATION_RETENTION_CAP
+                    and len(json.dumps(observations, sort_keys=True).encode("utf-8")) <= OBSERVATION_BYTE_CAP
+                    else "prune-or-compact-required",
+                    "max_current_results_per_criterion": 1,
+                    "record_cap": OBSERVATION_RETENTION_CAP,
+                    "byte_cap": OBSERVATION_BYTE_CAP,
+                    "current_record_count": len(observations),
+                    "current_byte_count": len(json.dumps(observations, sort_keys=True).encode("utf-8")),
+                    "historical_record_count": len(historical_observations),
+                    "cleanup_operation": "evaluation.prune",
+                    "cleanup_proof": "dry-run reports removable superseded or legacy local JSONL records before apply",
                 },
-                "conclusion_readiness": {
-                    "ready": conclusion_ready,
-                    "reason_code": "ready" if conclusion_ready else not_ready_reason,
-                },
-                "owner": definition["decision_owner"],
-                "sinks": definition["report_sinks"],
-                "next_collection_action": "owner-review-or-conclude"
-                if conclusion_ready
-                else "shape-or-resolve-material-finding-owner"
-                if finding_followup["status"] == "unresolved"
-                else "migrate-or-append-bound-observation"
-                if historical_observations
-                else "append-observation",
-            }
+                "admission_contract": definition.get("admission_contract", _evaluation_admission_contract()),
+                "consumer_rule": (
+                    "status, doctor, operating-decision, proof-selection, and closure consumers use only current "
+                    "definition-revision observations admitted with bound assignment, authority, baseline, and proof context"
+                ),
+            },
+            "conclusion_readiness": {
+                "ready": conclusion_ready,
+                "reason_code": "ready" if conclusion_ready else not_ready_reason,
+            },
+            "owner": definition["decision_owner"],
+            "sinks": definition["report_sinks"],
+            "next_collection_action": "owner-review-or-conclude"
+            if conclusion_ready
+            else "shape-or-resolve-material-finding-owner"
+            if finding_followup["status"] == "unresolved"
+            else "migrate-or-append-bound-observation"
+            if historical_observations
+            else "append-observation",
+        }
+        summary_item["operating_loop"] = _evaluation_operating_loop_projection(
+            definition=definition,
+            summary=summary_item,
+            finding_followup=finding_followup,
         )
+        summaries.append(summary_item)
     return {"kind": EVALUATION_SUMMARY_KIND, "path": WORKSPACE_EVALUATIONS_PATH.as_posix(), "summaries": summaries}
 
 

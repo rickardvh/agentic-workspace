@@ -2027,9 +2027,9 @@
     "src/agentic_workspace/contracts/schemas/evaluation_observation.schema.json": "b9e53d6e458a2a132d1a7b0e11309400f9e02be6",
     "src/agentic_workspace/contracts/schemas/evaluation_observation_input.schema.json": "0e484091e4bca456ff128786cd456c01ff466deb",
     "src/agentic_workspace/contracts/schemas/evaluation_observe_result.schema.json": "6c9bbbf21a3b28e12075ba9a03541a4d53b70991",
-    "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_input.schema.json": "6d70cadc148095bba908ea4a09d4d5c7582149e1",
-    "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_result.schema.json": "919b0d06058837660f324806c8c41fdc1e341dd3",
-    "src/agentic_workspace/contracts/schemas/evaluation_summary.schema.json": "e722b0a0a932c481973d0416169b47b1f9ba3e04",
+    "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_input.schema.json": "e489b6a43255749a47b933b983cae1de0a907704",
+    "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_result.schema.json": "8ffcc77ab0f8d683526688f13e4144e731ca1491",
+    "src/agentic_workspace/contracts/schemas/evaluation_summary.schema.json": "756c8c985672da9d0b46228256b73c756ea883c6",
     "src/agentic_workspace/contracts/schemas/final_response_admission_result.schema.json": "700ddc6bd97e6842480d2bf5098ec9b961da271c",
     "src/agentic_workspace/contracts/schemas/generated_behavior_stratification.schema.json": "3ba007bf42e4e586b31c74b96d99aec273077b18",
     "src/agentic_workspace/contracts/schemas/generated_command_check_inventory.schema.json": "951702b3f32d408531a6fbbbbd61206a686ddd29",
@@ -2127,7 +2127,7 @@
     "src/agentic_workspace/contracts/workspace_surfaces.json": "2a44db878136cb632db3c8afac72d79bea34ce9e",
     "src/agentic_workspace/current_work_context.py": "ba75693e0258b9c2b85b2d70b152466247f25097",
     "src/agentic_workspace/doctor.py": "eed6e60a72fb1c306688f6438d87a64afdcc5522",
-    "src/agentic_workspace/evaluation.py": "065819ff527ad5b3c896a2eb007a70702c1b2403",
+    "src/agentic_workspace/evaluation.py": "bd0ff06ef7ca01273f59fc4e4b0feecbad48872a",
     "src/agentic_workspace/generated_operations.py": "45589c79e879d68b69fd29c3d2f156a228306640",
     "src/agentic_workspace/improvement_consequence.py": "82693a891043a25a745ab711a8a87ea2251a6134",
     "src/agentic_workspace/operating_decision.py": "ead53e2a2ca6fc92586f7c854d0308a21611bca7",
@@ -2155,7 +2155,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "2aa49a57e2426e148c15b2e13038e181632939e9"
   },
-  "git_index_identity": "cd62c89e6211ed1b5d84f2df716cc3e8859b7df3989c735d9a52b8a4d579db7a",
+  "git_index_identity": "523a409b99af7bae9ac2ebc5ae652b83f4b9820291d6853489e369cd2f5554c2",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
