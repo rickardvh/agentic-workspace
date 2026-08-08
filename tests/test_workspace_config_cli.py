@@ -1670,6 +1670,50 @@ def _correction_event(**overrides: object) -> dict[str, object]:
     return event
 
 
+def _write_guidance_lifecycle_fixture(target: Path, *, user_root: Path | None) -> None:
+    local_memory = ["[local_memory]", "target_guidance_enabled = true"]
+    if user_root is not None:
+        local_memory.append(f'user_guidance_root = "{user_root.as_posix()}"')
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                *local_memory,
+                "",
+                "[delegation_targets.fast_worker]",
+                'target_id = "user-local:fast-worker"',
+                'target_revision = "rev-b"',
+                'aliases = ["fast"]',
+                'revision_policy = "revalidate"',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+                'model_family = "codex"',
+                'provider = "openai"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    store = target / ".agentic-workspace/local/correction-events.json"
+    store.parent.mkdir(parents=True, exist_ok=True)
+    store.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/correction-event-store/v1",
+                "events": [
+                    _correction_event(target_identity_ref="user-local:fast-worker", source_ref="review-1"),
+                    _correction_event(
+                        target_identity_ref="user-local:fast-worker",
+                        source_ref="review-2",
+                        evidence_hash="sha256:review-2",
+                    ),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision() -> None:
     from agentic_workspace.agent_guidance import admit_correction_events
 
@@ -2457,6 +2501,65 @@ def test_guidance_promotion_persists_provenance_and_reversible_transition(tmp_pa
     assert promoted["record"]["provenance"]["source_event_refs"]
     assert transitioned["record"]["status"] == "suppressed"
     assert transitioned["record"]["transitions"][-1]["reason"] == "conflicts with current policy"
+
+
+def test_guidance_lifecycle_supports_external_user_store_and_detects_user_to_overlay_conflict(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import apply_guidance_promotion, guidance_promotion_from_store, transition_guidance
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    user_root = tmp_path / "user-guidance"
+    _write_guidance_lifecycle_fixture(target, user_root=user_root)
+
+    decision = guidance_promotion_from_store(target_root=target)
+    guidance_id = decision["guidance"][0]["guidance_id"]
+    promoted = apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
+    transitioned = transition_guidance(
+        target_root=target,
+        guidance_id=guidance_id,
+        operation="suppress",
+        reason="temporarily background",
+        expected_revision=promoted["record"]["revision"],
+    )
+
+    expected_store = user_root / "user-local-fast-worker/guidance-lifecycle.json"
+    assert expected_store.exists()
+    assert promoted["store_location"] == {
+        "kind": "agentic-workspace/guidance-store-location/v1",
+        "scope": "user-local-external",
+        "store_ref": expected_store.resolve().as_posix(),
+        "absolute": True,
+        "owner": "user-local-target-guidance",
+    }
+    assert transitioned["record"]["status"] == "suppressed"
+    assert transitioned["store_location"]["store_ref"] == expected_store.resolve().as_posix()
+
+    _write_guidance_lifecycle_fixture(target, user_root=None)
+    conflict = apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
+    assert conflict["status"] == "promotion-owner-conflict"
+    assert conflict["migration"]["status"] == "required"
+    assert conflict["canonical_store_scan"]["active_stores"][0]["scope"] == "user-local-external"
+
+
+def test_guidance_promotion_detects_overlay_to_user_store_conflict(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import apply_guidance_promotion, guidance_promotion_from_store
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write_guidance_lifecycle_fixture(target, user_root=None)
+    decision = guidance_promotion_from_store(target_root=target)
+    guidance_id = decision["guidance"][0]["guidance_id"]
+    promoted = apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
+    assert promoted["status"] == "promoted"
+    assert promoted["store_location"]["scope"] == "repository-local"
+
+    _write_guidance_lifecycle_fixture(target, user_root=tmp_path / "user-guidance")
+    conflict = apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
+    assert conflict["status"] == "promotion-owner-conflict"
+    assert conflict["canonical_store_scan"]["active_match_count"] == 1
+    assert conflict["migration"]["expected_source_revisions"][0]["record_revision"] == 1
 
 
 def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_path: Path) -> None:

@@ -1550,6 +1550,7 @@ def guidance_promotion_from_store(
 
 
 GUIDANCE_LIFECYCLE_STORE_PATH = Path(".agentic-workspace/local/guidance-lifecycle.json")
+GUIDANCE_STORE_OWNER_REGISTRY_PATH = Path(".agentic-workspace/local/guidance-store-owners.json")
 _GUIDANCE_LIFECYCLE_OPERATIONS = {"edit", "merge", "split", "suppress", "revalidate", "weaken", "supersede", "retire", "delete"}
 _GUIDANCE_TERMINAL_STATUSES = {"retired", "deleted", "superseded", "merged", "split-retired"}
 
@@ -1568,6 +1569,19 @@ def _guidance_lifecycle_store(target_root: Path, store_ref: str | Path | None = 
     return path, payload
 
 
+def _guidance_store_owner_registry(target_root: Path) -> tuple[Path, dict[str, Any], str | None]:
+    path = target_root / GUIDANCE_STORE_OWNER_REGISTRY_PATH
+    if not path.exists():
+        return path, {"kind": "agentic-workspace/guidance-store-owner-registry/v1", "stores": []}, None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("guidance store owner registry is unreadable; repair it before lifecycle mutation.") from exc
+    if payload.get("kind") != "agentic-workspace/guidance-store-owner-registry/v1" or not isinstance(payload.get("stores"), list):
+        raise WorkspaceUsageError("guidance store owner registry is malformed; repair it before lifecycle mutation.")
+    return path, payload, _json_digest(payload)
+
+
 def _candidate_guidance_store_refs(*, target_root: Path, config: Any | None = None) -> list[Path]:
     refs = [GUIDANCE_LIFECYCLE_STORE_PATH, WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH]
     if config is not None:
@@ -1576,8 +1590,13 @@ def _candidate_guidance_store_refs(*, target_root: Path, config: Any | None = No
             refs.append(Path(overlay))
         user_root = getattr(config.local_override, "user_guidance_root", None)
         if user_root:
-            user_path = target_root / Path(user_root)
-            refs.extend(path.relative_to(target_root) for path in user_path.glob("*/guidance-lifecycle.json") if path.is_file())
+            configured_user_path = Path(user_root)
+            user_path = configured_user_path if configured_user_path.is_absolute() else target_root / configured_user_path
+            for path in user_path.glob("*/guidance-lifecycle.json"):
+                if not path.is_file():
+                    continue
+                resolved = path.resolve()
+                refs.append(resolved.relative_to(target_root.resolve()) if resolved.is_relative_to(target_root.resolve()) else resolved)
     refs.extend(
         [
             Path(".agentic-workspace/memory/guidance-lifecycle.json"),
@@ -1585,6 +1604,13 @@ def _candidate_guidance_store_refs(*, target_root: Path, config: Any | None = No
             Path(".agentic-workspace/local/guidance-issue-intake.json"),
         ]
     )
+    _, owner_registry, _ = _guidance_store_owner_registry(target_root)
+    for raw_store in owner_registry["stores"]:
+        if not isinstance(raw_store, dict) or raw_store.get("status") != "current":
+            continue
+        store_ref = str(raw_store.get("store_ref") or "")
+        if store_ref:
+            refs.append(Path(store_ref))
     deduped: list[Path] = []
     for ref in refs:
         if ref not in deduped:
@@ -1592,16 +1618,50 @@ def _candidate_guidance_store_refs(*, target_root: Path, config: Any | None = No
     return deduped
 
 
-def _find_guidance_lifecycle_store(target_root: Path, guidance_id: str) -> tuple[Path, dict[str, Any], int] | None:
+def _guidance_store_location_identity(*, path: Path, target_root: Path) -> dict[str, Any]:
+    resolved = path.resolve()
+    repo_root = target_root.resolve()
+    external = not resolved.is_relative_to(repo_root)
+    return {
+        "kind": "agentic-workspace/guidance-store-location/v1",
+        "scope": "user-local-external" if external else "repository-local",
+        "store_ref": resolved.as_posix() if external else resolved.relative_to(repo_root).as_posix(),
+        "absolute": external,
+        "owner": "user-local-target-guidance" if external else "repo-local-target-guidance-overlay",
+    }
+
+
+def _matching_guidance_lifecycle_stores(
+    *, target_root: Path, guidance_id: str, semantic_identity: str = ""
+) -> list[tuple[Path, dict[str, Any], int]]:
     config = load_workspace_config(target_root=target_root)
+    matches: list[tuple[Path, dict[str, Any], int]] = []
     for store_ref in _candidate_guidance_store_refs(target_root=target_root, config=config):
         path, store = _guidance_lifecycle_store(target_root, store_ref)
         records = [item for item in store["records"] if isinstance(item, dict)]
-        index = _guidance_index(records, guidance_id)
-        if index is not None:
-            store["records"] = records
-            return path, store, index
-    return None
+        for index, record in enumerate(records):
+            record_identity = _json_digest(
+                {
+                    "instruction": str(record.get("instruction") or ""),
+                    "applicability": record.get("applicability") if isinstance(record.get("applicability"), dict) else {},
+                }
+            )
+            if record.get("guidance_id") == guidance_id or (semantic_identity and record_identity == semantic_identity):
+                store["records"] = records
+                matches.append((path, store, index))
+    return matches
+
+
+def _find_guidance_lifecycle_store(target_root: Path, guidance_id: str) -> tuple[Path, dict[str, Any], int] | None:
+    matches = _matching_guidance_lifecycle_stores(target_root=target_root, guidance_id=guidance_id)
+    active = [match for match in matches if str(match[1]["records"][match[2]].get("status") or "") not in _GUIDANCE_TERMINAL_STATUSES]
+    if len(active) > 1:
+        stores = [_guidance_store_location_identity(path=path, target_root=target_root)["store_ref"] for path, _, _ in active]
+        raise WorkspaceUsageError(
+            "guidance lifecycle authority is duplicated across stores; reconcile one canonical owner before transition: "
+            + ", ".join(stores)
+        )
+    return active[0] if active else matches[0] if matches else None
 
 
 def _guidance_revision(record: dict[str, Any]) -> int:
@@ -1823,6 +1883,64 @@ def apply_guidance_promotion(
         }
     path, store = _guidance_lifecycle_store(target_root, str(store_ref))
     store_digest = _json_digest(store)
+    semantic_identity = _json_digest(
+        {
+            "instruction": str(candidate.get("instruction") or ""),
+            "applicability": candidate.get("applicability") if isinstance(candidate.get("applicability"), dict) else {},
+        }
+    )
+    canonical_matches = _matching_guidance_lifecycle_stores(
+        target_root=target_root,
+        guidance_id=guidance_id,
+        semantic_identity=semantic_identity,
+    )
+    active_matches = [
+        match for match in canonical_matches if str(match[1]["records"][match[2]].get("status") or "") not in _GUIDANCE_TERMINAL_STATUSES
+    ]
+    same_store_match = next((match for match in active_matches if match[0].resolve() == path.resolve()), None)
+    conflicting_matches = [match for match in active_matches if match[0].resolve() != path.resolve()]
+    canonical_store_scan = {
+        "kind": "agentic-workspace/guidance-canonical-store-scan/v1",
+        "status": "conflict" if conflicting_matches else "unique",
+        "guidance_id": guidance_id,
+        "semantic_identity": semantic_identity,
+        "selected_store": _guidance_store_location_identity(path=path, target_root=target_root),
+        "active_match_count": len(active_matches),
+        "active_stores": [
+            _guidance_store_location_identity(path=match_path, target_root=target_root) for match_path, _, _ in active_matches
+        ],
+        "rule": "Promotion may create authority only when no other authoritative target-guidance store has the same guidance or semantic identity.",
+    }
+    if conflicting_matches:
+        return {
+            "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+            "status": "promotion-owner-conflict",
+            "guidance_id": guidance_id,
+            "canonical_store_scan": canonical_store_scan,
+            "migration": {
+                "kind": "agentic-workspace/guidance-owner-migration-required/v1",
+                "status": "required",
+                "expected_source_revisions": [
+                    {
+                        "store": _guidance_store_location_identity(path=match_path, target_root=target_root),
+                        "store_digest": _json_digest(match_store),
+                        "record_revision": _guidance_revision(match_store["records"][index]),
+                    }
+                    for match_path, match_store, index in conflicting_matches
+                ],
+                "destination_store_digest": store_digest,
+                "rule": "Move authority through an explicit revision-guarded migration; promotion never copies an active record across owners.",
+            },
+        }
+    if same_store_match is not None:
+        existing = same_store_match[1]["records"][same_store_match[2]]
+        return {
+            "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+            "status": "already-promoted",
+            "record": existing,
+            "store": _repo_relative(path, root=target_root),
+            "canonical_store_scan": canonical_store_scan,
+        }
     owner_admission = _guidance_owner_admission(
         destination=destination,
         store_digest=store_digest,
@@ -1837,15 +1955,8 @@ def apply_guidance_promotion(
             "owner_admission": owner_admission,
             "decision": decision,
         }
+    owner_admission["canonical_store_scan"] = canonical_store_scan
     records = [item for item in store["records"] if isinstance(item, dict)]
-    existing = next((item for item in records if item.get("guidance_id") == guidance_id), None)
-    if isinstance(existing, dict):
-        return {
-            "kind": "agentic-workspace/guidance-lifecycle-result/v1",
-            "status": "already-promoted",
-            "record": existing,
-            "store": _repo_relative(path, root=target_root),
-        }
     record = {
         "kind": "agentic-workspace/guidance-lifecycle-record/v1",
         "guidance_id": guidance_id,
@@ -1865,6 +1976,25 @@ def apply_guidance_promotion(
         "schema_revision": hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest()[:20],
     }
     next_records = [*records, record]
+    registry_path, owner_registry, owner_registry_digest = _guidance_store_owner_registry(target_root)
+    location = _guidance_store_location_identity(path=path, target_root=target_root)
+    registered_stores = [
+        item for item in owner_registry["stores"] if isinstance(item, dict) and str(item.get("store_ref") or "") != location["store_ref"]
+    ]
+    next_owner_registry = {
+        "kind": "agentic-workspace/guidance-store-owner-registry/v1",
+        "stores": [
+            *registered_stores,
+            {
+                "store_ref": location["store_ref"],
+                "absolute": location["absolute"],
+                "scope": location["scope"],
+                "owner": location["owner"],
+                "status": "current",
+                "store_revision": "sha256:" + _json_digest({"records": next_records}),
+            },
+        ],
+    }
     mutation, receipt_result, receipt_writes = _guidance_mutation_receipt_write_plan(
         operation="promote",
         target_root=target_root,
@@ -1872,7 +2002,13 @@ def apply_guidance_promotion(
         store_pre_digest=store_digest,
         records=next_records,
         affected_records=[record],
-        postconditions=["single-canonical-destination", "active-guidance-created", "promotion-authority-retained"],
+        postconditions=[
+            "canonical-store-scan-unique",
+            "store-owner-registry-current",
+            "single-canonical-destination",
+            "active-guidance-created",
+            "promotion-authority-retained",
+        ],
         owner_admission=owner_admission,
     )
     _ = mutation
@@ -1883,6 +2019,7 @@ def apply_guidance_promotion(
                 {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": next_records},
                 store_digest if path.exists() else None,
             ),
+            (registry_path, next_owner_registry, owner_registry_digest),
             *receipt_writes,
         ]
     )
@@ -1891,6 +2028,8 @@ def apply_guidance_promotion(
         "status": "promoted",
         "record": record,
         "store": _repo_relative(path, root=target_root),
+        "store_location": location,
+        "canonical_store_scan": canonical_store_scan,
         "mutation_receipt": receipt_result,
     }
 
@@ -2194,9 +2333,29 @@ def transition_guidance(
         owner_admission=owner_admission,
     )
     _ = mutation
+    registry_path, owner_registry, owner_registry_digest = _guidance_store_owner_registry(target_root)
+    location = _guidance_store_location_identity(path=path, target_root=target_root)
+    registered_stores = [
+        item for item in owner_registry["stores"] if isinstance(item, dict) and str(item.get("store_ref") or "") != location["store_ref"]
+    ]
+    next_owner_registry = {
+        "kind": "agentic-workspace/guidance-store-owner-registry/v1",
+        "stores": [
+            *registered_stores,
+            {
+                "store_ref": location["store_ref"],
+                "absolute": location["absolute"],
+                "scope": location["scope"],
+                "owner": location["owner"],
+                "status": "current",
+                "store_revision": "sha256:" + _json_digest({"records": records}),
+            },
+        ],
+    }
     _write_guidance_json_transaction(
         [
             (path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": records}, store_digest),
+            (registry_path, next_owner_registry, owner_registry_digest),
             *receipt_writes,
         ]
     )
@@ -2206,6 +2365,7 @@ def transition_guidance(
         "record": record,
         "records": affected,
         "store": _repo_relative(path, root=target_root),
+        "store_location": location,
         "mutation_receipt": receipt_result,
     }
 
