@@ -1783,7 +1783,7 @@
     "src/agentic_workspace/_payload/.agentic-workspace/skills/REGISTRY.json": "32ada45ffe220ba04c5e87377cf9588ff2762656",
     "src/agentic_workspace/_schema.py": "7f38a89fc46e4931e9c360054f5e68b4125ac42b",
     "src/agentic_workspace/actionability.py": "b62a16160371d948c6324b5c7eaef4083e0ca9c0",
-    "src/agentic_workspace/agent_guidance.py": "5d0aa42332d4922421887e5b8dd3501eb0e0aa52",
+    "src/agentic_workspace/agent_guidance.py": "d39c6790fce30ce1ed1fd4abdf8677633c79acf4",
     "src/agentic_workspace/authority_envelope.py": "5de8905fe8f6190d762d8f33552a3d21dba13c09",
     "src/agentic_workspace/cli.py": "ba64ffe55b44353e1e832aa495fa2abab767c96d",
     "src/agentic_workspace/client.py": "49a5599fd3836a53a1b5a26f32095f659a114c53",
@@ -2179,7 +2179,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "2aa49a57e2426e148c15b2e13038e181632939e9"
   },
-  "git_index_identity": "b50c321ac07ef40237d432adb9ab0a700ae2c281bf93c6b31a9aa2a64fd71f7d",
+  "git_index_identity": "a72c970fc84061a533b04e6bbef893151361df6d26f352f6a579098ac3de6165",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }

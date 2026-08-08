@@ -1599,7 +1599,7 @@ def test_config_command_reports_target_identity_and_guidance_storage(tmp_path: P
     correction_operations = [item for item in correction["operations"] if item["operation_id"].startswith("correction-event.")]
     guidance_operations = [item for item in correction["operations"] if item["operation_id"].startswith("agent-guidance.")]
     assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in correction_operations)
-    assert all(item["public"] and not item["generated_operation"] and not item["external_contract"] for item in guidance_operations)
+    assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in guidance_operations)
     assert correction["storage"]["retention_cap"] == 20
     assert correction["storage"]["retention_operations"] == ["correction-event.prune-compact"]
     assert identity["storage"]["layers"][0]["id"] == "user-local-target-guidance"
@@ -2735,6 +2735,170 @@ def test_guidance_lifecycle_multi_file_transaction_rolls_back_prior_write(tmp_pa
 
     assert json.loads(first.read_text(encoding="utf-8")) == before
     assert not second.exists()
+
+
+@pytest.mark.parametrize("failure_boundary", ["after-write:1", "after-write:2"])
+def test_guidance_promotion_recovers_interrupted_store_registry_receipt_transaction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_boundary: str
+) -> None:
+    import agentic_workspace.agent_guidance as guidance_runtime
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write_guidance_lifecycle_fixture(target, user_root=None)
+    decision = guidance_runtime.guidance_promotion_from_store(target_root=target)
+    guidance_id = decision["guidance"][0]["guidance_id"]
+
+    class SimulatedProcessLoss(BaseException):
+        pass
+
+    def interrupt(phase: str, _path: Path) -> None:
+        if phase == failure_boundary:
+            raise SimulatedProcessLoss(phase)
+
+    monkeypatch.setattr(guidance_runtime, "_GUIDANCE_TRANSACTION_FAULT_INJECTOR", interrupt)
+    with pytest.raises(SimulatedProcessLoss, match=failure_boundary):
+        guidance_runtime.apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
+
+    journal = target / guidance_runtime.GUIDANCE_TRANSACTION_JOURNAL_PATH
+    assert journal.exists()
+    monkeypatch.setattr(guidance_runtime, "_GUIDANCE_TRANSACTION_FAULT_INJECTOR", None)
+
+    recovered = guidance_runtime.apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
+
+    assert recovered["status"] == "promoted"
+    assert recovered["recovery"]["status"] == "completed-prepared-transaction"
+    assert not journal.exists()
+    lifecycle_path = Path(recovered["store_location"]["store_ref"])
+    if not lifecycle_path.is_absolute():
+        lifecycle_path = target / lifecycle_path
+    lifecycle = json.loads(lifecycle_path.read_text(encoding="utf-8"))
+    registry = json.loads((target / guidance_runtime.GUIDANCE_STORE_OWNER_REGISTRY_PATH).read_text(encoding="utf-8"))
+    receipt_index = json.loads((target / guidance_runtime.GUIDANCE_RECEIPT_INDEX_PATH).read_text(encoding="utf-8"))
+    assert lifecycle["records"][0]["guidance_id"] == guidance_id
+    assert registry["stores"][0]["store_revision"] == "sha256:" + guidance_runtime._json_digest({"records": lifecycle["records"]})
+    matching_receipts = [
+        receipt
+        for receipt in receipt_index["receipts"]
+        if guidance_id in receipt.get("mutation_receipt", {}).get("affected_record_ids", [])
+    ]
+    assert matching_receipts
+    assert "store-owner-registry-current" in matching_receipts[-1]["mutation_receipt"]["postconditions"]
+
+
+def test_guidance_promotion_retry_repairs_stale_registry_and_missing_receipt(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.agent_guidance as guidance_runtime
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write_guidance_lifecycle_fixture(target, user_root=None)
+    decision = guidance_runtime.guidance_promotion_from_store(target_root=target)
+    guidance_id = decision["guidance"][0]["guidance_id"]
+    promoted = guidance_runtime.apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
+    assert promoted["status"] == "promoted"
+
+    registry_path = target / guidance_runtime.GUIDANCE_STORE_OWNER_REGISTRY_PATH
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    registry["stores"][0]["store_revision"] = "sha256:stale"
+    _write(registry_path, json.dumps(registry, indent=2, sort_keys=True) + "\n")
+    receipt_path = target / guidance_runtime.GUIDANCE_RECEIPT_INDEX_PATH
+    receipt_index = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt_index["receipts"] = []
+    _write(receipt_path, json.dumps(receipt_index, indent=2, sort_keys=True) + "\n")
+
+    repaired = guidance_runtime.apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
+
+    assert repaired["status"] == "already-promoted"
+    assert repaired["custody_verification"]["status"] == "recovered"
+    assert set(repaired["custody_verification"]["repaired_postconditions"]) == {
+        "store-owner-registry-current",
+        "promotion-receipt-current",
+    }
+    repaired_registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    assert repaired_registry["stores"][0]["store_revision"] != "sha256:stale"
+    repaired_receipts = json.loads(receipt_path.read_text(encoding="utf-8"))["receipts"]
+    assert repaired_receipts[-1]["operation"] == "promote-recovery"
+
+
+def test_guidance_transaction_recovery_rejects_concurrent_registry_writer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.agent_guidance as guidance_runtime
+    from agentic_workspace.config import WorkspaceUsageError
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write_guidance_lifecycle_fixture(target, user_root=None)
+    decision = guidance_runtime.guidance_promotion_from_store(target_root=target)
+    guidance_id = decision["guidance"][0]["guidance_id"]
+
+    class SimulatedProcessLoss(BaseException):
+        pass
+
+    def interrupt(phase: str, _path: Path) -> None:
+        if phase == "after-write:1":
+            raise SimulatedProcessLoss(phase)
+
+    monkeypatch.setattr(guidance_runtime, "_GUIDANCE_TRANSACTION_FAULT_INJECTOR", interrupt)
+    with pytest.raises(SimulatedProcessLoss):
+        guidance_runtime.apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
+    monkeypatch.setattr(guidance_runtime, "_GUIDANCE_TRANSACTION_FAULT_INJECTOR", None)
+    registry_path = target / guidance_runtime.GUIDANCE_STORE_OWNER_REGISTRY_PATH
+    _write(
+        registry_path,
+        json.dumps(
+            {
+                "kind": "agentic-workspace/guidance-store-owner-registry/v1",
+                "stores": [{"store_ref": "concurrent", "status": "current", "store_revision": "sha256:other"}],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="concurrent change"):
+        guidance_runtime.apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
+
+
+def test_guidance_transition_retry_completes_interrupted_custody_transaction(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.agent_guidance as guidance_runtime
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write_guidance_lifecycle_fixture(target, user_root=None)
+    decision = guidance_runtime.guidance_promotion_from_store(target_root=target)
+    promoted = guidance_runtime.apply_guidance_promotion(
+        target_root=target,
+        guidance_id=decision["guidance"][0]["guidance_id"],
+    )
+
+    class SimulatedProcessLoss(BaseException):
+        pass
+
+    def interrupt(phase: str, _path: Path) -> None:
+        if phase == "after-write:2":
+            raise SimulatedProcessLoss(phase)
+
+    monkeypatch.setattr(guidance_runtime, "_GUIDANCE_TRANSACTION_FAULT_INJECTOR", interrupt)
+    transition_args = {
+        "target_root": target,
+        "guidance_id": promoted["record"]["guidance_id"],
+        "operation": "suppress",
+        "reason": "temporarily background",
+        "expected_revision": promoted["record"]["revision"],
+    }
+    with pytest.raises(SimulatedProcessLoss):
+        guidance_runtime.transition_guidance(**transition_args)
+    monkeypatch.setattr(guidance_runtime, "_GUIDANCE_TRANSACTION_FAULT_INJECTOR", None)
+
+    recovered = guidance_runtime.transition_guidance(**transition_args)
+
+    assert recovered["status"] == "transitioned"
+    assert recovered["record"]["status"] == "suppressed"
+    assert recovered["recovery"]["status"] == "completed-prepared-transaction"
 
 
 def test_guidance_lifecycle_contract_claims_generated_external_operations() -> None:

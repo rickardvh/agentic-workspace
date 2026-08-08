@@ -21,6 +21,7 @@ from agentic_workspace.config import (
 
 CORRECTION_EVENT_RETENTION_CAP = 20
 GUIDANCE_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/guidance-receipts.json")
+GUIDANCE_TRANSACTION_JOURNAL_PATH = Path(".agentic-workspace/local/guidance-transaction.json")
 TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-events")
 TRUSTED_AUTHORITY_EVENT_INDEX_PATH = TRUSTED_AUTHORITY_EVENT_STORE_PATH / "index.json"
 TRUSTED_AUTHORITY_EVENT_INBOX_PATH = TRUSTED_AUTHORITY_EVENT_STORE_PATH / "inbox"
@@ -44,6 +45,7 @@ _TRUSTED_AUTHORITY_HOST_PUBLIC_KEYS = {
         "status": "current",
     }
 }
+_GUIDANCE_TRANSACTION_FAULT_INJECTOR: Callable[[str, Path], None] | None = None
 
 
 def _guidance_now() -> str:
@@ -685,26 +687,43 @@ def _write_guidance_json_transaction(
     writes: list[tuple[Path, dict[str, Any], str | None]],
     *,
     stale_message: str = "store changed before guidance lifecycle mutation could be applied; retry with fresh revision.",
+    journal_root: Path | None = None,
+    recovery_result: dict[str, Any] | None = None,
 ) -> None:
-    """Apply several guidance JSON writes as one rollback-capable local transaction."""
+    """Apply guidance writes through a prepared journal recoverable after process loss."""
     if not writes:
         return
     unique: dict[Path, tuple[dict[str, Any], str | None]] = {}
     for path, payload, expected_digest in writes:
         unique[path.resolve()] = (payload, expected_digest)
+    if journal_root is None:
+        common_parent = Path(os.path.commonpath([str(path.parent) for path in unique]))
+        journal_root = common_parent
+    journal_root = journal_root.resolve()
+    recovered = _recover_guidance_json_transaction(journal_root=journal_root)
+    if recovered.get("status") == "recovery-conflict":
+        raise WorkspaceUsageError(str(recovered.get("reason") or "guidance transaction recovery requires repair."))
+    journal_path = journal_root / GUIDANCE_TRANSACTION_JOURNAL_PATH
+    transaction_identity = {
+        "paths": [path.as_posix() for path in sorted(unique)],
+        "desired_digests": {path.as_posix(): _json_digest(payload) for path, (payload, _) in sorted(unique.items())},
+        "expected_digests": {path.as_posix(): expected for path, (_, expected) in sorted(unique.items())},
+    }
+    transaction_id = "guidance-tx:" + _json_digest(transaction_identity)[:24]
     lock_handles: list[tuple[Path, int]] = []
     snapshots: dict[Path, tuple[bool, bytes]] = {}
     written: list[Path] = []
     tmp_paths: list[Path] = []
+    journal_prepared = False
     try:
-        for path in sorted(unique):
+        for path in [journal_path, *sorted(unique)]:
             path.parent.mkdir(parents=True, exist_ok=True)
             lock_path = path.with_name(f".{path.name}.lock")
             try:
                 lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             except FileExistsError as exc:
                 raise WorkspaceUsageError("store is locked by another guidance lifecycle mutation; retry after it completes.") from exc
-            os.write(lock_fd, str(os.getpid()).encode("utf-8"))
+            os.write(lock_fd, transaction_id.encode("utf-8"))
             lock_handles.append((lock_path, lock_fd))
         for path, (_payload, expected_digest) in unique.items():
             existed = path.exists()
@@ -713,22 +732,55 @@ def _write_guidance_json_transaction(
                 current = _json_digest(json.loads(path.read_text(encoding="utf-8")))
                 if current != expected_digest:
                     raise WorkspaceUsageError(stale_message)
+            if expected_digest is not None and not existed:
+                raise WorkspaceUsageError(stale_message)
+        journal = {
+            "kind": "agentic-workspace/guidance-transaction-journal/v1",
+            "status": "prepared",
+            "transaction_id": transaction_id,
+            "prepared_at": _guidance_now(),
+            "writer_pid": os.getpid(),
+            "entries": [
+                {
+                    "path": path.as_posix(),
+                    "existed": snapshots[path][0],
+                    "before_digest": hashlib.sha256(snapshots[path][1]).hexdigest(),
+                    "expected_json_digest": expected_digest,
+                    "desired": payload,
+                    "desired_json_digest": _json_digest(payload),
+                }
+                for path, (payload, expected_digest) in sorted(unique.items())
+            ],
+            "recovery_result": recovery_result or {},
+            "rule": "Recovery completes only entries still at their prepared before-state or already at the desired state; concurrent divergence fails closed.",
+        }
+        _write_guidance_atomic_json(journal_path, journal, transaction_id=transaction_id)
+        journal_prepared = True
         for path, (payload, _expected_digest) in unique.items():
-            tmp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-            tmp_paths.append(tmp_path)
-            tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
-            tmp_path.replace(path)
+            _write_guidance_atomic_json(path, payload, transaction_id=transaction_id, tmp_paths=tmp_paths)
             written.append(path)
+            if _GUIDANCE_TRANSACTION_FAULT_INJECTOR is not None:
+                _GUIDANCE_TRANSACTION_FAULT_INJECTOR(f"after-write:{len(written)}", path)
+        for path, (payload, _expected_digest) in unique.items():
+            if not path.exists() or _json_digest(json.loads(path.read_text(encoding="utf-8"))) != _json_digest(payload):
+                raise WorkspaceUsageError("guidance transaction postcondition verification failed; retry recovery.")
+        journal_path.unlink()
+        journal_prepared = False
     except Exception:
         for path in reversed(written):
             existed, content = snapshots[path]
             if existed:
-                path.write_bytes(content)
+                _write_guidance_atomic_bytes(path, content, transaction_id=transaction_id)
             else:
                 try:
                     path.unlink()
                 except FileNotFoundError:
                     pass
+        if journal_prepared:
+            try:
+                journal_path.unlink()
+            except FileNotFoundError:
+                pass
         raise
     finally:
         for tmp_path in tmp_paths:
@@ -739,9 +791,148 @@ def _write_guidance_json_transaction(
         for lock_path, lock_fd in lock_handles:
             os.close(lock_fd)
             try:
-                lock_path.unlink()
+                if lock_path.read_text(encoding="utf-8") == transaction_id:
+                    lock_path.unlink()
             except FileNotFoundError:
                 pass
+
+
+def _write_guidance_atomic_bytes(
+    path: Path,
+    content: bytes,
+    *,
+    transaction_id: str,
+    tmp_paths: list[Path] | None = None,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    suffix = hashlib.sha256(f"{transaction_id}:{path.as_posix()}".encode("utf-8")).hexdigest()[:12]
+    tmp_path = path.with_name(f".{path.name}.{suffix}.tmp")
+    if tmp_paths is not None:
+        tmp_paths.append(tmp_path)
+    with tmp_path.open("wb") as stream:
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
+    tmp_path.replace(path)
+
+
+def _write_guidance_atomic_json(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    transaction_id: str,
+    tmp_paths: list[Path] | None = None,
+) -> None:
+    content = (json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n").encode("utf-8")
+    _write_guidance_atomic_bytes(path, content, transaction_id=transaction_id, tmp_paths=tmp_paths)
+
+
+def _recover_guidance_json_transaction(*, journal_root: Path) -> dict[str, Any]:
+    journal_path = journal_root.resolve() / GUIDANCE_TRANSACTION_JOURNAL_PATH
+    if not journal_path.exists():
+        return {"status": "none"}
+    try:
+        journal = json.loads(journal_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("guidance transaction journal is unreadable; repair it before lifecycle mutation.") from exc
+    if (
+        journal.get("kind") != "agentic-workspace/guidance-transaction-journal/v1"
+        or journal.get("status") != "prepared"
+        or not isinstance(journal.get("entries"), list)
+        or not str(journal.get("transaction_id") or "").startswith("guidance-tx:")
+    ):
+        raise WorkspaceUsageError("guidance transaction journal is malformed; repair it before lifecycle mutation.")
+    transaction_id = str(journal["transaction_id"])
+    entries = [entry for entry in journal["entries"] if isinstance(entry, dict)]
+    if len(entries) != len(journal["entries"]):
+        raise WorkspaceUsageError("guidance transaction journal contains malformed entries.")
+    paths = [Path(str(entry.get("path") or "")).resolve() for entry in entries]
+    if any(not str(entry.get("path") or "") for entry in entries) or len(set(paths)) != len(paths):
+        raise WorkspaceUsageError("guidance transaction journal path inventory is invalid.")
+    lock_paths = [journal_path.with_name(f".{journal_path.name}.lock"), *[path.with_name(f".{path.name}.lock") for path in paths]]
+    matching_locks: list[Path] = []
+    for lock_path in lock_paths:
+        try:
+            if lock_path.read_text(encoding="utf-8") == transaction_id:
+                matching_locks.append(lock_path)
+        except FileNotFoundError:
+            pass
+    writer_pid = journal.get("writer_pid")
+    if matching_locks and isinstance(writer_pid, int) and _guidance_process_alive(writer_pid):
+        raise WorkspaceUsageError("guidance transaction is still owned by a live writer; retry after it completes.")
+    for lock_path in matching_locks:
+        lock_path.unlink()
+    lock_handles: list[tuple[Path, int]] = []
+    tmp_paths: list[Path] = []
+    try:
+        for path in [journal_path, *paths]:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            lock_path = path.with_name(f".{path.name}.lock")
+            try:
+                lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except FileExistsError as exc:
+                raise WorkspaceUsageError("guidance transaction recovery is blocked by a concurrent writer.") from exc
+            os.write(lock_fd, transaction_id.encode("utf-8"))
+            lock_handles.append((lock_path, lock_fd))
+        repaired_paths: list[str] = []
+        for path, entry in zip(paths, entries, strict=True):
+            desired = entry.get("desired")
+            if not isinstance(desired, dict) or _json_digest(desired) != entry.get("desired_json_digest"):
+                raise WorkspaceUsageError("guidance transaction journal desired payload is invalid.")
+            if path.exists():
+                current_bytes = path.read_bytes()
+                try:
+                    current_json_digest = _json_digest(json.loads(current_bytes.decode("utf-8")))
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    current_json_digest = ""
+                if current_json_digest == entry["desired_json_digest"]:
+                    continue
+                before_matches = hashlib.sha256(current_bytes).hexdigest() == entry.get("before_digest")
+            else:
+                before_matches = entry.get("existed") is False
+            if not before_matches:
+                return {
+                    "status": "recovery-conflict",
+                    "transaction_id": transaction_id,
+                    "reason": f"guidance transaction recovery found a concurrent change at {path.as_posix()}; inspect before retry.",
+                }
+            _write_guidance_atomic_json(path, desired, transaction_id=transaction_id, tmp_paths=tmp_paths)
+            repaired_paths.append(path.as_posix())
+            if _GUIDANCE_TRANSACTION_FAULT_INJECTOR is not None:
+                _GUIDANCE_TRANSACTION_FAULT_INJECTOR(f"after-recovery-write:{len(repaired_paths)}", path)
+        for path, entry in zip(paths, entries, strict=True):
+            if not path.exists() or _json_digest(json.loads(path.read_text(encoding="utf-8"))) != entry["desired_json_digest"]:
+                raise WorkspaceUsageError("guidance transaction recovery could not prove all postconditions.")
+        journal_path.unlink()
+        return {
+            "status": "recovered",
+            "transaction_id": transaction_id,
+            "repaired_paths": repaired_paths,
+            "result": journal.get("recovery_result") if isinstance(journal.get("recovery_result"), dict) else {},
+        }
+    finally:
+        for tmp_path in tmp_paths:
+            try:
+                tmp_path.unlink()
+            except FileNotFoundError:
+                pass
+        for lock_path, lock_fd in lock_handles:
+            os.close(lock_fd)
+            try:
+                if lock_path.read_text(encoding="utf-8") == transaction_id:
+                    lock_path.unlink()
+            except FileNotFoundError:
+                pass
+
+
+def _guidance_process_alive(process_id: int) -> bool:
+    if process_id <= 0:
+        return False
+    try:
+        os.kill(process_id, 0)
+    except OSError:
+        return False
+    return True
 
 
 def _write_correction_receipt(*, target_root: Path, receipt: dict[str, Any]) -> Path:
@@ -817,7 +1008,7 @@ def _guidance_receipt_write_plan(
 
 def _store_guidance_receipt(*, target_root: Path, receipt: dict[str, Any], operation_id: str) -> dict[str, Any]:
     result, writes = _guidance_receipt_write_plan(target_root=target_root, receipt=receipt, operation_id=operation_id)
-    _write_guidance_json_transaction(writes)
+    _write_guidance_json_transaction(writes, journal_root=target_root)
     return result
 
 
@@ -908,7 +1099,8 @@ def record_trusted_authority_host_event(
                 {"kind": "agentic-workspace/trusted-authority-host-event-index/v1", "events": entries},
                 _json_digest(index) if index_path.exists() else None,
             ),
-        ]
+        ],
+        journal_root=target_root,
     )
     return {
         "kind": "agentic-workspace/trusted-authority-host-event-import-result/v1",
@@ -1784,7 +1976,7 @@ def _record_guidance_mutation_receipt(
         owner_admission=owner_admission,
     )
     _ = mutation
-    _write_guidance_json_transaction(writes)
+    _write_guidance_json_transaction(writes, journal_root=target_root)
     return receipt_result
 
 
@@ -1847,6 +2039,65 @@ def _guidance_owner_admission(*, destination: dict[str, Any], store_digest: str,
     }
 
 
+def _guidance_owner_registry_plan(
+    *, target_root: Path, store_path: Path, records: list[dict[str, Any]]
+) -> tuple[Path, dict[str, Any], str | None, dict[str, Any], bool]:
+    registry_path, owner_registry, owner_registry_digest = _guidance_store_owner_registry(target_root)
+    location = _guidance_store_location_identity(path=store_path, target_root=target_root)
+    expected_revision = "sha256:" + _json_digest({"records": records})
+    current_entry = next(
+        (item for item in owner_registry["stores"] if isinstance(item, dict) and str(item.get("store_ref") or "") == location["store_ref"]),
+        None,
+    )
+    current = bool(
+        isinstance(current_entry, dict)
+        and current_entry.get("status") == "current"
+        and current_entry.get("store_revision") == expected_revision
+        and current_entry.get("owner") == location["owner"]
+        and current_entry.get("scope") == location["scope"]
+        and bool(current_entry.get("absolute")) is bool(location["absolute"])
+    )
+    registered_stores = [
+        item for item in owner_registry["stores"] if isinstance(item, dict) and str(item.get("store_ref") or "") != location["store_ref"]
+    ]
+    next_registry = {
+        "kind": "agentic-workspace/guidance-store-owner-registry/v1",
+        "stores": [
+            *registered_stores,
+            {
+                "store_ref": location["store_ref"],
+                "absolute": location["absolute"],
+                "scope": location["scope"],
+                "owner": location["owner"],
+                "status": "current",
+                "store_revision": expected_revision,
+            },
+        ],
+    }
+    return registry_path, next_registry, owner_registry_digest, location, current
+
+
+def _guidance_promotion_receipt_current(*, target_root: Path, store_path: Path, records: list[dict[str, Any]], guidance_id: str) -> bool:
+    _receipt_path, index = _guidance_receipt_index(target_root)
+    expected_store_ref = _repo_relative(store_path, root=target_root)
+    expected_store_digest = hashlib.sha256(json.dumps(records, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+    for receipt in index["receipts"]:
+        if not isinstance(receipt, dict) or receipt.get("receipt_type") != "guidance-mutation":
+            continue
+        mutation = receipt.get("mutation_receipt") if isinstance(receipt.get("mutation_receipt"), dict) else {}
+        custody = receipt.get("custody") if isinstance(receipt.get("custody"), dict) else {}
+        if (
+            receipt.get("status") == "current"
+            and custody.get("producer") == "agentic-workspace.guidance-receipt-index"
+            and mutation.get("store_ref") == expected_store_ref
+            and mutation.get("store_digest") == expected_store_digest
+            and guidance_id in mutation.get("affected_record_ids", [])
+            and "store-owner-registry-current" in mutation.get("postconditions", [])
+        ):
+            return True
+    return False
+
+
 def apply_guidance_promotion(
     *,
     target_root: Path,
@@ -1856,6 +2107,31 @@ def apply_guidance_promotion(
     explicit_remember: bool = False,
 ) -> dict[str, Any]:
     """Persist one promoted candidate with its evidence and future lifecycle custody."""
+    request_identity = _json_digest(
+        {
+            "operation": "promote",
+            "guidance_id": guidance_id,
+            "task_class": task_class or "",
+            "scope_class": scope_class or "",
+            "explicit_remember": explicit_remember,
+        }
+    )
+    recovery = _recover_guidance_json_transaction(journal_root=target_root)
+    if recovery.get("status") == "recovery-conflict":
+        raise WorkspaceUsageError(str(recovery.get("reason") or "guidance transaction recovery requires repair."))
+    raw_recovered_payload = recovery.get("result")
+    recovered_payload: dict[str, Any] = raw_recovered_payload if isinstance(raw_recovered_payload, dict) else {}
+    raw_recovered_result = recovered_payload.get("result")
+    recovered_result: dict[str, Any] = raw_recovered_result if isinstance(raw_recovered_result, dict) else {}
+    if recovered_payload.get("request_identity") == request_identity and recovered_result:
+        return {
+            **recovered_result,
+            "recovery": {
+                "status": "completed-prepared-transaction",
+                "transaction_id": recovery.get("transaction_id", ""),
+                "repaired_paths": recovery.get("repaired_paths", []),
+            },
+        }
     decision = guidance_promotion_from_store(
         target_root=target_root,
         task_class=task_class,
@@ -1934,13 +2210,93 @@ def apply_guidance_promotion(
         }
     if same_store_match is not None:
         existing = same_store_match[1]["records"][same_store_match[2]]
-        return {
+        existing_records = [item for item in same_store_match[1]["records"] if isinstance(item, dict)]
+        registry_path, next_owner_registry, owner_registry_digest, location, registry_current = _guidance_owner_registry_plan(
+            target_root=target_root,
+            store_path=path,
+            records=existing_records,
+        )
+        receipt_current = _guidance_promotion_receipt_current(
+            target_root=target_root,
+            store_path=path,
+            records=existing_records,
+            guidance_id=guidance_id,
+        )
+        result = {
             "kind": "agentic-workspace/guidance-lifecycle-result/v1",
             "status": "already-promoted",
             "record": existing,
             "store": _repo_relative(path, root=target_root),
+            "store_location": location,
             "canonical_store_scan": canonical_store_scan,
         }
+        if registry_current and receipt_current:
+            result["custody_verification"] = {
+                "status": "current",
+                "postconditions": ["lifecycle-record-current", "store-owner-registry-current", "promotion-receipt-current"],
+            }
+            return result
+        raw_destination = existing.get("destination")
+        existing_destination = raw_destination if isinstance(raw_destination, dict) else {}
+        owner_admission = _guidance_owner_admission(
+            destination=existing_destination,
+            store_digest=_json_digest(same_store_match[1]),
+            store_path=path,
+            target_root=target_root,
+        )
+        if owner_admission["status"] != "admitted":
+            return {
+                **result,
+                "status": "promotion-custody-repair-required",
+                "owner_admission": owner_admission,
+                "missing_postconditions": [
+                    condition
+                    for condition, current in (
+                        ("store-owner-registry-current", registry_current),
+                        ("promotion-receipt-current", receipt_current),
+                    )
+                    if not current
+                ],
+            }
+        _mutation, receipt_result, receipt_writes = _guidance_mutation_receipt_write_plan(
+            operation="promote-recovery",
+            target_root=target_root,
+            store_path=path,
+            store_pre_digest=_json_digest(same_store_match[1]),
+            records=existing_records,
+            affected_records=[existing],
+            postconditions=[
+                "canonical-store-scan-unique",
+                "store-owner-registry-current",
+                "single-canonical-destination",
+                "active-guidance-created",
+                "promotion-authority-retained",
+                "interrupted-custody-recovered",
+            ],
+            owner_admission=owner_admission,
+        )
+        repaired_result = {
+            **result,
+            "custody_verification": {
+                "status": "recovered",
+                "repaired_postconditions": [
+                    condition
+                    for condition, current in (
+                        ("store-owner-registry-current", registry_current),
+                        ("promotion-receipt-current", receipt_current),
+                    )
+                    if not current
+                ],
+            },
+            "mutation_receipt": receipt_result,
+        }
+        registry_writes = [] if registry_current else [(registry_path, next_owner_registry, owner_registry_digest)]
+        _write_guidance_json_transaction(
+            [*registry_writes, *receipt_writes],
+            journal_root=target_root,
+            recovery_result={"request_identity": request_identity, "result": repaired_result},
+        )
+        return repaired_result
     owner_admission = _guidance_owner_admission(
         destination=destination,
         store_digest=store_digest,
@@ -1976,25 +2332,11 @@ def apply_guidance_promotion(
         "schema_revision": hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest()[:20],
     }
     next_records = [*records, record]
-    registry_path, owner_registry, owner_registry_digest = _guidance_store_owner_registry(target_root)
-    location = _guidance_store_location_identity(path=path, target_root=target_root)
-    registered_stores = [
-        item for item in owner_registry["stores"] if isinstance(item, dict) and str(item.get("store_ref") or "") != location["store_ref"]
-    ]
-    next_owner_registry = {
-        "kind": "agentic-workspace/guidance-store-owner-registry/v1",
-        "stores": [
-            *registered_stores,
-            {
-                "store_ref": location["store_ref"],
-                "absolute": location["absolute"],
-                "scope": location["scope"],
-                "owner": location["owner"],
-                "status": "current",
-                "store_revision": "sha256:" + _json_digest({"records": next_records}),
-            },
-        ],
-    }
+    registry_path, next_owner_registry, owner_registry_digest, location, _registry_current = _guidance_owner_registry_plan(
+        target_root=target_root,
+        store_path=path,
+        records=next_records,
+    )
     mutation, receipt_result, receipt_writes = _guidance_mutation_receipt_write_plan(
         operation="promote",
         target_root=target_root,
@@ -2012,6 +2354,15 @@ def apply_guidance_promotion(
         owner_admission=owner_admission,
     )
     _ = mutation
+    promotion_result = {
+        "kind": "agentic-workspace/guidance-lifecycle-result/v1",
+        "status": "promoted",
+        "record": record,
+        "store": _repo_relative(path, root=target_root),
+        "store_location": location,
+        "canonical_store_scan": canonical_store_scan,
+        "mutation_receipt": receipt_result,
+    }
     _write_guidance_json_transaction(
         [
             (
@@ -2021,17 +2372,11 @@ def apply_guidance_promotion(
             ),
             (registry_path, next_owner_registry, owner_registry_digest),
             *receipt_writes,
-        ]
+        ],
+        journal_root=target_root,
+        recovery_result={"request_identity": request_identity, "result": promotion_result},
     )
-    return {
-        "kind": "agentic-workspace/guidance-lifecycle-result/v1",
-        "status": "promoted",
-        "record": record,
-        "store": _repo_relative(path, root=target_root),
-        "store_location": location,
-        "canonical_store_scan": canonical_store_scan,
-        "mutation_receipt": receipt_result,
-    }
+    return promotion_result
 
 
 def _guidance_int_value(value: Any) -> int | None:
@@ -2148,6 +2493,35 @@ def transition_guidance(
         raise WorkspaceUsageError(f"unsupported guidance lifecycle operation: {operation}")
     if not reason.strip():
         raise WorkspaceUsageError("guidance lifecycle transitions require a reason.")
+    request_identity = _json_digest(
+        {
+            "operation": operation,
+            "guidance_id": guidance_id,
+            "reason": reason,
+            "expected_revision": expected_revision,
+            "expected_record_revisions": expected_record_revisions or {},
+            "replacement_guidance_id": replacement_guidance_id,
+            "instruction": instruction,
+            "merge_guidance_ids": merge_guidance_ids or [],
+            "split_instructions": split_instructions or [],
+        }
+    )
+    recovery = _recover_guidance_json_transaction(journal_root=target_root)
+    if recovery.get("status") == "recovery-conflict":
+        raise WorkspaceUsageError(str(recovery.get("reason") or "guidance transaction recovery requires repair."))
+    raw_recovered_payload = recovery.get("result")
+    recovered_payload: dict[str, Any] = raw_recovered_payload if isinstance(raw_recovered_payload, dict) else {}
+    raw_recovered_result = recovered_payload.get("result")
+    recovered_result: dict[str, Any] = raw_recovered_result if isinstance(raw_recovered_result, dict) else {}
+    if recovered_payload.get("request_identity") == request_identity and recovered_result:
+        return {
+            **recovered_result,
+            "recovery": {
+                "status": "completed-prepared-transaction",
+                "transaction_id": recovery.get("transaction_id", ""),
+                "repaired_paths": recovery.get("repaired_paths", []),
+            },
+        }
     found = _find_guidance_lifecycle_store(target_root, guidance_id)
     if found is None:
         return {"kind": "agentic-workspace/guidance-lifecycle-result/v1", "status": "missing-guidance", "guidance_id": guidance_id}
@@ -2318,6 +2692,7 @@ def transition_guidance(
     postconditions = [
         "revision-guard-satisfied",
         "lineage-preserved",
+        "store-owner-registry-current",
         "no-duplicate-active-authority"
         if operation in {"merge", "split", "supersede", "retire", "delete"}
         else "single-record-postcondition",
@@ -2333,33 +2708,12 @@ def transition_guidance(
         owner_admission=owner_admission,
     )
     _ = mutation
-    registry_path, owner_registry, owner_registry_digest = _guidance_store_owner_registry(target_root)
-    location = _guidance_store_location_identity(path=path, target_root=target_root)
-    registered_stores = [
-        item for item in owner_registry["stores"] if isinstance(item, dict) and str(item.get("store_ref") or "") != location["store_ref"]
-    ]
-    next_owner_registry = {
-        "kind": "agentic-workspace/guidance-store-owner-registry/v1",
-        "stores": [
-            *registered_stores,
-            {
-                "store_ref": location["store_ref"],
-                "absolute": location["absolute"],
-                "scope": location["scope"],
-                "owner": location["owner"],
-                "status": "current",
-                "store_revision": "sha256:" + _json_digest({"records": records}),
-            },
-        ],
-    }
-    _write_guidance_json_transaction(
-        [
-            (path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": records}, store_digest),
-            (registry_path, next_owner_registry, owner_registry_digest),
-            *receipt_writes,
-        ]
+    registry_path, next_owner_registry, owner_registry_digest, location, _registry_current = _guidance_owner_registry_plan(
+        target_root=target_root,
+        store_path=path,
+        records=records,
     )
-    return {
+    transition_result = {
         "kind": "agentic-workspace/guidance-lifecycle-result/v1",
         "status": "transitioned",
         "record": record,
@@ -2368,6 +2722,16 @@ def transition_guidance(
         "store_location": location,
         "mutation_receipt": receipt_result,
     }
+    _write_guidance_json_transaction(
+        [
+            (path, {"kind": "agentic-workspace/guidance-lifecycle-store/v1", "records": records}, store_digest),
+            (registry_path, next_owner_registry, owner_registry_digest),
+            *receipt_writes,
+        ],
+        journal_root=target_root,
+        recovery_result={"request_identity": request_identity, "result": transition_result},
+    )
+    return transition_result
 
 
 def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_root: Path | None) -> dict[str, Any]:
