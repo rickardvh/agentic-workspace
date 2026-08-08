@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
+from agentic_workspace.context_authority_owner_operations import (
+    registered_context_owner_operation_runner,
+    registered_context_owner_receipt_status,
+    registered_context_owner_result_status,
+)
 
 BLOCKER_PRECEDENCE = [
     "missing-authority",
@@ -35,6 +42,27 @@ def _digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
 
 
+def _file_digest(path: Path) -> str:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
+def _directory_digest(path: Path) -> str:
+    if not path.is_dir():
+        return ""
+    entries: list[dict[str, str]] = []
+    try:
+        children = sorted(item for item in path.rglob("*") if item.is_file())
+    except OSError:
+        return ""
+    for child in children[:200]:
+        rel = child.relative_to(path).as_posix()
+        entries.append({"path": rel, "digest": _file_digest(child)})
+    return _digest(entries)
+
+
 def _load_context_authority_registry_contract() -> dict[str, Any]:
     payload = (Path(__file__).resolve().parent / "contracts" / _CONTEXT_AUTHORITY_REGISTRY_RESOURCE).read_text(encoding="utf-8")
     data = json.loads(payload)
@@ -51,6 +79,106 @@ CONTEXT_AUTHORITY_REGISTRY = [
     dict(item) for item in _as_list(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("surfaces")) if isinstance(item, dict)
 ]
 CONTEXT_AUTHORITY_REGISTRY_REVISION = "sha256:" + _digest(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT)
+CONTEXT_AUTHORITY_SOURCE_SPECS: dict[str, dict[str, Any]] = {
+    "system-intent": {
+        "source": "SYSTEM_INTENT.md",
+        "required": ["SYSTEM_INTENT.md"],
+        "routes": ["SYSTEM_INTENT.md"],
+        "source_adapter": "system-intent-source-adapter",
+    },
+    "architecture-principles": {
+        "source": "SYSTEM_INTENT.md",
+        "required": ["SYSTEM_INTENT.md"],
+        "routes": ["SYSTEM_INTENT.md"],
+        "source_adapter": "architecture-principles-source-adapter",
+    },
+    "scoped-instructions": {
+        "source": "AGENTS.md",
+        "required": ["AGENTS.md", ".agentic-workspace/skills/workspace-startup/SKILL.md"],
+        "routes": ["AGENTS.md", ".agentic-workspace/skills/**"],
+        "source_adapter": "scoped-instruction-source-adapter",
+    },
+    "ownership": {
+        "source": ".agentic-workspace/OWNERSHIP.toml",
+        "required": [".agentic-workspace/OWNERSHIP.toml"],
+        "routes": ["*"],
+        "source_adapter": "ownership-source-adapter",
+    },
+    "planning": {
+        "source": ".agentic-workspace/planning/state.toml",
+        "required": [".agentic-workspace/planning/state.toml"],
+        "routes": [".agentic-workspace/planning/**"],
+        "source_adapter": "planning-source-adapter",
+    },
+    "memory": {
+        "source": ".agentic-workspace/memory/repo/index.md",
+        "required": [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/manifest.toml"],
+        "routes": [".agentic-workspace/memory/repo/**"],
+        "source_adapter": "memory-route-source-adapter",
+    },
+    "assignment": {
+        "source": ".agentic-workspace/config.toml",
+        "required": [".agentic-workspace/config.toml"],
+        "routes": ["*"],
+        "source_adapter": "assignment-source-adapter",
+    },
+    "evaluation": {
+        "source": "src/agentic_workspace/evaluation.py",
+        "required": ["src/agentic_workspace/evaluation.py"],
+        "routes": ["src/agentic_workspace/evaluation.py"],
+        "source_adapter": "evaluation-source-adapter",
+    },
+    "proof": {
+        "source": ".agentic-workspace/verification/manifest.toml",
+        "required": [".agentic-workspace/verification/manifest.toml"],
+        "routes": [".agentic-workspace/verification/**", "tests/**"],
+        "source_adapter": "proof-source-adapter",
+    },
+    "mutation-baseline": {
+        "source": ".agentic-workspace/planning/state.toml",
+        "required": [".agentic-workspace/planning/state.toml"],
+        "routes": ["*"],
+        "requires_git_head": True,
+        "source_adapter": "mutation-baseline-source-adapter",
+    },
+    "autopilot-executor": {
+        "source": "src/agentic_workspace/workspace_runtime_primitives.py",
+        "required": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+        "routes": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+        "source_adapter": "autopilot-executor-source-adapter",
+    },
+    "skills": {
+        "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+        "required": [".agentic-workspace/skills/workspace-startup/SKILL.md"],
+        "routes": [".agentic-workspace/skills/**"],
+        "source_adapter": "skill-registry-source-adapter",
+    },
+    "target-guidance": {
+        "source": ".agentic-workspace/config.toml",
+        "required": [".agentic-workspace/config.toml"],
+        "routes": ["*"],
+        "source_adapter": "target-guidance-source-adapter",
+    },
+    "terminal-outcome": {
+        "source": "src/agentic_workspace/workspace_runtime_primitives.py",
+        "required": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+        "routes": ["src/agentic_workspace/workspace_runtime_primitives.py"],
+        "source_adapter": "terminal-outcome-source-adapter",
+    },
+    "generated-references": {
+        "source": "generated/.agentic-workspace-cli-fingerprint.json",
+        "required": ["generated/.agentic-workspace-cli-fingerprint.json", "src/agentic_workspace/contracts/structured_file_inventory.json"],
+        "routes": ["generated/**", "src/agentic_workspace/contracts/**"],
+        "generated_freshness": True,
+        "source_adapter": "generated-reference-source-adapter",
+    },
+}
+
+CONTEXT_AUTHORITY_OWNER_CONTRACTS: dict[str, dict[str, Any]] = {
+    str(item.get("surface") or ""): _as_dict(item.get("source_owner_contract"))
+    for item in CONTEXT_AUTHORITY_REGISTRY
+    if str(item.get("surface") or "") and _as_dict(item.get("source_owner_contract"))
+}
 
 
 def context_authority_declarations() -> list[dict[str, Any]]:
@@ -83,6 +211,365 @@ def _registry_consumers(item: dict[str, Any]) -> list[str]:
         return [str(consumer).strip() for consumer in consumers if str(consumer).strip()]
     consumer = str(item.get("consumer") or "").strip()
     return [part.strip() for part in consumer.split(",") if part.strip()]
+
+
+def _context_source_candidates(surface: str) -> list[str]:
+    spec = CONTEXT_AUTHORITY_SOURCE_SPECS.get(surface, {})
+    return [str(path) for path in _as_list(spec.get("required") or [spec.get("source")]) if str(path)]
+
+
+def _task_terms(task: str) -> set[str]:
+    return {term.strip("#.,:;()[]{}").lower() for term in task.split() if len(term.strip("#.,:;()[]{}")) > 2}
+
+
+def _surface_owner_contract(surface: str) -> dict[str, Any]:
+    return dict(CONTEXT_AUTHORITY_OWNER_CONTRACTS.get(surface, {}))
+
+
+def _path_matches_context_routes(*, path: str, patterns: list[str], surface: str, task_matched: bool) -> bool:
+    normalized = path.replace("\\", "/").strip()
+    for pattern in patterns:
+        if pattern == "*":
+            if surface in {"ownership", "assignment", "mutation-baseline", "target-guidance"} or task_matched:
+                return True
+            continue
+        if fnmatch.fnmatch(normalized, pattern):
+            return True
+    return False
+
+
+def _context_surface_selection(
+    *,
+    surface: str,
+    item: dict[str, Any],
+    spec: dict[str, Any],
+    consumer: str,
+    task: str,
+    paths: list[str],
+) -> dict[str, Any]:
+    owner_contract = _surface_owner_contract(surface)
+    route_patterns = [str(pattern) for pattern in _as_list(spec.get("routes")) if str(pattern)]
+    terms = _task_terms(task)
+    activation_terms = {
+        str(term).lower()
+        for term in [
+            surface,
+            *surface.replace("-", " ").split(),
+            *[str(term) for term in _as_list(owner_contract.get("activation_terms"))],
+        ]
+        if str(term).strip()
+    }
+    task_matched = bool(terms & activation_terms)
+    matched_paths = [
+        path
+        for path in paths
+        if _path_matches_context_routes(path=path, patterns=route_patterns, surface=surface, task_matched=task_matched)
+    ]
+    baseline_for = {str(item) for item in _as_list(owner_contract.get("baseline_for"))}
+    baseline_selected = consumer in baseline_for and not paths
+    applicable = bool(matched_paths or task_matched or baseline_selected)
+    if surface == "memory":
+        applicable = bool(matched_paths or task_matched)
+    return {
+        "applicable": applicable,
+        "selected_required": applicable,
+        "task_matched": task_matched,
+        "matched_paths": sorted(matched_paths),
+        "route_patterns": route_patterns,
+        "activation_terms": sorted(activation_terms),
+        "baseline_selected": baseline_selected,
+    }
+
+
+def _git_head(root: Path) -> str:
+    completed = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=False)
+    return completed.stdout.strip() if completed.returncode == 0 else ""
+
+
+def _context_owner_operation_admission(
+    *,
+    owner_result: dict[str, Any],
+    root: Path | None,
+    surface: str,
+    expected_producer: str,
+    expected_result_kind: str,
+    expected_operation_id: str,
+    expected_source_id: str,
+    expected_source_revision: str,
+) -> tuple[bool, str]:
+    owner_operation = _as_dict(owner_result.get("owner_operation"))
+    receipt = _as_dict(owner_result.get("owner_execution_receipt"))
+    if not owner_operation:
+        return False, "owner-operation-missing"
+    if not receipt:
+        return False, "owner-operation-receipt-missing"
+    if receipt.get("kind") != "agentic-workspace/context-authority-owner-execution-receipt/v1":
+        return False, "owner-operation-receipt-kind-mismatch"
+    if receipt.get("status") != "executed" or receipt.get("current_state") != "current":
+        return False, "owner-operation-receipt-not-current"
+    expected_adapter_id = f"{surface}.owner-result"
+    expectations = {
+        "operation_id": expected_operation_id,
+        "producer": expected_producer,
+        "surface": surface,
+        "source_id": expected_source_id,
+        "source_revision": expected_source_revision,
+        "git_head": owner_result.get("git_head"),
+        "adapter_id": expected_adapter_id,
+    }
+    for key, expected in expectations.items():
+        if owner_operation.get(key) != expected or receipt.get(key) != expected:
+            return False, f"owner-operation-{key.replace('_', '-')}-mismatch"
+    if owner_operation.get("kind") != "agentic-workspace/context-authority-owner-operation/v1":
+        return False, "owner-operation-kind-mismatch"
+    if owner_operation.get("status") != "executed":
+        return False, "owner-operation-status-mismatch"
+    if owner_operation.get("run_id") != receipt.get("run_id"):
+        return False, "owner-operation-run-id-mismatch"
+    if owner_operation.get("receipt_id") != receipt.get("receipt_id"):
+        return False, "owner-operation-receipt-id-mismatch"
+    if owner_operation.get("selection_revision") != receipt.get("selection_revision"):
+        return False, "owner-operation-selection-revision-mismatch"
+    if owner_operation.get("schema_backing_revision") != receipt.get("schema_backing_revision"):
+        return False, "owner-operation-schema-backing-revision-mismatch"
+    if owner_operation.get("adapter_receipt_revision") != receipt.get("adapter_receipt_revision"):
+        return False, "owner-operation-adapter-receipt-revision-mismatch"
+    if owner_operation.get("result_payload_revision") != receipt.get("result_payload_revision"):
+        return False, "owner-operation-result-payload-revision-mismatch"
+    if receipt.get("supersedes"):
+        return False, "owner-operation-receipt-superseded"
+    if (
+        owner_result.get("producer") != expected_producer
+        or owner_result.get("kind") != expected_result_kind
+        or owner_result.get("status") != "current"
+        or owner_result.get("adapter_id") != expected_adapter_id
+    ):
+        return False, "owner-result-identity-mismatch"
+    issued, reason = registered_context_owner_result_status(owner_result)
+    if not issued:
+        return False, reason
+    registered, reason = registered_context_owner_receipt_status(
+        owner_operation=owner_operation,
+        receipt=receipt,
+        result_revision=str(owner_result.get("revision") or ""),
+        root=root,
+    )
+    if not registered:
+        return False, reason
+    return True, ""
+
+
+def _context_owner_result_from_adapter(
+    *,
+    surface: str,
+    item: dict[str, Any],
+    root: Path,
+    chosen: Path,
+    revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    task: str,
+    paths: list[str],
+    source_specific: dict[str, Any],
+) -> dict[str, Any]:
+    runner = registered_context_owner_operation_runner(surface)
+    return runner(
+        owner=item.get("owner"),
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        task=task,
+        paths=paths,
+        source_specific=source_specific,
+    )
+
+
+def _resolve_context_authority_source(
+    *,
+    item: dict[str, Any],
+    target_root: Path | None,
+    consumer: str = "",
+    task: str,
+    paths: list[str],
+) -> dict[str, Any]:
+    surface = str(item.get("surface") or "")
+    spec = CONTEXT_AUTHORITY_SOURCE_SPECS.get(surface, {})
+    selection = _context_surface_selection(surface=surface, item=item, spec=spec, consumer=consumer, task=task, paths=paths)
+    if not selection["applicable"]:
+        return {
+            "status": "not-applicable",
+            "applicable": False,
+            "selected_required": False,
+            "reason": "not-selected-by-task-or-path",
+            "selection": selection,
+        }
+    if target_root is None:
+        return {
+            "status": "missing",
+            "applicable": True,
+            "selected_required": True,
+            "reason": "missing-target-root",
+            "selection": selection,
+        }
+    root = target_root
+    candidates = _context_source_candidates(surface)
+    missing_required = [candidate for candidate in candidates if not (root / candidate).exists()]
+    if missing_required:
+        return {
+            "status": "missing",
+            "applicable": True,
+            "selected_required": True,
+            "reason": "canonical-source-missing",
+            "candidates": candidates,
+            "missing_required": missing_required,
+            "repair_operation_id": str(
+                _surface_owner_contract(surface).get("repair_operation_id") or f"context-authority.{surface}.refresh-source"
+            ),
+            "selection": selection,
+        }
+    chosen = root / str(spec.get("source") or candidates[0])
+    if not chosen.exists():
+        return {
+            "status": "missing",
+            "applicable": True,
+            "selected_required": True,
+            "reason": "canonical-source-missing",
+            "candidates": candidates,
+            "selection": selection,
+        }
+    revision = _directory_digest(chosen) if chosen.is_dir() else _file_digest(chosen)
+    if not revision:
+        return {
+            "status": "stale",
+            "applicable": True,
+            "selected_required": True,
+            "reason": "source-unreadable-or-empty",
+            "source_id": chosen.as_posix(),
+            "selection": selection,
+        }
+    if chosen.is_dir() and not any(path.is_file() for path in chosen.rglob("*")):
+        return {
+            "status": "missing",
+            "applicable": True,
+            "selected_required": True,
+            "reason": "configured-source-empty",
+            "source_id": chosen.relative_to(root).as_posix(),
+            "selection": selection,
+        }
+    git_head = _git_head(root) if spec.get("requires_git_head") else ""
+    if spec.get("requires_git_head") and not git_head:
+        return {
+            "status": "missing",
+            "applicable": True,
+            "selected_required": True,
+            "reason": "git-head-unavailable",
+            "source_id": chosen.relative_to(root).as_posix(),
+            "selection": selection,
+        }
+    source_adapter = str(spec.get("source_adapter") or f"{surface}-source-adapter")
+    owner_contract = _surface_owner_contract(surface)
+    path_tokens = {Path(path).parts[0] for path in paths if Path(path).parts}
+    source_token = chosen.parts[-1] if chosen.parts else chosen.as_posix()
+    source_specific: dict[str, Any] = {}
+    owner_result = _context_owner_result_from_adapter(
+        surface=surface,
+        item=item,
+        root=root,
+        chosen=chosen,
+        revision=revision,
+        git_head=git_head,
+        selection=selection,
+        task=task,
+        paths=paths,
+        source_specific=source_specific,
+    )
+    if owner_result.get("status") != "current":
+        if surface == "memory" and owner_result.get("reason") == "memory-curation-empty":
+            return {
+                "status": "not-applicable",
+                "applicable": False,
+                "selected_required": False,
+                "reason": "no-route-selected-memory",
+                "selection": {**selection, "memory_curation": _as_dict(owner_result.get("memory_curation"))},
+                "owner_result": owner_result,
+            }
+        return {
+            "status": "stale",
+            "applicable": True,
+            "selected_required": True,
+            "reason": str(owner_result.get("reason") or "owner-result-unavailable"),
+            "source_id": chosen.relative_to(root).as_posix(),
+            "selection": selection,
+            "owner_result": owner_result,
+        }
+    freshness_enforcement = {
+        "kind": "agentic-workspace/context-authority-freshness-enforcement/v1",
+        "status": "active",
+        "surface": surface,
+        "source_adapter": source_adapter,
+        "owner_module": str(owner_contract.get("owner_module") or source_adapter),
+        "owner_result_kind": str(owner_contract.get("owner_result_kind") or ""),
+        "freshness": "current",
+        "reject_when": [
+            "source-missing",
+            "source-unreadable",
+            "source-revision-changed",
+            "generated-projection-stale",
+            "registry-revision-mismatch",
+            "producer-mismatch",
+            "owner-result-kind-mismatch",
+        ],
+        "repair_operation_id": str(owner_contract.get("repair_operation_id") or f"context-authority.{surface}.refresh-source"),
+    }
+    owner_admission = {
+        "kind": "agentic-workspace/context-authority-owner-admission/v1",
+        "producer": str(owner_result.get("producer") or owner_contract.get("owner_module") or source_adapter),
+        "result_kind": str(owner_result.get("kind") or owner_contract.get("owner_result_kind") or ""),
+        "surface": surface,
+        "owner": item.get("owner"),
+        "revision": str(owner_result.get("revision") or ""),
+        "status": "admitted",
+        "owner_result_status": str(owner_result.get("status") or ""),
+    }
+    return {
+        "status": "current",
+        "applicable": True,
+        "selected_required": True,
+        "source_adapter": source_adapter,
+        "source_id": chosen.relative_to(root).as_posix() if chosen.is_relative_to(root) else chosen.as_posix(),
+        "revision": "sha256:" + _digest({"source": revision, "git_head": git_head}) if git_head else "sha256:" + revision,
+        "freshness": "current",
+        "selection": {
+            "task_digest": _digest(task)[:16],
+            "changed_path_count": len(paths),
+            "path_tokens": sorted(path_tokens),
+            "matched_paths": selection["matched_paths"],
+            "route_patterns": selection["route_patterns"],
+            "source_token": source_token,
+            "task_matched": selection["task_matched"],
+            "baseline_selected": selection["baseline_selected"],
+            "rule": "source-specific owner adapter resolved current source identity; caller supplied records are diagnostics only",
+            **({"memory_curation": owner_result["memory_curation"]} if surface == "memory" and "memory_curation" in owner_result else {}),
+            **source_specific,
+        },
+        "freshness_enforcement": freshness_enforcement,
+        "admission": {
+            "kind": "agentic-workspace/context-authority-source-receipt/v1",
+            "producer": source_adapter,
+            "owner_admission": owner_admission,
+            "owner_result": owner_result,
+            "registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+            "surface": surface,
+            "owner": item.get("owner"),
+            "source_revision": "sha256:" + revision,
+            "git_head": git_head,
+            "repair_operation_id": str(owner_contract.get("repair_operation_id") or f"context-authority.{surface}.refresh-source"),
+            "source_specific": source_specific,
+            "freshness_enforcement": freshness_enforcement,
+        },
+    }
 
 
 def context_authority_coverage(
@@ -164,6 +651,165 @@ def context_authority_coverage(
         "duplicate_canonical_owners": duplicate_canonical_owners,
         "duplicate_consumer_authorities": duplicate_consumer_authorities,
         "rule": "Operating decisions measure the versioned context-authority registry against ordinary consumers and fail closed on missing owners, duplicate surfaces, missing required sources, or uncovered consumers.",
+    }
+
+
+def resolve_context_authority_projection(
+    *,
+    consumer: str,
+    task: str = "",
+    changed_paths: list[str] | None = None,
+    target_root: Path | None = None,
+    source_records: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Resolve the smallest declared authority set for an ordinary consumer.
+
+    This is deliberately registry-driven: callers receive a revisioned projection
+    and a typed repair disposition instead of reimplementing source selection.
+    """
+    paths = [str(path) for path in (changed_paths or []) if str(path)]
+    caller_records = _as_dict(source_records)
+    coverage = context_authority_coverage()
+    required = set(ORDINARY_DECISION_CONSUMER_REQUIREMENTS.get(consumer, []))
+    selected: list[dict[str, Any]] = []
+    excluded: list[dict[str, Any]] = []
+    for item in CONTEXT_AUTHORITY_REGISTRY:
+        surface = str(item.get("surface") or "")
+        if surface not in required:
+            continue
+        record = _resolve_context_authority_source(item=item, target_root=target_root, consumer=consumer, task=task, paths=paths)
+        caller_record = _as_dict(caller_records.get(surface))
+        record_status = str(record.get("status") or "missing")
+        admission = _as_dict(record.get("admission"))
+        owner_admission = _as_dict(admission.get("owner_admission"))
+        owner_result = _as_dict(admission.get("owner_result"))
+        owner_contract = _surface_owner_contract(surface)
+        expected_producer = str(owner_contract.get("owner_module") or "")
+        expected_result_kind = str(owner_contract.get("owner_result_kind") or "")
+        expected_source_id = str(record.get("source_id") or record.get("source") or "")
+        expected_source_revision = str(admission.get("source_revision") or "")
+        expected_operation_id = str(owner_contract.get("repair_operation_id") or f"context-authority.{surface}.refresh-source")
+        owner_operation_valid, owner_operation_reason = _context_owner_operation_admission(
+            owner_result=owner_result,
+            root=target_root,
+            surface=surface,
+            expected_producer=expected_producer,
+            expected_result_kind=expected_result_kind,
+            expected_operation_id=expected_operation_id,
+            expected_source_id=expected_source_id,
+            expected_source_revision=expected_source_revision,
+        )
+        owner_identity_valid = (
+            owner_admission.get("producer") == expected_producer
+            and owner_admission.get("result_kind") == expected_result_kind
+            and owner_admission.get("revision") == owner_result.get("revision")
+            and owner_operation_valid
+        )
+        applicable = (
+            bool(record)
+            and record.get("applicable") is not False
+            and record.get("selected_required") is not False
+            and record_status == "current"
+            and bool(record.get("source_id") or record.get("source"))
+            and bool(record.get("revision"))
+            and str(record.get("freshness") or "") == "current"
+            and admission.get("registry_revision") == CONTEXT_AUTHORITY_REGISTRY_REVISION
+            and admission.get("surface") == surface
+            and admission.get("owner") == item.get("owner")
+            and admission.get("producer") == record.get("source_adapter")
+            and owner_admission.get("surface") == surface
+            and owner_admission.get("owner") == item.get("owner")
+            and owner_identity_valid
+            and _as_dict(record.get("freshness_enforcement")).get("status") == "active"
+        )
+        authority = {
+            "surface": surface,
+            "owner": str(item.get("owner") or ""),
+            "authority_class": str(item.get("authority_class") or ""),
+            "activation": str(item.get("activation") or ""),
+            "revision_fields": [str(field) for field in _as_list(item.get("revision_fields"))],
+            "disposition": str(item.get("disposition") or ""),
+            "source": {
+                "id": str(record.get("source_id") or record.get("source") or ""),
+                "revision": str(record.get("revision") or ""),
+                "freshness": str(record.get("freshness") or record_status),
+                "selection": _as_dict(record.get("selection")),
+                "admission": admission,
+                "source_adapter": str(record.get("source_adapter") or ""),
+                "freshness_enforcement": _as_dict(record.get("freshness_enforcement")),
+            },
+            "caller_record_status": "ignored" if caller_record else "absent",
+        }
+        if applicable:
+            selected.append(authority)
+        else:
+            excluded.append(
+                {
+                    "surface": surface,
+                    "reason": str(
+                        record.get("reason")
+                        or (owner_operation_reason if record_status == "current" and not owner_identity_valid else record_status)
+                    ),
+                    "selected_required": bool(record.get("selected_required")),
+                    "caller_record_status": authority["caller_record_status"],
+                }
+            )
+    selected_required_missing = {
+        str(item.get("surface") or "") for item in excluded if item.get("selected_required") and str(item.get("surface") or "") in required
+    }
+    missing = sorted(selected_required_missing)
+    status = "admitted" if not missing and coverage["status"] == "measured" else "repair-required"
+    repairs = [
+        {
+            "surface": item["surface"],
+            "owner": item["owner"],
+            "reason_code": next(
+                (
+                    str(excluded_authority.get("reason") or "missing")
+                    for excluded_authority in excluded
+                    if excluded_authority.get("surface") == item["surface"]
+                ),
+                "missing",
+            ),
+            "action": f"context-authority.{item['surface']}.refresh-source",
+            "operation_id": str(
+                _surface_owner_contract(str(item["surface"])).get("repair_operation_id")
+                or f"context-authority.{item['surface']}.refresh-source"
+            ),
+            "repair_owner": str(item.get("owner") or "context-authority-source-adapter"),
+            "required_record": [
+                "canonical repository source",
+                "source-owner admission result",
+                "source-specific schema/population check",
+                "producer-owned admission receipt",
+                "freshness=current",
+            ],
+            "arguments": {"target": ".", "surface": item["surface"], "consumer": consumer, "changed_path_count": len(paths)},
+        }
+        for item in sorted(
+            (item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in missing),
+            key=lambda item: str(item.get("surface") or ""),
+        )
+    ]
+    return {
+        "kind": "agentic-workspace/context-authority-projection/v1",
+        "status": status,
+        "consumer": consumer,
+        "registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+        "task_digest": _digest(task)[:16],
+        "changed_path_count": len(paths),
+        "target_root_status": "present" if target_root is not None else "missing",
+        "authorities": selected,
+        "excluded_authorities": excluded,
+        "missing_required_surfaces": missing,
+        "repair_operation": {
+            "kind": "agentic-workspace/context-authority-repair/v1",
+            "status": "required" if repairs else "not-required",
+            "consumer": consumer,
+            "repairs": repairs,
+            "blocked_claims": ["mutation", "proof-claim", "completion-claim"] if repairs else [],
+        },
+        "repair": ("repair the registry declaration or consumer requirement before mutation" if status == "repair-required" else ""),
     }
 
 
@@ -709,6 +1355,27 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "live_decision_input_revision": invocation_current_revision,
     }
     coverage = context_authority_coverage()
+    requested_consumer = str(inputs.get("consumer") or "operating-decision")
+    context_authority_projection = resolve_context_authority_projection(
+        consumer=requested_consumer,
+        task=str(inputs.get("task") or ""),
+        changed_paths=[str(path) for path in _as_list(inputs.get("changed_paths"))],
+        target_root=Path(str(inputs["target_root"])) if inputs.get("target_root") else None,
+        source_records=_as_dict(inputs.get("authority_sources")) or _as_dict(inputs.get("authorities")),
+    )
+    # Context admission is an authority gate, not advisory route decoration.
+    # A typed action cannot remain actionable when one of its registered
+    # required inputs is absent, stale, ambiguous, or otherwise unadmitted.
+    if context_authority_projection["status"] == "repair-required":
+        status = "blocked"
+        primary_action = {}
+        external_blocker = {
+            "kind": "agentic-workspace/operating-decision-blocker/v1",
+            "reason_code": "context-authority-unavailable",
+            "owner": "context-authority-registry",
+            "repair": "run the typed context-authority repair operation before retrying the decision",
+        }
+        identity_input["blocker"] = external_blocker
     input_revisions = {
         **revisions,
         **(
@@ -729,6 +1396,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "input_revisions": input_revisions,
         "canonical_decision_input_revision": invocation_current_revision,
         "context_authority_coverage": coverage,
+        "context_authority_projection": context_authority_projection,
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),
         "terminal_state": str(inputs.get("terminal_state") or "CONTINUE"),
