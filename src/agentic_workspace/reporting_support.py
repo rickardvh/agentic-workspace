@@ -1536,9 +1536,9 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                             "status",
                             "summary",
                             "current_task_class",
-                            "recommended_next_action",
-                            "safe_route_ids",
-                            "blocked_claims",
+                            "authority",
+                            "decision_fields_removed",
+                            "derive_action_from",
                             "detail_selector",
                             "rule",
                         )

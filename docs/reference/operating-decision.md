@@ -24,6 +24,7 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `selected_owner` | object | no |  | Selected owner identity admitted into the composed decision. |  |  |
 | `terminal_state` | string | no |  | Terminal outcome state used for continuation or finalization claims. |  |  |
 | `primary_action` | object | yes |  | Exactly one typed primary action when status is actionable; empty otherwise. |  |  |
+| `action_identity` | object | no |  | Typed operation identity and live input revision used for execution-safety comparison. |  |  |
 | `external_blocker` | object | yes |  | Exactly one typed blocker when status is blocked; empty otherwise. |  |  |
 | `blocked_claim_classes` | array of string | no |  | Claim classes this decision does not authorize. |  |  |
 | `provenance` | object | no |  | Specialist authority inputs and owners preserved for traceability. |  |  |

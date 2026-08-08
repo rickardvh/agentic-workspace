@@ -1094,7 +1094,19 @@ def test_operating_loop_projection_keeps_unrelated_task_switch_plan_as_residue()
         planning_safety_gate={
             "gate_result": "active-plan-task-switch",
             "workflow_sufficient": True,
-            "task_switch_reconciliation": {"status": "active"},
+            "route_decision": {
+                "kind": "agentic-planning/route-decision/v1",
+                "task_relation": "bounded-independent",
+                "owner_posture": "current",
+                "required_transition": "none",
+                "implementation_allowed": True,
+                "mutation_authority": "none",
+            },
+            "task_switch_reconciliation": {
+                "status": "forged-legacy-status",
+                "recommended_next_action": "silently-abandon-active-plan",
+                "implementation_allowed": False,
+            },
             "active_plan_reliance": {
                 "status": "active-plan-present",
                 "active_execplan": ".agentic-workspace/planning/execplans/current.md",

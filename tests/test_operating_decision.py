@@ -5,6 +5,7 @@ import hashlib
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -45,6 +46,23 @@ def _fixture_source_revision(path: Path) -> str:
             digest.update(b"\0")
         return digest.hexdigest()
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _live_mutation_baseline(*, allowed_paths: list[str] | None = None) -> dict[str, object]:
+    paths = allowed_paths or ["src/app.py"]
+    return {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "status": "clean-scope",
+        "revalidation_status": "current",
+        "baseline_id": "baseline-a",
+        "head": "abc123",
+        "scope": {"allowed_paths": paths, "path_count": len(paths), "comparison": "changed-path-scope"},
+        "observation": {"ok": True},
+        "observed_state": {"entry_count": 0, "enforcement_fingerprint": "fingerprint-a"},
+        "boundary_enforcement": {"status": "fail-closed-contract"},
+        "stale_revalidation": {"status": "required"},
+        "ownership": {"owner": "current-agent-session"},
+    }
 
 
 def test_operating_decision_emits_one_typed_primary_action() -> None:
@@ -552,7 +570,7 @@ def test_admitted_handoff_and_not_required_evaluation_can_reach_actionable_termi
             "target_identity_ref": "target-a",
         },
         "manual_transport": {"status": "disabled", "handoff_admission_status": "admitted"},
-        "mutation_baseline": {"baseline_id": "baseline-a", "revalidation_status": "fresh"},
+        "mutation_baseline": _live_mutation_baseline(),
         "proof": {"proof_subject_fingerprint": "proof-a", "receipt_status": "fresh"},
         "evaluation": {"freshness_status": "not-required", "required": False},
         "executor": {"binding_fingerprint": "executor-a", "availability_status": "available"},
@@ -577,6 +595,86 @@ def test_admitted_handoff_and_not_required_evaluation_can_reach_actionable_termi
     assert decision["status"] == "actionable"
     assert decision["primary_action"]["operation_invocation"]["operation_id"] == "handoff.prepare"
     assert decision["canonical_decision_input_revision"] == bound_invocation["expected_input_revision"]
+
+
+def test_repo_mutation_action_requires_live_mutation_baseline() -> None:
+    invocation = operation_invocation(
+        operation_id="implement.apply",
+        arguments={"target": ".", "changed": ["src/app.py"]},
+        effect_class="repo-mutation",
+        authority_class="mutation-gate",
+        mutation_boundary={"writes_repo_state": True, "allowed_paths": ["src/app.py"]},
+    )
+
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": "unregistered-test-consumer",
+            "actionability": {"next_action": {"action": "implement", "operation_invocation": invocation}},
+            "authorities": {},
+        }
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["primary_action"] == {}
+    assert decision["external_blocker"]["reason_code"] == "stale-mutation-baseline"
+    assert decision["external_blocker"]["repair"] == "resolve and revalidate a live mutation baseline before admitting this typed action"
+
+
+def test_bound_repo_mutation_preserves_typed_action_identity() -> None:
+    authorities = {"mutation_baseline": _live_mutation_baseline()}
+    invocation = operation_invocation(
+        operation_id="implement.apply",
+        arguments={"target": ".", "changed": ["src/app.py"]},
+        effect_class="repo-mutation",
+        authority_class="mutation-gate",
+        mutation_boundary={"writes_repo_state": True, "allowed_paths": ["src/app.py"]},
+    )
+    bound = bind_operation_invocation_to_authorities(invocation=invocation, authorities=authorities)
+
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": "unregistered-test-consumer",
+            "actionability": {"next_action": {"action": "rendered text is not identity", "operation_invocation": bound}},
+            "authorities": authorities,
+        }
+    )
+
+    assert decision["status"] == "actionable"
+    assert decision["primary_action"]["action"] == "rendered text is not identity"
+    assert decision["action_identity"]["operation_invocation"]["operation_id"] == "implement.apply"
+    assert decision["action_identity"]["requested_mutation_boundary"]["allowed_paths"] == ["src/app.py"]
+    assert decision["action_identity"]["expected_input_revision"] == bound["expected_input_revision"]
+
+
+def test_repo_mutation_rejects_planning_derived_placeholder_baseline() -> None:
+    authorities = {
+        "mutation_baseline": {
+            "kind": "agentic-planning/mutation-baseline/v1",
+            "status": "current",
+            "baseline_id": "planning-revision-a",
+            "source": "planning-revision-and-changed-paths",
+            "changed_path_count": 1,
+        }
+    }
+    invocation = operation_invocation(
+        operation_id="implement.apply",
+        arguments={"target": ".", "changed": ["src/app.py"]},
+        effect_class="repo-mutation",
+        authority_class="mutation-gate",
+        mutation_boundary={"writes_repo_state": True, "allowed_paths": ["src/app.py"]},
+    )
+    bound = bind_operation_invocation_to_authorities(invocation=invocation, authorities=authorities)
+
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": "unregistered-test-consumer",
+            "actionability": {"next_action": {"action": "implement", "operation_invocation": bound}},
+            "authorities": authorities,
+        }
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["external_blocker"]["reason_code"] == "stale-mutation-baseline"
 
 
 def test_context_authority_projection_requires_live_records_for_start() -> None:
@@ -1122,7 +1220,6 @@ def test_context_authority_rejects_unknown_planning_and_mutation_statuses(tmp_pa
 
     monkeypatch.setattr("agentic_workspace.workspace_runtime_core._planning_owner_admission_payload", unknown_planning)
     monkeypatch.setattr("agentic_workspace.authority_envelope.mutation_baseline_payload", unknown_baseline)
-    monkeypatch.setattr("agentic_workspace.authority_envelope.mutation_baseline_payload", unknown_baseline)
 
     planning_projection = resolve_context_authority_projection(
         consumer="start",
@@ -1291,6 +1388,60 @@ def test_context_owner_operation_runner_rejects_caller_producer_identity(tmp_pat
                 "owner_boundary": "caller-built generic boundary",
                 "schema_backing": {"source_format": "markdown", "parse_status": "valid"},
             },
+        )
+
+
+def test_mutation_baseline_owner_operation_produces_own_admission(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace.context_authority_owner_operations import registered_context_owner_operation_runner
+
+    _write_context_authority_sources(tmp_path)
+    chosen = tmp_path / "src/agentic_workspace/operating_decision.py"
+    chosen.parent.mkdir(parents=True, exist_ok=True)
+    chosen.write_text("mutation baseline owner source\n", encoding="utf-8")
+    observed_paths: list[str] = []
+
+    def owned_baseline(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+        observed_paths.extend(changed_paths)
+        return {
+            "kind": "agentic-workspace/mutation-baseline/v1",
+            "status": "current",
+            "baseline_id": "baseline-owner-produced",
+            "head": "a" * 40,
+            "scope": {"allowed_paths": changed_paths},
+            "identity": {"fingerprint": "owned"},
+        }
+
+    monkeypatch.setattr("agentic_workspace.authority_envelope.mutation_baseline_payload", owned_baseline)
+    runner = registered_context_owner_operation_runner("mutation-baseline")
+
+    result = runner(
+        owner="mutation authority",
+        root=tmp_path,
+        chosen=chosen,
+        revision=_fixture_source_revision(chosen),
+        git_head="a" * 40,
+        selection={"matched_paths": ["src/app.py"]},
+        paths=["src/app.py"],
+        task="mutation baseline",
+        source_specific={},
+    )
+
+    assert result["status"] == "current"
+    assert observed_paths == ["src/app.py"]
+    admission = result["schema_backing"]["mutation_baseline_admission"]
+    assert admission["baseline_id"] == "baseline-owner-produced"
+
+    with pytest.raises(ValueError, match="derives semantic evidence from its canonical subsystem"):
+        runner(
+            owner="mutation authority",
+            root=tmp_path,
+            chosen=chosen,
+            revision=_fixture_source_revision(chosen),
+            git_head="a" * 40,
+            selection={"matched_paths": ["src/app.py"]},
+            paths=["src/app.py"],
+            task="mutation baseline",
+            source_specific={"mutation_baseline_admission": {"status": "current"}},
         )
 
 

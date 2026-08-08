@@ -433,8 +433,8 @@
     {
       "command": "planning",
       "id": "planning.front-door",
-      "migration_status": "draft-contract-only",
-      "path": "operations/planning.front-door.json"
+      "path": "operations/planning.front-door.json",
+      "migration_status": "runtime-consumed"
     },
     {
       "command": "planning",
