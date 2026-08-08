@@ -761,12 +761,18 @@ def _run_vendor_neutral_consumer_case(
             case=case,
             artifact_registry={},
             target_kind="vendor-neutral",
-            state="skipped",
-            message="operation is not advertised for external consumer invocation",
+            state="unavailable",
+            message="operation is unavailable for external consumer invocation",
         )
     case_input = case.get("input", {})
     if not isinstance(case_input, Mapping) or not isinstance(case_input.get("json"), Mapping):
-        return _result(case=case, artifact_registry={}, target_kind="vendor-neutral", state="skipped", message="no JSON input for packaged consumer")
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="unavailable",
+            message="no operation-shaped JSON input for packaged consumer",
+        )
     json_values = dict(case_input.get("json", {}))
     expected = case.get("expected", {})
     expected_mapping = expected if isinstance(expected, Mapping) else {}
@@ -777,7 +783,7 @@ def _run_vendor_neutral_consumer_case(
             case=case,
             artifact_registry={},
             target_kind="vendor-neutral",
-            state="skipped",
+            state="unavailable",
             message="case is wrapper-only and has no operation-shaped generic client artifact",
         )
     if expected_error is None and (json_values.get("format") not in {None, "json"} or json_values.get("select")):
@@ -785,7 +791,7 @@ def _run_vendor_neutral_consumer_case(
             case=case,
             artifact_registry={},
             target_kind="vendor-neutral",
-            state="skipped",
+            state="unavailable",
             message="case exercises selected/text wrapper projection rather than generic operation JSON",
         )
     process_case = _case_process_fixture(case)

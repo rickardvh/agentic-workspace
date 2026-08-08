@@ -6,6 +6,7 @@ import shlex
 import subprocess
 import tomllib
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Mapping, Sequence, cast
@@ -98,6 +99,21 @@ def _valid_external_receipt_publication(payload: Mapping[str, Any]) -> bool:
     return publication.get("payload_digest") == f"sha256:{payload_digest}"
 
 
+def _external_receipt_time(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed
+
+
 def _external_conformance_receipt(
     *, entry: Mapping[str, Any], profile: Mapping[str, Any], receipt_store: Mapping[str, Any]
 ) -> Mapping[str, Any] | None:
@@ -122,6 +138,9 @@ def _external_conformance_receipt(
         if str(receipt.get("status") or "") in {"revoked", "superseded", "stale"}:
             continue
         if str(receipt.get("revoked_at") or receipt.get("superseded_by") or "").strip():
+            continue
+        expires_at = _external_receipt_time(receipt.get("expires_at"))
+        if expires_at is not None and datetime.now(UTC) >= expires_at:
             continue
         candidates.append(receipt)
     return sorted(candidates, key=lambda item: str(item.get("executed_at") or item.get("receipt_ref") or ""))[-1] if candidates else None

@@ -565,6 +565,41 @@ def test_operation_conformance_runner_reports_typescript_unavailable(monkeypatch
     assert strict["summary"]["fail_count"] == 8
 
 
+def test_vendor_neutral_non_operation_cases_are_unavailable_not_skipped(monkeypatch, tmp_path: Path) -> None:
+    runner = _load_test_ir_runner()
+    monkeypatch.setattr(runner.shutil, "which", lambda _command: "node")
+
+    unadvertised = runner._run_vendor_neutral_consumer_case(
+        case={
+            "id": "defaults.selected-output.success",
+            "operation_ref": {"operation_id": "defaults.report"},
+            "input": {"json": {}},
+            "expected": {"result": {}},
+        },
+        temp_root=tmp_path,
+        client_path=tmp_path / "client.mjs",
+        client_status="prepared",
+        require_node=False,
+    )
+    selected_text = runner._run_vendor_neutral_consumer_case(
+        case={
+            "id": "config.selected-output.success",
+            "operation_ref": {"operation_id": "config.report"},
+            "input": {"json": {"format": "text"}},
+            "expected": {"result": {}},
+        },
+        temp_root=tmp_path,
+        client_path=tmp_path / "client.mjs",
+        client_status="prepared",
+        require_node=False,
+    )
+
+    assert unadvertised["state"] == "unavailable"
+    assert "unavailable for external consumer invocation" in unadvertised["message"]
+    assert selected_text["state"] == "unavailable"
+    assert "selected/text wrapper projection" in selected_text["message"]
+
+
 def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
     runner = _load_test_ir_runner()
 

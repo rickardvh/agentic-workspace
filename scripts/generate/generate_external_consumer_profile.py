@@ -484,6 +484,7 @@ import json
 import shlex
 import subprocess
 import tomllib
+from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Sequence
@@ -518,6 +519,19 @@ def _valid_receipt_publication(payload: dict[str, Any]) -> bool:
     return publication.get("payload_digest") == f"sha256:{digest}"
 
 
+def _receipt_time(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+
 def _conformance_receipt(entry: dict[str, Any], profile: dict[str, Any], receipt_store: dict[str, Any]) -> dict[str, Any] | None:
     operation_fingerprint = entry.get("operation_compatibility", {}).get("fingerprint", "")
     profile_fingerprint = profile.get("compatibility", {}).get("fingerprint", "")
@@ -532,6 +546,8 @@ def _conformance_receipt(entry: dict[str, Any], profile: dict[str, Any], receipt
         if receipt.get("profile_fingerprint") != profile_fingerprint: continue
         if receipt.get("status") in {"revoked", "superseded", "stale"}: continue
         if receipt.get("revoked_at") or receipt.get("superseded_by"): continue
+        expires_at = _receipt_time(receipt.get("expires_at"))
+        if expires_at is not None and datetime.now(UTC) >= expires_at: continue
         candidates.append(receipt)
     return sorted(candidates, key=lambda item: str(item.get("executed_at") or item.get("receipt_ref") or ""))[-1] if candidates else None
 

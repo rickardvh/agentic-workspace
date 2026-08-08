@@ -29,6 +29,11 @@ function validReceiptPublication(payload) {
   const digest = createHash('sha256').update(sortedJson(receiptPublicationPayload(payload))).digest('hex');
   return publication.payload_digest === `sha256:${digest}`;
 }
+function receiptExpired(receipt) {
+  if (!receipt?.expires_at) return false;
+  const expiresAt = Date.parse(receipt.expires_at);
+  return Number.isFinite(expiresAt) && Date.now() >= expiresAt;
+}
 export function externalOperationConformanceReceipts() {
   try {
     const payload = JSON.parse(readFileSync(conformanceReceiptsUrl, 'utf8'));
@@ -47,7 +52,8 @@ function conformanceReceipt(entry, profile, receiptStore) {
       && receipt.profile_fingerprint === profile.compatibility?.fingerprint
       && !['revoked', 'superseded', 'stale'].includes(receipt.status)
       && !receipt.revoked_at
-      && !receipt.superseded_by;
+      && !receipt.superseded_by
+      && !receiptExpired(receipt);
   });
   return candidates.sort((left, right) => String(left.executed_at ?? left.receipt_ref ?? '').localeCompare(String(right.executed_at ?? right.receipt_ref ?? ''))).at(-1);
 }

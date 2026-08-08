@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 import shutil
@@ -133,6 +134,18 @@ def _readiness_conformance_receipt_store(profile: dict, operation: dict, *, stat
     return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": [receipt]}
 
 
+def _published_readiness_receipt_store(store: dict) -> dict:
+    payload = copy.deepcopy(store)
+    publication_payload = {key: value for key, value in payload.items() if key != "mirror_publication"}
+    digest = hashlib.sha256(json.dumps(publication_payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    payload["mirror_publication"] = {
+        "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
+        "status": "published",
+        "payload_digest": f"sha256:{digest}",
+    }
+    return payload
+
+
 def test_external_readiness_report_fails_closed_for_runtime_backed_operations() -> None:
     report = external_readiness_report(["assignment.export", "does.not.exist"])
     assert report["status"] == "not-ready"
@@ -250,14 +263,44 @@ def test_external_readiness_report_rejects_explicitly_revoked_and_superseded_rec
         report = external_readiness_report(["assignment.export"])
         assert report["status"] == "not-ready"
         assert "executed-conformance-receipt" in report["excluded_operations"][0]["missing_evidence"]
-    expired_only = {**base_receipt, "expires_at": "2026-07-26T00:00:00Z"}
+    expired_only = {**base_receipt, "expires_at": "2000-01-01T00:00:00Z"}
     monkeypatch.setattr(
         public_client,
         "external_operation_conformance_receipts",
         lambda: {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": [expired_only]},
     )
     report = external_readiness_report(["assignment.export"])
-    assert report["status"] == "ready"
+    assert report["status"] == "not-ready"
+    assert "executed-conformance-receipt" in report["excluded_operations"][0]["missing_evidence"]
+
+
+def test_generated_clients_reject_expired_conformance_receipts(monkeypatch, tmp_path: Path) -> None:
+    profile = copy.deepcopy(json.loads((ROOT / "generated/workspace/python/external_consumer_profile.json").read_text(encoding="utf-8")))
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"]["status"] = "supported"
+    receipt_store = _published_readiness_receipt_store(_readiness_conformance_receipt_store(profile, candidate))
+    receipt_store["receipts"][0]["expires_at"] = "2000-01-01T00:00:00Z"
+
+    python_client = _python_client()
+    monkeypatch.setattr(python_client, "external_consumer_profile", lambda: profile)
+    monkeypatch.setattr(python_client, "external_operation_conformance_receipts", lambda: receipt_store)
+    python_report = python_client.external_readiness_report(["assignment.export"])
+    assert python_report["status"] == "not-ready"
+    assert "executed-conformance-receipt" in python_report["excluded_operations"][0]["missing_evidence"]
+
+    package_root = tmp_path / "typescript"
+    shutil.copytree(ROOT / "generated/workspace/typescript", package_root)
+    (package_root / "external_consumer_profile.json").write_text(json.dumps(profile), encoding="utf-8")
+    (package_root / "external_operation_conformance_receipts.json").write_text(json.dumps(receipt_store), encoding="utf-8")
+    script = (
+        "import { externalReadinessReport } from './src/client.mjs';"
+        "console.log(JSON.stringify(externalReadinessReport(['assignment.export'])));"
+    )
+    completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=package_root, text=True, capture_output=True)
+    assert completed.returncode == 0, completed.stderr
+    typescript_report = json.loads(completed.stdout)
+    assert typescript_report["status"] == "not-ready"
+    assert "executed-conformance-receipt" in typescript_report["excluded_operations"][0]["missing_evidence"]
 
 
 def _python_client():
