@@ -6,6 +6,7 @@ import shlex
 import subprocess
 import tomllib
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Mapping, Sequence, cast
@@ -13,6 +14,19 @@ from typing import Any, Mapping, Sequence, cast
 from jsonschema import Draft202012Validator
 
 FAILURE_KINDS = {"absent", "disabled", "incompatible", "unsupported", "rejected", "failed", "malformed", "invocation-unavailable"}
+READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
+READINESS_CASES = (
+    "absent",
+    "disabled",
+    "incompatible",
+    "malformed",
+    "retryable",
+    "additive-field",
+    "mutation-applied",
+    "mutation-noop",
+    "mutation-rejected",
+    "mutation-failed",
+)
 
 
 @dataclass
@@ -45,6 +59,215 @@ def _resource(path: str, package_name: str = "agentic-workspace"):
 def external_consumer_profile() -> dict[str, Any]:
     resource = _resource("external_consumer_profile.json")
     return json.loads(resource.read_text(encoding="utf-8"))
+
+
+def external_operation_conformance_receipts() -> dict[str, Any]:
+    try:
+        resource = _resource("external_operation_conformance_receipts.json")
+        if not resource.is_file():
+            raise FileNotFoundError
+        payload = json.loads(resource.read_text(encoding="utf-8"))
+    except (FileNotFoundError, ModuleNotFoundError):
+        return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []}
+    if not isinstance(payload, dict) or payload.get("kind") != "agentic-workspace/external-operation-conformance-receipt-store/v1":
+        return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []}
+    if not _valid_external_receipt_publication(payload):
+        return {
+            "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
+            "receipts": [],
+            "status": "invalid-publication",
+            "rule": "Receipt stores must carry one self-verifiable publication generation.",
+        }
+    return payload
+
+
+def _external_receipt_publication_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): value for key, value in payload.items() if key != "mirror_publication"}
+
+
+def _valid_external_receipt_publication(payload: Mapping[str, Any]) -> bool:
+    publication = payload.get("mirror_publication")
+    if not isinstance(publication, Mapping):
+        return False
+    if publication.get("kind") != "agentic-workspace/external-operation-conformance-mirror-publication/v1":
+        return False
+    if publication.get("status") != "published":
+        return False
+    payload_digest = hashlib.sha256(
+        json.dumps(_external_receipt_publication_payload(payload), sort_keys=True, default=str, separators=(",", ":")).encode()
+    ).hexdigest()
+    return publication.get("payload_digest") == f"sha256:{payload_digest}"
+
+
+def _external_receipt_time(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed
+
+
+def _external_conformance_receipt(
+    *, entry: Mapping[str, Any], profile: Mapping[str, Any], receipt_store: Mapping[str, Any]
+) -> Mapping[str, Any] | None:
+    operation_id = str(entry.get("id") or "")
+    operation_fingerprint = str((entry.get("operation_compatibility") or {}).get("fingerprint") or "")
+    profile_fingerprint = str((profile.get("compatibility") or {}).get("fingerprint") or "")
+    candidates = []
+    for receipt in receipt_store.get("receipts", []):
+        if not isinstance(receipt, Mapping):
+            continue
+        custody = receipt.get("custody") if isinstance(receipt.get("custody"), Mapping) else {}
+        if receipt.get("kind") != "agentic-workspace/external-operation-conformance-receipt/v1":
+            continue
+        if custody.get("producer") != "agentic-workspace.operation-conformance-runner":
+            continue
+        if receipt.get("operation_id") != operation_id:
+            continue
+        if receipt.get("operation_fingerprint") != operation_fingerprint:
+            continue
+        if receipt.get("profile_fingerprint") != profile_fingerprint:
+            continue
+        if str(receipt.get("status") or "") in {"revoked", "superseded", "stale"}:
+            continue
+        if str(receipt.get("revoked_at") or receipt.get("superseded_by") or "").strip():
+            continue
+        expires_at = _external_receipt_time(receipt.get("expires_at"))
+        if expires_at is not None and datetime.now(UTC) >= expires_at:
+            continue
+        candidates.append(receipt)
+    return sorted(candidates, key=lambda item: str(item.get("executed_at") or item.get("receipt_ref") or ""))[-1] if candidates else None
+
+
+def _external_conformance_readiness(
+    entry: Mapping[str, Any], profile: Mapping[str, Any], receipt_store: Mapping[str, Any]
+) -> tuple[list[str], dict[str, Any]]:
+    evidence = _external_conformance_receipt(entry=entry, profile=profile, receipt_store=receipt_store)
+    if not isinstance(evidence, Mapping):
+        return ["executed-conformance-receipt"], {}
+    missing: list[str] = []
+    operation_fingerprint = str((entry.get("operation_compatibility") or {}).get("fingerprint") or "")
+    profile_fingerprint = str((profile.get("compatibility") or {}).get("fingerprint") or "")
+    if evidence.get("status") != "passed":
+        missing.append("executed-conformance-passed")
+    if evidence.get("operation_fingerprint") != operation_fingerprint:
+        missing.append("current-operation-fingerprint")
+    if evidence.get("profile_fingerprint") != profile_fingerprint:
+        missing.append("current-profile-fingerprint")
+    raw_authority = profile.get("readiness_authority")
+    authority: Mapping[str, Any] = raw_authority if isinstance(raw_authority, Mapping) else {}
+    raw_result_identity = evidence.get("result_identity")
+    result_identity: Mapping[str, Any] = raw_result_identity if isinstance(raw_result_identity, Mapping) else {}
+    if result_identity.get("runner_revision") != authority.get("runner_revision"):
+        missing.append("current-runner-revision")
+    if result_identity.get("client_semantics_revision") != authority.get("client_semantics_revision"):
+        missing.append("current-client-semantics-revision")
+    transports = evidence.get("transports")
+    if not isinstance(transports, Mapping):
+        missing.extend(f"transport-{transport}" for transport in READINESS_TRANSPORTS)
+    else:
+        for transport in READINESS_TRANSPORTS:
+            if not isinstance(transports.get(transport), Mapping) or transports[transport].get("status") != "passed":
+                missing.append(f"transport-{transport}")
+    cases = evidence.get("cases")
+    if not isinstance(cases, Mapping):
+        missing.extend(f"case-{case}" for case in READINESS_CASES)
+    else:
+        for case in READINESS_CASES:
+            if not isinstance(cases.get(case), Mapping) or cases[case].get("status") != "passed":
+                missing.append(f"case-{case}")
+    runtime_revision = evidence.get("runtime_exception_revision")
+    runtime_exceptions = (entry.get("external_consumption") or {}).get("runtime_exceptions", [])
+    if runtime_exceptions and not runtime_revision:
+        missing.append("runtime-exception-current-revision")
+    return missing, {
+        "status": evidence.get("status", ""),
+        "operation_fingerprint": evidence.get("operation_fingerprint", ""),
+        "profile_fingerprint": evidence.get("profile_fingerprint", ""),
+        "runner_revision": result_identity.get("runner_revision", ""),
+        "client_semantics_revision": result_identity.get("client_semantics_revision", ""),
+        "runtime_exception_revision": runtime_revision or "",
+        "transports": transports if isinstance(transports, Mapping) else {},
+        "cases": cases if isinstance(cases, Mapping) else {},
+        "receipt_ref": evidence.get("receipt_ref", ""),
+        "producer": (evidence.get("custody") or {}).get("producer", "") if isinstance(evidence.get("custody"), Mapping) else "",
+    }
+
+
+def external_readiness_report(required_operations: Sequence[str], *, allow_runtime_backed: bool = False) -> dict[str, Any]:
+    """Report whether a released operation subset has its declared proof surface.
+
+    This is deliberately readiness evidence, not an assertion that an arbitrary
+    runtime can execute an operation. A profile declaration alone is
+    insufficient: an operation needs released-client resources, schemas,
+    conformance references, and any required runtime-exception disposition.
+    """
+    profile = external_consumer_profile()
+    receipt_store = external_operation_conformance_receipts()
+    entries = {str(entry.get("id")): entry for entry in profile.get("operations", []) if isinstance(entry, dict)}
+    supported: list[str] = []
+    excluded: list[dict[str, Any]] = []
+    for operation_id in required_operations:
+        entry = entries.get(str(operation_id))
+        consumption = (entry or {}).get("external_consumption", {})
+        status = str(consumption.get("status") if isinstance(consumption, Mapping) else "unavailable")
+        resources = (entry or {}).get("operation_resources", {})
+        targets = (entry or {}).get("targets", {})
+        schemas = (entry or {}).get("schemas", {})
+        conformance = (entry or {}).get("conformance", [])
+        missing_evidence: list[str] = []
+        for language in ("python", "typescript"):
+            resource = resources.get(language) if isinstance(resources, Mapping) else None
+            target = targets.get(language) if isinstance(targets, Mapping) else None
+            if not isinstance(resource, Mapping) or not resource.get("exists"):
+                missing_evidence.append(f"released-{language}-resource")
+            if not isinstance(target, Mapping) or target.get("status") not in {"adapter", "mutation-capable-adapter"}:
+                missing_evidence.append(f"released-{language}-adapter")
+        if not isinstance(schemas, Mapping) or not schemas.get("input") or not schemas.get("output"):
+            missing_evidence.append("input-output-schema-coverage")
+        if not isinstance(conformance, list) or not conformance:
+            missing_evidence.append("conformance-reference")
+        conformance_missing, conformance_result = _external_conformance_readiness(entry or {}, profile, receipt_store)
+        missing_evidence.extend(conformance_missing)
+        runtime_exceptions = consumption.get("runtime_exceptions", []) if isinstance(consumption, Mapping) else []
+        if status == "runtime-backed" and not runtime_exceptions:
+            missing_evidence.append("runtime-exception-disposition")
+        evidence = {
+            "resources": {language: resources.get(language, {}) for language in ("python", "typescript")}
+            if isinstance(resources, Mapping)
+            else {},
+            "schemas": schemas if isinstance(schemas, Mapping) else {},
+            "conformance_refs": conformance if isinstance(conformance, list) else [],
+            "conformance_result": conformance_result,
+            "runtime_exceptions": runtime_exceptions if isinstance(runtime_exceptions, list) else [],
+        }
+        allowed_statuses = {"supported"} | ({"runtime-backed"} if allow_runtime_backed else set())
+        if status in allowed_statuses and not missing_evidence:
+            supported.append(str(operation_id))
+        else:
+            excluded.append(
+                {
+                    "id": str(operation_id),
+                    "status": status,
+                    "missing_evidence": missing_evidence,
+                    "evidence": evidence,
+                    "recovery": "negotiate a supported subset; do not reconstruct AW semantics",
+                }
+            )
+    return {
+        "kind": "agentic-workspace/external-readiness-report/v1",
+        "status": "ready" if not excluded else "subset-only" if supported else "not-ready",
+        "supported_operations": supported,
+        "excluded_operations": excluded,
+        "rule": "Ready requires declared support plus released Python/TypeScript resources, schemas, current runner/client-bound executed cross-transport conformance evidence, and any runtime-exception disposition.",
+    }
 
 
 def external_contract_bundle() -> dict[str, Any]:
@@ -181,15 +404,14 @@ def resolve_invocation(target: str | Path, override: Sequence[str] | None = None
 
 
 def require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:
-    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}
-    allowed = {"supported"} | ({"runtime-backed"} if allow_runtime_backed else set())
-    failures = []
-    for operation_id in operation_ids:
-        status = entries.get(operation_id, {}).get("external_consumption", {}).get("status", "unknown")
-        if status not in allowed:
-            failures.append({"operation": operation_id, "status": status})
+    readiness = external_readiness_report(operation_ids, allow_runtime_backed=allow_runtime_backed)
+    failures = readiness["excluded_operations"]
     if failures:
-        raise AWClientError("incompatible", "operation requirements are not satisfied", {"requirements": failures})
+        raise AWClientError(
+            "incompatible",
+            "operation requirements lack current external-readiness evidence",
+            {"requirements": failures, "readiness": readiness},
+        )
 
 
 def _operation_contract(entry: Mapping[str, Any]) -> dict[str, Any]:
@@ -267,7 +489,6 @@ def invoke_operation(
     state = detect_workspace(target)
     if state["status"] != "enabled":
         raise AWClientError(state["status"], "workspace is not available", state)
-    require_operations([operation_id], allow_runtime_backed=allow_runtime_backed)
     entry = next(item for item in external_consumer_profile()["operations"] if item["id"] == operation_id)
     for schema_name in entry["schemas"]["input"]:
         _validate_schema(entry, schema_name, dict(values), phase="input")

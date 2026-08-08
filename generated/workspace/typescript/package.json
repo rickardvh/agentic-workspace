@@ -49,6 +49,7 @@
   },
   "exports": {
     ".": "./src/client.mjs",
+    "./conformance-receipts": "./external_operation_conformance_receipts.json",
     "./contracts": "./external_contract_bundle.json",
     "./profile": "./external_consumer_profile.json"
   },
@@ -56,7 +57,8 @@
     "src",
     "resources",
     "external_consumer_profile.json",
-    "external_contract_bundle.json"
+    "external_contract_bundle.json",
+    "external_operation_conformance_receipts.json"
   ],
   "name": "@agentic-workspace/workspace-cli",
   "private": false,

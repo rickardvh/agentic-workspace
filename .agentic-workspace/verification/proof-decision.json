@@ -1,14 +1,14 @@
 {
   "proof_decision": {
     "selected_decision": "add",
-    "trust_question": "Can Planning advance a finite route only after the exact destination operation executes through the configured adapter and returns a current, non-replayable, postcondition-verified receipt?",
+    "trust_question": "Can every public external client reject declaration-only support and stale runner or client evidence with the same actionable readiness reasons?",
     "host_strategy_source": "docs/maintainer/testing-strategy.md",
-    "proof_owner": "planning-front-door-contract",
-    "proof_intent": "destination-execution-authority",
+    "proof_owner": "conformance-contract",
+    "proof_intent": "target-parity",
     "evidence_durability": "permanent",
-    "narrowest_evidence": "One configured-adapter process fixture plus focused caller-mapping, stale contract/runtime, replay/idempotency, producer, receipt, and live-postcondition rejection cases.",
-    "prune_or_replacement_condition": "Replace only when generated operation conformance executes the same front-door destination bindings and preserves the full negative receipt matrix.",
+    "narrowest_evidence": "Table-driven public Python receipt-state tests, one cross-language reason-parity case, and conformance-runner receipt identity tests.",
+    "prune_or_replacement_condition": "Replace only when the same missing, failed, stale-runner, stale-client, missing-transport, and missing-case behavior is owned by executable cross-transport contract cases.",
     "confidence": "high",
-    "residual_risk": "The bounded route-authority slice does not claim the broader completion of #2277 or #2275; exact-head hosted checks remain the final integration proof after restacking."
+    "residual_risk": "The independent installed-package mutation and removal matrix remains incomplete and is not claimed closed by PR #2431."
   }
 }
