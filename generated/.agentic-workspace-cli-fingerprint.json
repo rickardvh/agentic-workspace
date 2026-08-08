@@ -2077,8 +2077,8 @@
     "src/agentic_workspace/contracts/schemas/final_response_admission_result.schema.json": "700ddc6bd97e6842480d2bf5098ec9b961da271c",
     "src/agentic_workspace/contracts/schemas/generated_behavior_stratification.schema.json": "3ba007bf42e4e586b31c74b96d99aec273077b18",
     "src/agentic_workspace/contracts/schemas/generated_command_check_inventory.schema.json": "951702b3f32d408531a6fbbbbd61206a686ddd29",
-    "src/agentic_workspace/contracts/schemas/guidance_lifecycle_input.schema.json": "626e75d7901775b6ed3a1d4e8b88296af2c4d88d",
-    "src/agentic_workspace/contracts/schemas/guidance_lifecycle_result.schema.json": "4035f014c7f3f2a84a204486fc656f771a409dee",
+    "src/agentic_workspace/contracts/schemas/guidance_lifecycle_input.schema.json": "20e73e8f3db5aa0f6e4d4ed02958da012efa49aa",
+    "src/agentic_workspace/contracts/schemas/guidance_lifecycle_result.schema.json": "6a5d9dae4570c38b1ce639190d70851049a177d2",
     "src/agentic_workspace/contracts/schemas/implementer_context.schema.json": "6e2c55ce796d12771e67f632954d7baf6b230121",
     "src/agentic_workspace/contracts/schemas/improvement_latitude_policy.schema.json": "c02a1e04f8cff2a257ba9d6e3524becaea8799da",
     "src/agentic_workspace/contracts/schemas/improvement_signal_contract.schema.json": "1d74127d384c6a8f0d0811bd2dfd868633968319",
@@ -2201,7 +2201,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "2aa49a57e2426e148c15b2e13038e181632939e9"
   },
-  "git_index_identity": "186d4ce0ec48d44e0385372fe1dbfc3a41203611b1c416ea00361dc64dfa805a",
+  "git_index_identity": "9d346c379f676dd8eea6459cd3842570ffd7a3116a4b6ee3ff14f4129ab5587f",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
