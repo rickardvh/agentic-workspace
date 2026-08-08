@@ -1,32 +1,36 @@
-# Starter Example: Runtime Boundary
-
-This is a starter example for a domain note.
-Replace or delete it once the repository has a real runtime or subsystem note.
+# Workspace Runtime and Generated Surface Boundary
 
 ## Scope
 
-- Shows the intended shape for a small subsystem-orientation note.
+- `src/agentic_workspace/` owns hand-maintained runtime decisions and contracts.
+- `src/agentic_workspace/contracts/command_package_ir.json` owns command-package projection input.
+- `generated/` contains generated Python and TypeScript projections; do not hand-edit it.
 
 ## Boundary
 
-- Local rebuilds update code and assets only; they do not imply a deployment or published artifact.
+- Change a command surface or operation contract at its source, then regenerate the affected package projections.
+- Root runtime code may consume generated contracts, but generated targets must not reconstruct routing or ownership from command strings.
+- Package bootstrap payloads and the root operational install are separate layers; a source edit is not proof that an installed payload changed.
 
 ## Load when
 
-- A task changes runtime behavior, release flow, or deployment-facing tooling.
+- A task touches `src/agentic_workspace/`, command contracts, generated targets, package payloads, or installed-workspace behavior.
 
 ## Review when
 
-- Build, release, or deployment commands change.
+- Runtime ownership, command IR, generation scripts, or source/payload/install boundaries change.
 
 ## Failure signals
 
-- Contributors assume a local rebuild or test pass already updated a deployed artifact.
+- A generated target is edited directly.
+- A command behavior change bypasses its operation/IR source.
+- A source test pass is presented as installed-payload evidence.
 
 ## Verify
 
-- Confirm the canonical deploy or release path in repo docs or scripts before acting.
+- Run the focused generated-command check after projection changes.
+- Use the source-payload-operational-install check when package source, payload, and root install boundaries are involved.
 
 ## Last confirmed
 
-2026-04-15
+2026-07-25

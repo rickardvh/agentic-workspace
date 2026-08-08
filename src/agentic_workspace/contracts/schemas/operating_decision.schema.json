@@ -14,6 +14,7 @@
     "input_revisions": {"type": "object", "description": "Revision or freshness identifiers supplied by specialist authority inputs."},
     "canonical_decision_input_revision": {"type": "string", "description": "Canonical revision of the typed action's current owner, context, authority, proof, mutation, evaluation, and executor inputs."},
     "context_authority_coverage": {"type": "object", "description": "Registry-derived coverage of context authority sources and ordinary consumers considered by the decision compiler."},
+    "context_authority_projection": {"type": "object", "description": "Consumer-specific admitted context authorities and the typed repair operation when any required source is unavailable."},
     "current_work": {"type": "object", "description": "Current-work identity admitted into the composed decision."},
     "selected_owner": {"type": "object", "description": "Selected owner identity admitted into the composed decision."},
     "terminal_state": {"type": "string", "description": "Terminal outcome state used for continuation or finalization claims."},
