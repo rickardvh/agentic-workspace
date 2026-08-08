@@ -7813,10 +7813,24 @@ def test_assignment_admit_accepts_release_pinned_provider_envelope_across_proces
     )
     script = f"""
 import json
+from datetime import datetime, timezone
 from pathlib import Path
-from agentic_workspace.workspace_runtime_proof import admit_independent_review_result_operation
+import agentic_workspace.workspace_runtime_proof as proof_runtime
 
-payload = admit_independent_review_result_operation(
+
+class _ConformanceFixtureTime(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        current = cls(2026, 8, 8, 12, 2, tzinfo=timezone.utc)
+        return current if tz is None else current.astimezone(tz)
+
+
+# This immutable signed vector proves release-pinned provider compatibility.
+# Freeze only this clean subprocess inside the vector's declared validity
+# window; production admission continues to use the real wall clock.
+proof_runtime.datetime = _ConformanceFixtureTime
+
+payload = proof_runtime.admit_independent_review_result_operation(
     target_root=Path({str(tmp_path)!r}),
     values={{
         "host_result_ref": {host_result_ref!r},
