@@ -1,14 +1,14 @@
 {
   "proof_decision": {
     "selected_decision": "add",
-    "trust_question": "Can shared context routing admit current authority only from the registered subsystem owner operation and reject marker-only, stale, forged, or duplicate evidence?",
+    "trust_question": "Can Planning advance a finite route only after the exact destination operation executes through the configured adapter and returns a current, non-replayable, postcondition-verified receipt?",
     "host_strategy_source": "docs/maintainer/testing-strategy.md",
-    "proof_owner": "context-authority-contract",
-    "proof_intent": "negative-authority-boundary",
+    "proof_owner": "planning-front-door-contract",
+    "proof_intent": "destination-execution-authority",
     "evidence_durability": "permanent",
-    "narrowest_evidence": "Focused owner-dispatch, forged-result, canonical-structure, stale-generated, superseded-baseline, and duplicate-owner fixtures in the existing operating-decision suite.",
-    "prune_or_replacement_condition": "Replace only when the context-authority registry generates equivalent per-owner executable conformance cases and negative admission proof.",
+    "narrowest_evidence": "One configured-adapter process fixture plus focused caller-mapping, stale contract/runtime, replay/idempotency, producer, receipt, and live-postcondition rejection cases.",
+    "prune_or_replacement_condition": "Replace only when generated operation conformance executes the same front-door destination bindings and preserves the full negative receipt matrix.",
     "confidence": "high",
-    "residual_risk": "Some owner operations remain adapters over package-private subsystem APIs until those packages expose dedicated public owner-result operations."
+    "residual_risk": "The bounded route-authority slice does not claim the broader completion of #2277 or #2275; exact-head hosted checks remain the final integration proof after restacking."
   }
 }
