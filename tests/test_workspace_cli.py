@@ -7189,49 +7189,49 @@ def test_planning_route_front_door_admits_finite_route_action_matrix() -> None:
             {"task_relation": "bounded-independent", "owner_posture": "current", "route_inputs": {"task_binding": {"mode": "mutation"}}},
             {},
             "refresh-mutation-baseline",
-            "pending-owner-operation",
+            "host-action-required",
         ),
         (
             "completed-residue",
             {"task_relation": "bounded-independent", "owner_posture": "completed-residue"},
             {},
             "archive-or-retire-completed-plan",
-            "pending-owner-operation",
+            "host-action-required",
         ),
         (
             "external-conflict",
             {"task_relation": "continues-selected-owner", "owner_posture": "external-conflict"},
             {},
             "refresh-planning-reconciliation-proposal",
-            "pending-owner-operation",
+            "host-action-required",
         ),
         (
             "projection-drift",
             {"task_relation": "continues-selected-owner", "owner_posture": "projection-drifted"},
             {},
             "repair-planning-projection",
-            "pending-owner-operation",
+            "host-action-required",
         ),
         (
             "proof-incomplete",
             {"task_relation": "continues-selected-owner", "owner_posture": "proof-incomplete"},
             {},
             "complete-selected-proof",
-            "pending-owner-operation",
+            "host-action-required",
         ),
         (
             "promotion",
             {"task_relation": "owner-promotion-required", "owner_posture": "missing"},
             {},
             "promote-or-create-planning-owner",
-            "pending-owner-operation",
+            "host-action-required",
         ),
         (
             "missing-owner",
             {"task_relation": "continues-selected-owner", "owner_posture": "missing"},
             {},
             "select-planning-owner",
-            "pending-owner-operation",
+            "host-action-required",
         ),
         (
             "ambiguous",
@@ -7263,15 +7263,72 @@ def test_planning_route_front_door_admits_finite_route_action_matrix() -> None:
         assert invocation["operation_id"] == "planning.front-door"
         assert invocation["input_identity"]["route_action"] == route_action
         if route_action != "apply-planning-reconciliation-proposal":
-            outcome = _planning_front_door_projection_outcome(route_action, invocation["input_identity"])
+            outcome = _planning_front_door_projection_outcome(
+                route_action,
+                invocation["input_identity"],
+                target_root=Path(".").resolve(),
+                task_text=f"exercise {name}",
+                changed_paths=["src/example.py"],
+            )
             assert outcome["mutation_outcome"] == mutation_outcome
             assert outcome["route_transition"]["route_action"] == route_action
             assert outcome["route_transition"]["status"] != "unsupported-route-action"
-            if mutation_outcome == "pending-owner-operation":
-                assert outcome["typed_owner_operation"]["status"] == "dispatch-required"
-                assert outcome["typed_owner_operation"]["operation_id"]
-                assert outcome["typed_owner_operation"]["idempotency_key"] == invocation["input_identity"]["idempotency_key"]
-                assert outcome["route_transition"]["dispatch_status"] == "dispatch-required"
+            if mutation_outcome == "host-action-required":
+                host_invocation = outcome["host_action_invocation"]
+                assert host_invocation["status"] == "ready"
+                assert host_invocation["operation_id"]
+                assert host_invocation["idempotency_key"] == invocation["input_identity"]["idempotency_key"]
+                assert host_invocation["operation_contract_revision"].startswith("sha256:")
+                assert host_invocation["operation_schema_version"] == "agentic-workspace/operation/v1"
+                assert "command" not in host_invocation
+                assert outcome["route_transition"]["dispatch_status"] == "ready"
+
+
+def test_planning_front_door_rejects_unbound_or_stale_host_action_results() -> None:
+    from agentic_workspace.workspace_runtime_planning import (
+        _planning_front_door_projection_outcome,
+        _planning_route_decision_payload,
+        admit_planning_front_door_host_action_result,
+    )
+
+    decision = _planning_route_decision_payload(
+        {
+            "task_relation": "continues-selected-owner",
+            "owner_posture": "proof-incomplete",
+            "implementation_allowed": False,
+            "route_inputs": {"owner": {"ref": "owner-a", "revision": "owner-rev-a"}},
+        },
+        planning_revision={"revision_id": "planning-a"},
+    )
+    identity = decision["next_safe_action"]["operation_invocation"]["input_identity"]
+    outcome = _planning_front_door_projection_outcome(
+        "complete-selected-proof",
+        identity,
+        target_root=Path(".").resolve(),
+        task_text="complete selected proof",
+        changed_paths=["src/example.py"],
+    )
+    invocation = outcome["host_action_invocation"]
+    valid = {
+        "kind": "agentic-planning/front-door-host-action-result/v1",
+        "status": "passed",
+        "operation_id": invocation["operation_id"],
+        "invocation_revision": invocation["invocation_revision"],
+        "operation_contract_revision": invocation["operation_contract_revision"],
+        "receipt": {"operation_id": invocation["operation_id"], "status": "passed"},
+    }
+
+    assert admit_planning_front_door_host_action_result(invocation=invocation, result=valid)["status"] == "admitted"
+
+    for patch in [
+        {"invocation_revision": "sha256:stale"},
+        {"operation_contract_revision": "sha256:stale"},
+        {"operation_id": "proof.forged"},
+        {"status": "failed"},
+        {"receipt": {}},
+    ]:
+        result = {**valid, **patch}
+        assert admit_planning_front_door_host_action_result(invocation=invocation, result=result)["status"] == "rejected"
 
 
 def test_structured_route_inputs_cover_bounded_work_owner_lifecycle_and_missing_owner(tmp_path: Path) -> None:

@@ -64,6 +64,10 @@ def _stable_revision(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
 
 
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
 def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="reconcile", target_root=target_root)
@@ -1861,53 +1865,140 @@ def _apply_planning_front_door_reconciliation_proposal(
     }
 
 
-def _planning_front_door_projection_outcome(route_action: str, action_identity: Mapping[str, Any]) -> dict[str, Any]:
-    """Return the finite non-mutating outcome for an admitted Planning route action."""
+def _planning_front_door_host_action_invocation(
+    *,
+    target_root: Path,
+    route_action: str,
+    action_identity: Mapping[str, Any],
+    task_text: str,
+    changed_paths: list[str],
+) -> dict[str, Any]:
+    """Compile one host invocation from the versioned front-door operation IR."""
 
-    typed_owner_operations = {
-        "archive-or-retire-completed-plan": {
-            "operation_id": "planning.archive-plan.lifecycle",
-            "adapter_id": "planning.archive-plan.cli",
-            "effect": "archive-or-retire-completed-owner",
-            "command": "agentic-workspace planning archive-plan --target . --format json",
-        },
-        "refresh-mutation-baseline": {
-            "operation_id": "authority-envelope.mutation-baseline.refresh",
-            "adapter_id": "authority-envelope.mutation-baseline",
-            "effect": "refresh-live-mutation-baseline",
-            "command": "agentic-workspace implement --target . --changed <paths> --format json",
-        },
-        "repair-planning-projection": {
-            "operation_id": "planning.front-door-report.report",
-            "adapter_id": "planning.front-door-report.cli",
-            "effect": "refresh-selected-owner-projection",
-            "command": "agentic-workspace planning front-door-report --target . --format json",
-        },
-        "complete-selected-proof": {
-            "operation_id": "proof.report",
-            "adapter_id": "workspace-proof.cli",
-            "effect": "complete-selected-proof-route",
-            "command": "agentic-workspace proof --target . --format json",
-        },
-        "promote-or-create-planning-owner": {
-            "operation_id": "planning.promote-to-plan.lifecycle",
-            "adapter_id": "planning.promote-to-plan.cli",
-            "effect": "promote-or-create-owner",
-            "command": "agentic-workspace planning promote-to-plan --target . --format json",
-        },
-        "select-planning-owner": {
-            "operation_id": "planning.owner-select.lifecycle",
-            "adapter_id": "planning.owner-select.cli",
-            "effect": "select-planning-owner",
-            "command": "agentic-workspace planning owner-select --target . --format json",
-        },
-        "refresh-planning-reconciliation-proposal": {
-            "operation_id": "planning.reconcile.report",
-            "adapter_id": "planning.reconcile.cli",
-            "effect": "refresh-reconciliation-proposal",
-            "command": "agentic-workspace planning reconcile --target . --format json",
-        },
+    front_door_path = target_root / PLANNING_FRONT_DOOR_OPERATION_PATH
+    try:
+        front_door = json.loads(front_door_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "kind": "agentic-planning/front-door-host-action-invocation/v1",
+            "status": "unavailable",
+            "reason": "front-door-operation-contract-unavailable",
+            "error": str(exc),
+        }
+    binding = _as_dict(_as_dict(front_door.get("route_action_bindings")).get(route_action))
+    if not binding:
+        return {}
+    operation_path = str(binding.get("operation_path") or "")
+    destination_path = target_root / operation_path
+    try:
+        destination = json.loads(destination_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "kind": "agentic-planning/front-door-host-action-invocation/v1",
+            "status": "unavailable",
+            "reason": "destination-operation-contract-unavailable",
+            "operation_path": operation_path,
+            "error": str(exc),
+        }
+    route_values = dict(action_identity)
+    runtime_values: dict[str, Any] = {
+        "target": target_root.as_posix(),
+        "task": task_text,
+        "changed_paths": changed_paths,
     }
+    arguments: dict[str, Any] = {}
+    missing_sources: list[str] = []
+    for name, raw_source in _as_dict(binding.get("arguments")).items():
+        source = _as_dict(raw_source)
+        if "literal" in source:
+            arguments[str(name)] = source.get("literal")
+            continue
+        source_ref = str(source.get("from") or "")
+        namespace, _, field = source_ref.partition(".")
+        values = route_values if namespace == "route" else runtime_values if namespace == "runtime" else {}
+        value = values.get(field)
+        if field not in values or value is None or value == "" or value == []:
+            missing_sources.append(source_ref)
+            continue
+        arguments[str(name)] = value
+    declared_inputs = {
+        str(item.get("name") or "")
+        for item in _as_list(destination.get("inputs"))
+        if isinstance(item, dict) and str(item.get("name") or "")
+    }
+    undeclared_arguments = sorted(set(arguments) - declared_inputs)
+    identity = {
+        "route_action": route_action,
+        "front_door_operation_id": str(front_door.get("id") or ""),
+        "front_door_contract_revision": "sha256:" + _stable_revision(front_door),
+        "operation_id": str(destination.get("id") or ""),
+        "operation_path": operation_path,
+        "operation_contract_revision": "sha256:" + _stable_revision(destination),
+        "operation_schema_version": str(destination.get("schema_version") or ""),
+        "arguments": arguments,
+        "route_input_revision": "sha256:" + _stable_revision(dict(action_identity)),
+        "idempotency_key": str(action_identity.get("idempotency_key") or ""),
+        "result_admission": _as_dict(binding.get("result_admission")),
+    }
+    return {
+        "kind": "agentic-planning/front-door-host-action-invocation/v1",
+        "status": "ready" if binding and not missing_sources and not undeclared_arguments else "blocked",
+        **identity,
+        "invocation_revision": "sha256:" + _stable_revision(identity),
+        "missing_argument_sources": missing_sources,
+        "undeclared_arguments": undeclared_arguments,
+        "revalidate_before_execution": [
+            "front_door_contract_revision",
+            "operation_contract_revision",
+            "route_input_revision",
+            "planning_revision",
+            "selected_owner_revision",
+            "mutation_baseline_id",
+        ],
+        "rule": "Execute exactly this versioned operation contract through a supported host adapter, then re-admit its bound result through planning.front-door.",
+    }
+
+
+def admit_planning_front_door_host_action_result(*, invocation: Mapping[str, Any], result: Mapping[str, Any]) -> dict[str, Any]:
+    """Re-admit a destination operation result before route advancement."""
+
+    expected = _as_dict(invocation.get("result_admission"))
+    accepted_statuses = {str(item) for item in _as_list(expected.get("accepted_statuses"))}
+    failures: list[str] = []
+    expectations = {
+        "kind": str(expected.get("kind") or ""),
+        "operation_id": str(invocation.get("operation_id") or ""),
+        "invocation_revision": str(invocation.get("invocation_revision") or ""),
+        "operation_contract_revision": str(invocation.get("operation_contract_revision") or ""),
+    }
+    for field, value in expectations.items():
+        if str(result.get(field) or "") != value:
+            failures.append(field)
+    if str(result.get("status") or "") not in accepted_statuses:
+        failures.append("status")
+    receipt = _as_dict(result.get("receipt"))
+    if not receipt or receipt.get("operation_id") != expectations["operation_id"]:
+        failures.append("receipt")
+    return {
+        "kind": "agentic-planning/front-door-host-action-admission/v1",
+        "status": "admitted" if not failures else "rejected",
+        "operation_id": expectations["operation_id"],
+        "invocation_revision": expectations["invocation_revision"],
+        "result_status": str(result.get("status") or ""),
+        "failures": failures,
+        "receipt": receipt if not failures else {},
+    }
+
+
+def _planning_front_door_projection_outcome(
+    route_action: str,
+    action_identity: Mapping[str, Any],
+    *,
+    target_root: Path,
+    task_text: str,
+    changed_paths: list[str],
+) -> dict[str, Any]:
+    """Return the finite non-mutating outcome for an admitted Planning route action."""
     projection_outcomes = {
         "refresh-planning-route-decision": ("no-op", "blocked", "refresh-route-decision", "route-authority-incomplete"),
         "continue-active-plan": ("no-op", "available-after-proof", "continue-selected-owner", "selected-owner-continuation"),
@@ -1915,33 +2006,33 @@ def _planning_front_door_projection_outcome(route_action: str, action_identity: 
         "inspect-current-task-scope": ("no-op", "blocked", "inspect-current-task-scope", "current-task-scope-unresolved"),
         "choose-task-switch-route": ("blocked", "blocked", "explicit-route-choice-required", "ambiguous-active-plan-route"),
         "archive-or-retire-completed-plan": (
-            "pending-owner-operation",
+            "host-action-required",
             "blocked",
             "archive-or-retire-through-planning",
             "completed-active-plan-residue",
         ),
         "refresh-mutation-baseline": (
-            "pending-owner-operation",
+            "host-action-required",
             "blocked",
             "refresh-mutation-baseline",
             "mutation-baseline-required",
         ),
         "repair-planning-projection": (
-            "pending-owner-operation",
+            "host-action-required",
             "blocked",
             "repair-selected-owner-projection",
             "projection-repair-required",
         ),
-        "complete-selected-proof": ("pending-owner-operation", "blocked", "complete-selected-proof", "proof-incomplete"),
+        "complete-selected-proof": ("host-action-required", "blocked", "complete-selected-proof", "proof-incomplete"),
         "promote-or-create-planning-owner": (
-            "pending-owner-operation",
+            "host-action-required",
             "blocked",
             "promote-or-create-owner",
             "owner-promotion-required",
         ),
-        "select-planning-owner": ("pending-owner-operation", "blocked", "select-owner", "owner-selection-required"),
+        "select-planning-owner": ("host-action-required", "blocked", "select-owner", "owner-selection-required"),
         "refresh-planning-reconciliation-proposal": (
-            "pending-owner-operation",
+            "host-action-required",
             "blocked",
             "refresh-reconciliation-proposal",
             "fresh-reconciliation-proposal-required",
@@ -1950,43 +2041,25 @@ def _planning_front_door_projection_outcome(route_action: str, action_identity: 
     mutation_outcome, claim_outcome, transition_outcome, reason = projection_outcomes.get(
         route_action, ("rejected", "blocked", "unsupported-route-action", "unsupported-route-action")
     )
-    owner_operation_spec = _as_dict(typed_owner_operations.get(route_action))
-    typed_owner_operation = (
-        {
-            "kind": "agentic-planning/front-door-typed-owner-operation/v1",
-            "status": "dispatch-required",
-            **owner_operation_spec,
-            "route_action": route_action,
-            "expected_transition": str(_as_dict(action_identity).get("expected_transition") or ""),
-            "planning_revision": str(_as_dict(action_identity).get("planning_revision") or ""),
-            "selected_owner_ref": str(_as_dict(action_identity).get("selected_owner_ref") or ""),
-            "selected_owner_revision": str(_as_dict(action_identity).get("selected_owner_revision") or ""),
-            "mutation_baseline_id": str(_as_dict(action_identity).get("mutation_baseline_id") or ""),
-            "reconciliation_proposal_revision": str(_as_dict(action_identity).get("reconciliation_proposal_revision") or ""),
-            "idempotency_key": str(_as_dict(action_identity).get("idempotency_key") or ""),
-            "revalidate_before_dispatch": [
-                "planning_revision",
-                "selected_owner_revision",
-                "selected_owner_lifecycle",
-                "selected_owner_projection_status",
-                "task_binding_identity",
-                "mutation_baseline_id",
-                "mutation_scope_digest",
-                "reconciliation_proposal_revision",
-            ],
-        }
-        if owner_operation_spec
-        else {}
+    host_action_invocation = _planning_front_door_host_action_invocation(
+        target_root=target_root,
+        route_action=route_action,
+        action_identity=action_identity,
+        task_text=task_text,
+        changed_paths=changed_paths,
     )
+    if mutation_outcome == "host-action-required" and host_action_invocation.get("status") != "ready":
+        mutation_outcome = "blocked"
     return {
         "mutation_outcome": mutation_outcome,
         "claim_outcome": claim_outcome,
-        "typed_owner_operation": typed_owner_operation,
+        "typed_owner_operation": host_action_invocation,
+        "host_action_invocation": host_action_invocation,
         "route_transition": {
             "kind": "agentic-planning/front-door-route-transition/v1",
             "status": transition_outcome,
             "route_action": route_action,
-            "dispatch_status": str(typed_owner_operation.get("status") or "not-required"),
+            "dispatch_status": str(host_action_invocation.get("status") or "not-required"),
             "expected_transition": str(_as_dict(action_identity).get("expected_transition") or ""),
             "state_update_policy": str(_as_dict(action_identity).get("state_update_policy") or ""),
             "implementation_allowed": bool(_as_dict(action_identity).get("implementation_allowed") is True),
@@ -2043,7 +2116,40 @@ def execute_planning_front_door_route_action(values: Mapping[str, Any]) -> dict[
         )
         outcome = str(action_result.get("mutation_outcome") or "blocked")
     elif admitted:
-        action_result = _planning_front_door_projection_outcome(route_action, action_identity)
+        action_result = _planning_front_door_projection_outcome(
+            route_action,
+            action_identity,
+            target_root=target_root,
+            task_text=task_text,
+            changed_paths=changed_paths,
+        )
+        host_result = _as_dict(values.get("host_action_result"))
+        host_invocation = _as_dict(action_result.get("host_action_invocation"))
+        if host_result:
+            host_admission = admit_planning_front_door_host_action_result(
+                invocation=host_invocation,
+                result=host_result,
+            )
+            action_result["host_action_admission"] = host_admission
+            if host_admission.get("status") == "admitted":
+                admitted_status = str(host_admission.get("result_status") or "")
+                action_result["mutation_outcome"] = (
+                    "applied"
+                    if admitted_status == "applied"
+                    else "no-op"
+                    if admitted_status in {"already-applied", "no-op"}
+                    else "reported"
+                )
+                action_result["claim_outcome"] = "available-after-proof"
+                action_result["mutation_receipt"] = _as_dict(host_admission.get("receipt"))
+                action_result["route_transition"] = {
+                    **_as_dict(action_result.get("route_transition")),
+                    "dispatch_status": "result-admitted",
+                    "status": "owner-operation-result-admitted",
+                }
+            else:
+                action_result["mutation_outcome"] = "rejected"
+                action_result["claim_outcome"] = "blocked"
         outcome = str(action_result.get("mutation_outcome") or "blocked")
     else:
         outcome = "rejected"
@@ -2067,6 +2173,8 @@ def execute_planning_front_door_route_action(values: Mapping[str, Any]) -> dict[
         **({"mutation_receipt": action_result["mutation_receipt"]} if "mutation_receipt" in action_result else {}),
         **({"reconciliation_apply": action_result["reconciliation_apply"]} if "reconciliation_apply" in action_result else {}),
         **({"route_transition": action_result["route_transition"]} if "route_transition" in action_result else {}),
+        **({"host_action_invocation": action_result["host_action_invocation"]} if "host_action_invocation" in action_result else {}),
+        **({"host_action_admission": action_result["host_action_admission"]} if "host_action_admission" in action_result else {}),
         "rule": "planning.front-door recomputes and admits the live route decision before any Planning transition, mutation, proof, or claim effect.",
     }
 
