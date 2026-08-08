@@ -17,6 +17,7 @@ import shlex
 import subprocess
 import tomllib
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping
@@ -155,26 +156,47 @@ INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-revie
 INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
-INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS = {
-    "github-review-adapter:host-v1": {
-        "algorithm": "RS256",
-        "issuer": "github-review-webhook",
-        "producer": "github-review-adapter",
-        "trusted_channel": "github-review-webhook",
-        "n": (
-            "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
-            "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
-            "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
-            "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
-            "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
-            "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
-        ),
-        "e": 65537,
-        "status": "current",
-    }
-}
+INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS: dict[str, dict[str, Any]] = {}
 
 IndependentReviewHostResultResolver = Callable[[str], dict[str, Any]]
+_INDEPENDENT_REVIEW_HOST_RUNTIME_KEYS: ContextVar[dict[str, dict[str, Any]] | None] = ContextVar(
+    "agentic_workspace_independent_review_host_runtime_keys",
+    default=None,
+)
+
+
+@contextmanager
+def independent_review_host_runtime_trust_registry(
+    keys: Mapping[str, Mapping[str, Any]],
+) -> Any:
+    """Install a host-runtime-owned independent-review trust registry for this execution context.
+
+    This is intentionally not wired to CLI arguments, target-local files,
+    ``PYTHONPATH``, environment variables, or user-home state. Host/adapter code
+    can execute AW inside this context after resolving current provider-owned
+    trust roots. Target code can still author local result cache files, but those
+    files are non-authoritative unless this registry admits their signed host
+    envelope at import and proof-use time.
+    """
+
+    normalized: dict[str, dict[str, Any]] = {}
+    for key_id, raw_key in keys.items():
+        key = dict(raw_key)
+        key.setdefault("key_id", str(key_id))
+        key.setdefault("authority", "host-runtime-trust-registry")
+        normalized[str(key_id)] = key
+    token = _INDEPENDENT_REVIEW_HOST_RUNTIME_KEYS.set(normalized)
+    try:
+        yield
+    finally:
+        _INDEPENDENT_REVIEW_HOST_RUNTIME_KEYS.reset(token)
+
+
+def _current_independent_review_host_public_keys() -> dict[str, dict[str, Any]]:
+    runtime_keys = _INDEPENDENT_REVIEW_HOST_RUNTIME_KEYS.get()
+    if runtime_keys is not None:
+        return runtime_keys
+    return {key_id: dict(key) for key_id, key in INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS.items()}
 
 
 def _proof_lifecycle_command(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -6805,14 +6827,31 @@ def _signed_independent_review_host_verdict(*, host_result_ref: str, host_result
         return {}
     if not key_id:
         return {}
-    key = _as_dict(INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS.get(key_id))
+    key = _as_dict(_current_independent_review_host_public_keys().get(key_id))
     if not key or key.get("status") != "current":
         return {}
     if key.get("algorithm") != "RS256":
         return {}
+    if str(key.get("authority") or "host-runtime-trust-registry") not in {
+        "host-runtime-trust-registry",
+        "pinned-host-runtime",
+    }:
+        return {}
     if str(key.get("producer") or "") != str(_as_dict(host_result.get("custody")).get("producer") or ""):
         return {}
     if str(key.get("trusted_channel") or "") != str(_as_dict(host_result.get("custody")).get("trusted_channel") or ""):
+        return {}
+    expected_workspace_ref = f"workspace:path:{target_root.resolve()}"
+    if str(key.get("workspace_ref") or expected_workspace_ref) != expected_workspace_ref:
+        return {}
+    not_before = _parse_review_time(key.get("not_before"))
+    key_expires_at = _parse_review_time(key.get("expires_at"))
+    now = datetime.now(timezone.utc)
+    if not_before and now < not_before:
+        return {}
+    if key_expires_at and now >= key_expires_at:
+        return {}
+    if str(key.get("revoked_at") or key.get("superseded_by") or "").strip():
         return {}
     if not _rsa_sha256_signature_valid(signature_b64=str(admission.get("signature") or ""), payload=signed_payload, key=key):
         return {}
@@ -6842,6 +6881,7 @@ def _signed_independent_review_host_verdict(*, host_result_ref: str, host_result
         "expires_at": str(signed_payload.get("expires_at") or ""),
         "revoked_at": str(signed_payload.get("revoked_at") or ""),
         "superseded_by": str(signed_payload.get("superseded_by") or ""),
+        "registry_authority": str(key.get("authority") or "host-runtime-trust-registry"),
         **expected_payload,
     }
 
@@ -7144,6 +7184,12 @@ def _load_trusted_independent_review_result(*, target_root: Path, result_ref: st
     custody = _as_dict(result.get("custody"))
     if custody.get("producer") in {"", None, "caller", "implementer", "agent-implementer"}:
         raise WorkspaceUsageError("independent review result lacks producer-owned custody.")
+    host_result_ref = str(custody.get("host_result_ref") or result.get("host_result_ref") or "").strip()
+    if host_result_ref:
+        current_host = _load_independent_review_host_result(target_root=target_root, host_result_ref=host_result_ref)
+        current_digest = str(current_host.get("host_result_digest") or "")
+        if current_digest and str(custody.get("host_result_digest") or "") != current_digest:
+            raise WorkspaceUsageError("independent review host result changed after trusted import.")
     result.setdefault("result_ref", ref.replace("\\", "/"))
     return result
 
@@ -7429,6 +7475,21 @@ def _load_admitted_independent_review_receipt(
             continue
         if expected_scope_digest and str(payload.get("scope_digest") or "").strip() != expected_scope_digest:
             continue
+        review_result_payload = _as_dict(payload.get("review_result"))
+        review_result_ref = str(review_result_payload.get("result_ref") or "").strip()
+        if review_result_ref:
+            try:
+                current_result = _load_trusted_independent_review_result(target_root=target_root, result_ref=review_result_ref)
+            except WorkspaceUsageError:
+                continue
+            if _independent_review_result_failures(
+                result=current_result,
+                required_mode=required_mode,
+                changed_paths=changed_paths,
+            ):
+                continue
+            if review_result_payload.get("digest") != _stable_review_json_digest(dict(current_result)):
+                continue
         implementer = _as_dict(payload.get("implementer"))
         reviewer = _as_dict(payload.get("reviewer"))
         if not implementer.get("actor_id") or not reviewer.get("actor_id"):

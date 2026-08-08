@@ -1,11 +1,22 @@
 from __future__ import annotations
 
 import sys
+from contextlib import contextmanager
 
 # ruff: noqa: F403,F405
 from tests.workspace_cli_support import *
 
 ROOT = Path(__file__).resolve().parents[1]
+_INDEPENDENT_REVIEW_HOST_FIXTURE_KEYS: dict[str, dict[str, object]] = {}
+
+
+@contextmanager
+def _host_runtime_for_review_ref(host_result_ref: str):
+    from agentic_workspace.workspace_runtime_proof import independent_review_host_runtime_trust_registry
+
+    key = _INDEPENDENT_REVIEW_HOST_FIXTURE_KEYS[host_result_ref]
+    with independent_review_host_runtime_trust_registry({str(key["key_id"]): key}):
+        yield
 
 
 def _independent_review_host_signature(payload: dict[str, object]) -> dict[str, object]:
@@ -199,20 +210,7 @@ def _write_independent_review_host_result(
         "authority": "host-adapter-owned",
     }
     if install_host_admission:
-        import agentic_workspace.workspace_runtime_proof as proof_runtime
-
-        trusted_keys = {
-            **proof_runtime.INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS,  # type: ignore[attr-defined]
-            key_id: key,
-        }
-        if host_admission_monkeypatch is None:
-            proof_runtime.INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS = trusted_keys  # type: ignore[attr-defined]
-        else:
-            host_admission_monkeypatch.setattr(
-                proof_runtime,
-                "INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS",
-                trusted_keys,
-            )
+        _INDEPENDENT_REVIEW_HOST_FIXTURE_KEYS[host_result_ref] = key
     if caller_env_admission_keys:
         import os
 
@@ -7670,44 +7668,45 @@ certification_limits = ["does not certify production authorization safety"]
         review_result,
         host_admission_monkeypatch=monkeypatch,
     )
-    trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
-    inline = admit_independent_review_result_operation(
-        target_root=tmp_path,
-        values={"review_result": review_result, "required_mode": "human", "changed": ["services/auth/policy.py"]},
-    )
-    assert inline["status"] == "rejected"
-    assert inline["failures"][0]["reason"] == "caller-authored-review-result-rejected"
-    receipt = admit_independent_review_result_operation(
-        target_root=tmp_path,
-        values={"review_result_ref": trusted["result_ref"], "required_mode": "human", "changed": ["services/auth/policy.py"]},
-    )
-    assert receipt["status"] == "admitted"
-
-    assert (
-        cli.main(
-            [
-                "proof",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "services/auth/policy.py",
-                "--select",
-                "proof_decision",
-                "--format",
-                "json",
-            ]
+    with _host_runtime_for_review_ref(host_result_ref):
+        trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
+        inline = admit_independent_review_result_operation(
+            target_root=tmp_path,
+            values={"review_result": review_result, "required_mode": "human", "changed": ["services/auth/policy.py"]},
         )
-        == 0
-    )
+        assert inline["status"] == "rejected"
+        assert inline["failures"][0]["reason"] == "caller-authored-review-result-rejected"
+        receipt = admit_independent_review_result_operation(
+            target_root=tmp_path,
+            values={"review_result_ref": trusted["result_ref"], "required_mode": "human", "changed": ["services/auth/policy.py"]},
+        )
+        assert receipt["status"] == "admitted"
 
-    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
-    assert packet["separation_of_duty"]["status"] == "satisfied"
-    assert packet["separation_of_duty"]["authority"] == "repo-local-admitted-independent-review-receipt"
-    assert packet["separation_of_duty"]["receipt"]["source_path"] == ".agentic-workspace/local/independent-review-receipts.json"
-    assert packet["separation_of_duty"]["receipt"]["receipt_ref"] == receipt["receipt_ref"]
-    assert receipt["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
-    assert "high-assurance review separation is required" not in packet["missing_or_unresolved"]["blockers"]
-    assert "high-assurance closeout posture evidence is missing" in packet["missing_or_unresolved"]["blockers"]
+        assert (
+            cli.main(
+                [
+                    "proof",
+                    "--target",
+                    str(tmp_path),
+                    "--changed",
+                    "services/auth/policy.py",
+                    "--select",
+                    "proof_decision",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+
+        packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+        assert packet["separation_of_duty"]["status"] == "satisfied"
+        assert packet["separation_of_duty"]["authority"] == "repo-local-admitted-independent-review-receipt"
+        assert packet["separation_of_duty"]["receipt"]["source_path"] == ".agentic-workspace/local/independent-review-receipts.json"
+        assert packet["separation_of_duty"]["receipt"]["receipt_ref"] == receipt["receipt_ref"]
+        assert receipt["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
+        assert "high-assurance review separation is required" not in packet["missing_or_unresolved"]["blockers"]
+        assert "high-assurance closeout posture evidence is missing" in packet["missing_or_unresolved"]["blockers"]
 
 
 def test_assignment_admit_accepts_preinstalled_host_capability_ref(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -7739,14 +7738,15 @@ def test_assignment_admit_accepts_preinstalled_host_capability_ref(tmp_path: Pat
     )
     assert isinstance(host_result_ref, str)
 
-    receipt = admit_independent_review_result_operation(
-        target_root=tmp_path,
-        values={
-            "host_result_ref": host_result_ref,
-            "required_mode": "human",
-            "changed": ["services/auth/policy.py"],
-        },
-    )
+    with _host_runtime_for_review_ref(host_result_ref):
+        receipt = admit_independent_review_result_operation(
+            target_root=tmp_path,
+            values={
+                "host_result_ref": host_result_ref,
+                "required_mode": "human",
+                "changed": ["services/auth/policy.py"],
+            },
+        )
 
     assert receipt["status"] == "admitted"
     assert receipt["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
@@ -7785,21 +7785,31 @@ def test_assignment_admit_accepts_pinned_signed_host_evidence_across_process(tmp
     )
     assert isinstance(host_inputs, dict)
     host_result_ref = str(host_inputs["host_result_ref"])
+    script = f"""
+import json
+from pathlib import Path
+from agentic_workspace.workspace_runtime_proof import (
+    admit_independent_review_result_operation,
+    independent_review_host_runtime_trust_registry,
+)
+
+host_public_key = json.loads({json.dumps(json.dumps(host_inputs["host_public_key"], sort_keys=True))})
+with independent_review_host_runtime_trust_registry({{host_public_key["key_id"]: host_public_key}}):
+    payload = admit_independent_review_result_operation(
+        target_root=Path({str(tmp_path)!r}),
+        values={{
+            "host_result_ref": {host_result_ref!r},
+            "required_mode": "human",
+            "changed": ["services/auth/policy.py"],
+        }},
+    )
+print(json.dumps(payload, sort_keys=True))
+"""
     completed = subprocess.run(
         [
             sys.executable,
             "-c",
-            (
-                "import json; "
-                "from pathlib import Path; "
-                "import agentic_workspace.workspace_runtime_proof as proof_runtime; "
-                f"host_public_key = json.loads({json.dumps(host_inputs['host_public_key'], sort_keys=True)!r}); "
-                f"proof_runtime.INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS[{str(host_inputs['host_public_key']['key_id'])!r}] = host_public_key; "
-                "from agentic_workspace.workspace_runtime_proof import admit_independent_review_result_operation; "
-                f"payload = admit_independent_review_result_operation(target_root=Path({str(tmp_path)!r}), "
-                f"values={{'host_result_ref': {host_result_ref!r}, 'required_mode': 'human', 'changed': ['services/auth/policy.py']}}); "
-                "print(json.dumps(payload, sort_keys=True))"
-            ),
+            script,
         ],
         capture_output=True,
         cwd=ROOT,
@@ -8172,13 +8182,113 @@ claim_boundary = "critical-access-closeout"
         review_result,
         host_admission_monkeypatch=monkeypatch,
     )
-    trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
-    admission = admit_independent_review_result_operation(
-        target_root=tmp_path,
-        values={"review_result_ref": trusted["result_ref"], "required_mode": "human", "changed": ["services/auth/policy.py"]},
-    )
+    with _host_runtime_for_review_ref(host_result_ref):
+        trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
+        admission = admit_independent_review_result_operation(
+            target_root=tmp_path,
+            values={"review_result_ref": trusted["result_ref"], "required_mode": "human", "changed": ["services/auth/policy.py"]},
+        )
     assert admission["status"] == "rejected"
     assert admission["failures"][0]["reason"] == "review-result-expired"
+
+
+def test_high_assurance_closeout_revalidates_admitted_receipt_against_current_host_result(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    from agentic_workspace.workspace_runtime_proof import (
+        INDEPENDENT_REVIEW_HOST_RESULT_DIR,
+        WorkspaceUsageError,
+        _independent_review_scope_digest,
+        _stable_review_json_digest,
+        admit_independent_review_result_operation,
+        record_trusted_independent_review_result,
+    )
+
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.closeout_postures.critical_access]
+purpose = "Critical access changes need explicit closeout evidence."
+applies_to_paths = ["services/auth/**"]
+required_evidence = ["domain_review_recorded"]
+review_owner = "security"
+claim_boundary = "critical-access-closeout"
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "human",
+        "assignment_id": "critical-access-review",
+        "assignment_revision": "assignment-rev-1",
+        "proof_subject_revision": "proof-subject-rev-1",
+        "review_revision": "review-rev-1",
+        "reviewed_at": "2026-07-26T13:22:00Z",
+        "changed_paths": ["services/auth/policy.py"],
+        "scope_digest": _independent_review_scope_digest(["services/auth/policy.py"]),
+        "implementer": {"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
+        "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+        "custody": {
+            "producer": "github-review-adapter",
+            "authority_ref": "SECURITY.md#critical-access",
+            "source_ref": "pull-request-review:1",
+        },
+    }
+    host_result_ref = _write_independent_review_host_result(
+        tmp_path,
+        review_result,
+        host_admission_monkeypatch=monkeypatch,
+    )
+    with _host_runtime_for_review_ref(host_result_ref):
+        trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
+        receipt = admit_independent_review_result_operation(
+            target_root=tmp_path,
+            values={"review_result_ref": trusted["result_ref"], "required_mode": "human", "changed": ["services/auth/policy.py"]},
+        )
+    assert receipt["status"] == "admitted"
+
+    host_id = host_result_ref.removeprefix("independent-review-host-result:")
+    host_root = tmp_path / INDEPENDENT_REVIEW_HOST_RESULT_DIR
+    host_path = host_root / f"{host_id}.json"
+    host_result = json.loads(host_path.read_text(encoding="utf-8"))
+    host_result["status"] = "superseded"
+    host_result["superseded_by"] = "independent-review-host-result:replacement"
+    _write(host_path, json.dumps(host_result, indent=2, sort_keys=True) + "\n")
+    index_path = host_root / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    index["results"][host_id]["host_result_digest"] = _stable_review_json_digest(host_result)
+    _write(index_path, json.dumps(index, indent=2, sort_keys=True) + "\n")
+
+    with _host_runtime_for_review_ref(host_result_ref):
+        with pytest.raises(WorkspaceUsageError, match="not current"):
+            record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
+        assert (
+            cli.main(
+                [
+                    "proof",
+                    "--target",
+                    str(tmp_path),
+                    "--changed",
+                    "services/auth/policy.py",
+                    "--select",
+                    "proof_decision",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
+    assert packet["separation_of_duty"]["status"] == "required"
+    assert "high-assurance review separation is required" in packet["missing_or_unresolved"]["blockers"]
 
 
 def test_assignment_admit_exposes_independent_review_admission_contract() -> None:
