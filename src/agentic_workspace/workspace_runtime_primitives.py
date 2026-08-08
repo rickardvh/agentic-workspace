@@ -49397,11 +49397,23 @@ def _record_delegation_outcome(
         "records": [_record_payload(existing) for existing in retained_after_cap],
     }
     config_lib.write_delegation_outcomes(path=path, payload=updated_payload)
+    shared_observation = {
+        "kind": "agentic-workspace/evaluation-observation-projection/v1",
+        "status": "projection-only",
+        "subject": {"kind": "delegation-target", "id": normalized_target},
+        "criterion": "delegation-outcome",
+        "scope": {"task_class": normalized_task, "scope_class": normalized_scope},
+        "authority": normalized_authority,
+        "evidence_ref": normalized_source_ref,
+        "specialist_record_id": record_id,
+        "rule": "Delegation remains the owner of target-tuning fields; this projection exposes universal evaluation lifecycle facts without creating a second evidence store.",
+    }
     return {
         "kind": DELEGATION_OUTCOMES_KIND,
         "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
         "recorded": updated_payload["records"][-1],
         "record_count": len(updated_payload["records"]),
+        "shared_evaluation_observation": shared_observation,
         "rule": (
             "local-only delegation outcome evidence; public input cannot mint aw-proof or human-review authority; "
             "trusted producer receipts admit routable proof/review evidence"

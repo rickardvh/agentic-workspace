@@ -65,6 +65,16 @@ CORRECTION_OPERATION_IDS = (
     "correction-event.submit",
     "correction-event.withdraw-supersede",
 )
+EVALUATION_OPERATION_IDS = (
+    "evaluation.report-preview",
+    "evaluation.local-delivery",
+    "evaluation.external-request",
+    "evaluation.external-host-result-import",
+    "evaluation.external-adapter-receipt",
+    "evaluation.external-delivery",
+    "evaluation.delivery-status",
+    "evaluation.retry",
+)
 GUIDANCE_OPERATION_IDS = (
     "agent-guidance.delete",
     "agent-guidance.edit",
@@ -80,7 +90,12 @@ GUIDANCE_OPERATION_IDS = (
 OPERATION_RESOURCE_OUTPUTS = {
     REPO_ROOT / f"generated/workspace/python/operations/{operation_id}.json": REPO_ROOT
     / f"src/agentic_workspace/contracts/operations/{operation_id}.json"
-    for operation_id in (*ASSIGNMENT_OPERATION_IDS, *CORRECTION_OPERATION_IDS, *GUIDANCE_OPERATION_IDS)
+    for operation_id in (
+        *ASSIGNMENT_OPERATION_IDS,
+        *CORRECTION_OPERATION_IDS,
+        *EVALUATION_OPERATION_IDS,
+        *GUIDANCE_OPERATION_IDS,
+    )
 }
 SCHEMA_RESOURCE_OUTPUTS = {
     REPO_ROOT / "generated/workspace/python/_contracts/operation_failure.schema.json": REPO_ROOT
@@ -115,6 +130,22 @@ SCHEMA_RESOURCE_OUTPUTS = {
     / "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/config_report_result.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/config_report_result.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/evaluation_observation_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_observation_input.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/evaluation_observe_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_observe_result.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/evaluation_observation_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_observation_input.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/evaluation_observe_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_observe_result.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/evaluation_report_delivery_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_input.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/evaluation_report_delivery_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_result.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/evaluation_report_delivery_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_input.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/evaluation_report_delivery_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_result.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/delegation_outcome_append_input.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/delegation_outcome_append_input.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/delegation_outcome_append_result.schema.json": REPO_ROOT
@@ -227,19 +258,34 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
                 if not isinstance(ref, dict) or not ref.get("id") or not ref.get("path"):
                     continue
                 effects = command.get("effect_hints", {})
-                schemas = command.get("schemas", {"input": [], "output": []})
-                schema_refs = [
-                    str(value)
-                    for values in schemas.values()
-                    for value in values
-                    if isinstance(schemas, dict) and isinstance(values, list) and isinstance(value, str)
-                ]
                 conformance = [value for value in command.get("conformance_refs", []) if isinstance(value, str)]
                 contract_path = f"{package.get('operation_contract_root')}/{ref['path']}"
                 contract_exists = repo_root is None or (repo_root / contract_path).is_file()
                 contract_payload = (
                     json.loads((repo_root / contract_path).read_text(encoding="utf-8")) if repo_root is not None and contract_exists else {}
                 )
+                declared_schemas = command.get("schemas", {"input": [], "output": []})
+                schemas = {
+                    "input": list(declared_schemas.get("input", [])) if isinstance(declared_schemas, dict) else [],
+                    "output": list(declared_schemas.get("output", [])) if isinstance(declared_schemas, dict) else [],
+                }
+                contract_input_refs = [
+                    Path(str(item.get("schema_ref"))).name
+                    for item in contract_payload.get("inputs", [])
+                    if isinstance(item, dict) and item.get("schema_ref")
+                ]
+                contract_output_ref = (
+                    str(contract_payload.get("output", {}).get("schema_ref", ""))
+                    if isinstance(contract_payload.get("output"), dict)
+                    else ""
+                )
+                if contract_input_refs:
+                    schemas["input"] = sorted(set(contract_input_refs))
+                if contract_output_ref:
+                    schemas["output"] = [Path(contract_output_ref).name]
+                schema_refs = [
+                    str(value) for values in schemas.values() for value in values if isinstance(values, list) and isinstance(value, str)
+                ]
                 contract_fingerprint = hashlib.sha256(
                     json.dumps(contract_payload, sort_keys=True, separators=(",", ":")).encode()
                 ).hexdigest()

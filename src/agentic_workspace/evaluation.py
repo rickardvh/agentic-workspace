@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import ast
+import base64
 import hashlib
+import hmac
 import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Callable, Mapping
 
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, mutation_baseline_payload
 from agentic_workspace.config import WorkspaceUsageError
@@ -17,13 +20,52 @@ EVALUATION_OBSERVATION_KIND = "agentic-workspace/evaluation-observation/v1"
 EVALUATION_CLOSURE_AUTHORITY_KIND = "agentic-workspace/evaluation-closure-authority/v1"
 WORKSPACE_EVALUATIONS_PATH = Path(".agentic-workspace/evaluations.json")
 WORKSPACE_LOCAL_EVALUATIONS_DIR = Path(".agentic-workspace/local/evaluations")
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-host-results"
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-host-result-admissions"
+EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-adapter-receipts"
+EXTERNAL_EVALUATION_PROVIDER_RESULT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-provider-results"
+EXTERNAL_EVALUATION_PROVIDER_RESULT_INBOX_DIR = EXTERNAL_EVALUATION_PROVIDER_RESULT_DIR / "inbox"
+EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "external-provider-trust-roots"
+EVALUATION_PENDING_COLLECTIONS_DIR = WORKSPACE_LOCAL_EVALUATIONS_DIR / "pending-collections"
 ASSIGNMENT_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/planning/assignment-receipts")
 PROOF_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/proof/receipts")
 EVALUATION_FINDING_FOLLOWUPS_PATH = Path(".agentic-workspace/planning/evaluation-finding-followups.json")
 EVALUATION_OWNER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-owner-receipt-index/v1"
+EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-external-delivery-adapter-receipt-index/v1"
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND = "agentic-workspace/evaluation-external-delivery-adapter-host-result-index/v1"
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND = (
+    "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-index/v1"
+)
+EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_INDEX_KIND = "agentic-workspace/evaluation-external-provider-trust-root-index/v1"
+EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE = "agentic-workspace.evaluation-external-delivery"
 EVALUATION_FINDING_FOLLOWUPS_KIND = "agentic-workspace/evaluation-finding-followups/v1"
 OBSERVATION_RETENTION_CAP = 100
 OBSERVATION_BYTE_CAP = 256_000
+
+ExternalEvaluationProviderResultResolver = Callable[[str], dict[str, Any]]
+_RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
+_PINNED_EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS = MappingProxyType(
+    {
+        "evaluation-provider-adapter:host-v1": MappingProxyType(
+            {
+                "algorithm": "RS256",
+                "issuer": "evaluation-provider-adapter",
+                "trusted_channel": "provider-webhook",
+                "n": (
+                    "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
+                    "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
+                    "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
+                    "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
+                    "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
+                    "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
+                ),
+                "e": "010001",
+                "status": "current",
+                "key_revision": "host-v1",
+            }
+        )
+    }
+)
 
 EVALUATION_LIFECYCLES = (
     "collecting",
@@ -128,6 +170,26 @@ def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
+def _external_evaluation_provider_result_inbox_path(target_root: Path, provider_result_ref: str) -> Path:
+    result_id = provider_result_ref.removeprefix("external-evaluation-provider-result:")
+    return target_root / EXTERNAL_EVALUATION_PROVIDER_RESULT_INBOX_DIR / f"{result_id}.json"
+
+
+def _load_external_evaluation_provider_result_from_inbox(*, target_root: Path, provider_result_ref: str) -> dict[str, Any]:
+    path = _external_evaluation_provider_result_inbox_path(target_root, provider_result_ref)
+    try:
+        result = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("external evaluation signed provider result inbox is missing or unreadable.") from exc
+    if not isinstance(result, dict):
+        raise WorkspaceUsageError("external evaluation signed provider result inbox entry has the wrong contract.")
+    return json.loads(json.dumps(result, sort_keys=True, default=str))
+
+
+def _stable_json_digest(payload: dict[str, Any]) -> str:
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
+
+
 def _load_json(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
     if not path.exists():
         return default
@@ -150,6 +212,51 @@ def _atomic_write_text(path: Path, text: str) -> None:
     tmp_path = path.with_suffix(path.suffix + ".tmp")
     tmp_path.write_text(text, encoding="utf-8", newline="\n")
     tmp_path.replace(path)
+
+
+def _json_file_revision(path: Path) -> str:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return "missing"
+
+
+def _transactional_json_writes(
+    writes: list[tuple[Path, dict[str, Any]]],
+    *,
+    expected_revisions: dict[Path, str] | None = None,
+) -> dict[Path, str]:
+    backups: dict[Path, bytes | None] = {}
+    written: list[Path] = []
+    tmp_paths: list[Path] = []
+    expected = {path.resolve(): revision for path, revision in (expected_revisions or {}).items()}
+    try:
+        for path, expected_revision in expected.items():
+            if _json_file_revision(path) != expected_revision:
+                raise WorkspaceUsageError("external evaluation provider result index changed before import commit.")
+        for path, payload in writes:
+            resolved = path.resolve()
+            if resolved not in backups:
+                backups[resolved] = resolved.read_bytes() if resolved.exists() else None
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = resolved.with_suffix(resolved.suffix + ".tmp")
+            tmp_paths.append(tmp_path)
+            tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+            if resolved in expected and _json_file_revision(resolved) != expected[resolved]:
+                raise WorkspaceUsageError("external evaluation provider result index changed before import commit.")
+            tmp_path.replace(resolved)
+            written.append(resolved)
+    except Exception:
+        for path in reversed(written):
+            backup = backups.get(path)
+            if backup is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.write_bytes(backup)
+        for tmp_path in tmp_paths:
+            tmp_path.unlink(missing_ok=True)
+        raise
+    return {path.resolve(): _json_file_revision(path.resolve()) for path, _payload in writes}
 
 
 class _LocalFileLock:
@@ -381,6 +488,652 @@ def _write_indexed_owner_receipt(
     }
     _write_json(index_path, {"kind": EVALUATION_OWNER_RECEIPT_INDEX_KIND, "receipts": receipts})
     return f"aw://{store_root.as_posix()}/{safe_id}"
+
+
+def _local_receipt_path(*, target_root: Path, store_root: Path, receipt_ref: str, field: str) -> Path:
+    text = str(receipt_ref or "").strip()
+    if not text:
+        raise WorkspaceUsageError(f"{field} is required.")
+    if "://" in text:
+        raise WorkspaceUsageError(f"{field} must be a repo-relative local receipt path.")
+    candidate = Path(text)
+    if candidate.is_absolute():
+        raise WorkspaceUsageError(f"{field} must be repo-relative.")
+    root = (target_root / store_root).resolve()
+    resolved = (target_root / candidate).resolve()
+    if not resolved.is_relative_to(root):
+        raise WorkspaceUsageError(f"{field} must resolve inside {store_root.as_posix()}.")
+    return resolved
+
+
+def _load_external_delivery_adapter_receipt(*, target_root: Path, receipt_ref: str) -> dict[str, Any]:
+    path = _local_receipt_path(
+        target_root=target_root,
+        store_root=EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR,
+        receipt_ref=receipt_ref,
+        field="adapter_receipt_ref",
+    )
+    raw_bytes = path.read_bytes()
+    receipt = _load_json(path, default={})
+    receipt_id = str(receipt.get("receipt_id") or path.stem).strip()
+    index_path = (target_root / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR / "index.json").resolve()
+    index = _load_json(index_path, default={})
+    entries = index.get("receipts") if index.get("kind") == EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND else {}
+    entry = entries.get(receipt_id) if isinstance(entries, dict) else None
+    if not isinstance(entry, dict):
+        raise WorkspaceUsageError("external evaluation adapter receipt is not registered in the provider-owned receipt index.")
+    indexed_path = ((target_root / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR).resolve() / str(entry.get("path") or "")).resolve()
+    if indexed_path != path.resolve():
+        raise WorkspaceUsageError("external evaluation adapter receipt index path does not match the resolved receipt.")
+    if str(entry.get("status") or receipt.get("status") or "") not in {"current", "fresh", "accepted", "delivered", "failed"}:
+        raise WorkspaceUsageError("external evaluation adapter receipt index entry is not current.")
+    if entry.get("superseded_by") or entry.get("revoked_at") or receipt.get("superseded_by") or receipt.get("revoked_at"):
+        raise WorkspaceUsageError("external evaluation adapter receipt is superseded or revoked.")
+    if str(entry.get("producer") or receipt.get("producer") or "").strip() != str(receipt.get("producer") or "").strip():
+        raise WorkspaceUsageError("external evaluation adapter receipt producer does not match the provider-owned index.")
+    if str(entry.get("receipt_revision") or "") and str(entry.get("receipt_revision")) != str(receipt.get("receipt_revision") or ""):
+        raise WorkspaceUsageError("external evaluation adapter receipt revision does not match the provider-owned index.")
+    if str(entry.get("capability_revision") or "") and str(entry.get("capability_revision")) != str(
+        receipt.get("capability_revision") or ""
+    ):
+        raise WorkspaceUsageError("external evaluation adapter capability revision does not match the provider-owned index.")
+    receipt.setdefault("source_ref", path.relative_to(target_root).as_posix())
+    receipt["_source_ref"] = path.relative_to(target_root).as_posix()
+    receipt["_source_digest"] = hashlib.sha256(raw_bytes).hexdigest()
+    receipt["_index_ref"] = index_path.relative_to(target_root).as_posix()
+    return receipt
+
+
+def record_external_evaluation_adapter_host_result(
+    *,
+    target_root: Path,
+    provider_result_ref: str = "",
+    expected_result_digest: str = "",
+    delivery_id: str = "",
+    sink_id: str = "",
+    producer: str = "",
+    attempt_revision: str = "",
+    receipt_revision: str = "",
+    capability_revision: str = "",
+    status: str = "",
+    detail: str = "",
+    capability_status: str = "current",
+    status_owner: str = "provider-adapter",
+    supersedes: str = "",
+    request_revision: str = "",
+    trusted_channel: str = "external-evaluation-adapter-host",
+    provider_result_resolver: ExternalEvaluationProviderResultResolver | None = None,
+) -> dict[str, Any]:
+    _ = (delivery_id, sink_id, producer, attempt_revision, receipt_revision, status, detail, capability_status, status_owner)
+    _ = (supersedes, request_revision, trusted_channel)
+    ref = str(provider_result_ref or "").strip()
+    if not ref:
+        raise WorkspaceUsageError(
+            "external evaluation adapter host results are provider-owned evidence and cannot be minted by AW; "
+            "import by passing an opaque provider_result_ref."
+        )
+    if not ref.startswith("external-evaluation-provider-result:") or "/" in ref or "\\" in ref:
+        raise WorkspaceUsageError("provider_result_ref must be an opaque external-evaluation-provider-result reference.")
+    if provider_result_resolver is not None:
+        raise WorkspaceUsageError(
+            "caller-provided external evaluation provider result resolvers are rejected; import a signed provider result envelope."
+        )
+    provider_result_id = ref.removeprefix("external-evaluation-provider-result:")
+    result = _load_external_evaluation_provider_result_from_inbox(target_root=target_root, provider_result_ref=ref)
+    if not isinstance(result, dict):
+        raise WorkspaceUsageError("provider_result_ref resolver did not return a provider result object.")
+    raw = json.dumps(result, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
+    raw_digest = hashlib.sha256(raw).hexdigest()
+    stored_result_digest = hashlib.sha256((json.dumps(result, indent=2, sort_keys=True) + "\n").encode("utf-8")).hexdigest()
+    expected_digest = str(expected_result_digest or "").removeprefix("sha256:").strip()
+    if expected_digest and expected_digest != raw_digest:
+        raise WorkspaceUsageError("provider result digest does not match expected_result_digest.")
+    if result.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1":
+        raise WorkspaceUsageError("provider result has the wrong contract.")
+    if result.get("status") != "current":
+        raise WorkspaceUsageError("provider result is not current.")
+    custody_raw = result.get("custody")
+    custody: dict[str, Any] = custody_raw if isinstance(custody_raw, dict) else {}
+    if custody.get("producer") in {"", "evaluation.external-adapter-host-result", "caller", "agentic-workspace"}:
+        raise WorkspaceUsageError("provider result is not producer-owned.")
+    if custody.get("trusted_channel") not in {"provider-webhook", "external-operation-adapter", "delivery-provider-receipt"}:
+        raise WorkspaceUsageError("provider result does not come from an admitted provider channel.")
+    result_id = _require_non_empty(result.get("result_id"), "provider_result.result_id")
+    if provider_result_id != result_id:
+        raise WorkspaceUsageError("provider_result_ref does not match provider_result.result_id.")
+    result_ref = f"external-evaluation-adapter-host-result:{result_id}"
+    if result.get("result_ref") != result_ref:
+        raise WorkspaceUsageError("provider result identity does not match its import reference.")
+    if capability_revision and str(result.get("capability_revision") or "") != str(capability_revision):
+        raise WorkspaceUsageError("provider result capability_revision does not match the expected revision.")
+    if str(result.get("capability_status") or "current") not in {"current", "fresh", "accepted"}:
+        raise WorkspaceUsageError("provider result capability is not current.")
+    if result.get("superseded_by") or result.get("revoked_at"):
+        raise WorkspaceUsageError("provider result is superseded or revoked.")
+    if not _host_admits_external_delivery_adapter_host_result(result_ref, result, target_root=target_root):
+        raise WorkspaceUsageError("provider result was not admitted by the host boundary.")
+
+    host_admission_ref = _require_non_empty(result.get("host_admission_ref"), "provider_result.host_admission_ref")
+    if not host_admission_ref.startswith("external-evaluation-adapter-host-result-admission:"):
+        raise WorkspaceUsageError("provider result host_admission_ref is invalid.")
+    admission_id = host_admission_ref.removeprefix("external-evaluation-adapter-host-result-admission:")
+    admission_raw = result.get("host_admission")
+    if not isinstance(admission_raw, dict):
+        raise WorkspaceUsageError("provider result host_admission is required.")
+    admission_record = {
+        **admission_raw,
+        "admission_ref": host_admission_ref,
+        "result_ref": result_ref,
+        "result_digest": stored_result_digest,
+        "provider_result_ref": ref,
+        "imported_at": _now(),
+    }
+    host_root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR
+    admission_root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR
+    host_path = host_root / f"{result_id}.json"
+    host_index_path = host_root / "index.json"
+    admission_path = admission_root / f"{admission_id}.json"
+    admission_index_path = admission_root / "index.json"
+    lock_path = target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / ".external-host-result-import.lock"
+    with _LocalFileLock(lock_path):
+        result_index_revision = _json_file_revision(host_index_path)
+        admission_index_revision = _json_file_revision(admission_index_path)
+        host_index = _load_json(host_index_path, default={"kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND, "results": {}})
+        if host_index.get("kind") != EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND:
+            raise WorkspaceUsageError("external adapter host result index has the wrong contract.")
+        admission_index = _load_json(
+            admission_index_path,
+            default={"kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND, "admissions": {}},
+        )
+        if admission_index.get("kind") != EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND:
+            raise WorkspaceUsageError("external adapter host result admission index has the wrong contract.")
+        results_raw = host_index.get("results")
+        results: dict[str, Any] = dict(results_raw) if isinstance(results_raw, dict) else {}
+        admissions_raw = admission_index.get("admissions")
+        admissions: dict[str, Any] = dict(admissions_raw) if isinstance(admissions_raw, dict) else {}
+        existing_entry = results.get(result_id) if isinstance(results.get(result_id), dict) else None
+        if existing_entry:
+            existing_path = (host_root / str(existing_entry.get("path") or "")).resolve()
+            if existing_path != host_path.resolve():
+                raise WorkspaceUsageError("existing provider result index path conflicts with this import.")
+            if existing_entry.get("result_digest") != stored_result_digest:
+                raise WorkspaceUsageError("existing provider result index digest conflicts with this import.")
+        writes: list[tuple[Path, dict[str, Any]]] = []
+        if not host_path.exists():
+            writes.append((host_path, result))
+        elif hashlib.sha256(host_path.read_bytes()).hexdigest() != stored_result_digest:
+            raise WorkspaceUsageError("existing provider result file conflicts with this import.")
+        if not admission_path.exists():
+            admission_digest = hashlib.sha256(json.dumps(admission_record, indent=2, sort_keys=True).encode("utf-8") + b"\n").hexdigest()
+            writes.append((admission_path, admission_record))
+        else:
+            existing_admission = _load_json(admission_path, default={})
+            if existing_admission.get("result_digest") != stored_result_digest or existing_admission.get("result_ref") != result_ref:
+                raise WorkspaceUsageError("existing provider admission file conflicts with this import.")
+            admission_digest = hashlib.sha256(admission_path.read_bytes()).hexdigest()
+        results[result_id] = {
+            "path": host_path.relative_to(host_root).as_posix(),
+            "status": "current",
+            "producer": result["producer"],
+            "receipt_revision": result["receipt_revision"],
+            "capability_revision": result["capability_revision"],
+            "capability_status": result.get("capability_status") or "current",
+            "delivery_id": result["delivery_id"],
+            "sink_id": result["sink_id"],
+            "attempt_revision": result["attempt_revision"],
+            "provider_result_ref": ref,
+            "result_digest": stored_result_digest,
+        }
+        admissions[admission_id] = {
+            "path": admission_path.relative_to(admission_root).as_posix(),
+            "status": "current",
+            "result_ref": result_ref,
+            "result_digest": stored_result_digest,
+            "admission_digest": admission_digest,
+        }
+        writes.extend(
+            [
+                (host_index_path, {"kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND, "results": results}),
+                (
+                    admission_index_path,
+                    {"kind": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND, "admissions": admissions},
+                ),
+            ]
+        )
+        committed_revisions = _transactional_json_writes(
+            writes,
+            expected_revisions={
+                host_index_path: result_index_revision,
+                admission_index_path: admission_index_revision,
+            },
+        )
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-import/v1",
+        "status": "imported",
+        "provider_result_ref": ref,
+        "result_id": result_id,
+        "result_ref": result_ref,
+        "path": host_path.relative_to(target_root).as_posix(),
+        "index_ref": host_index_path.relative_to(target_root).as_posix(),
+        "admission_ref": host_admission_ref,
+        "admission_index_ref": admission_index_path.relative_to(target_root).as_posix(),
+        "result_index_revision": committed_revisions[host_index_path.resolve()],
+        "admission_index_revision": committed_revisions[admission_index_path.resolve()],
+        "observed_result_index_revision": result_index_revision,
+        "observed_admission_index_revision": admission_index_revision,
+    }
+
+
+def _external_delivery_adapter_host_result_digest(result: dict[str, Any]) -> str:
+    return _stable_json_digest(
+        {key: value for key, value in result.items() if key not in {"host_admission", "host_admission_ref", "host_admission_verdict"}}
+    )
+
+
+def _external_delivery_adapter_host_admission_payload(ref: str, result: dict[str, Any]) -> dict[str, Any]:
+    raw_custody = result.get("custody")
+    custody: dict[str, Any] = raw_custody if isinstance(raw_custody, dict) else {}
+    raw_context = result.get("admission_context")
+    context: dict[str, Any] = raw_context if isinstance(raw_context, dict) else {}
+    payload = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-payload/v1",
+        "result_ref": ref,
+        "result_digest": _external_delivery_adapter_host_result_digest(result),
+        "delivery_id": str(result.get("delivery_id") or ""),
+        "sink_id": str(result.get("sink_id") or ""),
+        "attempt_revision": str(result.get("attempt_revision") or ""),
+        "receipt_revision": str(result.get("receipt_revision") or ""),
+        "capability_revision": str(result.get("capability_revision") or ""),
+        "producer": str(custody.get("producer") or ""),
+        "trusted_channel": str(custody.get("trusted_channel") or ""),
+        "audience": str(context.get("audience") or ""),
+        "workspace_ref": str(context.get("workspace_ref") or ""),
+        "issued_at": str(context.get("issued_at") or ""),
+        "expires_at": str(context.get("expires_at") or ""),
+        "nonce": str(context.get("nonce") or ""),
+    }
+    if str(context.get("revoked_at") or "").strip():
+        payload["revoked_at"] = str(context.get("revoked_at") or "")
+    if str(context.get("superseded_by") or "").strip():
+        payload["superseded_by"] = str(context.get("superseded_by") or "")
+    return payload
+
+
+def _external_delivery_adapter_host_admission_signature_payload(
+    *,
+    ref: str,
+    result: dict[str, Any],
+    verdict: dict[str, Any],
+    admission: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission-signature-payload/v1",
+        "algorithm": str(admission.get("algorithm") or ""),
+        "key_id": str(admission.get("key_id") or ""),
+        "result_ref": ref,
+        "result_digest": _external_delivery_adapter_host_result_digest(result),
+        "verdict_digest": _stable_json_digest(verdict),
+        "audience": EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE,
+    }
+
+
+def _base64url_decode(value: str) -> bytes:
+    text = value.strip()
+    padding = "=" * (-len(text) % 4)
+    return base64.urlsafe_b64decode((text + padding).encode("ascii"))
+
+
+def _verify_rs256_signature(*, key: dict[str, str], payload: dict[str, Any], signature: str) -> bool:
+    try:
+        n = int(str(key.get("n") or ""), 16)
+        e = int(str(key.get("e") or ""), 16)
+        raw_signature = _base64url_decode(signature)
+    except (ValueError, TypeError):
+        return False
+    key_size = (n.bit_length() + 7) // 8
+    if len(raw_signature) != key_size:
+        return False
+    message = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    digest_info = _RSA_SHA256_DER_PREFIX + hashlib.sha256(message).digest()
+    encoded = pow(int.from_bytes(raw_signature, "big"), e, n).to_bytes(key_size, "big")
+    minimum_padding = 8
+    if not (encoded.startswith(b"\x00\x01") and b"\x00" in encoded[2 + minimum_padding :]):
+        return False
+    separator = encoded.find(b"\x00", 2)
+    if separator < 2 + minimum_padding:
+        return False
+    padding = encoded[2:separator]
+    if len(padding) < minimum_padding or any(byte != 0xFF for byte in padding):
+        return False
+    return hmac.compare_digest(encoded[separator + 1 :], digest_info)
+
+
+def _load_external_evaluation_provider_public_key(*, key_id: str) -> dict[str, str] | None:
+    """Resolve provider trust from immutable package-owned material only.
+
+    Target, repository, home, environment, import-path, and operation-argument
+    state are deliberately outside this lookup. Files under the workspace's
+    external-provider directories are evidence caches, never trust roots.
+    Rotation and revocation therefore require a released host/package update;
+    an ordinary AW operation cannot provision or select provider trust.
+    """
+
+    key = _PINNED_EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS.get(key_id)
+    if not isinstance(key, Mapping) or key.get("status") != "current":
+        return None
+    if key.get("revoked_at") or key.get("superseded_by"):
+        return None
+    if key.get("compatibility_status") not in {None, "", "current", "compatible"}:
+        return None
+    if not str(key.get("key_revision") or "").strip():
+        return None
+    if key.get("algorithm") != "RS256":
+        return None
+    return {str(item_key): str(item_value) for item_key, item_value in key.items()}
+
+
+def _parse_evaluation_time(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed
+
+
+def _load_external_delivery_adapter_host_admission(*, target_root: Path, admission_ref: str, result_ref: str) -> dict[str, Any] | None:
+    if not admission_ref.startswith("external-evaluation-adapter-host-result-admission:"):
+        return None
+    admission_id = admission_ref.removeprefix("external-evaluation-adapter-host-result-admission:")
+    root = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_DIR
+    index_path = root / "index.json"
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    entries = index.get("admissions") if index.get("kind") == EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_INDEX_KIND else {}
+    entry = entries.get(admission_id) if isinstance(entries, dict) else None
+    if not isinstance(entry, dict) or entry.get("status") != "current" or entry.get("result_ref") != result_ref:
+        return None
+    candidate = (root / str(entry.get("path") or "")).resolve()
+    try:
+        candidate.relative_to(root.resolve())
+        payload = json.loads(candidate.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("admission_ref") != admission_ref
+        or payload.get("result_ref") != result_ref
+        or hashlib.sha256(candidate.read_bytes()).hexdigest() != entry.get("admission_digest")
+    ):
+        return None
+    return payload
+
+
+def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[str, Any], *, target_root: Path) -> bool:
+    """Return whether a pinned host/provider signature admits this result.
+
+    AW verifies a signed verdict supplied by the provider result inbox used by
+    ``record_external_evaluation_adapter_host_result``. It deliberately does not
+    accept resolver functions, verifier modules, or trust roots through operation
+    arguments.
+    """
+
+    verdict_raw = result.get("host_admission_verdict")
+    verdict: dict[str, Any] = verdict_raw if isinstance(verdict_raw, dict) else {}
+    if not verdict:
+        return False
+    admission_raw = result.get("host_admission")
+    admission: dict[str, Any] = admission_raw if isinstance(admission_raw, dict) else {}
+    key_id = str(admission.get("key_id") or "")
+    key = _load_external_evaluation_provider_public_key(key_id=key_id)
+    if key is None:
+        return False
+    if admission.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1":
+        return False
+    if admission.get("algorithm") != "RS256" or key.get("algorithm") != "RS256":
+        return False
+    if verdict.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-verdict/v1":
+        return False
+    if verdict.get("status") != "admitted" or verdict.get("authority") != "signed-provider-adapter":
+        return False
+    if verdict.get("result_ref") != ref:
+        return False
+    if verdict.get("result_digest") != _external_delivery_adapter_host_result_digest(result):
+        return False
+    custody_raw = result.get("custody")
+    custody: dict[str, Any] = custody_raw if isinstance(custody_raw, dict) else {}
+    if str(key.get("issuer") or "") != str(custody.get("producer") or ""):
+        return False
+    if str(key.get("trusted_channel") or "") != str(custody.get("trusted_channel") or ""):
+        return False
+    if str(verdict.get("producer") or "") != str(result.get("producer") or ""):
+        return False
+    if str(verdict.get("delivery_id") or "") != str(result.get("delivery_id") or ""):
+        return False
+    if str(verdict.get("sink_id") or "") != str(result.get("sink_id") or ""):
+        return False
+    if str(verdict.get("attempt_revision") or "") != str(result.get("attempt_revision") or ""):
+        return False
+    if str(verdict.get("capability_revision") or "") != str(result.get("capability_revision") or ""):
+        return False
+    if str(verdict.get("workspace_ref") or "") != f"workspace:path:{target_root.resolve()}":
+        return False
+    if str(verdict.get("audience") or "") != EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_AUDIENCE:
+        return False
+    if not str(verdict.get("nonce") or "").strip():
+        return False
+    issued_at = _parse_evaluation_time(verdict.get("issued_at"))
+    expires_at = _parse_evaluation_time(verdict.get("expires_at"))
+    if issued_at is None or expires_at is None or expires_at <= issued_at or expires_at <= datetime.now(UTC):
+        return False
+    if not str(verdict.get("verifier_revision") or "").strip():
+        return False
+    if str(verdict.get("revoked_at") or "").strip() or str(verdict.get("superseded_by") or "").strip():
+        return False
+    payload = _external_delivery_adapter_host_admission_signature_payload(
+        ref=ref,
+        result=result,
+        verdict=verdict,
+        admission=admission,
+    )
+    return _verify_rs256_signature(key=key, payload=payload, signature=str(admission.get("signature") or ""))
+
+
+def _load_external_delivery_adapter_host_result(*, target_root: Path, result_ref: str) -> dict[str, Any]:
+    ref = str(result_ref or "").strip()
+    if not ref.startswith("external-evaluation-adapter-host-result:") or "/" in ref or "\\" in ref:
+        raise WorkspaceUsageError("external adapter receipt requires an indexed host result reference.")
+    result_id = ref.removeprefix("external-evaluation-adapter-host-result:")
+    path = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR / f"{result_id}.json"
+    try:
+        raw = path.read_bytes()
+        result = json.loads(raw.decode("utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceUsageError("external adapter host result is missing or unreadable.") from exc
+    if result.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result/v1":
+        raise WorkspaceUsageError("external adapter host result has the wrong contract.")
+    if result.get("result_ref") != ref or result.get("result_id") != result_id:
+        raise WorkspaceUsageError("external adapter host result identity does not match its reference.")
+    if result.get("status") != "current":
+        raise WorkspaceUsageError("external adapter host result is not current.")
+    custody = result.get("custody") if isinstance(result.get("custody"), dict) else {}
+    if custody.get("producer") in {"", "evaluation.external-adapter-host-result", "caller", "agentic-workspace"}:
+        raise WorkspaceUsageError("external adapter host result is not producer-owned.")
+    if custody.get("trusted_channel") not in {"provider-webhook", "external-operation-adapter", "delivery-provider-receipt"}:
+        raise WorkspaceUsageError("external adapter host result does not come from an admitted provider channel.")
+    index_path = target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR / "index.json"
+    index = _load_json(index_path, default={})
+    entries = index.get("results") if index.get("kind") == EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_INDEX_KIND else {}
+    entry = entries.get(result_id) if isinstance(entries, dict) else None
+    if not isinstance(entry, dict):
+        raise WorkspaceUsageError("external adapter host result is not registered in its host index.")
+    indexed_path = (target_root / EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_DIR / str(entry.get("path") or "")).resolve()
+    if indexed_path != path.resolve():
+        raise WorkspaceUsageError("external adapter host result index path does not match.")
+    if entry.get("status") != "current":
+        raise WorkspaceUsageError("external adapter host result is stale or superseded.")
+    if entry.get("result_digest") != hashlib.sha256(raw).hexdigest():
+        raise WorkspaceUsageError("external adapter host result digest does not match the host index.")
+    if not _load_external_delivery_adapter_host_admission(
+        target_root=target_root,
+        admission_ref=str(result.get("host_admission_ref") or ""),
+        result_ref=ref,
+    ):
+        raise WorkspaceUsageError("external adapter host result was not admitted by the host boundary.")
+    if not _host_admits_external_delivery_adapter_host_result(ref, result, target_root=target_root):
+        raise WorkspaceUsageError("external adapter host result was not admitted by the host boundary.")
+    return result
+
+
+def record_external_evaluation_adapter_receipt(
+    *,
+    target_root: Path,
+    delivery_id: str,
+    sink_id: str,
+    producer: str,
+    attempt_revision: str,
+    receipt_revision: str,
+    capability_revision: str,
+    status: str,
+    detail: str = "",
+    capability_status: str = "current",
+    status_owner: str = "provider-adapter",
+    supersedes: str = "",
+    host_result_ref: str = "",
+) -> dict[str, Any]:
+    """Record the producer-owned receipt consumed by external delivery admission."""
+    host_result = _load_external_delivery_adapter_host_result(target_root=target_root, result_ref=host_result_ref)
+    normalized_status = _require_non_empty(status, "status")
+    if normalized_status not in {"delivered", "failed"}:
+        raise WorkspaceUsageError("status must be delivered or failed.")
+    if status_owner not in {"provider-adapter", "external-operation-adapter"}:
+        raise WorkspaceUsageError("status_owner must identify the provider adapter.")
+    if capability_status not in {"current", "fresh", "accepted"}:
+        raise WorkspaceUsageError("capability_status must be current, fresh, or accepted.")
+    delivery_identity = _require_non_empty(delivery_id, "delivery_id")
+    sink_identity = _require_non_empty(sink_id, "sink_id")
+    attempt_identity = _require_non_empty(attempt_revision, "attempt_revision")
+    receipt_identity = _require_non_empty(receipt_revision, "receipt_revision")
+    producer_identity = _require_non_empty(producer, "producer")
+    capability_identity = _require_non_empty(capability_revision, "capability_revision")
+    expected_fields = {
+        "delivery_id": delivery_identity,
+        "sink_id": sink_identity,
+        "producer": producer_identity,
+        "status_owner": status_owner,
+        "attempt_revision": attempt_identity,
+        "receipt_revision": receipt_identity,
+        "capability_revision": capability_identity,
+        "capability_status": capability_status,
+        "delivery_status": normalized_status,
+        "supersedes": supersedes,
+    }
+    if any(str(host_result.get(key) or "") != expected for key, expected in expected_fields.items() if expected):
+        raise WorkspaceUsageError("external adapter receipt inputs do not match the trusted host result.")
+    receipt_id = hashlib.sha256(
+        json.dumps(
+            {
+                "delivery_id": delivery_identity,
+                "sink_id": sink_identity,
+                "producer": producer_identity,
+                "attempt_revision": attempt_identity,
+                "receipt_revision": receipt_identity,
+                "capability_revision": capability_identity,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()[:24]
+    root = target_root / EXTERNAL_EVALUATION_ADAPTER_RECEIPT_DIR
+    receipt = {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-receipt/v1",
+        "receipt_id": receipt_id,
+        "delivery_id": delivery_identity,
+        "sink_id": sink_identity,
+        "producer": producer_identity,
+        "status_owner": status_owner,
+        "attempt_revision": attempt_identity,
+        "receipt_revision": receipt_identity,
+        "capability_revision": capability_identity,
+        "capability_status": capability_status,
+        "status": normalized_status,
+        "detail": detail,
+        "supersedes": supersedes,
+        "host_result_ref": host_result_ref,
+        "host_result_digest": _stable_json_digest(host_result),
+        "recorded_at": _now(),
+    }
+    path = root / f"{receipt_id}.json"
+    index_path = root / "index.json"
+    lock_path = root / ".write.lock"
+    idempotency = "applied"
+    with _LocalFileLock(lock_path):
+        receipt_index_revision = _json_file_revision(index_path)
+        index = _load_json(index_path, default={"kind": EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND, "receipts": {}})
+        if index.get("kind") != EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND:
+            raise WorkspaceUsageError("external evaluation adapter receipt index has the wrong contract.")
+        raw_entries = index.get("receipts")
+        entries: dict[str, Any] = dict(raw_entries) if isinstance(raw_entries, dict) else {}
+        existing_entry = entries.get(receipt_id) if isinstance(entries.get(receipt_id), dict) else None
+        writes: list[tuple[Path, dict[str, Any]]] = []
+        if path.exists():
+            existing_receipt = _load_json(path, default={})
+            comparable_existing = {key: value for key, value in existing_receipt.items() if key != "recorded_at"}
+            comparable_receipt = {key: value for key, value in receipt.items() if key != "recorded_at"}
+            if comparable_existing != comparable_receipt:
+                raise WorkspaceUsageError("existing external adapter receipt conflicts with this idempotency identity.")
+            receipt = existing_receipt
+            idempotency = "replayed"
+        else:
+            writes.append((path, receipt))
+        if existing_entry:
+            indexed_path = (root / str(existing_entry.get("path") or "")).resolve()
+            if indexed_path != path.resolve():
+                raise WorkspaceUsageError("external adapter receipt index path conflicts with this idempotency identity.")
+            if str(existing_entry.get("receipt_revision") or "") != receipt_identity:
+                raise WorkspaceUsageError("external adapter receipt index revision conflicts with this idempotency identity.")
+            if str(existing_entry.get("host_result_ref") or "") != host_result_ref:
+                raise WorkspaceUsageError("external adapter receipt index host result conflicts with this idempotency identity.")
+            idempotency = "replayed" if not writes else idempotency
+        if supersedes and supersedes in entries and isinstance(entries[supersedes], dict):
+            entries[supersedes] = {**entries[supersedes], "status": "superseded", "superseded_by": receipt_id}
+        entries[receipt_id] = {
+            "path": path.relative_to(root).as_posix(),
+            "status": normalized_status,
+            "producer": producer_identity,
+            "receipt_revision": receipt_identity,
+            "capability_revision": capability_identity,
+            "capability_status": capability_status,
+            "delivery_id": delivery_identity,
+            "sink_id": sink_identity,
+            "attempt_revision": attempt_identity,
+            "host_result_ref": host_result_ref,
+        }
+        writes.append((index_path, {"kind": EXTERNAL_EVALUATION_ADAPTER_RECEIPT_INDEX_KIND, "receipts": entries}))
+        _transactional_json_writes(writes)
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-adapter-receipt-record/v1",
+        "status": "recorded",
+        "idempotency": idempotency,
+        "receipt_id": receipt_id,
+        "receipt_ref": path.relative_to(target_root).as_posix(),
+        "index_ref": index_path.relative_to(target_root).as_posix(),
+        "index_revision": receipt_index_revision,
+        "delivery_id": delivery_identity,
+        "sink_id": sink_identity,
+        "producer": producer_identity,
+        "attempt_revision": attempt_identity,
+        "receipt_revision": receipt_identity,
+        "capability_revision": capability_identity,
+        "host_result_ref": host_result_ref,
+        "retryable": normalized_status != "delivered",
+    }
 
 
 def _producer_receipt(
@@ -1153,6 +1906,142 @@ def append_observation_from_values(*, target_root: Path, values: dict[str, Any])
     )
 
 
+def _pending_collection_identity(
+    *,
+    action: dict[str, Any],
+    result: str,
+    evidence_refs: list[str],
+    context: dict[str, Any],
+    authority: dict[str, Any],
+) -> str:
+    source = {
+        "operation_invocation": action.get("operation_invocation"),
+        "result": result,
+        "evidence_refs": evidence_refs,
+        "context": context,
+        "authority_revision": authority.get("proof", {}).get("revision") if isinstance(authority.get("proof"), dict) else None,
+        "mutation_baseline": authority.get("authority_envelope", {}).get("mutation_baseline")
+        if isinstance(authority.get("authority_envelope"), dict)
+        else None,
+    }
+    digest = hashlib.sha256(json.dumps(source, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
+    return f"evaluation-pending-collection:{digest[:24]}"
+
+
+def execute_evaluation_collection_action(
+    *,
+    target_root: Path,
+    action: dict[str, Any],
+    result: str,
+    evidence_refs: list[str],
+    confidence: str = "medium",
+    burden: str = "medium",
+    context: dict[str, Any] | None = None,
+    finding: str = "",
+    recommended_action: str = "",
+) -> dict[str, Any]:
+    """Execute a projected collection action through the normal observation admission gate."""
+    raw_invocation = action.get("operation_invocation")
+    invocation: dict[str, Any] = raw_invocation if isinstance(raw_invocation, dict) else {}
+    if invocation.get("operation_id") != "evaluation.observe":
+        raise WorkspaceUsageError("evaluation collection action must invoke evaluation.observe.")
+    raw_arguments = invocation.get("arguments")
+    arguments: dict[str, Any] = raw_arguments if isinstance(raw_arguments, dict) else {}
+    evaluation_id = _require_non_empty(arguments.get("evaluation_id") or action.get("evaluation_id"), "evaluation_id")
+    criterion = _require_non_empty(arguments.get("criterion") or action.get("criterion"), "criterion")
+    requested_target = str(arguments.get("target") or "").strip()
+    if requested_target and Path(requested_target).resolve() != target_root.resolve():
+        raise WorkspaceUsageError("evaluation collection action target does not match target_root.")
+    raw_projected_context = arguments.get("context")
+    projected_context: dict[str, Any] = raw_projected_context if isinstance(raw_projected_context, dict) else {}
+    submitted_context: dict[str, Any] = context if isinstance(context, dict) else {}
+    observation_context = {**projected_context, **submitted_context}
+    authority = _load_observation_authority(target_root, evaluation_id)
+    pending_id = _pending_collection_identity(
+        action=action,
+        result=result,
+        evidence_refs=evidence_refs,
+        context=observation_context,
+        authority=authority,
+    )
+    pending_path = target_root / EVALUATION_PENDING_COLLECTIONS_DIR / f"{evaluation_id}.json"
+    pending_payload = _load_json(
+        pending_path,
+        default={"kind": "agentic-workspace/evaluation-pending-collections/v1", "evaluation_id": evaluation_id, "collections": []},
+    )
+    raw_collections = pending_payload.get("collections")
+    collections = raw_collections if isinstance(raw_collections, list) else []
+    pending_entry = {
+        "id": pending_id,
+        "status": "pending-admission",
+        "operation_id": "evaluation.observe",
+        "evaluation_id": evaluation_id,
+        "criterion": criterion,
+        "result": result,
+        "evidence_refs": evidence_refs,
+        "projected_action": action,
+        "authority_snapshot": {
+            "assignment_revision": authority.get("assignment", {}).get("assignment_revision")
+            if isinstance(authority.get("assignment"), dict)
+            else None,
+            "proof_revision": authority.get("proof", {}).get("revision") if isinstance(authority.get("proof"), dict) else None,
+            "baseline_id": authority.get("authority_envelope", {}).get("mutation_baseline", {}).get("baseline_id")
+            if isinstance(authority.get("authority_envelope"), dict)
+            and isinstance(authority.get("authority_envelope", {}).get("mutation_baseline"), dict)
+            else None,
+        },
+        "recorded_at": _now(),
+    }
+    next_collections = [item for item in collections if not (isinstance(item, dict) and item.get("id") == pending_id)]
+    try:
+        admitted = append_observation(
+            target_root=target_root,
+            evaluation_id=evaluation_id,
+            criterion=criterion,
+            result=result,
+            evidence_refs=evidence_refs,
+            confidence=confidence,
+            burden=burden,
+            context=observation_context,
+            finding=finding,
+            recommended_action=recommended_action,
+        )
+    except WorkspaceUsageError as exc:
+        failed_entry = {**pending_entry, "status": "admission-failed", "failure_reason": str(exc)}
+        _write_json(
+            pending_path,
+            {
+                "kind": "agentic-workspace/evaluation-pending-collections/v1",
+                "evaluation_id": evaluation_id,
+                "collections": [*next_collections, failed_entry],
+            },
+        )
+        raise
+    collection_status = "equivalent-observation-suppressed" if admitted.get("outcome") == "duplicate" else "admitted-observation"
+    pending_entry = {
+        **pending_entry,
+        "status": collection_status,
+        "observation_idempotency_key": admitted.get("idempotency_key"),
+        "result_identity": admitted.get("result_identity"),
+        "store_revision": admitted.get("store_revision"),
+    }
+    _write_json(
+        pending_path,
+        {
+            "kind": "agentic-workspace/evaluation-pending-collections/v1",
+            "evaluation_id": evaluation_id,
+            "collections": [*next_collections, pending_entry],
+        },
+    )
+    return {
+        "kind": "agentic-workspace/evaluation-collection-admission/v1",
+        "status": collection_status,
+        "pending_collection_id": pending_id,
+        "pending_collection_path": EVALUATION_PENDING_COLLECTIONS_DIR.joinpath(f"{evaluation_id}.json").as_posix(),
+        "observation": admitted,
+    }
+
+
 def _criterion_status(definition: dict[str, Any], observations: list[dict[str, Any]]) -> list[dict[str, Any]]:
     by_criterion: dict[str, list[dict[str, Any]]] = {}
     for observation in observations:
@@ -1379,6 +2268,138 @@ def current_evaluation_results(
     }
 
 
+def _evaluation_specialist_authority(definition: dict[str, Any]) -> dict[str, Any]:
+    evidence_classes = sorted(
+        {
+            str(source.get("class") or "")
+            for source in definition.get("evidence_sources", [])
+            if isinstance(source, dict) and str(source.get("class") or "").strip()
+        }
+    )
+    subject_type = str(definition.get("subject", {}).get("type") or "")
+    specialist_domains: list[dict[str, Any]] = []
+    if any(item in {"dogfooding-feedback", "dogfooding", "session-log", "log"} for item in evidence_classes):
+        specialist_domains.append(
+            {
+                "domain": "dogfooding-feedback",
+                "authority": "definition-declared-evidence-source",
+                "convergence_status": "not-yet-converged",
+                "allowed_role": "may be admitted as evidence only through evaluation.observe",
+                "not_authorized": "definition metadata does not prove producer write-through, lifecycle ownership, or delivery",
+            }
+        )
+    if any(item in {"long-horizon-evaluation", "long-horizon", "evaluation-run"} for item in evidence_classes):
+        specialist_domains.append(
+            {
+                "domain": "long-horizon-evaluation",
+                "authority": "definition-declared-evidence-source",
+                "convergence_status": "not-yet-converged",
+                "allowed_role": "may be admitted as longitudinal evidence only through evaluation.observe",
+                "not_authorized": "definition metadata does not prove producer write-through, lifecycle ownership, or delivery",
+            }
+        )
+    if subject_type in {"delegation", "assignment", "delegated-run"}:
+        specialist_domains.append(
+            {
+                "domain": "delegation-outcome",
+                "authority": "definition-declared-subject-specialist",
+                "convergence_status": "not-yet-converged",
+                "allowed_role": "may provide delegated-run evidence only through evaluation.observe",
+                "not_authorized": "subject type does not prove producer write-through or retirement of parallel authority",
+            }
+        )
+    if not specialist_domains:
+        specialist_domains.append(
+            {
+                "domain": "universal-evaluation",
+                "authority": "shared-lifecycle",
+                "convergence_status": "native",
+                "allowed_role": "own matching, admission, coverage, reporting, delivery status, and conclusion boundaries",
+                "not_authorized": "does not replace declared decision owner review",
+            }
+        )
+    return {
+        "kind": "agentic-workspace/evaluation-specialist-authority/v1",
+        "convergence_status": (
+            "native-only" if all(item.get("convergence_status") == "native" for item in specialist_domains) else "not-yet-converged"
+        ),
+        "universal_lifecycle_authority": "evaluation.register/observe/status/report-preview/local-delivery/external-request/external-delivery/delivery-status/retry/transition",
+        "decision_owner": definition.get("decision_owner", {}),
+        "specialist_domains": specialist_domains,
+        "convergence_rule": (
+            "Only producer receipts admitted through evaluation.observe prove specialist convergence. Definition evidence "
+            "classes and subject types declare applicability but do not establish producer write-through, duplicate-authority "
+            "retirement, or shared delivery/conclusion ownership."
+        ),
+    }
+
+
+def _evaluation_operating_loop_projection(
+    *, definition: dict[str, Any], summary: dict[str, Any], finding_followup: dict[str, Any]
+) -> dict[str, Any]:
+    lifecycle = str(definition.get("lifecycle") or "")
+    conclusion = summary.get("conclusion_readiness", {}) if isinstance(summary.get("conclusion_readiness"), dict) else {}
+    coverage = summary.get("coverage", {}) if isinstance(summary.get("coverage"), dict) else {}
+    sinks = summary.get("sinks", []) if isinstance(summary.get("sinks"), list) else []
+    external_sinks = [
+        sink for sink in sinks if isinstance(sink, dict) and str(sink.get("class") or "") in {"issue-or-report", "closed-issue"}
+    ]
+    material_followup_status = str(finding_followup.get("status") or "none")
+    if material_followup_status == "unresolved":
+        next_action = "create-or-reopen-material-finding-follow-up"
+    elif conclusion.get("ready") is True and lifecycle == "collecting":
+        next_action = "owner-review-report-and-transition"
+    elif external_sinks and conclusion.get("ready") is True:
+        next_action = "request-or-retry-external-delivery"
+    else:
+        next_action = str(summary.get("next_collection_action") or "append-observation")
+    return {
+        "kind": "agentic-workspace/evaluation-operating-loop/v1",
+        "status": "ready-for-owner-review" if conclusion.get("ready") is True else "collecting",
+        "evaluation_id": definition.get("id"),
+        "definition_revision": definition.get("revision"),
+        "lifecycle": lifecycle,
+        "matching": {
+            "operation": "evaluation_collection_actions",
+            "startup_implement_handoff_surfaces": ["start", "implement", "handoff"],
+            "quiet_non_match": True,
+            "selector_source": "structured issue_refs/operation_ids/phases/surfaces",
+        },
+        "observe_admission": {
+            "operation_id": "evaluation.observe",
+            "typed_boundary": "assignment authority + mutation baseline + proof receipt + definition revision",
+            "current_result_owner": "current_evaluation_results",
+            "coverage": coverage,
+        },
+        "reporting": {
+            "preview_operation": "evaluation.report-preview",
+            "local_delivery_operation": "evaluation.local-delivery",
+            "transition_operation": "evaluation.transition",
+            "transition_driven": True,
+            "conclusion": conclusion,
+            "material_negative_followup": {
+                "status": material_followup_status,
+                "required_action": finding_followup.get("required_action", "none"),
+            },
+        },
+        "external_delivery": {
+            "request_operation": "evaluation.external-request",
+            "adapter_receipt_operation": "evaluation.external-adapter-receipt",
+            "delivery_operation": "evaluation.external-delivery",
+            "status_operation": "evaluation.delivery-status",
+            "retry_operation": "evaluation.retry",
+            "external_sink_count": len(external_sinks),
+            "delivery_claim_rule": "transport delivery receipts do not change evaluation conclusion or issue-closure authority",
+        },
+        "specialist_authority": _evaluation_specialist_authority(definition),
+        "next_safe_action": next_action,
+        "claim_boundary": (
+            "Evaluation compiles owner reports and delivery status; it does not claim external sink delivery without adapter "
+            "receipts and does not close issues without fresh-bound conclusion readiness plus owner policy."
+        ),
+    }
+
+
 def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -> dict[str, Any]:
     definitions = _definitions_payload(target_root)
     selected = [
@@ -1448,77 +2469,547 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
             current_result_identity.update(
                 {key: current_identity[key] for key in ("id", "result", "proof_revision") if key in current_identity}
             )
-        summaries.append(
+        summary_item = {
+            "evaluation_id": definition["id"],
+            "revision": definition["revision"],
+            "lifecycle": definition["lifecycle"],
+            "coverage": {
+                "criterion_count": len(criteria),
+                "observed_criterion_count": len([item for item in criteria if item["observation_count"]]),
+                "observation_count": len(admitted_observations),
+                "decision_observation_count": len(current_bound_observations),
+                "historical_observation_count": len(historical_observations),
+                "legacy_unbound_count": legacy_unbound_count,
+                "stale_revision_count": stale_revision_count,
+                "stale_authority_count": len(stale_observations),
+                "superseded_result_count": superseded_count,
+                "minimum_observations": min_observations,
+            },
+            "criterion_status": criteria,
+            "contradictions": contradictions,
+            "latest_material_changes": current_bound_observations[-3:],
+            "fresh_result_admission": {
+                "status": freshness_status,
+                "bound_observation_count": len(current_bound_observations),
+                "historical_observation_count": len(historical_observations),
+                "ignored_statuses": ["legacy-unbound", "stale-definition-revision", "rejected"],
+                "superseded_result_ids": sorted(superseded_ids),
+                "current_result_identity": current_result_identity,
+                "current_result_resolution": {
+                    "status": current_results["status"],
+                    "recovery": current_results["recovery"],
+                    "freshness_records": current_results["freshness_records"],
+                    "stale_count": len(stale_observations),
+                    "consumer_rule": current_results["consumer_rule"],
+                },
+                "finding_followup": finding_followup,
+                "local_retention": {
+                    "status": "within-cap"
+                    if len(observations) <= OBSERVATION_RETENTION_CAP
+                    and len(json.dumps(observations, sort_keys=True).encode("utf-8")) <= OBSERVATION_BYTE_CAP
+                    else "prune-or-compact-required",
+                    "max_current_results_per_criterion": 1,
+                    "record_cap": OBSERVATION_RETENTION_CAP,
+                    "byte_cap": OBSERVATION_BYTE_CAP,
+                    "current_record_count": len(observations),
+                    "current_byte_count": len(json.dumps(observations, sort_keys=True).encode("utf-8")),
+                    "historical_record_count": len(historical_observations),
+                    "cleanup_operation": "evaluation.prune",
+                    "cleanup_proof": "dry-run reports removable superseded or legacy local JSONL records before apply",
+                },
+                "admission_contract": definition.get("admission_contract", _evaluation_admission_contract()),
+                "consumer_rule": (
+                    "status, doctor, operating-decision, proof-selection, and closure consumers use only current "
+                    "definition-revision observations admitted with bound assignment, authority, baseline, and proof context"
+                ),
+            },
+            "conclusion_readiness": {
+                "ready": conclusion_ready,
+                "reason_code": "ready" if conclusion_ready else not_ready_reason,
+            },
+            "owner": definition["decision_owner"],
+            "sinks": definition["report_sinks"],
+            "next_collection_action": "owner-review-or-conclude"
+            if conclusion_ready
+            else "shape-or-resolve-material-finding-owner"
+            if finding_followup["status"] == "unresolved"
+            else "migrate-or-append-bound-observation"
+            if historical_observations
+            else "append-observation",
+        }
+        summary_item["operating_loop"] = _evaluation_operating_loop_projection(
+            definition=definition,
+            summary=summary_item,
+            finding_followup=finding_followup,
+        )
+        summaries.append(summary_item)
+    return {"kind": EVALUATION_SUMMARY_KIND, "path": WORKSPACE_EVALUATIONS_PATH.as_posix(), "summaries": summaries}
+
+
+def evaluation_report_payload(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:
+    """Compile a compact owner-facing report without delivering it to a sink."""
+    authority = evaluation_report_authority(target_root=target_root, evaluation_id=evaluation_id, explicit=explicit)
+    if authority["status"] == "not-due":
+        return {
+            "kind": "agentic-workspace/evaluation-report/v1",
+            "status": "not-due",
+            "evaluation_id": evaluation_id,
+            "report_authority": authority,
+            "delivery": "not-due",
+        }
+    return {
+        "kind": "agentic-workspace/evaluation-report/v1",
+        "status": "ready",
+        "evaluation_id": evaluation_id,
+        "subject": authority["subject"],
+        "question": authority["question"],
+        "coverage": authority["coverage"],
+        "material_findings": authority["material_findings"],
+        "contradictions": authority["contradictions"],
+        "conclusion": authority["conclusion"],
+        "decision_owner": authority["decision_owner"],
+        "report_sinks": authority["report_sinks"],
+        "recommended_action": authority["recommended_action"],
+        "report_authority": authority,
+        "delivery": "recommendation-only; external delivery requires an adapter receipt",
+    }
+
+
+def evaluation_report_authority(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:
+    """Resolve the current owner, sink, result, evidence, and finding authority for one report."""
+    definitions = _definitions_payload(target_root)
+    definition = _definition_by_id(definitions, evaluation_id)
+    if definition is None:
+        raise WorkspaceUsageError(f"evaluation {evaluation_id!r} is not registered.")
+    summary = evaluation_summary(target_root=target_root, evaluation_id=evaluation_id)["summaries"][0]
+    admission = summary.get("fresh_result_admission") if isinstance(summary.get("fresh_result_admission"), dict) else {}
+    raw_finding_followup = admission.get("finding_followup")
+    finding_followup = raw_finding_followup if isinstance(raw_finding_followup, dict) else {}
+    meaningful = bool(
+        explicit
+        or (summary.get("conclusion_readiness") if isinstance(summary.get("conclusion_readiness"), dict) else {}).get("ready")
+        or summary.get("contradictions")
+        or finding_followup.get("status") == "unresolved"
+    )
+    current_result = admission.get("current_result_identity") if isinstance(admission.get("current_result_identity"), dict) else {}
+    authority_source = {
+        "evaluation_id": evaluation_id,
+        "definition_revision": definition.get("revision"),
+        "lifecycle": definition.get("lifecycle"),
+        "decision_owner": definition.get("decision_owner", {}),
+        "report_sinks": definition.get("report_sinks", []),
+        "current_result_identity": current_result,
+        "coverage": summary.get("coverage", {}),
+        "conclusion": summary.get("conclusion_readiness", {}),
+        "material_findings": finding_followup.get("unresolved", []),
+        "contradictions": summary.get("contradictions", []),
+        "finding_followup_status": finding_followup.get("status"),
+    }
+    revision = hashlib.sha256(json.dumps(authority_source, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()[:24]
+    return {
+        "kind": "agentic-workspace/evaluation-report-authority/v1",
+        "status": "ready" if meaningful else "not-due",
+        "revision": revision,
+        "source": "current-definition-plus-admitted-summary",
+        "evaluation_id": evaluation_id,
+        "definition_revision": definition.get("revision"),
+        "subject": definition.get("subject", {}),
+        "question": definition.get("question", ""),
+        "coverage": summary.get("coverage", {}),
+        "material_findings": finding_followup.get("unresolved", []),
+        "contradictions": summary.get("contradictions", []),
+        "conclusion": summary.get("conclusion_readiness", {}),
+        "current_result_identity": current_result,
+        "thresholds": definition.get("reporting", {}),
+        "confidence_evidence": {
+            "criterion_status": summary.get("criterion_status", []),
+            "latest_material_changes": summary.get("latest_material_changes", []),
+        },
+        "material_finding_owner": finding_followup.get("owner", definition.get("decision_owner", {})),
+        "decision_owner": definition.get("decision_owner", {}),
+        "report_sinks": definition.get("report_sinks", []),
+        "recommended_action": definition.get("action_policy", {}),
+        "authority_source": authority_source,
+        "rule": "Reports compile only from the current definition and admitted evaluation summary resolved at report time.",
+    }
+
+
+def record_local_evaluation_report_delivery(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:
+    """Persist a local compilation receipt without claiming external sink delivery."""
+    report = evaluation_report_payload(target_root=target_root, evaluation_id=evaluation_id, explicit=explicit)
+    if report["status"] != "ready":
+        return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "not-due", "report": report}
+    identity = hashlib.sha256(
+        json.dumps(
             {
-                "evaluation_id": definition["id"],
-                "revision": definition["revision"],
-                "lifecycle": definition["lifecycle"],
-                "coverage": {
-                    "criterion_count": len(criteria),
-                    "observed_criterion_count": len([item for item in criteria if item["observation_count"]]),
-                    "observation_count": len(admitted_observations),
-                    "decision_observation_count": len(current_bound_observations),
-                    "historical_observation_count": len(historical_observations),
-                    "legacy_unbound_count": legacy_unbound_count,
-                    "stale_revision_count": stale_revision_count,
-                    "stale_authority_count": len(stale_observations),
-                    "superseded_result_count": superseded_count,
-                    "minimum_observations": min_observations,
-                },
-                "criterion_status": criteria,
-                "contradictions": contradictions,
-                "latest_material_changes": current_bound_observations[-3:],
-                "fresh_result_admission": {
-                    "status": freshness_status,
-                    "bound_observation_count": len(current_bound_observations),
-                    "historical_observation_count": len(historical_observations),
-                    "ignored_statuses": ["legacy-unbound", "stale-definition-revision", "rejected"],
-                    "superseded_result_ids": sorted(superseded_ids),
-                    "current_result_identity": current_result_identity,
-                    "current_result_resolution": {
-                        "status": current_results["status"],
-                        "recovery": current_results["recovery"],
-                        "freshness_records": current_results["freshness_records"],
-                        "stale_count": len(stale_observations),
-                        "consumer_rule": current_results["consumer_rule"],
-                    },
-                    "finding_followup": finding_followup,
-                    "local_retention": {
-                        "status": "within-cap"
-                        if len(observations) <= OBSERVATION_RETENTION_CAP
-                        and len(json.dumps(observations, sort_keys=True).encode("utf-8")) <= OBSERVATION_BYTE_CAP
-                        else "prune-or-compact-required",
-                        "max_current_results_per_criterion": 1,
-                        "record_cap": OBSERVATION_RETENTION_CAP,
-                        "byte_cap": OBSERVATION_BYTE_CAP,
-                        "current_record_count": len(observations),
-                        "current_byte_count": len(json.dumps(observations, sort_keys=True).encode("utf-8")),
-                        "historical_record_count": len(historical_observations),
-                        "cleanup_operation": "evaluation.prune",
-                        "cleanup_proof": "dry-run reports removable superseded or legacy local JSONL records before apply",
-                    },
-                    "admission_contract": definition.get("admission_contract", _evaluation_admission_contract()),
-                    "consumer_rule": (
-                        "status, doctor, operating-decision, proof-selection, and closure consumers use only current "
-                        "definition-revision observations admitted with bound assignment, authority, baseline, and proof context"
-                    ),
-                },
-                "conclusion_readiness": {
-                    "ready": conclusion_ready,
-                    "reason_code": "ready" if conclusion_ready else not_ready_reason,
-                },
-                "owner": definition["decision_owner"],
-                "sinks": definition["report_sinks"],
-                "next_collection_action": "owner-review-or-conclude"
-                if conclusion_ready
-                else "shape-or-resolve-material-finding-owner"
-                if finding_followup["status"] == "unresolved"
-                else "migrate-or-append-bound-observation"
-                if historical_observations
-                else "append-observation",
+                "evaluation_id": evaluation_id,
+                "coverage": report["coverage"],
+                "conclusion": report["conclusion"],
+                "findings": report["material_findings"],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()[:24]
+    path = target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.report-deliveries.json"
+    previous = _load_json(path, default={"deliveries": []})
+    deliveries = previous.get("deliveries", []) if isinstance(previous.get("deliveries"), list) else []
+    existing = next((item for item in deliveries if isinstance(item, dict) and item.get("identity") == identity), None)
+    if existing:
+        return {
+            "kind": "agentic-workspace/evaluation-report-delivery/v1",
+            "status": "already-delivered",
+            "receipt": existing,
+            "report": report,
+        }
+    receipt = {
+        "identity": identity,
+        "status": "recorded-local",
+        "evaluation_id": evaluation_id,
+        "declared_sinks": report["report_sinks"],
+        "delivery_scope": "local-compilation-receipt-only",
+        "external_delivery": "unattempted; require one adapter receipt per external sink",
+    }
+    _write_json(path, {"deliveries": [*deliveries, receipt]})
+    return {"kind": "agentic-workspace/evaluation-report-delivery/v1", "status": "recorded-local", "receipt": receipt, "report": report}
+
+
+def external_evaluation_report_delivery_request(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:
+    """Prepare, but never perform, an external report delivery."""
+    report = evaluation_report_payload(target_root=target_root, evaluation_id=evaluation_id, explicit=explicit)
+    sinks = [
+        sink
+        for sink in report.get("report_sinks", [])
+        if isinstance(sink, dict) and sink.get("class") in {"issue-or-report", "closed-issue"}
+    ]
+    if report["status"] != "ready" or not sinks:
+        return {"kind": "agentic-workspace/evaluation-external-delivery-request/v1", "status": "not-due", "report": report}
+    raw_report_authority = report.get("report_authority")
+    report_authority: dict[str, Any] = raw_report_authority if isinstance(raw_report_authority, dict) else {}
+    identity_source = {
+        "evaluation_id": evaluation_id,
+        "sinks": sinks,
+        "authority_revision": report_authority.get("revision"),
+        "current_result_identity": report_authority.get("current_result_identity"),
+    }
+    identity = hashlib.sha256(json.dumps(identity_source, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()[:24]
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-request/v1",
+        "status": "adapter-required",
+        "delivery_id": identity,
+        "request_revision": identity,
+        "authority_revision": report_authority.get("revision"),
+        "sinks": sinks,
+        "sink_requests": [
+            {
+                "sink_id": str(sink.get("id") or ""),
+                "sink_class": str(sink.get("class") or ""),
+                "idempotency_key": hashlib.sha256(
+                    json.dumps({"delivery_id": identity, "sink": sink}, sort_keys=True, separators=(",", ":")).encode()
+                ).hexdigest()[:24],
+            }
+            for sink in sinks
+        ],
+        "report": report,
+        "authority_boundary": (
+            "This request recommends delivery to the declared external sink; a provider adapter must record one "
+            "producer receipt per sink and never changes the evaluation conclusion."
+        ),
+    }
+
+
+def record_external_evaluation_report_delivery(
+    *,
+    target_root: Path,
+    request: dict[str, Any],
+    succeeded: bool | None = None,
+    detail: str = "",
+    adapter_receipt: dict[str, Any] | None = None,
+    adapter_receipt_ref: str | Path | None = None,
+) -> dict[str, Any]:
+    """Persist adapter outcome; a failed attempt remains retryable."""
+    if request.get("status") != "adapter-required":
+        return {"kind": "agentic-workspace/evaluation-external-delivery-receipt/v1", "status": "not-due"}
+    evaluation_id = str(request.get("report", {}).get("evaluation_id") or "")
+    identity = str(request.get("delivery_id") or "")
+    current_request = external_evaluation_report_delivery_request(target_root=target_root, evaluation_id=evaluation_id, explicit=True)
+    if current_request.get("delivery_id") != identity or current_request.get("request_revision") != request.get("request_revision"):
+        return {
+            "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
+            "status": "stale-request",
+            "delivery_id": identity,
+            "current_delivery_id": current_request.get("delivery_id"),
+            "retry": True,
+        }
+    receipt_ref = str(adapter_receipt_ref or "").strip()
+    receipt = _load_external_delivery_adapter_receipt(target_root=target_root, receipt_ref=receipt_ref) if receipt_ref else {}
+    if not receipt:
+        return {
+            "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
+            "status": "adapter-receipt-required",
+            "delivery_id": identity,
+            "retry": True,
+            "rule": (
+                "External evaluation delivery must be recorded from a provider-owned local adapter receipt file, "
+                "not caller success flags or inline dictionaries."
+            ),
+        }
+    if adapter_receipt is not None:
+        return {
+            "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
+            "status": "adapter-receipt-required",
+            "delivery_id": identity,
+            "retry": True,
+            "rule": "Inline adapter_receipt is ignored; pass adapter_receipt_ref for a current producer-owned local receipt.",
+        }
+    if receipt.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-receipt/v1":
+        raise WorkspaceUsageError("adapter_receipt.kind is invalid for evaluation external delivery.")
+    if str(receipt.get("producer") or "").strip() == "":
+        raise WorkspaceUsageError("adapter_receipt.producer is required.")
+    if str(receipt.get("status_owner") or "").strip() not in {"provider-adapter", "external-operation-adapter"}:
+        raise WorkspaceUsageError("adapter_receipt.status_owner must identify the provider adapter.")
+    if str(receipt.get("receipt_revision") or "").strip() == "":
+        raise WorkspaceUsageError("adapter_receipt.receipt_revision is required.")
+    if str(receipt.get("capability_revision") or "").strip() == "":
+        raise WorkspaceUsageError("adapter_receipt.capability_revision is required.")
+    if str(receipt.get("capability_status") or "current").strip() not in {"current", "fresh", "accepted"}:
+        raise WorkspaceUsageError("adapter_receipt capability is not current.")
+    if receipt.get("superseded_by") or receipt.get("revoked_at"):
+        raise WorkspaceUsageError("adapter_receipt is superseded or revoked.")
+    if receipt.get("delivery_id") != identity:
+        raise WorkspaceUsageError("adapter_receipt.delivery_id does not match the current request.")
+    attempt_revision = str(receipt.get("attempt_revision") or "").strip()
+    sink_id = str(receipt.get("sink_id") or "").strip()
+    if not attempt_revision or not sink_id:
+        raise WorkspaceUsageError("adapter_receipt.attempt_revision and adapter_receipt.sink_id are required.")
+    status = str(receipt.get("status") or ("delivered" if succeeded else "failed"))
+    if status not in {"delivered", "failed"}:
+        raise WorkspaceUsageError("adapter_receipt.status must be delivered or failed.")
+    sink_requests = request.get("sink_requests", []) if isinstance(request.get("sink_requests"), list) else []
+    sink_request = next((item for item in sink_requests if isinstance(item, dict) and item.get("sink_id") == sink_id), None)
+    if not sink_request:
+        raise WorkspaceUsageError("adapter_receipt.sink_id is not part of the current delivery request.")
+    path = target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.external-deliveries.json"
+    payload = _load_json(path, default={"deliveries": []})
+    deliveries = payload.get("deliveries", []) if isinstance(payload.get("deliveries"), list) else []
+    existing = next(
+        (
+            item
+            for item in deliveries
+            if isinstance(item, dict)
+            and item.get("identity") == identity
+            and item.get("sink_id") == sink_id
+            and item.get("status") == "delivered"
+        ),
+        None,
+    )
+    if existing:
+        return {
+            "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
+            "status": "already-delivered",
+            "delivery_id": identity,
+            "sink_id": sink_id,
+        }
+    stored = {
+        "identity": identity,
+        "request_revision": request.get("request_revision"),
+        "authority_revision": request.get("authority_revision"),
+        "status": status,
+        "detail": detail or receipt.get("detail", ""),
+        "sink_id": sink_id,
+        "idempotency_key": sink_request.get("idempotency_key"),
+        "attempt_revision": attempt_revision,
+        "producer": receipt.get("producer"),
+        "adapter_receipt_ref": receipt.get("_source_ref"),
+        "adapter_receipt_digest": receipt.get("_source_digest"),
+        "adapter_receipt_revision": receipt.get("receipt_revision"),
+        "capability_revision": receipt.get("capability_revision"),
+        "adapter_receipt": receipt,
+    }
+    _write_json(path, {"deliveries": [*deliveries, stored]})
+    return {
+        "kind": "agentic-workspace/evaluation-external-delivery-receipt/v1",
+        "status": stored["status"],
+        "delivery_id": identity,
+        "sink_id": sink_id,
+        "attempt_revision": attempt_revision,
+        "retry": status != "delivered",
+    }
+
+
+def evaluation_report_delivery_status(*, target_root: Path, evaluation_id: str, explicit: bool = True) -> dict[str, Any]:
+    """Project delivery status from local compilation and producer-owned adapter receipts."""
+    request = external_evaluation_report_delivery_request(target_root=target_root, evaluation_id=evaluation_id, explicit=explicit)
+    if request.get("status") != "adapter-required":
+        return {
+            "kind": "agentic-workspace/evaluation-delivery-status/v1",
+            "status": "not-due",
+            "evaluation_id": evaluation_id,
+            "request": request,
+        }
+    delivery_id = str(request.get("delivery_id") or "")
+    local_payload = _load_json(
+        target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.report-deliveries.json",
+        default={"deliveries": []},
+    )
+    external_payload = _load_json(
+        target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.external-deliveries.json",
+        default={"deliveries": []},
+    )
+    local_receipts = [item for item in local_payload.get("deliveries", []) if isinstance(item, dict)]
+    external_receipts = [
+        item for item in external_payload.get("deliveries", []) if isinstance(item, dict) and str(item.get("identity") or "") == delivery_id
+    ]
+    sink_requests = request.get("sink_requests", []) if isinstance(request.get("sink_requests"), list) else []
+    sink_statuses: list[dict[str, Any]] = []
+    for sink_request in sink_requests:
+        if not isinstance(sink_request, dict):
+            continue
+        sink_id = str(sink_request.get("sink_id") or "")
+        attempts = [item for item in external_receipts if str(item.get("sink_id") or "") == sink_id]
+        latest = attempts[-1] if attempts else {}
+        sink_statuses.append(
+            {
+                "sink_id": sink_id,
+                "status": str(latest.get("status") or "pending"),
+                "attempt_count": len(attempts),
+                "latest_attempt_revision": latest.get("attempt_revision"),
+                "latest_adapter_receipt_ref": latest.get("adapter_receipt_ref"),
+                "retry": str(latest.get("status") or "") != "delivered",
+                "idempotency_key": sink_request.get("idempotency_key"),
             }
         )
-    return {"kind": EVALUATION_SUMMARY_KIND, "path": WORKSPACE_EVALUATIONS_PATH.as_posix(), "summaries": summaries}
+    delivered_count = len([item for item in sink_statuses if item.get("status") == "delivered"])
+    failed_count = len([item for item in sink_statuses if item.get("status") == "failed"])
+    pending_count = len([item for item in sink_statuses if item.get("status") == "pending"])
+    overall = "delivered" if sink_statuses and delivered_count == len(sink_statuses) else "retryable" if failed_count else "pending"
+    return {
+        "kind": "agentic-workspace/evaluation-delivery-status/v1",
+        "status": overall,
+        "evaluation_id": evaluation_id,
+        "delivery_id": delivery_id,
+        "authority_revision": request.get("authority_revision"),
+        "local_compilation_receipt_count": len(local_receipts),
+        "sink_statuses": sink_statuses,
+        "delivered_count": delivered_count,
+        "failed_count": failed_count,
+        "pending_count": pending_count,
+        "retry": overall != "delivered",
+        "request": request,
+        "authority_boundary": "Delivery status is projected from stored local compilation receipts and admitted provider-owned adapter receipts only.",
+    }
+
+
+def evaluation_report_delivery_retry_request(*, target_root: Path, evaluation_id: str, sink_id: str = "") -> dict[str, Any]:
+    """Return the current retryable delivery request without minting delivery success."""
+    status = evaluation_report_delivery_status(target_root=target_root, evaluation_id=evaluation_id, explicit=True)
+    if status.get("status") == "not-due":
+        return {"kind": "agentic-workspace/evaluation-delivery-retry/v1", "status": "not-due", "delivery_status": status}
+    retryable = [
+        item
+        for item in status.get("sink_statuses", [])
+        if isinstance(item, dict) and item.get("retry") is True and (not sink_id or str(item.get("sink_id") or "") == str(sink_id))
+    ]
+    return {
+        "kind": "agentic-workspace/evaluation-delivery-retry/v1",
+        "status": "retryable" if retryable else "nothing-to-retry",
+        "evaluation_id": evaluation_id,
+        "delivery_id": status.get("delivery_id"),
+        "sink_requests": retryable,
+        "request": status.get("request"),
+        "rule": "Retry reuses the current delivery request and waits for a fresh producer adapter receipt.",
+    }
+
+
+def evaluation_collection_actions(
+    *,
+    target_root: Path,
+    surface: str,
+    issue_refs: list[str] | None = None,
+    operation_id: str | None = None,
+    phase: str | None = None,
+) -> dict[str, Any]:
+    """Project only collecting evaluations selected by structured work facts."""
+    context = {
+        "issue_refs": {str(item) for item in issue_refs or [] if str(item).strip()},
+        "operation_ids": {str(operation_id)} if operation_id else set(),
+        "phases": {str(phase)} if phase else set(),
+        "surfaces": {str(surface)},
+        "commands": {str(surface)},
+        "profiles": {"default"},
+    }
+    actions: list[dict[str, Any]] = []
+    for definition in _definitions_payload(target_root)["evaluations"]:
+        if not isinstance(definition, dict) or str(definition.get("lifecycle") or "") != "collecting":
+            continue
+        selectors = definition.get("selectors")
+        if not isinstance(selectors, dict):
+            continue
+        matched_by: list[str] = []
+        for selector, observed in context.items():
+            expected = {str(item) for item in selectors.get(selector, []) if str(item).strip()}
+            if not expected:
+                continue
+            if not expected.intersection(observed):
+                matched_by = []
+                break
+            matched_by.append(selector)
+        else:
+            if not matched_by:
+                continue
+            criteria = definition.get("criteria") if isinstance(definition.get("criteria"), list) else []
+            criterion = next((item for item in criteria if isinstance(item, dict) and item.get("required", True)), {})
+            evaluation_id = str(definition.get("id") or "")
+            criterion_id = str(criterion.get("id") or "")
+            observation_context = {
+                "issue_refs": sorted(context["issue_refs"]),
+                "operation_ids": sorted(context["operation_ids"]),
+                "phases": sorted(context["phases"]),
+                "surface": surface,
+                "definition_revision": definition.get("revision"),
+            }
+            actions.append(
+                {
+                    "evaluation_id": evaluation_id,
+                    "criterion": criterion_id,
+                    "match_reason": matched_by,
+                    "decision_owner": definition.get("decision_owner", {}),
+                    "report_sinks": definition.get("report_sinks", []),
+                    "next_action": "record-evaluation-observation-after-bound-proof",
+                    "executable_operation": "execute_evaluation_collection_action",
+                    "operation_invocation": {
+                        "kind": "agentic-workspace/operation-invocation/v1",
+                        "operation_id": "evaluation.observe",
+                        "arguments": {
+                            "target": target_root.as_posix(),
+                            "evaluation_id": evaluation_id,
+                            "criterion": criterion_id,
+                            "context": observation_context,
+                        },
+                        "effect_class": "local-record-append",
+                        "authority_class": "evaluation-admission",
+                        "required_before_apply": ["current assignment", "current mutation baseline", "current proof receipt"],
+                        "idempotency_identity": _observation_idempotency_key(
+                            {
+                                "evaluation_id": evaluation_id,
+                                "definition_revision": definition.get("revision"),
+                                "criterion": criterion_id,
+                                "result": "pending-collection",
+                                "evidence_refs": [],
+                            },
+                            {},
+                        ),
+                    },
+                    "rule": "Use the evaluation observation operation after assignment, authority, baseline, and proof admission; do not append an unbound reminder observation.",
+                }
+            )
+    return {
+        "kind": "agentic-workspace/evaluation-collection-actions/v1",
+        "status": "matched" if actions else "not-applicable",
+        "surface": surface,
+        "actions": actions,
+        "rule": "Only explicitly selected collecting evaluations appear; non-matching work stays quiet.",
+    }
 
 
 def prune_observations(*, target_root: Path, evaluation_id: str, dry_run: bool = False) -> dict[str, Any]:
@@ -1626,6 +3117,70 @@ def _evaluation_adapter_payload(args: Any, *, target_root: Path) -> dict[str, An
         return append_observation_from_values(target_root=target_root, values=values)
     if command == "status":
         return evaluation_summary(target_root=target_root, evaluation_id=getattr(args, "evaluation_id", None))
+    if command == "report-preview":
+        return evaluation_report_payload(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            explicit=bool(getattr(args, "explicit", False)),
+        )
+    if command == "local-delivery":
+        return record_local_evaluation_report_delivery(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            explicit=bool(getattr(args, "explicit", False)),
+        )
+    if command == "external-request":
+        return external_evaluation_report_delivery_request(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            explicit=bool(getattr(args, "explicit", False)),
+        )
+    if command == "external-host-result-import":
+        return record_external_evaluation_adapter_host_result(
+            target_root=target_root,
+            provider_result_ref=_require_non_empty(getattr(args, "provider_result_ref", ""), "provider_result_ref"),
+            expected_result_digest=str(getattr(args, "expected_result_digest", "") or ""),
+            capability_revision=str(getattr(args, "capability_revision", "") or ""),
+        )
+    if command == "external-adapter-receipt":
+        return record_external_evaluation_adapter_receipt(
+            target_root=target_root,
+            delivery_id=_require_non_empty(getattr(args, "delivery_id", ""), "delivery_id"),
+            sink_id=_require_non_empty(getattr(args, "sink_id", ""), "sink_id"),
+            producer=_require_non_empty(getattr(args, "producer", ""), "producer"),
+            attempt_revision=_require_non_empty(getattr(args, "attempt_revision", ""), "attempt_revision"),
+            receipt_revision=_require_non_empty(getattr(args, "receipt_revision", ""), "receipt_revision"),
+            capability_revision=_require_non_empty(getattr(args, "capability_revision", ""), "capability_revision"),
+            capability_status=str(getattr(args, "capability_status", "current") or "current"),
+            status=_require_non_empty(getattr(args, "status", ""), "status"),
+            status_owner=str(getattr(args, "status_owner", "provider-adapter") or "provider-adapter"),
+            detail=str(getattr(args, "detail", "") or ""),
+            supersedes=str(getattr(args, "supersedes", "") or ""),
+            host_result_ref=_require_non_empty(getattr(args, "host_result_ref", ""), "host_result_ref"),
+        )
+    if command == "external-delivery":
+        request = external_evaluation_report_delivery_request(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            explicit=bool(getattr(args, "explicit", False)),
+        )
+        return record_external_evaluation_report_delivery(
+            target_root=target_root,
+            request=request,
+            adapter_receipt_ref=_require_non_empty(getattr(args, "adapter_receipt_ref", ""), "adapter_receipt_ref"),
+        )
+    if command == "delivery-status":
+        return evaluation_report_delivery_status(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            explicit=bool(getattr(args, "explicit", False)),
+        )
+    if command == "retry":
+        return evaluation_report_delivery_retry_request(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            sink_id=str(getattr(args, "sink_id", "") or ""),
+        )
     if command == "transition":
         return transition_evaluation(
             target_root=target_root,

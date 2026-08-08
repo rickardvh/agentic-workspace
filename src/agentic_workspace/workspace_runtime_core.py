@@ -30770,6 +30770,20 @@ def _start_tiny_payload_fast(
         payload["task_intent"] = task_intent
         payload["acceptance"] = task_intent["acceptance"]
         payload["durable_intent_promotion"] = task_intent["promotion_guidance"]
+    # Evaluations opt in through structured selectors.  Keep this local import
+    # so the compact startup core remains independent of evaluation lifecycle
+    # mechanics until a repository actually declares an evaluation.
+    from agentic_workspace.evaluation import evaluation_collection_actions
+
+    evaluation_actions = evaluation_collection_actions(
+        target_root=target_root,
+        surface="start",
+        issue_refs=sorted(set(re.findall(r"#\d+", str(task_text or "")))),
+        operation_id="start.context",
+        phase="startup",
+    )
+    if evaluation_actions["status"] == "matched":
+        payload["evaluation_actions"] = evaluation_actions
     read_only_response = _read_only_response_posture_payload(task_text=task_text, changed_paths=changed_paths)
     if read_only_response["status"] == "read-only-reporting":
         payload["read_only_response"] = read_only_response
@@ -51941,11 +51955,23 @@ def _record_delegation_outcome(
         "records": [_record_payload(existing) for existing in retained_after_cap],
     }
     config_lib.write_delegation_outcomes(path=path, payload=updated_payload)
+    shared_observation = {
+        "kind": "agentic-workspace/evaluation-observation-projection/v1",
+        "status": "projection-only",
+        "subject": {"kind": "delegation-target", "id": normalized_target},
+        "criterion": "delegation-outcome",
+        "scope": {"task_class": normalized_task, "scope_class": normalized_scope},
+        "authority": normalized_authority,
+        "evidence_ref": normalized_source_ref,
+        "specialist_record_id": record_id,
+        "rule": "Delegation remains the owner of target-tuning fields; this projection exposes universal evaluation lifecycle facts without creating a second evidence store.",
+    }
     return {
         "kind": DELEGATION_OUTCOMES_KIND,
         "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
         "recorded": updated_payload["records"][-1],
         "record_count": len(updated_payload["records"]),
+        "shared_evaluation_observation": shared_observation,
         "rule": (
             "local-only delegation outcome evidence; public input cannot mint aw-proof or human-review authority; "
             "trusted producer receipts admit routable proof/review evidence"

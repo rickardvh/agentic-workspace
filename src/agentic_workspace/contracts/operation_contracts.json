@@ -173,6 +173,54 @@
       "path": "operations/evaluation.prune.json"
     },
     {
+      "id": "evaluation.report-preview",
+      "path": "operations/evaluation.report-preview.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "evaluation.local-delivery",
+      "path": "operations/evaluation.local-delivery.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "evaluation.external-request",
+      "path": "operations/evaluation.external-request.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "evaluation.external-host-result-import",
+      "path": "operations/evaluation.external-host-result-import.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "evaluation.external-adapter-receipt",
+      "path": "operations/evaluation.external-adapter-receipt.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "evaluation.external-delivery",
+      "path": "operations/evaluation.external-delivery.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "evaluation.delivery-status",
+      "path": "operations/evaluation.delivery-status.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "evaluation.retry",
+      "path": "operations/evaluation.retry.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "command": "config",
       "id": "config.report",
       "migration_status": "runtime-consumed",

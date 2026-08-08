@@ -12,7 +12,8 @@
     {
       "name": "target",
       "source": "cli-option",
-      "required": false
+      "required": false,
+      "schema_ref": "schemas/evaluation_observation_input.schema.json"
     },
     {
       "name": "evaluation_id",
@@ -67,7 +68,7 @@
   ],
   "output": {
     "kind": "json",
-    "schema_ref": "schemas/evaluation_observation.schema.json"
+    "schema_ref": "schemas/evaluation_observe_result.schema.json"
   },
   "effects": {
     "read_only": false,

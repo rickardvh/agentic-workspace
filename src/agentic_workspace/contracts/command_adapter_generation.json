@@ -5848,6 +5848,14 @@
           "register",
           "observe",
           "status",
+          "report-preview",
+          "local-delivery",
+          "external-request",
+          "external-host-result-import",
+          "external-adapter-receipt",
+          "external-delivery",
+          "delivery-status",
+          "retry",
           "transition"
         ]
       },

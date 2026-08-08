@@ -1,14 +1,14 @@
 {
   "proof_decision": {
     "selected_decision": "add",
-    "trust_question": "Can a shared user-local guidance transaction recover after any write boundary from a different repository without deleting unknown locks or accepting divergent state?",
+    "trust_question": "Can evaluation routing admit provider identity and lifecycle evidence only through the host-owned trust boundary while preserving quiet non-match and selective due-action behavior?",
     "host_strategy_source": "docs/maintainer/testing-strategy.md",
-    "proof_owner": "guidance-lifecycle-contract",
-    "proof_intent": "cross-repository-recovery",
+    "proof_owner": "evaluation-operating-loop",
+    "proof_intent": "negative-authority-boundary",
     "evidence_durability": "permanent",
-    "narrowest_evidence": "Two-repository promotion and transition fixtures at the store, owner-registry, and receipt boundaries, plus unknown-lock and concurrent-divergence negatives.",
-    "prune_or_replacement_condition": "Replace only when the guidance lifecycle contract generates equivalent cross-process, cross-repository recovery and negative lock-admission conformance cases.",
+    "narrowest_evidence": "Focused evaluation matching, quiet non-match, due-action projection, host-owned provider admission, forged-provider rejection, report compilation, and specialist-authority fixtures.",
+    "prune_or_replacement_condition": "Replace only when the evaluation registry generates equivalent provider-trust, lifecycle, matching, and reporting conformance cases.",
     "confidence": "high",
-    "residual_risk": "Full #2220 promotion, routing, conflict, hygiene, and evidence-boundary closure remains broader than this recovery slice."
+    "residual_risk": "Compiled due reports remain local evidence; external delivery sinks, receipts, retries, and migrations are not implied by report compilation."
   }
 }

@@ -9,7 +9,7 @@ import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
 const supportedCommands = new Set(["agent-guidance", "assignment", "autopilot", "checkpoint", "config", "correction-event", "defaults", "doctor", "evaluation", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["agent-guidance.delete", "agent-guidance.edit", "agent-guidance.merge", "agent-guidance.promote", "agent-guidance.retire", "agent-guidance.revalidate", "agent-guidance.split", "agent-guidance.supersede", "agent-guidance.suppress", "agent-guidance.weaken", "assignment.admit", "assignment.cleanup", "assignment.close", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.report", "correction-event.correct-dispute", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.status", "evaluation.transition", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
+const nativeOperationIds = new Set(["agent-guidance.delete", "agent-guidance.edit", "agent-guidance.merge", "agent-guidance.promote", "agent-guidance.retire", "agent-guidance.revalidate", "agent-guidance.split", "agent-guidance.supersede", "agent-guidance.suppress", "agent-guidance.weaken", "assignment.admit", "assignment.cleanup", "assignment.close", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.report", "correction-event.correct-dispute", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.delivery-status", "evaluation.external-adapter-receipt", "evaluation.external-delivery", "evaluation.external-host-result-import", "evaluation.external-request", "evaluation.local-delivery", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.report-preview", "evaluation.retry", "evaluation.status", "evaluation.transition", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -3042,6 +3042,452 @@ const commandDefinitions = [
                 "--evaluation-id"
               ],
               "name": "evaluation_id"
+            }
+          ]
+        },
+        {
+          "help": "Compile the current evaluation report authority without claiming external delivery.",
+          "name": "report-preview",
+          "operation_ref": {
+            "id": "evaluation.report-preview",
+            "path": "operations/evaluation.report-preview.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "default": false,
+              "flags": [
+                "--explicit"
+              ],
+              "name": "explicit"
+            }
+          ]
+        },
+        {
+          "help": "Record a local report compilation receipt without claiming external sink delivery.",
+          "name": "local-delivery",
+          "operation_ref": {
+            "id": "evaluation.local-delivery",
+            "path": "operations/evaluation.local-delivery.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "default": false,
+              "flags": [
+                "--explicit"
+              ],
+              "name": "explicit"
+            }
+          ]
+        },
+        {
+          "help": "Create the current per-sink external delivery request.",
+          "name": "external-request",
+          "operation_ref": {
+            "id": "evaluation.external-request",
+            "path": "operations/evaluation.external-request.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "default": false,
+              "flags": [
+                "--explicit"
+              ],
+              "name": "explicit"
+            }
+          ]
+        },
+        {
+          "help": "Import a provider-owned external adapter host result by opaque reference.",
+          "name": "external-host-result-import",
+          "operation_ref": {
+            "id": "evaluation.external-host-result-import",
+            "path": "operations/evaluation.external-host-result-import.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--provider-result-ref"
+              ],
+              "name": "provider_result_ref",
+              "required": true
+            },
+            {
+              "default": "",
+              "flags": [
+                "--expected-result-digest"
+              ],
+              "name": "expected_result_digest"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--capability-revision"
+              ],
+              "name": "capability_revision"
+            }
+          ]
+        },
+        {
+          "help": "Record a producer-owned external adapter attempt/result receipt.",
+          "name": "external-adapter-receipt",
+          "operation_ref": {
+            "id": "evaluation.external-adapter-receipt",
+            "path": "operations/evaluation.external-adapter-receipt.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--delivery-id"
+              ],
+              "name": "delivery_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--sink-id"
+              ],
+              "name": "sink_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--producer"
+              ],
+              "name": "producer",
+              "required": true
+            },
+            {
+              "flags": [
+                "--attempt-revision"
+              ],
+              "name": "attempt_revision",
+              "required": true
+            },
+            {
+              "flags": [
+                "--receipt-revision"
+              ],
+              "name": "receipt_revision",
+              "required": true
+            },
+            {
+              "flags": [
+                "--capability-revision"
+              ],
+              "name": "capability_revision",
+              "required": true
+            },
+            {
+              "choices": [
+                "current",
+                "fresh",
+                "accepted"
+              ],
+              "default": "current",
+              "flags": [
+                "--capability-status"
+              ],
+              "name": "capability_status"
+            },
+            {
+              "choices": [
+                "provider-adapter",
+                "external-operation-adapter"
+              ],
+              "default": "provider-adapter",
+              "flags": [
+                "--status-owner"
+              ],
+              "name": "status_owner"
+            },
+            {
+              "choices": [
+                "delivered",
+                "failed"
+              ],
+              "flags": [
+                "--status"
+              ],
+              "name": "status",
+              "required": true
+            },
+            {
+              "default": "",
+              "flags": [
+                "--detail"
+              ],
+              "name": "detail"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--supersedes"
+              ],
+              "name": "supersedes"
+            },
+            {
+              "flags": [
+                "--host-result-ref"
+              ],
+              "name": "host_result_ref",
+              "required": true
+            }
+          ]
+        },
+        {
+          "help": "Admit one external delivery result from a current producer-owned adapter receipt.",
+          "name": "external-delivery",
+          "operation_ref": {
+            "id": "evaluation.external-delivery",
+            "path": "operations/evaluation.external-delivery.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--adapter-receipt-ref"
+              ],
+              "name": "adapter_receipt_ref",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "default": false,
+              "flags": [
+                "--explicit"
+              ],
+              "name": "explicit"
+            }
+          ]
+        },
+        {
+          "help": "Project per-sink report delivery status from admitted receipts.",
+          "name": "delivery-status",
+          "operation_ref": {
+            "id": "evaluation.delivery-status",
+            "path": "operations/evaluation.delivery-status.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "default": false,
+              "flags": [
+                "--explicit"
+              ],
+              "name": "explicit"
+            }
+          ]
+        },
+        {
+          "help": "Return the current retryable external delivery request for pending or failed sinks.",
+          "name": "retry",
+          "operation_ref": {
+            "id": "evaluation.retry",
+            "path": "operations/evaluation.retry.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "default": "",
+              "flags": [
+                "--sink-id"
+              ],
+              "name": "sink_id"
             }
           ]
         },

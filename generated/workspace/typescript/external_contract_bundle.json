@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:a05eec8ec3d9967bc2013b94c3ff5bdb3521c7d7bad0b42813cbfda5077aa766",
+  "profile_fingerprint": "sha256:1732fe2ff22459a1b28b0f36a113d4d4fbf8bae798889ca025b01a0abf043d6e",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -20,8 +20,8 @@
     "agent-guidance.delete": {
       "identity": "agent-guidance.delete",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:e9f6e362352931b3faefce2770e71df0896cb09e250defc9ae4f7133d11ef09b",
-      "compatibility_fingerprint": "sha256:43e8addc330895566aec37141307b145f5b5e6760a73547986226d267d58cb7a",
+      "fingerprint": "sha256:72d08d1bf10095632440dc55c71ee2bc1f28c225add74fb7c8f3568150fb3616",
+      "compatibility_fingerprint": "sha256:b4f09b9e934c462a47c5fd815585c60cb95b14ceeb8b4e757af6f70af93658ae",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -528,7 +528,8 @@
                 "dry_run": {
                   "type": "boolean"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "output": {
@@ -572,7 +573,8 @@
                 "failures": {
                   "type": "array"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "failure": {
@@ -615,8 +617,8 @@
     "agent-guidance.edit": {
       "identity": "agent-guidance.edit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f4a2d0f8f319047616ff3e3868694ffc7ca641db616699232322362ac9a1c218",
-      "compatibility_fingerprint": "sha256:d45681d4daa708cd65c76e3e8c84b58c7540abc1360c79b5fee14c01b44d9e9b",
+      "fingerprint": "sha256:1bf8bf97f93d6232471c053c513c03a5c3fa8930e4c47753731c02563fc53859",
+      "compatibility_fingerprint": "sha256:6734eda16717b7640d69c4e48247efe832967ff5c6df5e6e9379403ac6863b8e",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -1125,7 +1127,8 @@
                 "dry_run": {
                   "type": "boolean"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "output": {
@@ -1169,7 +1172,8 @@
                 "failures": {
                   "type": "array"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "failure": {
@@ -1212,8 +1216,8 @@
     "agent-guidance.merge": {
       "identity": "agent-guidance.merge",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:c4328ccba6dc7cf25e748f4653aa8f736261a25f2402daf5d554dc4d6dd04378",
-      "compatibility_fingerprint": "sha256:3bff69b1bf37f3fbd687f8354dd492e24863dd594bdb18454e5e320027a8e4e4",
+      "fingerprint": "sha256:3454924d4ad4aab8710a00b96e974418f9440fe77caa6c09494d891f1e8845e2",
+      "compatibility_fingerprint": "sha256:6e9baa8ed85df6d273beb15e28556ebef9188a9ea7b9dc79374ecfccce461612",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -1722,7 +1726,8 @@
                 "dry_run": {
                   "type": "boolean"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "output": {
@@ -1766,7 +1771,8 @@
                 "failures": {
                   "type": "array"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "failure": {
@@ -1809,8 +1815,8 @@
     "agent-guidance.promote": {
       "identity": "agent-guidance.promote",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6b3ed2423c577794670955277baa69254f1198b452fd422e7958037b63158974",
-      "compatibility_fingerprint": "sha256:feaff8efb173ad10dbdc5e6c499073e9658b494a95c2b8ed869899e3d53fc571",
+      "fingerprint": "sha256:946b21aba3e2b9d05b9e58f87309c2a872e3a9679b3b4e3474354cc3a8deabd4",
+      "compatibility_fingerprint": "sha256:2eb280a967005ea6542d0d6a97f2d4b5f552714ea7436971ef5b68f34df8d20a",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -2317,7 +2323,8 @@
                 "dry_run": {
                   "type": "boolean"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "output": {
@@ -2361,7 +2368,8 @@
                 "failures": {
                   "type": "array"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "failure": {
@@ -2404,8 +2412,8 @@
     "agent-guidance.retire": {
       "identity": "agent-guidance.retire",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:dcf37524c826d22a15601dd2887b15a9ee178604850c19565a0b554708802487",
-      "compatibility_fingerprint": "sha256:bdc13c6f212ac2193aadab9f051d38cbaa239aa124ee7667558a9b2c40ec5189",
+      "fingerprint": "sha256:71b6b66a7b52d8a4fcdd787b13415486625fafecb80cec63ecfc66517b14ff73",
+      "compatibility_fingerprint": "sha256:f13861c1a6d0070560a5f53caaacd5549aae06a2e7db73493f2da0d0335769a7",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -2912,7 +2920,8 @@
                 "dry_run": {
                   "type": "boolean"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "output": {
@@ -2956,7 +2965,8 @@
                 "failures": {
                   "type": "array"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "failure": {
@@ -2999,8 +3009,8 @@
     "agent-guidance.revalidate": {
       "identity": "agent-guidance.revalidate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:77360aea9c2b0640dc95956cbe5b466ff457f69c20bb066ba112837587293ab1",
-      "compatibility_fingerprint": "sha256:441066728a129de73c00946bbf1e165f4386c29d069db92007a71e6815e543da",
+      "fingerprint": "sha256:4333fca58ac4e179f8fbc8ad7201cd5bc9b662f66fec0dcf77283a421190291f",
+      "compatibility_fingerprint": "sha256:cbab443fb6945b9446e76ff0c6f11e7bfe1a81db89ac2d04a5862f17f9e3f60a",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -3507,7 +3517,8 @@
                 "dry_run": {
                   "type": "boolean"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "output": {
@@ -3551,7 +3562,8 @@
                 "failures": {
                   "type": "array"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "failure": {
@@ -3594,8 +3606,8 @@
     "agent-guidance.split": {
       "identity": "agent-guidance.split",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:cea3258866bb08e094fe62774580ce0ee4b32bf3804cfde9c96f6dc21dea2e06",
-      "compatibility_fingerprint": "sha256:939ceaea12002ff8243ad90fca55e1cf9e12b9a4894e5b3660f9d7f76de3aaf3",
+      "fingerprint": "sha256:0d75a3c0beded81fdb2acddaf4170ebe2dbc6f4543564f198cd9617f7c28393c",
+      "compatibility_fingerprint": "sha256:018989d3448c6d4065d1e891f9266be3124accabed3948ffa3733b8c9b930523",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -4104,7 +4116,8 @@
                 "dry_run": {
                   "type": "boolean"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "output": {
@@ -4148,7 +4161,8 @@
                 "failures": {
                   "type": "array"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "failure": {
@@ -4191,8 +4205,8 @@
     "agent-guidance.supersede": {
       "identity": "agent-guidance.supersede",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:eb989d88f814ccbd967c6a403db9f997fbfb89b32f13cfe603a59d1aefa6e64f",
-      "compatibility_fingerprint": "sha256:77eefc07393238c6fb514d9f1d399c9b96d6b6e865c1f936747783190ed81e56",
+      "fingerprint": "sha256:67aadfd93c0d7e3431185ffb144faf2f138229f6b8130fdbf9a271a560d5b801",
+      "compatibility_fingerprint": "sha256:b1a4428baceed14528875b4843b50e518e5b2aea378a93ffc0b3c53a3f5b54c6",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -4701,7 +4715,8 @@
                 "dry_run": {
                   "type": "boolean"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "output": {
@@ -4745,7 +4760,8 @@
                 "failures": {
                   "type": "array"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "failure": {
@@ -4788,8 +4804,8 @@
     "agent-guidance.suppress": {
       "identity": "agent-guidance.suppress",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:c5e087b29abe304f2ae6e61f2bccefe5851734f29f15038eebc1e3260a640183",
-      "compatibility_fingerprint": "sha256:571805b894d351396bfdc76088a8ef44a8465ea32fad6d0c1369857c0ce2ab61",
+      "fingerprint": "sha256:c92c753fcb15717ba351e29ce57f1d784dfbc97eb01a59648158e0b70425f136",
+      "compatibility_fingerprint": "sha256:dc93b6769a2e99e92e83c105fd060daf7ccda36d1dda15f12b43e67a34dbde96",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5296,7 +5312,8 @@
                 "dry_run": {
                   "type": "boolean"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "output": {
@@ -5340,7 +5357,8 @@
                 "failures": {
                   "type": "array"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "failure": {
@@ -5383,8 +5401,8 @@
     "agent-guidance.weaken": {
       "identity": "agent-guidance.weaken",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:1d56fa50b81b089d2471566b16e2b3af7f26187bc1a5b46c720c1a6b7057e3eb",
-      "compatibility_fingerprint": "sha256:fcd029b91c0fff1440fd985070886e5f498c6441b823b0f8d4cf9420db5edb71",
+      "fingerprint": "sha256:b621581d56b3aaf00a82b532fb5dda77db2c67655bf8ef64403c3d47f526c0e9",
+      "compatibility_fingerprint": "sha256:2a380b6f50be9ec0ac9d6c2c0fe3bc85ea14c781d340d3e8f562431c245ccc01",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5891,7 +5909,8 @@
                 "dry_run": {
                   "type": "boolean"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "output": {
@@ -5935,7 +5954,8 @@
                 "failures": {
                   "type": "array"
                 }
-              }
+              },
+              "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
           "failure": {
@@ -16885,6 +16905,2977 @@
           }
         }
       }
+    },
+    "evaluation.delivery-status": {
+      "identity": "evaluation.delivery-status",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:31a12290ca6c0ff0a60d912af2561cc11f063d1727b6c1a51a5a35bf0f4d0e8f",
+      "compatibility_fingerprint": "sha256:2da90e18c06890b8d5e35ad90c605b09e8cd6c06d7ed399ae3f8fa0cfdefe9fb",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.delivery-status",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "delivery-status"
+        },
+        "summary": "Project per-sink report delivery status from local compilation and admitted producer receipts.",
+        "classification": "read-only-report",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+          },
+          {
+            "name": "evaluation_id",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "explicit",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+          "description": "Current delivery status projection."
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.report-deliveries.json",
+            "required": false
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.external-deliveries.json",
+            "required": false
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "project",
+            "uses": "evaluation.delivery.status",
+            "description": "Resolve current delivery request and project each sink from stored receipts."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit status."
+          }
+        ],
+        "guards": [
+          "Caller-supplied success flags are ignored.",
+          "Only admitted producer-owned receipts can make a sink delivered."
+        ],
+        "proof": [
+          "evaluation unit tests",
+          "operation contract validates against operation.schema.json"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "evaluation_report_delivery_input.schema.json",
+        "evaluation_report_delivery_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_report_delivery_input.schema.json"
+        ],
+        "output": [
+          "evaluation_report_delivery_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.delivery-status",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+            },
+            {
+              "name": "evaluation_id",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "explicit",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+            "description": "Current delivery status projection."
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Caller-supplied success flags are ignored.",
+            "Only admitted producer-owned receipts can make a sink delivered."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_report_delivery_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_report_delivery_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "evaluation.external-adapter-receipt": {
+      "identity": "evaluation.external-adapter-receipt",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:f402fde771b9177bb0ce410baf53997d8fbb4b8ffd3164a8f946bdfe0675a90f",
+      "compatibility_fingerprint": "sha256:f69ae2d5d2f42c4cd39fb35ed896fe41fa1f2e5350510505dc795a4d4bb5dc05",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.external-adapter-receipt",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "external-adapter-receipt"
+        },
+        "summary": "Record a producer-owned external adapter attempt/result receipt for later delivery admission.",
+        "classification": "local-record-append",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+          },
+          {
+            "name": "delivery_id",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "sink_id",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "producer",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "attempt_revision",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "receipt_revision",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "capability_revision",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "capability_status",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "status_owner",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "status",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "detail",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "supersedes",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "host_result_ref",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+          "description": "Indexed producer-owned adapter receipt."
+        },
+        "effects": {
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-receipts/index.json",
+            "required": false
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-receipts/<receipt-id>.json",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-receipts/index.json",
+            "required": true
+          }
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "record",
+            "uses": "evaluation.delivery.adapter-receipt.record",
+            "description": "Validate and index provider-owned capability/result receipt."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit adapter receipt record."
+          }
+        ],
+        "guards": [
+          "Receipt status, producer, attempt, and capability revisions are required.",
+          "Superseded receipts are demoted in the producer-owned index.",
+          "Transport success is later admitted only by referencing an indexed receipt."
+        ],
+        "proof": [
+          "evaluation unit tests",
+          "operation contract validates against operation.schema.json"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "evaluation_report_delivery_input.schema.json",
+        "evaluation_report_delivery_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_report_delivery_input.schema.json"
+        ],
+        "output": [
+          "evaluation_report_delivery_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.external-adapter-receipt",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+            },
+            {
+              "name": "delivery_id",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "sink_id",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "producer",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "attempt_revision",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "receipt_revision",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "capability_revision",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "capability_status",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "status_owner",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "status",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "detail",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "supersedes",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "host_result_ref",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+            "description": "Indexed producer-owned adapter receipt."
+          },
+          "effects": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Receipt status, producer, attempt, and capability revisions are required.",
+            "Superseded receipts are demoted in the producer-owned index.",
+            "Transport success is later admitted only by referencing an indexed receipt."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_report_delivery_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_report_delivery_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "evaluation.external-delivery": {
+      "identity": "evaluation.external-delivery",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:dbf29426ab3c56905962d0f3ad177cd6eb5a89a7d7f750762a7160d1df81d08f",
+      "compatibility_fingerprint": "sha256:074fda166175f21c8497ef61111e7a5770b87d54b4cc61ff2cb86703de6c2290",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.external-delivery",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "external-delivery"
+        },
+        "summary": "Admit one external report delivery result from a current producer-owned adapter receipt.",
+        "classification": "local-record-append",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+          },
+          {
+            "name": "evaluation_id",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "adapter_receipt_ref",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "explicit",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+          "description": "Admitted delivery receipt or retryable rejection."
+        },
+        "effects": {
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/evaluations.json",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-receipts/index.json",
+            "required": true
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.external-deliveries.json",
+            "required": true
+          }
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "admit",
+            "uses": "evaluation.delivery.external-admit",
+            "description": "Recompute the current request and admit only the referenced indexed producer receipt."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit delivery admission result."
+          }
+        ],
+        "guards": [
+          "Current request is recomputed at admission time.",
+          "Arbitrary inline dictionaries and success flags are ignored.",
+          "Superseded, revoked, stale, unindexed, or wrong-sink receipts fail closed."
+        ],
+        "proof": [
+          "evaluation unit tests",
+          "operation contract validates against operation.schema.json"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "evaluation_report_delivery_input.schema.json",
+        "evaluation_report_delivery_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_report_delivery_input.schema.json"
+        ],
+        "output": [
+          "evaluation_report_delivery_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.external-delivery",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+            },
+            {
+              "name": "evaluation_id",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "adapter_receipt_ref",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "explicit",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+            "description": "Admitted delivery receipt or retryable rejection."
+          },
+          "effects": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Current request is recomputed at admission time.",
+            "Arbitrary inline dictionaries and success flags are ignored.",
+            "Superseded, revoked, stale, unindexed, or wrong-sink receipts fail closed."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_report_delivery_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_report_delivery_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "evaluation.external-host-result-import": {
+      "identity": "evaluation.external-host-result-import",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:4b4872cde889d0beb2745398faebdeb34645d90bd1362b8b57cf2ed517b2e681",
+      "compatibility_fingerprint": "sha256:cb6c8569048803c5a9d07550d4c15a7b6a20174051bc7ef645da00f7193106c1",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.external-host-result-import",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "external-host-result-import"
+        },
+        "summary": "Import one provider-owned external evaluation host result by opaque reference after host admission verification.",
+        "classification": "local-record-append",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+          },
+          {
+            "name": "provider_result_ref",
+            "source": "cli-option",
+            "required": true,
+            "description": "Opaque provider result reference resolved by the host/provider boundary."
+          },
+          {
+            "name": "expected_result_digest",
+            "source": "cli-option",
+            "required": false,
+            "description": "Optional sha256 digest guard for the provider-owned result artifact."
+          },
+          {
+            "name": "capability_revision",
+            "source": "cli-option",
+            "required": false,
+            "description": "Optional provider capability revision guard."
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+          "description": "Imported host result reference and append-preserving admission/index receipts."
+        },
+        "effects": {
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "allowed",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": "host/provider result resolver for opaque external-evaluation-provider-result:<id>",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-results/index.json",
+            "required": false
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-result-admissions/index.json",
+            "required": false
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-results/<result-id>.json",
+            "required": true,
+            "when": "new result import"
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-results/index.json",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-result-admissions/<admission-id>.json",
+            "required": true,
+            "when": "new admission import"
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/external-adapter-host-result-admissions/index.json",
+            "required": true
+          }
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "import_result",
+            "uses": "evaluation.delivery.host-result.import",
+            "description": "Resolve the opaque provider result reference through the host/provider boundary, verify the returned host-admission verdict, and transactionally append result/admission indexes."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit import result."
+          }
+        ],
+        "guards": [
+          "Callers pass an opaque provider_result_ref, not a raw host result mapping.",
+          "The default AW CLI fails closed unless a protected host/provider resolver supplies the provider result and admission verdict.",
+          "Host admission verdict, capability revision/status, result digest, supersession, and revocation are re-resolved immediately before import.",
+          "Result and admission file/index writes are append-preserving, locally locked, idempotent, and rolled back together on partial failure.",
+          "Adapter receipt recording consumes only imported host_result_ref values."
+        ],
+        "proof": [
+          "evaluation unit tests",
+          "operation contract validates against operation.schema.json",
+          "generated external consumer profile includes the operation"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "evaluation_report_delivery_input.schema.json",
+        "evaluation_report_delivery_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_report_delivery_input.schema.json"
+        ],
+        "output": [
+          "evaluation_report_delivery_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.external-host-result-import",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+            },
+            {
+              "name": "provider_result_ref",
+              "source": "cli-option",
+              "required": true,
+              "description": "Opaque provider result reference resolved by the host/provider boundary."
+            },
+            {
+              "name": "expected_result_digest",
+              "source": "cli-option",
+              "required": false,
+              "description": "Optional sha256 digest guard for the provider-owned result artifact."
+            },
+            {
+              "name": "capability_revision",
+              "source": "cli-option",
+              "required": false,
+              "description": "Optional provider capability revision guard."
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+            "description": "Imported host result reference and append-preserving admission/index receipts."
+          },
+          "effects": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Callers pass an opaque provider_result_ref, not a raw host result mapping.",
+            "The default AW CLI fails closed unless a protected host/provider resolver supplies the provider result and admission verdict.",
+            "Host admission verdict, capability revision/status, result digest, supersession, and revocation are re-resolved immediately before import.",
+            "Result and admission file/index writes are append-preserving, locally locked, idempotent, and rolled back together on partial failure.",
+            "Adapter receipt recording consumes only imported host_result_ref values."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_report_delivery_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_report_delivery_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "evaluation.external-request": {
+      "identity": "evaluation.external-request",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:8ed87608024cd5a00eaf7208ad1aeec0729cbee3d32784c07184a55b88102809",
+      "compatibility_fingerprint": "sha256:332130e4c180fc670136e82bfdc8b1ee826d43de8b8bb739035eb8aecc20da6b",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.external-request",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "external-request"
+        },
+        "summary": "Create the current per-sink external report delivery request.",
+        "classification": "read-only-report",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+          },
+          {
+            "name": "evaluation_id",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "explicit",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+          "description": "External delivery request requiring provider adapter receipts."
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/evaluations.json",
+            "required": true
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "request",
+            "uses": "evaluation.report.external-request",
+            "description": "Resolve current report authority and produce stable per-sink idempotency keys."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit delivery request."
+          }
+        ],
+        "guards": [
+          "Requests are stale if current report authority changes.",
+          "Requests do not prove any transport result."
+        ],
+        "proof": [
+          "evaluation unit tests",
+          "operation contract validates against operation.schema.json"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "evaluation_report_delivery_input.schema.json",
+        "evaluation_report_delivery_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_report_delivery_input.schema.json"
+        ],
+        "output": [
+          "evaluation_report_delivery_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.external-request",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+            },
+            {
+              "name": "evaluation_id",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "explicit",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+            "description": "External delivery request requiring provider adapter receipts."
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Requests are stale if current report authority changes.",
+            "Requests do not prove any transport result."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_report_delivery_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_report_delivery_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "evaluation.local-delivery": {
+      "identity": "evaluation.local-delivery",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:eff60e0af852f47682732eba349732c4431effbad940ba59d05f48c1cf20e496",
+      "compatibility_fingerprint": "sha256:b9ee313b26455eb6a1f3a32dfda7a95ab34f213b6e7e6bd8b3fc078aab3d8e64",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.local-delivery",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "local-delivery"
+        },
+        "summary": "Record a local report compilation receipt without claiming external sink delivery.",
+        "classification": "local-record-append",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+          },
+          {
+            "name": "evaluation_id",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "explicit",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+          "description": "Local report delivery receipt."
+        },
+        "effects": {
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/evaluations.json",
+            "required": true
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.report-deliveries.json",
+            "required": true
+          }
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "record",
+            "uses": "evaluation.report.local-delivery",
+            "description": "Persist or deduplicate a local compilation receipt."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit local delivery receipt."
+          }
+        ],
+        "guards": [
+          "Local delivery receipts explicitly state external delivery is unattempted.",
+          "Equivalent reports return the prior receipt."
+        ],
+        "proof": [
+          "evaluation unit tests",
+          "operation contract validates against operation.schema.json"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "evaluation_report_delivery_input.schema.json",
+        "evaluation_report_delivery_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_report_delivery_input.schema.json"
+        ],
+        "output": [
+          "evaluation_report_delivery_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.local-delivery",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+            },
+            {
+              "name": "evaluation_id",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "explicit",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+            "description": "Local report delivery receipt."
+          },
+          "effects": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Local delivery receipts explicitly state external delivery is unattempted.",
+            "Equivalent reports return the prior receipt."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_report_delivery_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_report_delivery_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "evaluation.observe": {
+      "identity": "evaluation.observe",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:9635d90397b25ffc92523f478e4e385cc008b44ba1cfd817ead15329f10ef278",
+      "compatibility_fingerprint": "sha256:3ad95af3342ef798ec156b1d874e555f734ccd0d8d475b6acc25bf7f46b4b3a7",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.observe",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "observe"
+        },
+        "summary": "Append one local-first evaluation observation after resolving current assignment, proof, and mutation authority.",
+        "classification": "local-record-append",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_observation_input.schema.json"
+          },
+          {
+            "name": "evaluation_id",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "criterion",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "result",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "evidence_refs",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "confidence",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "burden",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "context",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "finding",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "recommended_action",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_observe_result.schema.json"
+        },
+        "effects": {
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/evaluations.json",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.authority.json",
+            "required": true
+          },
+          {
+            "surface": "git HEAD and scoped status",
+            "required": true
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.jsonl",
+            "required": true,
+            "when": "locked atomic append or idempotent duplicate return"
+          }
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "append",
+            "uses": "evaluation.observation.append",
+            "description": "Resolve authority, take the local lock, detect duplicates, and atomically append or return the prior record."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit append result."
+          }
+        ],
+        "guards": [
+          "Observation criterion must exist in the registered definition.",
+          "Terminal evaluations reject additional observations.",
+          "Observation context is comparison evidence only; assignment, mutation baseline, and AW proof authority resolve from the local authority receipt and live Git.",
+          "Concurrent/retried observations use a local lock, store revision, and idempotency key.",
+          "Each admitted observation/result carries a stable identity and supersedes previous current results for the same criterion.",
+          "External evidence is referenced, not copied, unless separately promoted."
+        ],
+        "proof": [
+          "evaluation unit tests",
+          "operation contract validates against operation.schema.json"
+        ],
+        "migration_status": "runtime-consumed",
+        "ir_plan": {
+          "status": "representative",
+          "summary": "Generated command packages execute the evaluation observation operation through runtime-owned evaluation primitives.",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "Resolve the target root."
+            },
+            {
+              "id": "append",
+              "uses": "evaluation.observation.append",
+              "description": "Validate and append the observation."
+            },
+            {
+              "id": "emit_output",
+              "uses": "output.emit",
+              "description": "Emit append result."
+            }
+          ]
+        }
+      },
+      "schemas": [
+        "evaluation_observation_input.schema.json",
+        "evaluation_observe_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_observation_input.schema.json"
+        ],
+        "output": [
+          "evaluation_observe_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.observe",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_observation_input.schema.json"
+            },
+            {
+              "name": "evaluation_id",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "criterion",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "result",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "evidence_refs",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "confidence",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "burden",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "context",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "finding",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "recommended_action",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_observe_result.schema.json"
+          },
+          "effects": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Observation criterion must exist in the registered definition.",
+            "Terminal evaluations reject additional observations.",
+            "Observation context is comparison evidence only; assignment, mutation baseline, and AW proof authority resolve from the local authority receipt and live Git.",
+            "Concurrent/retried observations use a local lock, store revision, and idempotency key.",
+            "Each admitted observation/result carries a stable identity and supersedes previous current results for the same criterion.",
+            "External evidence is referenced, not copied, unless separately promoted."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_observation_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "schema-reference",
+              "type": "object",
+              "required": [
+                "evaluation_id",
+                "criterion",
+                "result"
+              ],
+              "properties": {
+                "target": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "evaluation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "criterion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "result": {
+                  "enum": [
+                    "supports",
+                    "contradicts",
+                    "mixed",
+                    "not-applicable",
+                    "unknown"
+                  ]
+                },
+                "evidence_refs": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  ]
+                },
+                "confidence": {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                },
+                "burden": {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                },
+                "context": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  ]
+                },
+                "finding": {
+                  "type": "string"
+                },
+                "recommended_action": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_observe_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "schema-reference",
+              "type": "object",
+              "required": [
+                "kind",
+                "path",
+                "outcome",
+                "evaluation_id",
+                "criterion",
+                "result",
+                "result_identity",
+                "supersedes",
+                "idempotency_key",
+                "store_revision"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/evaluation-observation/v1"
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "outcome": {
+                  "enum": [
+                    "appended",
+                    "duplicate"
+                  ]
+                },
+                "evaluation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "criterion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "result": {
+                  "enum": [
+                    "supports",
+                    "contradicts",
+                    "mixed",
+                    "not-applicable",
+                    "unknown"
+                  ]
+                },
+                "result_identity": {
+                  "type": "object",
+                  "required": [
+                    "kind",
+                    "id",
+                    "status",
+                    "evaluation_id",
+                    "definition_revision",
+                    "criterion"
+                  ],
+                  "additionalProperties": true
+                },
+                "supersedes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "store_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "storage": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "evaluation.report-preview": {
+      "identity": "evaluation.report-preview",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:ce6dd64d556f72373f124ff5432d59276cadd597e4dcb7ce54a3af51fc5b3340",
+      "compatibility_fingerprint": "sha256:5702c0f5a774b17b006b89815981052f3ae43eb61f92c5c308c1e8e2484e74fc",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.report-preview",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "report-preview"
+        },
+        "summary": "Compile current evaluation report authority without claiming external delivery.",
+        "classification": "read-only-report",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+          },
+          {
+            "name": "evaluation_id",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "explicit",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+          "description": "Evaluation report-authority payload."
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/evaluations.json",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.jsonl",
+            "required": false
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "compile",
+            "uses": "evaluation.report.preview",
+            "description": "Resolve current definition and admitted summary state and compile report authority."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit report preview."
+          }
+        ],
+        "guards": [
+          "Preview status is derived from current admitted evaluation state.",
+          "Preview never claims local or external delivery."
+        ],
+        "proof": [
+          "evaluation unit tests",
+          "operation contract validates against operation.schema.json"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "evaluation_report_delivery_input.schema.json",
+        "evaluation_report_delivery_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_report_delivery_input.schema.json"
+        ],
+        "output": [
+          "evaluation_report_delivery_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.report-preview",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+            },
+            {
+              "name": "evaluation_id",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "explicit",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+            "description": "Evaluation report-authority payload."
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Preview status is derived from current admitted evaluation state.",
+            "Preview never claims local or external delivery."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_report_delivery_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_report_delivery_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "evaluation.retry": {
+      "identity": "evaluation.retry",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:96945f01955dc0d11a465ca00351ebd69fe9fefdea50e55e8d86f4619c0b5240",
+      "compatibility_fingerprint": "sha256:bdd3dc69f9d7f35217cadd9052c4ed760727c0542c1366688e4b12fcc02168d4",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.retry",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "retry"
+        },
+        "summary": "Return the current retryable external delivery request for failed or pending sinks.",
+        "classification": "read-only-report",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+          },
+          {
+            "name": "evaluation_id",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "sink_id",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+          "description": "Retry projection for current delivery request."
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.external-deliveries.json",
+            "required": false
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "retry",
+            "uses": "evaluation.delivery.retry",
+            "description": "Return current pending/failed sinks and request identity for adapter retry."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit retry projection."
+          }
+        ],
+        "guards": [
+          "Retry projection does not claim execution.",
+          "A fresh producer adapter receipt is required before status can become delivered."
+        ],
+        "proof": [
+          "evaluation unit tests",
+          "operation contract validates against operation.schema.json"
+        ],
+        "migration_status": "runtime-consumed"
+      },
+      "schemas": [
+        "evaluation_report_delivery_input.schema.json",
+        "evaluation_report_delivery_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_report_delivery_input.schema.json"
+        ],
+        "output": [
+          "evaluation_report_delivery_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.retry",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_report_delivery_input.schema.json"
+            },
+            {
+              "name": "evaluation_id",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "sink_id",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_report_delivery_result.schema.json",
+            "description": "Retry projection for current delivery request."
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Retry projection does not claim execution.",
+            "A fresh producer adapter receipt is required before status can become delivered."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_report_delivery_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_report_delivery_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
     }
   },
   "schemas": {
@@ -17554,28 +20545,264 @@
         "additionalProperties": true
       }
     },
+    "evaluation_observation_input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/evaluation_observation_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/evaluation-observation-input.schema.json",
+        "title": "Agentic Workspace Evaluation Observation Input",
+        "description": "Input accepted by the generated evaluation.observe operation.",
+        "x-agentic-workspace-doc-role": "schema-reference",
+        "type": "object",
+        "required": [
+          "evaluation_id",
+          "criterion",
+          "result"
+        ],
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "Target repository path."
+          },
+          "format": {
+            "enum": [
+              "text",
+              "json"
+            ],
+            "description": "Output format."
+          },
+          "evaluation_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered evaluation id that will receive the observation."
+          },
+          "criterion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Criterion id within the registered evaluation definition."
+          },
+          "result": {
+            "enum": [
+              "supports",
+              "contradicts",
+              "mixed",
+              "not-applicable",
+              "unknown"
+            ],
+            "description": "Observed result for the selected criterion."
+          },
+          "evidence_refs": {
+            "description": "External evidence references, either as the CLI comma-separated string or an array of references.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            ]
+          },
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Confidence in the observation."
+          },
+          "burden": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Collection or review burden for this observation."
+          },
+          "context": {
+            "description": "Structured authority and comparison context, either as a JSON string from CLI transport or an object.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "finding": {
+            "type": "string",
+            "description": "Compact finding text derived from the observation."
+          },
+          "recommended_action": {
+            "type": "string",
+            "description": "Bounded next action recommended by the observer, when any."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "evaluation_observe_result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/evaluation_observe_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/evaluation-observe-result.schema.json",
+        "title": "Agentic Workspace Evaluation Observe Result",
+        "description": "Result returned by the evaluation.observe generated operation.",
+        "x-agentic-workspace-doc-role": "schema-reference",
+        "type": "object",
+        "required": [
+          "kind",
+          "path",
+          "outcome",
+          "evaluation_id",
+          "criterion",
+          "result",
+          "result_identity",
+          "supersedes",
+          "idempotency_key",
+          "store_revision"
+        ],
+        "properties": {
+          "kind": {
+            "const": "agentic-workspace/evaluation-observation/v1",
+            "description": "Discriminator identifying an evaluation observe result."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Repo-relative local observation store path."
+          },
+          "outcome": {
+            "enum": [
+              "appended",
+              "duplicate"
+            ],
+            "description": "Whether the operation appended a new observation or returned an idempotent duplicate."
+          },
+          "evaluation_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered evaluation id that received the observation."
+          },
+          "criterion": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Criterion id observed within the registered evaluation definition."
+          },
+          "result": {
+            "enum": [
+              "supports",
+              "contradicts",
+              "mixed",
+              "not-applicable",
+              "unknown"
+            ],
+            "description": "Observed result for the selected criterion."
+          },
+          "result_identity": {
+            "type": "object",
+            "required": [
+              "kind",
+              "id",
+              "status",
+              "evaluation_id",
+              "definition_revision",
+              "criterion"
+            ],
+            "additionalProperties": true,
+            "description": "Stable identity for the admitted decision-bearing evaluation result."
+          },
+          "supersedes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Result identities superseded by this admitted observation."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable duplicate-detection key for retry-safe observation append."
+          },
+          "store_revision": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Revision fingerprint of the local observation store after the operation."
+          },
+          "storage": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Storage and retention details returned for a newly appended observation."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "evaluation_report_delivery_input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/evaluation_report_delivery_input.schema.json",
+        "title": "Evaluation report and delivery operation input",
+        "description": "Common generated-client input envelope for evaluation report preview, local delivery, external request, adapter receipt, status, and retry operations. Runtime handlers enforce per-command required fields.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "evaluation_report_delivery_result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/evaluation_report_delivery_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/evaluation_report_delivery_result.schema.json",
+        "title": "Evaluation report and delivery operation result",
+        "description": "Common generated-client result envelope for evaluation report preview, local delivery, external request, adapter receipt, status, and retry operations. Runtime handlers provide the precise kind/status contract.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "Discriminator identifying the concrete evaluation report or delivery result envelope."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
     "guidance_lifecycle_input.schema.json": {
       "source": "src/agentic_workspace/contracts/schemas/guidance_lifecycle_input.schema.json",
       "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": "agentic-workspace/guidance-lifecycle-input.schema.json",
         "title": "Agent guidance lifecycle operation input",
+        "description": "Inputs for a bounded agent-guidance lifecycle query or mutation.",
         "type": "object",
         "additionalProperties": true,
         "properties": {
           "target": {
-            "type": "string"
+            "type": "string",
+            "description": "Workspace root whose guidance lifecycle is being inspected or changed."
           },
           "format": {
             "type": "string",
             "enum": [
               "text",
               "json"
-            ]
+            ],
+            "description": "Requested command output format."
           },
           "guidance_id": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Stable identifier of the guidance record to inspect or mutate."
           },
           "expected_revision": {
             "oneOf": [
@@ -17587,19 +20814,24 @@
                 "type": "string",
                 "pattern": "^[0-9]+$"
               }
-            ]
+            ],
+            "description": "Required current record revision for revision-guarded mutation."
           },
           "expected_record_revisions_json": {
-            "type": "string"
+            "type": "string",
+            "description": "Serialized map of guidance identifiers to expected revisions for multi-record mutation."
           },
           "reason": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable reason recorded for the lifecycle transition."
           },
           "instruction": {
-            "type": "string"
+            "type": "string",
+            "description": "Prescriptive guidance text used when creating, replacing, or splitting guidance."
           },
           "replacement_guidance_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Identifier of the guidance record that replaces the selected record."
           },
           "merge_guidance_ids": {
             "oneOf": [
@@ -17612,7 +20844,8 @@
               {
                 "type": "string"
               }
-            ]
+            ],
+            "description": "Guidance identifiers to merge into one lifecycle record."
           },
           "split_instructions": {
             "oneOf": [
@@ -17625,21 +20858,27 @@
               {
                 "type": "string"
               }
-            ]
+            ],
+            "description": "Prescriptive instructions used to split one guidance record into multiple records."
           },
           "task_class": {
-            "type": "string"
+            "type": "string",
+            "description": "Task applicability class attached to promoted guidance."
           },
           "scope_class": {
-            "type": "string"
+            "type": "string",
+            "description": "Scope applicability class attached to promoted guidance."
           },
           "explicit_remember": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether an explicit remember request supports promotion authority."
           },
           "dry_run": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Preview the lifecycle operation without applying mutations."
           }
-        }
+        },
+        "x-agentic-workspace-doc-role": "contract-reference"
       }
     },
     "guidance_lifecycle_result.schema.json": {
@@ -17648,6 +20887,7 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": "agentic-workspace/guidance-lifecycle-result.schema.json",
         "title": "Agent guidance lifecycle operation result",
+        "description": "Structured result of a bounded agent-guidance lifecycle query or mutation.",
         "type": "object",
         "additionalProperties": true,
         "required": [
@@ -17656,37 +20896,48 @@
         ],
         "properties": {
           "kind": {
-            "const": "agentic-workspace/guidance-lifecycle-result/v1"
+            "const": "agentic-workspace/guidance-lifecycle-result/v1",
+            "description": "Versioned result contract identifier."
           },
           "operation_id": {
             "type": "string",
-            "pattern": "^agent-guidance\\."
+            "pattern": "^agent-guidance\\.",
+            "description": "Agent-guidance operation that produced this result."
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "description": "Lifecycle outcome status."
           },
           "mutation_applied": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the requested lifecycle mutation changed durable state."
           },
           "guidance_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Stable identifier of the primary guidance record in the result."
           },
           "store": {
-            "type": "string"
+            "type": "string",
+            "description": "Guidance store selected by the lifecycle authority."
           },
           "record": {
-            "type": "object"
+            "type": "object",
+            "description": "Primary guidance record returned by the operation."
           },
           "records": {
-            "type": "array"
+            "type": "array",
+            "description": "Guidance records returned by a query or multi-record mutation."
           },
           "mutation_receipt": {
-            "type": "object"
+            "type": "object",
+            "description": "Revision-bound receipt for an applied or replayed mutation."
           },
           "failures": {
-            "type": "array"
+            "type": "array",
+            "description": "Structured failures that prevented or bounded the operation."
           }
-        }
+        },
+        "x-agentic-workspace-doc-role": "contract-reference"
       }
     },
     "operation_failure.schema.json": {

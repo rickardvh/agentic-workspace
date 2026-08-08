@@ -42,9 +42,17 @@ from . import correction_event_withdraw_supersede as _command_correction_event_w
 from . import defaults_report as _command_defaults_report
 from . import delegation_outcome_append as _command_delegation_outcome_append
 from . import doctor_report as _command_doctor_report
+from . import evaluation_delivery_status as _command_evaluation_delivery_status
+from . import evaluation_external_adapter_receipt as _command_evaluation_external_adapter_receipt
+from . import evaluation_external_delivery as _command_evaluation_external_delivery
+from . import evaluation_external_host_result_import as _command_evaluation_external_host_result_import
+from . import evaluation_external_request as _command_evaluation_external_request
+from . import evaluation_local_delivery as _command_evaluation_local_delivery
 from . import evaluation_observe as _command_evaluation_observe
 from . import evaluation_prune as _command_evaluation_prune
 from . import evaluation_register as _command_evaluation_register
+from . import evaluation_report_preview as _command_evaluation_report_preview
+from . import evaluation_retry as _command_evaluation_retry
 from . import evaluation_status as _command_evaluation_status
 from . import evaluation_transition as _command_evaluation_transition
 from . import external_intent_refresh_github as _command_external_intent_refresh_github
@@ -111,9 +119,17 @@ GENERATED_COMMAND_HANDLERS = {
     'defaults.report': _command_defaults_report.run,
     'delegation-outcome.append': _command_delegation_outcome_append.run,
     'doctor.report': _command_doctor_report.run,
+    'evaluation.delivery-status': _command_evaluation_delivery_status.run,
+    'evaluation.external-adapter-receipt': _command_evaluation_external_adapter_receipt.run,
+    'evaluation.external-delivery': _command_evaluation_external_delivery.run,
+    'evaluation.external-host-result-import': _command_evaluation_external_host_result_import.run,
+    'evaluation.external-request': _command_evaluation_external_request.run,
+    'evaluation.local-delivery': _command_evaluation_local_delivery.run,
     'evaluation.observe': _command_evaluation_observe.run,
     'evaluation.prune': _command_evaluation_prune.run,
     'evaluation.register': _command_evaluation_register.run,
+    'evaluation.report-preview': _command_evaluation_report_preview.run,
+    'evaluation.retry': _command_evaluation_retry.run,
     'evaluation.status': _command_evaluation_status.run,
     'evaluation.transition': _command_evaluation_transition.run,
     'external-intent.refresh-github': _command_external_intent_refresh_github.run,

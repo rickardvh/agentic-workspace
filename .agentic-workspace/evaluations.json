@@ -1,0 +1,146 @@
+{
+  "evaluations": [
+    {
+      "action_policy": {
+        "material_negative_finding": "create-or-reopen-bounded-follow-up",
+        "positive_conclusion": "close-issue-1969-after-owner-review"
+      },
+      "admission_contract": {
+        "consumers": [
+          "status",
+          "doctor",
+          "operating-decision",
+          "proof-selection",
+          "closure"
+        ],
+        "kind": "agentic-workspace/evaluation-admission-contract/v1",
+        "reject_when": [
+          "assignment-target-mismatch",
+          "baseline-head-changed",
+          "scope-expanded",
+          "stale-worktree",
+          "failed-proof",
+          "missing-bound-context",
+          "superseded-result"
+        ],
+        "repair_route": "rerun or supersede the evaluation result after refreshing assignment, authority, baseline, and proof context",
+        "required_context": [
+          "assignment.target_identity_ref",
+          "assignment.context_key",
+          "assignment.assignment_revision",
+          "authority_envelope.mutation_baseline.baseline_id",
+          "authority_envelope.mutation_baseline.head",
+          "authority_envelope.mutation_baseline.scope.allowed_paths",
+          "proof.provenance",
+          "proof.verified_by=aw"
+        ],
+        "status": "fail-closed-for-bound-results"
+      },
+      "collection_policy": {
+        "minimum_observations": 4,
+        "mode": "local-first",
+        "retention": "latest-current-per-criterion"
+      },
+      "conclusion_policy": {
+        "rule": "decision-owner-reviews-all-required-current-results",
+        "terminal_states": [
+          "satisfied",
+          "contradicted",
+          "inconclusive",
+          "superseded",
+          "archived"
+        ]
+      },
+      "created_at": "2026-07-25T22:02:41Z",
+      "criteria": [
+        {
+          "id": "review-recheck",
+          "question": "Do review and recheck turns resume from compact decision/proof/residue state without a broad recap?",
+          "required": true,
+          "success_condition": "At least one admitted review/recheck observation shows compact continuation with explicit proof and residue.",
+          "type": "qualitative"
+        },
+        {
+          "id": "handoff",
+          "question": "Can a handoff resume from the continuation capsule and current decision without reconstructing the full history?",
+          "required": true,
+          "success_condition": "At least one admitted handoff observation identifies the next action and boundary from the compact packets.",
+          "type": "qualitative"
+        },
+        {
+          "id": "closeout",
+          "question": "Does closeout retain proof, residue, and honest claim boundaries in its compact state-delta result?",
+          "required": true,
+          "success_condition": "At least one admitted closeout observation retains all three without an unsafe completion claim.",
+          "type": "qualitative"
+        },
+        {
+          "id": "cost",
+          "question": "Does the ordinary loop avoid broad generated rereads and repeated process narration?",
+          "required": true,
+          "success_condition": "Comparative observations show bounded selectors or deltas replace a broad recap or generated verbose reread.",
+          "type": "qualitative"
+        }
+      ],
+      "decision_owner": {
+        "class": "maintainer",
+        "id": "workspace-maintainer"
+      },
+      "evidence_sources": [
+        {
+          "class": "external-ref",
+          "id": "review-recheck-traces"
+        },
+        {
+          "class": "external-ref",
+          "id": "handoff-capsules"
+        },
+        {
+          "class": "external-ref",
+          "id": "closeout-packets"
+        },
+        {
+          "class": "external-ref",
+          "id": "session-cost-traces"
+        }
+      ],
+      "id": "state-delta-operating-loop-1969",
+      "lifecycle": "collecting",
+      "question": "Does ordinary state-delta-first operation reduce reconstruction cost across review, recheck, handoff, and closeout while preserving proof, residue, and claim boundaries?",
+      "report_sinks": [
+        {
+          "class": "issue-or-report",
+          "id": "#1969"
+        },
+        {
+          "class": "issue-or-report",
+          "id": "#2273"
+        }
+      ],
+      "revision": 1,
+      "selectors": {
+        "issue_refs": [
+          "#1969"
+        ],
+        "commands": [
+          "start",
+          "implement",
+          "summary",
+          "handoff",
+          "closeout_claim_boundary"
+        ],
+        "profiles": [
+          "tiny",
+          "default",
+          "selected"
+        ]
+      },
+      "subject": {
+        "ref": "#1969",
+        "type": "github-issue"
+      },
+      "updated_at": "2026-07-25T22:02:41Z"
+    }
+  ],
+  "kind": "agentic-workspace/evaluations/v1"
+}

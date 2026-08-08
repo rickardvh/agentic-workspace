@@ -25,6 +25,18 @@
       "storage_class": "source-of-truth"
     },
     {
+      "pattern": ".agentic-workspace/evaluations.json",
+      "format": "json",
+      "owner": "workspace-evaluation",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic-workspace evaluation runtime validator",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Checked-in local-first evaluation registry used for dogfooding and evaluation operating-loop continuity.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in evaluation definitions must survive checkout and support repeatable local evaluation status/report behavior."
+    },
+    {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
       "editable_by_agents": true,
       "format": "json",
@@ -1273,6 +1285,23 @@
       "storage_class": "generated-required-adapter"
     },
     {
+      "pattern": "generated/.agentic-workspace-cli-fingerprint.json",
+      "format": "json",
+      "owner": "generated-command-adapters",
+      "status": "generated-derived",
+      "schema_or_validator": "generated command package checks",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated freshness fingerprint for checked-in generated command-package outputs.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Checked in so generated package freshness checks can compare the generated surface set deterministically.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_command_packages.py",
+        "generated command package outputs and source contracts"
+      ],
+      "routed_to": "#931"
+    },
+    {
       "checked_in_justification": "Released Python and TypeScript clients require identical package-owned discovery metadata.",
       "editable_by_agents": false,
       "format": "json",
@@ -1882,6 +1911,16 @@
       "pattern": "generated/workspace/*/external_consumer_profile.json",
       "removal_or_demotion_path": "remove only if released clients gain an equivalent package-owned discovery resource",
       "source_command": "uv run python scripts/generate/generate_external_consumer_profile.py"
+    },
+    {
+      "pattern": "generated/.agentic-workspace-cli-fingerprint.json",
+      "source_command": "uv run python scripts/generate/generate_command_packages.py",
+      "named_consumer": "generated command package freshness checks",
+      "checked_in_justification": "Deterministic generated-surface fingerprint is required to detect stale generated command packages.",
+      "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
+      "ordinary_agent_route": "generated command package drill-down only; not an ordinary startup surface",
+      "removal_or_demotion_path": "remove only if generated command freshness moves to an equivalent package-owned manifest.",
+      "max_bytes": 250000
     },
     {
       "checked_in_justification": "Self-contained operation validation must work outside a source checkout without host payload mirrors.",

@@ -37,6 +37,15 @@
       },
       "default": []
     },
+    "shared_evaluation_aggregation": {
+      "type": "object",
+      "description": "Optional projection references for generic Evaluation; taxonomy and aggregation remain dogfooding-owned.",
+      "properties": {
+        "evaluation_ids": {"type": "array", "items": {"type": "string"}},
+        "observation_refs": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
     "taxonomy": {
       "type": "array",
       "minItems": 5,

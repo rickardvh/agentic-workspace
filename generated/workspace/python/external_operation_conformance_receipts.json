@@ -1,14 +1,14 @@
 {
   "executed_at": "2026-08-08T14:07:06Z",
   "freshness": {
-    "client_semantics_revision": "sha256:e06d89a37600b19950b73f9c481998924b8e7e8b79c0beb3f0f8e512c3d81522",
+    "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
     "rule": "Publication currentness is tied to runner/client-semantics and profile/operation revisions plus explicit stale/revoked/superseded markers.",
     "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
     "strategy": "runner-client-operation-profile-revision-bound"
   },
   "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
   "mirror_publication": {
-    "generation_id": "external-conformance-publication:903d23c2f0292d9dd3274d6b",
+    "generation_id": "external-conformance-publication:06781ce32891d06bc45f9e0d",
     "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
     "path_count": 3,
     "paths": [
@@ -16,9 +16,9 @@
       "generated/workspace/python/external_operation_conformance_receipts.json",
       "generated/workspace/typescript/external_operation_conformance_receipts.json"
     ],
-    "payload_digest": "sha256:903d23c2f0292d9dd3274d6b680a2e14326a38e2f7f59baf4d601e6b705faa9f",
-    "previous_digest": "8423636be4e14d145717536f10e08c1b3afb01906abe069b56adbecca25176e8",
-    "publisher_pid": 66184,
+    "payload_digest": "sha256:06781ce32891d06bc45f9e0db24f3deddb0735527da36723ca0aba08173ee082",
+    "previous_digest": "4621e3b2ae50a0f9feefb8552d3021c6259be2a518f397d88e9f9355b6205705",
+    "publisher_pid": 46752,
     "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
     "status": "published"
   },
@@ -97,7 +97,7 @@
       },
       "executed_at": "2026-08-08T14:07:06Z",
       "freshness": {
-        "client_semantics_revision": "sha256:e06d89a37600b19950b73f9c481998924b8e7e8b79c0beb3f0f8e512c3d81522",
+        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
         "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
         "strategy": "runner-client-operation-profile-revision-bound"
@@ -113,10 +113,10 @@
         "config.report:config.selected-output.success:typescript:typescript.function@sha256:5e7d326f7bd694b7",
         "config.report:config.selected-output.success:vendor-neutral:@sha256:7ca9472b6b8ef20e"
       ],
-      "profile_fingerprint": "sha256:a05eec8ec3d9967bc2013b94c3ff5bdb3521c7d7bad0b42813cbfda5077aa766",
-      "receipt_ref": "external-conformance:config.report:7bb6089d59d1ee7ff2d55804",
+      "profile_fingerprint": "sha256:1732fe2ff22459a1b28b0f36a113d4d4fbf8bae798889ca025b01a0abf043d6e",
+      "receipt_ref": "external-conformance:config.report:3e6043c1fc17f4d35b79eead",
       "result_identity": {
-        "client_semantics_revision": "sha256:e06d89a37600b19950b73f9c481998924b8e7e8b79c0beb3f0f8e512c3d81522",
+        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
         "executed_at": "2026-08-08T14:07:06Z",
         "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
@@ -218,7 +218,7 @@
       },
       "executed_at": "2026-08-08T14:07:06Z",
       "freshness": {
-        "client_semantics_revision": "sha256:e06d89a37600b19950b73f9c481998924b8e7e8b79c0beb3f0f8e512c3d81522",
+        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
         "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
         "strategy": "runner-client-operation-profile-revision-bound"
@@ -233,10 +233,10 @@
         "delegation-outcome.append:delegation-outcome.append-write.boundary:python:cli.process@sha256:3fd7c63647106d7c",
         "delegation-outcome.append:delegation-outcome.append-write.boundary:vendor-neutral:@sha256:7d94d37a097921f0"
       ],
-      "profile_fingerprint": "sha256:a05eec8ec3d9967bc2013b94c3ff5bdb3521c7d7bad0b42813cbfda5077aa766",
-      "receipt_ref": "external-conformance:delegation-outcome.append:2ed9525c4579698aef000409",
+      "profile_fingerprint": "sha256:1732fe2ff22459a1b28b0f36a113d4d4fbf8bae798889ca025b01a0abf043d6e",
+      "receipt_ref": "external-conformance:delegation-outcome.append:93cd2c293612b5421a1fec37",
       "result_identity": {
-        "client_semantics_revision": "sha256:e06d89a37600b19950b73f9c481998924b8e7e8b79c0beb3f0f8e512c3d81522",
+        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
         "executed_at": "2026-08-08T14:07:06Z",
         "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
@@ -281,7 +281,7 @@
     }
   ],
   "result_identity": {
-    "client_semantics_revision": "sha256:e06d89a37600b19950b73f9c481998924b8e7e8b79c0beb3f0f8e512c3d81522",
+    "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
     "executed_at": "2026-08-08T14:07:06Z",
     "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
     "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",

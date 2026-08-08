@@ -281,3 +281,101 @@ def delegation_outcome_append(values: Mapping[str, Any], *, target: str | Path, 
         invocation=invocation,
         allow_runtime_backed=True,
     )
+
+
+def evaluation_delivery_status(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.delivery-status",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def evaluation_external_adapter_receipt(
+    values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None
+) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.external-adapter-receipt",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def evaluation_external_delivery(
+    values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None
+) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.external-delivery",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def evaluation_external_host_result_import(
+    values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None
+) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.external-host-result-import",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def evaluation_external_request(
+    values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None
+) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.external-request",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def evaluation_local_delivery(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.local-delivery",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def evaluation_observe(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.observe",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def evaluation_report_preview(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.report-preview",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
+def evaluation_retry(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.retry",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
