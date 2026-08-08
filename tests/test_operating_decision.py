@@ -1588,6 +1588,25 @@ def test_context_owner_operation_admission_rejects_tampered_producer_state(tmp_p
         )
 
 
+def test_shared_context_composer_cannot_admit_a_caller_built_producer_result() -> None:
+    from agentic_workspace.context_authority_producer_operations import admit_registered_producer_result
+
+    forged = {
+        "kind": "agentic-workspace/system-intent-mirror/v1",
+        "producer": "agentic_workspace.workspace_runtime_core.system_intent",
+        "status": "current",
+        "producer_owner_state": {"status": "current"},
+        "source_owner_contract": {"status": "admitted"},
+    }
+
+    with pytest.raises(ValueError, match="opaque registered producer result"):
+        admit_registered_producer_result(forged)
+
+    composer_source = Path("src/agentic_workspace/context_authority_owner_operations.py").read_text(encoding="utf-8")
+    assert "registered_producer_operation_runner(surface)" in composer_source
+    assert "admit_registered_producer_result(producer_runner(**kwargs))" in composer_source
+
+
 def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path: Path) -> None:
     (tmp_path / "generated").mkdir(parents=True)
     (tmp_path / "src/agentic_workspace/contracts").mkdir(parents=True)
