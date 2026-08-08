@@ -1363,11 +1363,21 @@ def test_context_authority_each_owner_family_uses_concrete_adapter_output(tmp_pa
         assert record["status"] == "current", surface
         owner_result = record["admission"]["owner_result"]
         adapter_receipt = owner_result["owner_adapter_receipt"]
+        source_owner_contract = owner_result["source_owner_contract"]
         operation = owner_result["owner_operation"]
         execution_receipt = owner_result["owner_execution_receipt"]
         assert adapter_receipt["kind"] == "agentic-workspace/context-authority-owner-adapter-result/v1"
+        assert source_owner_contract["kind"] == "agentic-workspace/context-authority-source-owner-contract/v1"
         assert adapter_receipt["surface"] == operation["surface"] == execution_receipt["surface"] == surface
+        assert source_owner_contract["surface"] == surface
+        assert source_owner_contract["schema"]["status"] in {"valid", "current"}
+        assert source_owner_contract["lifecycle"]["status"] == "current"
+        assert source_owner_contract["population"]["status"] == "present"
+        assert source_owner_contract["supersession"]["status"] == "not-superseded"
+        assert source_owner_contract["lifecycle"]["repair_operation_id"] == operation["operation_id"]
         assert operation["adapter_receipt_revision"] == execution_receipt["adapter_receipt_revision"]
+        assert operation["source_owner_contract_revision"] == execution_receipt["source_owner_contract_revision"]
+        assert adapter_receipt["source_owner_contract_revision"] == operation["source_owner_contract_revision"]
         assert owner_result["schema_backing"]
         assert owner_result["owner_boundary"]
 

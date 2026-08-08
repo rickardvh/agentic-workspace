@@ -1312,6 +1312,36 @@ def _planning_route_decision_payload(
     owner_facts = _as_dict(route_inputs.get("owner"))
     selected_owner_ref = str(route_evidence.get("active_execplan") or owner_facts.get("ref") or "")
     task_mode = str(task_binding.get("mode") or "")
+    mutation_baseline = _as_dict(route_inputs.get("mutation_baseline"))
+    mutation_paths = [str(path) for path in task_binding.get("allowed_paths", []) if isinstance(task_binding.get("allowed_paths"), list)]
+    bounded_mutation = bounded and task_mode == "mutation"
+    mutation_baseline_current = not bounded_mutation or _mutation_baseline_route_current(mutation_baseline, changed_paths=mutation_paths)
+    mutation_baseline_admission = {
+        "status": "not-required",
+        "source": "canonical-route-decision",
+        "reason": "The resolved route does not require bounded mutation authority.",
+    }
+    if bounded_mutation:
+        mutation_baseline_admission = {
+            "status": "current" if mutation_baseline_current else "blocked",
+            "source": "canonical-route-decision",
+            "baseline_id": str(mutation_baseline.get("baseline_id") or ""),
+            "head": str(mutation_baseline.get("head") or ""),
+            "mutation_revision": str(
+                _as_dict(mutation_baseline.get("observed_state")).get("enforcement_fingerprint")
+                or mutation_baseline.get("mutation_revision")
+                or mutation_baseline.get("revision")
+                or ""
+            ),
+            "scope": _as_dict(mutation_baseline.get("scope")),
+            "requested_paths": mutation_paths,
+            "reason": "current live mutation baseline admitted into the canonical route decision"
+            if mutation_baseline_current
+            else _mutation_baseline_repair_reason(mutation_baseline, changed_paths=mutation_paths),
+            "rule": "Bounded mutation permission is derived exactly once by the canonical route decision; downstream consumers only project this admission.",
+        }
+    if transition == "none" and bounded_mutation and not mutation_baseline_current:
+        transition = "refresh-mutation-baseline"
     route_proposal = _as_dict(reconciliation_proposal) or _as_dict(route_evidence.get("reconciliation_proposal"))
     next_packet = _route_decision_next_action_packet(
         route_evidence={**route_evidence, "reconciliation_proposal": route_proposal},
@@ -1346,6 +1376,7 @@ def _planning_route_decision_payload(
             "required_transition": "route-decision policy; detailed reconciliation remains owned by planning reconcile",
         },
         "structured_inputs": route_inputs,
+        "mutation_baseline_admission": mutation_baseline_admission,
         "reason_codes": [
             code
             for code in (
@@ -1353,6 +1384,7 @@ def _planning_route_decision_payload(
                 str(route_evidence.get("intent_conflict_state") or ""),
                 str(task_binding.get("basis") or ""),
                 str(owner_facts.get("lifecycle") or ""),
+                "mutation-baseline-required" if bounded_mutation and not mutation_baseline_current else "",
             )
             if code
         ],
@@ -1513,6 +1545,12 @@ def _route_decision_next_action_packet(
         proof = "run implement/proof-selected commands for the changed paths; do not claim active-plan progress"
         required_inputs = ["changed paths or read-only task binding", "current task", "active plan claim boundary"]
         risk = "active-plan-protected-current-task"
+    elif task_relation == "bounded-independent" and required_transition == "refresh-mutation-baseline":
+        action = "refresh-mutation-baseline"
+        summary = "Refresh the live mutation baseline before bounded repository mutation."
+        proof = "rerun implement with changed paths so the authority-envelope mutation baseline is admitted before action"
+        required_inputs = ["changed paths", "live mutation baseline", "Planning route decision"]
+        risk = "mutation-baseline-required"
     elif task_relation == "independent-pending-scope":
         action = "inspect-current-task-scope"
         summary = "Inspect current-task scope before mutation; the selected active plan remains protected."
@@ -1525,6 +1563,36 @@ def _route_decision_next_action_packet(
         proof = "record the explicit task-route decision before implementation or active-plan claims"
         required_inputs = ["current task", "selected owner", "explicit route decision"]
         risk = "ambiguous-active-plan-route"
+    elif required_transition == "repair-projection":
+        action = "repair-planning-projection"
+        summary = "Repair the selected Planning projection before ordinary action."
+        proof = "refresh the selected-owner projection and retain its repair receipt"
+        required_inputs = ["selected owner", "projection revision", "Planning revision"]
+        risk = "projection-repair-required"
+    elif required_transition == "complete-proof":
+        action = "complete-selected-proof"
+        summary = "Complete the selected proof route before advancing route claims."
+        proof = "run or record the selected proof and re-resolve the route decision"
+        required_inputs = ["selected proof route", "proof subject revision", "Planning revision"]
+        risk = "proof-incomplete"
+    elif required_transition == "promote-or-create-owner":
+        action = "promote-or-create-planning-owner"
+        summary = "Promote or create the Planning owner before claiming active-plan progress."
+        proof = "create or promote the owner through Planning and re-resolve the route decision"
+        required_inputs = ["current task", "owner candidate", "Planning revision"]
+        risk = "owner-promotion-required"
+    elif required_transition == "select-owner":
+        action = "select-planning-owner"
+        summary = "Select the Planning owner before ordinary action."
+        proof = "record selected-owner evidence and re-resolve the route decision"
+        required_inputs = ["owner candidates", "selection basis", "Planning revision"]
+        risk = "owner-selection-required"
+    elif required_transition == "reconcile":
+        action = "refresh-planning-reconciliation-proposal"
+        summary = "Refresh the Planning reconciliation proposal before applying a transition."
+        proof = "produce a current reconciliation proposal and re-enter the Planning front door"
+        required_inputs = ["selected owner", "conflict evidence", "Planning revision"]
+        risk = "fresh-reconciliation-proposal-required"
     if required_transition == "reconcile" and route_proposal.get("status") == "current":
         action = "apply-planning-reconciliation-proposal"
         summary = "Apply the current Planning reconciliation proposal after its compare-and-swap check."
@@ -1793,6 +1861,53 @@ def _apply_planning_front_door_reconciliation_proposal(
     }
 
 
+def _planning_front_door_projection_outcome(route_action: str, action_identity: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the finite non-mutating outcome for an admitted Planning route action."""
+
+    projection_outcomes = {
+        "refresh-planning-route-decision": ("no-op", "blocked", "refresh-route-decision", "route-authority-incomplete"),
+        "continue-active-plan": ("no-op", "available-after-proof", "continue-selected-owner", "selected-owner-continuation"),
+        "prove-current-task": ("no-op", "available-after-proof", "prove-current-task", "active-plan-protected-current-task"),
+        "inspect-current-task-scope": ("no-op", "blocked", "inspect-current-task-scope", "current-task-scope-unresolved"),
+        "choose-task-switch-route": ("blocked", "blocked", "explicit-route-choice-required", "ambiguous-active-plan-route"),
+        "archive-or-retire-completed-plan": (
+            "blocked",
+            "blocked",
+            "archive-or-retire-through-planning",
+            "completed-active-plan-residue",
+        ),
+        "refresh-mutation-baseline": ("blocked", "blocked", "refresh-mutation-baseline", "mutation-baseline-required"),
+        "repair-planning-projection": ("blocked", "blocked", "repair-selected-owner-projection", "projection-repair-required"),
+        "complete-selected-proof": ("blocked", "blocked", "complete-selected-proof", "proof-incomplete"),
+        "promote-or-create-planning-owner": ("blocked", "blocked", "promote-or-create-owner", "owner-promotion-required"),
+        "select-planning-owner": ("blocked", "blocked", "select-owner", "owner-selection-required"),
+        "refresh-planning-reconciliation-proposal": (
+            "blocked",
+            "blocked",
+            "refresh-reconciliation-proposal",
+            "fresh-reconciliation-proposal-required",
+        ),
+    }
+    mutation_outcome, claim_outcome, transition_outcome, reason = projection_outcomes.get(
+        route_action, ("rejected", "blocked", "unsupported-route-action", "unsupported-route-action")
+    )
+    return {
+        "mutation_outcome": mutation_outcome,
+        "claim_outcome": claim_outcome,
+        "route_transition": {
+            "kind": "agentic-planning/front-door-route-transition/v1",
+            "status": transition_outcome,
+            "route_action": route_action,
+            "expected_transition": str(_as_dict(action_identity).get("expected_transition") or ""),
+            "state_update_policy": str(_as_dict(action_identity).get("state_update_policy") or ""),
+            "implementation_allowed": bool(_as_dict(action_identity).get("implementation_allowed") is True),
+            "mutation_authority": str(_as_dict(action_identity).get("mutation_authority") or "none"),
+            "reason": reason,
+            "rule": "Every admitted route action returns an explicit front-door transition outcome; consumers must not reinterpret legacy route fields.",
+        },
+    }
+
+
 def execute_planning_front_door_route_action(values: Mapping[str, Any]) -> dict[str, Any]:
     """Runtime admission boundary for the generated ``planning.front-door`` operation.
 
@@ -1829,14 +1944,6 @@ def execute_planning_front_door_route_action(values: Mapping[str, Any]) -> dict[
     live_action = _as_dict(live_route_decision.get("next_safe_action"))
     action_identity = _as_dict(_as_dict(live_action.get("operation_invocation")).get("input_identity"))
     route_action = str(action_identity.get("route_action") or live_action.get("action") or "")
-    dispatch_table = {
-        "refresh-planning-route-decision": "no-op",
-        "continue-active-plan": "no-op",
-        "prove-current-task": "no-op",
-        "inspect-current-task-scope": "no-op",
-        "choose-task-switch-route": "rejected",
-        "archive-or-retire-completed-plan": "rejected",
-    }
     admitted = admission["status"] == "admitted"
     action_result: dict[str, Any] = {}
     if admitted and route_action == "apply-planning-reconciliation-proposal":
@@ -1846,8 +1953,11 @@ def execute_planning_front_door_route_action(values: Mapping[str, Any]) -> dict[
             action_identity=action_identity,
         )
         outcome = str(action_result.get("mutation_outcome") or "blocked")
+    elif admitted:
+        action_result = _planning_front_door_projection_outcome(route_action, action_identity)
+        outcome = str(action_result.get("mutation_outcome") or "blocked")
     else:
-        outcome = dispatch_table.get(route_action, "rejected") if admitted else "rejected"
+        outcome = "rejected"
     claim_outcome = str(
         action_result.get("claim_outcome") or ("available-after-proof" if admitted and outcome in {"no-op", "applied"} else "blocked")
     )
@@ -1867,6 +1977,7 @@ def execute_planning_front_door_route_action(values: Mapping[str, Any]) -> dict[
         "next_safe_action": live_action,
         **({"mutation_receipt": action_result["mutation_receipt"]} if "mutation_receipt" in action_result else {}),
         **({"reconciliation_apply": action_result["reconciliation_apply"]} if "reconciliation_apply" in action_result else {}),
+        **({"route_transition": action_result["route_transition"]} if "route_transition" in action_result else {}),
         "rule": "planning.front-door recomputes and admits the live route decision before any Planning transition, mutation, proof, or claim effect.",
     }
 
@@ -1888,6 +1999,7 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
     baseline = _as_dict(structured_inputs.get("mutation_baseline"))
     proposal = _as_dict(route_decision.get("reconciliation_proposal"))
     mode = str(binding.get("mode") or "")
+    mutation_admission = _as_dict(route_decision.get("mutation_baseline_admission"))
     baseline_identity = str(baseline.get("baseline_id") or baseline.get("head") or baseline.get("revision") or "")
     default_action = (
         "prove-current-task"
@@ -1962,15 +2074,22 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
             "required_next_action": "archive-or-retire-completed-plan",
             "workflow_sufficient": True,
         }
+    if relation == "bounded-independent" and transition == "refresh-mutation-baseline":
+        return {
+            "status": "blocked",
+            "decision": "mutation-baseline-required",
+            "reason": str(mutation_admission.get("reason") or "The canonical route decision requires a refreshed mutation baseline."),
+            "required_next_action": str(action.get("action") or "refresh-mutation-baseline"),
+            "workflow_sufficient": False,
+            "action_safety": action_safety,
+        }
     if relation == "bounded-independent" and transition == "none":
-        if mode == "mutation" and not _mutation_baseline_route_current(
-            baseline, changed_paths=[str(path) for path in action_safety["effect_scope"]]
-        ):
+        if mode == "mutation" and mutation_admission.get("status") != "current":
             return {
                 "status": "blocked",
-                "decision": "mutation-baseline-required",
-                "reason": _mutation_baseline_repair_reason(baseline, changed_paths=[str(path) for path in action_safety["effect_scope"]]),
-                "required_next_action": "refresh-mutation-baseline",
+                "decision": "route-authority-inconsistent",
+                "reason": "The route decision allows bounded mutation without a canonical current mutation-baseline admission.",
+                "required_next_action": "refresh-planning-route-decision",
                 "workflow_sufficient": False,
                 "action_safety": action_safety,
             }

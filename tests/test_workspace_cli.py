@@ -6959,6 +6959,12 @@ def test_route_safety_projection_ignores_legacy_task_switch_status() -> None:
             "selected_owner_identity": {"ref": "current-task", "revision": "owner-a"},
             "state_update_policy": "no-active-plan-state-update",
             "next_safe_action": {"action": "prove-current-task"},
+            "mutation_baseline_admission": {
+                "status": "current",
+                "source": "canonical-route-decision",
+                "baseline_id": "baseline-a",
+                "reason": "current live mutation baseline admitted into the canonical route decision",
+            },
             "structured_inputs": {
                 "task_binding": {"mode": "mutation", "allowed_paths": ["README.md"]},
                 "mutation_baseline": {
@@ -7001,8 +7007,8 @@ def test_route_safety_projection_fails_closed_for_unbaselined_bounded_mutation()
 
     assert outcome["status"] == "blocked"
     assert outcome["workflow_sufficient"] is False
-    assert outcome["decision"] == "mutation-baseline-required"
-    assert outcome["required_next_action"] == "refresh-mutation-baseline"
+    assert outcome["decision"] == "route-authority-inconsistent"
+    assert outcome["required_next_action"] == "refresh-planning-route-decision"
 
 
 def test_route_safety_projection_fails_closed_for_unsupported_transition() -> None:
@@ -7156,6 +7162,113 @@ def test_planning_route_action_admission_rejects_stale_authority_inputs() -> Non
         assert rejected["rejection"]["status"] == "reject-on-input-revision-mismatch"
 
 
+def test_planning_route_front_door_admits_finite_route_action_matrix() -> None:
+    from agentic_workspace.workspace_runtime_planning import (
+        _planning_front_door_projection_outcome,
+        _planning_route_decision_payload,
+        validate_planning_route_action_invocation,
+    )
+
+    cases = [
+        (
+            "continuation",
+            {"task_relation": "continues-selected-owner", "owner_posture": "current"},
+            {},
+            "continue-active-plan",
+            "no-op",
+        ),
+        (
+            "bounded-read-only",
+            {"task_relation": "bounded-independent", "owner_posture": "current", "route_inputs": {"task_binding": {"mode": "read-only"}}},
+            {},
+            "prove-current-task",
+            "no-op",
+        ),
+        (
+            "bounded-mutation-baseline",
+            {"task_relation": "bounded-independent", "owner_posture": "current", "route_inputs": {"task_binding": {"mode": "mutation"}}},
+            {},
+            "refresh-mutation-baseline",
+            "blocked",
+        ),
+        (
+            "completed-residue",
+            {"task_relation": "bounded-independent", "owner_posture": "completed-residue"},
+            {},
+            "archive-or-retire-completed-plan",
+            "blocked",
+        ),
+        (
+            "external-conflict",
+            {"task_relation": "continues-selected-owner", "owner_posture": "external-conflict"},
+            {},
+            "refresh-planning-reconciliation-proposal",
+            "blocked",
+        ),
+        (
+            "projection-drift",
+            {"task_relation": "continues-selected-owner", "owner_posture": "projection-drifted"},
+            {},
+            "repair-planning-projection",
+            "blocked",
+        ),
+        (
+            "proof-incomplete",
+            {"task_relation": "continues-selected-owner", "owner_posture": "proof-incomplete"},
+            {},
+            "complete-selected-proof",
+            "blocked",
+        ),
+        (
+            "promotion",
+            {"task_relation": "owner-promotion-required", "owner_posture": "missing"},
+            {},
+            "promote-or-create-planning-owner",
+            "blocked",
+        ),
+        (
+            "missing-owner",
+            {"task_relation": "continues-selected-owner", "owner_posture": "missing"},
+            {},
+            "select-planning-owner",
+            "blocked",
+        ),
+        (
+            "ambiguous",
+            {"task_relation": "ambiguous", "owner_posture": "current"},
+            {},
+            "choose-task-switch-route",
+            "blocked",
+        ),
+        (
+            "current-proposal",
+            {"task_relation": "continues-selected-owner", "owner_posture": "external-conflict"},
+            {"status": "current", "proposal_id": "proposal-a", "revision": "proposal-rev-a"},
+            "apply-planning-reconciliation-proposal",
+            "applied-by-specialized-transaction",
+        ),
+    ]
+
+    for name, evidence, proposal, route_action, mutation_outcome in cases:
+        decision = _planning_route_decision_payload(
+            {"implementation_allowed": True, "route_inputs": {"owner": {"ref": f"owner-{name}", "revision": "owner-a"}}, **evidence},
+            planning_revision={"revision_id": "planning-a"},
+            reconciliation_proposal=proposal,
+        )
+        invocation = decision["next_safe_action"]["operation_invocation"]
+
+        admitted = validate_planning_route_action_invocation(invocation=invocation, live_route_decision=decision)
+
+        assert admitted["status"] == "admitted", name
+        assert invocation["operation_id"] == "planning.front-door"
+        assert invocation["input_identity"]["route_action"] == route_action
+        if route_action != "apply-planning-reconciliation-proposal":
+            outcome = _planning_front_door_projection_outcome(route_action, invocation["input_identity"])
+            assert outcome["mutation_outcome"] == mutation_outcome
+            assert outcome["route_transition"]["route_action"] == route_action
+            assert outcome["route_transition"]["status"] != "unsupported-route-action"
+
+
 def test_structured_route_inputs_cover_bounded_work_owner_lifecycle_and_missing_owner(tmp_path: Path) -> None:
     from agentic_workspace.workspace_runtime_planning import _structured_route_inputs
 
@@ -7215,7 +7328,7 @@ def test_route_decision_transition_matrix_is_compositional() -> None:
             "bounded-mutation",
             {"task_relation": "bounded-independent", "owner_posture": "current", "route_inputs": {"task_binding": {"mode": "mutation"}}},
             {},
-            "none",
+            "refresh-mutation-baseline",
             "current",
         ),
         (
@@ -7263,8 +7376,32 @@ def test_route_decision_transition_matrix_is_compositional() -> None:
             "route_inputs": {"task_binding": {"mode": "mutation"}},
         }
     )
+    mutation_current = _planning_route_decision_payload(
+        {
+            "implementation_allowed": True,
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "route_inputs": {
+                "task_binding": {"mode": "mutation", "allowed_paths": ["README.md"]},
+                "mutation_baseline": {
+                    "kind": "agentic-workspace/mutation-baseline/v1",
+                    "status": "clean-scope",
+                    "revalidation_status": "current",
+                    "baseline_id": "baseline-a",
+                    "head": "abc123",
+                    "scope": {"allowed_paths": ["README.md"]},
+                    "observation": {"ok": True},
+                    "observed_state": {"enforcement_fingerprint": "fingerprint-a"},
+                    "boundary_enforcement": {"status": "fail-closed-contract"},
+                    "stale_revalidation": {"status": "required"},
+                    "ownership": {"owner": "current-agent-session"},
+                },
+            },
+        }
+    )
     assert read_only["mutation_authority"] == "none"
-    assert mutation["mutation_authority"] == "current-task"
+    assert mutation["mutation_authority"] == "none"
+    assert mutation_current["mutation_authority"] == "current-task"
 
 
 def test_selector_first_gate_projects_authoritative_route_decision() -> None:
