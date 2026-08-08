@@ -12,6 +12,10 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 
 ## Available skills
 
+- `planning-manual-delegation`
+  - delegate through canonical assignment export and import without trusting worker claims
+- `planning-returned-result`
+  - admit or route a returned delegated result through authoritative assignment operations
 - `bootstrap-upgrade`
   - upgrade planning bootstrap files for an already bootstrapped repository safely
 - `planning-autopilot`

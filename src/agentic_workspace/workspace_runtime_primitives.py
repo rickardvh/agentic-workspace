@@ -32167,6 +32167,88 @@ def _final_response_closeout_trust_for_admission(*, target_root: Path) -> tuple[
     )
 
 
+def _current_assignment_lifecycle_record(*, target_root: Path) -> dict[str, Any]:
+    assignment_root = target_root / ".agentic-workspace" / "planning" / "assignments"
+    if not assignment_root.exists():
+        return {}
+    candidates: list[tuple[str, str, str, dict[str, Any]]] = []
+    for path in sorted(assignment_root.glob("*.assignment.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        attempt = _as_dict(payload.get("current_attempt"))
+        observed = str(attempt.get("updated_at") or payload.get("updated_at") or payload.get("created_at") or "").strip()
+        status_rank = "1" if str(payload.get("status") or "").strip() == "current" else "0"
+        try:
+            source_path = path.relative_to(target_root).as_posix()
+        except ValueError:
+            source_path = path.as_posix()
+        candidates.append((status_rank, observed, source_path, {**payload, "_source_path": source_path}))
+    if not candidates:
+        return {}
+    return sorted(candidates, key=lambda item: (item[0], item[1], item[2]))[-1][3]
+
+
+def _delegated_worker_kernel_payload(*, target_root: Path) -> dict[str, Any]:
+    assignment = _current_assignment_lifecycle_record(target_root=target_root)
+    if not assignment:
+        return {
+            "kind": "agentic-workspace/delegated-worker-kernel/v1",
+            "status": "direct-compatible",
+            "executor_boundary": "autopilot.run",
+            "return_admission": "final-response.admit",
+            "assignment": {"state": "not-applicable"},
+            "route_consumers": ["start", "implement", "skills"],
+            "worker_limit": "No active assignment is present; direct work still uses ordinary final-response admission and cannot bypass proof.",
+        }
+    gate = _as_dict(assignment.get("assignment_gate"))
+    attempt = _as_dict(assignment.get("current_attempt"))
+    delegation = _as_dict(assignment.get("delegation_decision"))
+    next_step = _as_dict(delegation.get("delegation_next_step"))
+    assignment_status = str(assignment.get("status") or "").strip()
+    attempt_status = str(attempt.get("status") or "").strip()
+    stale = assignment_status != "current" or attempt_status in {"cancelled", "closed", "integrated", "reassigned", "superseded"}
+    run_id = str(attempt.get("run_id") or next_step.get("handoff_run_id") or "").strip()
+    return {
+        "kind": "agentic-workspace/delegated-worker-kernel/v1",
+        "status": "blocked-stale-assignment" if stale else "assignment-bound",
+        "executor_boundary": "autopilot.run",
+        "return_admission": "final-response.admit",
+        "assignment": {
+            "assignment_id": str(assignment.get("assignment_id") or "").strip(),
+            "assignment_revision": str(assignment.get("current_revision") or "").strip(),
+            "source_path": str(assignment.get("_source_path") or "").strip(),
+            "status": assignment_status,
+            "run_id": run_id,
+            "attempt_status": attempt_status,
+            "role": str(gate.get("role") or "").strip(),
+            "target": str(assignment.get("target_name") or attempt.get("owner") or gate.get("selected_target") or "").strip(),
+        },
+        "scope": {
+            "allowed_paths": [str(item) for item in _list_payload(gate.get("allowed_paths")) if str(item).strip()],
+            "allowed_effects": [str(item) for item in _list_payload(gate.get("allowed_effects")) if str(item).strip()],
+            "proof_obligation": _as_dict(gate.get("proof_obligation")),
+            "mutation_baseline": gate.get("mutation_baseline"),
+            "stop_conditions": [str(item) for item in _list_payload(gate.get("stop_conditions")) if str(item).strip()],
+        },
+        "admission": {
+            "status": "blocked" if stale else "allowed",
+            "reason_code": "stale-or-terminal-assignment" if stale else "current-assignment",
+            "return_schema": str(next_step.get("return_schema") or "delegated-return/v1"),
+            "next_owner": str(attempt.get("owner") or assignment.get("target_name") or gate.get("selected_target") or "").strip(),
+        },
+        "route_consumers": {
+            "start": "projects the active assignment lifecycle before ordinary route advice",
+            "implement": "must keep mutations within assignment allowed paths, effects, proof obligation, and mutation baseline",
+            "skills": "must bind assignment skills to lifecycle operation receipts before returned-result admission",
+        },
+        "worker_limit": "Delegated executor output is a candidate return only; it cannot integrate, close, widen scope, or bypass final-response and assignment-result admission.",
+    }
+
+
 def _run_final_response_executor_loop(
     *,
     target_root: Path,
@@ -32230,11 +32312,45 @@ def _run_final_response_executor_loop(
             raise WorkspaceUsageError(
                 f"--executor-command has invalid executor binding ({binding_guard['reason']}): {binding_guard['repair']}"
             )
+        delegated_worker_kernel = (
+            _delegated_worker_kernel_payload(target_root=target_root) if str(getattr(args, "command", "") or "") == "autopilot" else {}
+        )
+        if delegated_worker_kernel.get("status") == "blocked-stale-assignment":
+            failed_executor = {
+                "kind": "agentic-workspace/final-response-executor-result/v1",
+                "slice": slice_number,
+                "command": executor_command,
+                "exit_code": None,
+                "stdout_present": False,
+                "stderr_excerpt": "",
+                "binding": executor_binding,
+                "binding_guard": binding_guard,
+                "delegated_worker_kernel": delegated_worker_kernel,
+            }
+            final_payload = {
+                "kind": "agentic-workspace/final-response-admission-result/v1",
+                "status": "stale_assignment_blocked",
+                "ordinary_execution_loop": {
+                    "status": "stale_assignment_blocked",
+                    "vendor_neutral": True,
+                    "depends_on_codex_goal_mode": False,
+                    "depends_on_model_cli_harness": False,
+                    "slice_count": slice_number,
+                    "slices": slices,
+                    "failed_executor": failed_executor,
+                    "custody": "agent",
+                    "delegated_worker_kernel": delegated_worker_kernel,
+                    "rule": "Autopilot refuses delegated execution when the active assignment is stale, terminal, or no longer current.",
+                },
+            }
+            raise WorkspaceUsageError("--executor-command is blocked by a stale or terminal assignment lifecycle.")
         env = os.environ.copy()
         env["AGENTIC_WORKSPACE_FINAL_RESPONSE_SLICE"] = str(slice_number)
         env["AGENTIC_WORKSPACE_FINAL_RESPONSE_CUSTODY"] = "agent"
         env["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING"] = json.dumps(executor_binding, sort_keys=True)
         env["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING_GUARD"] = json.dumps(binding_guard, sort_keys=True)
+        if delegated_worker_kernel:
+            env["AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL"] = json.dumps(delegated_worker_kernel, sort_keys=True)
         if previous_admission:
             env["AGENTIC_WORKSPACE_FINAL_RESPONSE_PREVIOUS_ADMISSION"] = json.dumps(previous_admission, sort_keys=True)
             previous_after_state = _as_dict(_as_dict(previous_admission.get("resume_transition")).get("after_state"))
@@ -32273,6 +32389,8 @@ def _run_final_response_executor_loop(
             "binding": executor_binding,
             "binding_guard": binding_guard,
         }
+        if delegated_worker_kernel:
+            executor_record["delegated_worker_kernel"] = delegated_worker_kernel
         if result.returncode != 0:
             final_payload = {
                 "kind": "agentic-workspace/final-response-admission-result/v1",
@@ -32340,6 +32458,8 @@ def _run_final_response_executor_loop(
             "executor_binding": executor_binding,
             "executor_binding_guard": binding_guard,
         }
+        if delegated_worker_kernel:
+            slice_record["delegated_worker_kernel"] = delegated_worker_kernel
         checkpoint_write = _write_local_chat_checkpoint(
             target_root=target_root,
             task="final-response admission resume checkpoint",
@@ -32368,6 +32488,8 @@ def _run_final_response_executor_loop(
             "executor_binding": executor_binding,
             "executor_binding_guard": binding_guard,
         }
+        if delegated_worker_kernel:
+            slice_payload["delegated_worker_kernel"] = delegated_worker_kernel
         slices.append(slice_payload)
         previous_admission = admission
         previous_continuation = executor_result
@@ -32394,12 +32516,14 @@ def _run_final_response_executor_loop(
                     "AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION_STATE",
                     "AGENTIC_WORKSPACE_FINAL_RESPONSE_ACTIVE_OBJECTIVE",
                     "AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING",
+                    "AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL",
                 ],
                 "custody": "agent" if admission.get("status") == "rejected_auto_resumed" else "completed-outcome",
                 "slice_count": slice_number,
                 "slices": slices,
                 "latest_executor_binding": executor_binding,
                 "latest_executor_binding_guard": binding_guard,
+                **({"delegated_worker_kernel": delegated_worker_kernel} if delegated_worker_kernel else {}),
                 "rule": "The package-owned ordinary loop admits every model-authored executor response and re-enters execution while CONTINUE remains.",
             },
             "rule": "This command is the vendor-neutral ordinary execution boundary for model-authored final responses.",
@@ -32533,6 +32657,9 @@ def _run_autopilot_adapter(args: argparse.Namespace) -> int:
         "effect_contract": "executor-mode-conservative",
         "rule": "The canonical ordinary autopilot route delegates all executor finals through final-response admission before output.",
     }
+    payload["delegated_worker_kernel"] = _as_dict(_as_dict(payload.get("ordinary_execution_loop")).get("delegated_worker_kernel")) or (
+        _delegated_worker_kernel_payload(target_root=target_root)
+    )
     payload["rule"] = "This command is the canonical ordinary AW/autopilot execution boundary for model-authored final responses."
     _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
     return 0
