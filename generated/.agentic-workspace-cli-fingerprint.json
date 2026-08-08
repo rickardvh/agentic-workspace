@@ -1843,7 +1843,7 @@
     "scripts/check/check_completion_cost_schema_analysis.py": "f9f8175241d738e731d662c5037ff4dc0c9fd108",
     "scripts/check/check_composed_operation_scenarios.py": "8acd470d25c36f241947ea8429aa1968618c86a2",
     "scripts/check/check_contract_tooling_surfaces.py": "f58422fefbeeeb0fde5d3edfe1e7f4daf4dc5525",
-    "scripts/check/check_generated_command_packages.py": "d62a0a9bfca49144e53bbaee3f1dc8d1a9d9941d",
+    "scripts/check/check_generated_command_packages.py": "621575ac41df5049f6d7eb2a90249ea3394a76d9",
     "scripts/check/check_maintainer_surfaces.py": "a8cc22d09e7d1949f9245464b883bf610e095048",
     "scripts/check/check_master_tests.py": "1b0bd134de91073356481c08e3430ee07644970c",
     "scripts/check/check_memory_freshness.py": "389c819e9ecca49fb53742e096e051874872a3c3",
@@ -1858,7 +1858,7 @@
     "scripts/check/measure_lazy_discovery.py": "834c506b024f575f6938f725d33a1c3b9dae9cae",
     "scripts/check/prove_command_generation_artifact_consumption.py": "9b4218d9adf4d1434152745be1417243000e95cd",
     "scripts/check/run_compact_command.py": "8a4641a4b2f75bc9c8c3f7978f9f2b3ab143eb9b",
-    "scripts/check/run_generated_command_package_proof.py": "b3fbc8caf682707c54a7070da1c59cc1ca640d5d",
+    "scripts/check/run_generated_command_package_proof.py": "3b7250f79899a9cc209d3567089eed06d346e225",
     "scripts/check/run_operation_conformance_tests.py": "3e2a7327b12b89c76c61998791a385b2f3a32618",
     "scripts/generate/generate_command_adapters.py": "034c36957eee7c75b313feb76a5cda78688ef794",
     "scripts/generate/generate_command_packages.py": "edf2e159b79ca65250245fa3fff7a2c20e192f70",
@@ -2303,7 +2303,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "a54e1329919341d768f0ebd512d6c3d7148759da"
   },
-  "git_index_identity": "7f314816f18eeee4b7ca88a2725d4b99595b92dcf0b9d9d629396a3c3ddf6cbf",
+  "git_index_identity": "4ce23614a25407233044e04aec0880b1f88dd91bb19c4c338be861800a5c95a3",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }

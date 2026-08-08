@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Require exact packed-artifact semantic conformance receipts for every supported generated command runtime."
