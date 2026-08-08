@@ -161,6 +161,14 @@ def _external_conformance_readiness(
         missing.append("current-operation-fingerprint")
     if evidence.get("profile_fingerprint") != profile_fingerprint:
         missing.append("current-profile-fingerprint")
+    raw_authority = profile.get("readiness_authority")
+    authority: Mapping[str, Any] = raw_authority if isinstance(raw_authority, Mapping) else {}
+    raw_result_identity = evidence.get("result_identity")
+    result_identity: Mapping[str, Any] = raw_result_identity if isinstance(raw_result_identity, Mapping) else {}
+    if result_identity.get("runner_revision") != authority.get("runner_revision"):
+        missing.append("current-runner-revision")
+    if result_identity.get("client_semantics_revision") != authority.get("client_semantics_revision"):
+        missing.append("current-client-semantics-revision")
     transports = evidence.get("transports")
     if not isinstance(transports, Mapping):
         missing.extend(f"transport-{transport}" for transport in READINESS_TRANSPORTS)
@@ -183,6 +191,8 @@ def _external_conformance_readiness(
         "status": evidence.get("status", ""),
         "operation_fingerprint": evidence.get("operation_fingerprint", ""),
         "profile_fingerprint": evidence.get("profile_fingerprint", ""),
+        "runner_revision": result_identity.get("runner_revision", ""),
+        "client_semantics_revision": result_identity.get("client_semantics_revision", ""),
         "runtime_exception_revision": runtime_revision or "",
         "transports": transports if isinstance(transports, Mapping) else {},
         "cases": cases if isinstance(cases, Mapping) else {},
@@ -191,7 +201,7 @@ def _external_conformance_readiness(
     }
 
 
-def external_readiness_report(required_operations: Sequence[str]) -> dict[str, Any]:
+def external_readiness_report(required_operations: Sequence[str], *, allow_runtime_backed: bool = False) -> dict[str, Any]:
     """Report whether a released operation subset has its declared proof surface.
 
     This is deliberately readiness evidence, not an assertion that an arbitrary
@@ -238,7 +248,8 @@ def external_readiness_report(required_operations: Sequence[str]) -> dict[str, A
             "conformance_result": conformance_result,
             "runtime_exceptions": runtime_exceptions if isinstance(runtime_exceptions, list) else [],
         }
-        if status == "supported" and not missing_evidence:
+        allowed_statuses = {"supported"} | ({"runtime-backed"} if allow_runtime_backed else set())
+        if status in allowed_statuses and not missing_evidence:
             supported.append(str(operation_id))
         else:
             excluded.append(
@@ -255,7 +266,7 @@ def external_readiness_report(required_operations: Sequence[str]) -> dict[str, A
         "status": "ready" if not excluded else "subset-only" if supported else "not-ready",
         "supported_operations": supported,
         "excluded_operations": excluded,
-        "rule": "Ready requires declared support plus released Python/TypeScript resources, schemas, current executed cross-transport conformance evidence, and any runtime-exception disposition.",
+        "rule": "Ready requires declared support plus released Python/TypeScript resources, schemas, current runner/client-bound executed cross-transport conformance evidence, and any runtime-exception disposition.",
     }
 
 
@@ -393,15 +404,14 @@ def resolve_invocation(target: str | Path, override: Sequence[str] | None = None
 
 
 def require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:
-    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}
-    allowed = {"supported"} | ({"runtime-backed"} if allow_runtime_backed else set())
-    failures = []
-    for operation_id in operation_ids:
-        status = entries.get(operation_id, {}).get("external_consumption", {}).get("status", "unknown")
-        if status not in allowed:
-            failures.append({"operation": operation_id, "status": status})
+    readiness = external_readiness_report(operation_ids, allow_runtime_backed=allow_runtime_backed)
+    failures = readiness["excluded_operations"]
     if failures:
-        raise AWClientError("incompatible", "operation requirements are not satisfied", {"requirements": failures})
+        raise AWClientError(
+            "incompatible",
+            "operation requirements lack current external-readiness evidence",
+            {"requirements": failures, "readiness": readiness},
+        )
 
 
 def _operation_contract(entry: Mapping[str, Any]) -> dict[str, Any]:
@@ -479,7 +489,6 @@ def invoke_operation(
     state = detect_workspace(target)
     if state["status"] != "enabled":
         raise AWClientError(state["status"], "workspace is not available", state)
-    require_operations([operation_id], allow_runtime_backed=allow_runtime_backed)
     entry = next(item for item in external_consumer_profile()["operations"] if item["id"] == operation_id)
     for schema_name in entry["schemas"]["input"]:
         _validate_schema(entry, schema_name, dict(values), phase="input")

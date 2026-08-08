@@ -104,10 +104,7 @@ def _result_evidence_ref(result: Mapping[str, object]) -> str:
         "mutation_outcome": result.get("mutation_outcome", {}),
     }
     digest = _stable_json_digest(payload)[:16]
-    return (
-        f"{payload['operation_id']}:{payload['case_id']}:"
-        f"{payload['target']}:{payload['adapter_id']}@sha256:{digest}"
-    )
+    return f"{payload['operation_id']}:{payload['case_id']}:{payload['target']}:{payload['adapter_id']}@sha256:{digest}"
 
 
 def _passed_results(results: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -327,6 +324,10 @@ def build_external_operation_conformance_receipts(
     receipts: list[dict[str, object]] = []
     actual_executed_at = executed_at or _utc_timestamp()
     actual_runner_revision = runner_revision or _runner_revision()
+    readiness_authority = profile.get("readiness_authority") if isinstance(profile.get("readiness_authority"), Mapping) else {}
+    expected_runner_revision = str(readiness_authority.get("runner_revision") or "")
+    client_semantics_revision = str(readiness_authority.get("client_semantics_revision") or "")
+    authority_current = bool(expected_runner_revision and client_semantics_revision and actual_runner_revision == expected_runner_revision)
     profile_fingerprint = (
         str((profile.get("compatibility") or {}).get("fingerprint", "")) if isinstance(profile.get("compatibility"), Mapping) else ""
     )
@@ -340,6 +341,7 @@ def build_external_operation_conformance_receipts(
         "status": "current",
         "invocation_id": actual_invocation_id,
         "runner_revision": actual_runner_revision,
+        "client_semantics_revision": client_semantics_revision,
         "result_digest": result_digest,
         "executed_at": actual_executed_at,
     }
@@ -383,6 +385,7 @@ def build_external_operation_conformance_receipts(
             "passed"
             if all(item["status"] == "passed" for item in [*transports.values(), *cases.values()])
             and runtime_exception_admission.get("status") in {"not-required", "admitted"}
+            and authority_current
             else "failed"
         )
         receipt_basis = {
@@ -408,8 +411,10 @@ def build_external_operation_conformance_receipts(
                 "status": receipt_status,
                 "executed_at": actual_executed_at,
                 "freshness": {
-                    "strategy": "revision-bound-explicit-revocation",
-                    "rule": "Receipts remain current while operation/profile fingerprints match and no stale, revoked, or superseded marker is present.",
+                    "strategy": "runner-client-operation-profile-revision-bound",
+                    "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
+                    "runner_revision": actual_runner_revision,
+                    "client_semantics_revision": client_semantics_revision,
                 },
                 "runtime_exception_revision": runtime_exception_revision,
                 "runtime_exception_admission": runtime_exception_admission,
@@ -434,8 +439,10 @@ def build_external_operation_conformance_receipts(
         "producer": "scripts/check/run_operation_conformance_tests.py",
         "executed_at": actual_executed_at,
         "freshness": {
-            "strategy": "revision-bound-explicit-revocation",
-            "rule": "Publication currentness is tied to profile and operation fingerprints plus explicit stale/revoked/superseded markers.",
+            "strategy": "runner-client-operation-profile-revision-bound",
+            "rule": "Publication currentness is tied to runner/client-semantics and profile/operation revisions plus explicit stale/revoked/superseded markers.",
+            "runner_revision": actual_runner_revision,
+            "client_semantics_revision": client_semantics_revision,
         },
         "result_identity": result_identity,
         "status": "recorded" if receipts else "no-operation-results",
@@ -496,8 +503,7 @@ def write_external_operation_conformance_receipts(
     if existing_digests and len(existing_digests) != len(selected_paths):
         missing = [path for path in selected_paths if path not in existing_digests]
         raise RuntimeError(
-            "external conformance receipt mirror set is partial before publication: "
-            + ", ".join(_path_label(path) for path in missing)
+            "external conformance receipt mirror set is partial before publication: " + ", ".join(_path_label(path) for path in missing)
         )
     if expected_existing_digest is None and existing_digests:
         unique_existing_digests = set(existing_digests.values())
@@ -519,14 +525,11 @@ def write_external_operation_conformance_receipts(
         raise RuntimeError(
             "external conformance receipt mirror revision changed before publication: "
             + ", ".join(
-                f"{_path_label(path)}={digest[:12]}"
-                for path, digest in sorted(mismatched.items(), key=lambda item: _path_label(item[0]))
+                f"{_path_label(path)}={digest[:12]}" for path, digest in sorted(mismatched.items(), key=lambda item: _path_label(item[0]))
             )
         )
     store = dict(receipt_store)
-    payload_digest = hashlib.sha256(
-        json.dumps(store, sort_keys=True, default=str, separators=(",", ":")).encode()
-    ).hexdigest()
+    payload_digest = hashlib.sha256(json.dumps(store, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
     if existing_digests and all(_published_payload_digest(path) == f"sha256:{payload_digest}" for path in selected_paths):
         return {
             "kind": "agentic-workspace/external-operation-conformance-receipt-write/v1",
@@ -725,7 +728,7 @@ def _write_local_invoke_config(fixture_root: Path) -> None:
     )
     config = config_dir / "config.toml"
     if not config.is_file():
-        config.write_text("schema_version = 1\n[workspace]\ncli_invoke = \"agentic-workspace\"\n", encoding="utf-8", newline="\n")
+        config.write_text('schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8", newline="\n")
 
 
 def _external_consumption_status(operation_id: str) -> str:
@@ -837,6 +840,16 @@ try {{
             state="fail",
             message=f"external consumer returned malformed JSON: {exc}; stdout={completed.stdout!r}",
         )
+    if envelope.get("ok") is False and envelope.get("kind") == "incompatible":
+        details = envelope.get("details") if isinstance(envelope.get("details"), Mapping) else {}
+        if isinstance(details.get("readiness"), Mapping):
+            return _result(
+                case=case,
+                artifact_registry={},
+                target_kind="vendor-neutral",
+                state="unavailable",
+                message="packaged consumer correctly refused operation without current external-readiness evidence",
+            )
     failures: list[str] = []
     selected_fields: dict[str, object] = {}
     if expected_error is not None:
@@ -854,7 +867,9 @@ try {{
         if envelope.get("ok") is not True:
             failures.append(f"external consumer error: {envelope.get('kind')} {envelope.get('message')}")
         else:
-            result_fields = expected_mapping.get("result", {}).get("selected_fields", {}) if isinstance(expected_mapping.get("result"), Mapping) else {}
+            result_fields = (
+                expected_mapping.get("result", {}).get("selected_fields", {}) if isinstance(expected_mapping.get("result"), Mapping) else {}
+            )
             if isinstance(result_fields, Mapping) and result_fields:
                 try:
                     selected_fields = _select_expected_result_fields(envelope.get("payload", {}), result_fields)
@@ -863,7 +878,9 @@ try {{
                 else:
                     if selected_fields != dict(result_fields):
                         failures.append(f"expected selected fields {dict(result_fields)!r}, got {selected_fields!r}")
-    result = _result(case=case, artifact_registry={}, target_kind="vendor-neutral", state="fail" if failures else "pass", message="; ".join(failures))
+    result = _result(
+        case=case, artifact_registry={}, target_kind="vendor-neutral", state="fail" if failures else "pass", message="; ".join(failures)
+    )
     result["adapter_id"] = "vendor-neutral.packaged-consumer"
     result["artifact_id"] = "packed:@agentic-workspace/workspace-cli"
     result["selected_fields"] = selected_fields

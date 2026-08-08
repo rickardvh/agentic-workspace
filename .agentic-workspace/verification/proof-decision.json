@@ -1,0 +1,14 @@
+{
+  "proof_decision": {
+    "selected_decision": "add",
+    "trust_question": "Can every public external client reject declaration-only support and stale runner or client evidence with the same actionable readiness reasons?",
+    "host_strategy_source": "docs/maintainer/testing-strategy.md",
+    "proof_owner": "conformance-contract",
+    "proof_intent": "target-parity",
+    "evidence_durability": "permanent",
+    "narrowest_evidence": "Table-driven public Python receipt-state tests, one cross-language reason-parity case, and conformance-runner receipt identity tests.",
+    "prune_or_replacement_condition": "Replace only when the same missing, failed, stale-runner, stale-client, missing-transport, and missing-case behavior is owned by executable cross-transport contract cases.",
+    "confidence": "high",
+    "residual_risk": "The independent installed-package mutation and removal matrix remains incomplete and is not claimed closed by PR #2431."
+  }
+}

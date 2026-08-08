@@ -138,6 +138,42 @@ def _operation_resource_path(target_id: str, target: dict[str, object], operatio
     return Path(str(target.get("generated_root", ""))) / resource_root / Path(operation_path).name
 
 
+def _artifact_revision(repo_root: Path, relative_path: str) -> str:
+    path = repo_root / relative_path
+    if not path.is_file():
+        return ""
+    return f"{relative_path}@sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+
+
+def _readiness_authority(repo_root: Path | None) -> dict[str, object]:
+    if repo_root is None:
+        return {
+            "kind": "agentic-workspace/external-readiness-authority/v1",
+            "status": "unbound",
+            "runner_revision": "",
+            "client_semantics_revision": "",
+            "client_artifact_revisions": {},
+        }
+    paths = {
+        "runner": "scripts/check/run_operation_conformance_tests.py",
+        "public_python_client": "src/agentic_workspace/client.py",
+        "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py",
+        "typescript_client_template": "scripts/generate/templates/external_client.mjs",
+    }
+    revisions = {name: _artifact_revision(repo_root, path) for name, path in paths.items()}
+    client_revisions = {name: revision for name, revision in revisions.items() if name != "runner"}
+    client_semantics_revision = (
+        "sha256:" + hashlib.sha256(json.dumps(client_revisions, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    return {
+        "kind": "agentic-workspace/external-readiness-authority/v1",
+        "status": "current" if all(revisions.values()) else "incomplete",
+        "runner_revision": revisions["runner"],
+        "client_semantics_revision": client_semantics_revision,
+        "client_artifact_revisions": client_revisions,
+    }
+
+
 def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> dict[str, object]:
     conformance_by_id: dict[str, dict[str, object]] = {}
     if repo_root is not None:
@@ -282,7 +318,10 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
             raise ValueError(f"conflicting explicit operation id: {operation_id}")
         unique.setdefault(operation_id, entry)
     operations = sorted(unique.values(), key=lambda item: str(item["id"]))
-    fingerprint_input = json.dumps(operations, sort_keys=True, separators=(",", ":")).encode()
+    readiness_authority = _readiness_authority(repo_root)
+    fingerprint_input = json.dumps(
+        {"operations": operations, "readiness_authority": readiness_authority}, sort_keys=True, separators=(",", ":")
+    ).encode()
     return {
         "schema_version": "agentic-workspace/external-consumer-profile/v1",
         "authority": "command_package_ir.json",
@@ -292,6 +331,7 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
             "additive_fields": "allowed",
         },
         "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
+        "readiness_authority": readiness_authority,
         "operations": operations,
     }
 
@@ -561,6 +601,10 @@ def _conformance_readiness(entry: dict[str, Any], profile: dict[str, Any], recei
     if evidence.get("status") != "passed": missing.append("executed-conformance-passed")
     if evidence.get("operation_fingerprint") != operation_fingerprint: missing.append("current-operation-fingerprint")
     if evidence.get("profile_fingerprint") != profile_fingerprint: missing.append("current-profile-fingerprint")
+    authority = profile.get("readiness_authority", {}) if isinstance(profile.get("readiness_authority"), dict) else {}
+    result_identity = evidence.get("result_identity", {}) if isinstance(evidence.get("result_identity"), dict) else {}
+    if result_identity.get("runner_revision") != authority.get("runner_revision"): missing.append("current-runner-revision")
+    if result_identity.get("client_semantics_revision") != authority.get("client_semantics_revision"): missing.append("current-client-semantics-revision")
     transports = evidence.get("transports", {})
     cases = evidence.get("cases", {})
     for transport in READINESS_TRANSPORTS:
@@ -569,10 +613,10 @@ def _conformance_readiness(entry: dict[str, Any], profile: dict[str, Any], recei
         if not isinstance(cases.get(case), dict) or cases[case].get("status") != "passed": missing.append(f"case-{case}")
     if entry.get("external_consumption", {}).get("runtime_exceptions") and not evidence.get("runtime_exception_revision"): missing.append("runtime-exception-current-revision")
     custody = evidence.get("custody", {}) if isinstance(evidence.get("custody"), dict) else {}
-    return missing, {"status": evidence.get("status", ""), "operation_fingerprint": evidence.get("operation_fingerprint", ""), "profile_fingerprint": evidence.get("profile_fingerprint", ""), "runtime_exception_revision": evidence.get("runtime_exception_revision", ""), "transports": transports if isinstance(transports, dict) else {}, "cases": cases if isinstance(cases, dict) else {}, "receipt_ref": evidence.get("receipt_ref", ""), "producer": custody.get("producer", "")}
+    return missing, {"status": evidence.get("status", ""), "operation_fingerprint": evidence.get("operation_fingerprint", ""), "profile_fingerprint": evidence.get("profile_fingerprint", ""), "runner_revision": result_identity.get("runner_revision", ""), "client_semantics_revision": result_identity.get("client_semantics_revision", ""), "runtime_exception_revision": evidence.get("runtime_exception_revision", ""), "transports": transports if isinstance(transports, dict) else {}, "cases": cases if isinstance(cases, dict) else {}, "receipt_ref": evidence.get("receipt_ref", ""), "producer": custody.get("producer", "")}
 
 
-def external_readiness_report(operation_ids: Sequence[str]) -> dict[str, Any]:
+def external_readiness_report(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> dict[str, Any]:
     profile = external_consumer_profile()
     receipt_store = external_operation_conformance_receipts()
     entries = {entry["id"]: entry for entry in profile["operations"]}
@@ -592,19 +636,16 @@ def external_readiness_report(operation_ids: Sequence[str]) -> dict[str, Any]:
         missing.extend(conformance_missing)
         status = consumption.get("status", "unavailable")
         if status == "runtime-backed" and not consumption.get("runtime_exceptions"): missing.append("runtime-exception-disposition")
-        if status == "supported" and not missing: supported.append(operation_id)
+        allowed_statuses = {"supported"} | ({"runtime-backed"} if allow_runtime_backed else set())
+        if status in allowed_statuses and not missing: supported.append(operation_id)
         else: excluded.append({"id": operation_id, "status": status, "missing_evidence": missing, "conformance_refs": conformance, "conformance_result": conformance_result})
     return {"kind": "agentic-workspace/external-readiness-report/v1", "status": "ready" if not excluded else "subset-only" if supported else "not-ready", "supported_operations": supported, "excluded_operations": excluded}
 
 
 def require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:
-    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}
-    failures = []
-    for operation_id in operation_ids:
-        status = entries.get(operation_id, {}).get("external_consumption", {}).get("status", "unknown")
-        if status in {"internal", "unknown"} or (status == "runtime-backed" and not allow_runtime_backed):
-            failures.append(f"{operation_id}: {status}")
-    if failures: raise ValueError("incompatible operation requirements: " + ", ".join(failures))
+    report = external_readiness_report(operation_ids, allow_runtime_backed=allow_runtime_backed)
+    failures = report["excluded_operations"]
+    if failures: raise ValueError("operation requirements lack current external-readiness evidence: " + json.dumps(failures, sort_keys=True))
 
 
 def resolve_invocation(target: str | Path, override: Sequence[str] | None = None) -> list[str]:

@@ -373,6 +373,18 @@
       "checked_in_justification": "Compact agent-recorded evidence labels preserve proof/review handoff decisions that would otherwise be lossy in chat or PR prose."
     },
     {
+      "pattern": ".agentic-workspace/verification/proof-decision.json",
+      "format": "json",
+      "owner": "verification",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "repo_verification_bootstrap.runtime_primitives._proof_decision_payload",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Optional live agent-authored decision for the current material test-evidence change, including trust question, evidence owner, durability, replacement condition, and residual risk.",
+      "storage_class": "non-reconstructable-decision",
+      "checked_in_justification": "The live test-evidence ownership decision would otherwise be lost in chat or PR prose and is required by the configured Verification manual boundary."
+    },
+    {
       "pattern": ".agentic-workspace/verification/reasoning-economy-evidence.json",
       "format": "json",
       "owner": "verification",

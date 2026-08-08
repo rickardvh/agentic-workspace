@@ -603,7 +603,9 @@ def test_vendor_neutral_non_operation_cases_are_unavailable_not_skipped(monkeypa
 def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
     runner = _load_test_ir_runner()
 
-    def fake_run_case_target(*, case, artifact_registry, target_kind, temp_root, require_node):
+    def fake_run_case_target(
+        *, case, artifact_registry, target_kind, temp_root, require_node, vendor_neutral_client=None, vendor_neutral_status="not-prepared"
+    ):
         return {
             "case_id": case["id"],
             "behavioral_class": case["behavioral_class"],
@@ -747,6 +749,7 @@ def test_external_conformance_receipts_ignore_forged_readiness_vectors() -> None
     runner = _load_test_ir_runner()
     profile = {
         "compatibility": {"fingerprint": "profile-1"},
+        "readiness_authority": {"runner_revision": "abc123", "client_semantics_revision": "client-1"},
         "operations": [
             {
                 "id": "assignment.export",
@@ -793,6 +796,7 @@ def test_external_conformance_receipts_pass_only_from_complete_result_vectors() 
     runner = _load_test_ir_runner()
     profile = {
         "compatibility": {"fingerprint": "profile-1"},
+        "readiness_authority": {"runner_revision": "abc123", "client_semantics_revision": "client-1"},
         "operations": [
             {
                 "id": "config.report",
@@ -821,8 +825,9 @@ def test_external_conformance_receipts_pass_only_from_complete_result_vectors() 
     assert all(item["status"] == "passed" for item in receipt["cases"].values())
     assert receipt["conformance_result_digest"]
     assert receipt["executed_at"] == "2026-07-30T10:00:00Z"
-    assert receipt["freshness"]["strategy"] == "revision-bound-explicit-revocation"
+    assert receipt["freshness"]["strategy"] == "runner-client-operation-profile-revision-bound"
     assert receipt["result_identity"]["runner_revision"] == "abc123"
+    assert receipt["result_identity"]["client_semantics_revision"] == "client-1"
     assert receipt["result_identity"]["invocation_id"] == "operation-conformance:test-invocation"
     assert receipt["result_identity"]["result_digest"] == receipt["conformance_result_digest"]
     assert receipt["custody"]["producer"] == "agentic-workspace.operation-conformance-runner"

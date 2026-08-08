@@ -1,12 +1,14 @@
 {
-  "executed_at": "2026-08-08T11:37:20Z",
+  "executed_at": "2026-08-08T14:07:06Z",
   "freshness": {
-    "rule": "Publication currentness is tied to profile and operation fingerprints plus explicit stale/revoked/superseded markers.",
-    "strategy": "revision-bound-explicit-revocation"
+    "client_semantics_revision": "sha256:fc8414af141f49fb7d18752cc757c8f265c7b82671183dc9dc225705380d9e83",
+    "rule": "Publication currentness is tied to runner/client-semantics and profile/operation revisions plus explicit stale/revoked/superseded markers.",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+    "strategy": "runner-client-operation-profile-revision-bound"
   },
   "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
   "mirror_publication": {
-    "generation_id": "external-conformance-publication:e3b5eccb69b0fbcfd9a7e667",
+    "generation_id": "external-conformance-publication:be3ca4b9bf7860c0ee0c8d97",
     "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
     "path_count": 3,
     "paths": [
@@ -14,9 +16,9 @@
       "generated/workspace/python/external_operation_conformance_receipts.json",
       "generated/workspace/typescript/external_operation_conformance_receipts.json"
     ],
-    "payload_digest": "sha256:e3b5eccb69b0fbcfd9a7e6674b2fc2ab2219ca51243eff5e84d724a5917299bc",
-    "previous_digest": "673c36c466bd9b2d7b67f207bdaaca51ba0b954b336aab42d9b2739dc2eec302",
-    "publisher_pid": 55668,
+    "payload_digest": "sha256:be3ca4b9bf7860c0ee0c8d97ea8778529fa2bbced2c41d7d899b266930fd3465",
+    "previous_digest": "12dd5bceaddda967f3606d0009998114ef444167683eb94c29a5984636a20b03",
+    "publisher_pid": 56048,
     "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
     "status": "published"
   },
@@ -93,10 +95,12 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-08T11:37:20Z",
+      "executed_at": "2026-08-08T14:07:06Z",
       "freshness": {
-        "rule": "Receipts remain current while operation/profile fingerprints match and no stale, revoked, or superseded marker is present.",
-        "strategy": "revision-bound-explicit-revocation"
+        "client_semantics_revision": "sha256:fc8414af141f49fb7d18752cc757c8f265c7b82671183dc9dc225705380d9e83",
+        "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+        "strategy": "runner-client-operation-profile-revision-bound"
       },
       "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
       "operation_fingerprint": "sha256:cbcd32386629e08c44b9dbbf897c6ff76ce62ca9c7831eee16c1d5ba8da64d18",
@@ -109,14 +113,15 @@
         "config.report:config.selected-output.success:typescript:typescript.function@sha256:5e7d326f7bd694b7",
         "config.report:config.selected-output.success:vendor-neutral:@sha256:7ca9472b6b8ef20e"
       ],
-      "profile_fingerprint": "sha256:2e3f8759c90e0cb321b6ad7a45647aaa516e138e105a8ed481f29bbcc2c3d98c",
-      "receipt_ref": "external-conformance:config.report:1214bf99e87423e12b2adacc",
+      "profile_fingerprint": "sha256:e82762ad50e99f3aad7a7e6f14cb348dcecd3f072b94d9242abe1560d2f2df4f",
+      "receipt_ref": "external-conformance:config.report:0fe727c7e391d4d851f6f609",
       "result_identity": {
-        "executed_at": "2026-08-08T11:37:20Z",
-        "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T11:37:20Z",
+        "client_semantics_revision": "sha256:fc8414af141f49fb7d18752cc757c8f265c7b82671183dc9dc225705380d9e83",
+        "executed_at": "2026-08-08T14:07:06Z",
+        "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
         "result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:5b952dcc0f3664c52af541d67d620c4c6d82b79d90cdbebde7f697949af7af55",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
         "status": "current"
       },
       "runtime_exception_admission": {
@@ -211,10 +216,12 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-08T11:37:20Z",
+      "executed_at": "2026-08-08T14:07:06Z",
       "freshness": {
-        "rule": "Receipts remain current while operation/profile fingerprints match and no stale, revoked, or superseded marker is present.",
-        "strategy": "revision-bound-explicit-revocation"
+        "client_semantics_revision": "sha256:fc8414af141f49fb7d18752cc757c8f265c7b82671183dc9dc225705380d9e83",
+        "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+        "strategy": "runner-client-operation-profile-revision-bound"
       },
       "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
       "operation_fingerprint": "sha256:2b0a1419d2d325564475ff783f78517d7e3cd59516f60fafe9dfb644845d0981",
@@ -226,14 +233,15 @@
         "delegation-outcome.append:delegation-outcome.append-write.boundary:python:cli.process@sha256:3fd7c63647106d7c",
         "delegation-outcome.append:delegation-outcome.append-write.boundary:vendor-neutral:@sha256:7d94d37a097921f0"
       ],
-      "profile_fingerprint": "sha256:2e3f8759c90e0cb321b6ad7a45647aaa516e138e105a8ed481f29bbcc2c3d98c",
-      "receipt_ref": "external-conformance:delegation-outcome.append:cdfb27d0c2c40bca6d67b0b7",
+      "profile_fingerprint": "sha256:e82762ad50e99f3aad7a7e6f14cb348dcecd3f072b94d9242abe1560d2f2df4f",
+      "receipt_ref": "external-conformance:delegation-outcome.append:2678e1b7cd81d653e5c80482",
       "result_identity": {
-        "executed_at": "2026-08-08T11:37:20Z",
-        "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T11:37:20Z",
+        "client_semantics_revision": "sha256:fc8414af141f49fb7d18752cc757c8f265c7b82671183dc9dc225705380d9e83",
+        "executed_at": "2026-08-08T14:07:06Z",
+        "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
         "result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:5b952dcc0f3664c52af541d67d620c4c6d82b79d90cdbebde7f697949af7af55",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
         "status": "current"
       },
       "runtime_exception_admission": {
@@ -273,11 +281,12 @@
     }
   ],
   "result_identity": {
-    "executed_at": "2026-08-08T11:37:20Z",
-    "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T11:37:20Z",
+    "client_semantics_revision": "sha256:fc8414af141f49fb7d18752cc757c8f265c7b82671183dc9dc225705380d9e83",
+    "executed_at": "2026-08-08T14:07:06Z",
+    "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
     "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
     "result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
-    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:5b952dcc0f3664c52af541d67d620c4c6d82b79d90cdbebde7f697949af7af55",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
     "status": "current"
   },
   "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored.",

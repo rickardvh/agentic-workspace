@@ -64,13 +64,16 @@ function conformanceReadiness(entry, profile, receiptStore) {
   if (evidence.status !== 'passed') missing.push('executed-conformance-passed');
   if (evidence.operation_fingerprint !== entry.operation_compatibility?.fingerprint) missing.push('current-operation-fingerprint');
   if (evidence.profile_fingerprint !== profile.compatibility?.fingerprint) missing.push('current-profile-fingerprint');
+  const authority = profile.readiness_authority ?? {}, resultIdentity = evidence.result_identity ?? {};
+  if (resultIdentity.runner_revision !== authority.runner_revision) missing.push('current-runner-revision');
+  if (resultIdentity.client_semantics_revision !== authority.client_semantics_revision) missing.push('current-client-semantics-revision');
   const transports = evidence.transports ?? {}, cases = evidence.cases ?? {};
   for (const transport of readinessTransports) if (transports[transport]?.status !== 'passed') missing.push(`transport-${transport}`);
   for (const item of readinessCases) if (cases[item]?.status !== 'passed') missing.push(`case-${item}`);
   if (entry.external_consumption?.runtime_exceptions?.length && !evidence.runtime_exception_revision) missing.push('runtime-exception-current-revision');
-  return {missing, result: {status: evidence.status ?? '', operation_fingerprint: evidence.operation_fingerprint ?? '', profile_fingerprint: evidence.profile_fingerprint ?? '', runtime_exception_revision: evidence.runtime_exception_revision ?? '', transports, cases, receipt_ref: evidence.receipt_ref ?? '', producer: evidence.custody?.producer ?? ''}};
+  return {missing, result: {status: evidence.status ?? '', operation_fingerprint: evidence.operation_fingerprint ?? '', profile_fingerprint: evidence.profile_fingerprint ?? '', runner_revision: resultIdentity.runner_revision ?? '', client_semantics_revision: resultIdentity.client_semantics_revision ?? '', runtime_exception_revision: evidence.runtime_exception_revision ?? '', transports, cases, receipt_ref: evidence.receipt_ref ?? '', producer: evidence.custody?.producer ?? ''}};
 }
-export function externalReadinessReport(operationIds) {
+export function externalReadinessReport(operationIds, { allowRuntimeBacked = false } = {}) {
   const profile = externalConsumerProfile();
   const receiptStore = externalOperationConformanceReceipts();
   const entries = new Map(profile.operations.map((entry) => [entry.id, entry])); const supported = [], excluded = [];
@@ -78,7 +81,8 @@ export function externalReadinessReport(operationIds) {
     for (const lang of ['python', 'typescript']) { if (!r[lang]?.exists) missing.push(`released-${lang}-resource`); if (!['adapter', 'mutation-capable-adapter'].includes(t[lang]?.status)) missing.push(`released-${lang}-adapter`); }
     if (!s.input?.length || !s.output?.length) missing.push('input-output-schema-coverage'); if (!refs.length) missing.push('conformance-reference'); const status = c.status ?? 'unavailable'; if (status === 'runtime-backed' && !c.runtime_exceptions?.length) missing.push('runtime-exception-disposition');
     const conformance = conformanceReadiness(entry, profile, receiptStore); missing.push(...conformance.missing);
-    if (status === 'supported' && !missing.length) supported.push(id); else excluded.push({id, status, missing_evidence: missing, conformance_refs: refs, conformance_result: conformance.result}); }
+    const allowedStatuses = new Set(allowRuntimeBacked ? ['supported', 'runtime-backed'] : ['supported']);
+    if (allowedStatuses.has(status) && !missing.length) supported.push(id); else excluded.push({id, status, missing_evidence: missing, conformance_refs: refs, conformance_result: conformance.result}); }
   return {kind: 'agentic-workspace/external-readiness-report/v1', status: !excluded.length ? 'ready' : supported.length ? 'subset-only' : 'not-ready', supported_operations: supported, excluded_operations: excluded};
 }
 export function externalContractBundle() { return JSON.parse(readFileSync(bundleUrl, 'utf8')); }
@@ -166,13 +170,9 @@ export function resolveInvocation(target, override) {
   return ['agentic-workspace'];
 }
 export function requireOperations(operationIds, { allowRuntimeBacked = false } = {}) {
-  const entries = new Map(externalConsumerProfile().operations.map((entry) => [entry.id, entry]));
-  const allowed = new Set(allowRuntimeBacked ? ['supported', 'runtime-backed'] : ['supported']);
-  const failures = operationIds.flatMap((id) => {
-    const status = entries.get(id)?.external_consumption?.status ?? 'unknown';
-    return allowed.has(status) ? [] : [{ operation: id, status }];
-  });
-  if (failures.length) throw new AWClientError('incompatible', 'operation requirements are not satisfied', { requirements: failures });
+  const readiness = externalReadinessReport(operationIds, { allowRuntimeBacked });
+  const failures = readiness.excluded_operations;
+  if (failures.length) throw new AWClientError('incompatible', 'operation requirements lack current external-readiness evidence', { requirements: failures, readiness });
 }
 export function invokeJson(argv, { target, invocation } = {}) {
   const state = detectWorkspace(target); if (state.status !== 'enabled') throw new AWClientError(state.status, 'workspace is not available', state);
@@ -212,7 +212,6 @@ function validateSchema(schema, value, path = '$') {
   return errors;
 }
 export function invokeOperation(operationId, values, { target, invocation, allowRuntimeBacked = false } = {}) {
-  requireOperations([operationId], { allowRuntimeBacked });
   const entry = externalConsumerProfile().operations.find((item) => item.id === operationId);
   if (entry.operation_resources.typescript.package !== '@agentic-workspace/workspace-cli') {
     throw new AWClientError('unsupported', 'operation belongs to a separate generated package', { operation: operationId });
