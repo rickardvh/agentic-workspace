@@ -18,8 +18,8 @@
     "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
     "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
     "Independent-review admission accepts only producer-owned review result envelopes and rejects caller-authored identity packets.",
-    "Independent-review host results are admitted only through an opaque host_result_ref whose signed envelope verifies against immutable release-pinned provider keys; when no provider key is shipped the operation is unavailable and fails closed. Repo-local files, user-home trust stores, PYTHONPATH modules, environment variables, operation arguments, caller-installed runtime keys, and caller-supplied verifier keys/signatures are non-authoritative caches.",
-    "Independent-review receipts are bound to changed scope and expire, revoke, supersede, or lose current host-runtime registry admission fail closed at import and proof-use time."
+    "Independent-review host results are admitted only through an opaque host_result_ref whose signed envelope verifies against an immutable release-pinned provider key. The supported provider envelope binds issuer, producer, channel, stable workspace identity, audience, operation, assignment/proof-subject revisions, nonce, expiry, and key revision. Repo-local files, user-home trust stores, PYTHONPATH modules, environment variables, operation arguments, caller-installed runtime keys, and caller-supplied verifier keys/signatures are non-authoritative caches.",
+    "Independent-review receipts are bound to changed scope and fail closed when the provider envelope expires, revokes, supersedes, reuses a nonce for a distinct result, or no longer verifies against the current release-pinned key at import and proof-use time."
   ],
   "id": "assignment.admit",
   "inputs": [

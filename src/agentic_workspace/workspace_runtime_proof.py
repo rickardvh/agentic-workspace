@@ -6755,6 +6755,25 @@ def _host_result_body_for_admission(host_result: dict[str, Any]) -> dict[str, An
     return body
 
 
+def _independent_review_workspace_ref(target_root: Path) -> str:
+    """Return the stable host-visible workspace identity for review envelopes."""
+
+    completed = subprocess.run(
+        ["git", "-C", str(target_root), "config", "--get", "remote.origin.url"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    remote = completed.stdout.strip() if completed.returncode == 0 else ""
+    if remote:
+        normalized = remote.replace("\\", "/").strip().removesuffix(".git")
+        if normalized.startswith("git@") and ":" in normalized:
+            host, path = normalized[4:].split(":", 1)
+            normalized = f"https://{host}/{path}"
+        return f"workspace:git:{normalized.rstrip('/').lower()}"
+    return f"workspace:path:{target_root.resolve()}"
+
+
 def _rsa_sha256_signature_valid(*, signature_b64: str, payload: dict[str, Any], key: dict[str, Any]) -> bool:
     try:
         signature = base64.b64decode(signature_b64, validate=True)
@@ -6799,7 +6818,8 @@ def _signed_independent_review_host_verdict_with_keys(
         return {}
     if not key_id:
         return {}
-    key = _as_dict(public_keys.get(key_id))
+    raw_key = public_keys.get(key_id)
+    key = dict(raw_key) if isinstance(raw_key, Mapping) else {}
     if not key or key.get("status") != "current":
         return {}
     if key.get("algorithm") != "RS256":
@@ -6810,7 +6830,9 @@ def _signed_independent_review_host_verdict_with_keys(
         return {}
     if str(key.get("trusted_channel") or "") != str(_as_dict(host_result.get("custody")).get("trusted_channel") or ""):
         return {}
-    expected_workspace_ref = f"workspace:path:{target_root.resolve()}"
+    if str(key.get("issuer") or "") != str(signed_payload.get("issuer") or ""):
+        return {}
+    expected_workspace_ref = _independent_review_workspace_ref(target_root)
     if str(key.get("workspace_ref") or expected_workspace_ref) != expected_workspace_ref:
         return {}
     not_before = _parse_review_time(key.get("not_before"))
@@ -6826,16 +6848,25 @@ def _signed_independent_review_host_verdict_with_keys(
         return {}
     if signed_payload.get("kind") != "agentic-workspace/independent-review-host-result-admission-payload/v1":
         return {}
+    issued_at = _parse_review_time(signed_payload.get("issued_at"))
+    admission_expires_at = _parse_review_time(signed_payload.get("expires_at"))
+    if issued_at is None or admission_expires_at is None or admission_expires_at <= issued_at:
+        return {}
+    if not_before and issued_at < not_before:
+        return {}
+    if key_expires_at and admission_expires_at > key_expires_at:
+        return {}
     expected_payload = {
         "host_result_ref": host_result_ref,
         "host_result_body_digest": _stable_review_json_digest(_host_result_body_for_admission(host_result)),
         "producer": str(_as_dict(host_result.get("custody")).get("producer") or ""),
         "trusted_channel": str(_as_dict(host_result.get("custody")).get("trusted_channel") or ""),
         "audience": INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
-        "workspace_ref": f"workspace:path:{target_root.resolve()}",
+        "workspace_ref": expected_workspace_ref,
         "operation": "assignment.admit.independent-review",
         "assignment_revision": str(_as_dict(host_result.get("review_result")).get("assignment_revision") or ""),
         "proof_subject_revision": str(_as_dict(host_result.get("review_result")).get("proof_subject_revision") or ""),
+        "key_revision": str(key.get("key_revision") or ""),
     }
     for field, expected in expected_payload.items():
         if str(signed_payload.get(field) or "") != expected:
@@ -6844,7 +6875,7 @@ def _signed_independent_review_host_verdict_with_keys(
         "kind": "agentic-workspace/independent-review-host-result-verdict/v1",
         "status": "admitted",
         "authority": "host-adapter-resolver",
-        "verifier_revision": key_id,
+        "verifier_revision": str(key.get("key_revision") or key_id),
         "nonce": str(signed_payload.get("nonce") or ""),
         "issued_at": str(signed_payload.get("issued_at") or ""),
         "expires_at": str(signed_payload.get("expires_at") or ""),
@@ -6876,11 +6907,28 @@ def _build_release_pinned_independent_review_verifier(
 
 
 # Independent-review authority is deliberately not configurable from the AW
-# library process. Provider keys may be added only by a reviewed package release;
-# until then external independent-review admission is unavailable and fails
-# closed. The key set is captured inside this verifier and has no registry/setter
-# surface that application or target code can populate.
-_signed_independent_review_host_verdict = _build_release_pinned_independent_review_verifier({})
+# library process. Signing stays in the separately operated review adapter while
+# its release-owned public key is sealed into the verifier. Rotation, revocation,
+# and supersession require a reviewed package release rather than target-owned
+# runtime state.
+_signed_independent_review_host_verdict = _build_release_pinned_independent_review_verifier(
+    {
+        "github-review-adapter:release-2026-08": {
+            "key_id": "github-review-adapter:release-2026-08",
+            "key_revision": "github-review-adapter-key/2026-08-01",
+            "algorithm": "RS256",
+            "authority": "pinned-host-runtime",
+            "issuer": "github-review-webhook",
+            "producer": "github-review-adapter",
+            "trusted_channel": "github-review-webhook",
+            "status": "current",
+            "not_before": "2026-08-01T00:00:00Z",
+            "expires_at": "2027-08-01T00:00:00Z",
+            "n": "d00a7cb961b3e2d0719371dd5821eedef6bde01ad436ceb25d533ced12e83fd0786a09f4b840a05f6372964ebcd56d6b61504c5d16cb9e995e4d460206eda4ba03c8fdca73f63c564c4746cb88946e4558ff8a654cc493212ead218e7d447f0ec206db41488551c57a50149367274144fdc8c5c6a0b2005daf1ecc5c810ce74ff198997acdbd1e2a0ed0514a5dc31b6468cf0afe67b724d02d093ddfa1826b773f476ed62bac7fb5549638481112e3b4b5a20ab857f2cf4c5cb632d470fd41c43cbc5b248614a57a334ae0a98ba844ad55f98923b01f12472f05db0a6e653afa4223b84a9a99babe5898bb237e9f4ff448bbf8e970dac3e9d7d670164f0b157b",
+            "e": 65537,
+        }
+    }
+)
 del _build_release_pinned_independent_review_verifier
 
 
@@ -7027,7 +7075,7 @@ def _host_admits_independent_review_host_result(host_result_ref: str, host_resul
         return False
     custody = _as_dict(host_result.get("custody"))
     review_result = _as_dict(host_result.get("review_result"))
-    expected_workspace_ref = f"workspace:path:{target_root.resolve()}"
+    expected_workspace_ref = _independent_review_workspace_ref(target_root)
     required = {
         "host_result_ref": host_result_ref,
         "host_result_body_digest": _stable_review_json_digest(_host_result_body_for_admission(host_result)),
@@ -7042,7 +7090,7 @@ def _host_admits_independent_review_host_result(host_result_ref: str, host_resul
     for field, expected in required.items():
         if str(verdict.get(field) or "") != expected:
             return False
-    for field in ("nonce", "issued_at", "expires_at", "verifier_revision"):
+    for field in ("nonce", "issued_at", "expires_at", "verifier_revision", "key_revision"):
         if not str(verdict.get(field) or "").strip():
             return False
     issued_at = _parse_review_time(verdict.get("issued_at"))
@@ -7102,6 +7150,14 @@ def record_trusted_independent_review_result(
         raise WorkspaceUsageError("independent review result index is malformed; repair it before admission.")
     host_results: dict[str, Any] = dict(host_results_raw)
     results: dict[str, Any] = raw_results
+    signed_payload = _as_dict(_as_dict(host_result.get("host_admission")).get("signed_payload"))
+    nonce = str(signed_payload.get("nonce") or "").strip()
+    for existing_host_id, existing_record_raw in host_results.items():
+        existing_record = _as_dict(existing_record_raw)
+        if str(existing_host_id) == host_result_id or existing_record.get("status") != "current":
+            continue
+        if nonce and str(existing_record.get("nonce") or "") == nonce:
+            raise WorkspaceUsageError("independent review host admission nonce was already used by another current result.")
     host_results[host_result_id] = {
         "path": host_path.relative_to(host_root).as_posix(),
         "status": "current",
@@ -7113,6 +7169,8 @@ def record_trusted_independent_review_result(
         "assignment_id": str(result.get("assignment_id") or ""),
         "review_revision": str(result.get("review_revision") or result.get("assignment_revision") or ""),
         "scope_digest": str(result.get("scope_digest") or ""),
+        "nonce": nonce,
+        "verifier_revision": str(signed_payload.get("key_revision") or ""),
     }
     results[result_id] = {
         "path": path.relative_to(root).as_posix(),
