@@ -43,18 +43,18 @@ def _source_owner_authority_contract(
     source_revision: str,
     git_head: str,
     status: str,
-    reason: str,
-    owner_boundary: str,
     schema_backing: dict[str, Any],
     selection: dict[str, Any],
+    producer_state: dict[str, Any],
 ) -> dict[str, Any]:
-    population = _as_dict(schema_backing.get("population"))
-    if not population:
-        population = {"status": "present" if status == "current" else "invalid"}
     schema_status = "valid" if status == "current" else "invalid"
     if schema_backing.get("parse_status") in {"valid", "invalid"}:
         schema_status = str(schema_backing.get("parse_status"))
-    lifecycle_status = "current" if status == "current" else "repair-required"
+    lifecycle = _as_dict(producer_state.get("lifecycle"))
+    population = _as_dict(producer_state.get("population"))
+    supersession = _as_dict(producer_state.get("supersession"))
+    if not lifecycle or not population or not supersession:
+        raise ValueError("producer owner state must carry lifecycle, population, and supersession")
     return {
         "kind": "agentic-workspace/context-authority-source-owner-contract/v1",
         "surface": surface,
@@ -72,20 +72,9 @@ def _source_owner_authority_contract(
             "missing_required_keys": [str(item) for item in _as_list(schema_backing.get("missing_required_keys"))],
             "missing_symbols": [str(item) for item in _as_list(schema_backing.get("missing_symbols"))],
         },
-        "lifecycle": {
-            "status": lifecycle_status,
-            "reason": reason,
-            "owner_boundary": owner_boundary,
-            "repair_operation_id": operation_id,
-            "repair_owner": producer,
-        },
+        "lifecycle": lifecycle,
         "population": population,
-        "supersession": {
-            "status": "not-superseded" if status == "current" else "unknown-until-repair",
-            "supersedes": "",
-            "superseded_by": "",
-            "currentness_basis": "selected source id + source revision + git head + selection revision",
-        },
+        "supersession": supersession,
         "source_owner_rule": (
             "Every registered context-authority surface must publish schema, lifecycle, population, and supersession "
             "evidence from its producer-owned operation before ordinary consumers may treat it as current."
@@ -181,6 +170,70 @@ def _reject_caller_semantic_inputs(kwargs: dict[str, Any]) -> None:
 def _reject_caller_source_specific(surface: str, kwargs: dict[str, Any]) -> None:
     if _as_dict(kwargs.get("source_specific")):
         raise ValueError(f"{surface} owner operation derives semantic evidence from its canonical subsystem")
+
+
+def _producer_owner_state(
+    *,
+    surface: str,
+    producer: str,
+    operation_id: str,
+    source_id: str,
+    source_revision: str,
+    git_head: str,
+    selection: dict[str, Any],
+    status: str,
+    reason: str,
+    owner_boundary: str,
+    schema_backing: dict[str, Any],
+    surface_specific: dict[str, Any],
+) -> dict[str, Any]:
+    population = _as_dict(schema_backing.get("population"))
+    if not population:
+        population = {"status": "present" if status == "current" else "invalid"}
+    lifecycle = {
+        "status": "current" if status == "current" else "repair-required",
+        "reason": reason,
+        "owner_boundary": owner_boundary,
+        "repair_operation_id": operation_id,
+        "repair_owner": producer,
+    }
+    supersession = {
+        "status": "not-superseded" if status == "current" else "unknown-until-repair",
+        "supersedes": "",
+        "superseded_by": "",
+        "currentness_basis": "selected source id + source revision + git head + selection revision",
+    }
+    producer_result_identity = {
+        "surface": surface,
+        "producer": producer,
+        "operation_id": operation_id,
+        "source_id": source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "selection_revision": "sha256:" + _digest(selection),
+        "status": status,
+        "schema_backing_revision": "sha256:" + _digest(schema_backing),
+        "surface_specific_revision": "sha256:" + _digest(surface_specific),
+        "lifecycle": lifecycle,
+        "population": population,
+        "supersession": supersession,
+    }
+    return {
+        "kind": "agentic-workspace/context-authority-producer-owner-state/v1",
+        "status": status,
+        "producer": producer,
+        "operation_id": operation_id,
+        "surface": surface,
+        "source_id": source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "selection_revision": producer_result_identity["selection_revision"],
+        "revision": "sha256:" + _digest(producer_result_identity),
+        "lifecycle": lifecycle,
+        "population": population,
+        "supersession": supersession,
+        "rule": "Producer owner state is issued by the selected owner-operation adapter before shared context admission.",
+    }
 
 
 def _path_matches_any(path: str, patterns: list[str]) -> bool:
@@ -348,6 +401,69 @@ def _admit_context_owner_operation_result(
     boundary = str(owner_result.get("owner_boundary") or "")
     if not structural_backing or not boundary:
         raise ValueError("context owner operation payload must provide owner boundary and schema backing")
+    producer_state = _as_dict(owner_result.get("producer_owner_state"))
+    if producer_state.get("kind") != "agentic-workspace/context-authority-producer-owner-state/v1":
+        raise ValueError("owner operation result is missing producer owner state")
+    producer_state_expectations = {
+        "producer": producer,
+        "surface": surface,
+        "source_id": source_id,
+        "source_revision": source_revision,
+        "git_head": git_head,
+        "operation_id": operation_id,
+        "selection_revision": "sha256:" + _digest(selection),
+    }
+    for key, expected in producer_state_expectations.items():
+        if producer_state.get(key) != expected:
+            raise ValueError(f"producer owner state {key.replace('_', ' ')} does not match")
+    if producer_state.get("status") != owner_result.get("status"):
+        raise ValueError("producer owner state status does not match owner result")
+    expected_state_revision = "sha256:" + _digest(
+        {
+            "surface": surface,
+            "producer": producer,
+            "operation_id": operation_id,
+            "source_id": source_id,
+            "source_revision": source_revision,
+            "git_head": git_head,
+            "selection_revision": "sha256:" + _digest(selection),
+            "status": owner_result.get("status"),
+            "schema_backing_revision": "sha256:" + _digest(structural_backing),
+            "surface_specific_revision": "sha256:"
+            + _digest(
+                {
+                    key: value
+                    for key, value in owner_result.items()
+                    if key
+                    not in {
+                        "kind",
+                        "producer",
+                        "status",
+                        "surface",
+                        "owner",
+                        "source_id",
+                        "source_revision",
+                        "git_head",
+                        "selection",
+                        "adapter_id",
+                        "repair_operation_id",
+                        "owner_boundary",
+                        "schema_backing",
+                        "producer_owner_state",
+                        "source_owner_contract",
+                        "owner_adapter_receipt",
+                        "revision",
+                        "reason",
+                    }
+                }
+            ),
+            "lifecycle": _as_dict(producer_state.get("lifecycle")),
+            "population": _as_dict(producer_state.get("population")),
+            "supersession": _as_dict(producer_state.get("supersession")),
+        }
+    )
+    if producer_state.get("revision") != expected_state_revision:
+        raise ValueError("producer owner state revision does not match current producer payload")
     source_owner_contract = _as_dict(owner_result.get("source_owner_contract"))
     if source_owner_contract.get("kind") != "agentic-workspace/context-authority-source-owner-contract/v1":
         raise ValueError("owner operation result is missing source owner authority contract")
@@ -371,6 +487,8 @@ def _admit_context_owner_operation_result(
         raise ValueError("source owner authority contract must carry population and supersession evidence")
     if adapter_receipt.get("source_owner_contract_revision") != "sha256:" + _digest(source_owner_contract):
         raise ValueError("owner operation adapter receipt source owner contract revision does not match")
+    if adapter_receipt.get("producer_state_revision") != producer_state.get("revision"):
+        raise ValueError("owner operation adapter receipt producer state revision does not match")
     result_payload_revision = str(owner_result.get("revision") or "")
     schema_backing_revision = "sha256:" + _digest(structural_backing)
     adapter_receipt_revision = "sha256:" + _digest(adapter_receipt)
@@ -496,6 +614,8 @@ def _complete_owner_operation_result(
     source_specific: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     _ = (task, paths)
+    if _as_dict(source_specific):
+        raise ValueError(f"{surface} owner operation derives semantic evidence from its canonical subsystem")
     source_revision = "sha256:" + revision
     spec = _OWNER_OPERATION_SPECS.get(surface)
     if not spec or not spec.get("producer") or not spec.get("result_kind") or not spec.get("operation_id"):
@@ -509,6 +629,20 @@ def _complete_owner_operation_result(
     status = str(status or "current")
     reason = str(reason or "")
     surface_specific = _as_dict(surface_specific)
+    producer_state = _producer_owner_state(
+        surface=surface,
+        producer=spec["producer"],
+        operation_id=spec["operation_id"],
+        source_id=expected_source_id,
+        source_revision=source_revision,
+        git_head=git_head,
+        selection=selection,
+        status=status,
+        reason=reason,
+        owner_boundary=owner_boundary,
+        schema_backing=structural_backing,
+        surface_specific=surface_specific,
+    )
     semantic_evidence_revision = "sha256:" + _digest(
         {
             "status": status,
@@ -516,6 +650,7 @@ def _complete_owner_operation_result(
             "owner_boundary": owner_boundary,
             "schema_backing": structural_backing,
             "surface_specific": surface_specific,
+            "producer_state_revision": producer_state["revision"],
         }
     )
     source_owner_contract = _source_owner_authority_contract(
@@ -526,10 +661,9 @@ def _complete_owner_operation_result(
         source_revision=source_revision,
         git_head=git_head,
         status=status,
-        reason=reason,
-        owner_boundary=owner_boundary,
         schema_backing=structural_backing,
         selection=selection,
+        producer_state=producer_state,
     )
     adapter_receipt = {
         "kind": "agentic-workspace/context-authority-owner-adapter-result/v1",
@@ -542,6 +676,7 @@ def _complete_owner_operation_result(
         "adapter_id": adapter_id,
         "selection_revision": "sha256:" + _digest(selection),
         "semantic_evidence_revision": semantic_evidence_revision,
+        "producer_state_revision": producer_state["revision"],
         "source_owner_contract_revision": "sha256:" + _digest(source_owner_contract),
         "operation_id": spec["operation_id"],
         "rule": "Concrete owner-operation front doors produce semantic payloads and adapter receipts from their selected canonical source.",
@@ -561,6 +696,7 @@ def _complete_owner_operation_result(
             "repair_operation_id": spec["operation_id"],
             "owner_boundary": owner_boundary,
             "schema_backing": structural_backing,
+            "producer_owner_state": producer_state,
             "source_owner_contract": source_owner_contract,
             "owner_adapter_receipt": adapter_receipt,
             **({"reason": reason} if reason else {}),

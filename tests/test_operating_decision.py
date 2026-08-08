@@ -1545,6 +1545,49 @@ def test_context_owner_operation_admission_rejects_forged_owner_identity(tmp_pat
         )
 
 
+def test_context_owner_operation_admission_rejects_tampered_producer_state(tmp_path: Path) -> None:
+    from agentic_workspace.context_authority_owner_operations import (
+        _admit_context_owner_operation_result,
+        registered_context_owner_operation_runner,
+    )
+
+    _write_context_authority_sources(tmp_path)
+    chosen = tmp_path / "SYSTEM_INTENT.md"
+    selection = {"consumer": "start"}
+    runner = registered_context_owner_operation_runner("system-intent")
+    current = runner(
+        owner="system-intent resolver",
+        root=tmp_path,
+        chosen=chosen,
+        revision=_fixture_source_revision(chosen),
+        git_head="",
+        selection=selection,
+        task="",
+        paths=[],
+        source_specific={},
+    )
+    forged = {key: value for key, value in current.items() if key not in {"owner_operation", "owner_execution_receipt", "revision"}}
+    forged["producer_owner_state"] = {
+        **forged["producer_owner_state"],
+        "lifecycle": {**forged["producer_owner_state"]["lifecycle"], "status": "current"},
+        "revision": "sha256:forged",
+    }
+    forged["revision"] = "sha256:forged-result"
+
+    with pytest.raises(ValueError, match="producer owner state revision does not match"):
+        _admit_context_owner_operation_result(
+            surface="system-intent",
+            owner="system-intent resolver",
+            root=tmp_path,
+            chosen=chosen,
+            source_revision="sha256:" + _fixture_source_revision(chosen),
+            git_head="",
+            selection=selection,
+            adapter_id="system-intent.owner-result",
+            owner_result=forged,
+        )
+
+
 def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path: Path) -> None:
     (tmp_path / "generated").mkdir(parents=True)
     (tmp_path / "src/agentic_workspace/contracts").mkdir(parents=True)
