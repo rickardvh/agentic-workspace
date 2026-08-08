@@ -1378,6 +1378,7 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "delegation.outcome.append",
     "assignment.lifecycle.apply",
     "correction.event.apply",
+    "guidance.lifecycle.apply",
     "workspace.selection.resolve",
 }
 

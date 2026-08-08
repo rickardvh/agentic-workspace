@@ -324,7 +324,7 @@ def _patch_workspace_typescript_sample_command_test(
     content = output.content
     content = content.replace(
         "assert.deepEqual(packageJson.files, ['src', 'resources']);",
-        "assert.deepEqual(packageJson.files, ['src', 'resources', 'external_consumer_profile.json', 'external_contract_bundle.json']);",
+        "assert.deepEqual(packageJson.files, ['src', 'resources', 'external_consumer_profile.json', 'external_contract_bundle.json', 'external_operation_conformance_receipts.json']);",
     )
     content = content.replace(
         "assert.match(result.stderr, /Unsupported generated command: __unsupported__/);",
@@ -934,12 +934,19 @@ from ..cli import build_generated_parser
     if relative != "generated/workspace/typescript/package.json":
         return output
     payload = json.loads(output.content)
-    payload["exports"] = {".": "./src/client.mjs", "./contracts": "./external_contract_bundle.json", "./profile": "./external_consumer_profile.json"}
+    payload["exports"] = {
+        ".": "./src/client.mjs",
+        "./contracts": "./external_contract_bundle.json",
+        "./profile": "./external_consumer_profile.json",
+        "./conformance-receipts": "./external_operation_conformance_receipts.json",
+    }
     files = list(payload.get("files", []))
     if "external_consumer_profile.json" not in files:
         files.append("external_consumer_profile.json")
     if "external_contract_bundle.json" not in files:
         files.append("external_contract_bundle.json")
+    if "external_operation_conformance_receipts.json" not in files:
+        files.append("external_operation_conformance_receipts.json")
     payload["files"] = files
     return GeneratedOutput(output.path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
