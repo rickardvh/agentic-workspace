@@ -1277,7 +1277,15 @@ def test_context_owner_operation_admission_does_not_accept_caller_semantic_paylo
     assert not hasattr(owner_operations, "run_context_owner_operation")
     assert "def run_context_owner_operation(" not in operation_source
     assert "registered_context_owner_operation_runner(surface)" in resolver_source
-    assert "_CONTEXT_OWNER_OPERATION_RUNNERS" in operation_source
+    assert "_CONTEXT_OWNER_OPERATION_RUNNERS" not in operation_source
+    assert "_issue_owner_result" not in operation_source
+    assert '"kind": "agentic-workspace/context-authority-producer-owner-state/v1"' not in operation_source
+    assert "owner_execution_receipt =" not in operation_source
+    assert "tomllib" not in operation_source
+    assert "ast." not in operation_source
+    assert "repo_planning_bootstrap.context_authority_owner" in operation_source
+    assert "repo_memory_bootstrap.context_authority_owner" in operation_source
+    assert "repo_verification_bootstrap.context_authority_owner" in operation_source
     assert "_CONTEXT_OWNER_ADAPTER_TOKEN" not in resolver_source
     assert "ContextOwnerAdapterResult" not in resolver_source
 
@@ -1342,6 +1350,8 @@ def test_context_authority_each_owner_family_uses_concrete_adapter_output(tmp_pa
         assert adapter_receipt["kind"] == "agentic-workspace/context-authority-owner-adapter-result/v1"
         assert source_owner_contract["kind"] == "agentic-workspace/context-authority-source-owner-contract/v1"
         assert adapter_receipt["surface"] == operation["surface"] == execution_receipt["surface"] == surface
+        assert "context_authority_owner_operations" not in execution_receipt["executor"]
+        assert execution_receipt["executor"] == adapter_receipt["executor"]
         assert source_owner_contract["surface"] == surface
         assert source_owner_contract["schema"]["status"] in {"valid", "current"}
         assert source_owner_contract["lifecycle"]["status"] == "current"
@@ -1487,94 +1497,72 @@ def test_protected_context_owner_operations_reject_caller_source_specific_semant
 
 
 def test_context_owner_operation_admission_rejects_forged_owner_identity(tmp_path: Path) -> None:
-    from agentic_workspace.context_authority_owner_operations import _admit_context_owner_operation_result
+    from agentic_workspace.context_authority_owner_operations import registered_context_owner_receipt_status
 
     _write_context_authority_sources(tmp_path)
-    chosen = tmp_path / "SYSTEM_INTENT.md"
-
-    with pytest.raises(ValueError, match="producer does not match"):
-        _admit_context_owner_operation_result(
-            surface="system-intent",
-            owner="workspace-runtime",
-            root=tmp_path,
-            chosen=chosen,
-            source_revision="sha256:" + _fixture_source_revision(chosen),
-            git_head="head",
-            selection={"consumer": "start"},
-            adapter_id="system-intent.owner-result",
-            owner_result={
-                "kind": "forged-kind",
-                "producer": "forged-producer",
-                "status": "current",
-                "surface": "system-intent",
-                "source_id": "SYSTEM_INTENT.md",
-                "source_revision": "sha256:" + _fixture_source_revision(chosen),
-                "git_head": "head",
-                "adapter_id": "system-intent.owner-result",
-                "revision": "sha256:forged",
-                "owner_boundary": "forged",
-                "schema_backing": {"source_format": "markdown"},
-            },
-        )
-
-
-def test_context_owner_operation_admission_rejects_tampered_producer_state(tmp_path: Path) -> None:
-    from agentic_workspace.context_authority_owner_operations import (
-        _admit_context_owner_operation_result,
-        registered_context_owner_operation_runner,
-    )
-
-    _write_context_authority_sources(tmp_path)
-    chosen = tmp_path / "SYSTEM_INTENT.md"
-    selection = {"consumer": "start"}
-    runner = registered_context_owner_operation_runner("system-intent")
-    current = runner(
-        owner="system-intent resolver",
+    admitted, reason = registered_context_owner_receipt_status(
+        owner_operation={"receipt_id": "sha256:forged", "run_id": "sha256:forged"},
+        receipt={
+            "kind": "agentic-workspace/context-authority-owner-execution-receipt/v1",
+            "status": "executed",
+            "current_state": "current",
+            "receipt_id": "sha256:forged",
+            "run_id": "sha256:forged",
+            "producer": "forged-producer",
+            "current_resolution": {"status": "current", "resolution_mode": "deterministic-source-revision"},
+        },
+        result_revision="sha256:forged",
         root=tmp_path,
-        chosen=chosen,
-        revision=_fixture_source_revision(chosen),
-        git_head="",
-        selection=selection,
-        task="",
-        paths=[],
-        source_specific={},
     )
-    forged = {key: value for key, value in current.items() if key not in {"owner_operation", "owner_execution_receipt", "revision"}}
-    forged["producer_owner_state"] = {
-        **forged["producer_owner_state"],
-        "lifecycle": {**forged["producer_owner_state"]["lifecycle"], "status": "current"},
-        "revision": "sha256:forged",
-    }
-    forged["revision"] = "sha256:forged-result"
 
-    with pytest.raises(ValueError, match="producer owner state revision does not match"):
-        _admit_context_owner_operation_result(
-            surface="system-intent",
-            owner="system-intent resolver",
-            root=tmp_path,
-            chosen=chosen,
-            source_revision="sha256:" + _fixture_source_revision(chosen),
-            git_head="",
-            selection=selection,
-            adapter_id="system-intent.owner-result",
-            owner_result=forged,
-        )
+    assert admitted is False
+    assert reason in {"owner-operation-current-run-mismatch", "owner-operation-current-receipt-mismatch"}
 
 
-def test_shared_context_composer_dispatches_the_registered_owner_operation(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_context_owner_operation_admission_rejects_tampered_producer_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import operating_decision
+    from agentic_workspace.context_authority_owner_operations import registered_context_owner_operation_runner
+
+    _write_context_authority_sources(tmp_path)
+    runner = registered_context_owner_operation_runner("system-intent")
+
+    def tampered_runner(**kwargs):
+        current = runner(**kwargs)
+        return {
+            **current,
+            "producer_owner_state": {
+                **current["producer_owner_state"],
+                "revision": "sha256:forged",
+            },
+        }
+
+    monkeypatch.setattr(operating_decision, "registered_context_owner_operation_runner", lambda _surface: tampered_runner)
+    projection = resolve_context_authority_projection(
+        consumer="start",
+        task="shape authority routing ownership skill guidance memory",
+        target_root=tmp_path,
+    )
+
+    assert projection["status"] == "repair-required"
+    intent = next(item for item in projection["excluded_authorities"] if item["surface"] == "system-intent")
+    assert intent["reason"] == "producer-owner-state-revision-mismatch"
+
+
+def test_shared_context_composer_dispatches_the_registered_owner_operation() -> None:
     from agentic_workspace import context_authority_owner_operations as owner_operations
 
-    sentinel = object()
-
-    def owner_runner(**_kwargs):
-        return sentinel
-
-    monkeypatch.setitem(owner_operations._CONTEXT_OWNER_OPERATION_RUNNERS, "system-intent", owner_runner)
-
-    selected = owner_operations.registered_context_owner_operation_runner("system-intent")
-
-    assert selected is owner_runner
-    assert selected() is sentinel
+    assert owner_operations.registered_context_owner_operation_runner("system-intent").__module__ == (
+        "agentic_workspace.context_authority_workspace_owners"
+    )
+    assert owner_operations.registered_context_owner_operation_runner("planning").__module__ == (
+        "repo_planning_bootstrap.context_authority_owner"
+    )
+    assert owner_operations.registered_context_owner_operation_runner("memory").__module__ == (
+        "repo_memory_bootstrap.context_authority_owner"
+    )
+    assert owner_operations.registered_context_owner_operation_runner("proof").__module__ == (
+        "repo_verification_bootstrap.context_authority_owner"
+    )
     assert not Path("src/agentic_workspace/context_authority_producer_operations.py").exists()
 
 
@@ -1611,7 +1599,7 @@ def test_owner_operations_reject_marker_and_symbol_mentions_without_canonical_st
         selection={"consumer": "start"},
     )
     assert evaluation_result["status"] == "invalid"
-    assert evaluation_result["reason"] == "owner-module-symbol-missing"
+    assert evaluation_result["reason"] == "evaluation-owner-runtime-contract-missing"
 
 
 def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path: Path) -> None:
