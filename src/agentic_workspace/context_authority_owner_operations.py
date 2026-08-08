@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
+import ast
 import fnmatch
 import hashlib
 import json
+import subprocess
 import tomllib
 from pathlib import Path
 from typing import Any
-
-from agentic_workspace.context_authority_producer_operations import (
-    admit_registered_producer_result,
-    registered_producer_operation_runner,
-)
 
 _CONTEXT_AUTHORITY_REGISTRY_RESOURCE = "context_authority_registry.json"
 
@@ -114,13 +111,28 @@ def _text_contract(path: Path, markers: list[str]) -> tuple[str, str, dict[str, 
             {"source_format": path.suffix.lower().lstrip(".") or "text", "error": str(exc)},
             {"population": {"status": "invalid"}},
         )
-    lowered = text.lower()
-    missing = [marker for marker in markers if marker.lower() not in lowered]
+    lines = [line.strip() for line in text.splitlines()]
+    headings = {line for line in lines if line.startswith("#")}
+
+    def marker_declared(marker: str) -> bool:
+        if marker.startswith("#"):
+            return marker in headings
+        marker_lower = marker.lower()
+        return any(
+            line.lower() == marker_lower
+            or line.lower().startswith(marker_lower)
+            or marker_lower in line.lower()
+            or (line.startswith("<!--") and marker_lower in line.lower())
+            for line in lines
+        )
+
+    missing = [marker for marker in markers if not marker_declared(marker)]
     backing = {
         "source_format": path.suffix.lower().lstrip(".") or "text",
         "contract_markers": markers,
         "matched_markers": sorted(set(markers) - set(missing)),
-        "line_count": len(text.splitlines()),
+        "line_count": len(lines),
+        "heading_count": len(headings),
         "population": {"status": "present" if not missing else "invalid"},
     }
     return ("current", "", backing, {}) if not missing else ("invalid", "owner-source-contract-marker-missing", backing, {})
@@ -154,11 +166,27 @@ def _module_contract(path: Path, symbols: list[str]) -> tuple[str, str, dict[str
             {"source_format": "python-module", "error": str(exc), "population": {"status": "invalid"}},
             {},
         )
-    missing = [symbol for symbol in symbols if symbol not in text]
+    try:
+        tree = ast.parse(text, filename=path.as_posix())
+    except SyntaxError as exc:
+        return (
+            "invalid",
+            "owner-module-syntax-invalid",
+            {"source_format": "python-module", "error": str(exc), "population": {"status": "invalid"}},
+            {},
+        )
+    defined_symbols = {node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            defined_symbols.update(target.id for target in node.targets if isinstance(target, ast.Name))
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            defined_symbols.add(node.target.id)
+    missing = [symbol for symbol in symbols if symbol not in defined_symbols]
     backing = {
         "source_format": "python-module",
         "required_symbols": symbols,
         "matched_symbols": sorted(set(symbols) - set(missing)),
+        "defined_symbol_count": len(defined_symbols),
         "missing_symbols": missing,
         "population": {"status": "present" if not missing else "invalid"},
     }
@@ -1014,13 +1042,43 @@ def _generated_references_owner_operation(**kwargs: Any) -> dict[str, Any]:
             surface_specific={"error": str(exc)},
             **kwargs,
         )
+    paths = manifest.get("file_paths")
+    entries = manifest.get("git_index_entries")
+    expected_identity = manifest.get("git_index_identity")
     manifest_current = manifest.get("kind") == "generated-cli-source-manifest/v1"
+    if manifest_current and isinstance(paths, list) and isinstance(entries, dict) and isinstance(expected_identity, str):
+        process = subprocess.run(["git", "ls-files", "-s", "-z"], cwd=kwargs["root"], capture_output=True, check=False)
+        all_entries: dict[str, str] = {}
+        if process.returncode == 0:
+            for raw_entry in process.stdout.split(b"\0"):
+                if not raw_entry:
+                    continue
+                metadata, _, indexed_path = raw_entry.decode("utf-8").partition("\t")
+                fields = metadata.split()
+                if len(fields) == 3 and fields[2] == "0":
+                    all_entries[indexed_path] = fields[1]
+        observed = {str(path): all_entries.get(str(path), "") for path in paths}
+        digest = hashlib.sha256()
+        for path in paths:
+            digest.update(str(path).encode())
+            digest.update(b"\0")
+            digest.update(str(observed.get(str(path), "")).encode())
+            digest.update(b"\0")
+        manifest_current = observed == entries and digest.hexdigest() == expected_identity
+    elif manifest_current:
+        manifest_current = set(manifest) == {"kind", "source_hashes"} and manifest.get("source_hashes") == {}
     return _complete_owner_operation_result(
         surface="generated-references",
         status="current" if manifest_current else "stale",
         reason="" if manifest_current else "generated-source-manifest-stale",
         owner_boundary="generated CLI source manifest contract",
-        schema_backing={"source_format": "json", "generated_source_manifest_kind": str(manifest.get("kind") or "")},
+        schema_backing={
+            "source_format": "json",
+            "parse_status": "valid" if manifest_current else "invalid",
+            "population": {"status": "present" if manifest_current else "invalid"},
+            "generated_source_manifest_kind": str(manifest.get("kind") or ""),
+            "manifest_identity": str(expected_identity or ""),
+        },
         surface_specific={"generated_source_manifest": manifest},
         **kwargs,
     )
@@ -1047,27 +1105,10 @@ _CONTEXT_OWNER_OPERATION_RUNNERS = {
 
 
 def registered_context_owner_operation_runner(surface: str):
-    if surface not in _CONTEXT_OWNER_OPERATION_RUNNERS:
+    runner = _CONTEXT_OWNER_OPERATION_RUNNERS.get(surface)
+    if runner is None:
         raise ValueError(f"context owner operation is not registered for surface {surface!r}")
-    producer_runner = registered_producer_operation_runner(surface)
-
-    def run(**kwargs: Any) -> dict[str, Any]:
-        owner_result = admit_registered_producer_result(producer_runner(**kwargs))
-        if owner_result.get("status") != "current":
-            return owner_result
-        return _admit_context_owner_operation_result(
-            surface=surface,
-            owner=kwargs.get("owner"),
-            root=kwargs["root"],
-            chosen=kwargs["chosen"],
-            source_revision="sha256:" + str(kwargs["revision"]),
-            git_head=str(kwargs.get("git_head") or ""),
-            selection=_as_dict(kwargs.get("selection")),
-            adapter_id=f"{surface}.owner-result",
-            owner_result=owner_result,
-        )
-
-    return run
+    return runner
 
 
 def registered_context_owner_receipt_status(

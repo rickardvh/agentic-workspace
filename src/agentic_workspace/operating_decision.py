@@ -6,12 +6,10 @@ import fnmatch
 import hashlib
 import json
 import subprocess
-import tomllib
 from pathlib import Path
 from typing import Any
 
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
-from agentic_workspace.authority_envelope import mutation_baseline_payload
 from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_operation_runner,
     registered_context_owner_receipt_status,
@@ -219,11 +217,6 @@ def _context_source_candidates(surface: str) -> list[str]:
     return [str(path) for path in _as_list(spec.get("required") or [spec.get("source")]) if str(path)]
 
 
-def _path_matches_any(path: str, patterns: list[str]) -> bool:
-    normalized = path.replace("\\", "/").strip()
-    return any(pattern == "*" or fnmatch.fnmatch(normalized, pattern) for pattern in patterns)
-
-
 def _task_terms(task: str) -> set[str]:
     return {term.strip("#.,:;()[]{}").lower() for term in task.split() if len(term.strip("#.,:;()[]{}")) > 2}
 
@@ -287,173 +280,9 @@ def _context_surface_selection(
     }
 
 
-def _load_toml_dict(path: Path) -> dict[str, Any]:
-    try:
-        payload = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
-def _memory_route_curation(root: Path, *, task: str, paths: list[str]) -> dict[str, Any]:
-    manifest_path = root / ".agentic-workspace/memory/repo/manifest.toml"
-    manifest = _load_toml_dict(manifest_path)
-    notes = _as_dict(manifest.get("notes"))
-    selected: list[dict[str, Any]] = []
-    stale_match_count = 0
-    review_only_excluded_count = 0
-    routing_index = ".agentic-workspace/memory/repo/index.md"
-    task_terms = {term.strip("#.,:;()[]{}").lower() for term in task.split() if len(term.strip("#.,:;()[]{}")) > 2}
-    for note_path, raw_note in notes.items():
-        if not isinstance(raw_note, dict):
-            continue
-        if str(raw_note.get("task_relevance") or "").strip() == "review-only":
-            review_only_excluded_count += 1
-            continue
-        canonical_home = str(raw_note.get("canonical_home") or note_path)
-        routes_from = [str(pattern) for pattern in _as_list(raw_note.get("routes_from")) if str(pattern)]
-        stale_when = [str(pattern) for pattern in _as_list(raw_note.get("stale_when")) if str(pattern)]
-        matched_paths = [path for path in paths if _path_matches_any(path, routes_from)]
-        stale_paths = [path for path in paths if _path_matches_any(path, stale_when)]
-        note_terms = {
-            str(value).lower()
-            for value in [
-                raw_note.get("note_type"),
-                *[str(item) for item in _as_list(raw_note.get("subsystems"))],
-                *[str(item) for item in _as_list(raw_note.get("surfaces"))],
-            ]
-            if str(value)
-        }
-        task_matched = bool(task_terms & {part for term in note_terms for part in term.replace("-", " ").split()})
-        routing_only = bool(raw_note.get("routing_only")) or canonical_home == routing_index
-        if routing_only or matched_paths or task_matched:
-            if stale_paths:
-                stale_match_count += 1
-            selected.append(
-                {
-                    "path": canonical_home,
-                    "note_type": str(raw_note.get("note_type") or ""),
-                    "authority": str(raw_note.get("authority") or ""),
-                    "task_relevance": str(raw_note.get("task_relevance") or ""),
-                    "routing_only": routing_only,
-                    "matched_paths": sorted(matched_paths),
-                    "stale_when_matched_paths": sorted(stale_paths),
-                }
-            )
-    if not selected and (root / routing_index).exists():
-        selected.append(
-            {
-                "path": routing_index,
-                "note_type": "routing",
-                "authority": "canonical",
-                "task_relevance": "required",
-                "routing_only": True,
-                "matched_paths": [],
-                "stale_when_matched_paths": [],
-                "fallback": "legacy-manifest-routing-index",
-            }
-        )
-    selected = sorted(selected, key=lambda item: (not bool(item.get("routing_only")), str(item.get("path") or "")))[:12]
-    return {
-        "kind": "agentic-workspace/memory-route-curation/v1",
-        "status": "stale-review-required" if stale_match_count else "selected" if selected else "empty",
-        "manifest": ".agentic-workspace/memory/repo/manifest.toml",
-        "total_note_count": len(notes),
-        "selected_note_count": len(selected),
-        "selected_notes": selected,
-        "stale_when_match_count": stale_match_count,
-        "review_only_excluded_count": review_only_excluded_count,
-        "context_budget": {"max_selected_notes": 12, "actual_selected_notes": len(selected)},
-        "repair_operation_id": "memory.route.report",
-        "rule": (
-            "Memory authority is admitted as a compact manifest-routed note set. A selected note with stale_when matches is "
-            "review-required and must not be admitted as current context until the Memory owner refreshes or excludes it."
-        ),
-    }
-
-
 def _git_head(root: Path) -> str:
     completed = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=False)
     return completed.stdout.strip() if completed.returncode == 0 else ""
-
-
-def _git_worktree_object_ids(root: Path, paths: list[str]) -> dict[str, str] | None:
-    if not paths:
-        return None
-    try:
-        completed = subprocess.run(
-            ["git", "hash-object", "--stdin-paths"],
-            cwd=root,
-            input="\n".join(paths) + "\n",
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except OSError:
-        return None
-    if completed.returncode != 0:
-        return None
-    object_ids = [line.strip() for line in completed.stdout.splitlines() if line.strip()]
-    if len(object_ids) != len(paths):
-        return None
-    return dict(zip(paths, object_ids, strict=True))
-
-
-def _git_index_identity(paths: list[str], entries: dict[str, str]) -> str:
-    digest = hashlib.sha256()
-    for path in paths:
-        digest.update(path.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(str(entries.get(path) or "").encode("utf-8"))
-        digest.update(b"\0")
-    return digest.hexdigest()
-
-
-def _generated_fingerprint_is_current(root: Path) -> bool:
-    fingerprint = root / "generated/.agentic-workspace-cli-fingerprint.json"
-    if not fingerprint.exists():
-        return False
-    try:
-        payload = json.loads(fingerprint.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return False
-    sources = payload.get("source_hashes")
-    if isinstance(sources, dict):
-        for relative, expected in sources.items():
-            path = root / str(relative)
-            if not path.exists() or _file_digest(path) != str(expected):
-                return False
-        return True
-    paths = payload.get("file_paths")
-    if (
-        payload.get("kind") == "generated-cli-source-manifest/v1"
-        and isinstance(paths, list)
-        and paths
-        and all(isinstance(path, str) and path for path in paths)
-        and payload.get("git_index_entries") is None
-        and payload.get("git_index_identity") is None
-    ):
-        return all((root / str(path)).exists() for path in paths)
-    expected_entries = payload.get("git_index_entries")
-    expected_identity = payload.get("git_index_identity")
-    if (
-        payload.get("kind") != "generated-cli-source-manifest/v1"
-        or not isinstance(paths, list)
-        or not all(isinstance(path, str) and path for path in paths)
-        or not isinstance(expected_entries, dict)
-        or set(expected_entries) != set(paths)
-        or not all(isinstance(value, str) and value for value in expected_entries.values())
-        or not isinstance(expected_identity, str)
-        or not expected_identity
-    ):
-        return False
-    normalized_paths = [str(path) for path in paths]
-    if any(not (root / path).is_file() for path in normalized_paths):
-        return False
-    worktree_entries = _git_worktree_object_ids(root, normalized_paths)
-    if worktree_entries != {path: str(expected_entries[path]) for path in normalized_paths}:
-        return False
-    return _git_index_identity(normalized_paths, {path: str(expected_entries[path]) for path in normalized_paths}) == expected_identity
 
 
 def _context_owner_operation_admission(
@@ -635,70 +464,11 @@ def _resolve_context_authority_source(
             "source_id": chosen.relative_to(root).as_posix(),
             "selection": selection,
         }
-    if spec.get("generated_freshness") and not _generated_fingerprint_is_current(root):
-        return {
-            "status": "stale",
-            "applicable": True,
-            "selected_required": True,
-            "reason": "stale-generated-projection",
-            "source_id": chosen.relative_to(root).as_posix(),
-            "selection": selection,
-        }
     source_adapter = str(spec.get("source_adapter") or f"{surface}-source-adapter")
     owner_contract = _surface_owner_contract(surface)
     path_tokens = {Path(path).parts[0] for path in paths if Path(path).parts}
     source_token = chosen.parts[-1] if chosen.parts else chosen.as_posix()
     source_specific: dict[str, Any] = {}
-    if surface == "memory":
-        memory_curation = _memory_route_curation(root, task=task, paths=paths)
-        if memory_curation["status"] == "empty":
-            return {
-                "status": "not-applicable",
-                "applicable": False,
-                "selected_required": False,
-                "reason": "no-route-selected-memory",
-                "selection": {**selection, "memory_curation": memory_curation},
-            }
-        if memory_curation["status"] == "stale-review-required":
-            return {
-                "status": "stale",
-                "applicable": True,
-                "selected_required": True,
-                "reason": "memory-stale-review-required",
-                "source_id": chosen.relative_to(root).as_posix(),
-                "repair_operation_id": "memory.route.report",
-                "selection": {**selection, "memory_curation": memory_curation},
-            }
-        else:
-            selection = {**selection, "applicable": True, "selected_required": True, "memory_curation": memory_curation}
-    elif surface == "mutation-baseline":
-        baseline = mutation_baseline_payload(target_root=root, changed_paths=paths)
-        if baseline.get("status") == "baseline-observation-failed":
-            return {
-                "status": "stale",
-                "applicable": True,
-                "selected_required": True,
-                "reason": "mutation-baseline-observation-failed",
-                "source_id": chosen.relative_to(root).as_posix(),
-                "selection": selection,
-            }
-    elif surface == "skills":
-        try:
-            from agentic_workspace import workspace_runtime_core as runtime_core
-
-            diagnostics = runtime_core._skill_dependency_diagnostics(target_root=root)  # type: ignore[attr-defined]
-        except Exception as exc:  # pragma: no cover - defensive, exercised by runtime integration.
-            diagnostics = [{"reason_code": "skill-dependency-resolution-failed", "message": str(exc)}]
-        if diagnostics:
-            return {
-                "status": "stale",
-                "applicable": True,
-                "selected_required": True,
-                "reason": "skill-dependency-unavailable",
-                "source_id": chosen.relative_to(root).as_posix(),
-                "selection": selection,
-                "dependency_diagnostics": diagnostics[:5],
-            }
     owner_result = _context_owner_result_from_adapter(
         surface=surface,
         item=item,
@@ -712,6 +482,15 @@ def _resolve_context_authority_source(
         source_specific=source_specific,
     )
     if owner_result.get("status") != "current":
+        if surface == "memory" and owner_result.get("reason") == "memory-curation-empty":
+            return {
+                "status": "not-applicable",
+                "applicable": False,
+                "selected_required": False,
+                "reason": "no-route-selected-memory",
+                "selection": {**selection, "memory_curation": _as_dict(owner_result.get("memory_curation"))},
+                "owner_result": owner_result,
+            }
         return {
             "status": "stale",
             "applicable": True,
@@ -768,7 +547,7 @@ def _resolve_context_authority_source(
             "task_matched": selection["task_matched"],
             "baseline_selected": selection["baseline_selected"],
             "rule": "source-specific owner adapter resolved current source identity; caller supplied records are diagnostics only",
-            **({"memory_curation": selection["memory_curation"]} if surface == "memory" and "memory_curation" in selection else {}),
+            **({"memory_curation": owner_result["memory_curation"]} if surface == "memory" and "memory_curation" in owner_result else {}),
             **source_specific,
         },
         "freshness_enforcement": freshness_enforcement,

@@ -857,7 +857,7 @@ stale_when = ["src/agentic_workspace/**"]
 
     assert projection["status"] == "repair-required"
     memory = next(item for item in projection["excluded_authorities"] if item["surface"] == "memory")
-    assert memory["reason"] == "memory-stale-review-required"
+    assert memory["reason"] == "memory-curation-stale-review-required"
     repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "memory")
     assert repair["operation_id"] == "memory.route.report"
 
@@ -919,7 +919,7 @@ def test_context_authority_projection_rejects_skill_dependency_owner_diagnostics
 
     assert projection["status"] == "repair-required"
     skills = next(item for item in projection["excluded_authorities"] if item["surface"] == "skills")
-    assert skills["reason"] == "skill-dependency-unavailable"
+    assert skills["reason"] == "skill-dependency-closure-unsatisfied"
     repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "skills")
     assert repair["operation_id"] == "workspace.skills.resolve-dependencies"
     assert repair["repair_owner"] == "workspace skill registry"
@@ -1114,8 +1114,6 @@ def test_context_authority_rejects_unknown_planning_and_mutation_statuses(tmp_pa
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", "fixture"], cwd=tmp_path, check=True, capture_output=True)
 
-    from agentic_workspace import operating_decision
-
     def unknown_planning(*, target_root, state_data):
         return {"kind": "agentic-workspace/planning-owner-admission/v1", "status": "blocked", "state_data": state_data}
 
@@ -1123,7 +1121,7 @@ def test_context_authority_rejects_unknown_planning_and_mutation_statuses(tmp_pa
         return {"kind": "agentic-workspace/mutation-baseline/v1", "status": "superseded", "scope": {"allowed_paths": changed_paths}}
 
     monkeypatch.setattr("agentic_workspace.workspace_runtime_core._planning_owner_admission_payload", unknown_planning)
-    monkeypatch.setattr(operating_decision, "mutation_baseline_payload", unknown_baseline)
+    monkeypatch.setattr("agentic_workspace.authority_envelope.mutation_baseline_payload", unknown_baseline)
     monkeypatch.setattr("agentic_workspace.authority_envelope.mutation_baseline_payload", unknown_baseline)
 
     planning_projection = resolve_context_authority_projection(
@@ -1198,19 +1196,7 @@ def test_context_authority_each_owner_family_uses_concrete_adapter_output(tmp_pa
         json.dumps({"kind": "generated-cli-source-manifest/v1", "source_hashes": {}}),
         encoding="utf-8",
     )
-    monkeypatch.setattr(operating_decision, "_generated_fingerprint_is_current", lambda _root: True)
     monkeypatch.setattr(operating_decision, "_git_head", lambda _root: "f" * 40)
-    monkeypatch.setattr(
-        operating_decision,
-        "mutation_baseline_payload",
-        lambda *, target_root, changed_paths: {
-            "status": "current",
-            "baseline_id": "baseline-1",
-            "head": "f" * 40,
-            "scope": {"paths": changed_paths},
-            "identity": {"fingerprint": "baseline"},
-        },
-    )
     monkeypatch.setattr(
         "agentic_workspace.authority_envelope.mutation_baseline_payload",
         lambda *, target_root, changed_paths: {
@@ -1424,23 +1410,57 @@ def test_context_owner_operation_admission_rejects_tampered_producer_state(tmp_p
         )
 
 
-def test_shared_context_composer_cannot_admit_a_caller_built_producer_result() -> None:
-    from agentic_workspace.context_authority_producer_operations import admit_registered_producer_result
+def test_shared_context_composer_dispatches_the_registered_owner_operation(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import context_authority_owner_operations as owner_operations
 
-    forged = {
-        "kind": "agentic-workspace/system-intent-mirror/v1",
-        "producer": "agentic_workspace.workspace_runtime_core.system_intent",
-        "status": "current",
-        "producer_owner_state": {"status": "current"},
-        "source_owner_contract": {"status": "admitted"},
-    }
+    sentinel = object()
 
-    with pytest.raises(ValueError, match="opaque registered producer result"):
-        admit_registered_producer_result(forged)
+    def owner_runner(**_kwargs):
+        return sentinel
 
-    composer_source = Path("src/agentic_workspace/context_authority_owner_operations.py").read_text(encoding="utf-8")
-    assert "registered_producer_operation_runner(surface)" in composer_source
-    assert "admit_registered_producer_result(producer_runner(**kwargs))" in composer_source
+    monkeypatch.setitem(owner_operations._CONTEXT_OWNER_OPERATION_RUNNERS, "system-intent", owner_runner)
+
+    selected = owner_operations.registered_context_owner_operation_runner("system-intent")
+
+    assert selected is owner_runner
+    assert selected() is sentinel
+    assert not Path("src/agentic_workspace/context_authority_producer_operations.py").exists()
+
+
+def test_owner_operations_reject_marker_and_symbol_mentions_without_canonical_structure(tmp_path: Path) -> None:
+    from agentic_workspace.context_authority_owner_operations import registered_context_owner_operation_runner
+
+    intent = tmp_path / "SYSTEM_INTENT.md"
+    intent.write_text(
+        "This prose mentions # System Intent, ## Purpose, and ## Governing intents without declaring headings.\n",
+        encoding="utf-8",
+    )
+    intent_result = registered_context_owner_operation_runner("system-intent")(
+        owner="system-intent resolver",
+        root=tmp_path,
+        chosen=intent,
+        revision=_fixture_source_revision(intent),
+        git_head="",
+        selection={"consumer": "start"},
+    )
+    assert intent_result["status"] == "invalid"
+    assert intent_result["reason"] == "owner-source-contract-marker-missing"
+
+    evaluation = tmp_path / "evaluation.py"
+    evaluation.write_text(
+        "# evaluation_collection_match\n# record_evaluation_report_delivery_operation\n",
+        encoding="utf-8",
+    )
+    evaluation_result = registered_context_owner_operation_runner("evaluation")(
+        owner="evaluation runtime",
+        root=tmp_path,
+        chosen=evaluation,
+        revision=_fixture_source_revision(evaluation),
+        git_head="",
+        selection={"consumer": "start"},
+    )
+    assert evaluation_result["status"] == "invalid"
+    assert evaluation_result["reason"] == "owner-module-symbol-missing"
 
 
 def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path: Path) -> None:
@@ -1457,7 +1477,7 @@ def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path:
     record = _resolve_context_authority_source(item=item, target_root=tmp_path, task="", paths=["generated/client.py"])
 
     assert record["status"] == "stale"
-    assert record["reason"] == "stale-generated-projection"
+    assert record["reason"] == "generated-source-manifest-stale"
 
 
 def test_context_authority_resolver_rejects_mutation_baseline_without_git_head(tmp_path: Path) -> None:

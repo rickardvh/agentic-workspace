@@ -1,0 +1,14 @@
+{
+  "proof_decision": {
+    "selected_decision": "add",
+    "trust_question": "Can shared context routing admit current authority only from the registered subsystem owner operation and reject marker-only, stale, forged, or duplicate evidence?",
+    "host_strategy_source": "docs/maintainer/testing-strategy.md",
+    "proof_owner": "context-authority-contract",
+    "proof_intent": "negative-authority-boundary",
+    "evidence_durability": "permanent",
+    "narrowest_evidence": "Focused owner-dispatch, forged-result, canonical-structure, stale-generated, superseded-baseline, and duplicate-owner fixtures in the existing operating-decision suite.",
+    "prune_or_replacement_condition": "Replace only when the context-authority registry generates equivalent per-owner executable conformance cases and negative admission proof.",
+    "confidence": "high",
+    "residual_risk": "Some owner operations remain adapters over package-private subsystem APIs until those packages expose dedicated public owner-result operations."
+  }
+}
