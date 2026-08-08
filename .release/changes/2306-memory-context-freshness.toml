@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Register durable Memory routes and freshness anchors so context drift is detected."
