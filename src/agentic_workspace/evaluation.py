@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import base64
 import hashlib
 import hmac
@@ -92,6 +93,77 @@ VALID_OBSERVATION_RESULTS = {"supports", "contradicts", "mixed", "not-applicable
 VALID_CONFIDENCE = {"low", "medium", "high"}
 VALID_BURDEN = {"low", "medium", "high"}
 LOG_OWNER_CLASSES = {"log", "transcript", "event-stream", "metric-stream"}
+
+
+def evaluation_context_authority_owner_operation(**kwargs: Any) -> dict[str, Any]:
+    """Issue Evaluation's own current definition/runtime authority result."""
+
+    if kwargs.get("owner_evidence") is not None or kwargs.get("adapter_id") is not None:
+        raise ValueError("owner evidence must not carry caller-provided producer identity or receipts")
+    if kwargs.get("source_specific"):
+        raise ValueError("evaluation owner operation derives semantic evidence from its canonical subsystem")
+    from agentic_workspace._context_authority_owner_protocol import _issue_owner_result
+
+    try:
+        tree = ast.parse(kwargs["chosen"].read_text(encoding="utf-8"), filename=kwargs["chosen"].as_posix())
+    except (OSError, SyntaxError):
+        tree = None
+    defined = (
+        {node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
+        if tree is not None
+        else set()
+    )
+    supported_pairs = [
+        {"evaluation_collection_match", "record_evaluation_report_delivery_operation"},
+        {"register_evaluation", "evaluation_summary", "current_evaluation_results"},
+    ]
+    current = any(required.issubset(defined) for required in supported_pairs)
+    status = "current" if current else "invalid"
+    reason = "" if current else "evaluation-owner-runtime-contract-missing"
+    producer = "agentic_workspace.evaluation"
+    operation_id = "evaluation.status.report"
+    boundary = "Evaluation definition and lifecycle runtime"
+    missing = [] if current else sorted(supported_pairs[0])
+    population = {"status": "present" if current else "invalid"}
+    schema = {
+        "source_format": "python-module",
+        "parse_status": "valid" if current else "invalid",
+        "missing_symbols": missing,
+        "defined_symbol_count": len(defined),
+        "population": population,
+    }
+    return _issue_owner_result(
+        surface="evaluation",
+        producer=producer,
+        result_kind="agentic-workspace/evaluation-definition/v1",
+        operation_id=operation_id,
+        owner=kwargs.get("owner"),
+        root=kwargs["root"],
+        chosen=kwargs["chosen"],
+        revision=kwargs["revision"],
+        git_head=kwargs["git_head"],
+        selection=kwargs["selection"],
+        status=status,
+        reason=reason,
+        owner_boundary=boundary,
+        schema_backing=schema,
+        lifecycle={
+            "status": "current" if current else "repair-required",
+            "reason": reason,
+            "owner_boundary": boundary,
+            "repair_operation_id": operation_id,
+            "repair_owner": producer,
+        },
+        population=population,
+        supersession={
+            "status": "not-superseded" if current else "unknown-until-repair",
+            "supersedes": "",
+            "superseded_by": "",
+            "currentness_basis": "Evaluation runtime contract and registered lifecycle implementation",
+        },
+        surface_specific={"supported_runtime_contracts": [sorted(item) for item in supported_pairs]},
+        executor="agentic_workspace.evaluation.evaluation_context_authority_owner_operation",
+    )
 
 
 def _now() -> str:

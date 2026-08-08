@@ -19,6 +19,7 @@ For shared memory policy, note hygiene, and ownership rules, read `.agentic-work
 - live decision review: the active planning slice plus `.agentic-workspace/memory/repo/decisions/README.md`
 - monorepo memory-package work: `.agentic-workspace/memory/repo/domains/memory-package-context.md` plus `.agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md`
 - monorepo planning-package work: `.agentic-workspace/memory/repo/domains/planning-package-context.md` plus `.agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md`
+- workspace runtime, command-contract, generated-target, or payload/install work: `.agentic-workspace/memory/repo/domains/example-runtime-boundary.md` plus the relevant package-boundary decision
 - workspace ownership or package-boundary change: `.agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md` plus `.agentic-workspace/memory/repo/decisions/workspace-orchestrator-ownership-ledger-2026-04-05.md`
 - root check or CI routing change: the active planning slice plus the relevant durable decision or runbook note
 
@@ -28,6 +29,7 @@ Prefer the smallest bundle that still covers the task surface.
 
 - If touching `packages/memory/**`, load `.agentic-workspace/memory/repo/domains/memory-package-context.md`.
 - If touching `packages/planning/**`, load `.agentic-workspace/memory/repo/domains/planning-package-context.md`.
+- If touching `src/agentic_workspace/**`, `generated/**`, or command contracts, load `.agentic-workspace/memory/repo/domains/example-runtime-boundary.md`.
 - If touching root orchestration files, load the most relevant decision note plus the active planning slice when it exists.
 - If calibrating routing quality, load `.agentic-workspace/memory/repo/current/routing-feedback.md`.
 
