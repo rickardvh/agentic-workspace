@@ -7189,49 +7189,49 @@ def test_planning_route_front_door_admits_finite_route_action_matrix() -> None:
             {"task_relation": "bounded-independent", "owner_posture": "current", "route_inputs": {"task_binding": {"mode": "mutation"}}},
             {},
             "refresh-mutation-baseline",
-            "blocked",
+            "pending-owner-operation",
         ),
         (
             "completed-residue",
             {"task_relation": "bounded-independent", "owner_posture": "completed-residue"},
             {},
             "archive-or-retire-completed-plan",
-            "blocked",
+            "pending-owner-operation",
         ),
         (
             "external-conflict",
             {"task_relation": "continues-selected-owner", "owner_posture": "external-conflict"},
             {},
             "refresh-planning-reconciliation-proposal",
-            "blocked",
+            "pending-owner-operation",
         ),
         (
             "projection-drift",
             {"task_relation": "continues-selected-owner", "owner_posture": "projection-drifted"},
             {},
             "repair-planning-projection",
-            "blocked",
+            "pending-owner-operation",
         ),
         (
             "proof-incomplete",
             {"task_relation": "continues-selected-owner", "owner_posture": "proof-incomplete"},
             {},
             "complete-selected-proof",
-            "blocked",
+            "pending-owner-operation",
         ),
         (
             "promotion",
             {"task_relation": "owner-promotion-required", "owner_posture": "missing"},
             {},
             "promote-or-create-planning-owner",
-            "blocked",
+            "pending-owner-operation",
         ),
         (
             "missing-owner",
             {"task_relation": "continues-selected-owner", "owner_posture": "missing"},
             {},
             "select-planning-owner",
-            "blocked",
+            "pending-owner-operation",
         ),
         (
             "ambiguous",
@@ -7267,6 +7267,11 @@ def test_planning_route_front_door_admits_finite_route_action_matrix() -> None:
             assert outcome["mutation_outcome"] == mutation_outcome
             assert outcome["route_transition"]["route_action"] == route_action
             assert outcome["route_transition"]["status"] != "unsupported-route-action"
+            if mutation_outcome == "pending-owner-operation":
+                assert outcome["typed_owner_operation"]["status"] == "dispatch-required"
+                assert outcome["typed_owner_operation"]["operation_id"]
+                assert outcome["typed_owner_operation"]["idempotency_key"] == invocation["input_identity"]["idempotency_key"]
+                assert outcome["route_transition"]["dispatch_status"] == "dispatch-required"
 
 
 def test_structured_route_inputs_cover_bounded_work_owner_lifecycle_and_missing_owner(tmp_path: Path) -> None:

@@ -1864,6 +1864,50 @@ def _apply_planning_front_door_reconciliation_proposal(
 def _planning_front_door_projection_outcome(route_action: str, action_identity: Mapping[str, Any]) -> dict[str, Any]:
     """Return the finite non-mutating outcome for an admitted Planning route action."""
 
+    typed_owner_operations = {
+        "archive-or-retire-completed-plan": {
+            "operation_id": "planning.archive-plan.lifecycle",
+            "adapter_id": "planning.archive-plan.cli",
+            "effect": "archive-or-retire-completed-owner",
+            "command": "agentic-workspace planning archive-plan --target . --format json",
+        },
+        "refresh-mutation-baseline": {
+            "operation_id": "authority-envelope.mutation-baseline.refresh",
+            "adapter_id": "authority-envelope.mutation-baseline",
+            "effect": "refresh-live-mutation-baseline",
+            "command": "agentic-workspace implement --target . --changed <paths> --format json",
+        },
+        "repair-planning-projection": {
+            "operation_id": "planning.front-door-report.report",
+            "adapter_id": "planning.front-door-report.cli",
+            "effect": "refresh-selected-owner-projection",
+            "command": "agentic-workspace planning front-door-report --target . --format json",
+        },
+        "complete-selected-proof": {
+            "operation_id": "proof.report",
+            "adapter_id": "workspace-proof.cli",
+            "effect": "complete-selected-proof-route",
+            "command": "agentic-workspace proof --target . --format json",
+        },
+        "promote-or-create-planning-owner": {
+            "operation_id": "planning.promote-to-plan.lifecycle",
+            "adapter_id": "planning.promote-to-plan.cli",
+            "effect": "promote-or-create-owner",
+            "command": "agentic-workspace planning promote-to-plan --target . --format json",
+        },
+        "select-planning-owner": {
+            "operation_id": "planning.owner-select.lifecycle",
+            "adapter_id": "planning.owner-select.cli",
+            "effect": "select-planning-owner",
+            "command": "agentic-workspace planning owner-select --target . --format json",
+        },
+        "refresh-planning-reconciliation-proposal": {
+            "operation_id": "planning.reconcile.report",
+            "adapter_id": "planning.reconcile.cli",
+            "effect": "refresh-reconciliation-proposal",
+            "command": "agentic-workspace planning reconcile --target . --format json",
+        },
+    }
     projection_outcomes = {
         "refresh-planning-route-decision": ("no-op", "blocked", "refresh-route-decision", "route-authority-incomplete"),
         "continue-active-plan": ("no-op", "available-after-proof", "continue-selected-owner", "selected-owner-continuation"),
@@ -1871,18 +1915,33 @@ def _planning_front_door_projection_outcome(route_action: str, action_identity: 
         "inspect-current-task-scope": ("no-op", "blocked", "inspect-current-task-scope", "current-task-scope-unresolved"),
         "choose-task-switch-route": ("blocked", "blocked", "explicit-route-choice-required", "ambiguous-active-plan-route"),
         "archive-or-retire-completed-plan": (
-            "blocked",
+            "pending-owner-operation",
             "blocked",
             "archive-or-retire-through-planning",
             "completed-active-plan-residue",
         ),
-        "refresh-mutation-baseline": ("blocked", "blocked", "refresh-mutation-baseline", "mutation-baseline-required"),
-        "repair-planning-projection": ("blocked", "blocked", "repair-selected-owner-projection", "projection-repair-required"),
-        "complete-selected-proof": ("blocked", "blocked", "complete-selected-proof", "proof-incomplete"),
-        "promote-or-create-planning-owner": ("blocked", "blocked", "promote-or-create-owner", "owner-promotion-required"),
-        "select-planning-owner": ("blocked", "blocked", "select-owner", "owner-selection-required"),
-        "refresh-planning-reconciliation-proposal": (
+        "refresh-mutation-baseline": (
+            "pending-owner-operation",
             "blocked",
+            "refresh-mutation-baseline",
+            "mutation-baseline-required",
+        ),
+        "repair-planning-projection": (
+            "pending-owner-operation",
+            "blocked",
+            "repair-selected-owner-projection",
+            "projection-repair-required",
+        ),
+        "complete-selected-proof": ("pending-owner-operation", "blocked", "complete-selected-proof", "proof-incomplete"),
+        "promote-or-create-planning-owner": (
+            "pending-owner-operation",
+            "blocked",
+            "promote-or-create-owner",
+            "owner-promotion-required",
+        ),
+        "select-planning-owner": ("pending-owner-operation", "blocked", "select-owner", "owner-selection-required"),
+        "refresh-planning-reconciliation-proposal": (
+            "pending-owner-operation",
             "blocked",
             "refresh-reconciliation-proposal",
             "fresh-reconciliation-proposal-required",
@@ -1891,13 +1950,43 @@ def _planning_front_door_projection_outcome(route_action: str, action_identity: 
     mutation_outcome, claim_outcome, transition_outcome, reason = projection_outcomes.get(
         route_action, ("rejected", "blocked", "unsupported-route-action", "unsupported-route-action")
     )
+    owner_operation_spec = _as_dict(typed_owner_operations.get(route_action))
+    typed_owner_operation = (
+        {
+            "kind": "agentic-planning/front-door-typed-owner-operation/v1",
+            "status": "dispatch-required",
+            **owner_operation_spec,
+            "route_action": route_action,
+            "expected_transition": str(_as_dict(action_identity).get("expected_transition") or ""),
+            "planning_revision": str(_as_dict(action_identity).get("planning_revision") or ""),
+            "selected_owner_ref": str(_as_dict(action_identity).get("selected_owner_ref") or ""),
+            "selected_owner_revision": str(_as_dict(action_identity).get("selected_owner_revision") or ""),
+            "mutation_baseline_id": str(_as_dict(action_identity).get("mutation_baseline_id") or ""),
+            "reconciliation_proposal_revision": str(_as_dict(action_identity).get("reconciliation_proposal_revision") or ""),
+            "idempotency_key": str(_as_dict(action_identity).get("idempotency_key") or ""),
+            "revalidate_before_dispatch": [
+                "planning_revision",
+                "selected_owner_revision",
+                "selected_owner_lifecycle",
+                "selected_owner_projection_status",
+                "task_binding_identity",
+                "mutation_baseline_id",
+                "mutation_scope_digest",
+                "reconciliation_proposal_revision",
+            ],
+        }
+        if owner_operation_spec
+        else {}
+    )
     return {
         "mutation_outcome": mutation_outcome,
         "claim_outcome": claim_outcome,
+        "typed_owner_operation": typed_owner_operation,
         "route_transition": {
             "kind": "agentic-planning/front-door-route-transition/v1",
             "status": transition_outcome,
             "route_action": route_action,
+            "dispatch_status": str(typed_owner_operation.get("status") or "not-required"),
             "expected_transition": str(_as_dict(action_identity).get("expected_transition") or ""),
             "state_update_policy": str(_as_dict(action_identity).get("state_update_policy") or ""),
             "implementation_allowed": bool(_as_dict(action_identity).get("implementation_allowed") is True),
