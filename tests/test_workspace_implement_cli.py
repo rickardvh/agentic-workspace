@@ -1035,15 +1035,15 @@ candidates = []
     assert gate["required_next_action"] == "refresh-mutation-baseline"
     route = gate["route_decision"]
     assert route["task_relation"] == "bounded-independent"
-    assert route["required_transition"] == "none"
-    assert route["next_safe_action"]["action"] == "prove-current-task"
+    assert route["required_transition"] == "refresh-mutation-baseline"
+    assert route["next_safe_action"]["action"] == "refresh-mutation-baseline"
     invocation = route["next_safe_action"]["operation_invocation"]
     assert invocation["operation_id"] == "planning.front-door"
     assert invocation["operation_action"] == "route-decision-next-action"
     assert invocation["operation_path"] == "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.front-door.json"
     assert invocation["authority"] == "agentic-planning/route-decision/v1"
     assert invocation["input_revision"].startswith("sha256:")
-    assert invocation["input_identity"]["route_action"] == "prove-current-task"
+    assert invocation["input_identity"]["route_action"] == "refresh-mutation-baseline"
     assert invocation["input_identity"]["mutation_baseline_id"]
     assert invocation["input_identity"]["idempotency_key"].startswith("planning-route:")
     assert invocation["stale_action_rejection"]["status"] == "reject-on-input-revision-mismatch"
@@ -1052,9 +1052,13 @@ candidates = []
         "route_decision.next_safe_action.action"
     )
     assert "claim-active-plan-progress" in route["blocked_claims"]
-    assert route["allowed_claims"] == ["bounded-task-progress"]
-    assert route["proof_expectation"] == "run implement/proof-selected commands for the changed paths; do not claim active-plan progress"
-    assert route["state_update_policy"] == "pre-write-revalidation-required"
+    assert route.get("allowed_claims", []) == []
+    assert route["implementation_allowed"] is False
+    assert route["mutation_authority"] == "none"
+    assert route["proof_expectation"] == (
+        "rerun implement with changed paths so the authority-envelope mutation baseline is admitted before action"
+    )
+    assert route["state_update_policy"] == "explicit-transition-required"
     compatibility = gate["task_switch_reconciliation"]
     assert compatibility["authority"] == "diagnostic-facts-only"
     assert compatibility["derive_action_from"] == "planning_safety_gate.route_decision"
@@ -1073,9 +1077,9 @@ candidates = []
     assert packet["verification"]["state"] == "proof_missing"
     assert packet["closeout_state"] == "blocked_missing_proof"
     assert packet["residue_owner"] == "verification"
-    assert packet["planning"]["state"] == "active"
+    assert packet["planning"]["state"] == "unrelated_active_plan"
     assert packet["planning"]["plan_ref"] == ".agentic-workspace/planning/execplans/active-plan.plan.json"
-    assert packet["planning"]["blocks_full_closure"] is True
+    assert packet["planning"]["blocks_full_closure"] is False
     assert packet["required_before_full_closure"] == ["run_or_refresh_proof"]
 
 
@@ -1130,16 +1134,17 @@ candidates = []
 
 
 def test_planning_task_switch_compatibility_packet_has_no_decision_authority() -> None:
+    import ast
+
     planning_source = Path("src/agentic_workspace/workspace_runtime_planning.py").read_text(encoding="utf-8")
     core_source = Path("src/agentic_workspace/workspace_runtime_core.py").read_text(encoding="utf-8")
+    primitives_source = Path("src/agentic_workspace/workspace_runtime_primitives.py").read_text(encoding="utf-8")
+    reporting_source = Path("src/agentic_workspace/reporting_support.py").read_text(encoding="utf-8")
     assert '"task_switch_reconciliation": _task_switch_fact_payload(route_evidence)' in planning_source
     assert '"derive_action_from": task_switch.get("derive_action_from") or "planning_safety_gate.route_decision"' in core_source
     assert 'operation_id": f"planning.route.{action}"' not in planning_source
     assert '"operation_id": "planning.front-door"' in planning_source
     assert '"legacy_consumer_replacement_map"' in planning_source
-    compact_region = core_source.split('if isinstance(task_switch, dict) and task_switch.get("status") in {', 1)[1].split(
-        "custody_planning = gate.get", 1
-    )[0]
     for legacy_decision_field in (
         '"recommended_next_action"',
         '"safe_route_ids"',
@@ -1148,7 +1153,45 @@ def test_planning_task_switch_compatibility_packet_has_no_decision_authority() -
         '"safe_routes"',
         '"active_plan_protection"',
     ):
-        assert legacy_decision_field not in compact_region
+        assert (
+            legacy_decision_field
+            not in core_source.split("compact_switch = {", 1)[1].split('compact["task_switch_reconciliation"] = compact_switch', 1)[0]
+        )
+        assert (
+            legacy_decision_field
+            not in primitives_source.split('compact["task_switch_reconciliation"] = {', 1)[1].split("custody_planning = gate.get", 1)[0]
+        )
+        assert legacy_decision_field not in reporting_source.split('"task_switch_reconciliation": {', 1)[1].split('"rule": scope.get', 1)[0]
+
+    forbidden_get_fields = {
+        "recommended_next_action",
+        "next_action_packet",
+        "safe_routes",
+        "safe_route_ids",
+        "implementation_allowed",
+        "active_plan_protection",
+        "blocked_claims",
+        "claim_boundary",
+        "command",
+    }
+    for source_path in (
+        Path("src/agentic_workspace/workspace_runtime_core.py"),
+        Path("src/agentic_workspace/workspace_runtime_primitives.py"),
+        Path("src/agentic_workspace/workspace_runtime_implement.py"),
+        Path("src/agentic_workspace/workspace_runtime_startup.py"),
+        Path("src/agentic_workspace/workspace_runtime_proof.py"),
+        Path("src/agentic_workspace/reporting_support.py"),
+    ):
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+        violations = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute) or node.func.attr != "get":
+                continue
+            if not isinstance(node.func.value, ast.Name) or node.func.value.id != "task_switch":
+                continue
+            if node.args and isinstance(node.args[0], ast.Constant) and node.args[0].value in forbidden_get_fields:
+                violations.append((node.lineno, node.args[0].value))
+        assert violations == [], f"{source_path} consumes demoted task-switch decision fields: {violations}"
 
 
 def test_implement_does_not_require_stale_deleted_test_inventory_sweep(tmp_path: Path, capsys) -> None:

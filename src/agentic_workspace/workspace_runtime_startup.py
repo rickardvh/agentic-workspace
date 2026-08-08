@@ -248,7 +248,6 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
             "proof_expectation",
             "state_update_policy",
             "action_identity",
-            "legacy_consumer_replacement_map",
             "reconciliation_proposal",
             "next_safe_action",
             "binding",
@@ -1073,7 +1072,8 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
         )
         planning_safety_gate["route_decision"] = route_decision
-        if route_decision.get("task_relation") != "not-applicable":
+        route_owner_rejected = _as_dict(route_decision.get("owner_admission")).get("status") == "rejected"
+        if route_decision.get("task_relation") != "not-applicable" or owner_admission_rejected or route_owner_rejected:
             payload["route_decision"] = route_decision
         else:
             payload.pop("route_decision", None)
@@ -1912,8 +1912,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             for key in ("kind", "surface", "sufficiency_result", "required_next_action", "evidence_required")
             if compact_workflow.get(key) not in (None, "", [], {})
         }
+    primary_action = _compact_start_route_action(payload["immediate_next_allowed_action"])
+    primary_action.setdefault("command", None)
     context: dict[str, Any] = {
-        "primary_action": _compact_start_route_action(payload["immediate_next_allowed_action"]),
+        "primary_action": primary_action,
         **({"route_decision": _compact_start_route_decision(payload.get("route_decision"))} if payload.get("route_decision") else {}),
         "active_state": _active_state_with_orientation_delta(payload.get("active_state_summary", {}), cli_invoke=cli_invoke),
         "skill_routing": {

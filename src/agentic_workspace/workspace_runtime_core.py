@@ -246,6 +246,12 @@ def _planning_safety_gate_payload(*args: Any, **kwargs: Any) -> Any:
     return owner(*args, **kwargs)
 
 
+def _is_bounded_current_task_route(route_decision: Any) -> bool:
+    from agentic_workspace.workspace_runtime_planning import _is_bounded_current_task_route as owner
+
+    return owner(route_decision)
+
+
 def _pr_comment_repair_context_payload(*args: Any, **kwargs: Any) -> Any:
     from agentic_workspace.workspace_runtime_planning import _pr_comment_repair_context_payload as owner
 
@@ -17738,6 +17744,9 @@ def _operating_loop_planning_state(
         return {"state": "closeout_required", "plan_ref": plan_ref, "blocks_full_closure": True}
     if _as_int(closeout.get("lower_trust_closeout_count")) > 0 or str(closeout.get("trust") or "") == "lower-trust":
         return {"state": "closeout_required", "plan_ref": plan_ref, "blocks_full_closure": True}
+    route_decision = _as_dict(gate.get("route_decision"))
+    if route_decision.get("kind") == "agentic-planning/route-decision/v1" and route_decision.get("task_relation") == "bounded-independent":
+        return {"state": "unrelated_active_plan", "plan_ref": plan_ref, "blocks_full_closure": False}
     if gate.get("workflow_sufficient") is False:
         return {"state": "active", "plan_ref": plan_ref, "blocks_full_closure": True}
     custody = _as_dict(gate.get("custody_planning"))
@@ -17756,11 +17765,6 @@ def _operating_loop_planning_state(
             "blocks_full_closure": True,
             "custody": "recommended",
         }
-    if (
-        str(gate.get("gate_result") or "") in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
-        and gate.get("workflow_sufficient") is True
-    ):
-        return {"state": "unrelated_active_plan", "plan_ref": plan_ref, "blocks_full_closure": False}
     if str(reliance.get("status") or "") not in {"", "no-active-plan", "not-applicable", "clear", "satisfied"}:
         return {"state": "continuation", "plan_ref": plan_ref, "blocks_full_closure": True}
     if active_record.get("status") == "present":
@@ -21897,22 +21901,9 @@ def _report_closeout_trust_payload(
             task_text=task_text,
             execution_posture=execution_posture,
         )
-        task_switch = _as_dict(planning_safety_gate.get("task_switch_reconciliation"))
         route_decision = _as_dict(planning_safety_gate.get("route_decision"))
         scope_gate = copy.deepcopy(planning_safety_gate)
-        if (
-            str(task_switch.get("status") or "") == "current-task-route-acknowledged"
-            and str(scope_gate.get("gate_result") or "") == "mutation-baseline-required"
-        ):
-            scope_gate["gate_result"] = "current-task-route-acknowledged"
-            scope_gate["status"] = "satisfied"
-            scope_gate["workflow_sufficient"] = True
-            scope_gate["required_next_action"] = "prove-current-task"
-        if scope_gate.get("workflow_sufficient") is not True or (
-            str(scope_gate.get("gate_result") or "")
-            not in {"active-plan-task-switch", "current-task-route-acknowledged", "bounded-current-task"}
-            and str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
-        ):
+        if not _is_bounded_current_task_route(route_decision):
             return {
                 "kind": "agentic-workspace/current-task-closeout-scope/v1",
                 "status": "not-applicable",
@@ -21925,7 +21916,7 @@ def _report_closeout_trust_payload(
             "changed_paths": normalized_changed_paths,
             "planning_safety_gate": _selector_first_planning_safety_gate(scope_gate),
             "route_decision": route_decision,
-            "task_switch_reconciliation": task_switch,
+            "task_switch_reconciliation": _as_dict(planning_safety_gate.get("task_switch_reconciliation")),
             "rule": "The active plan remains protected repo-wide residue; this scope only classifies current bounded-task closeout blockers.",
         }
 
@@ -28371,11 +28362,11 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
     if not isinstance(gate, dict):
         return {}
     task_switch = gate.get("task_switch_reconciliation")
-    compact_route = isinstance(task_switch, dict) and task_switch.get("status") in {
-        "bounded-reflection-reporting",
-        "current-task-route-acknowledged",
-        "completed-active-plan-route",
-        "scope-inspection-required",
+    route_decision = _as_dict(gate.get("route_decision"))
+    compact_route = route_decision.get("kind") == "agentic-planning/route-decision/v1" and route_decision.get("task_relation") not in {
+        None,
+        "",
+        "not-applicable",
     }
     compact: dict[str, Any] = {
         "kind": gate.get("kind"),
@@ -28436,13 +28427,32 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             compact["changed_path_facts"]["archived_planning_residue"] = {"status": "completed-closeout-residue"}
     if "work_shape_guidance" in gate and gate.get("workflow_sufficient") is False:
         compact["work_shape_guidance"] = _tiny_work_shape_guidance(gate["work_shape_guidance"])
-    if isinstance(task_switch, dict) and task_switch.get("status") in {
-        "active",
-        "bounded-reflection-reporting",
-        "current-task-route-acknowledged",
-        "completed-active-plan-route",
-        "scope-inspection-required",
-    }:
+    if compact_route:
+        compact["route_decision"] = {
+            key: route_decision.get(key)
+            for key in (
+                "kind",
+                "task_relation",
+                "owner_posture",
+                "required_transition",
+                "selected_owner",
+                "selected_owner_identity",
+                "reason_codes",
+                "input_provenance",
+                "allowed_claims",
+                "blocked_claims",
+                "implementation_allowed",
+                "mutation_authority",
+                "proof_expectation",
+                "state_update_policy",
+                "action_identity",
+                "legacy_consumer_replacement_map",
+                "reconciliation_proposal",
+                "next_safe_action",
+            )
+            if route_decision.get(key) not in (None, "", [], {})
+        }
+    if isinstance(task_switch, dict):
         compact_switch = {
             "kind": task_switch.get("kind"),
             "status": task_switch.get("status"),
@@ -30830,16 +30840,24 @@ def _start_tiny_payload_fast(
     custody_planning = planning_safety_gate.get("custody_planning", {})
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
     route_decision = planning_safety_gate.get("route_decision", {})
+    route_owner_rejected = False
     if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
         route_decision = copy.deepcopy(route_decision)
-        if route_decision.get("task_relation") != "not-applicable":
+        route_decision["binding"] = _startup_route_binding(
+            route_decision=route_decision,
+            target_root=target_root,
+            task_text=task_text,
+            cli_invoke=config.cli_invoke,
+        )
+        route_owner_rejected = _as_dict(route_decision.get("owner_admission")).get("status") == "rejected"
+        if route_decision.get("task_relation") != "not-applicable" or route_owner_rejected:
             payload["route_decision"] = route_decision
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
     route_applies = (
         isinstance(route_decision, dict)
         and route_decision.get("kind") == "agentic-planning/route-decision/v1"
-        and route_relation != "not-applicable"
+        and (route_relation != "not-applicable" or route_owner_rejected)
     )
     task_switch_visible_by_default = (
         route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"} if route_applies else False
@@ -38047,7 +38065,13 @@ def _tiny_workflow_sufficiency(value: Any) -> dict[str, Any]:
     compact = {key: value.get(key) for key in keys if value.get(key) not in (None, "", [])}
     compact.setdefault("sufficiency_result", value.get("decision"))
     compact["decision_maturity"] = _tiny_decision_maturity(value.get("decision_maturity"))
-    compact["authority_boundary"] = _compact_authority_boundary(value.get("authority_boundary"))
+    if compact.get("sufficiency_result") not in {
+        "direct-work-allowed",
+        "enough-for-bounded-implementation",
+        "enough-for-first-contact-routing",
+        "startup-orientation-embedded",
+    }:
+        compact["authority_boundary"] = _compact_authority_boundary(value.get("authority_boundary"))
     return {key: item for key, item in compact.items() if item not in (None, "", {})}
 
 

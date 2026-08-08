@@ -3762,8 +3762,8 @@ candidates = []
     assert payload["strict_closeout_gate"]["blocking"] is True
     current = payload["current_task_closeout"]
     assert current["status"] == "active"
-    assert current["scope"]["relationship"] == "bounded-task-switch"
-    assert current["scope"]["planning_safety_gate"]["gate_result"] == "current-task-route-acknowledged"
+    assert current["scope"]["relationship"] == "bounded-current-task"
+    assert current["scope"]["planning_safety_gate"]["gate_result"] == "mutation-baseline-required"
     switch = current["scope"]["planning_safety_gate"]["task_switch_reconciliation"]
     assert switch["status"] == "current-task-route-acknowledged"
     assert switch["route_acknowledgement"]["status"] == "acknowledged"
@@ -3884,10 +3884,10 @@ candidates = []
     assert (route["task_relation"], route["owner_posture"], route["required_transition"]) == (
         "bounded-independent",
         "current",
-        "none",
+        "refresh-mutation-baseline",
     )
-    assert route["mutation_authority"] == "current-task"
-    assert route["next_safe_action"]["action"] == "prove-current-task"
+    assert route["mutation_authority"] == "none"
+    assert route["next_safe_action"]["action"] == "refresh-mutation-baseline"
 
 
 def test_closeout_trust_preserves_current_task_manual_proof_obligations(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -4437,8 +4437,8 @@ def test_start_exposes_workflow_sufficiency_and_continuation_selectors(tmp_path:
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["values"]["workflow_sufficiency"]["kind"] == "agentic-workspace/workflow-sufficiency/v1"
-    assert payload["values"]["workflow_sufficiency"]["sufficiency_result"] == "direct-work-allowed"
-    assert payload["values"]["workflow_sufficiency"]["required_next_action"] == "continue-direct"
+    assert payload["values"]["workflow_sufficiency"]["sufficiency_result"] == "enough-for-first-contact-routing"
+    assert payload["values"]["workflow_sufficiency"]["required_next_action"] == "choose-smallest-workflow-shape"
     continuation = payload["values"]["continuation_state"]
     assert continuation["kind"] == "agentic-workspace/compact-continuation-state/v1"
     assert continuation["fields"] == [
@@ -6316,8 +6316,8 @@ candidates = []
     route = payload["context"]["planning_safety_gate"]["route_decision"]
 
     assert route["task_relation"] == "bounded-independent"
-    assert route["required_transition"] == "none"
-    assert route["next_safe_action"]["action"] == "prove-current-task"
+    assert route["required_transition"] == "refresh-mutation-baseline"
+    assert route["next_safe_action"]["action"] == "refresh-mutation-baseline"
     assert "claim-active-plan-progress" in route["blocked_claims"]
 
 
@@ -7127,7 +7127,12 @@ def test_planning_route_action_admission_rejects_stale_authority_inputs() -> Non
     assert identity["mutation_authority"] == "reconciliation-proposal"
     assert identity["state_update_policy"] == "reconciliation-apply-required"
     assert identity["allowed_claims"] == []
-    assert identity["blocked_claims"] == ["claim-route-transition-complete-without-receipt"]
+    assert identity["blocked_claims"] == [
+        "claim-active-plan-progress",
+        "claim-active-plan-complete",
+        "silently-abandon-active-plan",
+        "claim-route-transition-complete-without-receipt",
+    ]
     assert identity["allowed_claims"] == live["allowed_claims"]
     assert identity["blocked_claims"] == live["blocked_claims"]
     assert identity["mutation_allowed_paths_digest"]

@@ -1346,6 +1346,8 @@ def _planning_route_decision_payload(
             else _mutation_baseline_repair_reason(mutation_baseline, changed_paths=mutation_paths),
             "rule": "Bounded mutation permission is derived exactly once by the canonical route decision; downstream consumers only project this admission.",
         }
+        if not mutation_baseline_current and transition == "none":
+            transition = "refresh-mutation-baseline"
     route_proposal = _as_dict(reconciliation_proposal) or _as_dict(route_evidence.get("reconciliation_proposal"))
     next_packet = _route_decision_next_action_packet(
         route_evidence={**route_evidence, "reconciliation_proposal": route_proposal},
@@ -1480,8 +1482,11 @@ def _route_decision_blocked_claims(*, task_relation: str, owner_posture: str, tr
         return ["claim-lane-complete", "claim-parent-complete", "silently-close-planning-state"]
     if task_relation == "continues-selected-owner" and transition == "none":
         return ["claim-unrelated-task-complete", "silently-close-active-plan"]
-    if task_relation == "bounded-independent" and transition == "none":
-        return ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"]
+    if task_relation == "bounded-independent":
+        claims = ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"]
+        if transition != "none":
+            claims.append("claim-route-transition-complete-without-receipt")
+        return claims
     if task_relation == "ambiguous" or transition == "ask-for-route-decision":
         return ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"]
     return ["claim-route-transition-complete-without-receipt"]
@@ -2462,15 +2467,25 @@ def _route_safety_outcome(route_decision: dict[str, Any]) -> dict[str, Any]:
             "required_next_action": "archive-or-retire-completed-plan",
             "workflow_sufficient": True,
         }
+    if relation == "bounded-independent" and transition == "refresh-mutation-baseline":
+        return {
+            "status": "blocked",
+            "decision": "mutation-baseline-required",
+            "reason": str(mutation_admission.get("reason") or "The bounded route requires a refreshed mutation baseline before mutation."),
+            "required_next_action": "refresh-mutation-baseline",
+            "workflow_sufficient": False,
+            "action_safety": action_safety,
+        }
     if relation == "bounded-independent" and transition == "none":
         if mode == "mutation" and mutation_admission.get("status") != "current":
             return {
                 "status": "blocked",
-                "decision": "mutation-baseline-required",
+                "decision": "route-authority-inconsistent",
                 "reason": str(
-                    mutation_admission.get("reason") or "The bounded route requires a refreshed mutation baseline before mutation."
+                    mutation_admission.get("reason")
+                    or "The route decision is internally inconsistent: bounded mutation has no current baseline admission."
                 ),
-                "required_next_action": "refresh-mutation-baseline",
+                "required_next_action": "refresh-planning-route-decision",
                 "workflow_sufficient": False,
                 "action_safety": action_safety,
             }
@@ -2613,6 +2628,24 @@ def _task_switch_fact_payload(route_evidence: dict[str, Any]) -> dict[str, Any]:
     ]
     facts["derive_action_from"] = "planning_safety_gate.route_decision"
     return facts
+
+
+def _is_bounded_current_task_route(route_decision: Any) -> bool:
+    """Return whether the canonical route admits ordinary bounded current-task work.
+
+    This predicate is intentionally expressed only in the compositional route
+    dimensions.  Compatibility task-switch facts must never participate in an
+    action, permission, claim, or closeout decision.
+    """
+    route = _as_dict(route_decision)
+    return (
+        route.get("kind") == "agentic-planning/route-decision/v1"
+        and route.get("task_relation") == "bounded-independent"
+        and route.get("owner_posture") == "current"
+        and route.get("required_transition") == "none"
+        and route.get("implementation_allowed") is True
+        and route.get("mutation_authority") in {"current-task", "none"}
+    )
 
 
 def _structured_route_inputs(
