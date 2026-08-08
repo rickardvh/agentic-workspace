@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Allow revision-guarded overwrite to update one existing active execplan without recreating it."

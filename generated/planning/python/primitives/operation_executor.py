@@ -99,6 +99,12 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'parent_close_permission': getattr(args, 'parent_close_permission', 'may-advance-parent'),
                 'next_owner': getattr(args, 'next_owner', ''),
                 'plan': getattr(args, 'plan', None),
+                'patch': getattr(args, 'patch', ''),
+                'expect_owner_revision': getattr(args, 'expect_owner_revision', ''),
+                'expect_lane_revision': getattr(args, 'expect_lane_revision', ''),
+                'apply': getattr(args, 'apply', False),
+                'preflight_token': getattr(args, 'preflight_token', ''),
+                'preflight_max_age_seconds': getattr(args, 'preflight_max_age_seconds', 900),
                 'apply_cleanup': getattr(args, 'apply_cleanup', False),
                 'prepare_closeout': getattr(args, 'prepare_closeout', False),
                 'retain_archive': getattr(args, 'retain_archive', False),
@@ -214,6 +220,12 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'parent_close_permission': values.get('parent_close_permission', 'may-advance-parent'),
                 'next_owner': values.get('next_owner', ''),
                 'plan': values.get('plan', None),
+                'patch': values.get('patch', ''),
+                'expect_owner_revision': values.get('expect_owner_revision', ''),
+                'expect_lane_revision': values.get('expect_lane_revision', ''),
+                'apply': values.get('apply', False),
+                'preflight_token': values.get('preflight_token', ''),
+                'preflight_max_age_seconds': values.get('preflight_max_age_seconds', 900),
                 'apply_cleanup': values.get('apply_cleanup', False),
                 'prepare_closeout': values.get('prepare_closeout', False),
                 'retain_archive': values.get('retain_archive', False),
@@ -286,6 +298,7 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
         'planning.report.report',
         'planning.status.report',
         'planning.summary.report',
+        'planning.targeted-write.lifecycle',
         'planning.uninstall.lifecycle',
         'planning.upgrade.lifecycle',
         'planning.verify-payload.report'
@@ -333,6 +346,7 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
                 'planning.bootstrap.status.load': _handle_planning_bootstrap_status_load,
                 'planning.uninstall.apply': _handle_planning_uninstall_apply,
                 'planning.upgrade.apply': _handle_planning_upgrade_apply,
+                'planning.targeted-write.apply': _handle_planning_targeted_write_apply,
                 'planning.verify-payload.load': _handle_planning_verify_payload_load,
             },
         )
@@ -530,6 +544,12 @@ def _handle_planning_upgrade_apply(values: dict[str, Any], _arguments: dict[str,
     from .planning_installer import upgrade_bootstrap
 
     return upgrade_bootstrap(dry_run=values.get('dry_run'), include_optional=values.get('include_optional'), target=values.get('target'))
+
+
+def _handle_planning_targeted_write_apply(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:
+    from .planning_installer import targeted_execplan_write
+
+    return targeted_execplan_write(apply=values.get('apply'), expected_lane_revision=values.get('expect_lane_revision'), expected_owner_revision=values.get('expect_owner_revision'), expected_planning_revision=values.get('expect_planning_revision'), patch=values.get('patch'), plan=values.get('plan'), preflight_max_age_seconds=values.get('preflight_max_age_seconds'), preflight_token=values.get('preflight_token'), target=values.get('target'))
 
 
 def _handle_planning_verify_payload_load(values: dict[str, Any], _arguments: dict[str, Any], _context: PrimitiveContext) -> Any:

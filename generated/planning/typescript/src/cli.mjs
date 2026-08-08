@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "closeout", "create-review", "decomposition-create", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "integration-apply", "integration-propose", "issue-shape", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "owner-select", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"]);
-const nativeOperationIds = new Set(["planning.adopt.lifecycle", "planning.archive-plan.lifecycle", "planning.close-item.lifecycle", "planning.closeout.lifecycle", "planning.create-review.lifecycle", "planning.decomposition-create.lifecycle", "planning.delegation-decision.lifecycle", "planning.doctor.report", "planning.handoff.report", "planning.init.lifecycle", "planning.install.lifecycle", "planning.intake-artifact.lifecycle", "planning.integration-apply.lifecycle", "planning.integration-propose.lifecycle", "planning.issue-shape.lifecycle", "planning.lane-activate.lifecycle", "planning.lane-archive.lifecycle", "planning.lane-close.lifecycle", "planning.lane-create.lifecycle", "planning.lane-promote.lifecycle", "planning.list-files.report", "planning.new-plan.lifecycle", "planning.owner-select.lifecycle", "planning.promote-to-plan.lifecycle", "planning.prompt.render", "planning.reconcile.report", "planning.report.report", "planning.status.report", "planning.summary.report", "planning.uninstall.lifecycle", "planning.upgrade.lifecycle", "planning.verify-payload.report"]);
+const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "closeout", "create-review", "decomposition-create", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "integration-apply", "integration-propose", "issue-shape", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "owner-select", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "targeted-write", "uninstall", "upgrade", "verify-payload"]);
+const nativeOperationIds = new Set(["planning.adopt.lifecycle", "planning.archive-plan.lifecycle", "planning.close-item.lifecycle", "planning.closeout.lifecycle", "planning.create-review.lifecycle", "planning.decomposition-create.lifecycle", "planning.delegation-decision.lifecycle", "planning.doctor.report", "planning.handoff.report", "planning.init.lifecycle", "planning.install.lifecycle", "planning.intake-artifact.lifecycle", "planning.integration-apply.lifecycle", "planning.integration-propose.lifecycle", "planning.issue-shape.lifecycle", "planning.lane-activate.lifecycle", "planning.lane-archive.lifecycle", "planning.lane-close.lifecycle", "planning.lane-create.lifecycle", "planning.lane-promote.lifecycle", "planning.list-files.report", "planning.new-plan.lifecycle", "planning.owner-select.lifecycle", "planning.promote-to-plan.lifecycle", "planning.prompt.render", "planning.reconcile.report", "planning.report.report", "planning.status.report", "planning.summary.report", "planning.targeted-write.lifecycle", "planning.uninstall.lifecycle", "planning.upgrade.lifecycle", "planning.verify-payload.report"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -395,6 +395,101 @@ const commandDefinitions = [
     "operation_ref": {
       "id": "planning.closeout.lifecycle",
       "path": "operations/planning.closeout.lifecycle.json"
+    }
+  },
+  {
+    "interface": {
+      "arguments": [
+        {
+          "help": "Execplan path, slug, or id to patch.",
+          "name": "plan"
+        }
+      ],
+      "help": "Preview or apply a guarded patch to exactly one canonical execplan.",
+      "name": "targeted-write",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--patch"
+          ],
+          "help": "JSON object containing the bounded execplan patch.",
+          "name": "patch",
+          "required": true
+        },
+        {
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Planning revision id observed before the write.",
+          "name": "expect_planning_revision",
+          "required": true
+        },
+        {
+          "flags": [
+            "--expect-owner-revision"
+          ],
+          "help": "Owner record revision observed before the write.",
+          "name": "expect_owner_revision",
+          "required": true
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-lane-revision"
+          ],
+          "help": "Lane revision guard when the owner is lane-backed.",
+          "name": "expect_lane_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--apply"
+          ],
+          "help": "Apply the patch. Omit for preview.",
+          "name": "apply"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--preflight-token"
+          ],
+          "help": "Deprecated bearer-token option. Apply rejects supplied tokens and runs a sealed internal preflight.",
+          "name": "preflight_token"
+        },
+        {
+          "default": 900,
+          "flags": [
+            "--preflight-max-age-seconds"
+          ],
+          "help": "Maximum lifetime of the sealed internal preflight result used during --apply.",
+          "name": "preflight_max_age_seconds",
+          "type": "integer"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "targeted-write",
+    "operation_ref": {
+      "id": "planning.targeted-write.lifecycle",
+      "path": "operations/planning.targeted-write.lifecycle.json"
     }
   },
   {

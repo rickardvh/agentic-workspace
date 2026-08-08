@@ -337,6 +337,18 @@
       "path": "conformance/planning.closeout.lifecycle.dry-run.process.json"
     },
     {
+      "id": "planning.targeted-write.lifecycle.preview.process",
+      "operation_id": "planning.targeted-write.lifecycle",
+      "path": "conformance/planning.targeted-write.lifecycle.preview.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.targeted-write.lifecycle.apply-preflight-refusal.process",
+      "operation_id": "planning.targeted-write.lifecycle",
+      "path": "conformance/planning.targeted-write.lifecycle.apply-preflight-refusal.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "adapter_kind": "process",
       "id": "planning.close-item.process",
       "operation_id": "planning.close-item.lifecycle",

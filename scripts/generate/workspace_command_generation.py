@@ -716,6 +716,31 @@ def _argv_contains_sequence(argv: list[str], sequence: Any) -> bool:
     return GeneratedOutput(output.path, content.replace(old_helpers, new_helpers))
 
 
+def _patch_planning_python_targeted_write_preflight_values(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+    path = output.path if output.path.is_absolute() else repo_root / output.path
+    relative = path.relative_to(repo_root).as_posix()
+    if relative != "generated/planning/python/primitives/operation_executor.py":
+        return output
+    content = output.content
+    args_anchor = "                'expect_planning_revision': getattr(args, 'expect_planning_revision', ''),\n"
+    args_insert = (
+        args_anchor
+        + "                'preflight_token': getattr(args, 'preflight_token', ''),\n"
+        + "                'preflight_max_age_seconds': getattr(args, 'preflight_max_age_seconds', 900),\n"
+    )
+    if args_anchor in content and "'preflight_token': getattr(args, 'preflight_token', '')," not in content:
+        content = content.replace(args_anchor, args_insert, 1)
+    values_anchor = "                'expect_planning_revision': values.get('expect_planning_revision', ''),\n"
+    values_insert = (
+        values_anchor
+        + "                'preflight_token': values.get('preflight_token', ''),\n"
+        + "                'preflight_max_age_seconds': values.get('preflight_max_age_seconds', 900),\n"
+    )
+    if values_anchor in content and "'preflight_token': values.get('preflight_token', '')," not in content:
+        content = content.replace(values_anchor, values_insert, 1)
+    return GeneratedOutput(output.path, content)
+
+
 def _patch_typescript_structured_usage_errors(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
     path = output.path if output.path.is_absolute() else repo_root / output.path
     relative = path.relative_to(repo_root).as_posix()
@@ -870,8 +895,13 @@ def render_workspace_command_package_outputs(
             _patch_typescript_strict_preflight_gate(
                 _patch_workspace_typescript_sample_command_test(
                     _patch_python_structured_usage_errors(
-                        _patch_typescript_structured_usage_errors(
-                            _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root),
+                        _patch_planning_python_targeted_write_preflight_values(
+                            _patch_typescript_structured_usage_errors(
+                                _normalize_releaseable_typescript_package_json(
+                                    output, release_metadata=release_metadata, repo_root=repo_root
+                                ),
+                                repo_root=repo_root,
+                            ),
                             repo_root=repo_root,
                         ),
                         repo_root=repo_root,

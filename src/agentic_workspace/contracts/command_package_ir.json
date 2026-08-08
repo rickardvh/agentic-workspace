@@ -16541,6 +16541,121 @@
           "status": "generated"
         },
         {
+          "adapter_id": "planning.targeted-write.cli",
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "targeted-write"
+          },
+          "conformance_refs": [
+            "planning.targeted-write.lifecycle.preview.process",
+            "planning.targeted-write.lifecycle.apply-preflight-refusal.process"
+          ],
+          "effect_hints": {
+            "destructive": false,
+            "idempotent": true,
+            "read_only": false,
+            "requires_preflight_gate": false,
+            "writes_repo_state": true
+          },
+          "interface": {
+            "arguments": [
+              {
+                "help": "Execplan path, slug, or id to patch.",
+                "name": "plan"
+              }
+            ],
+            "help": "Preview or apply a guarded patch to exactly one canonical execplan.",
+            "name": "targeted-write",
+            "options": [
+              {
+                "flags": ["--target"],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "flags": ["--patch"],
+                "help": "JSON object containing the bounded execplan patch.",
+                "name": "patch",
+                "required": true
+              },
+              {
+                "flags": ["--expect-planning-revision"],
+                "help": "Planning revision id observed before the write.",
+                "name": "expect_planning_revision",
+                "required": true
+              },
+              {
+                "flags": ["--expect-owner-revision"],
+                "help": "Owner record revision observed before the write.",
+                "name": "expect_owner_revision",
+                "required": true
+              },
+              {
+                "default": "",
+                "flags": ["--expect-lane-revision"],
+                "help": "Lane revision guard when the owner is lane-backed.",
+                "name": "expect_lane_revision"
+              },
+              {
+                "action": "store_true",
+                "flags": ["--apply"],
+                "help": "Apply the patch. Omit for preview.",
+                "name": "apply"
+              },
+              {
+                "default": "",
+                "flags": ["--preflight-token"],
+                "help": "Deprecated bearer-token option. Apply rejects supplied tokens and runs a sealed internal preflight.",
+                "name": "preflight_token"
+              },
+              {
+                "default": 900,
+                "flags": ["--preflight-max-age-seconds"],
+                "help": "Maximum lifetime of the sealed internal preflight result used during --apply.",
+                "name": "preflight_max_age_seconds",
+                "type": "integer"
+              },
+              {
+                "choices": ["text", "json"],
+                "default": "text",
+                "flags": ["--format"],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "planning.targeted-write.lifecycle",
+            "path": "operations/planning.targeted-write.lifecycle.json"
+          },
+          "projection_boundary": {
+            "runtime_owned": [
+              "targeted execplan patch validation",
+              "planning state and lane projection update policy",
+              "rollback-safe write transaction"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ]
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": ["planning.targeted-write.apply", "output.emit"]
+          },
+          "schemas": {"input": [], "output": []},
+          "status": "generated"
+        },
+        {
           "adapter_id": "planning.close-item.cli",
           "command": {
             "manifest_ref": "package:planning:cli",
@@ -20388,6 +20503,23 @@
               "primitive": "planning.upgrade.apply"
             },
             {
+              "function": "targeted_execplan_write",
+              "handler": "function_call",
+              "import_module": "repo_planning_bootstrap.installer",
+              "kwargs": {
+                "apply": {"value": "apply"},
+                "expected_lane_revision": {"value": "expect_lane_revision"},
+                "expected_owner_revision": {"value": "expect_owner_revision"},
+                "expected_planning_revision": {"value": "expect_planning_revision"},
+                "patch": {"value": "patch"},
+                "plan": {"value": "plan"},
+                "preflight_max_age_seconds": {"value": "preflight_max_age_seconds"},
+                "preflight_token": {"value": "preflight_token"},
+                "target": {"value": "target"}
+              },
+              "primitive": "planning.targeted-write.apply"
+            },
+            {
               "function": "verify_payload",
               "handler": "function_call",
               "import_module": "repo_planning_bootstrap.installer",
@@ -20722,6 +20854,36 @@
               "name": "plan"
             },
             {
+              "arg": "patch",
+              "default": "",
+              "name": "patch"
+            },
+            {
+              "arg": "expect_owner_revision",
+              "default": "",
+              "name": "expect_owner_revision"
+            },
+            {
+              "arg": "expect_lane_revision",
+              "default": "",
+              "name": "expect_lane_revision"
+            },
+            {
+              "arg": "apply",
+              "default": false,
+              "name": "apply"
+            },
+            {
+              "arg": "preflight_token",
+              "default": "",
+              "name": "preflight_token"
+            },
+            {
+              "arg": "preflight_max_age_seconds",
+              "default": 900,
+              "name": "preflight_max_age_seconds"
+            },
+            {
               "arg": "apply_cleanup",
               "default": false,
               "name": "apply_cleanup"
@@ -20912,6 +21074,7 @@
             "planning.delegation-decision.lifecycle",
             "planning.doctor.report",
             "planning.handoff.report",
+            "planning.targeted-write.lifecycle",
             "planning.init.lifecycle",
             "planning.install.lifecycle",
             "planning.intake-artifact.lifecycle",

@@ -939,6 +939,39 @@
       },
       "status": "generated"
     },
+    "targeted-write": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "targeted-write",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.targeted-write.lifecycle.preview.process",
+        "planning.targeted-write.lifecycle.apply-preflight-refusal.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.targeted-write.cli",
+      "operation_id": "planning.targeted-write.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.targeted-write.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "uninstall": {
       "command": {
         "command_manifest": "package:planning:cli",
