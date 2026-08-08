@@ -889,7 +889,49 @@ def render_workspace_command_package_outputs(
 
 def _patch_external_consumer_exports(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
     path = output.path if output.path.is_absolute() else repo_root / output.path
-    if path.relative_to(repo_root).as_posix() != "generated/workspace/typescript/package.json":
+    relative = path.relative_to(repo_root).as_posix()
+    if relative == "generated/workspace/python/commands/planning_front_door.py":
+        content = output.content.replace(
+            """import argparse
+
+from typing import Any
+from collections.abc import Mapping
+
+# DO NOT EDIT DIRECTLY.
+# Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json and the referenced operation contract.
+# Regenerate with: uv run python scripts/generate/generate_command_packages.py
+
+import contextlib
+import io
+import json
+from ..cli import build_generated_parser
+""",
+            """import argparse
+import contextlib
+import io
+import json
+from collections.abc import Mapping
+from typing import Any
+
+from ..cli import build_generated_parser
+
+# DO NOT EDIT DIRECTLY.
+# Command behavior changes belong in src/agentic_workspace/contracts/command_package_ir.json and the referenced operation contract.
+# Regenerate with: uv run python scripts/generate/generate_command_packages.py
+""",
+        )
+        old = """def invoke(_values: Mapping[str, Any]) -> object:
+    raise RuntimeError('planning.front-door' + ' has no generated operation callable')
+"""
+        new = """def invoke(_values: Mapping[str, Any]) -> object:
+    from agentic_workspace.workspace_runtime_planning import execute_planning_front_door_route_action
+
+    return execute_planning_front_door_route_action(_values)
+"""
+        if old in content:
+            content = content.replace(old, new)
+        return GeneratedOutput(output.path, content)
+    if relative != "generated/workspace/typescript/package.json":
         return output
     payload = json.loads(output.content)
     payload["exports"] = {

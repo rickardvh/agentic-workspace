@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import importlib
 import json
 
 import pytest
-from command_generation.generated_package_loader import load_generated_command_module_for_entrypoint
+from command_generation.generated_package_loader import (
+    load_generated_command_module_for_entrypoint,
+    load_generated_command_package_for_entrypoint,
+)
 
+generated_workspace = load_generated_command_package_for_entrypoint("agentic-workspace")
 cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
+planning_front_door = importlib.import_module(f"{generated_workspace.__name__}.commands.planning_front_door")
 
 
 def test_invalid_command_shows_preflight_fallback_hint(capsys) -> None:
@@ -120,6 +126,144 @@ def test_planning_front_door_runs_package_operation(tmp_path, capsys) -> None:
     assert payload["message"] == "Create execplan scaffold 'front-door-plan'"
     assert payload["dry_run"] is True
     assert payload["lifecycle_plan"]["next_safe_command"].startswith("agentic-workspace planning new-plan")
+
+
+def test_planning_front_door_invoke_enforces_live_route_action_admission(tmp_path) -> None:
+    from agentic_workspace import config as config_lib
+    from agentic_workspace.workspace_runtime_planning import _planning_safety_gate_payload
+
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        encoding="utf-8",
+    )
+    config = config_lib.load_workspace_config(target_root=tmp_path)
+    gate = _planning_safety_gate_payload(
+        target_root=tmp_path,
+        config=config,
+        changed_paths=["README.md"],
+        task_text="fix readme",
+        execution_posture={},
+    )
+    invocation = gate["route_decision"]["next_safe_action"]["operation_invocation"]
+
+    admitted = planning_front_door.invoke(
+        {"target": str(tmp_path), "task": "fix readme", "changed_paths": ["README.md"], "operation_invocation": invocation}
+    )
+
+    assert admitted["status"] == "admitted"
+    assert admitted["operation_action"] == "route-decision-next-action"
+    assert admitted["admission"]["status"] == "admitted"
+    assert admitted["mutation_outcome"] in {"no-op", "applied"}
+
+    stale_invocation = json.loads(json.dumps(invocation))
+    stale_invocation["input_revision"] = "sha256:stale-route-action"
+    rejected = planning_front_door.invoke(
+        {"target": str(tmp_path), "task": "fix readme", "changed_paths": ["README.md"], "operation_invocation": stale_invocation}
+    )
+
+    assert rejected["status"] == "rejected"
+    assert rejected["mutation_outcome"] == "rejected"
+    assert "input_revision" in rejected["admission"]["revision_failures"]
+
+
+def _current_reconciliation_front_door_decision() -> dict:
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    return _planning_route_decision_payload(
+        {
+            "task_relation": "continues-selected-owner",
+            "owner_posture": "external-conflict",
+            "active_execplan": ".agentic-workspace/planning/execplans/active.plan.json",
+            "route_inputs": {
+                "task_binding": {"mode": "mutation", "identity": "task-a", "allowed_paths": ["README.md"]},
+                "owner": {
+                    "ref": ".agentic-workspace/planning/execplans/active.plan.json",
+                    "revision": "owner-a",
+                    "lifecycle": "active",
+                    "projection_status": "clean",
+                },
+                "mutation_baseline": {"baseline_id": "baseline-a", "scope": {"allowed_paths": ["README.md"]}},
+            },
+        },
+        planning_revision={"revision_id": "planning-a"},
+        reconciliation_proposal={
+            "status": "current",
+            "proposal_id": "a" * 20,
+            "revision": "proposal-rev-a",
+            "apply_command": "agentic-workspace planning reconcile --apply --proposal " + "a" * 20,
+        },
+    )
+
+
+def test_planning_front_door_applies_current_reconciliation_through_cas(tmp_path, monkeypatch) -> None:
+    import repo_planning_bootstrap.installer as planning_installer
+
+    import agentic_workspace.workspace_runtime_planning as runtime_planning
+
+    decision = _current_reconciliation_front_door_decision()
+    invocation = decision["next_safe_action"]["operation_invocation"]
+    calls = []
+
+    monkeypatch.setattr(runtime_planning, "_planning_safety_gate_payload", lambda **_kwargs: {"route_decision": decision})
+
+    def fake_reconcile(**kwargs):
+        calls.append(kwargs)
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "status": "applied",
+            "receipt": {
+                "kind": "agentic-planning/reconciliation-receipt/v1",
+                "proposal_id": kwargs["proposal"],
+                "planning_revision_before": kwargs["expected_planning_revision"],
+            },
+        }
+
+    monkeypatch.setattr(planning_installer, "planning_reconcile", fake_reconcile)
+
+    result = planning_front_door.invoke(
+        {"target": str(tmp_path), "task": "apply proposal", "changed_paths": ["README.md"], "operation_invocation": invocation}
+    )
+
+    assert result["status"] == "admitted"
+    assert result["route_action"] == "apply-planning-reconciliation-proposal"
+    assert result["mutation_outcome"] == "applied"
+    assert result["claim_outcome"] == "available-after-proof"
+    assert result["mutation_receipt"]["proposal_id"] == "a" * 20
+    assert result["reconciliation_apply"]["status"] == "applied"
+    assert calls == [{"target": tmp_path.resolve(), "apply": True, "proposal": "a" * 20, "expected_planning_revision": "planning-a"}]
+
+
+def test_planning_front_door_does_not_report_blocked_reconciliation_as_applied(tmp_path, monkeypatch) -> None:
+    import repo_planning_bootstrap.installer as planning_installer
+
+    import agentic_workspace.workspace_runtime_planning as runtime_planning
+
+    decision = _current_reconciliation_front_door_decision()
+    invocation = decision["next_safe_action"]["operation_invocation"]
+
+    monkeypatch.setattr(runtime_planning, "_planning_safety_gate_payload", lambda **_kwargs: {"route_decision": decision})
+    monkeypatch.setattr(
+        planning_installer,
+        "planning_reconcile",
+        lambda **_kwargs: {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "status": "blocked",
+            "reason": "planning-revision-mismatch",
+        },
+    )
+
+    result = planning_front_door.invoke(
+        {"target": str(tmp_path), "task": "apply proposal", "changed_paths": ["README.md"], "operation_invocation": invocation}
+    )
+
+    assert result["status"] == "admitted"
+    assert result["mutation_outcome"] == "blocked"
+    assert result["claim_outcome"] == "blocked"
+    assert result["mutation_receipt"] == {}
+    assert result["reconciliation_apply"]["status"] == "blocked"
+    assert result["reconciliation_apply"]["reason"] == "planning-revision-mismatch"
 
 
 def test_planning_front_door_runs_lane_create_operation(tmp_path, capsys) -> None:

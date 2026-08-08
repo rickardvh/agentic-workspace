@@ -1343,7 +1343,10 @@ def mutation_baseline_context_authority_owner_operation(**kwargs: Any) -> dict[s
         raise ValueError("mutation-baseline owner operation derives semantic evidence from its canonical subsystem")
     from agentic_workspace._context_authority_owner_protocol import _issue_owner_result
 
-    baseline = mutation_baseline_payload(target_root=kwargs["root"], changed_paths=list(kwargs.get("paths") or []))
+    raw_selection = kwargs.get("selection")
+    selection: dict[str, Any] = raw_selection if isinstance(raw_selection, dict) else {}
+    changed_paths = list(kwargs.get("paths") or []) or list(selection.get("matched_paths") or [])
+    baseline = mutation_baseline_payload(target_root=kwargs["root"], changed_paths=changed_paths)
     baseline_status = str(baseline.get("status") or "")
     accepted = {"clean", "clean-scope", "dirty-accounted", "scoped-status-current", "current"}
     current = baseline_status in accepted

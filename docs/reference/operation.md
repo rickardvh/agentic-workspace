@@ -59,4 +59,12 @@ Contract for one Agentic Workspace operation, including command shape, effects, 
 | `projections.skill` | object | no |  | Skill details used by this contract. |  |  |
 | `projections.skill.activation` | array of string | no |  | Ordered activation entries used by this contract. |  |  |
 | `projections.skill.instruction_summary` | string | no |  | Instruction summary text value used by this contract. |  |  |
+| `route_action_bindings` | object | no |  | Versioned route-action to operation-IR bindings owned by a front-door operation contract. |  |  |
+| `route_action_bindings.<name>` | object | no |  | One route action binding to a destination operation contract. |  |  |
+| `route_action_bindings.<name>.operation_path` | string | yes |  | Repository-relative authoritative destination operation contract. |  |  |
+| `route_action_bindings.<name>.arguments` | object | yes |  | Typed destination arguments derived from the admitted route identity or runtime request. |  |  |
+| `route_action_bindings.<name>.arguments.<name>` |  | no |  | One typed argument source binding. |  |  |
+| `route_action_bindings.<name>.result_admission` | object | yes |  | Result envelope and statuses accepted when the destination operation returns. |  |  |
+| `route_action_bindings.<name>.result_admission.kind` | string | yes |  | Required result-envelope kind. |  |  |
+| `route_action_bindings.<name>.result_admission.accepted_statuses` | array of string | yes |  | Destination result statuses that may advance the route. |  |  |
 | `migration_status` | enum `"draft-contract-only"`, `"validated-contract"`, `"runtime-consumed"` | no |  | Maturity of the operation contract relative to implementation. |  |  |

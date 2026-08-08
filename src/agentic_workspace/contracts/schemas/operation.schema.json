@@ -438,6 +438,81 @@
       "additionalProperties": false,
       "description": "Adapter projections such as CLI, MCP, or skill bindings."
     },
+    "route_action_bindings": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "description": "One route action binding to a destination operation contract.",
+        "required": [
+          "operation_path",
+          "arguments",
+          "result_admission"
+        ],
+        "properties": {
+          "operation_path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Repository-relative authoritative destination operation contract."
+          },
+          "arguments": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": ["from"],
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Dotted route or runtime value source."
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "required": ["literal"],
+                  "properties": {
+                    "literal": {
+                      "description": "Literal argument value."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "description": "One typed argument source binding."
+            },
+            "description": "Typed destination arguments derived from the admitted route identity or runtime request."
+          },
+          "result_admission": {
+            "type": "object",
+            "description": "Result envelope and statuses accepted when the destination operation returns.",
+            "required": ["kind", "accepted_statuses"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Required result-envelope kind."
+              },
+              "accepted_statuses": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true,
+                "description": "Destination result statuses that may advance the route."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Versioned route-action to operation-IR bindings owned by a front-door operation contract."
+    },
     "migration_status": {
       "type": "string",
       "enum": [
