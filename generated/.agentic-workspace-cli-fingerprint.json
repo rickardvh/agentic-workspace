@@ -1444,7 +1444,7 @@
     "generated/workspace/python/commands/work_thread_select.py": "db79aa20289b0590e44730067610c1289ae04488",
     "generated/workspace/python/external_consumer_profile.json": "f6507f4c91a4ec2aa71a75a67eec4681263a54fe",
     "generated/workspace/python/external_contract_bundle.json": "43d4e25edd22f30f4d00a92c01dc57ce6ed1a8aa",
-    "generated/workspace/python/external_operation_conformance_receipts.json": "e6cb2721f93c25da15bd2e9f561a213c229f5ae6",
+    "generated/workspace/python/external_operation_conformance_receipts.json": "a2a2f21931b3c726eadcd94a3e03b30ea0b11ba5",
     "generated/workspace/python/generated_command_adapters.json": "ba04158f73d9d4326e9d996a75d62505bfffa447",
     "generated/workspace/python/operations/assignment.admit.json": "889256e3c450f7347b7922f6b3c16bb28098f3c8",
     "generated/workspace/python/operations/assignment.cleanup.json": "d11263c9004d5548c824bb9ba62033d6ec47f6f6",
@@ -1483,7 +1483,7 @@
     "generated/workspace/python/primitives/workspace_startup_runtime.py": "cee2b88bf6a581ed83ce9a7b130cbfa2d4815c5e",
     "generated/workspace/typescript/external_consumer_profile.json": "f6507f4c91a4ec2aa71a75a67eec4681263a54fe",
     "generated/workspace/typescript/external_contract_bundle.json": "43d4e25edd22f30f4d00a92c01dc57ce6ed1a8aa",
-    "generated/workspace/typescript/external_operation_conformance_receipts.json": "e6cb2721f93c25da15bd2e9f561a213c229f5ae6",
+    "generated/workspace/typescript/external_operation_conformance_receipts.json": "a2a2f21931b3c726eadcd94a3e03b30ea0b11ba5",
     "generated/workspace/typescript/package.json": "3f9fb4cae6d372464b74739f80fbee4b02192433",
     "generated/workspace/typescript/resources/_contracts/assignment_lifecycle_input.schema.json": "5597eb625c8c296aceaeb6281a80efbcddea3941",
     "generated/workspace/typescript/resources/_contracts/assignment_lifecycle_result.schema.json": "d56d0bac245a24cca1a6ce9d017301a512285e92",
@@ -1837,7 +1837,7 @@
     "src/agentic_workspace/contracts/context_templates.json": "688cb00968cff4131bf5f2eb8c004e8adfe5d8a3",
     "src/agentic_workspace/contracts/contract_inventory.json": "5d2154d2353a62dd5c25815de9def22783318e1f",
     "src/agentic_workspace/contracts/external_consumer_profile.json": "f6507f4c91a4ec2aa71a75a67eec4681263a54fe",
-    "src/agentic_workspace/contracts/external_operation_conformance_receipts.json": "e6cb2721f93c25da15bd2e9f561a213c229f5ae6",
+    "src/agentic_workspace/contracts/external_operation_conformance_receipts.json": "a2a2f21931b3c726eadcd94a3e03b30ea0b11ba5",
     "src/agentic_workspace/contracts/generated_behavior_stratification.json": "71a107210f80ea6a69b593482c488dd81c4ec3ec",
     "src/agentic_workspace/contracts/generated_command_check_inventory.json": "44bdf3318e24c1b0b09f6a5917b77d04d7a06fb2",
     "src/agentic_workspace/contracts/improvement_latitude_policy.json": "f8f8b1b0d848a8b9272dff809239d17f6a38670c",
@@ -2073,7 +2073,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "2aa49a57e2426e148c15b2e13038e181632939e9"
   },
-  "git_index_identity": "791d832afd8f17d21bab1e33d8e45a6648fdeab47e49b28c8663cb18d76ccf65",
+  "git_index_identity": "af433fd2bc288dfaf70d3cea9fe0a3a98e0a20dbd146fe3817d75f0014aada03",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
