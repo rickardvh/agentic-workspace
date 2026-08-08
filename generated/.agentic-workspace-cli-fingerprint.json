@@ -2127,7 +2127,7 @@
     "src/agentic_workspace/contracts/workspace_surfaces.json": "2a44db878136cb632db3c8afac72d79bea34ce9e",
     "src/agentic_workspace/current_work_context.py": "ba75693e0258b9c2b85b2d70b152466247f25097",
     "src/agentic_workspace/doctor.py": "eed6e60a72fb1c306688f6438d87a64afdcc5522",
-    "src/agentic_workspace/evaluation.py": "bd0ff06ef7ca01273f59fc4e4b0feecbad48872a",
+    "src/agentic_workspace/evaluation.py": "864403cb300a302a190282693d6b93dc20b57f23",
     "src/agentic_workspace/generated_operations.py": "45589c79e879d68b69fd29c3d2f156a228306640",
     "src/agentic_workspace/improvement_consequence.py": "82693a891043a25a745ab711a8a87ea2251a6134",
     "src/agentic_workspace/operating_decision.py": "ead53e2a2ca6fc92586f7c854d0308a21611bca7",
@@ -2155,7 +2155,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "2aa49a57e2426e148c15b2e13038e181632939e9"
   },
-  "git_index_identity": "523a409b99af7bae9ac2ebc5ae652b83f4b9820291d6853489e369cd2f5554c2",
+  "git_index_identity": "585079fc7d20363e1bdcf78701c7d4748c2a42bacc48f57184ea2cb8bbb7fa04",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }

@@ -7,7 +7,8 @@ import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from types import MappingProxyType
+from typing import Any, Callable, Mapping
 
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, mutation_baseline_payload
 from agentic_workspace.config import WorkspaceUsageError
@@ -42,24 +43,28 @@ OBSERVATION_BYTE_CAP = 256_000
 
 ExternalEvaluationProviderResultResolver = Callable[[str], dict[str, Any]]
 _RSA_SHA256_DER_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
-_EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS = {
-    "evaluation-provider-adapter:host-v1": {
-        "algorithm": "RS256",
-        "issuer": "evaluation-provider-adapter",
-        "trusted_channel": "provider-webhook",
-        "n": (
-            "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
-            "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
-            "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
-            "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
-            "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
-            "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
-        ),
-        "e": "010001",
-        "status": "current",
-        "key_revision": "host-v1",
+_PINNED_EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS = MappingProxyType(
+    {
+        "evaluation-provider-adapter:host-v1": MappingProxyType(
+            {
+                "algorithm": "RS256",
+                "issuer": "evaluation-provider-adapter",
+                "trusted_channel": "provider-webhook",
+                "n": (
+                    "998d17874f9e1598c0660b41e484fb8e8a16de1a523885b0c194f9468858ca108b89133eb871c8da398df7ad"
+                    "4e2f53e5bc474442f060655e71839cfa016922f11f26e0c07f92eeee56a8653ae8ce6c8e4e19a63622a1519685"
+                    "bada671ba9655c381b4b35beda14676fd302764e5e60854c3f26b1b27a6c5ea9cf30905f2b995f5ecc6056437048"
+                    "cb80301f8e613920ebc5b13232f933e66e7581dee91bb7a728da54392b77736ebaf44b0cbf9bea1998d04484de"
+                    "87d695dec8b98936cf5d64a6ea3d91f1dc45ae91098ffb85055ff3db456a664bf3dea9f0c204f1c1c85f4d"
+                    "53997c2f6f8a41a7d80972ffe9dafcb939d48f35656f67f7bb0ce17c0835adf3d9"
+                ),
+                "e": "010001",
+                "status": "current",
+                "key_revision": "host-v1",
+            }
+        )
     }
-}
+)
 
 EVALUATION_LIFECYCLES = (
     "collecting",
@@ -731,18 +736,18 @@ def _verify_rs256_signature(*, key: dict[str, str], payload: dict[str, Any], sig
     return hmac.compare_digest(encoded[separator + 1 :], digest_info)
 
 
-def _load_external_evaluation_provider_public_key(*, target_root: Path, key_id: str) -> dict[str, str] | None:
-    key = _EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS.get(key_id)
-    if key is None:
-        index_path = target_root / EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_DIR / "index.json"
-        try:
-            index = json.loads(index_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            index = {}
-        entries = index.get("keys") if index.get("kind") == EXTERNAL_EVALUATION_PROVIDER_TRUST_ROOT_INDEX_KIND else {}
-        candidate = entries.get(key_id) if isinstance(entries, dict) else None
-        key = candidate if isinstance(candidate, dict) else None
-    if not isinstance(key, dict) or key.get("status") != "current":
+def _load_external_evaluation_provider_public_key(*, key_id: str) -> dict[str, str] | None:
+    """Resolve provider trust from immutable package-owned material only.
+
+    Target, repository, home, environment, import-path, and operation-argument
+    state are deliberately outside this lookup. Files under the workspace's
+    external-provider directories are evidence caches, never trust roots.
+    Rotation and revocation therefore require a released host/package update;
+    an ordinary AW operation cannot provision or select provider trust.
+    """
+
+    key = _PINNED_EXTERNAL_EVALUATION_PROVIDER_PUBLIC_KEYS.get(key_id)
+    if not isinstance(key, Mapping) or key.get("status") != "current":
         return None
     if key.get("revoked_at") or key.get("superseded_by"):
         return None
@@ -814,7 +819,7 @@ def _host_admits_external_delivery_adapter_host_result(ref: str, result: dict[st
     admission_raw = result.get("host_admission")
     admission: dict[str, Any] = admission_raw if isinstance(admission_raw, dict) else {}
     key_id = str(admission.get("key_id") or "")
-    key = _load_external_evaluation_provider_public_key(target_root=target_root, key_id=key_id)
+    key = _load_external_evaluation_provider_public_key(key_id=key_id)
     if key is None:
         return False
     if admission.get("kind") != "agentic-workspace/evaluation-external-delivery-adapter-host-result-admission/v1":
@@ -2205,27 +2210,30 @@ def _evaluation_specialist_authority(definition: dict[str, Any]) -> dict[str, An
         specialist_domains.append(
             {
                 "domain": "dogfooding-feedback",
-                "authority": "evidence-source",
-                "allowed_role": "produce observations and findings",
-                "not_authorized": "does not conclude evaluation or deliver owner reports",
+                "authority": "definition-declared-evidence-source",
+                "convergence_status": "not-yet-converged",
+                "allowed_role": "may be admitted as evidence only through evaluation.observe",
+                "not_authorized": "definition metadata does not prove producer write-through, lifecycle ownership, or delivery",
             }
         )
     if any(item in {"long-horizon-evaluation", "long-horizon", "evaluation-run"} for item in evidence_classes):
         specialist_domains.append(
             {
                 "domain": "long-horizon-evaluation",
-                "authority": "evidence-source",
-                "allowed_role": "produce longitudinal observations",
-                "not_authorized": "does not own lifecycle transitions or closure",
+                "authority": "definition-declared-evidence-source",
+                "convergence_status": "not-yet-converged",
+                "allowed_role": "may be admitted as longitudinal evidence only through evaluation.observe",
+                "not_authorized": "definition metadata does not prove producer write-through, lifecycle ownership, or delivery",
             }
         )
     if subject_type in {"delegation", "assignment", "delegated-run"}:
         specialist_domains.append(
             {
                 "domain": "delegation-outcome",
-                "authority": "subject-specialist",
-                "allowed_role": "provide delegated-run evidence",
-                "not_authorized": "does not bypass evaluation admission or report delivery",
+                "authority": "definition-declared-subject-specialist",
+                "convergence_status": "not-yet-converged",
+                "allowed_role": "may provide delegated-run evidence only through evaluation.observe",
+                "not_authorized": "subject type does not prove producer write-through or retirement of parallel authority",
             }
         )
     if not specialist_domains:
@@ -2233,18 +2241,23 @@ def _evaluation_specialist_authority(definition: dict[str, Any]) -> dict[str, An
             {
                 "domain": "universal-evaluation",
                 "authority": "shared-lifecycle",
+                "convergence_status": "native",
                 "allowed_role": "own matching, admission, coverage, reporting, delivery status, and conclusion boundaries",
                 "not_authorized": "does not replace declared decision owner review",
             }
         )
     return {
         "kind": "agentic-workspace/evaluation-specialist-authority/v1",
+        "convergence_status": (
+            "native-only" if all(item.get("convergence_status") == "native" for item in specialist_domains) else "not-yet-converged"
+        ),
         "universal_lifecycle_authority": "evaluation.register/observe/status/report-preview/local-delivery/external-request/external-delivery/delivery-status/retry/transition",
         "decision_owner": definition.get("decision_owner", {}),
         "specialist_domains": specialist_domains,
         "convergence_rule": (
-            "Specialists produce evidence through the shared observe/admission path; the universal Evaluation lifecycle "
-            "owns result currentness, coverage, reporting, delivery status, and conclusion projection."
+            "Only producer receipts admitted through evaluation.observe prove specialist convergence. Definition evidence "
+            "classes and subject types declare applicability but do not establish producer write-through, duplicate-authority "
+            "retirement, or shared delivery/conclusion ownership."
         ),
     }
 

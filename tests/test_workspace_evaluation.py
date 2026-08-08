@@ -10,6 +10,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import cli
+from agentic_workspace.client import AWClientError
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.contract_tooling import contract_schema
 from agentic_workspace.evaluation import (
@@ -185,7 +186,16 @@ def _write_external_evaluation_adapter_host_result(
     trust_host_key: bool = True,
     **values: object,
 ) -> dict[str, object]:
-    _ = host_admission_monkeypatch
+    if host_admission_monkeypatch is not None:
+        # Lower-layer publication and receipt tests substitute the already
+        # authenticated host boundary. Trust-path tests never use this seam.
+        import agentic_workspace.evaluation as evaluation_runtime
+
+        host_admission_monkeypatch.setattr(
+            evaluation_runtime,
+            "_host_admits_external_delivery_adapter_host_result",
+            lambda _ref, _result, *, target_root: bool(target_root),
+        )
     workspace_ref = str(values.get("workspace_ref") or f"workspace:path:{target_root.resolve()}")
     audience = str(values.get("audience") or "agentic-workspace.evaluation-external-delivery")
     result = {
@@ -538,7 +548,7 @@ def test_external_adapter_receipt_requires_matching_host_result(tmp_path: Path, 
     assert recorded["host_result_ref"] == host["result_ref"]
 
 
-def test_external_host_result_import_is_idempotent_and_append_preserving(tmp_path: Path) -> None:
+def test_external_host_result_import_is_idempotent_and_append_preserving(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     first = _write_external_evaluation_adapter_host_result(
         tmp_path,
         delivery_id="delivery-1",
@@ -548,6 +558,7 @@ def test_external_host_result_import_is_idempotent_and_append_preserving(tmp_pat
         receipt_revision="receipt-1",
         capability_revision="github-issues-adapter:v1",
         status="delivered",
+        host_admission_monkeypatch=monkeypatch,
     )
     second = _write_external_evaluation_adapter_host_result(
         tmp_path,
@@ -558,6 +569,7 @@ def test_external_host_result_import_is_idempotent_and_append_preserving(tmp_pat
         receipt_revision="receipt-2",
         capability_revision="github-issues-adapter:v1",
         status="failed",
+        host_admission_monkeypatch=monkeypatch,
     )
     replay = record_external_evaluation_adapter_host_result(
         target_root=tmp_path,
@@ -632,6 +644,7 @@ def test_external_host_result_import_rolls_back_partial_write(tmp_path: Path, mo
     with pytest.raises(OSError, match="simulated partial import failure"):
         _write_external_evaluation_adapter_host_result(
             tmp_path,
+            host_admission_monkeypatch=monkeypatch,
             delivery_id="delivery-rollback",
             sink_id="#1969",
             producer="github-issues-adapter",
@@ -646,7 +659,7 @@ def test_external_host_result_import_rolls_back_partial_write(tmp_path: Path, mo
     assert not (host_root / "index.json").exists()
 
 
-def test_external_adapter_receipt_accepts_host_provider_verdict_across_process(tmp_path: Path) -> None:
+def test_external_adapter_receipt_rejects_target_local_trust_across_process(tmp_path: Path) -> None:
     receipt = {
         "delivery_id": "delivery-1",
         "sink_id": "#1969",
@@ -656,7 +669,7 @@ def test_external_adapter_receipt_accepts_host_provider_verdict_across_process(t
         "capability_revision": "github-issues-adapter:v1",
         "status": "delivered",
     }
-    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
+    host = _write_external_evaluation_adapter_host_result(tmp_path, import_result=False, **receipt)
     completed = subprocess.run(
         [
             sys.executable,
@@ -664,11 +677,9 @@ def test_external_adapter_receipt_accepts_host_provider_verdict_across_process(t
             (
                 "import json; "
                 "from pathlib import Path; "
-                "from agentic_workspace.evaluation import record_external_evaluation_adapter_receipt; "
-                f"payload = record_external_evaluation_adapter_receipt(target_root=Path({str(tmp_path)!r}), "
-                "delivery_id='delivery-1', sink_id='#1969', producer='github-issues-adapter', "
-                "attempt_revision='attempt-1', receipt_revision='receipt-1', capability_revision='github-issues-adapter:v1', "
-                f"status='delivered', host_result_ref={str(host['result_ref'])!r}); "
+                "from agentic_workspace.evaluation import record_external_evaluation_adapter_host_result; "
+                f"payload = record_external_evaluation_adapter_host_result(target_root=Path({str(tmp_path)!r}), "
+                f"provider_result_ref={str(host['provider_result_ref'])!r}, capability_revision='github-issues-adapter:v1'); "
                 "print(json.dumps(payload, sort_keys=True))"
             ),
         ],
@@ -677,10 +688,8 @@ def test_external_adapter_receipt_accepts_host_provider_verdict_across_process(t
         text=True,
     )
 
-    assert completed.returncode == 0, completed.stderr or completed.stdout
-    payload = json.loads(completed.stdout)
-    assert payload["status"] == "recorded"
-    assert payload["host_result_ref"] == host["result_ref"]
+    assert completed.returncode != 0
+    assert "not admitted by the host boundary" in completed.stderr
 
 
 def test_external_adapter_receipt_does_not_load_repo_or_pythonpath_host_verifiers() -> None:
@@ -693,6 +702,7 @@ def test_external_adapter_receipt_does_not_load_repo_or_pythonpath_host_verifier
     assert "_EXTERNAL_EVALUATION_PROVIDER_TEST_RSA" + "_D" not in test_source
     assert "_external_evaluation_provider" + "_test_signature" not in test_source
     assert "_EXTERNAL_EVALUATION_PROVIDER" + "_PUBLIC_KEYS" not in test_source
+    assert "_PINNED_EXTERNAL_EVALUATION_PROVIDER" + "_PUBLIC_KEYS" not in test_source
     assert "evaluation-provider-adapter:test-v1" not in source
     assert "_EXTERNAL_EVALUATION_ADAPTER_HOST_ADMISSION_KEYS" not in source
     assert "_external_evaluation_provider_result_store_path" not in source
@@ -711,7 +721,7 @@ def test_external_adapter_receipt_rejects_jointly_forged_local_host_result(tmp_p
         "capability_revision": "github-issues-adapter:v1",
         "status": "delivered",
     }
-    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
+    host = _write_external_evaluation_adapter_host_result(tmp_path, host_admission_monkeypatch=monkeypatch, **receipt)
     monkeypatch.setenv(
         "AW_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSION_KEYS",
         json.dumps({"caller-key": {"status": "current"}}),
@@ -783,6 +793,26 @@ def test_external_host_result_import_rejects_revoked_local_trust_root(tmp_path: 
         )
 
 
+def test_external_host_result_import_rejects_current_target_local_trust_root(tmp_path: Path) -> None:
+    receipt = {
+        "delivery_id": "delivery-local-root",
+        "sink_id": "#1969",
+        "producer": "github-issues-adapter",
+        "attempt_revision": "attempt-1",
+        "receipt_revision": "receipt-1",
+        "capability_revision": "github-issues-adapter:v1",
+        "status": "delivered",
+    }
+    host = _write_external_evaluation_adapter_host_result(tmp_path, import_result=False, **receipt)
+
+    with pytest.raises(WorkspaceUsageError, match="host boundary"):
+        record_external_evaluation_adapter_host_result(
+            target_root=tmp_path,
+            provider_result_ref=str(host["provider_result_ref"]),
+            capability_revision="github-issues-adapter:v1",
+        )
+
+
 def test_external_host_result_import_rejects_stale_index_before_commit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     import agentic_workspace.evaluation as evaluation_runtime
 
@@ -797,6 +827,11 @@ def test_external_host_result_import_rejects_stale_index_before_commit(tmp_path:
     }
     host = _write_external_evaluation_adapter_host_result(tmp_path, import_result=False, **receipt)
     original_transaction = evaluation_runtime._transactional_json_writes  # type: ignore[attr-defined]
+    monkeypatch.setattr(
+        evaluation_runtime,
+        "_host_admits_external_delivery_adapter_host_result",
+        lambda _ref, _result, *, target_root: bool(target_root),
+    )
 
     def mutate_index_before_commit(
         writes: list[tuple[Path, dict[str, object]]],
@@ -846,7 +881,7 @@ def test_external_evaluation_host_admission_issuer_is_not_public_runtime_entrypo
     assert "_CURRENT_EXTERNAL_EVALUATION_ADAPTER_HOST_RESULT_ADMISSIONS" not in source
 
 
-def test_external_adapter_receipt_accepts_resolver_imported_host_result_without_local_verifier(tmp_path: Path) -> None:
+def test_external_adapter_receipt_accepts_authenticated_host_result_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     receipt = {
         "delivery_id": "delivery-1",
         "sink_id": "#1969",
@@ -856,7 +891,7 @@ def test_external_adapter_receipt_accepts_resolver_imported_host_result_without_
         "capability_revision": "github-issues-adapter:v1",
         "status": "delivered",
     }
-    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
+    host = _write_external_evaluation_adapter_host_result(tmp_path, host_admission_monkeypatch=monkeypatch, **receipt)
 
     recorded = record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
 
@@ -874,7 +909,7 @@ def test_external_adapter_receipt_is_idempotent_and_rolls_back_partial_write(tmp
         "capability_revision": "github-issues-adapter:v1",
         "status": "delivered",
     }
-    host = _write_external_evaluation_adapter_host_result(tmp_path, **receipt)
+    host = _write_external_evaluation_adapter_host_result(tmp_path, host_admission_monkeypatch=monkeypatch, **receipt)
     first = record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
     replay = record_external_evaluation_adapter_receipt(target_root=tmp_path, **receipt, host_result_ref=host["result_ref"])
 
@@ -882,7 +917,7 @@ def test_external_adapter_receipt_is_idempotent_and_rolls_back_partial_write(tmp
     assert replay["idempotency"] == "replayed"
 
     failing_receipt = {**receipt, "delivery_id": "delivery-2", "receipt_revision": "receipt-2"}
-    failing_host = _write_external_evaluation_adapter_host_result(tmp_path, **failing_receipt)
+    failing_host = _write_external_evaluation_adapter_host_result(tmp_path, host_admission_monkeypatch=monkeypatch, **failing_receipt)
     original_replace = Path.replace
     replace_count = 0
 
@@ -1057,6 +1092,8 @@ def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(t
     assert loop["matching"]["quiet_non_match"] is True
     assert loop["observe_admission"]["typed_boundary"] == "assignment authority + mutation baseline + proof receipt + definition revision"
     assert loop["specialist_authority"]["specialist_domains"][0]["domain"] == "dogfooding-feedback"
+    assert loop["specialist_authority"]["convergence_status"] == "not-yet-converged"
+    assert loop["specialist_authority"]["specialist_domains"][0]["convergence_status"] == "not-yet-converged"
 
 
 def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1824,7 +1861,7 @@ def test_evaluation_cli_register_observe_status(tmp_path: Path, capsys) -> None:
     assert prune["operation_id"] == "evaluation.prune"
 
 
-def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -> None:
+def test_evaluation_report_delivery_generated_operation_family_fails_closed_without_host_trust(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     config_path = tmp_path / ".agentic-workspace" / "config.toml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1877,30 +1914,28 @@ def test_evaluation_report_delivery_generated_operation_family(tmp_path: Path) -
         import_result=False,
     )
     host_invocation = _external_evaluation_host_trusted_invocation(host)
-    imported = evaluation_external_host_result_import(
-        {
-            "provider_result_ref": str(host["provider_result_ref"]),
-            "expected_result_digest": str(host["provider_result_digest"]),
-            "capability_revision": "github-issues-adapter:v1",
-        },
-        target=tmp_path,
-        invocation=host_invocation,
-    )
-    assert imported["status"] == "imported"
-    assert imported["result_ref"] == host["result_ref"]
-    recorded = evaluation_external_adapter_receipt(
-        {
-            "delivery_id": request["delivery_id"],
-            "sink_id": "#1969",
-            "producer": "github-issues-adapter",
-            "attempt_revision": "attempt-public-1",
-            "receipt_revision": "receipt-public-1",
-            "capability_revision": "github-issues-adapter:v1",
-            "status": "failed",
-            "host_result_ref": host["result_ref"],
-        },
-        target=tmp_path,
-        invocation=host_invocation,
-    )
-    assert recorded["status"] == "recorded"
-    assert recorded["host_result_ref"] == host["result_ref"]
+    with pytest.raises(AWClientError, match="AW operation failed"):
+        evaluation_external_host_result_import(
+            {
+                "provider_result_ref": str(host["provider_result_ref"]),
+                "expected_result_digest": str(host["provider_result_digest"]),
+                "capability_revision": "github-issues-adapter:v1",
+            },
+            target=tmp_path,
+            invocation=host_invocation,
+        )
+    with pytest.raises(AWClientError, match="AW operation failed"):
+        evaluation_external_adapter_receipt(
+            {
+                "delivery_id": request["delivery_id"],
+                "sink_id": "#1969",
+                "producer": "github-issues-adapter",
+                "attempt_revision": "attempt-public-1",
+                "receipt_revision": "receipt-public-1",
+                "capability_revision": "github-issues-adapter:v1",
+                "status": "failed",
+                "host_result_ref": host["result_ref"],
+            },
+            target=tmp_path,
+            invocation=host_invocation,
+        )
