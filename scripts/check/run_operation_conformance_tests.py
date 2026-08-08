@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -38,6 +41,556 @@ from agentic_workspace.contract_tooling import (  # noqa: E402
     operation_artifact_registry_manifest,
     operation_conformance_test_ir_manifest,
 )
+
+READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
+READINESS_CASES = (
+    "absent",
+    "disabled",
+    "incompatible",
+    "malformed",
+    "retryable",
+    "additive-field",
+    "mutation-applied",
+    "mutation-noop",
+    "mutation-rejected",
+    "mutation-failed",
+)
+EXTERNAL_CONFORMANCE_RECEIPT_PATHS = (
+    REPO_ROOT / "src/agentic_workspace/contracts/external_operation_conformance_receipts.json",
+    REPO_ROOT / "generated/workspace/python/external_operation_conformance_receipts.json",
+    REPO_ROOT / "generated/workspace/typescript/external_operation_conformance_receipts.json",
+)
+
+
+def _stable_json_digest(value: object) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
+
+
+def _utc_timestamp() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _runner_revision() -> str:
+    runner_path = REPO_ROOT / "scripts/check/run_operation_conformance_tests.py"
+    return f"{runner_path.relative_to(REPO_ROOT).as_posix()}@sha256:{hashlib.sha256(runner_path.read_bytes()).hexdigest()}"
+
+
+def _all_passed(results: list[dict[str, object]]) -> bool:
+    return bool(results) and all(result.get("state") == "pass" for result in results)
+
+
+def _status(
+    state: str,
+    *,
+    evidence: list[str] | None = None,
+    reason: str | None = None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {"status": state}
+    if evidence:
+        payload["evidence"] = sorted(set(evidence))
+    if reason:
+        payload["reason"] = reason
+    return payload
+
+
+def _result_evidence_ref(result: Mapping[str, object]) -> str:
+    payload = {
+        "operation_id": result.get("operation_id", ""),
+        "case_id": result.get("case_id", ""),
+        "target": result.get("target", ""),
+        "adapter_id": result.get("adapter_id", ""),
+        "state": result.get("state", ""),
+        "selected_fields": result.get("selected_fields", {}),
+        "mutation_outcome": result.get("mutation_outcome", {}),
+    }
+    digest = _stable_json_digest(payload)[:16]
+    return f"{payload['operation_id']}:{payload['case_id']}:{payload['target']}:{payload['adapter_id']}@sha256:{digest}"
+
+
+def _passed_results(results: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [result for result in results if result.get("state") == "pass"]
+
+
+def _operation_contract(entry: Mapping[str, object]) -> Mapping[str, object]:
+    operation_contract_ref = str(entry.get("operation_contract") or "").strip()
+    if not operation_contract_ref:
+        return {}
+    try:
+        loaded_contract = json.loads((REPO_ROOT / operation_contract_ref).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return loaded_contract if isinstance(loaded_contract, Mapping) else {}
+
+
+def _is_mutation_operation(entry: Mapping[str, object]) -> tuple[bool, str]:
+    operation_contract = _operation_contract(entry)
+    effects = operation_contract.get("effects") if isinstance(operation_contract.get("effects"), Mapping) else {}
+    writes = operation_contract.get("writes") if isinstance(operation_contract.get("writes"), list) else []
+    locality = operation_contract.get("locality") if isinstance(operation_contract.get("locality"), Mapping) else {}
+    if isinstance(effects, Mapping) and effects.get("read_only") is True and not writes:
+        return False, "operation contract is read-only and declares no writes"
+    if isinstance(effects, Mapping) and effects.get("writes_repo_state") is True:
+        return True, "effects.writes_repo_state=true"
+    if writes:
+        return True, "operation contract declares writes"
+    if isinstance(effects, Mapping) and effects.get("read_only") is False:
+        return True, "effects.read_only=false"
+    if isinstance(locality, Mapping) and str(locality.get("outside_repo_writes") or "") not in {"", "forbidden"}:
+        return True, "operation locality allows outside-repo writes"
+    return False, "operation contract has no declared mutation effect"
+
+
+def _readiness_case_label(result: Mapping[str, object]) -> str:
+    explicit = str(result.get("readiness_case") or "").strip()
+    if explicit:
+        return explicit
+    behavioral_class = str(result.get("behavioral_class") or "").strip()
+    if behavioral_class in READINESS_CASES:
+        return behavioral_class
+    if behavioral_class == "error":
+        return "malformed"
+    return ""
+
+
+def _mutation_case_label(result: Mapping[str, object]) -> str:
+    explicit = _readiness_case_label(result)
+    if explicit.startswith("mutation-"):
+        return explicit
+    mutation_outcome = result.get("mutation_outcome")
+    if isinstance(mutation_outcome, Mapping):
+        reason_code = str(mutation_outcome.get("reason_code") or mutation_outcome.get("outcome") or "")
+        mutation_applied = mutation_outcome.get("mutation_applied")
+    else:
+        selected_fields = result.get("selected_fields")
+        selected = selected_fields if isinstance(selected_fields, Mapping) else {}
+        reason_code = str(selected.get("reason_code") or selected.get("outcome") or selected.get("status") or "")
+        mutation_applied = selected.get("mutation_applied")
+    if mutation_applied is True or reason_code in {"mutation-applied", "applied", "recorded", "written", "appended"}:
+        return "mutation-applied"
+    if mutation_applied is False and reason_code in {
+        "mutation-noop",
+        "noop",
+        "no-op",
+        "idempotent",
+        "already-present",
+        "duplicate",
+        "blocked",
+    }:
+        return "mutation-noop"
+    if reason_code in {"mutation-rejected", "rejected", "invalid", "invalid-input", "forbidden", "unauthorized"}:
+        return "mutation-rejected"
+    if reason_code in {"mutation-failed", "failed", "error"}:
+        return "mutation-failed"
+    return ""
+
+
+def _runtime_exception_revision_for_operation(
+    *,
+    entry: Mapping[str, object],
+    conformance_result: Mapping[str, object],
+    operation_id: str,
+    operation_fingerprint: str,
+    profile_fingerprint: str,
+    operation_results: list[dict[str, object]],
+) -> tuple[str, dict[str, object]]:
+    consumption = entry.get("external_consumption", {})
+    runtime_exceptions = consumption.get("runtime_exceptions") if isinstance(consumption, Mapping) else None
+    if not runtime_exceptions:
+        return "", {"status": "not-required"}
+    revisions = conformance_result.get("runtime_exception_revisions", {})
+    revision = ""
+    if isinstance(revisions, Mapping):
+        revision = str(revisions.get(operation_id) or "")
+    if revision and revision != "#2044@accepted":
+        return revision, {
+            "status": "admitted",
+            "operation_id": operation_id,
+            "revision": revision,
+            "rule": "Runtime exception evidence is operation-specific and supplied by a separate authoritative owner.",
+        }
+    if revision == "#2044@accepted":
+        return "", {
+            "status": "rejected",
+            "reason": "missing-operation-specific-runtime-exception-revision",
+            "rule": "Blanket issue labels are not executable operation-specific runtime-exception evidence.",
+        }
+    return "", {
+        "status": "rejected",
+        "reason": "missing-operation-specific-runtime-exception-revision",
+        "rule": "Runtime exceptions must be admitted per operation/profile by an authority outside the conformance result.",
+    }
+
+
+def _readiness_transport_statuses(operation_results: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+    def _status_for(results: list[dict[str, object]], *, missing_reason: str) -> dict[str, object]:
+        if not results:
+            return _status("not-run", reason=missing_reason)
+        if _all_passed(results):
+            return _status("passed", evidence=[_result_evidence_ref(result) for result in results])
+        states = sorted({str(result.get("state") or "not-run") for result in results})
+        return _status(
+            "failed",
+            evidence=[_result_evidence_ref(result) for result in results],
+            reason=f"transport results were not all pass: {', '.join(states)}",
+        )
+
+    def _adapter(adapter: str) -> list[dict[str, object]]:
+        return [result for result in operation_results if result.get("adapter_id") == adapter]
+
+    def _target(target: str) -> list[dict[str, object]]:
+        return [result for result in operation_results if result.get("target") == target]
+
+    transports = {
+        "python": _status_for(
+            _target("python"),
+            missing_reason="no Python operation result was produced by this invocation",
+        ),
+        "typescript": _status_for(
+            _target("typescript"),
+            missing_reason="no TypeScript operation result was produced by this invocation",
+        ),
+        "cli-json": _status_for(
+            _adapter("cli.process"),
+            missing_reason="no CLI JSON operation result was produced by this invocation",
+        ),
+    }
+    vendor_results = [
+        result
+        for result in operation_results
+        if result.get("target") == "vendor-neutral" and str(result.get("adapter_id") or "").startswith("vendor-neutral")
+    ]
+    transports["vendor-neutral"] = _status_for(
+        vendor_results,
+        missing_reason="no independently packaged vendor-neutral consumer result was produced by this invocation",
+    )
+    return transports
+
+
+def _readiness_case_statuses(entry: Mapping[str, object], operation_results: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+    is_mutation_operation, mutation_reason = _is_mutation_operation(entry)
+
+    def _results_for(case_name: str) -> list[dict[str, object]]:
+        if case_name.startswith("mutation-"):
+            return [result for result in operation_results if _mutation_case_label(result) == case_name]
+        return [result for result in operation_results if _readiness_case_label(result) == case_name]
+
+    def _case_status(case_name: str) -> dict[str, object]:
+        results = _results_for(case_name)
+        if case_name.startswith("mutation-") and not is_mutation_operation:
+            return _status(
+                "passed",
+                reason=f"not applicable: {mutation_reason}",
+                evidence=[str(entry.get("operation_contract") or entry.get("id") or "operation-contract")],
+            )
+        if not results:
+            return _status("not-run", reason=f"no {case_name} result was produced by this invocation")
+        if _all_passed(results):
+            return _status("passed", evidence=[_result_evidence_ref(result) for result in results])
+        states = sorted({str(result.get("state") or "not-run") for result in results})
+        return _status(
+            "failed",
+            evidence=[_result_evidence_ref(result) for result in results],
+            reason=f"{case_name} results were not all pass: {', '.join(states)}",
+        )
+
+    return {case: _case_status(case) for case in READINESS_CASES}
+
+
+def build_external_operation_conformance_receipts(
+    profile: Mapping[str, object],
+    *,
+    conformance_result: Mapping[str, object] | None = None,
+    executed_at: str | None = None,
+    runner_revision: str | None = None,
+    invocation_id: str | None = None,
+) -> dict[str, object]:
+    """Build producer-owned external readiness receipts for packaged operations.
+
+    The readiness report consumes this receipt store instead of trusting profile
+    declarations as evidence. The receipt content is intentionally tied to the
+    current operation/profile fingerprints so stale, revoked, superseded, or
+    expired receipts fail closed at runtime.
+    """
+
+    if conformance_result is None:
+        return {
+            "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
+            "receipts": [],
+            "producer": "scripts/check/run_operation_conformance_tests.py",
+            "status": "not-run",
+            "rule": "No packaged conformance receipts are synthesized from profile declarations; run conformance and pass its result set to build receipts.",
+        }
+
+    receipts: list[dict[str, object]] = []
+    actual_executed_at = executed_at or _utc_timestamp()
+    actual_runner_revision = runner_revision or _runner_revision()
+    readiness_authority = profile.get("readiness_authority") if isinstance(profile.get("readiness_authority"), Mapping) else {}
+    expected_runner_revision = str(readiness_authority.get("runner_revision") or "")
+    client_semantics_revision = str(readiness_authority.get("client_semantics_revision") or "")
+    authority_current = bool(expected_runner_revision and client_semantics_revision and actual_runner_revision == expected_runner_revision)
+    profile_fingerprint = (
+        str((profile.get("compatibility") or {}).get("fingerprint", "")) if isinstance(profile.get("compatibility"), Mapping) else ""
+    )
+    all_results = [dict(result) for result in conformance_result.get("cases", []) if isinstance(result, Mapping)]
+    result_digest = _stable_json_digest(conformance_result)
+    actual_invocation_id = invocation_id or (
+        f"operation-conformance:{actual_runner_revision[:12]}:{result_digest[:24]}:{actual_executed_at}"
+    )
+    result_identity = {
+        "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
+        "status": "current",
+        "invocation_id": actual_invocation_id,
+        "runner_revision": actual_runner_revision,
+        "client_semantics_revision": client_semantics_revision,
+        "result_digest": result_digest,
+        "executed_at": actual_executed_at,
+    }
+
+    def _state_for_results(results: list[dict[str, object]]) -> str:
+        states = {str(result.get("state") or "not-run") for result in results}
+        if not results:
+            return "not-run"
+        if "fail" in states:
+            return "failed"
+        if "unavailable" in states:
+            return "unavailable"
+        if "skipped" in states:
+            return "skipped"
+        return "passed" if states == {"pass"} else "failed"
+
+    for entry in profile.get("operations", []):
+        if not isinstance(entry, Mapping):
+            continue
+        consumption = entry.get("external_consumption", {})
+        if not isinstance(consumption, Mapping) or consumption.get("status") == "internal":
+            continue
+        operation_id = str(entry.get("id") or "")
+        operation_compatibility = entry.get("operation_compatibility", {})
+        operation_fingerprint = str(operation_compatibility.get("fingerprint", "")) if isinstance(operation_compatibility, Mapping) else ""
+        conformance_refs = [str(ref) for ref in entry.get("conformance", []) if isinstance(ref, str)]
+        operation_results = [result for result in all_results if str(result.get("operation_id") or "") == operation_id]
+        if not operation_results:
+            continue
+        runtime_exception_revision, runtime_exception_admission = _runtime_exception_revision_for_operation(
+            entry=entry,
+            conformance_result=conformance_result,
+            operation_id=operation_id,
+            operation_fingerprint=operation_fingerprint,
+            profile_fingerprint=profile_fingerprint,
+            operation_results=operation_results,
+        )
+        transports = _readiness_transport_statuses(operation_results)
+        cases = _readiness_case_statuses(entry, operation_results)
+        receipt_status = (
+            "passed"
+            if all(item["status"] == "passed" for item in [*transports.values(), *cases.values()])
+            and runtime_exception_admission.get("status") in {"not-required", "admitted"}
+            and authority_current
+            else "failed"
+        )
+        receipt_basis = {
+            "operation_id": operation_id,
+            "operation_fingerprint": operation_fingerprint,
+            "profile_fingerprint": profile_fingerprint,
+            "conformance_refs": conformance_refs,
+            "result_identity": result_identity,
+            "operation_results": operation_results,
+            "operation_result_evidence": [_result_evidence_ref(result) for result in operation_results],
+            "transports": transports,
+            "cases": cases,
+            "producer": "scripts/check/run_operation_conformance_tests.py",
+        }
+        digest = _stable_json_digest(receipt_basis)[:24]
+        receipts.append(
+            {
+                "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+                "receipt_ref": f"external-conformance:{operation_id}:{digest}",
+                "operation_id": operation_id,
+                "operation_fingerprint": operation_fingerprint,
+                "profile_fingerprint": profile_fingerprint,
+                "status": receipt_status,
+                "executed_at": actual_executed_at,
+                "freshness": {
+                    "strategy": "runner-client-operation-profile-revision-bound",
+                    "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
+                    "runner_revision": actual_runner_revision,
+                    "client_semantics_revision": client_semantics_revision,
+                },
+                "runtime_exception_revision": runtime_exception_revision,
+                "runtime_exception_admission": runtime_exception_admission,
+                "conformance_result_digest": result_digest,
+                "result_identity": result_identity,
+                "conformance_refs": conformance_refs,
+                "operation_result_evidence": [_result_evidence_ref(result) for result in operation_results],
+                "transports": transports,
+                "cases": cases,
+                "custody": {
+                    "operation_id": "external-operation-conformance.run",
+                    "producer": "agentic-workspace.operation-conformance-runner",
+                    "trusted_channel": "packaged-conformance-receipt",
+                    "source": "scripts/check/run_operation_conformance_tests.py",
+                    "result_kind": conformance_result.get("kind", ""),
+                },
+            }
+        )
+    return {
+        "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
+        "receipts": receipts,
+        "producer": "scripts/check/run_operation_conformance_tests.py",
+        "executed_at": actual_executed_at,
+        "freshness": {
+            "strategy": "runner-client-operation-profile-revision-bound",
+            "rule": "Publication currentness is tied to runner/client-semantics and profile/operation revisions plus explicit stale/revoked/superseded markers.",
+            "runner_revision": actual_runner_revision,
+            "client_semantics_revision": client_semantics_revision,
+        },
+        "result_identity": result_identity,
+        "status": "recorded" if receipts else "no-operation-results",
+        "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored.",
+    }
+
+
+def _path_label(path: Path) -> str:
+    return path.relative_to(REPO_ROOT).as_posix() if path.is_relative_to(REPO_ROOT) else path.as_posix()
+
+
+def _existing_mirror_digests(paths: tuple[Path, ...]) -> dict[Path, str]:
+    digests: dict[Path, str] = {}
+    for path in paths:
+        if path.exists():
+            digests[path] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return digests
+
+
+def _published_payload_digest(path: Path) -> str:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    publication = payload.get("mirror_publication") if isinstance(payload, Mapping) else None
+    if not isinstance(publication, Mapping) or publication.get("status") != "published":
+        return ""
+    return str(publication.get("payload_digest") or "")
+
+
+def _existing_receipt_identity_for_result(conformance_result: Mapping[str, object]) -> tuple[str | None, str | None]:
+    path = EXTERNAL_CONFORMANCE_RECEIPT_PATHS[0]
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None, None
+    if not isinstance(payload, Mapping):
+        return None, None
+    identity = payload.get("result_identity") if isinstance(payload.get("result_identity"), Mapping) else {}
+    if identity.get("runner_revision") != _runner_revision():
+        return None, None
+    if identity.get("result_digest") != _stable_json_digest(conformance_result):
+        return None, None
+    executed_at = str(identity.get("executed_at") or payload.get("executed_at") or "").strip()
+    invocation_id = str(identity.get("invocation_id") or "").strip()
+    return executed_at or None, invocation_id or None
+
+
+def write_external_operation_conformance_receipts(
+    receipt_store: Mapping[str, object],
+    *,
+    paths: tuple[Path, ...] | None = None,
+    expected_existing_digest: str | None = None,
+) -> dict[str, object]:
+    """Persist the authoritative receipt mirrors consumed by packaged clients."""
+    selected_paths = paths or EXTERNAL_CONFORMANCE_RECEIPT_PATHS
+    existing_digests = _existing_mirror_digests(selected_paths)
+    if existing_digests and len(existing_digests) != len(selected_paths):
+        missing = [path for path in selected_paths if path not in existing_digests]
+        raise RuntimeError(
+            "external conformance receipt mirror set is partial before publication: " + ", ".join(_path_label(path) for path in missing)
+        )
+    if expected_existing_digest is None and existing_digests:
+        unique_existing_digests = set(existing_digests.values())
+        if len(unique_existing_digests) != 1:
+            raise RuntimeError(
+                "external conformance receipt mirrors are not in one pre-publication revision: "
+                + ", ".join(
+                    f"{_path_label(path)}={digest[:12]}"
+                    for path, digest in sorted(existing_digests.items(), key=lambda item: _path_label(item[0]))
+                )
+            )
+        expected_existing_digest = next(iter(unique_existing_digests))
+    mismatched = {
+        path: digest
+        for path, digest in existing_digests.items()
+        if expected_existing_digest is not None and digest != expected_existing_digest
+    }
+    if mismatched:
+        raise RuntimeError(
+            "external conformance receipt mirror revision changed before publication: "
+            + ", ".join(
+                f"{_path_label(path)}={digest[:12]}" for path, digest in sorted(mismatched.items(), key=lambda item: _path_label(item[0]))
+            )
+        )
+    store = dict(receipt_store)
+    payload_digest = hashlib.sha256(json.dumps(store, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
+    if existing_digests and all(_published_payload_digest(path) == f"sha256:{payload_digest}" for path in selected_paths):
+        return {
+            "kind": "agentic-workspace/external-operation-conformance-receipt-write/v1",
+            "status": "unchanged",
+            "receipt_count": len(store.get("receipts", [])) if isinstance(store.get("receipts"), list) else 0,
+            "publication_digest": f"sha256:{payload_digest}",
+            "paths": [],
+            "reason": "Existing receipt mirrors already publish the same payload generation.",
+        }
+    store["mirror_publication"] = {
+        "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
+        "status": "published",
+        "generation_id": f"external-conformance-publication:{payload_digest[:24]}",
+        "payload_digest": f"sha256:{payload_digest}",
+        "previous_digest": expected_existing_digest or "",
+        "publisher_pid": os.getpid(),
+        "paths": [_path_label(path) for path in selected_paths],
+        "path_count": len(selected_paths),
+        "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
+    }
+    text = json.dumps(store, indent=2, sort_keys=True) + "\n"
+    publication_digest = hashlib.sha256(text.encode()).hexdigest()
+    written: list[str] = []
+    staged: list[tuple[Path, Path]] = []
+    originals = {path: path.read_bytes() for path in selected_paths if path.exists()}
+    lock_path = selected_paths[0].parent / ".external_operation_conformance_receipts.lock"
+    lock_fd: int | None = None
+    try:
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError as exc:
+            raise RuntimeError(f"external conformance receipt mirror publication is locked: {_path_label(lock_path)}") from exc
+        os.write(lock_fd, str(os.getpid()).encode("utf-8"))
+        for path in selected_paths:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+            tmp.write_text(text, encoding="utf-8", newline="\n")
+            staged.append((path, tmp))
+        for path, tmp in staged:
+            tmp.replace(path)
+            written.append(_path_label(path))
+    except Exception:
+        for path, tmp in staged:
+            if tmp.exists():
+                tmp.unlink()
+            if path in originals:
+                path.write_bytes(originals[path])
+        raise
+    finally:
+        if lock_fd is not None:
+            os.close(lock_fd)
+            lock_path.unlink(missing_ok=True)
+    return {
+        "kind": "agentic-workspace/external-operation-conformance-receipt-write/v1",
+        "status": "written",
+        "receipt_count": len(store.get("receipts", [])) if isinstance(store.get("receipts"), list) else 0,
+        "previous_digest": expected_existing_digest or "",
+        "publication_digest": publication_digest,
+        "paths": written,
+    }
 
 
 def _selected_field(payload: object, field_path: str) -> object:
@@ -136,6 +689,204 @@ def _typescript_command_for_package(package: Mapping[str, object]) -> tuple[str,
     return "target-unavailable", None
 
 
+def _prepare_vendor_neutral_consumer(temp_root: Path, *, require_node: bool) -> tuple[str, Path | None]:
+    npm = shutil.which("npm") or shutil.which("npm.cmd")
+    if npm is None:
+        return ("node-unavailable" if require_node else "node-unavailable"), None
+    packed_root = temp_root / "vendor-neutral-consumer"
+    packed_root.mkdir(parents=True, exist_ok=True)
+    completed = subprocess.run(
+        [npm, "pack", "--json", "--pack-destination", str(packed_root)],
+        cwd=REPO_ROOT / "generated/workspace/typescript",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return f"npm-pack-failed: {completed.stderr.strip()}", None
+    try:
+        filename = json.loads(completed.stdout)[0]["filename"]
+    except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+        return "npm-pack-returned-malformed-json", None
+    unpacked = packed_root / "unpacked"
+    shutil.unpack_archive(packed_root / str(filename), unpacked, "gztar")
+    client = unpacked / "package/src/client.mjs"
+    if not client.is_file():
+        return "packed-client-missing", None
+    return "available", client
+
+
+def _write_local_invoke_config(fixture_root: Path) -> None:
+    config_dir = fixture_root / ".agentic-workspace"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    local_config = config_dir / "config.local.toml"
+    command = f"{Path(sys.executable).as_posix()} {(REPO_ROOT / 'scripts/run_agentic_workspace.py').as_posix()}"
+    local_config.write_text(
+        "schema_version = 1\n[workspace]\ncli_invoke = " + json.dumps(command) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    config = config_dir / "config.toml"
+    if not config.is_file():
+        config.write_text('schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8", newline="\n")
+
+
+def _external_consumption_status(operation_id: str) -> str:
+    try:
+        profile = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/external_consumer_profile.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "unknown"
+    for entry in profile.get("operations", []):
+        if isinstance(entry, Mapping) and entry.get("id") == operation_id:
+            consumption = entry.get("external_consumption") if isinstance(entry.get("external_consumption"), Mapping) else {}
+            return str(consumption.get("status") or "unknown")
+    return "unknown"
+
+
+def _run_vendor_neutral_consumer_case(
+    *,
+    case: Mapping[str, object],
+    temp_root: Path,
+    client_path: Path | None,
+    client_status: str,
+    require_node: bool,
+) -> dict[str, object]:
+    node = shutil.which("node")
+    if node is None or client_path is None:
+        state = "fail" if require_node else "unavailable"
+        return _result(case=case, artifact_registry={}, target_kind="vendor-neutral", state=state, message=client_status)
+    operation_ref = case.get("operation_ref", {})
+    if not isinstance(operation_ref, Mapping):
+        return _result(case=case, artifact_registry={}, target_kind="vendor-neutral", state="fail", message="malformed operation_ref")
+    operation_id = str(operation_ref.get("operation_id") or "")
+    if _external_consumption_status(operation_id) not in {"supported", "runtime-backed"}:
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="unavailable",
+            message="operation is unavailable for external consumer invocation",
+        )
+    case_input = case.get("input", {})
+    if not isinstance(case_input, Mapping) or not isinstance(case_input.get("json"), Mapping):
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="unavailable",
+            message="no operation-shaped JSON input for packaged consumer",
+        )
+    json_values = dict(case_input.get("json", {}))
+    expected = case.get("expected", {})
+    expected_mapping = expected if isinstance(expected, Mapping) else {}
+    expected_error = expected_mapping.get("error") if isinstance(expected_mapping.get("error"), Mapping) else None
+    artifacts = [item for item in case.get("artifacts", []) if isinstance(item, Mapping)]
+    if expected_error is None and artifacts and all(str(item.get("adapter_id") or "") == "cli.process" for item in artifacts):
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="unavailable",
+            message="case is wrapper-only and has no operation-shaped generic client artifact",
+        )
+    if expected_error is None and (json_values.get("format") not in {None, "json"} or json_values.get("select")):
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="unavailable",
+            message="case exercises selected/text wrapper projection rather than generic operation JSON",
+        )
+    process_case = _case_process_fixture(case)
+    fixture_root = materialize_case_fixture(
+        case=process_case,
+        root=temp_root / str(case.get("id", "case")).replace(".", "-") / "vendor-neutral",
+    )
+    _write_local_invoke_config(fixture_root)
+    script = f"""
+import {{ invokeOperation, AWClientError }} from {json.dumps(client_path.as_uri())};
+const operationId = {json.dumps(str(operation_ref.get("operation_id", "")))};
+const values = {json.dumps(json_values, sort_keys=True)};
+const target = {json.dumps(str(fixture_root))};
+try {{
+  const payload = invokeOperation(operationId, values, {{ target, allowRuntimeBacked: true }});
+  console.log(JSON.stringify({{ ok: true, payload }}));
+}} catch (error) {{
+  const details = error && typeof error === 'object' ? (error.details ?? {{}}) : {{}};
+  console.log(JSON.stringify({{
+    ok: false,
+    kind: error instanceof AWClientError ? error.kind : (error?.kind ?? error?.name ?? 'error'),
+    message: String(error?.message ?? error),
+    details,
+  }}));
+}}
+"""
+    completed = subprocess.run([node, "--input-type=module", "--eval", script], text=True, capture_output=True, check=False)
+    if completed.returncode != 0:
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="fail",
+            message=f"external consumer process failed: {completed.stderr.strip()}",
+        )
+    try:
+        envelope = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        return _result(
+            case=case,
+            artifact_registry={},
+            target_kind="vendor-neutral",
+            state="fail",
+            message=f"external consumer returned malformed JSON: {exc}; stdout={completed.stdout!r}",
+        )
+    if envelope.get("ok") is False and envelope.get("kind") == "incompatible":
+        details = envelope.get("details") if isinstance(envelope.get("details"), Mapping) else {}
+        if isinstance(details.get("readiness"), Mapping):
+            return _result(
+                case=case,
+                artifact_registry={},
+                target_kind="vendor-neutral",
+                state="unavailable",
+                message="packaged consumer correctly refused operation without current external-readiness evidence",
+            )
+    failures: list[str] = []
+    selected_fields: dict[str, object] = {}
+    if expected_error is not None:
+        if envelope.get("ok") is not False:
+            failures.append("expected external consumer error")
+        else:
+            if expected_error.get("kind") and envelope.get("kind") not in {expected_error.get("kind"), "malformed"}:
+                failures.append(f"expected error kind {expected_error.get('kind')!r}, got {envelope.get('kind')!r}")
+            details = envelope.get("details") if isinstance(envelope.get("details"), Mapping) else {}
+            if envelope.get("kind") != "malformed":
+                for key in ("field", "value"):
+                    if key in expected_error and details.get(key) != expected_error.get(key):
+                        failures.append(f"expected error detail {key}={expected_error.get(key)!r}, got {details.get(key)!r}")
+    else:
+        if envelope.get("ok") is not True:
+            failures.append(f"external consumer error: {envelope.get('kind')} {envelope.get('message')}")
+        else:
+            result_fields = (
+                expected_mapping.get("result", {}).get("selected_fields", {}) if isinstance(expected_mapping.get("result"), Mapping) else {}
+            )
+            if isinstance(result_fields, Mapping) and result_fields:
+                try:
+                    selected_fields = _select_expected_result_fields(envelope.get("payload", {}), result_fields)
+                except KeyError as exc:
+                    failures.append(f"result selected fields unavailable: {exc}")
+                else:
+                    if selected_fields != dict(result_fields):
+                        failures.append(f"expected selected fields {dict(result_fields)!r}, got {selected_fields!r}")
+    result = _result(
+        case=case, artifact_registry={}, target_kind="vendor-neutral", state="fail" if failures else "pass", message="; ".join(failures)
+    )
+    result["adapter_id"] = "vendor-neutral.packaged-consumer"
+    result["artifact_id"] = "packed:@agentic-workspace/workspace-cli"
+    result["selected_fields"] = selected_fields
+    return result
+
+
 def _run_case_target(
     *,
     case: Mapping[str, object],
@@ -143,18 +894,38 @@ def _run_case_target(
     target_kind: str,
     temp_root: Path,
     require_node: bool,
+    vendor_neutral_client: Path | None = None,
+    vendor_neutral_status: str = "not-prepared",
 ) -> dict[str, object]:
     operation_ref = case.get("operation_ref", {})
     if not isinstance(operation_ref, Mapping):
-        return _result(case=case, target_kind=target_kind, state="fail", message="malformed operation_ref")
+        return _result(
+            case=case,
+            artifact_registry=artifact_registry,
+            target_kind=target_kind,
+            state="fail",
+            message="malformed operation_ref",
+        )
+    if target_kind == "vendor-neutral":
+        return _run_vendor_neutral_consumer_case(
+            case=case,
+            temp_root=temp_root,
+            client_path=vendor_neutral_client,
+            client_status=vendor_neutral_status,
+            require_node=require_node,
+        )
     artifact = _artifact_for_target(case, target_kind, artifact_registry)
     if artifact is None:
-        return _result(case=case, artifact_registry=artifact_registry, target_kind=target_kind, state="fail", message="no registry artifact for target")
+        return _result(
+            case=case, artifact_registry=artifact_registry, target_kind=target_kind, state="fail", message="no registry artifact for target"
+        )
     package_id = str(artifact.get("package_id", operation_ref.get("package_id", "")))
     command_package_ir = generated_package_check.load_workspace_command_package_ir(repo_root=REPO_ROOT)
     package = _package_by_id(command_package_ir).get(package_id)
     if package is None:
-        return _result(case=case, artifact_registry=artifact_registry, target_kind=target_kind, state="fail", message=f"unknown package {package_id!r}")
+        return _result(
+            case=case, artifact_registry=artifact_registry, target_kind=target_kind, state="fail", message=f"unknown package {package_id!r}"
+        )
     adapter_id = str(artifact.get("adapter_id", "cli.process"))
     if target_kind == "python" and adapter_id == "python.function":
         return _run_python_function_case(case=case, artifact=artifact)
@@ -175,7 +946,9 @@ def _run_case_target(
             return _result(case=case, artifact_registry=artifact_registry, target_kind=target_kind, state=state, message=status)
         env = generated_package_check._conformance_env(runtime="")
     else:
-        return _result(case=case, artifact_registry=artifact_registry, target_kind=target_kind, state="skipped", message="target not selected")
+        return _result(
+            case=case, artifact_registry=artifact_registry, target_kind=target_kind, state="skipped", message="target not selected"
+        )
     completed = subprocess.run(
         [*command, *process_case.success_args],
         cwd=fixture_root,
@@ -188,6 +961,7 @@ def _run_case_target(
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
+        "readiness_case": str(case.get("readiness_case", "")),
         "operation_id": str(operation_ref.get("operation_id", "")),
         "artifact_id": str(artifact.get("artifact_id", "")) if isinstance(artifact, Mapping) else "",
         "adapter_id": str(artifact.get("adapter_id", "cli.process")) if isinstance(artifact, Mapping) else "cli.process",
@@ -206,12 +980,15 @@ def _run_python_function_case(*, case: Mapping[str, object], artifact: Mapping[s
         return _function_result(case=case, artifact=artifact, state="fail", message="malformed operation_ref")
     function_target = _python_function_target_for_artifact(artifact)
     if function_target is None:
-        return _function_result(case=case, artifact=artifact, state="unavailable", message="python.function artifact has no importable symbol")
+        return _function_result(
+            case=case, artifact=artifact, state="unavailable", message="python.function artifact has no importable symbol"
+        )
     function_case = _case_function_fixture(case)
     result, failures = run_function_conformance_case(case=function_case, target=function_target)
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
+        "readiness_case": str(case.get("readiness_case", "")),
         "operation_id": str(operation_ref.get("operation_id", "")),
         "artifact_id": str(artifact.get("artifact_id", "")),
         "adapter_id": str(artifact.get("adapter_id", "python.function")),
@@ -262,7 +1039,9 @@ def _run_typescript_function_case(
         return _function_result(case=case, artifact=artifact, state=state, message="node-unavailable")
     runtime_symbol = _typescript_runtime_symbol(artifact)
     if runtime_symbol is None:
-        return _function_result(case=case, artifact=artifact, state="unavailable", message="typescript.function artifact has no runtime symbol")
+        return _function_result(
+            case=case, artifact=artifact, state="unavailable", message="typescript.function artifact has no runtime symbol"
+        )
     runtime_path, function_name = runtime_symbol
     if not runtime_path.is_file():
         return _function_result(
@@ -326,6 +1105,7 @@ def _function_result(
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
+        "readiness_case": str(case.get("readiness_case", "")),
         "operation_id": str(operation_id),
         "artifact_id": str(artifact.get("artifact_id", "")),
         "adapter_id": adapter_id,
@@ -337,11 +1117,7 @@ def _function_result(
 
 
 def _artifact_by_id(registry: Mapping[str, object]) -> dict[str, Mapping[str, object]]:
-    return {
-        str(artifact.get("artifact_id", "")): artifact
-        for artifact in registry.get("artifacts", [])
-        if isinstance(artifact, Mapping)
-    }
+    return {str(artifact.get("artifact_id", "")): artifact for artifact in registry.get("artifacts", []) if isinstance(artifact, Mapping)}
 
 
 def _artifact_for_target(
@@ -353,6 +1129,7 @@ def _artifact_for_target(
         if isinstance(artifact, Mapping) and artifact.get("target") == target_kind:
             return artifact_registry.get(str(artifact.get("artifact_id", "")))
     return None
+
 
 def _evaluate_process_result(
     *,
@@ -418,6 +1195,7 @@ def _result(
     return {
         "case_id": str(case.get("id", "")),
         "behavioral_class": str(case.get("behavioral_class", "")),
+        "readiness_case": str(case.get("readiness_case", "")),
         "operation_id": str(operation_id),
         "artifact_id": str(artifact.get("artifact_id", "")) if isinstance(artifact, Mapping) else "",
         "adapter_id": str(artifact.get("adapter_id", "")) if isinstance(artifact, Mapping) else "",
@@ -431,7 +1209,9 @@ def _result(
 def _case_targets(case: Mapping[str, object], target_selection: str) -> list[str]:
     declared = [str(target.get("kind", "")) for target in case.get("targets", []) if isinstance(target, Mapping)]
     if target_selection == "all":
-        return declared
+        return [*declared, "vendor-neutral"]
+    if target_selection == "vendor-neutral":
+        return ["vendor-neutral"]
     if target_selection == "parity":
         return declared if case.get("behavioral_class") == "cross-target-parity" else []
     return [target_selection] if target_selection in declared else []
@@ -446,14 +1226,25 @@ def _append_parity_results(
     if case.get("behavioral_class") != "cross-target-parity" or len(selected_targets) < 2:
         return
     case_id = str(case.get("id", ""))
-    target_results = [result for result in results if result.get("case_id") == case_id and result.get("target") in selected_targets]
+    parity_targets = [target for target in selected_targets if target != "vendor-neutral"]
+    target_results = [result for result in results if result.get("case_id") == case_id and result.get("target") in parity_targets]
     if any(result.get("state") == "fail" for result in target_results):
-        results.append(_result(case=case, artifact_registry=artifact_registry, target_kind="parity", state="fail", message="one or more target runs failed"))
+        results.append(
+            _result(
+                case=case, artifact_registry=artifact_registry, target_kind="parity", state="fail", message="one or more target runs failed"
+            )
+        )
         return
     unavailable = [result for result in target_results if result.get("state") == "unavailable"]
     if unavailable:
         results.append(
-            _result(case=case, artifact_registry=artifact_registry, target_kind="parity", state="unavailable", message="one or more targets unavailable")
+            _result(
+                case=case,
+                artifact_registry=artifact_registry,
+                target_kind="parity",
+                state="unavailable",
+                message="one or more targets unavailable",
+            )
         )
         return
     comparable = [(result.get("exit_code"), result.get("selected_fields")) for result in target_results]
@@ -465,9 +1256,15 @@ def _append_parity_results(
 def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: bool) -> dict[str, object]:
     manifest = operation_conformance_test_ir_manifest()
     registry = operation_artifact_registry_manifest()
-    schema_errors = sorted(Draft202012Validator(contract_schema("operation_conformance_test_ir.schema.json")).iter_errors(manifest), key=str)
-    registry_schema_errors = sorted(Draft202012Validator(contract_schema("operation_artifact_registry.schema.json")).iter_errors(registry), key=str)
-    semantic_errors = contract_tooling_check._validate_operation_conformance_test_ir(manifest) + contract_tooling_check._validate_operation_artifact_registry(registry)
+    schema_errors = sorted(
+        Draft202012Validator(contract_schema("operation_conformance_test_ir.schema.json")).iter_errors(manifest), key=str
+    )
+    registry_schema_errors = sorted(
+        Draft202012Validator(contract_schema("operation_artifact_registry.schema.json")).iter_errors(registry), key=str
+    )
+    semantic_errors = contract_tooling_check._validate_operation_conformance_test_ir(
+        manifest
+    ) + contract_tooling_check._validate_operation_artifact_registry(registry)
     all_schema_errors = schema_errors + registry_schema_errors
     if all_schema_errors or semantic_errors:
         return {
@@ -481,10 +1278,23 @@ def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: 
     results: list[dict[str, object]] = []
     with tempfile.TemporaryDirectory(prefix="agentic-workspace-operation-conformance-test-ir-") as tmp:
         temp_root = Path(tmp)
+        vendor_neutral_status, vendor_neutral_client = (
+            _prepare_vendor_neutral_consumer(temp_root, require_node=require_node)
+            if target_selection in {"all", "vendor-neutral"}
+            else ("not-selected", None)
+        )
         for case in cases:
             selected_targets = _case_targets(case, target_selection)
             if not selected_targets:
-                results.append(_result(case=case, artifact_registry=artifact_registry, target_kind=target_selection, state="skipped", message="case not selected"))
+                results.append(
+                    _result(
+                        case=case,
+                        artifact_registry=artifact_registry,
+                        target_kind=target_selection,
+                        state="skipped",
+                        message="case not selected",
+                    )
+                )
                 continue
             for target_kind in selected_targets:
                 results.append(
@@ -494,6 +1304,8 @@ def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: 
                         target_kind=target_kind,
                         temp_root=temp_root,
                         require_node=require_node,
+                        vendor_neutral_client=vendor_neutral_client,
+                        vendor_neutral_status=vendor_neutral_status,
                     )
                 )
             _append_parity_results(results, case, selected_targets, artifact_registry)
@@ -535,7 +1347,7 @@ def _print_text(payload: Mapping[str, object]) -> None:
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run operation conformance tests.")
-    parser.add_argument("--target", choices=["all", "python", "typescript", "parity"], default="all")
+    parser.add_argument("--target", choices=["all", "python", "typescript", "vendor-neutral", "parity"], default="all")
     parser.add_argument("--case", action="append", default=[], help="Run only a specific IR case id. May be repeated.")
     parser.add_argument("--require-node", action="store_true", help="Fail when TypeScript cases are selected but Node is unavailable.")
     parser.add_argument("--format", choices=["text", "json"], default="text")
@@ -545,6 +1357,24 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     payload = run_ir_cases(target_selection=str(args.target), case_filter=set(args.case), require_node=bool(args.require_node))
+    profile = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/external_consumer_profile.json").read_text(encoding="utf-8"))
+    reuse_executed_at, reuse_invocation_id = _existing_receipt_identity_for_result(payload)
+    receipt_store = build_external_operation_conformance_receipts(
+        profile,
+        conformance_result=payload,
+        executed_at=reuse_executed_at,
+        invocation_id=reuse_invocation_id,
+    )
+    complete_publication = not args.case and args.target == "all" and payload.get("summary", {}).get("state") == "pass"
+    if complete_publication:
+        payload["external_operation_conformance_receipts"] = write_external_operation_conformance_receipts(receipt_store)
+    else:
+        payload["external_operation_conformance_receipts"] = {
+            "kind": "agentic-workspace/external-operation-conformance-receipt-write/v1",
+            "status": "not-published",
+            "receipt_count": len(receipt_store.get("receipts", [])) if isinstance(receipt_store.get("receipts"), list) else 0,
+            "reason": "Only a complete --target all invocation with no case filter and a passing summary may publish release readiness mirrors.",
+        }
     if args.format == "json":
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:

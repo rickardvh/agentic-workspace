@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 import shutil
@@ -18,6 +19,7 @@ from agentic_workspace import (
     AWClientError,
     detect_workspace,
     external_contract_bundle,
+    external_readiness_report,
     invoke_operation,
     negotiate_requirements,
     operation_compatibility_fingerprint,
@@ -300,6 +302,298 @@ def _independent_review_host_result_fixture(tmp_path: Path, *, changed_paths: li
     return host_result_ref, host_result, resolver
 
 
+def _readiness_conformance_evidence(profile: dict, operation: dict, *, status: str = "passed") -> dict:
+    authority = profile.get("readiness_authority", {})
+    return {
+        "kind": "agentic-workspace/external-operation-conformance-result/v1",
+        "status": status,
+        "operation_id": operation["id"],
+        "operation_fingerprint": operation["operation_compatibility"]["fingerprint"],
+        "profile_fingerprint": profile["compatibility"]["fingerprint"],
+        "runtime_exception_revision": "#2044@accepted",
+        "result_identity": {
+            "runner_revision": authority.get("runner_revision", ""),
+            "client_semantics_revision": authority.get("client_semantics_revision", ""),
+        },
+        "transports": {
+            "cli-json": {"status": "passed"},
+            "python": {"status": "passed"},
+            "typescript": {"status": "passed"},
+            "vendor-neutral": {"status": "passed"},
+        },
+        "cases": {
+            "absent": {"status": "passed"},
+            "disabled": {"status": "passed"},
+            "incompatible": {"status": "passed"},
+            "malformed": {"status": "passed"},
+            "retryable": {"status": "passed"},
+            "additive-field": {"status": "passed"},
+            "mutation-applied": {"status": "passed"},
+            "mutation-noop": {"status": "passed"},
+            "mutation-rejected": {"status": "passed"},
+            "mutation-failed": {"status": "passed"},
+        },
+    }
+
+
+def _readiness_conformance_receipt_store(profile: dict, operation: dict, *, status: str = "passed") -> dict:
+    receipt = {
+        **_readiness_conformance_evidence(profile, operation, status=status),
+        "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+        "receipt_ref": f"external-conformance:{operation['id']}:test",
+        "executed_at": "2026-07-26T20:00:00Z",
+        "custody": {
+            "operation_id": "external-operation-conformance.run",
+            "producer": "agentic-workspace.operation-conformance-runner",
+            "trusted_channel": "producer-owned-test-fixture",
+        },
+    }
+    return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": [receipt]}
+
+
+def _published_readiness_receipt_store(store: dict) -> dict:
+    payload = copy.deepcopy(store)
+    publication_payload = {key: value for key, value in payload.items() if key != "mirror_publication"}
+    digest = hashlib.sha256(json.dumps(publication_payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    payload["mirror_publication"] = {
+        "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
+        "status": "published",
+        "payload_digest": f"sha256:{digest}",
+    }
+    return payload
+
+
+def test_external_readiness_report_fails_closed_for_runtime_backed_operations() -> None:
+    report = external_readiness_report(["assignment.export", "does.not.exist"])
+    assert report["status"] == "not-ready"
+    runtime_backed, unknown = report["excluded_operations"]
+    assert runtime_backed["id"] == "assignment.export"
+    assert runtime_backed["status"] == "runtime-backed"
+    assert runtime_backed["evidence"]["conformance_refs"]
+    assert runtime_backed["evidence"]["conformance_result"] == {}
+    assert "executed-conformance-receipt" in runtime_backed["missing_evidence"]
+    assert runtime_backed["evidence"]["runtime_exceptions"]
+    assert unknown["id"] == "does.not.exist"
+    assert "released-python-resource" in unknown["missing_evidence"]
+
+
+def test_external_readiness_report_requires_released_client_and_conformance_evidence(monkeypatch) -> None:
+    profile = copy.deepcopy(public_client.external_consumer_profile())
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"] = {"status": "supported"}
+    candidate["operation_resources"]["typescript"]["exists"] = False
+    candidate["conformance"] = []
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
+
+    report = external_readiness_report(["assignment.export"])
+
+    assert report["status"] == "not-ready"
+    excluded = report["excluded_operations"][0]
+    assert set(excluded["missing_evidence"]) == {
+        "released-typescript-resource",
+        "conformance-reference",
+        "executed-conformance-receipt",
+    }
+    assert excluded["evidence"]["conformance_result"] == {}
+
+
+def test_external_readiness_report_requires_current_executed_cross_transport_conformance(monkeypatch) -> None:
+    profile = copy.deepcopy(public_client.external_consumer_profile())
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"]["status"] = "supported"
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
+    monkeypatch.setattr(
+        public_client, "external_operation_conformance_receipts", lambda: _readiness_conformance_receipt_store(profile, candidate)
+    )
+
+    report = external_readiness_report(["assignment.export"])
+
+    assert report["status"] == "ready"
+    assert report["supported_operations"] == ["assignment.export"]
+    assert report["excluded_operations"] == []
+
+    stale_profile = copy.deepcopy(profile)
+    stale_profile["compatibility"]["fingerprint"] = "sha256:stale"
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: stale_profile)
+    monkeypatch.setattr(
+        public_client,
+        "external_operation_conformance_receipts",
+        lambda: _readiness_conformance_receipt_store(profile, candidate),
+    )
+
+    stale_report = external_readiness_report(["assignment.export"])
+
+    assert stale_report["status"] == "not-ready"
+    assert "executed-conformance-receipt" in stale_report["excluded_operations"][0]["missing_evidence"]
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected_reason"),
+    [
+        ("missing", "executed-conformance-receipt"),
+        ("failed", "executed-conformance-passed"),
+        ("stale-runner", "current-runner-revision"),
+        ("stale-client", "current-client-semantics-revision"),
+        ("missing-transport", "transport-typescript"),
+        ("missing-case", "case-mutation-failed"),
+    ],
+)
+def test_require_operations_uses_readiness_receipts(monkeypatch: pytest.MonkeyPatch, mutation: str, expected_reason: str) -> None:
+    profile = copy.deepcopy(public_client.external_consumer_profile())
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"]["status"] = "supported"
+    store = _readiness_conformance_receipt_store(profile, candidate)
+    receipt = store["receipts"][0]
+    if mutation == "missing":
+        store["receipts"] = []
+    elif mutation == "failed":
+        receipt["status"] = "failed"
+    elif mutation == "stale-runner":
+        receipt["result_identity"]["runner_revision"] = "stale-runner"
+    elif mutation == "stale-client":
+        receipt["result_identity"]["client_semantics_revision"] = "stale-client"
+    elif mutation == "missing-transport":
+        receipt["transports"].pop("typescript")
+    elif mutation == "missing-case":
+        receipt["cases"].pop("mutation-failed")
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
+    monkeypatch.setattr(public_client, "external_operation_conformance_receipts", lambda: store)
+
+    with pytest.raises(AWClientError) as excinfo:
+        require_operations(["assignment.export"])
+
+    assert expected_reason in excinfo.value.details["requirements"][0]["missing_evidence"]
+
+
+def test_generated_python_and_typescript_require_operations_share_readiness_reasons(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    profile = copy.deepcopy(json.loads((ROOT / "generated/workspace/python/external_consumer_profile.json").read_text(encoding="utf-8")))
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"]["status"] = "supported"
+    store = _readiness_conformance_receipt_store(profile, candidate)
+    receipt = store["receipts"][0]
+    receipt["result_identity"]["runner_revision"] = "stale-runner"
+    receipt["cases"].pop("mutation-failed")
+
+    python_client = _python_client()
+    monkeypatch.setattr(python_client, "external_consumer_profile", lambda: profile)
+    monkeypatch.setattr(python_client, "external_operation_conformance_receipts", lambda: store)
+    with pytest.raises(ValueError) as python_error:
+        python_client.require_operations(["assignment.export"])
+    assert "current-runner-revision" in str(python_error.value)
+    assert "case-mutation-failed" in str(python_error.value)
+
+    package_root = tmp_path / "typescript-readiness"
+    shutil.copytree(ROOT / "generated/workspace/typescript", package_root)
+    published = _published_readiness_receipt_store(store)
+    (package_root / "external_consumer_profile.json").write_text(json.dumps(profile), encoding="utf-8")
+    (package_root / "external_operation_conformance_receipts.json").write_text(json.dumps(published), encoding="utf-8")
+    script = """
+import { requireOperations } from './src/client.mjs';
+try { requireOperations(['assignment.export']); }
+catch (error) { console.log(JSON.stringify(error.details.requirements[0].missing_evidence)); }
+"""
+    completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=package_root, text=True, capture_output=True)
+    assert completed.returncode == 0, completed.stderr
+    typescript_reasons = json.loads(completed.stdout)
+    assert "current-runner-revision" in typescript_reasons
+    assert "case-mutation-failed" in typescript_reasons
+
+
+def test_external_readiness_report_ignores_inline_profile_conformance_evidence(monkeypatch) -> None:
+    profile = copy.deepcopy(public_client.external_consumer_profile())
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"]["status"] = "supported"
+    candidate["conformance_evidence"] = _readiness_conformance_evidence(profile, candidate)
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
+    monkeypatch.setattr(
+        public_client,
+        "external_operation_conformance_receipts",
+        lambda: {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []},
+    )
+
+    report = external_readiness_report(["assignment.export"])
+
+    assert report["status"] == "not-ready"
+    assert "executed-conformance-receipt" in report["excluded_operations"][0]["missing_evidence"]
+
+
+def test_packaged_conformance_receipt_store_fails_closed_without_full_external_evidence() -> None:
+    store = public_client.external_operation_conformance_receipts()
+    assert store["kind"] == "agentic-workspace/external-operation-conformance-receipt-store/v1"
+    assert store["status"] == "recorded"
+    receipts = {receipt["operation_id"]: receipt for receipt in store["receipts"]}
+    assert {"config.report", "delegation-outcome.append"}.issubset(receipts)
+    config_receipt = receipts["config.report"]
+    assert config_receipt["status"] == "failed"
+    assert config_receipt["transports"]["vendor-neutral"]["status"] == "passed"
+    assert config_receipt["cases"]["absent"]["status"] == "not-run"
+    assert config_receipt["freshness"]["strategy"] == "runner-client-operation-profile-revision-bound"
+    delegation_receipt = receipts["delegation-outcome.append"]
+    assert delegation_receipt["status"] == "failed"
+    assert delegation_receipt["runtime_exception_revision"] == ""
+    assert delegation_receipt["runtime_exception_admission"]["reason"] == "missing-operation-specific-runtime-exception-revision"
+    assert delegation_receipt["transports"]["vendor-neutral"]["status"] == "not-run"
+    assert delegation_receipt["operation_result_evidence"]
+
+
+def test_external_readiness_report_rejects_explicitly_revoked_and_superseded_receipts(monkeypatch) -> None:
+    profile = copy.deepcopy(public_client.external_consumer_profile())
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"]["status"] = "supported"
+    base_receipt = _readiness_conformance_receipt_store(profile, candidate)["receipts"][0]
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
+    for marker in ({"revoked_at": "2026-07-29T00:00:00Z"}, {"superseded_by": "newer"}, {"status": "stale"}):
+        stale = {**base_receipt, **marker}
+        monkeypatch.setattr(
+            public_client,
+            "external_operation_conformance_receipts",
+            lambda stale=stale: {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": [stale]},
+        )
+        report = external_readiness_report(["assignment.export"])
+        assert report["status"] == "not-ready"
+        assert "executed-conformance-receipt" in report["excluded_operations"][0]["missing_evidence"]
+    expired_only = {**base_receipt, "expires_at": "2000-01-01T00:00:00Z"}
+    monkeypatch.setattr(
+        public_client,
+        "external_operation_conformance_receipts",
+        lambda: {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": [expired_only]},
+    )
+    report = external_readiness_report(["assignment.export"])
+    assert report["status"] == "not-ready"
+    assert "executed-conformance-receipt" in report["excluded_operations"][0]["missing_evidence"]
+
+
+def test_generated_clients_reject_expired_conformance_receipts(monkeypatch, tmp_path: Path) -> None:
+    profile = copy.deepcopy(json.loads((ROOT / "generated/workspace/python/external_consumer_profile.json").read_text(encoding="utf-8")))
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "assignment.export")
+    candidate["external_consumption"]["status"] = "supported"
+    receipt_store = _published_readiness_receipt_store(_readiness_conformance_receipt_store(profile, candidate))
+    receipt_store["receipts"][0]["expires_at"] = "2000-01-01T00:00:00Z"
+
+    python_client = _python_client()
+    monkeypatch.setattr(python_client, "external_consumer_profile", lambda: profile)
+    monkeypatch.setattr(python_client, "external_operation_conformance_receipts", lambda: receipt_store)
+    python_report = python_client.external_readiness_report(["assignment.export"])
+    assert python_report["status"] == "not-ready"
+    assert "executed-conformance-receipt" in python_report["excluded_operations"][0]["missing_evidence"]
+
+    package_root = tmp_path / "typescript"
+    shutil.copytree(ROOT / "generated/workspace/typescript", package_root)
+    (package_root / "external_consumer_profile.json").write_text(json.dumps(profile), encoding="utf-8")
+    (package_root / "external_operation_conformance_receipts.json").write_text(json.dumps(receipt_store), encoding="utf-8")
+    script = (
+        "import { externalReadinessReport } from './src/client.mjs';"
+        "console.log(JSON.stringify(externalReadinessReport(['assignment.export'])));"
+    )
+    completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=package_root, text=True, capture_output=True)
+    assert completed.returncode == 0, completed.stderr
+    typescript_report = json.loads(completed.stdout)
+    assert typescript_report["status"] == "not-ready"
+    assert "executed-conformance-receipt" in typescript_report["excluded_operations"][0]["missing_evidence"]
+
+
 def _python_client():
     path = ROOT / "generated/workspace/python/client.py"
     spec = importlib.util.spec_from_file_location("generated_external_client", path)
@@ -310,10 +604,16 @@ def _python_client():
     return module
 
 
-def test_python_client_negotiates_and_invokes_json() -> None:
+def test_python_client_negotiates_and_invokes_json(monkeypatch: pytest.MonkeyPatch) -> None:
     client = _python_client()
     profile = json.loads((ROOT / "generated/workspace/python/external_consumer_profile.json").read_text(encoding="utf-8"))
     candidate = next(entry for entry in profile["operations"] if entry["external_consumption"]["status"] != "internal")
+    monkeypatch.setattr(client, "external_consumer_profile", lambda: profile)
+    monkeypatch.setattr(
+        client,
+        "external_operation_conformance_receipts",
+        lambda: _readiness_conformance_receipt_store(profile, candidate),
+    )
     client.require_operations([candidate["id"]], allow_runtime_backed=True)
     payload = client.invoke_json(
         ["summary"],
@@ -323,8 +623,29 @@ def test_python_client_negotiates_and_invokes_json() -> None:
     assert payload
 
 
+def test_generated_python_client_resolves_config_local_cli_invoke(tmp_path: Path) -> None:
+    client = _python_client()
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    config_dir = tmp_path / ".agentic-workspace"
+    config_dir.mkdir()
+    (config_dir / "config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        encoding="utf-8",
+    )
+    local_command = f"{Path(sys.executable).as_posix()} {(ROOT / 'scripts/run_agentic_workspace.py').as_posix()}"
+    (config_dir / "config.local.toml").write_text(
+        "schema_version = 1\n[workspace]\ncli_invoke = " + json.dumps(local_command) + "\n",
+        encoding="utf-8",
+    )
+
+    assert client.resolve_invocation(tmp_path) == [Path(sys.executable).as_posix(), (ROOT / "scripts/run_agentic_workspace.py").as_posix()]
+    payload = client.invoke_json(["config", "--verbose"], target=tmp_path)
+
+    assert local_command in json.dumps(payload)
+
+
 def test_python_client_fails_closed_for_unknown_operation() -> None:
-    with pytest.raises(ValueError, match="unknown"):
+    with pytest.raises(ValueError, match="does.not.exist"):
         _python_client().require_operations(["does.not.exist"])
 
 
@@ -333,6 +654,14 @@ def test_typescript_client_public_export_reads_profile() -> None:
     completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True, check=False)
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.strip() == "agentic-workspace/external-consumer-profile/v1"
+
+
+def test_generated_clients_share_fail_closed_readiness_contract() -> None:
+    python_report = _python_client().external_readiness_report(["assignment.export", "does.not.exist"])
+    script = "import { externalReadinessReport } from './generated/workspace/typescript/src/client.mjs'; console.log(JSON.stringify(externalReadinessReport(['assignment.export', 'does.not.exist'])));"
+    completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True, check=False)
+    assert completed.returncode == 0, completed.stderr
+    assert python_report == json.loads(completed.stdout)
 
 
 def test_packed_typescript_client_loads_and_enforces_shipped_constraints(tmp_path: Path) -> None:
@@ -351,6 +680,80 @@ def test_packed_typescript_client_loads_and_enforces_shipped_constraints(tmp_pat
     assert loaded.stdout.strip() == "malformed"
 
 
+def test_packed_python_client_loads_external_readiness_without_source_checkout(tmp_path: Path) -> None:
+    wheel_dir = tmp_path / "wheels"
+    site_dir = tmp_path / "site"
+    build = subprocess.run(
+        [shutil.which("uv") or shutil.which("uv.exe") or "uv", "build", "--wheel", "--out-dir", str(wheel_dir)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert build.returncode == 0, build.stderr
+    wheel = next(wheel_dir.glob("agentic_workspace-*.whl"))
+    install = subprocess.run(
+        [
+            shutil.which("uv") or shutil.which("uv.exe") or "uv",
+            "pip",
+            "install",
+            "--python",
+            sys.executable,
+            "--no-deps",
+            "--target",
+            str(site_dir),
+            str(wheel),
+        ],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert install.returncode == 0, install.stderr
+    install_jsonschema = subprocess.run(
+        [
+            shutil.which("uv") or shutil.which("uv.exe") or "uv",
+            "pip",
+            "install",
+            "--python",
+            sys.executable,
+            "--target",
+            str(site_dir),
+            "jsonschema",
+        ],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert install_jsonschema.returncode == 0, install_jsonschema.stderr
+    script = f"""
+import json
+import sys
+from pathlib import Path
+
+site = Path({str(site_dir)!r})
+root = Path({str(ROOT)!r}).resolve()
+sys.path = [str(site)] + [item for item in sys.path if str(root) not in str(Path(item or '.').resolve())]
+import agentic_workspace
+
+report = agentic_workspace.external_readiness_report(['does.not.exist'])
+print(json.dumps({{'module': agentic_workspace.__file__, 'status': report['status'], 'missing': report['excluded_operations'][0]['missing_evidence']}}))
+"""
+    loaded = subprocess.run(
+        [shutil.which("uv") or shutil.which("uv.exe") or "uv", "run", "--project", str(ROOT), "python", "-c", script],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert loaded.returncode == 0, loaded.stderr
+    payload = json.loads(loaded.stdout)
+    assert str(ROOT) not in payload["module"]
+    assert payload["status"] == "not-ready"
+    assert "released-python-resource" in payload["missing"]
+
+
 def test_typescript_client_fails_closed_and_detects_workspace() -> None:
     script = """
 import { AWClientError, detectWorkspace, requireOperations } from './generated/workspace/typescript/src/client.mjs';
@@ -362,6 +765,31 @@ console.log(JSON.stringify({ status: state.status, kind }));
     completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True, check=False)
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout) == {"status": "enabled", "kind": "incompatible"}
+
+
+def test_typescript_client_resolves_config_local_cli_invoke(tmp_path: Path) -> None:
+    config_dir = tmp_path / ".agentic-workspace"
+    config_dir.mkdir()
+    (config_dir / "config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        encoding="utf-8",
+    )
+    local_command = f"{Path(sys.executable).as_posix()} {(ROOT / 'scripts/run_agentic_workspace.py').as_posix()}"
+    (config_dir / "config.local.toml").write_text(
+        "schema_version = 1\n[workspace]\ncli_invoke = " + json.dumps(local_command) + "\n",
+        encoding="utf-8",
+    )
+    script = f"""
+import {{ detectWorkspace, resolveInvocation }} from './generated/workspace/typescript/src/client.mjs';
+const target = {json.dumps(str(tmp_path))};
+console.log(JSON.stringify({{ state: detectWorkspace(target), command: resolveInvocation(target) }}));
+"""
+    completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["state"]["status"] == "enabled"
+    assert payload["state"]["config"] == "config.local.toml"
+    assert payload["command"] == [Path(sys.executable).as_posix(), (ROOT / "scripts/run_agentic_workspace.py").as_posix()]
 
 
 def test_typescript_invokes_same_schema_valid_operation_as_python() -> None:
@@ -390,7 +818,15 @@ def test_public_requirement_negotiation_rejects_unknown_status() -> None:
     assert exc.value.kind == "incompatible"
 
 
-def test_public_operation_client_invokes_by_operation_identity() -> None:
+def test_public_operation_client_invokes_by_operation_identity(monkeypatch: pytest.MonkeyPatch) -> None:
+    profile = copy.deepcopy(public_client.external_consumer_profile())
+    candidate = next(entry for entry in profile["operations"] if entry["id"] == "config.report")
+    monkeypatch.setattr(public_client, "external_consumer_profile", lambda: profile)
+    monkeypatch.setattr(
+        public_client,
+        "external_operation_conformance_receipts",
+        lambda: _readiness_conformance_receipt_store(profile, candidate),
+    )
     payload = invoke_operation(
         "config.report",
         {},
@@ -401,7 +837,7 @@ def test_public_operation_client_invokes_by_operation_identity() -> None:
     assert payload["kind"] == "agentic-workspace/config-tiny/v1"
 
 
-def test_assignment_lifecycle_operations_are_generated_runtime_backed() -> None:
+def test_assignment_lifecycle_operations_are_declared_but_not_ready_without_receipts() -> None:
     operation_ids = [
         "assignment.export",
         "assignment.import",
@@ -414,7 +850,10 @@ def test_assignment_lifecycle_operations_are_generated_runtime_backed() -> None:
         "assignment.cleanup",
         "assignment.override",
     ]
-    assert require_operations(operation_ids, allow_runtime_backed=True) is None
+    with pytest.raises(AWClientError) as excinfo:
+        require_operations(operation_ids, allow_runtime_backed=True)
+    assert excinfo.value.kind == "incompatible"
+    assert all("executed-conformance-receipt" in item["missing_evidence"] for item in excinfo.value.details["requirements"])
     statuses = {
         entry["identity"]: entry["external_consumption"]["status"]
         for entry in external_contract_bundle()["operations"].values()

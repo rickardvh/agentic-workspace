@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import importlib.util
 import json
 import re
@@ -10,6 +11,7 @@ import sys
 import tomllib
 from pathlib import Path
 
+import pytest
 from repo_planning_bootstrap.installer import (
     create_execplan_scaffold,
     install_bootstrap,
@@ -563,10 +565,47 @@ def test_operation_conformance_runner_reports_typescript_unavailable(monkeypatch
     assert strict["summary"]["fail_count"] == 8
 
 
+def test_vendor_neutral_non_operation_cases_are_unavailable_not_skipped(monkeypatch, tmp_path: Path) -> None:
+    runner = _load_test_ir_runner()
+    monkeypatch.setattr(runner.shutil, "which", lambda _command: "node")
+
+    unadvertised = runner._run_vendor_neutral_consumer_case(
+        case={
+            "id": "defaults.selected-output.success",
+            "operation_ref": {"operation_id": "defaults.report"},
+            "input": {"json": {}},
+            "expected": {"result": {}},
+        },
+        temp_root=tmp_path,
+        client_path=tmp_path / "client.mjs",
+        client_status="prepared",
+        require_node=False,
+    )
+    selected_text = runner._run_vendor_neutral_consumer_case(
+        case={
+            "id": "config.selected-output.success",
+            "operation_ref": {"operation_id": "config.report"},
+            "input": {"json": {"format": "text"}},
+            "expected": {"result": {}},
+        },
+        temp_root=tmp_path,
+        client_path=tmp_path / "client.mjs",
+        client_status="prepared",
+        require_node=False,
+    )
+
+    assert unadvertised["state"] == "unavailable"
+    assert "unavailable for external consumer invocation" in unadvertised["message"]
+    assert selected_text["state"] == "unavailable"
+    assert "selected/text wrapper projection" in selected_text["message"]
+
+
 def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
     runner = _load_test_ir_runner()
 
-    def fake_run_case_target(*, case, artifact_registry, target_kind, temp_root, require_node):
+    def fake_run_case_target(
+        *, case, artifact_registry, target_kind, temp_root, require_node, vendor_neutral_client=None, vendor_neutral_status="not-prepared"
+    ):
         return {
             "case_id": case["id"],
             "behavioral_class": case["behavioral_class"],
@@ -609,6 +648,379 @@ def test_operation_conformance_runner_reports_missing_python_function_symbol() -
 
     assert result["state"] == "unavailable"
     assert result["message"] == "python.function artifact has no importable symbol"
+
+
+def test_external_conformance_receipts_require_executed_results() -> None:
+    runner = _load_test_ir_runner()
+    profile = {
+        "compatibility": {"fingerprint": "profile-1"},
+        "operations": [
+            {
+                "id": "assignment.export",
+                "external_consumption": {"status": "runtime-backed"},
+                "operation_compatibility": {"fingerprint": "op-1"},
+                "conformance": ["assignment.export.process"],
+            }
+        ],
+    }
+
+    empty = runner.build_external_operation_conformance_receipts(profile)
+    assert empty["status"] == "not-run"
+    assert empty["receipts"] == []
+
+    failed = runner.build_external_operation_conformance_receipts(
+        profile,
+        conformance_result={
+            "kind": "operation-conformance-proof/v1",
+            "cases": [
+                {
+                    "case_id": "assignment.export.process",
+                    "behavioral_class": "absent",
+                    "operation_id": "assignment.export",
+                    "target": "python",
+                    "state": "fail",
+                }
+            ],
+        },
+    )
+    receipt = failed["receipts"][0]
+    assert receipt["status"] == "failed"
+    assert receipt["transports"]["python"]["status"] == "failed"
+    assert receipt["transports"]["typescript"]["status"] == "not-run"
+    assert receipt["cases"]["absent"]["status"] == "failed"
+
+
+def _complete_same_invocation_results(operation_id: str) -> list[dict[str, object]]:
+    results: list[dict[str, object]] = [
+        {
+            "case_id": f"{operation_id}.python.success",
+            "behavioral_class": "success",
+            "operation_id": operation_id,
+            "target": "python",
+            "adapter_id": "python.function",
+            "state": "pass",
+            "selected_fields": {"status": "ok"},
+        },
+        {
+            "case_id": f"{operation_id}.typescript.success",
+            "behavioral_class": "success",
+            "operation_id": operation_id,
+            "target": "typescript",
+            "adapter_id": "typescript.function",
+            "state": "pass",
+            "selected_fields": {"status": "ok"},
+        },
+        {
+            "case_id": f"{operation_id}.cli.success",
+            "behavioral_class": "success",
+            "operation_id": operation_id,
+            "target": "python",
+            "adapter_id": "cli.process",
+            "state": "pass",
+            "selected_fields": {"status": "ok"},
+        },
+        {
+            "case_id": f"{operation_id}.vendor.success",
+            "behavioral_class": "success",
+            "operation_id": operation_id,
+            "target": "vendor-neutral",
+            "adapter_id": "vendor-neutral.consumer",
+            "state": "pass",
+            "selected_fields": {"status": "ok"},
+        },
+    ]
+    for readiness_case in ["absent", "disabled", "incompatible", "malformed", "retryable", "additive-field"]:
+        results.append(
+            {
+                "case_id": f"{operation_id}.{readiness_case}",
+                "behavioral_class": readiness_case,
+                "readiness_case": readiness_case,
+                "operation_id": operation_id,
+                "target": "vendor-neutral",
+                "adapter_id": "vendor-neutral.consumer",
+                "state": "pass",
+                "selected_fields": {"status": readiness_case},
+            }
+        )
+    return results
+
+
+def test_external_conformance_receipts_ignore_forged_readiness_vectors() -> None:
+    runner = _load_test_ir_runner()
+    profile = {
+        "compatibility": {"fingerprint": "profile-1"},
+        "readiness_authority": {"runner_revision": "abc123", "client_semantics_revision": "client-1"},
+        "operations": [
+            {
+                "id": "assignment.export",
+                "external_consumption": {"status": "supported"},
+                "operation_compatibility": {"fingerprint": "op-1"},
+                "operation_contract": "src/agentic_workspace/contracts/operations/config.report.json",
+                "conformance": ["assignment.export.process"],
+            }
+        ],
+    }
+    conformance_result = {
+        "kind": "operation-conformance-proof/v1",
+        "readiness_transports": {transport: {"status": "passed"} for transport in runner.READINESS_TRANSPORTS},
+        "readiness_cases": {case: {"status": "passed"} for case in runner.READINESS_CASES},
+        "cases": [
+            {
+                "case_id": "assignment.export.process",
+                "behavioral_class": "absent",
+                "operation_id": "assignment.export",
+                "target": "python",
+                "state": "pass",
+            }
+        ],
+    }
+
+    store = runner.build_external_operation_conformance_receipts(
+        profile,
+        conformance_result=conformance_result,
+        executed_at="2026-07-30T10:00:00Z",
+        runner_revision="abc123",
+        invocation_id="operation-conformance:test-invocation",
+    )
+    receipt = store["receipts"][0]
+    assert receipt["status"] == "failed"
+    assert receipt["transports"]["typescript"]["status"] == "not-run"
+    assert receipt["transports"]["vendor-neutral"]["status"] == "not-run"
+    assert receipt["cases"]["disabled"]["status"] == "not-run"
+    assert receipt["operation_result_evidence"]
+    assert receipt["conformance_result_digest"]
+    assert receipt["executed_at"] == "2026-07-30T10:00:00Z"
+
+
+def test_external_conformance_receipts_pass_only_from_complete_result_vectors() -> None:
+    runner = _load_test_ir_runner()
+    profile = {
+        "compatibility": {"fingerprint": "profile-1"},
+        "readiness_authority": {"runner_revision": "abc123", "client_semantics_revision": "client-1"},
+        "operations": [
+            {
+                "id": "config.report",
+                "external_consumption": {"status": "supported"},
+                "operation_compatibility": {"fingerprint": "op-1"},
+                "operation_contract": "src/agentic_workspace/contracts/operations/config.report.json",
+                "conformance": ["config.report.process"],
+            }
+        ],
+    }
+    conformance_result = {
+        "kind": "operation-conformance-proof/v1",
+        "cases": _complete_same_invocation_results("config.report"),
+    }
+
+    store = runner.build_external_operation_conformance_receipts(
+        profile,
+        conformance_result=conformance_result,
+        executed_at="2026-07-30T10:00:00Z",
+        runner_revision="abc123",
+        invocation_id="operation-conformance:test-invocation",
+    )
+    receipt = store["receipts"][0]
+    assert receipt["status"] == "passed"
+    assert all(item["status"] == "passed" for item in receipt["transports"].values())
+    assert all(item["status"] == "passed" for item in receipt["cases"].values())
+    assert receipt["conformance_result_digest"]
+    assert receipt["executed_at"] == "2026-07-30T10:00:00Z"
+    assert receipt["freshness"]["strategy"] == "runner-client-operation-profile-revision-bound"
+    assert receipt["result_identity"]["runner_revision"] == "abc123"
+    assert receipt["result_identity"]["client_semantics_revision"] == "client-1"
+    assert receipt["result_identity"]["invocation_id"] == "operation-conformance:test-invocation"
+    assert receipt["result_identity"]["result_digest"] == receipt["conformance_result_digest"]
+    assert receipt["custody"]["producer"] == "agentic-workspace.operation-conformance-runner"
+    assert receipt["runtime_exception_admission"]["status"] == "not-required"
+
+
+def test_external_conformance_receipts_classify_local_writers_as_mutations() -> None:
+    runner = _load_test_ir_runner()
+    profile = {
+        "compatibility": {"fingerprint": "profile-1"},
+        "operations": [
+            {
+                "id": "delegation-outcome.append",
+                "external_consumption": {"status": "supported"},
+                "operation_compatibility": {"fingerprint": "op-1"},
+                "operation_contract": "src/agentic_workspace/contracts/operations/delegation-outcome.append.json",
+                "conformance": ["delegation-outcome.append.process"],
+            }
+        ],
+    }
+    conformance_result = {
+        "kind": "operation-conformance-proof/v1",
+        "cases": [
+            {
+                "case_id": "delegation-outcome.append.python.apply",
+                "behavioral_class": "boundary",
+                "operation_id": "delegation-outcome.append",
+                "target": "python",
+                "adapter_id": "python.function",
+                "state": "pass",
+                "selected_fields": {"mutation_applied": True, "reason_code": "mutation-applied"},
+            },
+            *[
+                {
+                    "case_id": f"delegation-outcome.append.{readiness_case}",
+                    "behavioral_class": readiness_case,
+                    "readiness_case": readiness_case,
+                    "operation_id": "delegation-outcome.append",
+                    "target": "python",
+                    "adapter_id": "python.function",
+                    "state": "pass",
+                    "selected_fields": {"status": readiness_case},
+                }
+                for readiness_case in ["absent", "disabled", "incompatible", "malformed", "retryable", "additive-field"]
+            ],
+        ],
+    }
+
+    store = runner.build_external_operation_conformance_receipts(profile, conformance_result=conformance_result)
+    receipt = store["receipts"][0]
+    assert receipt["status"] == "failed"
+    assert receipt["cases"]["mutation-applied"]["status"] == "passed"
+    assert receipt["cases"]["mutation-noop"]["status"] == "not-run"
+    assert receipt["cases"]["mutation-rejected"]["status"] == "not-run"
+    assert receipt["cases"]["mutation-failed"]["status"] == "not-run"
+    assert "read-only" not in receipt["cases"]["mutation-applied"].get("reason", "")
+
+
+def test_external_conformance_receipts_reject_blanket_runtime_exception_revision() -> None:
+    runner = _load_test_ir_runner()
+    profile = {
+        "compatibility": {"fingerprint": "profile-1"},
+        "operations": [
+            {
+                "id": "assignment.export",
+                "external_consumption": {"status": "supported", "runtime_exceptions": ["requires-host-runtime"]},
+                "operation_compatibility": {"fingerprint": "op-1"},
+                "conformance": ["assignment.export.process"],
+            }
+        ],
+    }
+    conformance_result = {
+        "kind": "operation-conformance-proof/v1",
+        "readiness_transports": {transport: {"status": "passed"} for transport in runner.READINESS_TRANSPORTS},
+        "readiness_cases": {case: {"status": "passed"} for case in runner.READINESS_CASES},
+        "runtime_exception_revisions": {"assignment.export": "#2044@accepted"},
+        "cases": [
+            {
+                "case_id": "assignment.export.process",
+                "behavioral_class": "absent",
+                "operation_id": "assignment.export",
+                "target": "python",
+                "state": "pass",
+            }
+        ],
+    }
+
+    store = runner.build_external_operation_conformance_receipts(profile, conformance_result=conformance_result)
+    receipt = store["receipts"][0]
+    assert receipt["status"] == "failed"
+    assert receipt["runtime_exception_revision"] == ""
+    assert receipt["runtime_exception_admission"]["reason"] == "missing-operation-specific-runtime-exception-revision"
+
+
+def test_operation_conformance_main_writes_authoritative_receipt_mirrors(tmp_path: Path, monkeypatch) -> None:
+    runner = _load_test_ir_runner()
+    paths = (
+        tmp_path / "src" / "external_operation_conformance_receipts.json",
+        tmp_path / "python" / "external_operation_conformance_receipts.json",
+        tmp_path / "typescript" / "external_operation_conformance_receipts.json",
+    )
+    conformance_result = {
+        "kind": "operation-conformance-proof/v1",
+        "summary": {"state": "pass", "pass_count": 1, "fail_count": 0, "unavailable_count": 0, "skipped_count": 0},
+        "readiness_transports": {transport: {"status": "passed"} for transport in runner.READINESS_TRANSPORTS},
+        "readiness_cases": {case: {"status": "passed"} for case in runner.READINESS_CASES},
+        "cases": [
+            {
+                "case_id": "assignment.export.process",
+                "behavioral_class": "absent",
+                "operation_id": "assignment.export",
+                "target": "python",
+                "state": "pass",
+            }
+        ],
+    }
+    monkeypatch.setattr(runner, "run_ir_cases", lambda **_kwargs: conformance_result)
+    monkeypatch.setattr(runner, "EXTERNAL_CONFORMANCE_RECEIPT_PATHS", paths)
+
+    assert runner.main(["--format", "json"]) == 0
+
+    stores = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
+    assert stores[0] == stores[1] == stores[2]
+    assert stores[0]["status"] == "recorded"
+    assert stores[0]["mirror_publication"]["status"] == "published"
+    assert stores[0]["mirror_publication"]["payload_digest"].startswith("sha256:")
+    assert any(receipt["operation_id"] == "assignment.export" for receipt in stores[0]["receipts"])
+
+
+def test_operation_conformance_receipt_mirror_publication_rejects_partial_prestate(tmp_path: Path) -> None:
+    runner = _load_test_ir_runner()
+    paths = (
+        tmp_path / "src" / "external_operation_conformance_receipts.json",
+        tmp_path / "python" / "external_operation_conformance_receipts.json",
+        tmp_path / "typescript" / "external_operation_conformance_receipts.json",
+    )
+    for index, path in enumerate(paths):
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"kind": "old", "mirror": index}) + "\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="not in one pre-publication revision"):
+        runner.write_external_operation_conformance_receipts(
+            {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []},
+            paths=paths,
+        )
+
+    assert [json.loads(path.read_text(encoding="utf-8"))["mirror"] for path in paths] == [0, 1, 2]
+
+
+def test_operation_conformance_receipt_mirror_publication_uses_expected_revision(tmp_path: Path) -> None:
+    runner = _load_test_ir_runner()
+    paths = (
+        tmp_path / "src" / "external_operation_conformance_receipts.json",
+        tmp_path / "python" / "external_operation_conformance_receipts.json",
+        tmp_path / "typescript" / "external_operation_conformance_receipts.json",
+    )
+    baseline = json.dumps({"kind": "old", "mirror": "same"}, sort_keys=True) + "\n"
+    expected_digest = hashlib.sha256(baseline.encode()).hexdigest()
+    for path in paths:
+        path.parent.mkdir(parents=True)
+        path.write_text(baseline, encoding="utf-8")
+
+    paths[1].write_text(json.dumps({"kind": "old", "mirror": "changed"}, sort_keys=True) + "\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="revision changed"):
+        runner.write_external_operation_conformance_receipts(
+            {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []},
+            paths=paths,
+            expected_existing_digest=expected_digest,
+        )
+
+    assert json.loads(paths[1].read_text(encoding="utf-8"))["mirror"] == "changed"
+
+
+def test_operation_conformance_receipt_mirror_publication_rejects_missing_mirror(tmp_path: Path) -> None:
+    runner = _load_test_ir_runner()
+    paths = (
+        tmp_path / "src" / "external_operation_conformance_receipts.json",
+        tmp_path / "python" / "external_operation_conformance_receipts.json",
+        tmp_path / "typescript" / "external_operation_conformance_receipts.json",
+    )
+    baseline = json.dumps({"kind": "old", "mirror": "same"}, sort_keys=True) + "\n"
+    for path in paths[:2]:
+        path.parent.mkdir(parents=True)
+        path.write_text(baseline, encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="mirror set is partial"):
+        runner.write_external_operation_conformance_receipts(
+            {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []},
+            paths=paths,
+        )
+
+    assert not paths[2].exists()
 
 
 def test_generated_typescript_conformance_cases_come_from_contract_artifacts() -> None:

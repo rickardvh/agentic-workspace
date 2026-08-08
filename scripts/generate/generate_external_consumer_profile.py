@@ -3,17 +3,41 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.check.run_operation_conformance_tests import build_external_operation_conformance_receipts  # noqa: E402
+
 IR_PATH = REPO_ROOT / "src/agentic_workspace/contracts/command_package_ir.json"
 OUTPUTS = (
     REPO_ROOT / "src/agentic_workspace/contracts/external_consumer_profile.json",
     REPO_ROOT / "generated/workspace/python/external_consumer_profile.json",
     REPO_ROOT / "generated/workspace/typescript/external_consumer_profile.json",
 )
+CONFORMANCE_RECEIPT_OUTPUTS = (
+    REPO_ROOT / "src/agentic_workspace/contracts/external_operation_conformance_receipts.json",
+    REPO_ROOT / "generated/workspace/python/external_operation_conformance_receipts.json",
+    REPO_ROOT / "generated/workspace/typescript/external_operation_conformance_receipts.json",
+)
 USABLE_MATURITY_LEVELS = {"runnable-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
+READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
+READINESS_CASES = (
+    "absent",
+    "disabled",
+    "incompatible",
+    "malformed",
+    "retryable",
+    "additive-field",
+    "mutation-applied",
+    "mutation-noop",
+    "mutation-rejected",
+    "mutation-failed",
+)
 PYTHON_CLIENT = REPO_ROOT / "generated/workspace/python/client.py"
 TYPESCRIPT_CLIENT = REPO_ROOT / "generated/workspace/typescript/src/client.mjs"
 BUNDLE_OUTPUTS = (
@@ -134,6 +158,42 @@ def _operation_resource_path(target_id: str, target: dict[str, object], operatio
     return Path(str(target.get("generated_root", ""))) / resource_root / Path(operation_path).name
 
 
+def _artifact_revision(repo_root: Path, relative_path: str) -> str:
+    path = repo_root / relative_path
+    if not path.is_file():
+        return ""
+    return f"{relative_path}@sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+
+
+def _readiness_authority(repo_root: Path | None) -> dict[str, object]:
+    if repo_root is None:
+        return {
+            "kind": "agentic-workspace/external-readiness-authority/v1",
+            "status": "unbound",
+            "runner_revision": "",
+            "client_semantics_revision": "",
+            "client_artifact_revisions": {},
+        }
+    paths = {
+        "runner": "scripts/check/run_operation_conformance_tests.py",
+        "public_python_client": "src/agentic_workspace/client.py",
+        "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py",
+        "typescript_client_template": "scripts/generate/templates/external_client.mjs",
+    }
+    revisions = {name: _artifact_revision(repo_root, path) for name, path in paths.items()}
+    client_revisions = {name: revision for name, revision in revisions.items() if name != "runner"}
+    client_semantics_revision = (
+        "sha256:" + hashlib.sha256(json.dumps(client_revisions, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    return {
+        "kind": "agentic-workspace/external-readiness-authority/v1",
+        "status": "current" if all(revisions.values()) else "incomplete",
+        "runner_revision": revisions["runner"],
+        "client_semantics_revision": client_semantics_revision,
+        "client_artifact_revisions": client_revisions,
+    }
+
+
 def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> dict[str, object]:
     conformance_by_id: dict[str, dict[str, object]] = {}
     if repo_root is not None:
@@ -241,9 +301,9 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
                     "operation_resources": {
                         target_id: {
                             "package": target["package"],
-                            "path": _operation_resource_path(target_id, target, str(ref["path"])).relative_to(
-                                Path(str(target.get("generated_root", "")))
-                            ).as_posix(),
+                            "path": _operation_resource_path(target_id, target, str(ref["path"]))
+                            .relative_to(Path(str(target.get("generated_root", ""))))
+                            .as_posix(),
                             "exists": repo_root is None
                             or (repo_root / _operation_resource_path(target_id, target, str(ref["path"]))).is_file(),
                         }
@@ -257,14 +317,14 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
                     "external_consumption": {
                         "status": maturity,
                         "runtime_exceptions": [
-                                {
-                                    "owner": package.get("id"),
-                                    "scope": scope,
-                                    "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-                                    "proof": resolved_conformance,
-                                    "migration_dependency": "#2044",
-                                }
-                                for scope in runtime_owned
+                            {
+                                "owner": package.get("id"),
+                                "scope": scope,
+                                "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+                                "proof": resolved_conformance,
+                                "migration_dependency": "#2044",
+                            }
+                            for scope in runtime_owned
                         ],
                         "dependency": "#2044" if runtime_owned else None,
                     },
@@ -278,7 +338,10 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
             raise ValueError(f"conflicting explicit operation id: {operation_id}")
         unique.setdefault(operation_id, entry)
     operations = sorted(unique.values(), key=lambda item: str(item["id"]))
-    fingerprint_input = json.dumps(operations, sort_keys=True, separators=(",", ":")).encode()
+    readiness_authority = _readiness_authority(repo_root)
+    fingerprint_input = json.dumps(
+        {"operations": operations, "readiness_authority": readiness_authority}, sort_keys=True, separators=(",", ":")
+    ).encode()
     return {
         "schema_version": "agentic-workspace/external-consumer-profile/v1",
         "authority": "command_package_ir.json",
@@ -288,6 +351,7 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
             "additive_fields": "allowed",
         },
         "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
+        "readiness_authority": readiness_authority,
         "operations": operations,
     }
 
@@ -351,7 +415,11 @@ def collect_schema_graph(initial: set[str], *, repo_root: Path = REPO_ROOT) -> t
     pending: list[tuple[str, Path | None, str | None]] = [(ref, None, None) for ref in sorted(initial)]
     while pending:
         reference, base_path, preferred_key = pending.pop()
-        schema_path = base_path if reference.startswith("#") and base_path is not None else resolve_schema_reference(reference, repo_root=repo_root, base_path=base_path)
+        schema_path = (
+            base_path
+            if reference.startswith("#") and base_path is not None
+            else resolve_schema_reference(reference, repo_root=repo_root, base_path=base_path)
+        )
         if reference.startswith("#"):
             resolve_schema_reference(schema_path.name + reference, repo_root=repo_root, base_path=schema_path)
         key = preferred_key or reference.split("#", 1)[0]
@@ -361,7 +429,9 @@ def collect_schema_graph(initial: set[str], *, repo_root: Path = REPO_ROOT) -> t
         graph[key] = {"source": schema_path.relative_to(repo_root).as_posix(), "schema": schema}
         closure.add(key)
         for nested in schema_references(schema):
-            nested_path = schema_path if nested.startswith("#") else resolve_schema_reference(nested, repo_root=repo_root, base_path=schema_path)
+            nested_path = (
+                schema_path if nested.startswith("#") else resolve_schema_reference(nested, repo_root=repo_root, base_path=schema_path)
+            )
             pending.append((nested, schema_path, nested_path.relative_to(repo_root).as_posix()))
     return closure, graph
 
@@ -419,15 +489,19 @@ def render_bundle(profile: dict[str, object]) -> str:
         closure = {name: schemas[name]["schema"] for name in operation["schemas"]}
         exact = {"contract": operation["contract"], "schemas": closure}
         compatible = {
-            "contract": {key: operation["contract"].get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")},
+            "contract": {
+                key: operation["contract"].get(key)
+                for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")
+            },
             "schemas": {
-                role: compatibility_schema({name: closure[name] for name in names})
-                for role, names in operation["schema_roles"].items()
+                role: compatibility_schema({name: closure[name] for name in names}) for role, names in operation["schema_roles"].items()
             },
         }
         operation["compatibility_surface"] = compatible
         operation["fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(exact, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-        operation["compatibility_fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(compatible, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        operation["compatibility_fingerprint"] = (
+            "sha256:" + hashlib.sha256(json.dumps(compatible, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        )
     payload = {
         "schema_version": "agentic-workspace/external-contract-bundle/v1",
         "protocol": profile["compatibility"]["protocol"],
@@ -437,8 +511,14 @@ def render_bundle(profile: dict[str, object]) -> str:
             "command_ir_schema": json.loads(IR_PATH.read_text(encoding="utf-8"))["schema_version"],
             "client_package": tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"],
             "runtime_protocol": profile["compatibility"]["protocol"],
-            "python_package": {"name": "agentic-workspace", "version": tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]},
-            "typescript_package": {"name": "@agentic-workspace/workspace-cli", "version": json.loads((REPO_ROOT / "generated/workspace/typescript/package.json").read_text(encoding="utf-8"))["version"]},
+            "python_package": {
+                "name": "agentic-workspace",
+                "version": tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"],
+            },
+            "typescript_package": {
+                "name": "@agentic-workspace/workspace-cli",
+                "version": json.loads((REPO_ROOT / "generated/workspace/typescript/package.json").read_text(encoding="utf-8"))["version"],
+            },
         },
         "operations": operations,
         "schemas": dict(sorted(schemas.items())),
@@ -448,15 +528,181 @@ def render_bundle(profile: dict[str, object]) -> str:
     return json.dumps(payload, indent=2) + "\n"
 
 
+def render_conformance_receipts(profile: dict[str, object]) -> str:
+    return json.dumps(build_external_operation_conformance_receipts(profile), indent=2) + "\n"
+
+
+def _legacy_render_python_client() -> str:
+    return """# Generated from command_package_ir.json. Do not edit.\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nfrom importlib.resources import files\nfrom pathlib import Path\nfrom typing import Any, Sequence\n\n\ndef external_consumer_profile() -> dict[str, Any]:\n    resource = files("agentic_workspace._generated_cli_package_impl").joinpath("external_consumer_profile.json")\n    return json.loads(resource.read_text(encoding="utf-8"))\n\n\ndef require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:\n    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}\n    failures = []\n    for operation_id in operation_ids:\n        entry = entries.get(operation_id)\n        status = entry and entry["external_consumption"]["status"]\n        if entry is None or status == "internal" or (status == "runtime-backed" and not allow_runtime_backed):\n            failures.append(f"{operation_id}: {status or 'unknown'}")\n    if failures:\n        raise ValueError("incompatible operation requirements: " + ", ".join(failures))\n\n\ndef invoke_json(argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] = ("agentic-workspace",)) -> dict[str, Any]:\n    command = [*executable, *argv]\n    if target is not None and "--target" not in command:\n        command.extend(["--target", str(target)])\n    if "--format" not in command:\n        command.extend(["--format", "json"])\n    completed = subprocess.run(command, text=True, capture_output=True, check=False)\n    stream = completed.stdout or completed.stderr\n    try:\n        payload = json.loads(stream)\n    except json.JSONDecodeError as exc:\n        raise RuntimeError(f"AW returned non-JSON output (exit {completed.returncode})") from exc\n    if completed.returncode:\n        raise RuntimeError(json.dumps({"exit_code": completed.returncode, "error": payload}))\n    return payload\n"""
+
+
 def render_python_client() -> str:
-    return '''# Generated from command_package_ir.json. Do not edit.\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nfrom importlib.resources import files\nfrom pathlib import Path\nfrom typing import Any, Sequence\n\n\ndef external_consumer_profile() -> dict[str, Any]:\n    resource = files("agentic_workspace._generated_cli_package_impl").joinpath("external_consumer_profile.json")\n    return json.loads(resource.read_text(encoding="utf-8"))\n\n\ndef require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:\n    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}\n    failures = []\n    for operation_id in operation_ids:\n        entry = entries.get(operation_id)\n        status = entry and entry["external_consumption"]["status"]\n        if entry is None or status == "internal" or (status == "runtime-backed" and not allow_runtime_backed):\n            failures.append(f"{operation_id}: {status or 'unknown'}")\n    if failures:\n        raise ValueError("incompatible operation requirements: " + ", ".join(failures))\n\n\ndef invoke_json(argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] = ("agentic-workspace",)) -> dict[str, Any]:\n    command = [*executable, *argv]\n    if target is not None and "--target" not in command:\n        command.extend(["--target", str(target)])\n    if "--format" not in command:\n        command.extend(["--format", "json"])\n    completed = subprocess.run(command, text=True, capture_output=True, check=False)\n    stream = completed.stdout or completed.stderr\n    try:\n        payload = json.loads(stream)\n    except json.JSONDecodeError as exc:\n        raise RuntimeError(f"AW returned non-JSON output (exit {completed.returncode})") from exc\n    if completed.returncode:\n        raise RuntimeError(json.dumps({"exit_code": completed.returncode, "error": payload}))\n    return payload\n'''
+    return """# Generated from command_package_ir.json. Do not edit.
+from __future__ import annotations
+
+import json
+import shlex
+import subprocess
+import tomllib
+from datetime import UTC, datetime
+from importlib.resources import files
+from pathlib import Path
+from typing import Any, Sequence
+
+READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
+READINESS_CASES = ("absent", "disabled", "incompatible", "malformed", "retryable", "additive-field", "mutation-applied", "mutation-noop", "mutation-rejected", "mutation-failed")
+
+
+def external_consumer_profile() -> dict[str, Any]:
+    return json.loads(files("agentic_workspace._generated_cli_package_impl").joinpath("external_consumer_profile.json").read_text(encoding="utf-8"))
+
+
+def external_operation_conformance_receipts() -> dict[str, Any]:
+    resource = files("agentic_workspace._generated_cli_package_impl").joinpath("external_operation_conformance_receipts.json")
+    if not resource.is_file():
+        return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []}
+    payload = json.loads(resource.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict) or payload.get("kind") != "agentic-workspace/external-operation-conformance-receipt-store/v1":
+        return {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": []}
+    return payload if _valid_receipt_publication(payload) else {"kind": "agentic-workspace/external-operation-conformance-receipt-store/v1", "receipts": [], "status": "invalid-publication"}
+
+
+def _receipt_publication_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in payload.items() if key != "mirror_publication"}
+
+
+def _valid_receipt_publication(payload: dict[str, Any]) -> bool:
+    publication = payload.get("mirror_publication", {})
+    if not isinstance(publication, dict) or publication.get("status") != "published":
+        return False
+    digest = __import__("hashlib").sha256(json.dumps(_receipt_publication_payload(payload), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return publication.get("payload_digest") == f"sha256:{digest}"
+
+
+def _receipt_time(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+
+def _conformance_receipt(entry: dict[str, Any], profile: dict[str, Any], receipt_store: dict[str, Any]) -> dict[str, Any] | None:
+    operation_fingerprint = entry.get("operation_compatibility", {}).get("fingerprint", "")
+    profile_fingerprint = profile.get("compatibility", {}).get("fingerprint", "")
+    candidates = []
+    for receipt in receipt_store.get("receipts", []):
+        if not isinstance(receipt, dict): continue
+        custody = receipt.get("custody", {}) if isinstance(receipt.get("custody"), dict) else {}
+        if receipt.get("kind") != "agentic-workspace/external-operation-conformance-receipt/v1": continue
+        if custody.get("producer") != "agentic-workspace.operation-conformance-runner": continue
+        if receipt.get("operation_id") != entry.get("id"): continue
+        if receipt.get("operation_fingerprint") != operation_fingerprint: continue
+        if receipt.get("profile_fingerprint") != profile_fingerprint: continue
+        if receipt.get("status") in {"revoked", "superseded", "stale"}: continue
+        if receipt.get("revoked_at") or receipt.get("superseded_by"): continue
+        expires_at = _receipt_time(receipt.get("expires_at"))
+        if expires_at is not None and datetime.now(UTC) >= expires_at: continue
+        candidates.append(receipt)
+    return sorted(candidates, key=lambda item: str(item.get("executed_at") or item.get("receipt_ref") or ""))[-1] if candidates else None
+
+
+def _conformance_readiness(entry: dict[str, Any], profile: dict[str, Any], receipt_store: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
+    evidence = _conformance_receipt(entry, profile, receipt_store)
+    if not isinstance(evidence, dict): return ["executed-conformance-receipt"], {}
+    missing = []
+    operation_fingerprint = entry.get("operation_compatibility", {}).get("fingerprint", "")
+    profile_fingerprint = profile.get("compatibility", {}).get("fingerprint", "")
+    if evidence.get("status") != "passed": missing.append("executed-conformance-passed")
+    if evidence.get("operation_fingerprint") != operation_fingerprint: missing.append("current-operation-fingerprint")
+    if evidence.get("profile_fingerprint") != profile_fingerprint: missing.append("current-profile-fingerprint")
+    authority = profile.get("readiness_authority", {}) if isinstance(profile.get("readiness_authority"), dict) else {}
+    result_identity = evidence.get("result_identity", {}) if isinstance(evidence.get("result_identity"), dict) else {}
+    if result_identity.get("runner_revision") != authority.get("runner_revision"): missing.append("current-runner-revision")
+    if result_identity.get("client_semantics_revision") != authority.get("client_semantics_revision"): missing.append("current-client-semantics-revision")
+    transports = evidence.get("transports", {})
+    cases = evidence.get("cases", {})
+    for transport in READINESS_TRANSPORTS:
+        if not isinstance(transports.get(transport), dict) or transports[transport].get("status") != "passed": missing.append(f"transport-{transport}")
+    for case in READINESS_CASES:
+        if not isinstance(cases.get(case), dict) or cases[case].get("status") != "passed": missing.append(f"case-{case}")
+    if entry.get("external_consumption", {}).get("runtime_exceptions") and not evidence.get("runtime_exception_revision"): missing.append("runtime-exception-current-revision")
+    custody = evidence.get("custody", {}) if isinstance(evidence.get("custody"), dict) else {}
+    return missing, {"status": evidence.get("status", ""), "operation_fingerprint": evidence.get("operation_fingerprint", ""), "profile_fingerprint": evidence.get("profile_fingerprint", ""), "runner_revision": result_identity.get("runner_revision", ""), "client_semantics_revision": result_identity.get("client_semantics_revision", ""), "runtime_exception_revision": evidence.get("runtime_exception_revision", ""), "transports": transports if isinstance(transports, dict) else {}, "cases": cases if isinstance(cases, dict) else {}, "receipt_ref": evidence.get("receipt_ref", ""), "producer": custody.get("producer", "")}
+
+
+def external_readiness_report(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> dict[str, Any]:
+    profile = external_consumer_profile()
+    receipt_store = external_operation_conformance_receipts()
+    entries = {entry["id"]: entry for entry in profile["operations"]}
+    supported, excluded = [], []
+    for operation_id in operation_ids:
+        entry = entries.get(operation_id, {})
+        consumption = entry.get("external_consumption", {})
+        resources, targets = entry.get("operation_resources", {}), entry.get("targets", {})
+        schemas, conformance = entry.get("schemas", {}), entry.get("conformance", [])
+        missing = []
+        for language in ("python", "typescript"):
+            if not resources.get(language, {}).get("exists"): missing.append(f"released-{language}-resource")
+            if targets.get(language, {}).get("status") not in {"adapter", "mutation-capable-adapter"}: missing.append(f"released-{language}-adapter")
+        if not schemas.get("input") or not schemas.get("output"): missing.append("input-output-schema-coverage")
+        if not conformance: missing.append("conformance-reference")
+        conformance_missing, conformance_result = _conformance_readiness(entry, profile, receipt_store)
+        missing.extend(conformance_missing)
+        status = consumption.get("status", "unavailable")
+        if status == "runtime-backed" and not consumption.get("runtime_exceptions"): missing.append("runtime-exception-disposition")
+        allowed_statuses = {"supported"} | ({"runtime-backed"} if allow_runtime_backed else set())
+        if status in allowed_statuses and not missing: supported.append(operation_id)
+        else: excluded.append({"id": operation_id, "status": status, "missing_evidence": missing, "conformance_refs": conformance, "conformance_result": conformance_result})
+    return {"kind": "agentic-workspace/external-readiness-report/v1", "status": "ready" if not excluded else "subset-only" if supported else "not-ready", "supported_operations": supported, "excluded_operations": excluded}
+
+
+def require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:
+    report = external_readiness_report(operation_ids, allow_runtime_backed=allow_runtime_backed)
+    failures = report["excluded_operations"]
+    if failures: raise ValueError("operation requirements lack current external-readiness evidence: " + json.dumps(failures, sort_keys=True))
+
+
+def resolve_invocation(target: str | Path, override: Sequence[str] | None = None) -> list[str]:
+    if override:
+        return [str(item) for item in override]
+    root = Path(target).resolve()
+    for name in ("config.local.toml", "config.toml"):
+        path = root / ".agentic-workspace" / name
+        if not path.is_file():
+            continue
+        payload = tomllib.loads(path.read_text(encoding="utf-8"))
+        workspace = payload.get("workspace", {}) if isinstance(payload, dict) else {}
+        command = workspace.get("cli_invoke") if isinstance(workspace, dict) else None
+        if isinstance(command, str) and command.strip():
+            return shlex.split(command, posix=False)
+    return ["agentic-workspace"]
+
+
+def invoke_json(
+    argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] | None = None
+) -> dict[str, Any]:
+    command = [*(resolve_invocation(target or ".", executable)), *argv]
+    if target is not None and "--target" not in command: command.extend(["--target", str(target)])
+    if "--format" not in command: command.extend(["--format", "json"])
+    completed = subprocess.run(command, text=True, capture_output=True, check=False)
+    try: payload = json.loads(completed.stdout or completed.stderr)
+    except json.JSONDecodeError as exc: raise RuntimeError(f"AW returned non-JSON output (exit {completed.returncode})") from exc
+    if completed.returncode: raise RuntimeError(json.dumps({"exit_code": completed.returncode, "error": payload}))
+    return payload
+"""
 
 
 def render_typescript_client() -> str:
     template = REPO_ROOT / "scripts/generate/templates/external_client.mjs"
     if template.is_file():
         return template.read_text(encoding="utf-8")
-    return '''// Generated from command_package_ir.json. Do not edit.\nimport { readFileSync } from 'node:fs';\nimport { spawnSync } from 'node:child_process';\n\nconst profileUrl = new URL('../external_consumer_profile.json', import.meta.url);\nexport function externalConsumerProfile() { return JSON.parse(readFileSync(profileUrl, 'utf8')); }\nexport function requireOperations(operationIds, { allowRuntimeBacked = false } = {}) {\n  const entries = new Map(externalConsumerProfile().operations.map((entry) => [entry.id, entry]));\n  const failures = operationIds.flatMap((id) => {\n    const status = entries.get(id)?.external_consumption?.status ?? 'unknown';\n    return status === 'internal' || status === 'unknown' || (status === 'runtime-backed' && !allowRuntimeBacked) ? [`${id}: ${status}`] : [];\n  });\n  if (failures.length) throw new Error(`incompatible operation requirements: ${failures.join(', ')}`);\n}\nexport function invokeJson(argv, { target, executable = 'agentic-workspace' } = {}) {\n  const args = [...argv];\n  if (target !== undefined && !args.includes('--target')) args.push('--target', String(target));\n  if (!args.includes('--format')) args.push('--format', 'json');\n  const result = spawnSync(executable, args, { encoding: 'utf8' });\n  const text = result.stdout || result.stderr;\n  let payload;\n  try { payload = JSON.parse(text); } catch (error) { throw new Error(`AW returned non-JSON output (exit ${result.status})`, { cause: error }); }\n  if (result.status !== 0) throw new Error(JSON.stringify({ exit_code: result.status, error: payload }));\n  return payload;\n}\n'''
+    return """// Generated from command_package_ir.json. Do not edit.\nimport { readFileSync } from 'node:fs';\nimport { spawnSync } from 'node:child_process';\n\nconst profileUrl = new URL('../external_consumer_profile.json', import.meta.url);\nexport function externalConsumerProfile() { return JSON.parse(readFileSync(profileUrl, 'utf8')); }\nexport function requireOperations(operationIds, { allowRuntimeBacked = false } = {}) {\n  const entries = new Map(externalConsumerProfile().operations.map((entry) => [entry.id, entry]));\n  const failures = operationIds.flatMap((id) => {\n    const status = entries.get(id)?.external_consumption?.status ?? 'unknown';\n    return status === 'internal' || status === 'unknown' || (status === 'runtime-backed' && !allowRuntimeBacked) ? [`${id}: ${status}`] : [];\n  });\n  if (failures.length) throw new Error(`incompatible operation requirements: ${failures.join(', ')}`);\n}\nexport function invokeJson(argv, { target, executable = 'agentic-workspace' } = {}) {\n  const args = [...argv];\n  if (target !== undefined && !args.includes('--target')) args.push('--target', String(target));\n  if (!args.includes('--format')) args.push('--format', 'json');\n  const result = spawnSync(executable, args, { encoding: 'utf8' });\n  const text = result.stdout || result.stderr;\n  let payload;\n  try { payload = JSON.parse(text); } catch (error) { throw new Error(`AW returned non-JSON output (exit ${result.status})`, { cause: error }); }\n  if (result.status !== 0) throw new Error(JSON.stringify({ exit_code: result.status, error: payload }));\n  return payload;\n}\n"""
 
 
 def render_python_typed_operations(profile: dict[str, object]) -> str:

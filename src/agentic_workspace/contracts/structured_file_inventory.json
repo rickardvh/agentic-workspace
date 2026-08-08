@@ -1307,6 +1307,23 @@
       "storage_class": "generated-required-adapter"
     },
     {
+      "pattern": "generated/workspace/*/external_operation_conformance_receipts.json",
+      "format": "json",
+      "owner": "external-operation-conformance-runner",
+      "status": "generated-derived",
+      "schema_or_validator": "tests/test_external_operation_clients.py",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated mirror of producer-owned external operation conformance receipts consumed by released clients.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Released Python and TypeScript clients need one package-owned receipt generation to fail closed outside a source checkout.",
+      "reconstructable_from": [
+        "uv run python scripts/check/run_operation_conformance_tests.py --target all",
+        "operation conformance IR and external consumer profile"
+      ],
+      "routed_to": "#2200"
+    },
+    {
       "checked_in_justification": "Checked in for framework-native agent discovery; canonical source remains SkillSpec.",
       "editable_by_agents": false,
       "format": "json",
@@ -1875,6 +1892,16 @@
       "pattern": "generated/workspace/*/external_contract_bundle.json",
       "removal_or_demotion_path": "remove only if released clients gain an equivalent self-contained contract transport",
       "source_command": "uv run python scripts/generate/generate_external_consumer_profile.py"
+    },
+    {
+      "pattern": "generated/workspace/*/external_operation_conformance_receipts.json",
+      "source_command": "uv run python scripts/check/run_operation_conformance_tests.py --target all",
+      "named_consumer": "released Python and TypeScript external readiness reports",
+      "checked_in_justification": "Package-owned readiness must consume a verified receipt generation without reaching into source-checkout proof output.",
+      "freshness_check": "uv run python scripts/check/run_operation_conformance_tests.py --target all",
+      "ordinary_agent_route": "external-readiness proof drill-down only; not an ordinary startup surface",
+      "removal_or_demotion_path": "remove only if released clients stop shipping conformance-backed readiness reporting",
+      "max_bytes": 5000000
     },
     {
       "checked_in_justification": "Installed planning payload manifest used as the local source for generated weak-agent adapters.",
