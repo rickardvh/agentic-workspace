@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:2e3f8759c90e0cb321b6ad7a45647aaa516e138e105a8ed481f29bbcc2c3d98c",
+  "profile_fingerprint": "sha256:276d08f6e9d8920e8cc03fecddb551f3dfa7ec1576eb751105b4c25de4c272c3",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -20,8 +20,8 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ebba25bbb334c400dd582da2e68ac39614e8c8637e6b438a7dc2cebdc8158c01",
-      "compatibility_fingerprint": "sha256:e050ff093562bf47c84ad2600f7a038626cbbfb655f69c06023f91909242cc6a",
+      "fingerprint": "sha256:ed6d8216c0965698fc18cdcb00d378aac706aece4d6b101749474dff5f01f2d4",
+      "compatibility_fingerprint": "sha256:c093c874ddb3177b806a8e8c2faca5890dbaa80eb5a56fc052d04e8de93add07",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -42,7 +42,7 @@
           "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
           "Independent-review admission accepts only producer-owned review result envelopes and rejects caller-authored identity packets.",
-          "Independent-review host results are admitted only through an opaque host_result_ref whose signed envelope is verified against a current host-runtime trust registry; repo-local files, user-home trust stores, PYTHONPATH modules, environment variables, checked-in keys, and caller-supplied verifier keys/signatures are non-authoritative caches.",
+          "Independent-review host results are admitted only through an opaque host_result_ref whose signed envelope verifies against immutable release-pinned provider keys; when no provider key is shipped the operation is unavailable and fails closed. Repo-local files, user-home trust stores, PYTHONPATH modules, environment variables, operation arguments, caller-installed runtime keys, and caller-supplied verifier keys/signatures are non-authoritative caches.",
           "Independent-review receipts are bound to changed scope and expire, revoke, supersede, or lose current host-runtime registry admission fail closed at import and proof-use time."
         ],
         "id": "assignment.admit",
@@ -193,7 +193,7 @@
           "assignment.admit.process",
           "generated external clients expose and negotiate the operation family as runtime-backed",
           "operation contract validates against operation.schema.json",
-          "assignment.admit admits independent-review host results through the same generated public operation used by external clients while requiring protected host-runtime trust-registry custody outside the caller path",
+          "assignment.admit admits independent-review host results only when an immutable release-pinned provider key verifies the opaque result envelope and rejects caller-installed in-process trust roots",
           "proof decision rejects expired, revoked, superseded, stale-after-import, wrong-scope, same-actor, or caller-shaped independent-review evidence"
         ],
         "reads": [
@@ -485,7 +485,7 @@
             "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
             "Independent-review admission accepts only producer-owned review result envelopes and rejects caller-authored identity packets.",
-            "Independent-review host results are admitted only through an opaque host_result_ref whose signed envelope is verified against a current host-runtime trust registry; repo-local files, user-home trust stores, PYTHONPATH modules, environment variables, checked-in keys, and caller-supplied verifier keys/signatures are non-authoritative caches.",
+            "Independent-review host results are admitted only through an opaque host_result_ref whose signed envelope verifies against immutable release-pinned provider keys; when no provider key is shipped the operation is unavailable and fails closed. Repo-local files, user-home trust stores, PYTHONPATH modules, environment variables, operation arguments, caller-installed runtime keys, and caller-supplied verifier keys/signatures are non-authoritative caches.",
             "Independent-review receipts are bound to changed scope and expire, revoke, supersede, or lose current host-runtime registry admission fail closed at import and proof-use time."
           ]
         },

@@ -17,9 +17,9 @@ import shlex
 import subprocess
 import tomllib
 from contextlib import contextmanager
-from contextvars import ContextVar
 from datetime import date, datetime, timezone
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Callable, Mapping
 
 from repo_verification_bootstrap.runtime_primitives import (
@@ -156,47 +156,7 @@ INDEPENDENT_REVIEW_HOST_RESULT_INDEX_KIND = "agentic-workspace/independent-revie
 INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
-INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS: dict[str, dict[str, Any]] = {}
-
 IndependentReviewHostResultResolver = Callable[[str], dict[str, Any]]
-_INDEPENDENT_REVIEW_HOST_RUNTIME_KEYS: ContextVar[dict[str, dict[str, Any]] | None] = ContextVar(
-    "agentic_workspace_independent_review_host_runtime_keys",
-    default=None,
-)
-
-
-@contextmanager
-def independent_review_host_runtime_trust_registry(
-    keys: Mapping[str, Mapping[str, Any]],
-) -> Any:
-    """Install a host-runtime-owned independent-review trust registry for this execution context.
-
-    This is intentionally not wired to CLI arguments, target-local files,
-    ``PYTHONPATH``, environment variables, or user-home state. Host/adapter code
-    can execute AW inside this context after resolving current provider-owned
-    trust roots. Target code can still author local result cache files, but those
-    files are non-authoritative unless this registry admits their signed host
-    envelope at import and proof-use time.
-    """
-
-    normalized: dict[str, dict[str, Any]] = {}
-    for key_id, raw_key in keys.items():
-        key = dict(raw_key)
-        key.setdefault("key_id", str(key_id))
-        key.setdefault("authority", "host-runtime-trust-registry")
-        normalized[str(key_id)] = key
-    token = _INDEPENDENT_REVIEW_HOST_RUNTIME_KEYS.set(normalized)
-    try:
-        yield
-    finally:
-        _INDEPENDENT_REVIEW_HOST_RUNTIME_KEYS.reset(token)
-
-
-def _current_independent_review_host_public_keys() -> dict[str, dict[str, Any]]:
-    runtime_keys = _INDEPENDENT_REVIEW_HOST_RUNTIME_KEYS.get()
-    if runtime_keys is not None:
-        return runtime_keys
-    return {key_id: dict(key) for key_id, key in INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS.items()}
 
 
 def _proof_lifecycle_command(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -6817,7 +6777,19 @@ def _rsa_sha256_signature_valid(*, signature_b64: str, payload: dict[str, Any], 
     return decoded[2:separator] == b"\xff" * (separator - 2) and decoded[separator + 1 :] == digest_info
 
 
-def _signed_independent_review_host_verdict(*, host_result_ref: str, host_result: dict[str, Any], target_root: Path) -> dict[str, Any]:
+def _signed_independent_review_host_verdict_with_keys(
+    *,
+    host_result_ref: str,
+    host_result: dict[str, Any],
+    target_root: Path,
+    public_keys: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Verify a host result against an already-authoritative key set.
+
+    This helper is a cryptographic unit seam, not a trust-registration surface.
+    Production callers use only the immutable release-pinned registry below.
+    """
+
     admission = _as_dict(host_result.get("host_admission"))
     signed_payload = _as_dict(admission.get("signed_payload"))
     key_id = str(admission.get("key_id") or "").strip()
@@ -6827,15 +6799,12 @@ def _signed_independent_review_host_verdict(*, host_result_ref: str, host_result
         return {}
     if not key_id:
         return {}
-    key = _as_dict(_current_independent_review_host_public_keys().get(key_id))
+    key = _as_dict(public_keys.get(key_id))
     if not key or key.get("status") != "current":
         return {}
     if key.get("algorithm") != "RS256":
         return {}
-    if str(key.get("authority") or "host-runtime-trust-registry") not in {
-        "host-runtime-trust-registry",
-        "pinned-host-runtime",
-    }:
+    if str(key.get("authority") or "") != "pinned-host-runtime":
         return {}
     if str(key.get("producer") or "") != str(_as_dict(host_result.get("custody")).get("producer") or ""):
         return {}
@@ -6881,9 +6850,38 @@ def _signed_independent_review_host_verdict(*, host_result_ref: str, host_result
         "expires_at": str(signed_payload.get("expires_at") or ""),
         "revoked_at": str(signed_payload.get("revoked_at") or ""),
         "superseded_by": str(signed_payload.get("superseded_by") or ""),
-        "registry_authority": str(key.get("authority") or "host-runtime-trust-registry"),
+        "registry_authority": str(key.get("authority") or ""),
         **expected_payload,
     }
+
+
+def _build_release_pinned_independent_review_verifier(
+    public_keys: Mapping[str, Mapping[str, Any]],
+) -> Callable[..., dict[str, Any]]:
+    """Seal release-owned keys into the production verifier closure."""
+
+    sealed_keys: Mapping[str, Mapping[str, Any]] = MappingProxyType(
+        {str(key_id): MappingProxyType(dict(key)) for key_id, key in public_keys.items()}
+    )
+
+    def verify(*, host_result_ref: str, host_result: dict[str, Any], target_root: Path) -> dict[str, Any]:
+        return _signed_independent_review_host_verdict_with_keys(
+            host_result_ref=host_result_ref,
+            host_result=host_result,
+            target_root=target_root,
+            public_keys=sealed_keys,
+        )
+
+    return verify
+
+
+# Independent-review authority is deliberately not configurable from the AW
+# library process. Provider keys may be added only by a reviewed package release;
+# until then external independent-review admission is unavailable and fails
+# closed. The key set is captured inside this verifier and has no registry/setter
+# surface that application or target code can populate.
+_signed_independent_review_host_verdict = _build_release_pinned_independent_review_verifier({})
+del _build_release_pinned_independent_review_verifier
 
 
 def _load_indexed_independent_review_host_result(*, target_root: Path, host_result_ref: str) -> dict[str, Any]:

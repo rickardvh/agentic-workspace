@@ -11,11 +11,22 @@ _INDEPENDENT_REVIEW_HOST_FIXTURE_KEYS: dict[str, dict[str, object]] = {}
 
 
 @contextmanager
-def _host_runtime_for_review_ref(host_result_ref: str):
-    from agentic_workspace.workspace_runtime_proof import independent_review_host_runtime_trust_registry
+def _verified_host_fixture(monkeypatch: pytest.MonkeyPatch, host_result_ref: str):
+    import agentic_workspace.workspace_runtime_proof as proof_runtime
 
     key = _INDEPENDENT_REVIEW_HOST_FIXTURE_KEYS[host_result_ref]
-    with independent_review_host_runtime_trust_registry({str(key["key_id"]): key}):
+    original_verifier = proof_runtime._signed_independent_review_host_verdict_with_keys
+
+    def verify_fixture(*, host_result_ref: str, host_result: dict[str, object], target_root: Path) -> dict[str, object]:
+        return original_verifier(
+            host_result_ref=host_result_ref,
+            host_result=host_result,
+            target_root=target_root,
+            public_keys={str(key["key_id"]): key},
+        )
+
+    with monkeypatch.context() as fixture_patch:
+        fixture_patch.setattr(proof_runtime, "_signed_independent_review_host_verdict", verify_fixture)
         yield
 
 
@@ -182,6 +193,7 @@ def _write_independent_review_host_result(
     key = dict(signed["key"]) if isinstance(signed.get("key"), dict) else {}
     key.update(
         {
+            "authority": "pinned-host-runtime",
             "status": str(result.get("key_status") or "current"),
             "key_id": key_id,
             "workspace_ref": str(result.get("key_workspace_ref") or f"workspace:path:{target_root.resolve()}"),
@@ -7668,7 +7680,7 @@ certification_limits = ["does not certify production authorization safety"]
         review_result,
         host_admission_monkeypatch=monkeypatch,
     )
-    with _host_runtime_for_review_ref(host_result_ref):
+    with _verified_host_fixture(monkeypatch, host_result_ref):
         trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
         inline = admit_independent_review_result_operation(
             target_root=tmp_path,
@@ -7738,7 +7750,7 @@ def test_assignment_admit_accepts_preinstalled_host_capability_ref(tmp_path: Pat
     )
     assert isinstance(host_result_ref, str)
 
-    with _host_runtime_for_review_ref(host_result_ref):
+    with _verified_host_fixture(monkeypatch, host_result_ref):
         receipt = admit_independent_review_result_operation(
             target_root=tmp_path,
             values={
@@ -7752,7 +7764,7 @@ def test_assignment_admit_accepts_preinstalled_host_capability_ref(tmp_path: Pat
     assert receipt["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
 
 
-def test_assignment_admit_accepts_pinned_signed_host_evidence_across_process(tmp_path: Path) -> None:
+def test_assignment_admit_rejects_unpinned_signed_host_evidence_across_process(tmp_path: Path) -> None:
     import subprocess
     import sys
 
@@ -7788,21 +7800,16 @@ def test_assignment_admit_accepts_pinned_signed_host_evidence_across_process(tmp
     script = f"""
 import json
 from pathlib import Path
-from agentic_workspace.workspace_runtime_proof import (
-    admit_independent_review_result_operation,
-    independent_review_host_runtime_trust_registry,
-)
+from agentic_workspace.workspace_runtime_proof import admit_independent_review_result_operation
 
-host_public_key = json.loads({json.dumps(json.dumps(host_inputs["host_public_key"], sort_keys=True))})
-with independent_review_host_runtime_trust_registry({{host_public_key["key_id"]: host_public_key}}):
-    payload = admit_independent_review_result_operation(
-        target_root=Path({str(tmp_path)!r}),
-        values={{
-            "host_result_ref": {host_result_ref!r},
-            "required_mode": "human",
-            "changed": ["services/auth/policy.py"],
-        }},
-    )
+payload = admit_independent_review_result_operation(
+    target_root=Path({str(tmp_path)!r}),
+    values={{
+        "host_result_ref": {host_result_ref!r},
+        "required_mode": "human",
+        "changed": ["services/auth/policy.py"],
+    }},
+)
 print(json.dumps(payload, sort_keys=True))
 """
     completed = subprocess.run(
@@ -7818,8 +7825,8 @@ print(json.dumps(payload, sort_keys=True))
 
     assert completed.returncode == 0, completed.stderr or completed.stdout
     payload = json.loads(completed.stdout)
-    assert payload["status"] == "admitted"
-    assert payload["receipt"]["review_result"]["custody"]["host_result_ref"] == host_result_ref
+    assert payload["status"] == "rejected"
+    assert payload["failures"][0]["reason"] == "host-capability-admission-rejected"
 
 
 def test_assignment_admit_does_not_load_repo_or_pythonpath_host_verifiers() -> None:
@@ -7835,6 +7842,108 @@ def test_assignment_admit_does_not_load_repo_or_pythonpath_host_verifiers() -> N
     assert "_independent_review_host" + "_test_signature" not in test_source
     assert "github-review-adapter:" + "test-v1" not in source
     assert "_INDEPENDENT_REVIEW_HOST_ADMISSION_KEYS" not in source
+    assert "def independent_review_host_runtime_trust_registry(" not in source
+    assert "\nINDEPENDENT_REVIEW_HOST_PUBLIC_KEYS:" not in source
+    assert "_INDEPENDENT_REVIEW_HOST_RUNTIME_KEYS" not in source
+
+
+def test_independent_review_release_pinned_verifier_exposes_no_runtime_registry() -> None:
+    import agentic_workspace.workspace_runtime_proof as proof_runtime
+
+    assert not hasattr(proof_runtime, "independent_review_host_runtime_trust_registry")
+    assert not hasattr(proof_runtime, "INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS")
+    assert not hasattr(proof_runtime, "_INDEPENDENT_REVIEW_HOST_RUNTIME_KEYS")
+    assert not hasattr(proof_runtime, "_PINNED_INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS")
+
+
+@pytest.mark.parametrize(
+    ("key_change", "admitted"),
+    [
+        ({}, True),
+        ({"status": "revoked"}, False),
+        ({"revoked_at": "2026-08-01T00:00:00Z"}, False),
+        ({"superseded_by": "github-review-adapter:replacement"}, False),
+        ({"expires_at": "2026-08-01T00:00:00Z"}, False),
+    ],
+)
+def test_independent_review_cryptographic_verifier_enforces_pinned_key_lifecycle(
+    tmp_path: Path, key_change: dict[str, str], admitted: bool
+) -> None:
+    import agentic_workspace.workspace_runtime_proof as proof_runtime
+
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "human",
+        "assignment_revision": "assignment-rev-1",
+        "proof_subject_revision": "proof-subject-rev-1",
+        "changed_paths": ["services/auth/policy.py"],
+        "scope_digest": proof_runtime._independent_review_scope_digest(["services/auth/policy.py"]),
+        "implementer": {"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
+        "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+        "custody": {"producer": "github-review-adapter", "trusted_channel": "github-review-webhook"},
+    }
+    host_inputs = _write_independent_review_host_result(
+        tmp_path,
+        review_result,
+        install_host_admission=False,
+        return_capability_inputs=True,
+    )
+    assert isinstance(host_inputs, dict)
+    host_result_ref = str(host_inputs["host_result_ref"])
+    host_id = host_result_ref.removeprefix("independent-review-host-result:")
+    host_result = json.loads((tmp_path / proof_runtime.INDEPENDENT_REVIEW_HOST_RESULT_DIR / f"{host_id}.json").read_text(encoding="utf-8"))
+    key = dict(host_inputs["host_public_key"])
+    key.update(key_change)
+
+    verdict = proof_runtime._signed_independent_review_host_verdict_with_keys(
+        host_result_ref=host_result_ref,
+        host_result=host_result,
+        target_root=tmp_path,
+        public_keys={str(key["key_id"]): key},
+    )
+
+    assert (verdict.get("status") == "admitted") is admitted
+
+
+def test_independent_review_ignores_caller_recreated_legacy_authority_attributes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.workspace_runtime_proof as proof_runtime
+
+    review_result = {
+        "kind": "agentic-workspace/independent-review-result/v1",
+        "status": "accepted",
+        "required_mode": "human",
+        "assignment_revision": "assignment-rev-1",
+        "proof_subject_revision": "proof-subject-rev-1",
+        "changed_paths": ["services/auth/policy.py"],
+        "scope_digest": proof_runtime._independent_review_scope_digest(["services/auth/policy.py"]),
+        "implementer": {"actor_id": "agent-implementer", "provider": "codex", "role": "implementer"},
+        "reviewer": {"actor_id": "human-reviewer", "provider": "human", "role": "human-approver", "fresh_context": True},
+        "custody": {"producer": "github-review-adapter", "trusted_channel": "github-review-webhook"},
+    }
+    host_inputs = _write_independent_review_host_result(
+        tmp_path,
+        review_result,
+        install_host_admission=False,
+        return_capability_inputs=True,
+    )
+    assert isinstance(host_inputs, dict)
+    key = host_inputs["host_public_key"]
+    monkeypatch.setattr(proof_runtime, "INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS", {key["key_id"]: key}, raising=False)
+    monkeypatch.setattr(proof_runtime, "_INDEPENDENT_REVIEW_HOST_RUNTIME_KEYS", {key["key_id"]: key}, raising=False)
+    monkeypatch.setattr(proof_runtime, "_PINNED_INDEPENDENT_REVIEW_HOST_PUBLIC_KEYS", {key["key_id"]: key}, raising=False)
+
+    receipt = proof_runtime.admit_independent_review_result_operation(
+        target_root=tmp_path,
+        values={
+            "host_result_ref": host_inputs["host_result_ref"],
+            "required_mode": "human",
+            "changed": ["services/auth/policy.py"],
+        },
+    )
+
+    assert receipt["status"] == "rejected"
+    assert receipt["failures"][0]["reason"] == "host-capability-admission-rejected"
 
 
 def test_assignment_admit_rejects_caller_supplied_host_trust_root(tmp_path: Path) -> None:
@@ -8182,7 +8291,7 @@ claim_boundary = "critical-access-closeout"
         review_result,
         host_admission_monkeypatch=monkeypatch,
     )
-    with _host_runtime_for_review_ref(host_result_ref):
+    with _verified_host_fixture(monkeypatch, host_result_ref):
         trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
         admission = admit_independent_review_result_operation(
             target_root=tmp_path,
@@ -8247,7 +8356,7 @@ claim_boundary = "critical-access-closeout"
         review_result,
         host_admission_monkeypatch=monkeypatch,
     )
-    with _host_runtime_for_review_ref(host_result_ref):
+    with _verified_host_fixture(monkeypatch, host_result_ref):
         trusted = record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
         receipt = admit_independent_review_result_operation(
             target_root=tmp_path,
@@ -8267,7 +8376,7 @@ claim_boundary = "critical-access-closeout"
     index["results"][host_id]["host_result_digest"] = _stable_review_json_digest(host_result)
     _write(index_path, json.dumps(index, indent=2, sort_keys=True) + "\n")
 
-    with _host_runtime_for_review_ref(host_result_ref):
+    with _verified_host_fixture(monkeypatch, host_result_ref):
         with pytest.raises(WorkspaceUsageError, match="not current"):
             record_trusted_independent_review_result(target_root=tmp_path, review_result={"host_result_ref": host_result_ref})
         assert (
