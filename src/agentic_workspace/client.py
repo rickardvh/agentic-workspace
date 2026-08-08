@@ -219,7 +219,53 @@ def _validate_failure(entry: Mapping[str, Any], value: Any) -> None:
         raise AWClientError("malformed", "operation failure failed schema validation", {"errors": [error.message for error in errors]})
 
 
-def _argv(contract: Mapping[str, Any], values: Mapping[str, Any], target: Path) -> list[str]:
+def _adapter_commands(package_name: str) -> list[dict[str, Any]]:
+    try:
+        payload = json.loads(_resource("adapter_commands.json", package_name).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return []
+    return [item for item in payload if isinstance(item, dict)] if isinstance(payload, list) else []
+
+
+def _command_interface(contract: Mapping[str, Any], *, package_name: str) -> Mapping[str, Any]:
+    surface = contract.get("command_surface", {})
+    if not isinstance(surface, Mapping):
+        return {}
+    command_tokens = str(surface.get("command", "")).split()
+    subcommand = str(surface.get("subcommand", "")).strip()
+    if subcommand and (not command_tokens or command_tokens[-1] != subcommand):
+        command_tokens.append(subcommand)
+    if not command_tokens:
+        return {}
+    current: Mapping[str, Any] | None = None
+    choices = [item.get("interface", {}) for item in _adapter_commands(package_name)]
+    for token in command_tokens:
+        current = next(
+            (item for item in choices if isinstance(item, Mapping) and str(item.get("name", "")) == token),
+            None,
+        )
+        if current is None:
+            return {}
+        choices = [item for item in current.get("subcommands", []) if isinstance(item, Mapping)]
+    return cast(Mapping[str, Any], current)
+
+
+def _command_options_by_input_name(contract: Mapping[str, Any], *, package_name: str) -> dict[str, Mapping[str, Any]]:
+    interface = _command_interface(contract, package_name=package_name)
+    options = interface.get("options", []) if isinstance(interface, Mapping) else []
+    return {str(option.get("name")): option for option in options if isinstance(option, Mapping) and str(option.get("name", "")).strip()}
+
+
+def _option_flag(name: str, option_spec: Mapping[str, Any] | None) -> str:
+    flags = option_spec.get("flags", []) if isinstance(option_spec, Mapping) else []
+    if isinstance(flags, list):
+        long_flags = [str(flag) for flag in flags if isinstance(flag, str) and flag.startswith("--")]
+        if long_flags:
+            return long_flags[0]
+    return f"--{name.replace('_', '-')}"
+
+
+def _argv(contract: Mapping[str, Any], values: Mapping[str, Any], target: Path, *, package_name: str = "agentic-workspace") -> list[str]:
     surface = contract.get("command_surface", {})
     command = str(surface.get("command", "")).split()
     subcommand = str(surface.get("subcommand", "")).strip()
@@ -237,22 +283,30 @@ def _argv(contract: Mapping[str, Any], values: Mapping[str, Any], target: Path) 
     missing = sorted(name for name, item in declared.items() if item.get("required") and name not in values)
     if missing:
         raise AWClientError("malformed", "operation input is missing required fields", {"fields": missing})
+    options_by_name = _command_options_by_input_name(contract, package_name=package_name)
     argv = list(command)
     for name, value in values.items():
         if name == "target":
             continue
-        flag = f"--{name.replace('_', '-')}"
+        option_spec = options_by_name.get(name)
+        flag = _option_flag(name, option_spec)
         if isinstance(value, bool):
             if value:
                 argv.append(flag)
         elif isinstance(value, list):
-            argv.extend([flag, ",".join(str(item) for item in value)])
+            if isinstance(option_spec, Mapping) and option_spec.get("action") == "append":
+                for item in value:
+                    argv.extend([flag, str(item)])
+            else:
+                argv.extend([flag, ",".join(str(item) for item in value)])
         else:
             argv.extend([flag, str(value)])
     if "target" in declared:
-        argv.extend(["--target", str(target)])
+        target_spec = options_by_name.get("target")
+        argv.extend([_option_flag("target", target_spec), str(target)])
     if "format" in declared:
-        argv.extend(["--format", "json"])
+        format_spec = options_by_name.get("format")
+        argv.extend([_option_flag("format", format_spec), "json"])
     return argv
 
 
@@ -271,7 +325,8 @@ def invoke_operation(
     entry = next(item for item in external_consumer_profile()["operations"] if item["id"] == operation_id)
     for schema_name in entry["schemas"]["input"]:
         _validate_schema(entry, schema_name, dict(values), phase="input")
-    argv = _argv(_operation_contract(entry), values, Path(target).resolve())
+    resource_ref = entry["operation_resources"]["python"]
+    argv = _argv(_operation_contract(entry), values, Path(target).resolve(), package_name=str(resource_ref["package"]))
     command = [*resolve_invocation(target, invocation), *argv]
     try:
         completed = subprocess.run(command, text=True, capture_output=True, check=False)

@@ -700,26 +700,85 @@ def test_agent_guidance_generated_lifecycle_operations_are_external_runtime_back
     )
     store_path = tmp_path / ".agentic-workspace/local/guidance-lifecycle.json"
     store_path.parent.mkdir(parents=True)
+
+    def lifecycle_record(guidance_id: str, instruction: str) -> dict[str, object]:
+        return {
+            "kind": "agentic-workspace/guidance-lifecycle-record/v1",
+            "guidance_id": guidance_id,
+            "status": "active",
+            "instruction": instruction,
+            "applicability": {"target_identity_ref": "user-local:fast-worker"},
+            "destination": {
+                "owner": "repo-local-target-guidance-overlay",
+                "owner_operation_id": "agent-guidance.promote.target-guidance",
+                "store": ".agentic-workspace/local/guidance-lifecycle.json",
+            },
+            "provenance": {"source_event_refs": [guidance_id]},
+            "transitions": [{"operation": "promote", "reason": "fixture"}],
+            "revision": 1,
+        }
+
     store_path.write_text(
         json.dumps(
             {
                 "kind": "agentic-workspace/guidance-lifecycle-store/v1",
                 "records": [
+                    lifecycle_record("guidance:generated-edit", "Prefer broad edits."),
+                    lifecycle_record("guidance:generated-merge-target", "Prefer precise edits."),
+                    lifecycle_record("guidance:generated-merge-source", "Prefer precise edits too."),
+                    lifecycle_record("guidance:generated-split", "Prefer precise edits and proof."),
+                    lifecycle_record("guidance:generated-suppress", "Prefer temporary guidance."),
+                    lifecycle_record("guidance:generated-revalidate", "Prefer current target guidance."),
+                    lifecycle_record("guidance:generated-weaken", "Prefer advisory guidance."),
+                    lifecycle_record("guidance:generated-supersede", "Prefer old guidance."),
+                    lifecycle_record("guidance:generated-replacement", "Prefer replacement guidance."),
+                    lifecycle_record("guidance:generated-retire", "Prefer retiring guidance."),
+                    lifecycle_record("guidance:generated-delete", "Prefer deleting guidance."),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    correction_store = tmp_path / ".agentic-workspace/local/correction-events.json"
+    correction_store.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/correction-event-store/v1",
+                "events": [
                     {
-                        "kind": "agentic-workspace/guidance-lifecycle-record/v1",
-                        "guidance_id": "guidance:generated-edit",
-                        "status": "active",
-                        "instruction": "Prefer broad edits.",
-                        "applicability": {"target_identity_ref": "user-local:fast-worker"},
-                        "destination": {
-                            "owner": "repo-local-target-guidance-overlay",
-                            "owner_operation_id": "agent-guidance.promote.target-guidance",
-                            "store": ".agentic-workspace/local/guidance-lifecycle.json",
-                        },
-                        "provenance": {"source_event_refs": ["review-1"]},
-                        "transitions": [{"operation": "promote", "reason": "fixture"}],
-                        "revision": 1,
-                    }
+                        "target_identity_ref": "fast",
+                        "target_revision": "rev-1",
+                        "task_class": "mechanical-follow-through",
+                        "scope_class": "narrow-code-change",
+                        "invariant_id": "generated-promote",
+                        "behavior_class": "edit-scope",
+                        "desired_behavior": "Prefer generated promotion.",
+                        "replaced_behavior": "Manual promotion.",
+                        "authority": "explicit-user-correction",
+                        "source": "pr-review",
+                        "source_ref": "generated-promote-1",
+                        "producer_class": "human-reviewer",
+                        "producer_id": "reviewer-1",
+                        "evidence_hash": "sha256:generated-promote-1",
+                        "route_decisions": ["target-guidance", "target-suitability"],
+                    },
+                    {
+                        "target_identity_ref": "fast",
+                        "target_revision": "rev-1",
+                        "task_class": "mechanical-follow-through",
+                        "scope_class": "narrow-code-change",
+                        "invariant_id": "generated-promote",
+                        "behavior_class": "edit-scope",
+                        "desired_behavior": "Prefer generated promotion.",
+                        "replaced_behavior": "Manual promotion.",
+                        "authority": "explicit-user-correction",
+                        "source": "pr-review",
+                        "source_ref": "generated-promote-2",
+                        "producer_class": "human-reviewer",
+                        "producer_id": "reviewer-1",
+                        "evidence_hash": "sha256:generated-promote-2",
+                        "route_decisions": ["target-guidance", "target-suitability"],
+                    },
                 ],
             }
         ),
@@ -742,6 +801,97 @@ def test_agent_guidance_generated_lifecycle_operations_are_external_runtime_back
     assert edited["mutation_applied"] is True
     assert edited["record"]["revision"] == 2
     assert edited["record"]["instruction"] == "Prefer narrow edits."
+    merged = agent_guidance_merge(
+        {
+            "guidance_id": "guidance:generated-merge-target",
+            "expected_revision": 1,
+            "expected_record_revisions_json": json.dumps({"guidance:generated-merge-source": 1}),
+            "merge_guidance_ids": ["guidance:generated-merge-source"],
+            "reason": "generated external merge",
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    split = agent_guidance_split(
+        {
+            "guidance_id": "guidance:generated-split",
+            "expected_revision": 1,
+            "split_instructions": ["Prefer precise edits.", "Prefer precise proof."],
+            "reason": "generated external split",
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    suppressed = agent_guidance_suppress(
+        {"guidance_id": "guidance:generated-suppress", "expected_revision": 1, "reason": "generated external suppress"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    revalidated = agent_guidance_revalidate(
+        {"guidance_id": "guidance:generated-revalidate", "expected_revision": 1, "reason": "generated external revalidate"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    weakened = agent_guidance_weaken(
+        {"guidance_id": "guidance:generated-weaken", "expected_revision": 1, "reason": "generated external weaken"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    superseded = agent_guidance_supersede(
+        {
+            "guidance_id": "guidance:generated-supersede",
+            "expected_revision": 1,
+            "expected_record_revisions_json": json.dumps({"guidance:generated-replacement": 1}),
+            "replacement_guidance_id": "guidance:generated-replacement",
+            "reason": "generated external supersede",
+        },
+        target=tmp_path,
+        invocation=invocation,
+    )
+    retired = agent_guidance_retire(
+        {"guidance_id": "guidance:generated-retire", "expected_revision": 1, "reason": "generated external retire"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    deleted = agent_guidance_delete(
+        {"guidance_id": "guidance:generated-delete", "expected_revision": 1, "reason": "generated external delete"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    from agentic_workspace.agent_guidance import guidance_promotion_from_store
+
+    promotion_decision = guidance_promotion_from_store(target_root=tmp_path)
+    promoted = agent_guidance_promote(
+        {"guidance_id": promotion_decision["guidance"][0]["guidance_id"]},
+        target=tmp_path,
+        invocation=invocation,
+    )
+
+    assert merged["status"] == "transitioned"
+    assert "guidance:generated-merge-source" in merged["record"]["merged_guidance_ids"]
+    assert split["status"] == "transitioned"
+    assert split["record"]["status"] == "split-retired"
+    assert suppressed["record"]["status"] == "suppressed"
+    assert revalidated["record"]["authority_revalidation"]["status"] == "current"
+    assert weakened["record"]["claim_effect"] == "advisory-only"
+    assert superseded["record"]["status"] == "superseded"
+    assert retired["record"]["status"] == "retired"
+    assert deleted["record"]["status"] == "deleted"
+    assert promoted["status"] == "promoted"
+    receipt_index = json.loads((tmp_path / ".agentic-workspace/local/guidance-receipts.json").read_text(encoding="utf-8"))
+    mutation_receipts = [item for item in receipt_index["receipts"] if item.get("receipt_type") == "guidance-mutation"]
+    assert {item["operation"] for item in mutation_receipts} >= {
+        "promote",
+        "edit",
+        "merge",
+        "split",
+        "suppress",
+        "revalidate",
+        "weaken",
+        "supersede",
+        "retire",
+        "delete",
+    }
 
 
 def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
