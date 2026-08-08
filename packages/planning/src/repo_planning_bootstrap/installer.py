@@ -16586,6 +16586,186 @@ def record_delegation_decision(
     return result
 
 
+def _targeted_write_revision(value: Any) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
+
+
+def _targeted_write_mutation_baseline(target_root: Path) -> dict[str, str]:
+    def git_value(*args: str, binary: bool = False) -> bytes:
+        try:
+            completed = subprocess.run(
+                ["git", *args],
+                cwd=target_root,
+                capture_output=True,
+                check=False,
+            )
+        except OSError:
+            return b""
+        return completed.stdout if completed.returncode == 0 else b""
+
+    worktree = git_value("rev-parse", "--show-toplevel").decode("utf-8", errors="replace").strip()
+    git_dir = git_value("rev-parse", "--absolute-git-dir").decode("utf-8", errors="replace").strip()
+    head = git_value("rev-parse", "HEAD").decode("ascii", errors="replace").strip()
+    status = git_value("status", "--porcelain=v1", "-z", "--untracked-files=all", binary=True)
+    identity = {
+        "target_root": str(target_root.resolve()),
+        "worktree_root": str(Path(worktree).resolve()) if worktree else str(target_root.resolve()),
+        "git_dir": str(Path(git_dir).resolve()) if git_dir else "",
+        "head": head,
+        "status_revision": hashlib.sha256(status).hexdigest(),
+    }
+    identity["baseline_id"] = _targeted_write_revision(identity)
+    return identity
+
+
+_TARGETED_WRITE_PREFLIGHT_ISSUER = object()
+
+
+class _TargetedWritePreflightResult:
+    __slots__ = ("_facts", "_issuer")
+
+    def __init__(self, *, facts: dict[str, Any], issuer: object) -> None:
+        if issuer is not _TARGETED_WRITE_PREFLIGHT_ISSUER:
+            raise TypeError("targeted-write preflight results are issued only by the internal preflight operation")
+        self._facts = copy.deepcopy(facts)
+        self._issuer = issuer
+
+
+def _run_targeted_write_preflight(
+    *,
+    target_root: Path,
+    request: dict[str, Any],
+    owner_ref: str,
+    owner_revision: Any,
+    lane_ref: str,
+    lane_revision: str,
+    preflight_max_age_seconds: int,
+) -> _TargetedWritePreflightResult:
+    max_age = int(preflight_max_age_seconds or 0)
+    if max_age <= 0:
+        raise ValueError("preflight_max_age_seconds must be positive")
+    issued_epoch = int(time.time())
+    facts = {
+        "kind": "agentic-planning/targeted-write-preflight-receipt/v1",
+        "status": "issued",
+        "producer": "planning.targeted-write.lifecycle.internal-preflight",
+        "issued_at_epoch": issued_epoch,
+        "expires_at_epoch": issued_epoch + max_age,
+        "target_root": str(target_root.resolve()),
+        "mutation_baseline": _targeted_write_mutation_baseline(target_root),
+        "planning_revision": str(request["planning_revision"]),
+        "owner_ref": owner_ref,
+        "owner_revision": str(owner_revision),
+        "lane_ref": lane_ref,
+        "lane_revision": lane_revision,
+        "request_revision": _targeted_write_revision(request),
+    }
+    facts["receipt_id"] = _targeted_write_revision(facts)
+    return _TargetedWritePreflightResult(facts=facts, issuer=_TARGETED_WRITE_PREFLIGHT_ISSUER)
+
+
+def _admit_targeted_write_preflight(
+    *,
+    result: object,
+    target_root: Path,
+    request: dict[str, Any],
+    owner_ref: str,
+    owner_revision: Any,
+    lane_ref: str,
+    lane_revision: str,
+) -> dict[str, Any]:
+    if not isinstance(result, _TargetedWritePreflightResult) or result._issuer is not _TARGETED_WRITE_PREFLIGHT_ISSUER:
+        return {
+            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
+            "status": "unadmitted-preflight-result",
+            "repair": "Use the composed targeted-write apply operation; mappings and bearer tokens are not admitted.",
+        }
+    facts = copy.deepcopy(result._facts)
+    expected = {
+        "target_root": str(target_root.resolve()),
+        "planning_revision": str(request["planning_revision"]),
+        "owner_ref": owner_ref,
+        "owner_revision": str(owner_revision),
+        "lane_ref": lane_ref,
+        "lane_revision": lane_revision,
+        "request_revision": _targeted_write_revision(request),
+    }
+    if (
+        facts.get("kind") != "agentic-planning/targeted-write-preflight-receipt/v1"
+        or facts.get("status") != "issued"
+        or facts.get("producer") != "planning.targeted-write.lifecycle.internal-preflight"
+        or facts.get("receipt_id") != _targeted_write_revision({key: value for key, value in facts.items() if key != "receipt_id"})
+    ):
+        return {"kind": "agentic-planning/targeted-write-preflight-admission/v1", "status": "invalid-preflight-result"}
+    stale_fields = [field for field, value in expected.items() if str(facts.get(field, "")) != value]
+    current_baseline = _targeted_write_mutation_baseline(target_root)
+    if facts.get("mutation_baseline") != current_baseline:
+        stale_fields.append("mutation_baseline")
+    now_epoch = int(time.time())
+    if now_epoch < int(facts.get("issued_at_epoch") or 0) or now_epoch > int(facts.get("expires_at_epoch") or 0):
+        stale_fields.append("expiry")
+    if stale_fields:
+        return {
+            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
+            "status": "stale-preflight-result",
+            "stale_fields": sorted(set(stale_fields)),
+            "repair": "Rerun the composed targeted-write apply operation against current state.",
+        }
+    return {
+        "kind": "agentic-planning/targeted-write-preflight-admission/v1",
+        "status": "admitted",
+        "authority": "sealed-internal-preflight-result",
+        "receipt": facts,
+        "mutation_baseline_id": current_baseline["baseline_id"],
+    }
+
+
+def _targeted_write_receipt_postcondition(
+    *, target_root: Path, receipt: dict[str, Any], record: dict[str, Any], owner_ref: str
+) -> dict[str, Any]:
+    result_raw = receipt.get("result")
+    result: dict[str, Any] = result_raw if isinstance(result_raw, dict) else {}
+    postcondition_raw = result.get("postcondition")
+    postcondition: dict[str, Any] = postcondition_raw if isinstance(postcondition_raw, dict) else {}
+    request_raw = receipt.get("request")
+    request: dict[str, Any] = request_raw if isinstance(request_raw, dict) else {}
+    reasons: list[str] = []
+    if owner_ref != request.get("owner"):
+        reasons.append("owner-ref")
+    if str(record.get("revision") or "") != str(postcondition.get("owner_revision") or ""):
+        reasons.append("owner-revision")
+    patch_raw = request.get("patch")
+    patch: dict[str, Any] = patch_raw if isinstance(patch_raw, dict) else {}
+    if any(record.get(field) != value for field, value in patch.items()):
+        reasons.append("owner-fields")
+    if planning_revision(target_root).get("revision_id") != postcondition.get("planning_revision"):
+        reasons.append("planning-revision")
+    lane_ref = str(postcondition.get("lane_ref") or "")
+    if lane_ref:
+        lane_path = (target_root / lane_ref).resolve()
+        try:
+            lane_path.relative_to(target_root.resolve())
+        except ValueError:
+            reasons.append("lane-ref")
+        else:
+            lane_record = _load_lane_record(lane_path) or {}
+            if _record_revision(lane_record) != str(postcondition.get("lane_revision") or ""):
+                reasons.append("lane-revision")
+    if postcondition.get("terminal_owner_absent_from_active_state"):
+        state = _read_state_from_toml(target_root) or {}
+        owner_id = str(record.get("id") or "")
+        if any(
+            str(item.get("id") or "") == owner_id or _active_execplan_reference(item) == owner_ref
+            for item in [*_state_active_items(state), *_state_queued_items(state)]
+        ):
+            reasons.append("terminal-state-projection")
+    return {
+        "status": "current" if not reasons else "stale",
+        "reasons": reasons,
+        "postcondition": postcondition,
+    }
+
+
 def targeted_execplan_write(
     *,
     target: str | Path | None = None,
@@ -16614,17 +16794,17 @@ def targeted_execplan_write(
         if not isinstance(parsed_patch, dict):
             return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch-json"}
         patch = parsed_patch
-    if apply:
-        preflight_admission = _planning_targeted_write_preflight_admission(
-            preflight_token=preflight_token,
-            preflight_max_age_seconds=preflight_max_age_seconds,
-        )
-        if preflight_admission["status"] != "admitted":
-            return {
-                "kind": "agentic-planning/targeted-execplan-write/v1",
-                "status": preflight_admission["status"],
-                "preflight_admission": preflight_admission,
-            }
+    if apply and str(preflight_token or "").strip():
+        preflight_admission = {
+            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
+            "status": "caller-preflight-token-rejected",
+            "repair": "Omit --preflight-token; apply performs and admits its own target-bound preflight.",
+        }
+        return {
+            "kind": "agentic-planning/targeted-execplan-write/v1",
+            "status": "caller-preflight-token-rejected",
+            "preflight_admission": preflight_admission,
+        }
     if not str(expected_planning_revision or "").strip() or not str(expected_owner_revision or "").strip():
         return {
             "kind": "agentic-planning/targeted-execplan-write/v1",
@@ -16637,7 +16817,7 @@ def targeted_execplan_write(
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "ambiguous-or-missing-owner"}
     record_path = _canonical_execplan_record_path(plan_path)
     record = _load_execplan_record(record_path)
-    if record is None or _execplan_lifecycle(record) != "live":
+    if record is None:
         return {
             "kind": "agentic-planning/targeted-execplan-write/v1",
             "status": "owner-not-live",
@@ -16658,12 +16838,33 @@ def targeted_execplan_write(
         except (OSError, json.JSONDecodeError):
             receipt = {}
         if receipt.get("request") == request:
+            postcondition = _targeted_write_receipt_postcondition(
+                target_root=target_root,
+                receipt=receipt,
+                record=record,
+                owner_ref=request["owner"],
+            )
+            if postcondition["status"] == "current":
+                return {
+                    "kind": "agentic-planning/targeted-execplan-write/v1",
+                    "status": "already-applied",
+                    "receipt_path": _planning_surface_relative(target_root, receipt_path),
+                    "receipt": receipt,
+                    "postcondition_admission": postcondition,
+                }
             return {
                 "kind": "agentic-planning/targeted-execplan-write/v1",
-                "status": "already-applied",
+                "status": "stale-applied-receipt",
                 "receipt_path": _planning_surface_relative(target_root, receipt_path),
-                "receipt": receipt,
+                "postcondition_admission": postcondition,
+                "repair": "The recorded result is no longer current; rerun targeted-write preview with live revisions.",
             }
+    if _execplan_lifecycle(record) != "live":
+        return {
+            "kind": "agentic-planning/targeted-execplan-write/v1",
+            "status": "owner-not-live",
+            "owner": _planning_surface_relative(target_root, record_path),
+        }
     if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "stale-planning-revision", "result": result.to_dict()}
     if str(record.get("revision") or "") != str(expected_owner_revision):
@@ -16784,6 +16985,55 @@ def targeted_execplan_write(
             "unsupported": [],
         },
     }
+    lane_ref = _planning_surface_relative(target_root, lane_path) if lane_path is not None else ""
+    if not apply:
+        payload["apply_preflight"] = {
+            "mode": "composed-internal-preflight",
+            "status": "will-rerun-on-apply",
+            "bound_fields": [
+                "target_root",
+                "worktree mutation baseline",
+                "planning_revision",
+                "owner_ref/owner_revision",
+                "lane_ref/lane_revision",
+                "request_revision",
+                "expiry",
+            ],
+            "caller_bearer_tokens": "rejected",
+        }
+        return payload
+    try:
+        internal_preflight = _run_targeted_write_preflight(
+            target_root=target_root,
+            request=request,
+            owner_ref=owner_relative,
+            owner_revision=record.get("revision"),
+            lane_ref=lane_ref,
+            lane_revision=lane_revision,
+            preflight_max_age_seconds=preflight_max_age_seconds,
+        )
+    except ValueError:
+        return {
+            "kind": "agentic-planning/targeted-execplan-write/v1",
+            "status": "invalid-preflight-max-age",
+            "repair": "Use a positive preflight max age.",
+        }
+    preflight_admission = _admit_targeted_write_preflight(
+        result=internal_preflight,
+        target_root=target_root,
+        request=request,
+        owner_ref=owner_relative,
+        owner_revision=record.get("revision"),
+        lane_ref=lane_ref,
+        lane_revision=lane_revision,
+    )
+    if preflight_admission["status"] != "admitted":
+        return {
+            "kind": "agentic-planning/targeted-execplan-write/v1",
+            "status": preflight_admission["status"],
+            "preflight_admission": preflight_admission,
+        }
+    payload["preflight_admission"] = preflight_admission
     if apply and changed:
         transaction_paths = [record_path, receipt_path]
         if state_projection_changes:
@@ -16810,6 +17060,7 @@ def targeted_execplan_write(
                     "postcondition": {
                         "owner_revision": updated.get("revision"),
                         "planning_revision": state_revision_after,
+                        "lane_ref": lane_ref,
                         "lane_revision": lane_revision_after,
                         "terminal_owner_absent_from_active_state": bool(terminal_lifecycle and state_projection_changes),
                     },
@@ -16826,60 +17077,6 @@ def targeted_execplan_write(
         payload = final_payload or payload
         payload["receipt_path"] = _planning_surface_relative(target_root, receipt_path)
     return payload
-
-
-def _planning_targeted_write_preflight_admission(*, preflight_token: str, preflight_max_age_seconds: int) -> dict[str, Any]:
-    token = str(preflight_token or "").strip()
-    if not token:
-        return {
-            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
-            "status": "missing-preflight-token",
-            "repair": "Run agentic-workspace preflight --format json and pass its preflight_token to --preflight-token.",
-        }
-    prefix = "preflight-v1:"
-    if not token.startswith(prefix):
-        return {
-            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
-            "status": "invalid-preflight-token",
-            "repair": "Pass an unmodified preflight_token from agentic-workspace preflight --format json.",
-        }
-    issued_text = token[len(prefix) :]
-    if not issued_text.isdigit():
-        return {
-            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
-            "status": "invalid-preflight-token",
-            "repair": "Pass an unmodified preflight_token from agentic-workspace preflight --format json.",
-        }
-    max_age = int(preflight_max_age_seconds or 0)
-    if max_age <= 0:
-        return {
-            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
-            "status": "invalid-preflight-max-age",
-            "repair": "Use a positive preflight max age.",
-        }
-    issued_at_epoch = int(issued_text)
-    now_epoch = int(time.time())
-    age_seconds = now_epoch - issued_at_epoch
-    if age_seconds < 0:
-        return {
-            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
-            "status": "future-preflight-token",
-            "repair": "Regenerate the preflight token in the current host session.",
-        }
-    if age_seconds > max_age:
-        return {
-            "kind": "agentic-planning/targeted-write-preflight-admission/v1",
-            "status": "stale-preflight-token",
-            "age_seconds": age_seconds,
-            "max_age_seconds": max_age,
-            "repair": "Regenerate the preflight token with agentic-workspace preflight --format json.",
-        }
-    return {
-        "kind": "agentic-planning/targeted-write-preflight-admission/v1",
-        "status": "admitted",
-        "age_seconds": age_seconds,
-        "max_age_seconds": max_age,
-    }
 
 
 def _apply_prep_only_execplan_defaults(plan_record: dict[str, Any]) -> None:

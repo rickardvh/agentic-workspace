@@ -460,7 +460,7 @@ const commandDefinitions = [
           "flags": [
             "--preflight-token"
           ],
-          "help": "Fresh token from agentic-workspace preflight --format json; required when --apply is set.",
+          "help": "Deprecated bearer-token option. Apply rejects supplied tokens and runs a sealed internal preflight.",
           "name": "preflight_token"
         },
         {
@@ -468,7 +468,7 @@ const commandDefinitions = [
           "flags": [
             "--preflight-max-age-seconds"
           ],
-          "help": "Maximum preflight token age for --apply.",
+          "help": "Maximum lifetime of the sealed internal preflight result used during --apply.",
           "name": "preflight_max_age_seconds",
           "type": "integer"
         },

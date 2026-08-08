@@ -954,7 +954,7 @@
         "destructive": false,
         "idempotent": true,
         "read_only": false,
-        "requires_preflight_gate": true,
+        "requires_preflight_gate": false,
         "writes_repo_state": true
       },
       "id": "planning.targeted-write.cli",

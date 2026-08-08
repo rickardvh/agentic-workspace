@@ -9,14 +9,15 @@
     "destructive": false,
     "idempotent": true,
     "read_only": false,
-    "requires_preflight_gate": true,
+    "requires_preflight_gate": false,
     "writes_repo_state": true
   },
   "guards": [
     "one exact canonical owner selected by id/path",
     "preview returns owner/state/lane revisions and changed fields without writes",
-    "apply writes owner/projection updates and local receipt atomically after revision guards and a fresh preflight token",
-    "replay is idempotent"
+    "preview projects the exact delta while apply reruns a sealed internal preflight bound to target/worktree mutation baseline, Planning, owner, lane, request revisions, and expiry",
+    "apply rejects caller-built timestamp/lookalike bearer tokens and writes owner/projection updates and the admitted preflight evidence atomically",
+    "replay is idempotent only while the recorded owner/state/lane postcondition remains live"
   ],
   "id": "planning.targeted-write.lifecycle",
   "inputs": [
@@ -100,7 +101,8 @@
   "proof": [
     "targeted writer CLI preview/apply/replay tests preserve unrelated records and templates",
     "generated command conformance",
-    "apply without preflight token refuses before owner lookup or writes",
+    "apply without a preview-issued preflight receipt refuses before mutation",
+    "forged, cross-target, stale-baseline, owner/lane mutation, and invalidated-replay fixtures",
     "Planning package mutation rollback tests",
     "title-based owner selection",
     "delete and recreate an execplan",

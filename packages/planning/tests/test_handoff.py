@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import shutil as _shutil
 import sys as _sys
-import time as _time
 
 # ruff: noqa: F403,F405
 from pathlib import Path as _Path
@@ -11,8 +11,8 @@ from planning_test_support import *
 from repo_planning_bootstrap import cli as planning_cli
 
 
-def _fresh_preflight_token() -> str:
-    return f"preflight-v1:{int(_time.time())}"
+def _forged_timestamp_preflight_token() -> str:
+    return "preflight-v1:4102444800"
 
 
 def _write_live_execplan_state(tmp_path: Path, *, item_id: str, surface: str | None = None) -> None:
@@ -215,7 +215,6 @@ def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_p
         expected_owner_revision=record["revision"],
         expected_lane_revision=lane_revision,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
     assert applied["status"] == "applied"
     assert applied["projection_effects"]["state"]["todo.active_items.active-plan"]["after"]["next_action"] == "run the focused proof"
@@ -234,7 +233,6 @@ def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_p
         expected_owner_revision=record["revision"],
         expected_lane_revision=lane_revision,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
     assert replay["status"] == "already-applied"
     assert replay["receipt"]["result"]["state_revision_after"] == applied["state_revision_after"]
@@ -248,7 +246,6 @@ def test_targeted_execplan_writer_previews_applies_and_rejects_stale_owner(tmp_p
         expected_owner_revision=record["revision"],
         expected_lane_revision=lane_revision,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
     assert stale["status"] == "stale-owner-revision"
     assert json.loads(plan_path.read_text(encoding="utf-8"))["next_action"] == "run the focused proof"
@@ -264,7 +261,6 @@ def test_targeted_execplan_writer_requires_both_revision_guards(tmp_path: Path) 
         expected_planning_revision="",
         expected_owner_revision="",
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
 
     assert result == {
@@ -274,21 +270,187 @@ def test_targeted_execplan_writer_requires_both_revision_guards(tmp_path: Path) 
     }
 
 
-def test_targeted_execplan_writer_apply_requires_preflight_token(tmp_path: Path) -> None:
+def test_targeted_execplan_writer_replay_rejects_invalidated_postcondition(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="active-plan")
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    revision = planning_revision(tmp_path)["revision_id"]
+    patch = {"next_action": "recorded result"}
+    preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch=patch,
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+    )
+    assert preview["status"] == "preview"
+    applied = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch=patch,
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+    )
+    assert applied["status"] == "applied"
+
+    externally_changed = json.loads(plan_path.read_text(encoding="utf-8"))
+    externally_changed["revision"] += 1
+    externally_changed["next_action"] = "external owner mutation"
+    plan_path.write_text(json.dumps(externally_changed, indent=2) + "\n", encoding="utf-8")
+    replay = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch=patch,
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+    )
+
+    assert replay["status"] == "stale-applied-receipt"
+    assert set(replay["postcondition_admission"]["reasons"]) >= {
+        "owner-revision",
+        "owner-fields",
+        "planning-revision",
+    }
+    assert json.loads(plan_path.read_text(encoding="utf-8"))["next_action"] == "external owner mutation"
+
+
+def test_targeted_execplan_writer_apply_runs_internal_preflight_without_bearer_token(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="active-plan")
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    planning_before = planning_revision(tmp_path)["revision_id"]
 
     result = installer_mod.targeted_execplan_write(
         target=tmp_path,
         plan="active-plan",
         patch={"next_action": "must not write"},
-        expected_planning_revision="fixture-planning-revision",
+        expected_planning_revision=planning_before,
         expected_owner_revision=1,
         apply=True,
     )
 
-    assert result["status"] == "missing-preflight-token"
-    assert result["preflight_admission"]["status"] == "missing-preflight-token"
-    assert not (tmp_path / ".agentic-workspace/local/planning/targeted-execplan-receipts").exists()
+    assert result["status"] == "applied"
+    assert result["preflight_admission"]["status"] == "admitted"
+    assert result["preflight_admission"]["authority"] == "sealed-internal-preflight-result"
+
+
+def test_targeted_execplan_writer_rejects_forged_timestamp_preflight_token(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="active-plan")
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    revision = planning_revision(tmp_path)["revision_id"]
+
+    result = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch={"next_action": "must not write"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+        preflight_token=_forged_timestamp_preflight_token(),
+    )
+
+    assert result["status"] == "caller-preflight-token-rejected"
+    assert json.loads(plan_path.read_text(encoding="utf-8"))["revision"] == 1
+
+
+def test_targeted_execplan_writer_rejects_caller_constructed_internal_preflight_result(tmp_path: Path) -> None:
+    request = {
+        "owner": ".agentic-workspace/planning/execplans/active-plan.plan.json",
+        "patch": {"next_action": "must not write"},
+        "planning_revision": "planning-revision",
+        "owner_revision": 1,
+        "lane_revision": "",
+    }
+    admission = installer_mod._admit_targeted_write_preflight(
+        result={"kind": "agentic-planning/targeted-write-preflight-receipt/v1", "status": "issued"},
+        target_root=tmp_path,
+        request=request,
+        owner_ref=request["owner"],
+        owner_revision=1,
+        lane_ref="",
+        lane_revision="",
+    )
+    with pytest.raises(TypeError, match="issued only by the internal preflight operation"):
+        installer_mod._TargetedWritePreflightResult(facts={}, issuer=object())
+
+    assert admission["status"] == "unadmitted-preflight-result"
+
+
+def test_targeted_execplan_writer_rejects_cross_target_preview_mapping_as_authority(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    other_root = tmp_path / "other"
+    install_bootstrap(target=source_root)
+    plan_path = source_root / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    _write_live_execplan_state(source_root, item_id="active-plan")
+    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    revision = planning_revision(source_root)["revision_id"]
+    preview = installer_mod.targeted_execplan_write(
+        target=source_root,
+        plan="active-plan",
+        patch={"next_action": "target-bound"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+    )
+    request = {
+        "owner": ".agentic-workspace/planning/execplans/active-plan.plan.json",
+        "patch": {"next_action": "target-bound"},
+        "planning_revision": revision,
+        "owner_revision": 1,
+        "lane_revision": "",
+    }
+    sealed = installer_mod._run_targeted_write_preflight(
+        target_root=source_root,
+        request=request,
+        owner_ref=request["owner"],
+        owner_revision=1,
+        lane_ref="",
+        lane_revision="",
+        preflight_max_age_seconds=900,
+    )
+
+    _shutil.copytree(source_root / ".agentic-workspace", other_root / ".agentic-workspace")
+    cross_target_admission = installer_mod._admit_targeted_write_preflight(
+        result=sealed,
+        target_root=other_root,
+        request=request,
+        owner_ref=request["owner"],
+        owner_revision=1,
+        lane_ref="",
+        lane_revision="",
+    )
+    result = installer_mod.targeted_execplan_write(
+        target=other_root,
+        plan="active-plan",
+        patch={"next_action": "target-bound"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        apply=True,
+        preflight_token=json.dumps(preview),
+    )
+
+    assert result["status"] == "caller-preflight-token-rejected"
+    assert cross_target_admission["status"] == "stale-preflight-result"
+    assert "target_root" in cross_target_admission["stale_fields"]
+    other_plan = other_root / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    assert json.loads(other_plan.read_text(encoding="utf-8"))["revision"] == 1
 
 
 def test_targeted_execplan_writer_rejects_missing_or_stale_lane_guard(tmp_path: Path) -> None:
@@ -312,7 +474,6 @@ def test_targeted_execplan_writer_rejects_missing_or_stale_lane_guard(tmp_path: 
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
     stale = installer_mod.targeted_execplan_write(
         target=tmp_path,
@@ -322,12 +483,60 @@ def test_targeted_execplan_writer_rejects_missing_or_stale_lane_guard(tmp_path: 
         expected_owner_revision=1,
         expected_lane_revision=f"stale-{lane_revision}",
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
 
     assert missing["status"] == "missing-lane-revision-guard"
     assert stale["status"] == "stale-lane-revision"
     assert json.loads(plan_path.read_text(encoding="utf-8"))["revision"] == 1
+
+
+@pytest.mark.parametrize("mutation_owner", ["owner", "lane"])
+def test_targeted_execplan_writer_rejects_owner_or_lane_mutation_after_preview(tmp_path: Path, mutation_owner: str) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/lane-plan.plan.json"
+    _write_live_execplan_state(tmp_path, item_id="lane-plan")
+    _write_execplan_record(plan_path, item_id="lane-plan", status="in-progress")
+    record = json.loads(plan_path.read_text(encoding="utf-8"))
+    record["revision"] = 1
+    plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    lane_path = next((tmp_path / ".agentic-workspace/planning/lanes").glob("*.lane.json"))
+    lane_record = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane_record["current_slice"] = "lane-plan"
+    installer_mod._write_lane_record(record_path=lane_path, record=lane_record)
+    lane_revision = installer_mod._record_revision(json.loads(lane_path.read_text(encoding="utf-8")))
+    revision = planning_revision(tmp_path)["revision_id"]
+    preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="lane-plan",
+        patch={"next_action": "must be preview-bound"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        expected_lane_revision=lane_revision,
+    )
+    assert preview["status"] == "preview"
+
+    if mutation_owner == "owner":
+        mutated = json.loads(plan_path.read_text(encoding="utf-8"))
+        mutated["revision"] = 2
+        mutated["next_action"] = "external owner change"
+        plan_path.write_text(json.dumps(mutated, indent=2) + "\n", encoding="utf-8")
+    else:
+        mutated_lane = json.loads(lane_path.read_text(encoding="utf-8"))
+        mutated_lane["title"] = "external lane change"
+        installer_mod._write_lane_record(record_path=lane_path, record=mutated_lane)
+
+    result = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="lane-plan",
+        patch={"next_action": "must be preview-bound"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        expected_lane_revision=lane_revision,
+        apply=True,
+    )
+
+    assert result["status"] in {"stale-planning-revision", "stale-owner-revision", "stale-lane-revision"}
+    assert json.loads(plan_path.read_text(encoding="utf-8")).get("next_action") != "must be preview-bound"
 
 
 def test_targeted_execplan_writer_cli_preview_apply_and_projection_effects(tmp_path: Path, capsys) -> None:
@@ -390,8 +599,6 @@ def test_targeted_execplan_writer_cli_preview_apply_and_projection_effects(tmp_p
                 "--expect-owner-revision",
                 "1",
                 "--apply",
-                "--preflight-token",
-                _fresh_preflight_token(),
                 "--format",
                 "json",
             ]
@@ -420,9 +627,28 @@ def test_targeted_execplan_writer_cli_preview_apply_and_projection_effects(tmp_p
                 replay_revision,
                 "--expect-owner-revision",
                 "2",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    replay_preview = json.loads(capsys.readouterr().out)
+    assert replay_preview["apply_preflight"]["mode"] == "composed-internal-preflight"
+    assert (
+        planning_cli.main(
+            [
+                "targeted-write",
+                "active-plan",
+                "--target",
+                str(tmp_path),
+                "--patch",
+                json.dumps({"next_action": "run generated CLI proof"}),
+                "--expect-planning-revision",
+                replay_revision,
+                "--expect-owner-revision",
+                "2",
                 "--apply",
-                "--preflight-token",
-                _fresh_preflight_token(),
                 "--format",
                 "json",
             ]
@@ -452,6 +678,15 @@ def test_targeted_execplan_writer_lifecycle_updates_lane_projection(tmp_path: Pa
     installer_mod._write_lane_record(record_path=lane_path, record=lane_record)
     lane_revision = installer_mod._record_revision(json.loads(lane_path.read_text(encoding="utf-8")))
     revision = planning_revision(tmp_path)["revision_id"]
+    preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="lane-plan",
+        patch={"phase": "complete"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        expected_lane_revision=lane_revision,
+    )
+    assert preview["status"] == "preview"
     applied = installer_mod.targeted_execplan_write(
         target=tmp_path,
         plan="lane-plan",
@@ -460,7 +695,6 @@ def test_targeted_execplan_writer_lifecycle_updates_lane_projection(tmp_path: Pa
         expected_owner_revision=1,
         expected_lane_revision=lane_revision,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
 
     assert applied["status"] == "applied"
@@ -525,7 +759,6 @@ def test_targeted_execplan_writer_rejects_unsupported_parent_projection(tmp_path
         expected_planning_revision=planning_revision(tmp_path)["revision_id"],
         expected_owner_revision=1,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
 
     assert result["status"] == "unsupported-projection-patch"
@@ -560,6 +793,14 @@ def test_targeted_execplan_writer_migrates_supported_fields_and_preserves_unrela
         "proof": {"claims": ["Writer preserves unspecified fields."], "requirements": ["make test-planning"], "refs": []},
         "continuation": {"owner": "none", "residual_intent": "none"},
     }
+    preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch=patch,
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+    )
+    assert preview["status"] == "preview"
 
     applied = installer_mod.targeted_execplan_write(
         target=tmp_path,
@@ -568,7 +809,6 @@ def test_targeted_execplan_writer_migrates_supported_fields_and_preserves_unrela
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
 
     assert applied["status"] == "applied"
@@ -579,14 +819,22 @@ def test_targeted_execplan_writer_migrates_supported_fields_and_preserves_unrela
     assert unrelated_path.read_bytes() == unrelated_before
     assert template_path.read_bytes() == template_before
     assert history_path.read_bytes() == history_before
+    noop_revision = planning_revision(tmp_path)["revision_id"]
+    noop_preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch=patch,
+        expected_planning_revision=noop_revision,
+        expected_owner_revision=updated["revision"],
+    )
+    assert noop_preview["status"] == "preview"
     noop = installer_mod.targeted_execplan_write(
         target=tmp_path,
         plan="active-plan",
         patch=patch,
-        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+        expected_planning_revision=noop_revision,
         expected_owner_revision=updated["revision"],
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
     assert noop["status"] == "no-op"
     assert json.loads(plan_path.read_text(encoding="utf-8"))["revision"] == updated["revision"]
@@ -597,7 +845,6 @@ def test_targeted_execplan_writer_migrates_supported_fields_and_preserves_unrela
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
     assert replay["status"] == "already-applied"
     assert replay["receipt"]["request"]["owner_revision"] == 1
@@ -629,7 +876,6 @@ def test_targeted_execplan_writer_preview_delta_matches_apply_delta(tmp_path: Pa
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
 
     assert preview["status"] == "preview"
@@ -647,7 +893,6 @@ def test_targeted_execplan_writer_handles_missing_ambiguous_and_unbound_owners(t
         expected_planning_revision="rev",
         expected_owner_revision=1,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
     assert missing["status"] == "ambiguous-or-missing-owner"
 
@@ -657,6 +902,14 @@ def test_targeted_execplan_writer_handles_missing_ambiguous_and_unbound_owners(t
     record["revision"] = 1
     plan_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     revision = planning_revision(tmp_path)["revision_id"]
+    unbound_preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="unbound",
+        patch={"next_action": "supported without a lane relation"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+    )
+    assert unbound_preview["status"] == "preview"
     unbound = installer_mod.targeted_execplan_write(
         target=tmp_path,
         plan="unbound",
@@ -664,7 +917,6 @@ def test_targeted_execplan_writer_handles_missing_ambiguous_and_unbound_owners(t
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
     assert unbound["status"] == "applied"
     assert unbound["lane_revision"] is None
@@ -684,7 +936,6 @@ def test_targeted_execplan_writer_handles_missing_ambiguous_and_unbound_owners(t
         expected_planning_revision=planning_revision(tmp_path)["revision_id"],
         expected_owner_revision=2,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
     assert ambiguous["status"] == "ambiguous-lane-relation"
 
@@ -708,6 +959,15 @@ def test_targeted_execplan_writer_rolls_back_late_lane_write_failure(tmp_path: P
     owner_before = plan_path.read_bytes()
     state_before = (tmp_path / ".agentic-workspace/planning/state.toml").read_bytes()
     lane_before = lane_path.read_bytes()
+    preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="lane-plan",
+        patch={"lifecycle": "archived", "phase": "complete"},
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+        expected_lane_revision=lane_revision,
+    )
+    assert preview["status"] == "preview"
 
     original_write_lane = installer_mod._write_lane_record
 
@@ -726,7 +986,6 @@ def test_targeted_execplan_writer_rolls_back_late_lane_write_failure(tmp_path: P
         expected_owner_revision=1,
         expected_lane_revision=lane_revision,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
 
     assert result["status"] == "rolled-back"
@@ -752,6 +1011,15 @@ def test_targeted_execplan_writer_rolls_back_each_write_boundary(
     state_before = state_path.read_bytes()
     revision = planning_revision(tmp_path)["revision_id"]
     receipt_dir = tmp_path / ".agentic-workspace/local/planning/targeted-execplan-receipts"
+    patch = {"next_action": f"would fail at {failure_boundary}"}
+    preview = installer_mod.targeted_execplan_write(
+        target=tmp_path,
+        plan="active-plan",
+        patch=patch,
+        expected_planning_revision=revision,
+        expected_owner_revision=1,
+    )
+    assert preview["status"] == "preview"
 
     if failure_boundary == "owner":
         original_write_execplan = installer_mod._write_execplan_record
@@ -783,11 +1051,10 @@ def test_targeted_execplan_writer_rolls_back_each_write_boundary(
     result = installer_mod.targeted_execplan_write(
         target=tmp_path,
         plan="active-plan",
-        patch={"next_action": f"would fail at {failure_boundary}"},
+        patch=patch,
         expected_planning_revision=revision,
         expected_owner_revision=1,
         apply=True,
-        preflight_token=_fresh_preflight_token(),
     )
 
     assert result["status"] == "rolled-back"

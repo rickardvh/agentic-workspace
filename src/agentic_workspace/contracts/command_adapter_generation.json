@@ -2948,7 +2948,7 @@
         "destructive": false,
         "idempotent": true,
         "writes_repo_state": true,
-        "requires_preflight_gate": true
+        "requires_preflight_gate": false
       },
       "projection_hints": {
         "universal_fields": [

@@ -5837,7 +5837,7 @@
             "destructive": true,
             "idempotent": false,
             "read_only": false,
-            "requires_preflight_gate": true,
+            "requires_preflight_gate": false,
             "writes_repo_state": true
           },
           "interface": {
@@ -16605,13 +16605,13 @@
               {
                 "default": "",
                 "flags": ["--preflight-token"],
-                "help": "Fresh token from agentic-workspace preflight --format json; required when --apply is set.",
+                "help": "Deprecated bearer-token option. Apply rejects supplied tokens and runs a sealed internal preflight.",
                 "name": "preflight_token"
               },
               {
                 "default": 900,
                 "flags": ["--preflight-max-age-seconds"],
-                "help": "Maximum preflight token age for --apply.",
+                "help": "Maximum lifetime of the sealed internal preflight result used during --apply.",
                 "name": "preflight_max_age_seconds",
                 "type": "integer"
               },

@@ -37,6 +37,18 @@
       "checked_in_justification": "Canonical checked-in evaluation definitions must survive checkout and support repeatable local evaluation status/report behavior."
     },
     {
+      "pattern": ".agentic-workspace/evaluations/*.json",
+      "format": "json",
+      "owner": "workspace-evaluation",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/evaluation_issue_disposition.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Checked-in, explicitly non-closing issue dispositions keep implementation evidence separate from longitudinal Evaluation authority.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Disposition boundaries and audited remaining gaps must survive checkout until an Evaluation owner operation supersedes them."
+    },
+    {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
       "editable_by_agents": true,
       "format": "json",

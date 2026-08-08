@@ -17,6 +17,8 @@
       "--expect-owner-revision",
       "1",
       "--apply",
+      "--preflight-token",
+      "preflight-v1:4102444800",
       "--format",
       "json"
     ],
@@ -42,14 +44,14 @@
           "path": [
             "status"
           ],
-          "equals": "missing-preflight-token"
+          "equals": "caller-preflight-token-rejected"
         },
         {
           "path": [
             "preflight_admission",
             "status"
           ],
-          "equals": "missing-preflight-token"
+          "equals": "caller-preflight-token-rejected"
         }
       ]
     },
