@@ -193,6 +193,28 @@ def _external_conformance_readiness(
         for case in READINESS_CASES:
             if not isinstance(cases.get(case), Mapping) or cases[case].get("status") != "passed":
                 missing.append(f"case-{case}")
+    matrix = evidence.get("case_transport_matrix")
+    if not isinstance(matrix, Mapping):
+        missing.append("case-transport-matrix")
+    else:
+        for case in READINESS_CASES:
+            cells = matrix.get(case)
+            for transport in READINESS_TRANSPORTS:
+                if (
+                    not isinstance(cells, Mapping)
+                    or not isinstance(cells.get(transport), Mapping)
+                    or cells[transport].get("status") != "passed"
+                ):
+                    missing.append(f"case-{case}-transport-{transport}")
+    footprints = evidence.get("footprints")
+    if not isinstance(footprints, Mapping):
+        missing.extend(f"footprint-{footprint}" for footprint in ("necessary-surfaces", "full-mirror"))
+    else:
+        for footprint in ("necessary-surfaces", "full-mirror"):
+            if not isinstance(footprints.get(footprint), Mapping) or footprints[footprint].get("status") != "passed":
+                missing.append(f"footprint-{footprint}")
+        if not isinstance(footprints.get("semantic-parity"), Mapping) or footprints["semantic-parity"].get("status") != "passed":
+            missing.append("footprint-semantic-parity")
     runtime_revision = evidence.get("runtime_exception_revision")
     runtime_exceptions = (entry.get("external_consumption") or {}).get("runtime_exceptions", [])
     if runtime_exceptions and not runtime_revision:
@@ -206,6 +228,8 @@ def _external_conformance_readiness(
         "runtime_exception_revision": runtime_revision or "",
         "transports": transports if isinstance(transports, Mapping) else {},
         "cases": cases if isinstance(cases, Mapping) else {},
+        "case_transport_matrix": matrix if isinstance(matrix, Mapping) else {},
+        "footprints": footprints if isinstance(footprints, Mapping) else {},
         "receipt_ref": evidence.get("receipt_ref", ""),
         "producer": (evidence.get("custody") or {}).get("producer", "") if isinstance(evidence.get("custody"), Mapping) else "",
     }

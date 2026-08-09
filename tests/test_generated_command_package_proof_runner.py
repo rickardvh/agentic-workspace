@@ -693,12 +693,55 @@ def test_vendor_neutral_packaged_client_executes_ir_owned_readiness_matrix() -> 
         "retryable",
         "additive-field",
         "mutation-applied",
+        "mutation-noop",
         "mutation-rejected",
         "mutation-failed",
     }
     assert all(case["state"] == "pass" for case in readiness)
-    assert payload["readiness_case_exceptions"]["delegation-outcome.append"]["mutation-noop"]
+    assert payload["readiness_case_exceptions"]["delegation-outcome.append"] == {}
+    for transport in runner.READINESS_TRANSPORTS:
+        for footprint in runner.READINESS_FOOTPRINTS:
+            assert any(
+                case.get("operation_id") == "delegation-outcome.append"
+                and case.get("readiness_case") == "mutation-noop"
+                and case.get("readiness_transport") == transport
+                and case.get("readiness_footprint") == footprint
+                and case.get("state") == "pass"
+                for case in readiness
+            )
     assert payload["runtime_exception_revisions"]["config.report"].endswith("@pr-2256")
+
+
+def test_external_readiness_matrix_fails_when_one_transport_case_is_missing() -> None:
+    runner = _load_test_ir_runner()
+    entry = {
+        "id": "config.report",
+        "operation_contract": "src/agentic_workspace/contracts/operations/config.report.json",
+    }
+    results = [
+        {
+            "case_id": f"config.report.{case}.{transport}",
+            "operation_id": "config.report",
+            "readiness_case": case,
+            "readiness_transport": transport,
+            "target": transport,
+            "adapter_id": f"{transport}.external-client",
+            "state": "pass",
+        }
+        for case in runner.READINESS_CASES
+        if not case.startswith("mutation-")
+        for transport in runner.READINESS_TRANSPORTS
+    ]
+
+    complete = runner._readiness_case_transport_matrix(entry, results)
+    assert complete["absent"]["python"]["status"] == "passed"
+
+    missing_python_absent = [
+        result for result in results if not (result["readiness_case"] == "absent" and result["readiness_transport"] == "python")
+    ]
+    incomplete = runner._readiness_case_transport_matrix(entry, missing_python_absent)
+    assert incomplete["absent"]["python"]["status"] == "not-run"
+    assert incomplete["absent"]["typescript"]["status"] == "passed"
 
 
 def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
@@ -792,58 +835,23 @@ def test_external_conformance_receipts_require_executed_results() -> None:
 
 
 def _complete_same_invocation_results(operation_id: str) -> list[dict[str, object]]:
-    results: list[dict[str, object]] = [
+    return [
         {
-            "case_id": f"{operation_id}.python.success",
-            "behavioral_class": "success",
+            "case_id": f"{operation_id}.{readiness_case}.{transport}.{footprint}",
+            "behavioral_class": readiness_case,
+            "readiness_case": readiness_case,
+            "readiness_transport": transport,
+            "readiness_footprint": footprint,
             "operation_id": operation_id,
-            "target": "python",
-            "adapter_id": "python.function",
+            "target": transport,
+            "adapter_id": "cli.process" if transport == "cli-json" else f"{transport}.external-client",
             "state": "pass",
-            "selected_fields": {"status": "ok"},
-        },
-        {
-            "case_id": f"{operation_id}.typescript.success",
-            "behavioral_class": "success",
-            "operation_id": operation_id,
-            "target": "typescript",
-            "adapter_id": "typescript.function",
-            "state": "pass",
-            "selected_fields": {"status": "ok"},
-        },
-        {
-            "case_id": f"{operation_id}.cli.success",
-            "behavioral_class": "success",
-            "operation_id": operation_id,
-            "target": "python",
-            "adapter_id": "cli.process",
-            "state": "pass",
-            "selected_fields": {"status": "ok"},
-        },
-        {
-            "case_id": f"{operation_id}.vendor.success",
-            "behavioral_class": "success",
-            "operation_id": operation_id,
-            "target": "vendor-neutral",
-            "adapter_id": "vendor-neutral.consumer",
-            "state": "pass",
-            "selected_fields": {"status": "ok"},
-        },
+            "selected_fields": {"status": readiness_case},
+        }
+        for readiness_case in ["absent", "disabled", "incompatible", "malformed", "retryable", "additive-field"]
+        for transport in ("cli-json", "python", "typescript", "vendor-neutral")
+        for footprint in ("necessary-surfaces", "full-mirror")
     ]
-    for readiness_case in ["absent", "disabled", "incompatible", "malformed", "retryable", "additive-field"]:
-        results.append(
-            {
-                "case_id": f"{operation_id}.{readiness_case}",
-                "behavioral_class": readiness_case,
-                "readiness_case": readiness_case,
-                "operation_id": operation_id,
-                "target": "vendor-neutral",
-                "adapter_id": "vendor-neutral.consumer",
-                "state": "pass",
-                "selected_fields": {"status": readiness_case},
-            }
-        )
-    return results
 
 
 def test_external_conformance_receipts_ignore_forged_readiness_vectors() -> None:

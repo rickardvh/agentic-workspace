@@ -10,7 +10,7 @@
     "outcome": "Complete #2198 by deriving reusable external-client readiness scenarios from the existing operation conformance authority and making the supported read/mutation subset fail closed on executed cross-transport evidence.",
     "non_goals": [
       "Do not implement vendor adapters or a second semantic fixture registry.",
-      "Leave #2200's final clean-install, removal, no-residue, and broad adapter-readiness closure proof to its own slice."
+      "Leave #2200's broader independent clean-install, removal, no-residue, and general adapter-readiness closure proof to its own slice; #2198 still owns necessary/full footprint semantic parity for its bounded ready subset."
     ]
   },
   "parent": {
@@ -42,8 +42,8 @@
     "proof_posture": {
       "state": "current",
       "refs": [
-        "operation conformance: pass=36 fail=0 unavailable=8 skipped=0",
-        "external client and generated proof suites: 166 passed",
+        "operation conformance: pass=149 fail=0 unavailable=8 skipped=0",
+        "external client and generated proof suites: 167 passed",
         "contract tooling and generated package checks: passed",
         "all package typechecks: passed",
         ".agentic-workspace/verification/proof-decision.json: present and valid"
@@ -53,7 +53,7 @@
       "state": "observed",
       "refs": [
         "GitHub #2198 remains open until the implementation is merged",
-        "GitHub #2200 retains final clean-install, footprint-parity, removal, and no-residue proof"
+        "GitHub #2200 retains broader independent-consumer clean-install, removal, no-residue, and general adapter-readiness proof"
       ]
     }
   },
@@ -72,6 +72,8 @@
     "claims": [
       "External readiness cases are selected from the existing operation conformance IR, not a second registry.",
       "CLI JSON, generated Python, generated TypeScript, and packaged vendor-neutral consumer results are structurally accounted for.",
+      "Every applicable readiness case must pass on every transport on necessary-surface and full-mirror installations, with semantic parity across footprints.",
+      "The representative mutation proves applied, duplicate-blocked/no-op, rejected, and failed outcomes against the real operation while preserving unrelated state.",
       "The representative read-only and mutation operations either receive current passing receipts with applicable cases or remain fail-closed with exact missing evidence.",
       "Third-party consumers can use the packaged conformance surface without source-checkout internal imports."
     ],
@@ -82,11 +84,12 @@
       "uv run --active python scripts/check/check_generated_command_packages.py"
     ],
     "refs": [
-      "operation conformance: pass=36 fail=0 unavailable=8 skipped=0; both bounded receipts passed every required transport and readiness case",
-      "tests/test_generated_command_package_proof_runner.py + tests/test_external_operation_clients.py: 166 passed",
+      "operation conformance: pass=149 fail=0 unavailable=8 skipped=0; both bounded receipts passed every required case-by-transport cell on both installation footprints",
+      "tests/test_generated_command_package_proof_runner.py + tests/test_external_operation_clients.py: 167 passed",
       "packages/verification/tests: 38 passed",
       "generated command packages, contract tooling, structured inventory, schema-reference docs, maintainer surfaces, Ruff, and all package typechecks: passed",
-      "manual behavior review: packaged public TypeScript client executed absent, disabled, incompatible, malformed, retryable, additive-field, applied, rejected, and failed vectors",
+      "manual behavior review: CLI JSON, generated Python, generated TypeScript, and packaged public TypeScript clients executed absent, disabled, incompatible, malformed, retryable, additive-field, applied, duplicate-blocked/no-op, rejected, and failed vectors",
+      "manual footprint review: necessary-surface and full-mirror installed fixtures produced semantically identical case results for the bounded read and mutation subset",
       "manual docs review: external-conformance instructions match the generated Python/TypeScript exports and retain #2200's claim boundary",
       "manual static review: receipt profile fingerprints match the packaged profile and runtime-exception revisions are operation-specific",
       ".agentic-workspace/verification/proof-decision.json records conformance-contract ownership; proof-route fallback is explicitly escalated because mixed Planning/docs/generated surfaces do not share one focused route"
@@ -94,7 +97,7 @@
   },
   "continuation": {
     "owner": "issue-2200-prove-adapter-readiness",
-    "residual_intent": "Run final independently installed Python and TypeScript consumer scenarios, necessary/full footprint parity, removal/no-residue proof, and close #2194 only if the complete readiness claim is supported."
+    "residual_intent": "Run broader independently installed Python and TypeScript consumer scenarios, removal/no-residue proof, and general adapter-readiness closure; close #2194 only if the complete readiness claim is supported."
   },
   "specialist_contracts": [
     {

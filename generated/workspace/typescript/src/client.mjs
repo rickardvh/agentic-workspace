@@ -70,8 +70,12 @@ function conformanceReadiness(entry, profile, receiptStore) {
   const transports = evidence.transports ?? {}, cases = evidence.cases ?? {};
   for (const transport of readinessTransports) if (transports[transport]?.status !== 'passed') missing.push(`transport-${transport}`);
   for (const item of readinessCases) if (cases[item]?.status !== 'passed') missing.push(`case-${item}`);
+  const matrix = evidence.case_transport_matrix ?? {}, footprints = evidence.footprints ?? {};
+  for (const item of readinessCases) for (const transport of readinessTransports) if (matrix[item]?.[transport]?.status !== 'passed') missing.push(`case-${item}-transport-${transport}`);
+  for (const footprint of ['necessary-surfaces', 'full-mirror']) if (footprints[footprint]?.status !== 'passed') missing.push(`footprint-${footprint}`);
+  if (footprints['semantic-parity']?.status !== 'passed') missing.push('footprint-semantic-parity');
   if (entry.external_consumption?.runtime_exceptions?.length && !evidence.runtime_exception_revision) missing.push('runtime-exception-current-revision');
-  return {missing, result: {status: evidence.status ?? '', operation_fingerprint: evidence.operation_fingerprint ?? '', profile_fingerprint: evidence.profile_fingerprint ?? '', runner_revision: resultIdentity.runner_revision ?? '', client_semantics_revision: resultIdentity.client_semantics_revision ?? '', runtime_exception_revision: evidence.runtime_exception_revision ?? '', transports, cases, receipt_ref: evidence.receipt_ref ?? '', producer: evidence.custody?.producer ?? ''}};
+  return {missing, result: {status: evidence.status ?? '', operation_fingerprint: evidence.operation_fingerprint ?? '', profile_fingerprint: evidence.profile_fingerprint ?? '', runner_revision: resultIdentity.runner_revision ?? '', client_semantics_revision: resultIdentity.client_semantics_revision ?? '', runtime_exception_revision: evidence.runtime_exception_revision ?? '', transports, cases, case_transport_matrix: matrix, footprints, receipt_ref: evidence.receipt_ref ?? '', producer: evidence.custody?.producer ?? ''}};
 }
 export function externalReadinessReport(operationIds, { allowRuntimeBacked = false } = {}) {
   const profile = externalConsumerProfile();

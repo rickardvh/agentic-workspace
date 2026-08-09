@@ -334,6 +334,26 @@ def _readiness_conformance_evidence(profile: dict, operation: dict, *, status: s
             "mutation-rejected": {"status": "passed"},
             "mutation-failed": {"status": "passed"},
         },
+        "case_transport_matrix": {
+            case: {transport: {"status": "passed"} for transport in ("cli-json", "python", "typescript", "vendor-neutral")}
+            for case in (
+                "absent",
+                "disabled",
+                "incompatible",
+                "malformed",
+                "retryable",
+                "additive-field",
+                "mutation-applied",
+                "mutation-noop",
+                "mutation-rejected",
+                "mutation-failed",
+            )
+        },
+        "footprints": {
+            "necessary-surfaces": {"status": "passed"},
+            "full-mirror": {"status": "passed"},
+            "semantic-parity": {"status": "passed"},
+        },
     }
 
 
@@ -537,7 +557,11 @@ def test_packaged_conformance_receipt_store_publishes_executed_external_evidence
     assert delegation_receipt["runtime_exception_admission"]["status"] == "admitted"
     assert {item["status"] for item in delegation_receipt["transports"].values()} == {"passed"}
     assert {item["status"] for item in delegation_receipt["cases"].values()} == {"passed"}
-    assert "explicit non-applicable operation vector" in delegation_receipt["cases"]["mutation-noop"]["reason"]
+    assert {
+        cell["status"] for transport_cells in delegation_receipt["case_transport_matrix"].values() for cell in transport_cells.values()
+    } == {"passed"}
+    assert {item["status"] for item in delegation_receipt["footprints"].values()} == {"passed"}
+    assert "reason" not in delegation_receipt["cases"]["mutation-noop"]
     assert delegation_receipt["operation_result_evidence"]
     report = external_readiness_report(["config.report", "delegation-outcome.append"], allow_runtime_backed=True)
     assert report["status"] == "ready"
@@ -1233,7 +1257,7 @@ def test_external_contract_bundle_exposes_ir_owned_conformance_profile() -> None
         "delegation-outcome.append",
     }
     delegation = next(entry for entry in conformance["operations"] if entry["operation_id"] == "delegation-outcome.append")
-    assert "mutation-noop" in delegation["case_exceptions"]
+    assert delegation["case_exceptions"] == {}
     selected = external_conformance_profile(["config.report"])
     assert [entry["operation_id"] for entry in selected["operations"]] == ["config.report"]
 

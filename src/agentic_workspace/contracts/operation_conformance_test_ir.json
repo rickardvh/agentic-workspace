@@ -166,12 +166,10 @@
         },
         "runtime_exception_revision": "github-2044-closure:delegation-outcome.append@pr-2256",
         "mutation_path": ".agentic-workspace/delegation-outcomes.json",
-        "case_exceptions": {
-          "mutation-noop": "delegation-outcome.append is intentionally non-idempotent; duplicate evidence is rejected rather than reported as a successful no-op"
-        }
+        "case_exceptions": {}
       }
     ],
-    "rule": "The operation conformance runner derives external-client scenarios from this existing authority, executes the packaged public client, and treats only explicit operation-specific non-applicable mutation vectors as satisfied exceptions."
+    "rule": "The operation conformance runner derives external-client scenarios from this existing authority and requires every applicable case across CLI JSON, generated Python, generated TypeScript, and the independently packaged client on necessary-surface and full-mirror installations."
   },
   "initial_cases": [
     {

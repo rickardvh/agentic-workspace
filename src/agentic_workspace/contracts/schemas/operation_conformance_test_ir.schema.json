@@ -261,7 +261,7 @@
         "rule": {"type": "string", "minLength": 1, "description": "Authority and fail-closed interpretation rule for the packaged external conformance profile."}
       },
       "additionalProperties": false,
-      "description": "Operation-specific inputs and explicit non-applicable mutation vectors used by the existing conformance runner to produce packaged external-client readiness evidence."
+      "description": "Operation-specific inputs used by the conformance runner to produce case-by-transport readiness evidence across necessary-surface and full-mirror installations; explicit exclusions remain fail-closed for broad readiness."
     },
     "initial_cases": {
       "type": "array",
