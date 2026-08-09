@@ -1,0 +1,12 @@
+{
+  "kind": "agentic-workspace/trusted-producer-receipt-index/v1",
+  "receipts": {
+    "6b78016940cb8b39": {
+      "path": "6b78016940cb8b39.json",
+      "producer_class": "aw-proof",
+      "revision": "2026-08-09T17:34:45+00:00",
+      "source_ref": "proof://receipts/6b78016940cb8b39",
+      "status": "current"
+    }
+  }
+}
