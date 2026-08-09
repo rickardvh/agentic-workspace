@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Require explicit trusted execution, blocking security scans, immutable workflows, SBOMs, and artifact attestations for support-bearing releases."

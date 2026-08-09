@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Collapse the duplicated workspace runtime mirror into one canonical owner with compatibility and review-scale ratchets."
