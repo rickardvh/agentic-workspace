@@ -18,6 +18,7 @@ import agentic_workspace.client as public_client
 from agentic_workspace import (
     AWClientError,
     detect_workspace,
+    external_conformance_profile,
     external_contract_bundle,
     external_readiness_report,
     invoke_operation,
@@ -321,6 +322,12 @@ def _readiness_conformance_evidence(profile: dict, operation: dict, *, status: s
             "typescript": {"status": "passed"},
             "vendor-neutral": {"status": "passed"},
         },
+        "executors": {
+            "cli-json": {"status": "passed", "executor_id": "direct-cli-json"},
+            "python": {"status": "passed", "executor_id": "generated-python-client"},
+            "typescript": {"status": "passed", "executor_id": "generated-typescript-client"},
+            "vendor-neutral": {"status": "passed", "executor_id": "packed-typescript-client"},
+        },
         "cases": {
             "absent": {"status": "passed"},
             "disabled": {"status": "passed"},
@@ -332,6 +339,26 @@ def _readiness_conformance_evidence(profile: dict, operation: dict, *, status: s
             "mutation-noop": {"status": "passed"},
             "mutation-rejected": {"status": "passed"},
             "mutation-failed": {"status": "passed"},
+        },
+        "case_transport_matrix": {
+            case: {transport: {"status": "passed"} for transport in ("cli-json", "python", "typescript", "vendor-neutral")}
+            for case in (
+                "absent",
+                "disabled",
+                "incompatible",
+                "malformed",
+                "retryable",
+                "additive-field",
+                "mutation-applied",
+                "mutation-noop",
+                "mutation-rejected",
+                "mutation-failed",
+            )
+        },
+        "footprints": {
+            "necessary-surfaces": {"status": "passed"},
+            "full-mirror": {"status": "passed"},
+            "semantic-parity": {"status": "passed"},
         },
     }
 
@@ -519,23 +546,38 @@ def test_external_readiness_report_ignores_inline_profile_conformance_evidence(m
     assert "executed-conformance-receipt" in report["excluded_operations"][0]["missing_evidence"]
 
 
-def test_packaged_conformance_receipt_store_fails_closed_without_full_external_evidence() -> None:
+def test_packaged_conformance_receipt_store_publishes_executed_external_evidence() -> None:
     store = public_client.external_operation_conformance_receipts()
     assert store["kind"] == "agentic-workspace/external-operation-conformance-receipt-store/v1"
     assert store["status"] == "recorded"
     receipts = {receipt["operation_id"]: receipt for receipt in store["receipts"]}
     assert {"config.report", "delegation-outcome.append"}.issubset(receipts)
     config_receipt = receipts["config.report"]
-    assert config_receipt["status"] == "failed"
-    assert config_receipt["transports"]["vendor-neutral"]["status"] == "passed"
-    assert config_receipt["cases"]["absent"]["status"] == "not-run"
+    assert config_receipt["status"] == "passed"
+    assert {item["status"] for item in config_receipt["transports"].values()} == {"passed"}
+    assert {transport: item["executor_id"] for transport, item in config_receipt["executors"].items()} == {
+        "cli-json": "direct-cli-json",
+        "python": "generated-python-client",
+        "typescript": "generated-typescript-client",
+        "vendor-neutral": "packed-typescript-client",
+    }
+    assert {item["status"] for item in config_receipt["cases"].values()} == {"passed"}
     assert config_receipt["freshness"]["strategy"] == "runner-client-operation-profile-revision-bound"
     delegation_receipt = receipts["delegation-outcome.append"]
-    assert delegation_receipt["status"] == "failed"
-    assert delegation_receipt["runtime_exception_revision"] == ""
-    assert delegation_receipt["runtime_exception_admission"]["reason"] == "missing-operation-specific-runtime-exception-revision"
-    assert delegation_receipt["transports"]["vendor-neutral"]["status"] == "not-run"
+    assert delegation_receipt["status"] == "passed"
+    assert delegation_receipt["runtime_exception_revision"] == "github-2044-closure:delegation-outcome.append@pr-2256"
+    assert delegation_receipt["runtime_exception_admission"]["status"] == "admitted"
+    assert {item["status"] for item in delegation_receipt["transports"].values()} == {"passed"}
+    assert {item["status"] for item in delegation_receipt["cases"].values()} == {"passed"}
+    assert {
+        cell["status"] for transport_cells in delegation_receipt["case_transport_matrix"].values() for cell in transport_cells.values()
+    } == {"passed"}
+    assert {item["status"] for item in delegation_receipt["footprints"].values()} == {"passed"}
+    assert "reason" not in delegation_receipt["cases"]["mutation-noop"]
     assert delegation_receipt["operation_result_evidence"]
+    report = external_readiness_report(["config.report", "delegation-outcome.append"], allow_runtime_backed=True)
+    assert report["status"] == "ready"
+    assert report["supported_operations"] == ["config.report", "delegation-outcome.append"]
 
 
 def test_external_readiness_report_rejects_explicitly_revoked_and_superseded_receipts(monkeypatch) -> None:
@@ -1214,6 +1256,50 @@ def test_correction_event_public_contract_omits_caller_authority_inputs() -> Non
         input_names = {entry["name"] for entry in operation["contract"]["inputs"]}
         assert not caller_authority_inputs & input_names
         assert "trusted_authority_receipt_ref" in input_names
+
+
+def test_external_contract_bundle_exposes_ir_owned_conformance_profile() -> None:
+    conformance = external_contract_bundle()["external_conformance"]
+
+    assert conformance["kind"] == "agentic-workspace/packaged-external-conformance-profile/v1"
+    assert conformance["source"] == "operation_conformance_test_ir.json#external_readiness"
+    assert conformance["transport_matrix"] == ["cli-json", "python", "typescript", "vendor-neutral"]
+    assert conformance["executor_matrix"] == {
+        "cli-json": "direct-cli-json",
+        "python": "generated-python-client",
+        "typescript": "generated-typescript-client",
+        "vendor-neutral": "packed-typescript-client",
+    }
+    assert {entry["operation_id"] for entry in conformance["operations"]} == {
+        "config.report",
+        "delegation-outcome.append",
+    }
+    delegation = next(entry for entry in conformance["operations"] if entry["operation_id"] == "delegation-outcome.append")
+    assert delegation["case_exceptions"] == {}
+    selected = external_conformance_profile(["config.report"])
+    assert [entry["operation_id"] for entry in selected["operations"]] == ["config.report"]
+
+
+def test_generated_typescript_client_selects_packaged_conformance_profile() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node is required for generated TypeScript client coverage")
+    script = """
+import { externalConformanceProfile } from './generated/workspace/typescript/src/client.mjs';
+const profile = externalConformanceProfile(['delegation-outcome.append']);
+console.log(JSON.stringify({ kind: profile.kind, operations: profile.operations.map((item) => item.operation_id) }));
+"""
+    completed = subprocess.run(
+        [node, "--input-type=module", "--eval", script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert json.loads(completed.stdout) == {
+        "kind": "agentic-workspace/packaged-external-conformance-profile/v1",
+        "operations": ["delegation-outcome.append"],
+    }
 
 
 def test_agent_guidance_generated_lifecycle_operations_are_external_runtime_backed(tmp_path: Path) -> None:

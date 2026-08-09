@@ -8,6 +8,7 @@ const profileUrl = new URL('../external_consumer_profile.json', import.meta.url)
 const conformanceReceiptsUrl = new URL('../external_operation_conformance_receipts.json', import.meta.url);
 const bundleUrl = new URL('../external_contract_bundle.json', import.meta.url);
 const readinessTransports = ['cli-json', 'python', 'typescript', 'vendor-neutral'];
+const readinessExecutors = { 'cli-json': 'direct-cli-json', python: 'generated-python-client', typescript: 'generated-typescript-client', 'vendor-neutral': 'packed-typescript-client' };
 const readinessCases = ['absent', 'disabled', 'incompatible', 'malformed', 'retryable', 'additive-field', 'mutation-applied', 'mutation-noop', 'mutation-rejected', 'mutation-failed'];
 export class AWClientError extends Error {
   constructor(kind, message, details = {}) { super(message); this.name = 'AWClientError'; this.kind = kind; this.details = details; }
@@ -67,11 +68,18 @@ function conformanceReadiness(entry, profile, receiptStore) {
   const authority = profile.readiness_authority ?? {}, resultIdentity = evidence.result_identity ?? {};
   if (resultIdentity.runner_revision !== authority.runner_revision) missing.push('current-runner-revision');
   if (resultIdentity.client_semantics_revision !== authority.client_semantics_revision) missing.push('current-client-semantics-revision');
-  const transports = evidence.transports ?? {}, cases = evidence.cases ?? {};
-  for (const transport of readinessTransports) if (transports[transport]?.status !== 'passed') missing.push(`transport-${transport}`);
+  const transports = evidence.transports ?? {}, executors = evidence.executors ?? {}, cases = evidence.cases ?? {};
+  for (const transport of readinessTransports) {
+    if (transports[transport]?.status !== 'passed') missing.push(`transport-${transport}`);
+    if (executors[transport]?.status !== 'passed' || executors[transport]?.executor_id !== readinessExecutors[transport]) missing.push(`executor-${transport}`);
+  }
   for (const item of readinessCases) if (cases[item]?.status !== 'passed') missing.push(`case-${item}`);
+  const matrix = evidence.case_transport_matrix ?? {}, footprints = evidence.footprints ?? {};
+  for (const item of readinessCases) for (const transport of readinessTransports) if (matrix[item]?.[transport]?.status !== 'passed') missing.push(`case-${item}-transport-${transport}`);
+  for (const footprint of ['necessary-surfaces', 'full-mirror']) if (footprints[footprint]?.status !== 'passed') missing.push(`footprint-${footprint}`);
+  if (footprints['semantic-parity']?.status !== 'passed') missing.push('footprint-semantic-parity');
   if (entry.external_consumption?.runtime_exceptions?.length && !evidence.runtime_exception_revision) missing.push('runtime-exception-current-revision');
-  return {missing, result: {status: evidence.status ?? '', operation_fingerprint: evidence.operation_fingerprint ?? '', profile_fingerprint: evidence.profile_fingerprint ?? '', runner_revision: resultIdentity.runner_revision ?? '', client_semantics_revision: resultIdentity.client_semantics_revision ?? '', runtime_exception_revision: evidence.runtime_exception_revision ?? '', transports, cases, receipt_ref: evidence.receipt_ref ?? '', producer: evidence.custody?.producer ?? ''}};
+  return {missing, result: {status: evidence.status ?? '', operation_fingerprint: evidence.operation_fingerprint ?? '', profile_fingerprint: evidence.profile_fingerprint ?? '', runner_revision: resultIdentity.runner_revision ?? '', client_semantics_revision: resultIdentity.client_semantics_revision ?? '', runtime_exception_revision: evidence.runtime_exception_revision ?? '', transports, executors, cases, case_transport_matrix: matrix, footprints, receipt_ref: evidence.receipt_ref ?? '', producer: evidence.custody?.producer ?? ''}};
 }
 export function externalReadinessReport(operationIds, { allowRuntimeBacked = false } = {}) {
   const profile = externalConsumerProfile();
@@ -86,6 +94,12 @@ export function externalReadinessReport(operationIds, { allowRuntimeBacked = fal
   return {kind: 'agentic-workspace/external-readiness-report/v1', status: !excluded.length ? 'ready' : supported.length ? 'subset-only' : 'not-ready', supported_operations: supported, excluded_operations: excluded};
 }
 export function externalContractBundle() { return JSON.parse(readFileSync(bundleUrl, 'utf8')); }
+export function externalConformanceProfile(operationIds = null) {
+  const profile = { ...(externalContractBundle().external_conformance ?? {}) };
+  const requested = operationIds === null ? null : new Set(operationIds.map(String));
+  profile.operations = (profile.operations ?? []).filter((item) => requested === null || requested.has(String(item.operation_id)));
+  return profile;
+}
 export function operationCompatibilityFingerprint(contract) {
   const normalized = Object.fromEntries(['schema_version', 'id', 'classification', 'inputs', 'output', 'effects', 'guards'].map((key) => [key, contract[key] ?? null]));
   const bundle = externalContractBundle(); const operation = bundle.operations[String(contract.id)] ?? {};

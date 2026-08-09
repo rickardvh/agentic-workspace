@@ -671,6 +671,118 @@ def test_vendor_neutral_non_operation_cases_are_unavailable_not_skipped(monkeypa
     assert "selected/text wrapper projection" in selected_text["message"]
 
 
+def test_vendor_neutral_packaged_client_executes_ir_owned_readiness_matrix() -> None:
+    runner = _load_test_ir_runner()
+    if runner.shutil.which("node") is None or (runner.shutil.which("npm") is None and runner.shutil.which("npm.cmd") is None):
+        pytest.skip("Node and npm are required for packaged external-client conformance")
+
+    payload = runner.run_ir_cases(target_selection="vendor-neutral", case_filter=set(), require_node=True)
+
+    readiness = [case for case in payload["cases"] if case.get("readiness_case")]
+    by_operation = {
+        operation_id: {case["readiness_case"]: case for case in readiness if case["operation_id"] == operation_id}
+        for operation_id in ("config.report", "delegation-outcome.append")
+    }
+    assert payload["summary"]["fail_count"] == 0
+    assert set(by_operation["config.report"]) == {"absent", "disabled", "incompatible", "malformed", "retryable", "additive-field"}
+    assert set(by_operation["delegation-outcome.append"]) == {
+        "absent",
+        "disabled",
+        "incompatible",
+        "malformed",
+        "retryable",
+        "additive-field",
+        "mutation-applied",
+        "mutation-noop",
+        "mutation-rejected",
+        "mutation-failed",
+    }
+    assert all(case["state"] == "pass" for case in readiness)
+    assert payload["readiness_case_exceptions"]["delegation-outcome.append"] == {}
+    for transport in runner.READINESS_TRANSPORTS:
+        for footprint in runner.READINESS_FOOTPRINTS:
+            assert any(
+                case.get("operation_id") == "delegation-outcome.append"
+                and case.get("readiness_case") == "mutation-noop"
+                and case.get("readiness_transport") == transport
+                and case.get("readiness_footprint") == footprint
+                and case.get("state") == "pass"
+                for case in readiness
+            )
+    assert payload["runtime_exception_revisions"]["config.report"].endswith("@pr-2256")
+
+
+def test_external_readiness_matrix_fails_when_one_transport_case_is_missing() -> None:
+    runner = _load_test_ir_runner()
+    entry = {
+        "id": "config.report",
+        "operation_contract": "src/agentic_workspace/contracts/operations/config.report.json",
+    }
+    results = [
+        {
+            "case_id": f"config.report.{case}.{transport}",
+            "operation_id": "config.report",
+            "readiness_case": case,
+            "readiness_transport": transport,
+            "readiness_executor": runner.READINESS_EXECUTORS[transport],
+            "target": transport,
+            "adapter_id": f"{transport}.external-client",
+            "state": "pass",
+        }
+        for case in runner.READINESS_CASES
+        if not case.startswith("mutation-")
+        for transport in runner.READINESS_TRANSPORTS
+    ]
+
+    complete = runner._readiness_case_transport_matrix(entry, results)
+    assert complete["absent"]["python"]["status"] == "passed"
+
+    missing_python_absent = [
+        result for result in results if not (result["readiness_case"] == "absent" and result["readiness_transport"] == "python")
+    ]
+    incomplete = runner._readiness_case_transport_matrix(entry, missing_python_absent)
+    assert incomplete["absent"]["python"]["status"] == "not-run"
+    assert incomplete["absent"]["typescript"]["status"] == "passed"
+
+    relabeled_python_absent = [
+        *missing_python_absent,
+        {
+            "case_id": "config.report.absent.python.relabelled",
+            "operation_id": "config.report",
+            "readiness_case": "absent",
+            "readiness_transport": "python",
+            "readiness_executor": "direct-cli-json",
+            "target": "python",
+            "adapter_id": "python.external-client",
+            "state": "pass",
+        },
+    ]
+    relabeled = runner._readiness_case_transport_matrix(entry, relabeled_python_absent)
+    assert relabeled["absent"]["python"]["status"] == "failed"
+    assert "expected executor generated-python-client" in relabeled["absent"]["python"]["reason"]
+
+
+@pytest.mark.parametrize("broken_transport", ["cli-json", "python"])
+def test_external_readiness_executor_failure_is_isolated_to_its_transport(broken_transport: str) -> None:
+    runner = _load_test_ir_runner()
+    results = _complete_same_invocation_results("config.report")
+    for result in results:
+        if result["readiness_transport"] == broken_transport:
+            result["state"] = "fail"
+
+    executors = runner._readiness_executor_statuses(results)
+    matrix = runner._readiness_case_transport_matrix(
+        {"id": "config.report", "operation_contract": "src/agentic_workspace/contracts/operations/config.report.json"},
+        results,
+    )
+
+    assert executors[broken_transport]["status"] == "failed"
+    assert matrix["absent"][broken_transport]["status"] == "failed"
+    other_transport = "python" if broken_transport == "cli-json" else "cli-json"
+    assert executors[other_transport]["status"] == "passed"
+    assert matrix["absent"][other_transport]["status"] == "passed"
+
+
 def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
     runner = _load_test_ir_runner()
 
@@ -762,58 +874,29 @@ def test_external_conformance_receipts_require_executed_results() -> None:
 
 
 def _complete_same_invocation_results(operation_id: str) -> list[dict[str, object]]:
-    results: list[dict[str, object]] = [
+    return [
         {
-            "case_id": f"{operation_id}.python.success",
-            "behavioral_class": "success",
+            "case_id": f"{operation_id}.{readiness_case}.{transport}.{footprint}",
+            "behavioral_class": readiness_case,
+            "readiness_case": readiness_case,
+            "readiness_transport": transport,
+            "readiness_executor": {
+                "cli-json": "direct-cli-json",
+                "python": "generated-python-client",
+                "typescript": "generated-typescript-client",
+                "vendor-neutral": "packed-typescript-client",
+            }[transport],
+            "readiness_footprint": footprint,
             "operation_id": operation_id,
-            "target": "python",
-            "adapter_id": "python.function",
+            "target": transport,
+            "adapter_id": "cli.process" if transport == "cli-json" else f"{transport}.external-client",
             "state": "pass",
-            "selected_fields": {"status": "ok"},
-        },
-        {
-            "case_id": f"{operation_id}.typescript.success",
-            "behavioral_class": "success",
-            "operation_id": operation_id,
-            "target": "typescript",
-            "adapter_id": "typescript.function",
-            "state": "pass",
-            "selected_fields": {"status": "ok"},
-        },
-        {
-            "case_id": f"{operation_id}.cli.success",
-            "behavioral_class": "success",
-            "operation_id": operation_id,
-            "target": "python",
-            "adapter_id": "cli.process",
-            "state": "pass",
-            "selected_fields": {"status": "ok"},
-        },
-        {
-            "case_id": f"{operation_id}.vendor.success",
-            "behavioral_class": "success",
-            "operation_id": operation_id,
-            "target": "vendor-neutral",
-            "adapter_id": "vendor-neutral.consumer",
-            "state": "pass",
-            "selected_fields": {"status": "ok"},
-        },
+            "selected_fields": {"status": readiness_case},
+        }
+        for readiness_case in ["absent", "disabled", "incompatible", "malformed", "retryable", "additive-field"]
+        for transport in ("cli-json", "python", "typescript", "vendor-neutral")
+        for footprint in ("necessary-surfaces", "full-mirror")
     ]
-    for readiness_case in ["absent", "disabled", "incompatible", "malformed", "retryable", "additive-field"]:
-        results.append(
-            {
-                "case_id": f"{operation_id}.{readiness_case}",
-                "behavioral_class": readiness_case,
-                "readiness_case": readiness_case,
-                "operation_id": operation_id,
-                "target": "vendor-neutral",
-                "adapter_id": "vendor-neutral.consumer",
-                "state": "pass",
-                "selected_fields": {"status": readiness_case},
-            }
-        )
-    return results
 
 
 def test_external_conformance_receipts_ignore_forged_readiness_vectors() -> None:

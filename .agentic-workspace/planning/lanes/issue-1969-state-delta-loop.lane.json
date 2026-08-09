@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "issue-1969-state-delta-loop",
   "title": "Issue 1969 state-delta-first operating loop",
-  "status": "active",
+  "status": "ready",
   "parent_decomposition_ref": "",
   "lane_outcome": "Make ordinary AW operating-loop packets state-delta-first for issue #1969 across startup, implementation, report/continuation, and shipped skill adoption.",
   "purpose_for_parent": "Close the #1969 parent by landing all child slices #1970-#1974 as an ordered stack, with proof that the loop exposes current decision, message economy, continuation capsule, evidence bundle, and skill guidance without prompt-prose classifiers.",
@@ -23,7 +23,7 @@
     {
       "id": "issue-1970-current-decision",
       "title": "#1970 current-decision packet",
-      "status": "active",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json",
       "depends_on": [],
       "purpose_for_lane": "Expose current_decision packets in ordinary workflow outputs. Branch: codex/1969-01-current-decision."
@@ -31,7 +31,7 @@
     {
       "id": "issue-1971-message-economy",
       "title": "#1971 message-economy contract",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json",
       "depends_on": [
         "issue-1970-current-decision"
@@ -41,7 +41,7 @@
     {
       "id": "issue-1972-continuation-capsule",
       "title": "#1972 continuation capsule",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json",
       "depends_on": [
         "issue-1971-message-economy"
@@ -51,7 +51,7 @@
     {
       "id": "issue-1973-evidence-bundles",
       "title": "#1973 evidence bundles",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json",
       "depends_on": [
         "issue-1972-continuation-capsule"
@@ -61,7 +61,7 @@
     {
       "id": "issue-1974-operating-loop-skill",
       "title": "#1974 operating-loop skill adoption",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json",
       "depends_on": [
         "issue-1973-evidence-bundles"
@@ -69,22 +69,26 @@
       "purpose_for_lane": "Update shipped workspace-operating-loop skill and registries for state-delta behavior. Branch: codex/1969-05-operating-loop-skill."
     }
   ],
-  "current_slice": "#1970-#1974 stack controller",
+  "current_slice": "",
   "acceptance_boundary": "The lane is complete only when the stacked branches/PRs together satisfy #1969 and all child issue acceptance criteria, with tests proving compact packets and skill discovery while preserving proof, residue, next action, and honest closure.",
   "proof_strategy": "Run changed-path AW proof selection, focused CLI tests for start/implement/report/skills packet exposure, summary/doctor planning checks, and a real CLI sample showing compact state-delta packets without broad always-on dumps.",
   "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
-    "known_gaps": []
+    "status": "partial",
+    "evidence": [
+      "Child issues #1970-#1974 are completed and their PR stack #1976-#1980 is merged."
+    ],
+    "known_gaps": [
+      "Issue #2273 owns migration of the remaining #1969 effectiveness questions into Evaluation and the resulting closure decision."
+    ]
   },
-  "residual_lane_work": "not evaluated",
-  "lane_to_epic_contribution": "not evaluated",
-  "parent_close_permission": "not-evaluated",
+  "residual_lane_work": "Wait for #2273 to migrate the remaining effectiveness questions into an owned evaluation and decide whether #1969 can close.",
+  "lane_to_epic_contribution": "The original state-delta packet and operating-loop adoption stack is complete; remaining longitudinal evidence ownership moved to #2273.",
+  "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
-    "summary": "",
-    "residual_work": "",
-    "next_owner": ""
+    "summary": "The original #1970-#1974 implementation stack is complete; the parent remains open for its explicitly broader effectiveness boundary.",
+    "residual_work": "#2273 must migrate the remaining effectiveness questions and decide the #1969 closure boundary.",
+    "next_owner": "issue-2273"
   },
   "references": [
     {
@@ -122,7 +126,13 @@
       "target": "#1974",
       "label": "Operating-loop skill",
       "role": "slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#2273",
+      "label": "Evaluation migration and closure decision",
+      "role": "successor-owner"
     }
   ],
-  "notes": "Stack order follows child issues so each PR can be reviewed independently while the final branch closes the parent lane."
+  "notes": "The initial stack is complete. The lane is parked without a current executable slice because #2273 now owns the remaining evaluation migration and parent closure decision."
 }

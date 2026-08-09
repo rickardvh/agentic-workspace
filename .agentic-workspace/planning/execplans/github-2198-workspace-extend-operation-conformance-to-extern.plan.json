@@ -1,0 +1,110 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "github-2198-workspace-extend-operation-conformance-to-extern",
+  "title": "[Workspace]: Extend operation conformance to external clients and integrations",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 4,
+  "intent": {
+    "outcome": "Complete #2198 by deriving reusable external-client readiness scenarios from the existing operation conformance authority and making the supported read/mutation subset fail closed on executed cross-transport evidence.",
+    "non_goals": [
+      "Do not implement vendor adapters or a second semantic fixture registry.",
+      "Leave #2200's broader independent clean-install, removal, no-residue, and general adapter-readiness closure proof to its own slice; #2198 still owns necessary/full footprint semantic parity for its bounded ready subset."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2194-external-consumer-lane",
+    "contribution": "Provide the reusable cross-transport conformance authority required before #2200 can prove the boundary from independent consumers.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/contracts/operation_conformance_test_ir.json",
+      "src/agentic_workspace/contracts/schemas/operation_conformance_test_ir.schema.json",
+      "scripts/check/run_operation_conformance_tests.py",
+      "src/agentic_workspace/client.py",
+      "scripts/generate/generate_external_consumer_profile.py",
+      "generated/workspace/python/**",
+      "generated/workspace/typescript/**",
+      "tests/test_generated_command_package_proof_runner.py",
+      "tests/test_external_operation_clients.py",
+      ".agentic-workspace/docs/local-integration-area.md",
+      "docs/package/**",
+      ".agentic-workspace/planning/**"
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected",
+      "owner": "shared Planning state"
+    },
+    "proof_posture": {
+      "state": "current",
+      "refs": [
+        "operation conformance: pass=149 fail=0 unavailable=8 skipped=0",
+        "external client and generated proof suites: 169 passed",
+        "contract tooling and generated package checks: passed",
+        "all package typechecks: passed",
+        ".agentic-workspace/verification/proof-decision.json: present and valid"
+      ]
+    },
+    "external_posture": {
+      "state": "observed",
+      "refs": [
+        "GitHub #2198 remains open until the implementation is merged",
+        "GitHub #2200 retains broader independent-consumer clean-install, removal, no-residue, and general adapter-readiness proof"
+      ]
+    }
+  },
+  "references": [
+    "GitHub #2198",
+    "GitHub #2194",
+    "GitHub #2200",
+    "GitHub #2044",
+    "PR #2431"
+  ],
+  "next_action": "Publish and review the #2198 implementation; after merge, close this slice and activate #2200 for final independent-consumer closure proof.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "External readiness cases are selected from the existing operation conformance IR, not a second registry.",
+      "CLI JSON, generated Python, generated TypeScript, and packaged vendor-neutral consumer results execute through distinct provenance-bound executors.",
+      "Every applicable readiness case must pass on every transport on necessary-surface and full-mirror installations, with semantic parity across footprints.",
+      "The representative mutation proves applied, duplicate-blocked/no-op, rejected, and failed outcomes against the real operation while preserving unrelated state.",
+      "The representative read-only and mutation operations either receive current passing receipts with applicable cases or remain fail-closed with exact missing evidence.",
+      "Third-party consumers can use the packaged conformance surface without source-checkout internal imports."
+    ],
+    "requirements": [
+      "uv run --active python scripts/check/run_operation_conformance_tests.py --target all --require-node --format json",
+      "uv run --active pytest tests/test_generated_command_package_proof_runner.py tests/test_external_operation_clients.py -q",
+      "uv run --active python scripts/check/check_contract_tooling_surfaces.py",
+      "uv run --active python scripts/check/check_generated_command_packages.py"
+    ],
+    "refs": [
+      "operation conformance: pass=149 fail=0 unavailable=8 skipped=0; both bounded receipts passed every required case-by-transport cell on both installation footprints",
+      "tests/test_generated_command_package_proof_runner.py + tests/test_external_operation_clients.py: 169 passed, including isolated direct-CLI and generated-Python executor failure regressions",
+      "packages/verification/tests: 38 passed",
+      "generated command packages, contract tooling, structured inventory, schema-reference docs, maintainer surfaces, Ruff, and all package typechecks: passed",
+      "manual behavior review: direct-cli-json, generated-python-client, generated-typescript-client, and packed-typescript-client independently executed absent, disabled, incompatible, malformed, retryable, additive-field, applied, duplicate-blocked/no-op, rejected, and failed vectors",
+      "manual footprint review: necessary-surface and full-mirror installed fixtures produced semantically identical case results for the bounded read and mutation subset",
+      "manual docs review: external-conformance instructions match the generated Python/TypeScript exports and retain #2200's claim boundary",
+      "manual static review: receipt profile fingerprints match the packaged profile and runtime-exception revisions are operation-specific",
+      ".agentic-workspace/verification/proof-decision.json records conformance-contract ownership; proof-route fallback is explicitly escalated because mixed Planning/docs/generated surfaces do not share one focused route"
+    ]
+  },
+  "continuation": {
+    "owner": "issue-2200-prove-adapter-readiness",
+    "residual_intent": "Run broader independently installed Python and TypeScript consumer scenarios, removal/no-residue proof, and general adapter-readiness closure; close #2194 only if the complete readiness claim is supported."
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-lane/v1",
+      "target": "planning://lane/github-2198-workspace-extend-operation-conformance-to-extern",
+      "revision": 1
+    }
+  ]
+}

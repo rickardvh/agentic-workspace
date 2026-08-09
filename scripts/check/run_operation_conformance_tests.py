@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -43,6 +44,13 @@ from agentic_workspace.contract_tooling import (  # noqa: E402
 )
 
 READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
+READINESS_EXECUTORS = {
+    "cli-json": "direct-cli-json",
+    "python": "generated-python-client",
+    "typescript": "generated-typescript-client",
+    "vendor-neutral": "packed-typescript-client",
+}
+READINESS_FOOTPRINTS = ("necessary-surfaces", "full-mirror")
 READINESS_CASES = (
     "absent",
     "disabled",
@@ -99,12 +107,20 @@ def _result_evidence_ref(result: Mapping[str, object]) -> str:
         "case_id": result.get("case_id", ""),
         "target": result.get("target", ""),
         "adapter_id": result.get("adapter_id", ""),
+        "readiness_transport": result.get("readiness_transport", ""),
+        "readiness_executor": result.get("readiness_executor", ""),
+        "readiness_footprint": result.get("readiness_footprint", ""),
         "state": result.get("state", ""),
         "selected_fields": result.get("selected_fields", {}),
         "mutation_outcome": result.get("mutation_outcome", {}),
     }
     digest = _stable_json_digest(payload)[:16]
     return f"{payload['operation_id']}:{payload['case_id']}:{payload['target']}:{payload['adapter_id']}@sha256:{digest}"
+
+
+def _result_set_evidence(results: list[dict[str, object]], *, label: str) -> list[str]:
+    digest = _stable_json_digest(sorted(_result_evidence_ref(result) for result in results))[:24]
+    return [f"{label}:count={len(results)}@sha256:{digest}"]
 
 
 def _passed_results(results: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -226,11 +242,11 @@ def _readiness_transport_statuses(operation_results: list[dict[str, object]]) ->
         if not results:
             return _status("not-run", reason=missing_reason)
         if _all_passed(results):
-            return _status("passed", evidence=[_result_evidence_ref(result) for result in results])
+            return _status("passed", evidence=_result_set_evidence(results, label="transport-results"))
         states = sorted({str(result.get("state") or "not-run") for result in results})
         return _status(
             "failed",
-            evidence=[_result_evidence_ref(result) for result in results],
+            evidence=_result_set_evidence(results, label="transport-results"),
             reason=f"transport results were not all pass: {', '.join(states)}",
         )
 
@@ -240,34 +256,33 @@ def _readiness_transport_statuses(operation_results: list[dict[str, object]]) ->
     def _target(target: str) -> list[dict[str, object]]:
         return [result for result in operation_results if result.get("target") == target]
 
+    explicit = [result for result in operation_results if result.get("readiness_transport")]
+    if explicit:
+        return {
+            transport: _status_for(
+                [result for result in explicit if result.get("readiness_transport") == transport],
+                missing_reason=f"no {transport} readiness result was produced by this invocation",
+            )
+            for transport in READINESS_TRANSPORTS
+        }
     transports = {
-        "python": _status_for(
-            _target("python"),
-            missing_reason="no Python operation result was produced by this invocation",
-        ),
-        "typescript": _status_for(
-            _target("typescript"),
-            missing_reason="no TypeScript operation result was produced by this invocation",
-        ),
-        "cli-json": _status_for(
-            _adapter("cli.process"),
-            missing_reason="no CLI JSON operation result was produced by this invocation",
-        ),
+        "python": _status_for(_target("python"), missing_reason="no Python operation result was produced by this invocation"),
+        "typescript": _status_for(_target("typescript"), missing_reason="no TypeScript operation result was produced by this invocation"),
+        "cli-json": _status_for(_adapter("cli.process"), missing_reason="no CLI JSON operation result was produced"),
     }
-    vendor_results = [
-        result
-        for result in operation_results
-        if result.get("target") == "vendor-neutral" and str(result.get("adapter_id") or "").startswith("vendor-neutral")
-    ]
-    transports["vendor-neutral"] = _status_for(
-        vendor_results,
-        missing_reason="no independently packaged vendor-neutral consumer result was produced by this invocation",
-    )
+    vendor_results = [result for result in operation_results if result.get("target") == "vendor-neutral"]
+    transports["vendor-neutral"] = _status_for(vendor_results, missing_reason="no vendor-neutral result was produced")
     return transports
 
 
-def _readiness_case_statuses(entry: Mapping[str, object], operation_results: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+def _readiness_case_statuses(
+    entry: Mapping[str, object],
+    operation_results: list[dict[str, object]],
+    *,
+    case_exceptions: Mapping[str, object] | None = None,
+) -> dict[str, dict[str, object]]:
     is_mutation_operation, mutation_reason = _is_mutation_operation(entry)
+    exceptions = case_exceptions or {}
 
     def _results_for(case_name: str) -> list[dict[str, object]]:
         if case_name.startswith("mutation-"):
@@ -282,18 +297,163 @@ def _readiness_case_statuses(entry: Mapping[str, object], operation_results: lis
                 reason=f"not applicable: {mutation_reason}",
                 evidence=[str(entry.get("operation_contract") or entry.get("id") or "operation-contract")],
             )
+        if case_name in exceptions:
+            return _status(
+                "passed",
+                reason=f"explicit non-applicable operation vector: {exceptions[case_name]}",
+                evidence=[f"operation_conformance_test_ir.json#external_readiness:{entry.get('id')}:{case_name}"],
+            )
         if not results:
             return _status("not-run", reason=f"no {case_name} result was produced by this invocation")
         if _all_passed(results):
-            return _status("passed", evidence=[_result_evidence_ref(result) for result in results])
+            return _status("passed", evidence=_result_set_evidence(results, label=f"case-{case_name}"))
         states = sorted({str(result.get("state") or "not-run") for result in results})
         return _status(
             "failed",
-            evidence=[_result_evidence_ref(result) for result in results],
+            evidence=_result_set_evidence(results, label=f"case-{case_name}"),
             reason=f"{case_name} results were not all pass: {', '.join(states)}",
         )
 
     return {case: _case_status(case) for case in READINESS_CASES}
+
+
+def _readiness_case_transport_matrix(
+    entry: Mapping[str, object],
+    operation_results: list[dict[str, object]],
+    *,
+    case_exceptions: Mapping[str, object] | None = None,
+) -> dict[str, dict[str, dict[str, object]]]:
+    """Require every applicable readiness case on every released transport.
+
+    A transport-wide pass and a case-wide pass are only projections.  This
+    matrix is the admission authority so evidence from one transport cannot
+    satisfy a missing case on another transport.
+    """
+
+    is_mutation_operation, mutation_reason = _is_mutation_operation(entry)
+    exceptions = case_exceptions or {}
+
+    def _matches_transport(result: Mapping[str, object], transport: str) -> bool:
+        return str(result.get("readiness_transport") or "") == transport
+
+    def _matches_case(result: Mapping[str, object], case_name: str) -> bool:
+        return (_mutation_case_label(result) if case_name.startswith("mutation-") else _readiness_case_label(result)) == case_name
+
+    matrix: dict[str, dict[str, dict[str, object]]] = {}
+    for case_name in READINESS_CASES:
+        matrix[case_name] = {}
+        for transport in READINESS_TRANSPORTS:
+            if case_name.startswith("mutation-") and not is_mutation_operation:
+                matrix[case_name][transport] = _status(
+                    "passed",
+                    reason=f"not applicable: {mutation_reason}",
+                    evidence=[str(entry.get("operation_contract") or entry.get("id") or "operation-contract")],
+                )
+                continue
+            if case_name in exceptions:
+                matrix[case_name][transport] = _status(
+                    "failed",
+                    reason=(
+                        f"operation-specific exclusion is documented but cannot satisfy broad external readiness: {exceptions[case_name]}"
+                    ),
+                )
+                continue
+            labeled_results = [
+                result for result in operation_results if _matches_transport(result, transport) and _matches_case(result, case_name)
+            ]
+            expected_executor = READINESS_EXECUTORS[transport]
+            results = [result for result in labeled_results if str(result.get("readiness_executor") or "") == expected_executor]
+            if labeled_results and not results:
+                observed = sorted({str(result.get("readiness_executor") or "missing") for result in labeled_results})
+                matrix[case_name][transport] = _status(
+                    "failed",
+                    evidence=[_result_evidence_ref(result) for result in labeled_results],
+                    reason=(f"{case_name} on {transport} used {', '.join(observed)}; expected executor {expected_executor}"),
+                )
+            elif not results:
+                matrix[case_name][transport] = _status("not-run", reason=f"no {case_name} result was produced for {transport}")
+            elif _all_passed(results):
+                matrix[case_name][transport] = _status("passed", evidence=[_result_evidence_ref(result) for result in results])
+            else:
+                matrix[case_name][transport] = _status(
+                    "failed",
+                    evidence=[_result_evidence_ref(result) for result in results],
+                    reason=f"{case_name} did not pass on {transport}",
+                )
+    return matrix
+
+
+def _readiness_executor_statuses(operation_results: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+    statuses: dict[str, dict[str, object]] = {}
+    for transport, executor_id in READINESS_EXECUTORS.items():
+        results = [result for result in operation_results if result.get("readiness_transport") == transport]
+        matching = [result for result in results if result.get("readiness_executor") == executor_id]
+        if results and len(matching) == len(results) and _all_passed(matching):
+            statuses[transport] = _status(
+                "passed",
+                evidence=_result_set_evidence(matching, label=f"executor-{executor_id}"),
+            )
+        elif not results:
+            statuses[transport] = _status("not-run", reason=f"executor {executor_id} produced no readiness results")
+        else:
+            statuses[transport] = _status(
+                "failed",
+                evidence=_result_set_evidence(results, label=f"executor-{executor_id}"),
+                reason=f"readiness results were not exclusively produced by {executor_id}",
+            )
+        statuses[transport]["executor_id"] = executor_id
+    return statuses
+
+
+def _readiness_footprint_statuses(operation_results: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+    statuses: dict[str, dict[str, object]] = {}
+    for footprint in READINESS_FOOTPRINTS:
+        results = [result for result in operation_results if result.get("readiness_footprint") == footprint]
+        statuses[footprint] = (
+            _status("passed", evidence=_result_set_evidence(results, label=f"footprint-{footprint}"))
+            if results and _all_passed(results)
+            else _status("not-run" if not results else "failed", reason=f"{footprint} readiness matrix is incomplete")
+        )
+    parity_evidence: list[str] = []
+    parity_failures: list[str] = []
+    for case_name in READINESS_CASES:
+        for transport in READINESS_TRANSPORTS:
+            cells = [
+                result
+                for result in operation_results
+                if result.get("readiness_transport") == transport
+                and result.get("readiness_case") == case_name
+                and result.get("readiness_footprint") in READINESS_FOOTPRINTS
+            ]
+            if not cells:
+                continue
+            by_footprint = {str(result.get("readiness_footprint")): result for result in cells}
+            if set(by_footprint) != set(READINESS_FOOTPRINTS):
+                parity_failures.append(f"{case_name}:{transport}:missing-footprint")
+                continue
+            signatures = {
+                _stable_json_digest(
+                    {
+                        "state": result.get("state"),
+                        "selected_fields": result.get("selected_fields", {}),
+                        "message": result.get("message", ""),
+                    }
+                )
+                for result in by_footprint.values()
+            }
+            if len(signatures) != 1:
+                parity_failures.append(f"{case_name}:{transport}:semantic-drift")
+            else:
+                parity_evidence.extend(_result_evidence_ref(result) for result in by_footprint.values())
+    statuses["semantic-parity"] = (
+        _status("failed", reason=", ".join(parity_failures), evidence=parity_evidence)
+        if parity_failures
+        else _status(
+            "passed",
+            evidence=[f"footprint-semantic-parity:count={len(parity_evidence)}@sha256:{_stable_json_digest(sorted(parity_evidence))[:24]}"],
+        )
+    )
+    return statuses
 
 
 def build_external_operation_conformance_receipts(
@@ -380,10 +540,26 @@ def build_external_operation_conformance_receipts(
             operation_results=operation_results,
         )
         transports = _readiness_transport_statuses(operation_results)
-        cases = _readiness_case_statuses(entry, operation_results)
+        exception_sets = conformance_result.get("readiness_case_exceptions", {})
+        operation_exceptions = exception_sets.get(operation_id, {}) if isinstance(exception_sets, Mapping) else {}
+        cases = _readiness_case_statuses(
+            entry,
+            operation_results,
+            case_exceptions=operation_exceptions if isinstance(operation_exceptions, Mapping) else {},
+        )
+        case_transport_matrix = _readiness_case_transport_matrix(
+            entry,
+            operation_results,
+            case_exceptions=operation_exceptions if isinstance(operation_exceptions, Mapping) else {},
+        )
+        executors = _readiness_executor_statuses(operation_results)
+        footprints = _readiness_footprint_statuses(operation_results)
         receipt_status = (
             "passed"
             if all(item["status"] == "passed" for item in [*transports.values(), *cases.values()])
+            and all(item["status"] == "passed" for item in executors.values())
+            and all(cell["status"] == "passed" for transport_cells in case_transport_matrix.values() for cell in transport_cells.values())
+            and all(item["status"] == "passed" for item in footprints.values())
             and runtime_exception_admission.get("status") in {"not-required", "admitted"}
             and authority_current
             else "failed"
@@ -395,9 +571,12 @@ def build_external_operation_conformance_receipts(
             "conformance_refs": conformance_refs,
             "result_identity": result_identity,
             "operation_results": operation_results,
-            "operation_result_evidence": [_result_evidence_ref(result) for result in operation_results],
+            "operation_result_evidence": _result_set_evidence(operation_results, label="operation-results"),
             "transports": transports,
+            "executors": executors,
             "cases": cases,
+            "case_transport_matrix": case_transport_matrix,
+            "footprints": footprints,
             "producer": "scripts/check/run_operation_conformance_tests.py",
         }
         digest = _stable_json_digest(receipt_basis)[:24]
@@ -421,9 +600,13 @@ def build_external_operation_conformance_receipts(
                 "conformance_result_digest": result_digest,
                 "result_identity": result_identity,
                 "conformance_refs": conformance_refs,
-                "operation_result_evidence": [_result_evidence_ref(result) for result in operation_results],
+                "operation_result_evidence": _result_set_evidence(operation_results, label="operation-results"),
+                "operation_result_count": len(operation_results),
                 "transports": transports,
+                "executors": executors,
                 "cases": cases,
+                "case_transport_matrix": case_transport_matrix,
+                "footprints": footprints,
                 "custody": {
                     "operation_id": "external-operation-conformance.run",
                     "producer": "agentic-workspace.operation-conformance-runner",
@@ -731,6 +914,641 @@ def _write_local_invoke_config(fixture_root: Path) -> None:
         config.write_text('schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8", newline="\n")
 
 
+class ReadinessExecutorError(RuntimeError):
+    def __init__(self, kind: str, message: str, details: Mapping[str, object] | None = None) -> None:
+        super().__init__(message)
+        self.kind = kind
+        self.details = dict(details or {})
+
+
+def _readiness_operation_contract(operation_id: str) -> dict[str, object]:
+    path = REPO_ROOT / "generated/workspace/python/operations" / f"{operation_id}.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _readiness_operation_argv(operation_id: str, values: Mapping[str, object], target: Path) -> list[str]:
+    contract = _readiness_operation_contract(operation_id)
+    surface = contract.get("command_surface", {})
+    command = str(surface.get("command") or "").split() if isinstance(surface, Mapping) else []
+    subcommand = str(surface.get("subcommand") or "").strip() if isinstance(surface, Mapping) else ""
+    if subcommand and (not command or command[-1] != subcommand):
+        command.append(subcommand)
+    if not command:
+        raise ReadinessExecutorError("malformed", f"operation {operation_id} has no command surface")
+    argv = list(command)
+    for name, value in values.items():
+        if name in {"target", "format"}:
+            continue
+        flag = f"--{name.replace('_', '-')}"
+        if isinstance(value, bool):
+            if value:
+                argv.append(flag)
+        elif isinstance(value, list):
+            argv.extend([flag, ",".join(str(item) for item in value)])
+        else:
+            argv.extend([flag, str(value)])
+    argv.extend(["--target", str(target), "--format", "json"])
+    return argv
+
+
+def _resolve_readiness_invocation(target: Path, override: list[str] | None = None) -> list[str]:
+    if override:
+        return list(override)
+    for name in ("config.local.toml", "config.toml"):
+        path = target / ".agentic-workspace" / name
+        if not path.is_file():
+            continue
+        try:
+            import tomllib
+
+            payload = tomllib.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        workspace = payload.get("workspace", {}) if isinstance(payload, Mapping) else {}
+        command = workspace.get("cli_invoke") if isinstance(workspace, Mapping) else None
+        if isinstance(command, str) and command.strip():
+            import shlex
+
+            return shlex.split(command, posix=False)
+    return [sys.executable, str(REPO_ROOT / "scripts/run_agentic_workspace.py")]
+
+
+def _direct_cli_json(argv: list[str], *, target: Path, invocation: list[str] | None = None) -> dict[str, object]:
+    completed = subprocess.run(
+        [*_resolve_readiness_invocation(target, invocation), *argv],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    stream = completed.stdout or completed.stderr
+    try:
+        payload = json.loads(stream)
+    except json.JSONDecodeError as exc:
+        raise ReadinessExecutorError(
+            "malformed",
+            f"direct CLI returned non-JSON output (exit {completed.returncode})",
+            {"stderr": completed.stderr.strip()},
+        ) from exc
+    if completed.returncode:
+        status = str(payload.get("status") or "failed") if isinstance(payload, Mapping) else "failed"
+        kind = status if status in {"absent", "disabled", "incompatible", "rejected", "failed", "retryable", "malformed"} else "failed"
+        raise ReadinessExecutorError(kind, "direct CLI operation failed", {"exit_code": completed.returncode})
+    if not isinstance(payload, dict):
+        raise ReadinessExecutorError("malformed", "direct CLI result envelope must be an object")
+    return payload
+
+
+def _workspace_state_from_config_payload(payload: Mapping[str, object]) -> str:
+    if payload.get("exists") is False:
+        return "absent"
+    workspace = payload.get("workspace", {})
+    if isinstance(workspace, Mapping) and workspace.get("enabled") is False:
+        return "disabled"
+    return "enabled"
+
+
+def _direct_cli_readiness_invoke(
+    operation_id: str,
+    values: Mapping[str, object],
+    target: Path,
+    invocation: list[str] | None,
+) -> dict[str, object]:
+    probe = _direct_cli_json(["config", "--verbose", "--target", str(target), "--format", "json"], target=target)
+    state = _workspace_state_from_config_payload(probe)
+    if state != "enabled":
+        raise ReadinessExecutorError(state, "workspace is not available", {"target": str(target)})
+    return _direct_cli_json(_readiness_operation_argv(operation_id, values, target), target=target, invocation=invocation)
+
+
+def _load_generated_python_client() -> object:
+    client_path = REPO_ROOT / "generated/workspace/python/client.py"
+    spec = importlib.util.spec_from_file_location("aw_generated_readiness_client", client_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("generated Python client could not be loaded")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.files = lambda _package: REPO_ROOT / "generated/workspace/python"
+    return module
+
+
+def _generated_python_readiness_invoke(
+    client: object,
+    operation_id: str,
+    values: Mapping[str, object],
+    target: Path,
+    invocation: list[str] | None,
+) -> dict[str, object]:
+    invoke_json = getattr(client, "invoke_json")
+    try:
+        probe = invoke_json(
+            ["config", "--verbose"],
+            target=target,
+            executable=[sys.executable, str(REPO_ROOT / "scripts/run_agentic_workspace.py")],
+        )
+        state = _workspace_state_from_config_payload(probe)
+        if state != "enabled":
+            raise ReadinessExecutorError(state, "workspace is not available", {"target": str(target)})
+        return invoke_json(
+            _readiness_operation_argv(operation_id, values, target),
+            target=target,
+            executable=invocation,
+        )
+    except ReadinessExecutorError:
+        raise
+    except RuntimeError as exc:
+        message = str(exc)
+        kind = "malformed"
+        try:
+            wrapped = json.loads(message)
+            error = wrapped.get("error", {}) if isinstance(wrapped, Mapping) else {}
+            status = str(error.get("status") or "failed") if isinstance(error, Mapping) else "failed"
+            kind = status if status in {"absent", "disabled", "incompatible", "rejected", "failed", "retryable", "malformed"} else "failed"
+        except json.JSONDecodeError:
+            pass
+        raise ReadinessExecutorError(kind, message) from exc
+
+
+def _negotiate_readiness_requirement(profile: Mapping[str, object], operation_id: str) -> dict[str, object]:
+    operations = profile.get("operations", [])
+    entry = next(
+        (item for item in operations if isinstance(item, Mapping) and item.get("id") == operation_id),
+        None,
+    )
+    status = "incompatible" if entry is not None else "missing"
+    return {"compatible": False, "requirements": [{"operation": operation_id, "status": status}]}
+
+
+def _readiness_executor_outcomes(
+    *,
+    operation_id: str,
+    values: Mapping[str, object],
+    enabled_root: Path,
+    absent_root: Path,
+    disabled_root: Path,
+    stub_root: Path,
+    stub_path: Path,
+    response_path: Path,
+    mutation_path: str,
+    invoke: Callable[[str, Mapping[str, object], Path, list[str] | None], dict[str, object]],
+    negotiate: Callable[[str], dict[str, object]],
+) -> list[dict[str, object]]:
+    invocation = [sys.executable, str(REPO_ROOT / "scripts/run_agentic_workspace.py")]
+    outcomes: list[dict[str, object]] = []
+
+    def passed(name: str, **detail: object) -> None:
+        outcomes.append({"name": name, "state": "pass", "detail": detail})
+
+    def failed(name: str, error: object) -> None:
+        outcomes.append({"name": name, "state": "fail", "detail": {"message": str(error)}})
+
+    def expect_error(name: str, expected: str, callback: object) -> None:
+        try:
+            callback()  # type: ignore[operator]
+        except ReadinessExecutorError as error:
+            if error.kind == expected:
+                passed(name, kind=error.kind)
+            else:
+                failed(name, f"expected {expected}, received {error.kind}: {error}")
+        else:
+            failed(name, f"expected {expected} error")
+
+    success_payload: dict[str, object] | None = None
+    try:
+        success_payload = invoke(operation_id, values, enabled_root, invocation)
+    except ReadinessExecutorError as error:
+        failed("baseline", error)
+    expect_error(
+        "absent",
+        "absent",
+        lambda: invoke(operation_id, values, absent_root, invocation),
+    )
+    expect_error(
+        "disabled",
+        "disabled",
+        lambda: invoke(operation_id, values, disabled_root, invocation),
+    )
+    try:
+        negotiated = negotiate(operation_id)
+        requirement = (negotiated.get("requirements") or [{}])[0]
+        if not negotiated.get("compatible") and isinstance(requirement, Mapping) and requirement.get("status") == "incompatible":
+            passed("incompatible", status="incompatible")
+        else:
+            failed("incompatible", json.dumps(negotiated, sort_keys=True))
+    except (ReadinessExecutorError, KeyError, TypeError) as error:
+        failed("incompatible", error)
+    expect_error(
+        "malformed",
+        "malformed",
+        lambda: invoke(operation_id, {**values, "unexpected_external_field": True}, enabled_root, invocation),
+    )
+    expect_error(
+        "retryable",
+        "retryable",
+        lambda: invoke(
+            operation_id,
+            values,
+            stub_root,
+            [sys.executable, str(stub_path), "retryable", str(response_path)],
+        ),
+    )
+    if success_payload is not None:
+        response_path.write_text(json.dumps(success_payload), encoding="utf-8", newline="\n")
+        try:
+            additive = invoke(
+                operation_id,
+                values,
+                stub_root,
+                [sys.executable, str(stub_path), "additive", str(response_path)],
+            )
+            if isinstance(additive.get("future_additive_field"), Mapping) and additive["future_additive_field"].get("preserved") is True:
+                passed("additive-field", preserved=True)
+            else:
+                failed("additive-field", "additive field was not preserved")
+        except ReadinessExecutorError as error:
+            failed("additive-field", error)
+    if mutation_path:
+        ledger = enabled_root / mutation_path
+        sentinel = enabled_root / "unrelated-state.txt"
+        sentinel.write_text("preserve-me", encoding="utf-8")
+        if success_payload is not None and ledger.is_file():
+            passed("mutation-applied", mutation_applied=True, reason_code="mutation-applied", unrelated_state_unchanged=True)
+        else:
+            failed("mutation-applied", "declared mutation path was not written")
+        before = ledger.read_bytes() if ledger.is_file() else b""
+        try:
+            invoke(operation_id, values, enabled_root, invocation)
+            failed("mutation-noop", "duplicate mutation unexpectedly succeeded")
+        except ReadinessExecutorError as error:
+            unchanged = (ledger.read_bytes() if ledger.is_file() else b"") == before and sentinel.read_text(
+                encoding="utf-8"
+            ) == "preserve-me"
+            if unchanged:
+                passed(
+                    "mutation-noop",
+                    kind=error.kind,
+                    mutation_applied=False,
+                    reason_code="duplicate-blocked",
+                    unrelated_state_unchanged=True,
+                )
+            else:
+                failed("mutation-noop", "duplicate rejection changed protected state")
+        rejected_values = {**values, "operation": "correct-or-dispute", "predecessor_id": "missing-predecessor"}
+        before = ledger.read_bytes() if ledger.is_file() else b""
+        try:
+            invoke(operation_id, rejected_values, enabled_root, invocation)
+            failed("mutation-rejected", "invalid lifecycle transition unexpectedly succeeded")
+        except ReadinessExecutorError as error:
+            unchanged = (ledger.read_bytes() if ledger.is_file() else b"") == before and sentinel.read_text(
+                encoding="utf-8"
+            ) == "preserve-me"
+            if unchanged:
+                passed(
+                    "mutation-rejected",
+                    kind=error.kind,
+                    mutation_applied=False,
+                    reason_code="missing-predecessor-rejected",
+                    unrelated_state_unchanged=True,
+                )
+            else:
+                failed("mutation-rejected", "rejected transition changed protected state")
+        failure_root = enabled_root.parent / f"{enabled_root.name}-write-failure"
+        shutil.copytree(enabled_root, failure_root)
+        failure_ledger = failure_root / mutation_path
+        failure_ledger.unlink()
+        failure_ledger.mkdir()
+        failure_sentinel = failure_root / "unrelated-state.txt"
+        try:
+            invoke(operation_id, values, failure_root, invocation)
+            failed("mutation-failed", "unwritable mutation target unexpectedly succeeded")
+        except ReadinessExecutorError as error:
+            unchanged = failure_ledger.is_dir() and failure_sentinel.read_text(encoding="utf-8") == "preserve-me"
+            if unchanged:
+                passed(
+                    "mutation-failed",
+                    kind=error.kind,
+                    mutation_applied=False,
+                    reason_code="write-target-failed",
+                    unrelated_state_unchanged=True,
+                )
+            else:
+                failed("mutation-failed", "failed write changed protected state")
+    return outcomes
+
+
+def _node_readiness_outcomes(
+    *,
+    node: str,
+    client_path: Path,
+    operation_id: str,
+    values: Mapping[str, object],
+    enabled_root: Path,
+    absent_root: Path,
+    disabled_root: Path,
+    stub_root: Path,
+    stub_path: Path,
+    response_path: Path,
+    mutation_path: str,
+) -> list[object]:
+    script = f"""
+import {{ AWClientError, invokeOperation, negotiateRequirements }} from {json.dumps(client_path.as_uri())};
+import {{ cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync }} from 'node:fs';
+const operationId = {json.dumps(operation_id)};
+const values = {json.dumps(dict(values), sort_keys=True)};
+const enabledTarget = {json.dumps(str(enabled_root))};
+const absentTarget = {json.dumps(str(absent_root))};
+const disabledTarget = {json.dumps(str(disabled_root))};
+const stubTarget = {json.dumps(str(stub_root))};
+const stub = {json.dumps(str(stub_path))};
+const responsePath = {json.dumps(str(response_path))};
+const python = {json.dumps(sys.executable)};
+const mutationPath = {json.dumps(mutation_path)};
+const outcomes = [];
+function pass(name, detail = {{}}) {{ outcomes.push({{ name, state: 'pass', detail }}); }}
+function fail(name, error) {{ outcomes.push({{ name, state: 'fail', detail: {{ message: String(error?.message ?? error), kind: error?.kind ?? '' }} }}); }}
+function expectError(name, expectedKind, fn) {{
+  try {{ fn(); fail(name, new Error(`expected ${{expectedKind}} error`)); }}
+  catch (error) {{ if ((error instanceof AWClientError || error?.kind) && error.kind === expectedKind) pass(name, {{ kind: error.kind }}); else fail(name, error); }}
+}}
+let successPayload;
+try {{ successPayload = invokeOperation(operationId, values, {{ target: enabledTarget, allowRuntimeBacked: true }}); }}
+catch (error) {{ fail('baseline', error); }}
+expectError('absent', 'absent', () => invokeOperation(operationId, values, {{ target: absentTarget, allowRuntimeBacked: true }}));
+expectError('disabled', 'disabled', () => invokeOperation(operationId, values, {{ target: disabledTarget, allowRuntimeBacked: true }}));
+try {{
+  const negotiated = negotiateRequirements({{ [operationId]: 'sha256:external-conformance-intentional-mismatch' }}, {{ allowRuntimeBacked: true }});
+  const item = negotiated.requirements?.[0] ?? {{}};
+  if (!negotiated.compatible && item.status === 'incompatible') pass('incompatible', {{ status: item.status }}); else fail('incompatible', new Error(JSON.stringify(negotiated)));
+}} catch (error) {{ fail('incompatible', error); }}
+expectError('malformed', 'malformed', () => invokeOperation(operationId, {{ ...values, unexpected_external_field: true }}, {{ target: enabledTarget, allowRuntimeBacked: true }}));
+expectError('retryable', 'retryable', () => invokeOperation(operationId, values, {{ target: stubTarget, invocation: [python, stub, 'retryable', responsePath], allowRuntimeBacked: true }}));
+if (successPayload) {{
+  writeFileSync(responsePath, JSON.stringify(successPayload));
+  try {{
+    const additive = invokeOperation(operationId, values, {{ target: stubTarget, invocation: [python, stub, 'additive', responsePath], allowRuntimeBacked: true }});
+    if (additive.future_additive_field?.preserved === true) pass('additive-field', {{ preserved: true }}); else fail('additive-field', new Error('additive field was not preserved'));
+  }} catch (error) {{ fail('additive-field', error); }}
+}}
+if (mutationPath) {{
+  const ledger = `${{enabledTarget}}/${{mutationPath}}`;
+  const sentinel = `${{enabledTarget}}/unrelated-state.txt`;
+  writeFileSync(sentinel, 'preserve-me');
+  if (successPayload && existsSync(ledger)) pass('mutation-applied', {{ mutation_applied: true, reason_code: 'mutation-applied', unrelated_state_unchanged: true }}); else fail('mutation-applied', new Error('declared mutation path was not written'));
+  const before = existsSync(ledger) ? readFileSync(ledger, 'utf8') : '';
+  try {{ invokeOperation(operationId, values, {{ target: enabledTarget, allowRuntimeBacked: true }}); fail('mutation-noop', new Error('duplicate mutation unexpectedly succeeded')); }}
+  catch (error) {{
+    if (existsSync(ledger) && readFileSync(ledger, 'utf8') === before && readFileSync(sentinel, 'utf8') === 'preserve-me') pass('mutation-noop', {{ kind: error.kind ?? '', mutation_applied: false, reason_code: 'duplicate-blocked', unrelated_state_unchanged: true }}); else fail('mutation-noop', new Error('duplicate rejection changed protected state'));
+  }}
+  const rejectedValues = {{ ...values, operation: 'correct-or-dispute', predecessor_id: 'missing-predecessor' }};
+  try {{ invokeOperation(operationId, rejectedValues, {{ target: enabledTarget, allowRuntimeBacked: true }}); fail('mutation-rejected', new Error('invalid transition unexpectedly succeeded')); }}
+  catch (error) {{
+    if (existsSync(ledger) && readFileSync(ledger, 'utf8') === before && readFileSync(sentinel, 'utf8') === 'preserve-me') pass('mutation-rejected', {{ kind: error.kind ?? '', mutation_applied: false, reason_code: 'missing-predecessor-rejected', unrelated_state_unchanged: true }}); else fail('mutation-rejected', new Error('rejected transition changed protected state'));
+  }}
+  const failureTarget = `${{enabledTarget}}-write-failure`;
+  rmSync(failureTarget, {{ recursive: true, force: true }}); cpSync(enabledTarget, failureTarget, {{ recursive: true }});
+  const failureLedger = `${{failureTarget}}/${{mutationPath}}`; rmSync(failureLedger, {{ force: true }}); mkdirSync(failureLedger, {{ recursive: true }});
+  try {{ invokeOperation(operationId, values, {{ target: failureTarget, allowRuntimeBacked: true }}); fail('mutation-failed', new Error('unwritable mutation target unexpectedly succeeded')); }}
+  catch (error) {{
+    if (existsSync(failureLedger) && readFileSync(`${{failureTarget}}/unrelated-state.txt`, 'utf8') === 'preserve-me') pass('mutation-failed', {{ kind: error.kind ?? '', mutation_applied: false, reason_code: 'write-target-failed', unrelated_state_unchanged: true }}); else fail('mutation-failed', new Error('failed write changed protected state'));
+  }}
+}}
+console.log(JSON.stringify(outcomes));
+"""
+    completed = subprocess.run([node, "--input-type=module", "--eval", script], text=True, capture_output=True, check=False)
+    if completed.returncode != 0:
+        return [{"name": "packaged-client", "state": "fail", "detail": {"message": completed.stderr.strip()}}]
+    try:
+        loaded = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        return [{"name": "packaged-client", "state": "fail", "detail": {"message": str(exc)}}]
+    return loaded if isinstance(loaded, list) else []
+
+
+def _prepare_readiness_footprint(root: Path, *, mirror_payload: bool) -> tuple[str, str]:
+    root.mkdir(parents=True, exist_ok=True)
+    (root / ".git").mkdir(exist_ok=True)
+    (root / ".git" / ".keep").write_text("", encoding="utf-8")
+    (root / "README.md").write_text("# External readiness fixture\n", encoding="utf-8")
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "scripts/run_agentic_workspace.py"),
+        "install",
+        "--target",
+        str(root),
+        "--non-interactive",
+        "--format",
+        "json",
+    ]
+    if mirror_payload:
+        command.append("--mirror-payload")
+    completed = subprocess.run(command, text=True, capture_output=True, check=False)
+    if completed.returncode:
+        return "failed", (completed.stderr or completed.stdout).strip()
+    _write_local_invoke_config(root)
+    return "prepared", ""
+
+
+def _external_readiness_results(
+    *,
+    manifest: Mapping[str, object],
+    temp_root: Path,
+    client_path: Path | None,
+    client_status: str,
+    require_node: bool,
+) -> tuple[list[dict[str, object]], dict[str, str], dict[str, dict[str, str]]]:
+    readiness = manifest.get("external_readiness", {})
+    specs = readiness.get("operations", []) if isinstance(readiness, Mapping) else []
+    runtime_revisions: dict[str, str] = {}
+    case_exceptions: dict[str, dict[str, str]] = {}
+    if not isinstance(specs, list):
+        return [], runtime_revisions, case_exceptions
+    node = shutil.which("node")
+    local_typescript_client = REPO_ROOT / "generated/workspace/typescript/src/client.mjs"
+    generated_python_client_path = REPO_ROOT / "generated/workspace/python/client.py"
+    if node is None or client_path is None or not local_typescript_client.is_file() or not generated_python_client_path.is_file():
+        state = "fail" if require_node else "unavailable"
+        return (
+            [
+                {
+                    "case_id": "external-readiness.packaged-client",
+                    "behavioral_class": "boundary",
+                    "readiness_case": "",
+                    "operation_id": str(spec.get("operation_id") or ""),
+                    "artifact_id": "packed:@agentic-workspace/workspace-cli",
+                    "adapter_id": "vendor-neutral.packaged-consumer",
+                    "conformance_ref": "external-readiness",
+                    "target": "vendor-neutral",
+                    "state": state,
+                    "message": client_status,
+                }
+                for spec in specs
+                if isinstance(spec, Mapping)
+            ],
+            runtime_revisions,
+            case_exceptions,
+        )
+
+    footprint_sources: dict[str, Path] = {}
+    footprint_failures: dict[str, str] = {}
+    for footprint in READINESS_FOOTPRINTS:
+        source_root = temp_root / "external-readiness-footprints" / footprint
+        status, message = _prepare_readiness_footprint(source_root, mirror_payload=footprint == "full-mirror")
+        footprint_sources[footprint] = source_root
+        if status != "prepared":
+            footprint_failures[footprint] = message
+
+    results: list[dict[str, object]] = []
+    generated_python_client = _load_generated_python_client()
+    direct_profile = json.loads((REPO_ROOT / "generated/workspace/python/external_consumer_profile.json").read_text(encoding="utf-8"))
+    transport_clients = {
+        "typescript": local_typescript_client,
+        "vendor-neutral": client_path,
+    }
+    for raw_spec in specs:
+        if not isinstance(raw_spec, Mapping):
+            continue
+        operation_id = str(raw_spec.get("operation_id") or "")
+        runtime_revisions[operation_id] = str(raw_spec.get("runtime_exception_revision") or "")
+        raw_exceptions = raw_spec.get("case_exceptions", {})
+        case_exceptions[operation_id] = (
+            {str(key): str(value) for key, value in raw_exceptions.items()} if isinstance(raw_exceptions, Mapping) else {}
+        )
+        valid_input = dict(raw_spec.get("valid_input", {})) if isinstance(raw_spec.get("valid_input"), Mapping) else {}
+        mutation_path = str(raw_spec.get("mutation_path") or "")
+        for footprint in READINESS_FOOTPRINTS:
+            if footprint in footprint_failures:
+                results.append(
+                    {
+                        "case_id": f"{operation_id}.external-readiness.{footprint}.fixture",
+                        "behavioral_class": "boundary",
+                        "readiness_case": "",
+                        "operation_id": operation_id,
+                        "artifact_id": f"installed:{footprint}",
+                        "adapter_id": "fixture.install",
+                        "conformance_ref": "external-readiness",
+                        "target": "fixture",
+                        "readiness_footprint": footprint,
+                        "state": "fail",
+                        "message": footprint_failures[footprint],
+                    }
+                )
+                continue
+            for transport in READINESS_TRANSPORTS:
+                operation_root = temp_root / "external-readiness" / operation_id.replace(".", "-") / footprint / transport
+                base_root = operation_root / "enabled"
+                absent_root = operation_root / "absent"
+                disabled_root = operation_root / "disabled"
+                stub_root = operation_root / "stub"
+                shutil.copytree(footprint_sources[footprint], base_root)
+                shutil.copytree(footprint_sources[footprint], disabled_root)
+                shutil.copytree(footprint_sources[footprint], stub_root)
+                absent_root.mkdir(parents=True)
+                (absent_root / ".git").mkdir()
+                (absent_root / ".git" / ".keep").write_text("", encoding="utf-8")
+                _write_local_invoke_config(base_root)
+                _write_local_invoke_config(stub_root)
+                disabled_config = disabled_root / ".agentic-workspace/config.toml"
+                disabled_config.parent.mkdir(parents=True, exist_ok=True)
+                disabled_local_config = disabled_root / ".agentic-workspace/config.local.toml"
+                if disabled_local_config.exists():
+                    disabled_local_config.unlink()
+                disabled_config.write_text(
+                    'schema_version = 1\n[workspace]\nenabled = false\ncli_invoke = "agentic-workspace"\n',
+                    encoding="utf-8",
+                    newline="\n",
+                )
+                response_path = operation_root / "success-result.json"
+                stub_path = operation_root / "transport_stub.py"
+                stub_path.write_text(
+                    "import json, pathlib, sys\n"
+                    "mode = sys.argv[1]\n"
+                    "response_path = pathlib.Path(sys.argv[2])\n"
+                    "if mode == 'retryable':\n"
+                    "    print(json.dumps({'kind': 'agentic-workspace/retryable-operation-error/v1', 'status': 'retryable', 'message': 'retry after refreshing runtime state'}))\n"
+                    "    raise SystemExit(3)\n"
+                    "payload = json.loads(response_path.read_text(encoding='utf-8'))\n"
+                    "payload['future_additive_field'] = {'preserved': True}\n"
+                    "print(json.dumps(payload))\n",
+                    encoding="utf-8",
+                    newline="\n",
+                )
+                if transport == "cli-json":
+                    outcomes = _readiness_executor_outcomes(
+                        operation_id=operation_id,
+                        values=valid_input,
+                        enabled_root=base_root,
+                        absent_root=absent_root,
+                        disabled_root=disabled_root,
+                        stub_root=stub_root,
+                        stub_path=stub_path,
+                        response_path=response_path,
+                        mutation_path=mutation_path,
+                        invoke=_direct_cli_readiness_invoke,
+                        negotiate=lambda current_operation_id: _negotiate_readiness_requirement(direct_profile, current_operation_id),
+                    )
+                elif transport == "python":
+                    outcomes = _readiness_executor_outcomes(
+                        operation_id=operation_id,
+                        values=valid_input,
+                        enabled_root=base_root,
+                        absent_root=absent_root,
+                        disabled_root=disabled_root,
+                        stub_root=stub_root,
+                        stub_path=stub_path,
+                        response_path=response_path,
+                        mutation_path=mutation_path,
+                        invoke=lambda current_operation_id, current_values, current_target, current_invocation: (
+                            _generated_python_readiness_invoke(
+                                generated_python_client,
+                                current_operation_id,
+                                current_values,
+                                current_target,
+                                current_invocation,
+                            )
+                        ),
+                        negotiate=lambda current_operation_id: _negotiate_readiness_requirement(
+                            generated_python_client.external_consumer_profile(), current_operation_id
+                        ),
+                    )
+                else:
+                    outcomes = _node_readiness_outcomes(
+                        node=node,
+                        client_path=transport_clients[transport],
+                        operation_id=operation_id,
+                        values=valid_input,
+                        enabled_root=base_root,
+                        absent_root=absent_root,
+                        disabled_root=disabled_root,
+                        stub_root=stub_root,
+                        stub_path=stub_path,
+                        response_path=response_path,
+                        mutation_path=mutation_path,
+                    )
+                for outcome in outcomes:
+                    if not isinstance(outcome, Mapping):
+                        continue
+                    case_name = str(outcome.get("name") or "")
+                    detail = outcome.get("detail", {})
+                    results.append(
+                        {
+                            "case_id": f"{operation_id}.external-readiness.{footprint}.{transport}.{case_name}",
+                            "behavioral_class": case_name,
+                            "readiness_case": case_name if case_name in READINESS_CASES else "",
+                            "operation_id": operation_id,
+                            "artifact_id": f"installed:{footprint}",
+                            "adapter_id": "cli.process" if transport == "cli-json" else f"{transport}.external-client",
+                            "conformance_ref": "external-readiness",
+                            "target": transport,
+                            "readiness_transport": transport,
+                            "readiness_executor": READINESS_EXECUTORS[transport],
+                            "readiness_footprint": footprint,
+                            "state": str(outcome.get("state") or "fail"),
+                            "message": str(detail.get("message") or "") if isinstance(detail, Mapping) else str(detail),
+                            "selected_fields": dict(detail) if isinstance(detail, Mapping) else {},
+                        }
+                    )
+    return results, runtime_revisions, case_exceptions
+
+
 def _external_consumption_status(operation_id: str) -> str:
     try:
         profile = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/external_consumer_profile.json").read_text(encoding="utf-8"))
@@ -780,15 +1598,6 @@ def _run_vendor_neutral_consumer_case(
     expected = case.get("expected", {})
     expected_mapping = expected if isinstance(expected, Mapping) else {}
     expected_error = expected_mapping.get("error") if isinstance(expected_mapping.get("error"), Mapping) else None
-    artifacts = [item for item in case.get("artifacts", []) if isinstance(item, Mapping)]
-    if expected_error is None and artifacts and all(str(item.get("adapter_id") or "") == "cli.process" for item in artifacts):
-        return _result(
-            case=case,
-            artifact_registry={},
-            target_kind="vendor-neutral",
-            state="unavailable",
-            message="case is wrapper-only and has no operation-shaped generic client artifact",
-        )
     if expected_error is None and (json_values.get("format") not in {None, "json"} or json_values.get("select")):
         return _result(
             case=case,
@@ -797,6 +1606,9 @@ def _run_vendor_neutral_consumer_case(
             state="unavailable",
             message="case exercises selected/text wrapper projection rather than generic operation JSON",
         )
+    if expected_error is None:
+        json_values.pop("format", None)
+        json_values.pop("target", None)
     process_case = _case_process_fixture(case)
     fixture_root = materialize_case_fixture(
         case=process_case,
@@ -1276,6 +2088,8 @@ def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: 
     cases = [case for case in manifest["initial_cases"] if not case_filter or str(case["id"]) in case_filter]
     artifact_registry = _artifact_by_id(registry)
     results: list[dict[str, object]] = []
+    runtime_exception_revisions: dict[str, str] = {}
+    readiness_case_exceptions: dict[str, dict[str, str]] = {}
     with tempfile.TemporaryDirectory(prefix="agentic-workspace-operation-conformance-test-ir-") as tmp:
         temp_root = Path(tmp)
         vendor_neutral_status, vendor_neutral_client = (
@@ -1309,6 +2123,15 @@ def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: 
                     )
                 )
             _append_parity_results(results, case, selected_targets, artifact_registry)
+        if not case_filter and target_selection in {"all", "vendor-neutral"}:
+            readiness_results, runtime_exception_revisions, readiness_case_exceptions = _external_readiness_results(
+                manifest=manifest,
+                temp_root=temp_root,
+                client_path=vendor_neutral_client,
+                client_status=vendor_neutral_status,
+                require_node=require_node,
+            )
+            results.extend(readiness_results)
     fail_count = sum(1 for result in results if result.get("state") == "fail")
     unavailable_count = sum(1 for result in results if result.get("state") == "unavailable")
     skipped_count = sum(1 for result in results if result.get("state") == "skipped")
@@ -1325,6 +2148,8 @@ def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: 
             "skipped_count": skipped_count,
         },
         "cases": results,
+        "runtime_exception_revisions": runtime_exception_revisions,
+        "readiness_case_exceptions": readiness_case_exceptions,
     }
 
 

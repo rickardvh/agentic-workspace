@@ -13,8 +13,24 @@ from typing import Any, Mapping, Sequence, cast
 
 from jsonschema import Draft202012Validator
 
-FAILURE_KINDS = {"absent", "disabled", "incompatible", "unsupported", "rejected", "failed", "malformed", "invocation-unavailable"}
+FAILURE_KINDS = {
+    "absent",
+    "disabled",
+    "incompatible",
+    "unsupported",
+    "rejected",
+    "failed",
+    "retryable",
+    "malformed",
+    "invocation-unavailable",
+}
 READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
+READINESS_EXECUTORS = {
+    "cli-json": "direct-cli-json",
+    "python": "generated-python-client",
+    "typescript": "generated-typescript-client",
+    "vendor-neutral": "packed-typescript-client",
+}
 READINESS_CASES = (
     "absent",
     "disabled",
@@ -176,6 +192,17 @@ def _external_conformance_readiness(
         for transport in READINESS_TRANSPORTS:
             if not isinstance(transports.get(transport), Mapping) or transports[transport].get("status") != "passed":
                 missing.append(f"transport-{transport}")
+    executors = evidence.get("executors")
+    if not isinstance(executors, Mapping):
+        missing.extend(f"executor-{transport}" for transport in READINESS_TRANSPORTS)
+    else:
+        for transport in READINESS_TRANSPORTS:
+            if (
+                not isinstance(executors.get(transport), Mapping)
+                or executors[transport].get("status") != "passed"
+                or executors[transport].get("executor_id") != READINESS_EXECUTORS[transport]
+            ):
+                missing.append(f"executor-{transport}")
     cases = evidence.get("cases")
     if not isinstance(cases, Mapping):
         missing.extend(f"case-{case}" for case in READINESS_CASES)
@@ -183,6 +210,28 @@ def _external_conformance_readiness(
         for case in READINESS_CASES:
             if not isinstance(cases.get(case), Mapping) or cases[case].get("status") != "passed":
                 missing.append(f"case-{case}")
+    matrix = evidence.get("case_transport_matrix")
+    if not isinstance(matrix, Mapping):
+        missing.append("case-transport-matrix")
+    else:
+        for case in READINESS_CASES:
+            cells = matrix.get(case)
+            for transport in READINESS_TRANSPORTS:
+                if (
+                    not isinstance(cells, Mapping)
+                    or not isinstance(cells.get(transport), Mapping)
+                    or cells[transport].get("status") != "passed"
+                ):
+                    missing.append(f"case-{case}-transport-{transport}")
+    footprints = evidence.get("footprints")
+    if not isinstance(footprints, Mapping):
+        missing.extend(f"footprint-{footprint}" for footprint in ("necessary-surfaces", "full-mirror"))
+    else:
+        for footprint in ("necessary-surfaces", "full-mirror"):
+            if not isinstance(footprints.get(footprint), Mapping) or footprints[footprint].get("status") != "passed":
+                missing.append(f"footprint-{footprint}")
+        if not isinstance(footprints.get("semantic-parity"), Mapping) or footprints["semantic-parity"].get("status") != "passed":
+            missing.append("footprint-semantic-parity")
     runtime_revision = evidence.get("runtime_exception_revision")
     runtime_exceptions = (entry.get("external_consumption") or {}).get("runtime_exceptions", [])
     if runtime_exceptions and not runtime_revision:
@@ -195,7 +244,10 @@ def _external_conformance_readiness(
         "client_semantics_revision": result_identity.get("client_semantics_revision", ""),
         "runtime_exception_revision": runtime_revision or "",
         "transports": transports if isinstance(transports, Mapping) else {},
+        "executors": executors if isinstance(executors, Mapping) else {},
         "cases": cases if isinstance(cases, Mapping) else {},
+        "case_transport_matrix": matrix if isinstance(matrix, Mapping) else {},
+        "footprints": footprints if isinstance(footprints, Mapping) else {},
         "receipt_ref": evidence.get("receipt_ref", ""),
         "producer": (evidence.get("custody") or {}).get("producer", "") if isinstance(evidence.get("custody"), Mapping) else "",
     }
@@ -272,6 +324,16 @@ def external_readiness_report(required_operations: Sequence[str], *, allow_runti
 
 def external_contract_bundle() -> dict[str, Any]:
     return json.loads(_resource("external_contract_bundle.json").read_text(encoding="utf-8"))
+
+
+def external_conformance_profile(operation_ids: Sequence[str] | None = None) -> dict[str, Any]:
+    profile = dict(external_contract_bundle().get("external_conformance", {}))
+    operations = [dict(item) for item in profile.get("operations", []) if isinstance(item, Mapping)]
+    if operation_ids is not None:
+        requested = {str(operation_id) for operation_id in operation_ids}
+        operations = [item for item in operations if str(item.get("operation_id") or "") in requested]
+    profile["operations"] = operations
+    return profile
 
 
 def operation_compatibility_fingerprint(contract: Mapping[str, Any]) -> str:

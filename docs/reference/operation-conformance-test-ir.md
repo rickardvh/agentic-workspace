@@ -36,4 +36,7 @@ Schema-coupled behavioral conformance cases for operation contracts and implemen
 | `proof_output.states` | array of enum `"pass"`, `"fail"`, `"stale"`, `"unavailable"`, `"skipped"` | yes |  | Allowed per-case result states in runner proof output. |  |  |
 | `proof_output.required_case_fields` | ref `#/$defs/non_empty_strings` | yes |  | Fields each proof case result must expose for closeout and changed-path routing. |  |  |
 | `proof_output.routing_rule` | string | yes |  | Rule for selecting the runner as proof when operation contracts, artifacts, adapters, or wrapper surfaces change. |  |  |
+| `external_readiness` | object | no |  | Operation-specific inputs used by the conformance runner to produce case-by-transport readiness evidence across necessary-surface and full-mirror installations; explicit exclusions remain fail-closed for broad readiness. |  |  |
+| `external_readiness.operations` | array of object | yes |  | Bounded externally consumable operations whose packaged client readiness is executed by the conformance runner. |  |  |
+| `external_readiness.rule` | string | yes |  | Authority and fail-closed interpretation rule for the packaged external conformance profile. |  |  |
 | `initial_cases` | array of ref `#/$defs/test_case` | yes |  | Initial representative cases proving the IR can express success, error, and cross-target parity behavior. |  |  |

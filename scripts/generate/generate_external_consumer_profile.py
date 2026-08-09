@@ -14,6 +14,7 @@ if str(REPO_ROOT) not in sys.path:
 from scripts.check.run_operation_conformance_tests import build_external_operation_conformance_receipts  # noqa: E402
 
 IR_PATH = REPO_ROOT / "src/agentic_workspace/contracts/command_package_ir.json"
+OPERATION_CONFORMANCE_IR_PATH = REPO_ROOT / "src/agentic_workspace/contracts/operation_conformance_test_ir.json"
 OUTPUTS = (
     REPO_ROOT / "src/agentic_workspace/contracts/external_consumer_profile.json",
     REPO_ROOT / "generated/workspace/python/external_consumer_profile.json",
@@ -26,6 +27,12 @@ CONFORMANCE_RECEIPT_OUTPUTS = (
 )
 USABLE_MATURITY_LEVELS = {"runnable-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
 READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
+READINESS_EXECUTORS = {
+    "cli-json": "direct-cli-json",
+    "python": "generated-python-client",
+    "typescript": "generated-typescript-client",
+    "vendor-neutral": "packed-typescript-client",
+}
 READINESS_CASES = (
     "absent",
     "disabled",
@@ -398,6 +405,7 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
         },
         "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
         "readiness_authority": readiness_authority,
+        "readiness_executors": dict(READINESS_EXECUTORS),
         "operations": operations,
     }
 
@@ -548,6 +556,7 @@ def render_bundle(profile: dict[str, object]) -> str:
         operation["compatibility_fingerprint"] = (
             "sha256:" + hashlib.sha256(json.dumps(compatible, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         )
+    conformance_ir = json.loads(OPERATION_CONFORMANCE_IR_PATH.read_text(encoding="utf-8"))
     payload = {
         "schema_version": "agentic-workspace/external-contract-bundle/v1",
         "protocol": profile["compatibility"]["protocol"],
@@ -568,6 +577,15 @@ def render_bundle(profile: dict[str, object]) -> str:
         },
         "operations": operations,
         "schemas": dict(sorted(schemas.items())),
+        "external_conformance": {
+            "kind": "agentic-workspace/packaged-external-conformance-profile/v1",
+            "source": "operation_conformance_test_ir.json#external_readiness",
+            "readiness_cases": list(READINESS_CASES),
+            "transport_matrix": list(READINESS_TRANSPORTS),
+            "executor_matrix": dict(READINESS_EXECUTORS),
+            "operations": conformance_ir.get("external_readiness", {}).get("operations", []),
+            "rule": conformance_ir.get("external_readiness", {}).get("rule", ""),
+        },
         "requirement_states": ["compatible", "incompatible", "missing", "runtime-backed", "unsupported"],
         "compatibility_rule": "Protocol major versions must match; fingerprint changes require requirement negotiation.",
     }
@@ -596,6 +614,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
+READINESS_EXECUTORS = {"cli-json": "direct-cli-json", "python": "generated-python-client", "typescript": "generated-typescript-client", "vendor-neutral": "packed-typescript-client"}
 READINESS_CASES = ("absent", "disabled", "incompatible", "malformed", "retryable", "additive-field", "mutation-applied", "mutation-noop", "mutation-rejected", "mutation-failed")
 
 
@@ -672,14 +691,25 @@ def _conformance_readiness(entry: dict[str, Any], profile: dict[str, Any], recei
     if result_identity.get("runner_revision") != authority.get("runner_revision"): missing.append("current-runner-revision")
     if result_identity.get("client_semantics_revision") != authority.get("client_semantics_revision"): missing.append("current-client-semantics-revision")
     transports = evidence.get("transports", {})
+    executors = evidence.get("executors", {})
     cases = evidence.get("cases", {})
     for transport in READINESS_TRANSPORTS:
         if not isinstance(transports.get(transport), dict) or transports[transport].get("status") != "passed": missing.append(f"transport-{transport}")
+        if not isinstance(executors.get(transport), dict) or executors[transport].get("status") != "passed" or executors[transport].get("executor_id") != READINESS_EXECUTORS[transport]: missing.append(f"executor-{transport}")
     for case in READINESS_CASES:
         if not isinstance(cases.get(case), dict) or cases[case].get("status") != "passed": missing.append(f"case-{case}")
+    matrix = evidence.get("case_transport_matrix", {})
+    footprints = evidence.get("footprints", {})
+    for case in READINESS_CASES:
+        cells = matrix.get(case, {}) if isinstance(matrix, dict) else {}
+        for transport in READINESS_TRANSPORTS:
+            if not isinstance(cells.get(transport), dict) or cells[transport].get("status") != "passed": missing.append(f"case-{case}-transport-{transport}")
+    for footprint in ("necessary-surfaces", "full-mirror"):
+        if not isinstance(footprints.get(footprint), dict) or footprints[footprint].get("status") != "passed": missing.append(f"footprint-{footprint}")
+    if not isinstance(footprints.get("semantic-parity"), dict) or footprints["semantic-parity"].get("status") != "passed": missing.append("footprint-semantic-parity")
     if entry.get("external_consumption", {}).get("runtime_exceptions") and not evidence.get("runtime_exception_revision"): missing.append("runtime-exception-current-revision")
     custody = evidence.get("custody", {}) if isinstance(evidence.get("custody"), dict) else {}
-    return missing, {"status": evidence.get("status", ""), "operation_fingerprint": evidence.get("operation_fingerprint", ""), "profile_fingerprint": evidence.get("profile_fingerprint", ""), "runner_revision": result_identity.get("runner_revision", ""), "client_semantics_revision": result_identity.get("client_semantics_revision", ""), "runtime_exception_revision": evidence.get("runtime_exception_revision", ""), "transports": transports if isinstance(transports, dict) else {}, "cases": cases if isinstance(cases, dict) else {}, "receipt_ref": evidence.get("receipt_ref", ""), "producer": custody.get("producer", "")}
+    return missing, {"status": evidence.get("status", ""), "operation_fingerprint": evidence.get("operation_fingerprint", ""), "profile_fingerprint": evidence.get("profile_fingerprint", ""), "runner_revision": result_identity.get("runner_revision", ""), "client_semantics_revision": result_identity.get("client_semantics_revision", ""), "runtime_exception_revision": evidence.get("runtime_exception_revision", ""), "transports": transports if isinstance(transports, dict) else {}, "executors": executors if isinstance(executors, dict) else {}, "cases": cases if isinstance(cases, dict) else {}, "case_transport_matrix": matrix if isinstance(matrix, dict) else {}, "footprints": footprints if isinstance(footprints, dict) else {}, "receipt_ref": evidence.get("receipt_ref", ""), "producer": custody.get("producer", "")}
 
 
 def external_readiness_report(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> dict[str, Any]:

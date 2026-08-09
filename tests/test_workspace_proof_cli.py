@@ -1405,6 +1405,39 @@ def test_proof_route_transition_gate_blocks_only_matching_scoped_findings(tmp_pa
     assert matching["blocked_finding_ids"] == ["finding-config"]
 
 
+def test_proof_route_transition_gate_uses_latest_finding_scope(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_proof import _improvement_consequence_record_event, _proof_route_transition_gate_payload
+
+    _write_repo_local_proof_target(tmp_path)
+    for changed_path in ("src/agentic_workspace/config.py", "README.md"):
+        _improvement_consequence_record_event(
+            target_root=tmp_path,
+            event={
+                "event": "observed",
+                "finding_id": "finding-moved",
+                "finding_class": "route_execution_failure",
+                "affected_route": "domain:config",
+                "scope": {"changed_paths": [changed_path]},
+            },
+        )
+
+    stale_scope = _proof_route_transition_gate_payload(
+        target_root=tmp_path,
+        transition="planning-closeout",
+        changed_paths=["src/agentic_workspace/config.py"],
+    )
+    assert stale_scope["status"] == "current"
+    assert stale_scope["blocked_finding_ids"] == []
+
+    current_scope = _proof_route_transition_gate_payload(
+        target_root=tmp_path,
+        transition="planning-closeout",
+        changed_paths=["README.md"],
+    )
+    assert current_scope["status"] == "blocked"
+    assert current_scope["blocked_finding_ids"] == ["finding-moved"]
+
+
 def test_proof_route_repair_validation_failure_rolls_back_without_receipt(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from agentic_workspace import workspace_runtime_proof
     from agentic_workspace.config import WorkspaceUsageError

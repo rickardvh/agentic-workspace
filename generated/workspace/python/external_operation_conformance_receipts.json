@@ -1,14 +1,14 @@
 {
-  "executed_at": "2026-08-08T14:07:06Z",
+  "executed_at": "2026-08-09T09:47:57Z",
   "freshness": {
-    "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
+    "client_semantics_revision": "sha256:228e0ba3e4120bacba5754dfd7875f85d8b0b5d139b9a0311806bf0e6b2909f8",
     "rule": "Publication currentness is tied to runner/client-semantics and profile/operation revisions plus explicit stale/revoked/superseded markers.",
-    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:84ad2cf426b0ab3a295c6260f78e3b7449604b3e29dcb2b9e1fc2cfb63eab3de",
     "strategy": "runner-client-operation-profile-revision-bound"
   },
   "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
   "mirror_publication": {
-    "generation_id": "external-conformance-publication:579ae562469358f8a7fcacfd",
+    "generation_id": "external-conformance-publication:ea1baac5a5964e39ec05b436",
     "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
     "path_count": 3,
     "paths": [
@@ -16,37 +16,345 @@
       "generated/workspace/python/external_operation_conformance_receipts.json",
       "generated/workspace/typescript/external_operation_conformance_receipts.json"
     ],
-    "payload_digest": "sha256:579ae562469358f8a7fcacfde9712e009f0e8586226e814ad15c185fd8145553",
-    "previous_digest": "7b482a6c070afe4e211438ddbefcefaa9218d9822a6d7726249f29413c7b9eab",
-    "publisher_pid": 65796,
+    "payload_digest": "sha256:ea1baac5a5964e39ec05b43689801d5ca5286176bfc92ddb23f90cc45dd6f99f",
+    "previous_digest": "521e4a7b485f1339bf57f3073357fa35cf4865725533bc1aae2bc3fd8c5622de",
+    "publisher_pid": 76212,
     "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
     "status": "published"
   },
   "producer": "scripts/check/run_operation_conformance_tests.py",
   "receipts": [
     {
-      "cases": {
+      "case_transport_matrix": {
         "absent": {
-          "reason": "no absent result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.cli-json.absent:cli-json:cli.process@sha256:9d8e100fa3dc5b9a",
+              "config.report:config.report.external-readiness.necessary-surfaces.cli-json.absent:cli-json:cli.process@sha256:bd5e03fac3467b15"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.python.absent:python:python.external-client@sha256:23b3ac6d8e0d89ad",
+              "config.report:config.report.external-readiness.necessary-surfaces.python.absent:python:python.external-client@sha256:eea9809b5fefd50f"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.typescript.absent:typescript:typescript.external-client@sha256:0cb2eadca9c4152f",
+              "config.report:config.report.external-readiness.necessary-surfaces.typescript.absent:typescript:typescript.external-client@sha256:8fd6994f98b7dd98"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.vendor-neutral.absent:vendor-neutral:vendor-neutral.external-client@sha256:02846e65aa5eb65e",
+              "config.report:config.report.external-readiness.necessary-surfaces.vendor-neutral.absent:vendor-neutral:vendor-neutral.external-client@sha256:2862d46c140a8a08"
+            ],
+            "status": "passed"
+          }
         },
         "additive-field": {
-          "reason": "no additive-field result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.cli-json.additive-field:cli-json:cli.process@sha256:1f6ee782fcc07c8e",
+              "config.report:config.report.external-readiness.necessary-surfaces.cli-json.additive-field:cli-json:cli.process@sha256:25d37da667e6dbf4"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.python.additive-field:python:python.external-client@sha256:eacc53acf9c937be",
+              "config.report:config.report.external-readiness.necessary-surfaces.python.additive-field:python:python.external-client@sha256:59e6abca24139054"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.typescript.additive-field:typescript:typescript.external-client@sha256:8a0f20cdeefa5c53",
+              "config.report:config.report.external-readiness.necessary-surfaces.typescript.additive-field:typescript:typescript.external-client@sha256:eb6320546687b48a"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.vendor-neutral.additive-field:vendor-neutral:vendor-neutral.external-client@sha256:97362fb336c2036a",
+              "config.report:config.report.external-readiness.necessary-surfaces.vendor-neutral.additive-field:vendor-neutral:vendor-neutral.external-client@sha256:2e146daf7c0af718"
+            ],
+            "status": "passed"
+          }
         },
         "disabled": {
-          "reason": "no disabled result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.cli-json.disabled:cli-json:cli.process@sha256:af9cf0a3dd0dbbf8",
+              "config.report:config.report.external-readiness.necessary-surfaces.cli-json.disabled:cli-json:cli.process@sha256:78022191c6b15cf7"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.python.disabled:python:python.external-client@sha256:f69cd571fc7c31de",
+              "config.report:config.report.external-readiness.necessary-surfaces.python.disabled:python:python.external-client@sha256:99d96ebc9433b49d"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.typescript.disabled:typescript:typescript.external-client@sha256:b6079f90e8885db1",
+              "config.report:config.report.external-readiness.necessary-surfaces.typescript.disabled:typescript:typescript.external-client@sha256:685e9760db161969"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.vendor-neutral.disabled:vendor-neutral:vendor-neutral.external-client@sha256:377647d42bae244e",
+              "config.report:config.report.external-readiness.necessary-surfaces.vendor-neutral.disabled:vendor-neutral:vendor-neutral.external-client@sha256:043950d237561d3d"
+            ],
+            "status": "passed"
+          }
         },
         "incompatible": {
-          "reason": "no incompatible result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.cli-json.incompatible:cli-json:cli.process@sha256:07b0e38ba6ed0803",
+              "config.report:config.report.external-readiness.necessary-surfaces.cli-json.incompatible:cli-json:cli.process@sha256:fad99adba0eba3ce"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.python.incompatible:python:python.external-client@sha256:1a46188b53559bdd",
+              "config.report:config.report.external-readiness.necessary-surfaces.python.incompatible:python:python.external-client@sha256:7358fc220e455ed8"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.typescript.incompatible:typescript:typescript.external-client@sha256:68c3e8c5e391803b",
+              "config.report:config.report.external-readiness.necessary-surfaces.typescript.incompatible:typescript:typescript.external-client@sha256:84e22a209dccc81c"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.vendor-neutral.incompatible:vendor-neutral:vendor-neutral.external-client@sha256:f15cff82384e9f28",
+              "config.report:config.report.external-readiness.necessary-surfaces.vendor-neutral.incompatible:vendor-neutral:vendor-neutral.external-client@sha256:fff82abc823d854b"
+            ],
+            "status": "passed"
+          }
+        },
+        "malformed": {
+          "cli-json": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.cli-json.malformed:cli-json:cli.process@sha256:29ab5e1dbceb20fe",
+              "config.report:config.report.external-readiness.necessary-surfaces.cli-json.malformed:cli-json:cli.process@sha256:5209fbc2c437fca8"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.python.malformed:python:python.external-client@sha256:988f5c9b8ccbd8cc",
+              "config.report:config.report.external-readiness.necessary-surfaces.python.malformed:python:python.external-client@sha256:c872bcddfa800b62"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.typescript.malformed:typescript:typescript.external-client@sha256:c4cf26ceb6e49058",
+              "config.report:config.report.external-readiness.necessary-surfaces.typescript.malformed:typescript:typescript.external-client@sha256:8a5a99172c08bc26"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.vendor-neutral.malformed:vendor-neutral:vendor-neutral.external-client@sha256:56f927cf9634d1bf",
+              "config.report:config.report.external-readiness.necessary-surfaces.vendor-neutral.malformed:vendor-neutral:vendor-neutral.external-client@sha256:7f480e6e4739eab0"
+            ],
+            "status": "passed"
+          }
+        },
+        "mutation-applied": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "mutation-failed": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "mutation-noop": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "mutation-rejected": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/config.report.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "retryable": {
+          "cli-json": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.cli-json.retryable:cli-json:cli.process@sha256:08ee7eafcab4bafc",
+              "config.report:config.report.external-readiness.necessary-surfaces.cli-json.retryable:cli-json:cli.process@sha256:d3654f0ae16e5618"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.python.retryable:python:python.external-client@sha256:053ecab2d3151aff",
+              "config.report:config.report.external-readiness.necessary-surfaces.python.retryable:python:python.external-client@sha256:f29e1b185b17dc7d"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.typescript.retryable:typescript:typescript.external-client@sha256:3c240469e360c42b",
+              "config.report:config.report.external-readiness.necessary-surfaces.typescript.retryable:typescript:typescript.external-client@sha256:4a7434c2af706dcb"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "config.report:config.report.external-readiness.full-mirror.vendor-neutral.retryable:vendor-neutral:vendor-neutral.external-client@sha256:7e58c61ebab2cad1",
+              "config.report:config.report.external-readiness.necessary-surfaces.vendor-neutral.retryable:vendor-neutral:vendor-neutral.external-client@sha256:609a34538a37ecc5"
+            ],
+            "status": "passed"
+          }
+        }
+      },
+      "cases": {
+        "absent": {
+          "evidence": [
+            "case-absent:count=8@sha256:5894c51a758d94a8222ec253"
+          ],
+          "status": "passed"
+        },
+        "additive-field": {
+          "evidence": [
+            "case-additive-field:count=8@sha256:e75ab2378deceeabf56baf31"
+          ],
+          "status": "passed"
+        },
+        "disabled": {
+          "evidence": [
+            "case-disabled:count=8@sha256:25c5326ea1940b2c81275136"
+          ],
+          "status": "passed"
+        },
+        "incompatible": {
+          "evidence": [
+            "case-incompatible:count=8@sha256:da4350b0bd568b3d80ec500f"
+          ],
+          "status": "passed"
         },
         "malformed": {
           "evidence": [
-            "config.report:config.invalid-format.error:python:cli.process@sha256:69d5a4dcadabf6eb",
-            "config.report:config.invalid-format.error:typescript:cli.process@sha256:9e4976a01f59fca0",
-            "config.report:config.invalid-format.error:vendor-neutral:vendor-neutral.packaged-consumer@sha256:89c6300c99ef26cc"
+            "case-malformed:count=11@sha256:46c5848f3f2375defdcea733"
           ],
           "status": "passed"
         },
@@ -79,15 +387,17 @@
           "status": "passed"
         },
         "retryable": {
-          "reason": "no retryable result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "case-retryable:count=8@sha256:154ea62df4d7f75557ecc0a8"
+          ],
+          "status": "passed"
         }
       },
       "conformance_refs": [
         "config.report.process",
         "config.selected-text.process"
       ],
-      "conformance_result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
+      "conformance_result_digest": "e8302c8f434d4a060bc7d7e6cce1f8308fff402f472d26b970de3007c952c390",
       "custody": {
         "operation_id": "external-operation-conformance.run",
         "producer": "agentic-workspace.operation-conformance-runner",
@@ -95,120 +405,486 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-08T14:07:06Z",
+      "executed_at": "2026-08-09T09:47:57Z",
+      "executors": {
+        "cli-json": {
+          "evidence": [
+            "executor-direct-cli-json:count=12@sha256:bceef0d29a412fbe760682f2"
+          ],
+          "executor_id": "direct-cli-json",
+          "status": "passed"
+        },
+        "python": {
+          "evidence": [
+            "executor-generated-python-client:count=12@sha256:32ec56cc112d1a0f525991af"
+          ],
+          "executor_id": "generated-python-client",
+          "status": "passed"
+        },
+        "typescript": {
+          "evidence": [
+            "executor-generated-typescript-client:count=12@sha256:39babd5026f546adc2ad8af7"
+          ],
+          "executor_id": "generated-typescript-client",
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "evidence": [
+            "executor-packed-typescript-client:count=12@sha256:9eddef07b9aafdce46c3f3e1"
+          ],
+          "executor_id": "packed-typescript-client",
+          "status": "passed"
+        }
+      },
+      "footprints": {
+        "full-mirror": {
+          "evidence": [
+            "footprint-full-mirror:count=24@sha256:577205e437812d06033d938c"
+          ],
+          "status": "passed"
+        },
+        "necessary-surfaces": {
+          "evidence": [
+            "footprint-necessary-surfaces:count=24@sha256:8ea9561e0234d62083bf928c"
+          ],
+          "status": "passed"
+        },
+        "semantic-parity": {
+          "evidence": [
+            "footprint-semantic-parity:count=48@sha256:bf355984930b0c271e126547"
+          ],
+          "status": "passed"
+        }
+      },
       "freshness": {
-        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
+        "client_semantics_revision": "sha256:228e0ba3e4120bacba5754dfd7875f85d8b0b5d139b9a0311806bf0e6b2909f8",
         "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:84ad2cf426b0ab3a295c6260f78e3b7449604b3e29dcb2b9e1fc2cfb63eab3de",
         "strategy": "runner-client-operation-profile-revision-bound"
       },
       "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
       "operation_fingerprint": "sha256:cbcd32386629e08c44b9dbbf897c6ff76ce62ca9c7831eee16c1d5ba8da64d18",
       "operation_id": "config.report",
+      "operation_result_count": 54,
       "operation_result_evidence": [
-        "config.report:config.invalid-format.error:python:cli.process@sha256:69d5a4dcadabf6eb",
-        "config.report:config.invalid-format.error:typescript:cli.process@sha256:9e4976a01f59fca0",
-        "config.report:config.invalid-format.error:vendor-neutral:vendor-neutral.packaged-consumer@sha256:89c6300c99ef26cc",
-        "config.report:config.selected-output.success:python:python.function@sha256:ee8d2ae121b6f5aa",
-        "config.report:config.selected-output.success:typescript:typescript.function@sha256:5e7d326f7bd694b7",
-        "config.report:config.selected-output.success:vendor-neutral:@sha256:7ca9472b6b8ef20e"
+        "operation-results:count=54@sha256:8845f2fecae3613825209d52"
       ],
-      "profile_fingerprint": "sha256:a9d79f7085e012eaccce910e3dd33146bdec218263fbb561d7fd9501c91e520f",
-      "receipt_ref": "external-conformance:config.report:dc19ae1ef8776aee25ffa3e9",
+      "profile_fingerprint": "sha256:f24d0120627edd2773361f7c97212cffda1cdce813cc6c92796fc91b8d251f42",
+      "receipt_ref": "external-conformance:config.report:7561b22ed85258df4c87f04d",
       "result_identity": {
-        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
-        "executed_at": "2026-08-08T14:07:06Z",
-        "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
+        "client_semantics_revision": "sha256:228e0ba3e4120bacba5754dfd7875f85d8b0b5d139b9a0311806bf0e6b2909f8",
+        "executed_at": "2026-08-09T09:47:57Z",
+        "invocation_id": "operation-conformance:scripts/chec:e8302c8f434d4a060bc7d7e6:2026-08-09T09:47:57Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
-        "result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+        "result_digest": "e8302c8f434d4a060bc7d7e6cce1f8308fff402f472d26b970de3007c952c390",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:84ad2cf426b0ab3a295c6260f78e3b7449604b3e29dcb2b9e1fc2cfb63eab3de",
         "status": "current"
       },
       "runtime_exception_admission": {
-        "reason": "missing-operation-specific-runtime-exception-revision",
-        "rule": "Runtime exceptions must be admitted per operation/profile by an authority outside the conformance result.",
-        "status": "rejected"
+        "operation_id": "config.report",
+        "revision": "github-2044-closure:config.report@pr-2256",
+        "rule": "Runtime exception evidence is operation-specific and supplied by a separate authoritative owner.",
+        "status": "admitted"
       },
-      "runtime_exception_revision": "",
-      "status": "failed",
+      "runtime_exception_revision": "github-2044-closure:config.report@pr-2256",
+      "status": "passed",
       "transports": {
         "cli-json": {
           "evidence": [
-            "config.report:config.invalid-format.error:python:cli.process@sha256:69d5a4dcadabf6eb",
-            "config.report:config.invalid-format.error:typescript:cli.process@sha256:9e4976a01f59fca0"
+            "transport-results:count=12@sha256:bceef0d29a412fbe760682f2"
           ],
           "status": "passed"
         },
         "python": {
           "evidence": [
-            "config.report:config.invalid-format.error:python:cli.process@sha256:69d5a4dcadabf6eb",
-            "config.report:config.selected-output.success:python:python.function@sha256:ee8d2ae121b6f5aa"
+            "transport-results:count=12@sha256:32ec56cc112d1a0f525991af"
           ],
           "status": "passed"
         },
         "typescript": {
           "evidence": [
-            "config.report:config.invalid-format.error:typescript:cli.process@sha256:9e4976a01f59fca0",
-            "config.report:config.selected-output.success:typescript:typescript.function@sha256:5e7d326f7bd694b7"
+            "transport-results:count=12@sha256:39babd5026f546adc2ad8af7"
           ],
           "status": "passed"
         },
         "vendor-neutral": {
           "evidence": [
-            "config.report:config.invalid-format.error:vendor-neutral:vendor-neutral.packaged-consumer@sha256:89c6300c99ef26cc"
+            "transport-results:count=12@sha256:9eddef07b9aafdce46c3f3e1"
           ],
           "status": "passed"
         }
       }
     },
     {
-      "cases": {
+      "case_transport_matrix": {
         "absent": {
-          "reason": "no absent result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.cli-json.absent:cli-json:cli.process@sha256:5d1b82ffbf119ee3",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.cli-json.absent:cli-json:cli.process@sha256:818375898a2500ed"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.python.absent:python:python.external-client@sha256:60330443f528412b",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.python.absent:python:python.external-client@sha256:adc90446f0f30145"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.typescript.absent:typescript:typescript.external-client@sha256:ee63b9cde4044dc0",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.typescript.absent:typescript:typescript.external-client@sha256:6a1af939e71adad2"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.vendor-neutral.absent:vendor-neutral:vendor-neutral.external-client@sha256:ec0fdb1dc92885bf",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.vendor-neutral.absent:vendor-neutral:vendor-neutral.external-client@sha256:a111c56886c4e3b0"
+            ],
+            "status": "passed"
+          }
         },
         "additive-field": {
-          "reason": "no additive-field result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.cli-json.additive-field:cli-json:cli.process@sha256:9cd45daeb565e85d",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.cli-json.additive-field:cli-json:cli.process@sha256:e6627bfce76ae1e3"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.python.additive-field:python:python.external-client@sha256:a37b447056284a4c",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.python.additive-field:python:python.external-client@sha256:e541a0d3e869f5d7"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.typescript.additive-field:typescript:typescript.external-client@sha256:75cb414605c68819",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.typescript.additive-field:typescript:typescript.external-client@sha256:191aac9a6279a0ee"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.vendor-neutral.additive-field:vendor-neutral:vendor-neutral.external-client@sha256:11b83ee7686cc478",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.vendor-neutral.additive-field:vendor-neutral:vendor-neutral.external-client@sha256:739acead97031614"
+            ],
+            "status": "passed"
+          }
         },
         "disabled": {
-          "reason": "no disabled result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.cli-json.disabled:cli-json:cli.process@sha256:62a05aa41b5c7524",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.cli-json.disabled:cli-json:cli.process@sha256:41472e675067e6bb"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.python.disabled:python:python.external-client@sha256:456eac18e5a21b39",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.python.disabled:python:python.external-client@sha256:2fe2c87b240da57f"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.typescript.disabled:typescript:typescript.external-client@sha256:164935a3e055aa05",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.typescript.disabled:typescript:typescript.external-client@sha256:7eb96beb09e86f67"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.vendor-neutral.disabled:vendor-neutral:vendor-neutral.external-client@sha256:14992bf54aaa40b4",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.vendor-neutral.disabled:vendor-neutral:vendor-neutral.external-client@sha256:c1b9fe491bae3600"
+            ],
+            "status": "passed"
+          }
         },
         "incompatible": {
-          "reason": "no incompatible result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.cli-json.incompatible:cli-json:cli.process@sha256:357b86063f410da7",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.cli-json.incompatible:cli-json:cli.process@sha256:bca0556136b68d5b"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.python.incompatible:python:python.external-client@sha256:ff3a7d605f4096fb",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.python.incompatible:python:python.external-client@sha256:2ac3757b142ed733"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.typescript.incompatible:typescript:typescript.external-client@sha256:1b29141febee4aea",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.typescript.incompatible:typescript:typescript.external-client@sha256:83c5aaa5bb150718"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.vendor-neutral.incompatible:vendor-neutral:vendor-neutral.external-client@sha256:9082d10428892f2f",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.vendor-neutral.incompatible:vendor-neutral:vendor-neutral.external-client@sha256:2dd734160e9c988a"
+            ],
+            "status": "passed"
+          }
         },
         "malformed": {
-          "reason": "no malformed result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.cli-json.malformed:cli-json:cli.process@sha256:7acc04090e8b537c",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.cli-json.malformed:cli-json:cli.process@sha256:08fe43f8fa96abfa"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.python.malformed:python:python.external-client@sha256:f26782e0de14c7c5",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.python.malformed:python:python.external-client@sha256:0388eea812698636"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.typescript.malformed:typescript:typescript.external-client@sha256:c8529669179f8ef6",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.typescript.malformed:typescript:typescript.external-client@sha256:655121330189c382"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.vendor-neutral.malformed:vendor-neutral:vendor-neutral.external-client@sha256:971676b3fab35e4f",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.vendor-neutral.malformed:vendor-neutral:vendor-neutral.external-client@sha256:75fa5b24afac6714"
+            ],
+            "status": "passed"
+          }
         },
         "mutation-applied": {
-          "reason": "no mutation-applied result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.cli-json.mutation-applied:cli-json:cli.process@sha256:d9cc70ab2c7eee39",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.cli-json.mutation-applied:cli-json:cli.process@sha256:826fcae5bbdad0c5"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.python.mutation-applied:python:python.external-client@sha256:89bad6d20259e106",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.python.mutation-applied:python:python.external-client@sha256:e0745a0b7b1821d3"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.typescript.mutation-applied:typescript:typescript.external-client@sha256:1539ade4a4403f01",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.typescript.mutation-applied:typescript:typescript.external-client@sha256:c56cc5cb483d5349"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.vendor-neutral.mutation-applied:vendor-neutral:vendor-neutral.external-client@sha256:e13d1b663d4b0af2",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.vendor-neutral.mutation-applied:vendor-neutral:vendor-neutral.external-client@sha256:58e76bc61293b135"
+            ],
+            "status": "passed"
+          }
         },
         "mutation-failed": {
-          "reason": "no mutation-failed result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.cli-json.mutation-failed:cli-json:cli.process@sha256:7db67fcc83610253",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.cli-json.mutation-failed:cli-json:cli.process@sha256:469bb4135f93ecdc"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.python.mutation-failed:python:python.external-client@sha256:dcd29e5e714fa4db",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.python.mutation-failed:python:python.external-client@sha256:8029c93bb01da291"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.typescript.mutation-failed:typescript:typescript.external-client@sha256:9c90be88481fbafb",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.typescript.mutation-failed:typescript:typescript.external-client@sha256:7e092fc1e9e7ad3d"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.vendor-neutral.mutation-failed:vendor-neutral:vendor-neutral.external-client@sha256:283fd110b30d4487",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.vendor-neutral.mutation-failed:vendor-neutral:vendor-neutral.external-client@sha256:ff9081dfc5544ff8"
+            ],
+            "status": "passed"
+          }
         },
         "mutation-noop": {
-          "reason": "no mutation-noop result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.cli-json.mutation-noop:cli-json:cli.process@sha256:1473fdf1699365a6",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.cli-json.mutation-noop:cli-json:cli.process@sha256:d60b0d05047d45e7"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.python.mutation-noop:python:python.external-client@sha256:0c60c8137a184f4b",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.python.mutation-noop:python:python.external-client@sha256:9e1bbfd85ffedaa2"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.typescript.mutation-noop:typescript:typescript.external-client@sha256:cf66f289b0557b0f",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.typescript.mutation-noop:typescript:typescript.external-client@sha256:3d163c8827e1d4b1"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.vendor-neutral.mutation-noop:vendor-neutral:vendor-neutral.external-client@sha256:e94ee89190ef57aa",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.vendor-neutral.mutation-noop:vendor-neutral:vendor-neutral.external-client@sha256:ea1767dfbdf5cc48"
+            ],
+            "status": "passed"
+          }
         },
         "mutation-rejected": {
-          "reason": "no mutation-rejected result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.cli-json.mutation-rejected:cli-json:cli.process@sha256:9bc6ec2176cb8a1f",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.cli-json.mutation-rejected:cli-json:cli.process@sha256:d3a2ed036bedff8b"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.python.mutation-rejected:python:python.external-client@sha256:6d354bf756d6b649",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.python.mutation-rejected:python:python.external-client@sha256:a4aede4c0150673f"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.typescript.mutation-rejected:typescript:typescript.external-client@sha256:75622706812929fd",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.typescript.mutation-rejected:typescript:typescript.external-client@sha256:854756654e54debd"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.vendor-neutral.mutation-rejected:vendor-neutral:vendor-neutral.external-client@sha256:625de02051c9ec19",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.vendor-neutral.mutation-rejected:vendor-neutral:vendor-neutral.external-client@sha256:bd0ae34132d2d316"
+            ],
+            "status": "passed"
+          }
         },
         "retryable": {
-          "reason": "no retryable result was produced by this invocation",
-          "status": "not-run"
+          "cli-json": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.cli-json.retryable:cli-json:cli.process@sha256:c5f3e60b6d50d255",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.cli-json.retryable:cli-json:cli.process@sha256:aec8a9bfddc50a43"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.python.retryable:python:python.external-client@sha256:e35b8de19b4486c4",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.python.retryable:python:python.external-client@sha256:1b72731de1ff763d"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.typescript.retryable:typescript:typescript.external-client@sha256:9944adb148186efa",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.typescript.retryable:typescript:typescript.external-client@sha256:de9146516181a7d4"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.full-mirror.vendor-neutral.retryable:vendor-neutral:vendor-neutral.external-client@sha256:dc516ad3cf358f9c",
+              "delegation-outcome.append:delegation-outcome.append.external-readiness.necessary-surfaces.vendor-neutral.retryable:vendor-neutral:vendor-neutral.external-client@sha256:2d69dc6050d52be4"
+            ],
+            "status": "passed"
+          }
+        }
+      },
+      "cases": {
+        "absent": {
+          "evidence": [
+            "case-absent:count=8@sha256:25f043cd6f06bff04d6e3ebb"
+          ],
+          "status": "passed"
+        },
+        "additive-field": {
+          "evidence": [
+            "case-additive-field:count=8@sha256:9461345adb50410a4019d1a0"
+          ],
+          "status": "passed"
+        },
+        "disabled": {
+          "evidence": [
+            "case-disabled:count=8@sha256:527dd99d96904a2bce9aa913"
+          ],
+          "status": "passed"
+        },
+        "incompatible": {
+          "evidence": [
+            "case-incompatible:count=8@sha256:cd859559ee19c11031eb3bae"
+          ],
+          "status": "passed"
+        },
+        "malformed": {
+          "evidence": [
+            "case-malformed:count=8@sha256:05f87183edc5d6366547246b"
+          ],
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "evidence": [
+            "case-mutation-applied:count=8@sha256:247570015bc95d59b5b9abb5"
+          ],
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "evidence": [
+            "case-mutation-failed:count=8@sha256:1f1640f6add85322db224fe1"
+          ],
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "evidence": [
+            "case-mutation-noop:count=8@sha256:8a6d88ba9f53203756badfba"
+          ],
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "evidence": [
+            "case-mutation-rejected:count=8@sha256:5d1761aecf39f7ab494f3b5f"
+          ],
+          "status": "passed"
+        },
+        "retryable": {
+          "evidence": [
+            "case-retryable:count=8@sha256:217b684da21065e229c7c5c6"
+          ],
+          "status": "passed"
         }
       },
       "conformance_refs": [
         "delegation-outcome.append.process",
         "delegation-outcome.append-text.process"
       ],
-      "conformance_result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
+      "conformance_result_digest": "e8302c8f434d4a060bc7d7e6cce1f8308fff402f472d26b970de3007c952c390",
       "custody": {
         "operation_id": "external-operation-conformance.run",
         "producer": "agentic-workspace.operation-conformance-runner",
@@ -216,77 +892,124 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-08T14:07:06Z",
+      "executed_at": "2026-08-09T09:47:57Z",
+      "executors": {
+        "cli-json": {
+          "evidence": [
+            "executor-direct-cli-json:count=20@sha256:3ee8c3d73e52d4f0dfa26450"
+          ],
+          "executor_id": "direct-cli-json",
+          "status": "passed"
+        },
+        "python": {
+          "evidence": [
+            "executor-generated-python-client:count=20@sha256:67f8c84ce48915910ec9d83a"
+          ],
+          "executor_id": "generated-python-client",
+          "status": "passed"
+        },
+        "typescript": {
+          "evidence": [
+            "executor-generated-typescript-client:count=20@sha256:547abfff7ccb063f035186b0"
+          ],
+          "executor_id": "generated-typescript-client",
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "evidence": [
+            "executor-packed-typescript-client:count=20@sha256:a7d7b313934f968c95fcc0e8"
+          ],
+          "executor_id": "packed-typescript-client",
+          "status": "passed"
+        }
+      },
+      "footprints": {
+        "full-mirror": {
+          "evidence": [
+            "footprint-full-mirror:count=40@sha256:8ccb9f43753f7d05c592ff16"
+          ],
+          "status": "passed"
+        },
+        "necessary-surfaces": {
+          "evidence": [
+            "footprint-necessary-surfaces:count=40@sha256:08b212c641fab77c1703d309"
+          ],
+          "status": "passed"
+        },
+        "semantic-parity": {
+          "evidence": [
+            "footprint-semantic-parity:count=80@sha256:352c8f2f7fc5967f80a96bcb"
+          ],
+          "status": "passed"
+        }
+      },
       "freshness": {
-        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
+        "client_semantics_revision": "sha256:228e0ba3e4120bacba5754dfd7875f85d8b0b5d139b9a0311806bf0e6b2909f8",
         "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:84ad2cf426b0ab3a295c6260f78e3b7449604b3e29dcb2b9e1fc2cfb63eab3de",
         "strategy": "runner-client-operation-profile-revision-bound"
       },
       "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
       "operation_fingerprint": "sha256:2b0a1419d2d325564475ff783f78517d7e3cd59516f60fafe9dfb644845d0981",
       "operation_id": "delegation-outcome.append",
+      "operation_result_count": 85,
       "operation_result_evidence": [
-        "delegation-outcome.append:delegation-outcome.append-text.boundary:python:cli.process@sha256:6d25bda9291969c2",
-        "delegation-outcome.append:delegation-outcome.append-text.boundary:typescript:cli.process@sha256:07d425e097089c69",
-        "delegation-outcome.append:delegation-outcome.append-text.boundary:vendor-neutral:@sha256:92c734b851195332",
-        "delegation-outcome.append:delegation-outcome.append-write.boundary:python:cli.process@sha256:3fd7c63647106d7c",
-        "delegation-outcome.append:delegation-outcome.append-write.boundary:vendor-neutral:@sha256:7d94d37a097921f0"
+        "operation-results:count=85@sha256:a6abb417664be206c2edf5bf"
       ],
-      "profile_fingerprint": "sha256:a9d79f7085e012eaccce910e3dd33146bdec218263fbb561d7fd9501c91e520f",
-      "receipt_ref": "external-conformance:delegation-outcome.append:f13651a8d1138c1819fcc362",
+      "profile_fingerprint": "sha256:f24d0120627edd2773361f7c97212cffda1cdce813cc6c92796fc91b8d251f42",
+      "receipt_ref": "external-conformance:delegation-outcome.append:7c84954bc1645239dc1d9f95",
       "result_identity": {
-        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
-        "executed_at": "2026-08-08T14:07:06Z",
-        "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
+        "client_semantics_revision": "sha256:228e0ba3e4120bacba5754dfd7875f85d8b0b5d139b9a0311806bf0e6b2909f8",
+        "executed_at": "2026-08-09T09:47:57Z",
+        "invocation_id": "operation-conformance:scripts/chec:e8302c8f434d4a060bc7d7e6:2026-08-09T09:47:57Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
-        "result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+        "result_digest": "e8302c8f434d4a060bc7d7e6cce1f8308fff402f472d26b970de3007c952c390",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:84ad2cf426b0ab3a295c6260f78e3b7449604b3e29dcb2b9e1fc2cfb63eab3de",
         "status": "current"
       },
       "runtime_exception_admission": {
-        "reason": "missing-operation-specific-runtime-exception-revision",
-        "rule": "Runtime exceptions must be admitted per operation/profile by an authority outside the conformance result.",
-        "status": "rejected"
+        "operation_id": "delegation-outcome.append",
+        "revision": "github-2044-closure:delegation-outcome.append@pr-2256",
+        "rule": "Runtime exception evidence is operation-specific and supplied by a separate authoritative owner.",
+        "status": "admitted"
       },
-      "runtime_exception_revision": "",
-      "status": "failed",
+      "runtime_exception_revision": "github-2044-closure:delegation-outcome.append@pr-2256",
+      "status": "passed",
       "transports": {
         "cli-json": {
           "evidence": [
-            "delegation-outcome.append:delegation-outcome.append-text.boundary:python:cli.process@sha256:6d25bda9291969c2",
-            "delegation-outcome.append:delegation-outcome.append-text.boundary:typescript:cli.process@sha256:07d425e097089c69",
-            "delegation-outcome.append:delegation-outcome.append-write.boundary:python:cli.process@sha256:3fd7c63647106d7c"
+            "transport-results:count=20@sha256:3ee8c3d73e52d4f0dfa26450"
           ],
           "status": "passed"
         },
         "python": {
           "evidence": [
-            "delegation-outcome.append:delegation-outcome.append-text.boundary:python:cli.process@sha256:6d25bda9291969c2",
-            "delegation-outcome.append:delegation-outcome.append-write.boundary:python:cli.process@sha256:3fd7c63647106d7c"
+            "transport-results:count=20@sha256:67f8c84ce48915910ec9d83a"
           ],
           "status": "passed"
         },
         "typescript": {
           "evidence": [
-            "delegation-outcome.append:delegation-outcome.append-text.boundary:typescript:cli.process@sha256:07d425e097089c69"
+            "transport-results:count=20@sha256:547abfff7ccb063f035186b0"
           ],
           "status": "passed"
         },
         "vendor-neutral": {
-          "reason": "no independently packaged vendor-neutral consumer result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "transport-results:count=20@sha256:a7d7b313934f968c95fcc0e8"
+          ],
+          "status": "passed"
         }
       }
     }
   ],
   "result_identity": {
-    "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
-    "executed_at": "2026-08-08T14:07:06Z",
-    "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
+    "client_semantics_revision": "sha256:228e0ba3e4120bacba5754dfd7875f85d8b0b5d139b9a0311806bf0e6b2909f8",
+    "executed_at": "2026-08-09T09:47:57Z",
+    "invocation_id": "operation-conformance:scripts/chec:e8302c8f434d4a060bc7d7e6:2026-08-09T09:47:57Z",
     "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
-    "result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
-    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+    "result_digest": "e8302c8f434d4a060bc7d7e6cce1f8308fff402f472d26b970de3007c952c390",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:84ad2cf426b0ab3a295c6260f78e3b7449604b3e29dcb2b9e1fc2cfb63eab3de",
     "status": "current"
   },
   "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored.",
