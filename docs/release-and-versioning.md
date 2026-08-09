@@ -1,8 +1,8 @@
 # Release And Versioning
 
 Agentic Workspace uses coordinated workspace releases. The root
-`agentic-workspace` package, `agentic-memory`, `agentic-planning`, and
-`agentic-verification` release together under one semver tag, with both Python
+`agentic-workspace`, `agentic-workspace-memory`, `agentic-workspace-planning`, and
+`agentic-workspace-verification` release together under one semver tag, with both Python
 and TypeScript CLI distributions treated as first-class release artifacts.
 
 ## Release Goal
@@ -178,8 +178,8 @@ needs a release bump or no verified release tag exists yet.
 
 Python packages are released as GitHub Release assets, not through a package
 index. The root `agentic-workspace` wheel is therefore patched during release so
-its `Requires-Dist` entries for `agentic-memory`, `agentic-planning`, and
-`agentic-verification` point to the same GitHub Release wheel assets with
+its `Requires-Dist` entries for `agentic-workspace-memory`, `agentic-workspace-planning`, and
+`agentic-workspace-verification` point to the same GitHub Release wheel assets with
 hashes. Host repositories should be able to depend on the public root wheel as a
 single normal dependency and let `uv sync` resolve the coordinated stack.
 

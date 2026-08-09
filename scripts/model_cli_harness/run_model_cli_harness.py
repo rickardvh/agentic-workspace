@@ -58,9 +58,9 @@ HARNESS_SETUP_MUTATION_PATHS = (
 SANDBOX_ADAPTER_KIND = "agentic-workspace/model-cli-sandbox-adapter/v1"
 LOCAL_AW_WHEEL_PACKAGES = {
     "agentic-workspace": "agentic_workspace",
-    "agentic-memory": "agentic_memory",
-    "agentic-planning": "agentic_planning",
-    "agentic-verification": "agentic_verification",
+    "agentic-workspace-memory": "agentic_workspace_memory",
+    "agentic-workspace-planning": "agentic_workspace_planning",
+    "agentic-workspace-verification": "agentic_workspace_verification",
 }
 FINAL_ANSWER_PATH_RULE = (
     "Final answer path rule: cite changed files and evidence using repo-relative paths only. "

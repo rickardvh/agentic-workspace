@@ -58,7 +58,11 @@ The threshold is not team size. The threshold is whether future continuation wou
 
 The usual adoption path has two parts.
 
-First, choose how Agentic Workspace should be made available to the target repository. Today that is usually the CLI installed as a repo development dependency. Future integrations may use another surface, such as an MCP server.
+First, choose a versioned GitHub release and use the exact root-wheel command in its
+`distribution-install-readiness.json`. That receipt pins the project-controlled release
+asset and SHA-256 digest; mutable branch and registry resolution are not support-bearing
+installation paths. The CLI can then be retained in the target repository's development
+or tool environment. Future integrations may use another surface, such as an MCP server.
 
 Then give an agent a small bootstrap instruction in the target repo, or point it at the remote instructions in [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md) so it can perform the operation itself. The agent should use the target repo’s tooling environment, choose the smallest useful module footprint, inspect the generated surfaces, and leave a bounded handoff for any manual initialization that remains.
 

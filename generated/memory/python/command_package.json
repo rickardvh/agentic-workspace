@@ -2656,7 +2656,7 @@
     "target": {
       "kind": "python",
       "layout_version": "command-generation/python-target-layout/v1",
-      "package_name": "agentic-memory"
+      "package_name": "agentic-workspace-memory"
     }
   },
   "id": "memory-bootstrap",
@@ -3403,7 +3403,7 @@
       "generation_status": "mutation-capable-adapter",
       "kind": "python",
       "maturity_level_ref": "mutation-capable-adapter",
-      "package_name": "agentic-memory",
+      "package_name": "agentic-workspace-memory",
       "test_environment": "python-dev"
     },
     {
@@ -3419,7 +3419,7 @@
     }
   ],
   "version_metadata": {
-    "distribution": "agentic-memory",
+    "distribution": "agentic-workspace-memory",
     "fallback_version": "0.3.11",
     "source": "python-package-metadata"
   }

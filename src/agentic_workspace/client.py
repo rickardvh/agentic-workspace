@@ -59,9 +59,9 @@ class AWClientError(RuntimeError):
 def _resource(path: str, package_name: str = "agentic-workspace"):
     package_modules = {
         "agentic-workspace": "agentic_workspace._generated_cli_package_impl",
-        "agentic-memory": "repo_memory_bootstrap._generated_cli_package_impl",
-        "agentic-planning": "repo_planning_bootstrap._generated_cli_package_impl",
-        "agentic-verification": "repo_verification_bootstrap._generated_cli_package_impl",
+        "agentic-workspace-memory": "repo_memory_bootstrap._generated_cli_package_impl",
+        "agentic-workspace-planning": "repo_planning_bootstrap._generated_cli_package_impl",
+        "agentic-workspace-verification": "repo_verification_bootstrap._generated_cli_package_impl",
     }
     try:
         resource = files(package_modules[package_name]).joinpath(path)
@@ -69,7 +69,13 @@ def _resource(path: str, package_name: str = "agentic-workspace"):
             return resource
     except ModuleNotFoundError:
         pass
-    target = package_name.removeprefix("agentic-")
+    targets = {
+        "agentic-workspace": "workspace",
+        "agentic-workspace-memory": "memory",
+        "agentic-workspace-planning": "planning",
+        "agentic-workspace-verification": "verification",
+    }
+    target = targets[package_name]
     return Path(__file__).resolve().parents[2] / f"generated/{target}/python" / path
 
 

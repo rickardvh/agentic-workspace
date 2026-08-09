@@ -135,7 +135,7 @@
     }
   ],
   "version_metadata": {
-    "distribution": "agentic-verification",
+    "distribution": "agentic-workspace-verification",
     "fallback_version": "0.1.0",
     "source": "python-package-metadata"
   }

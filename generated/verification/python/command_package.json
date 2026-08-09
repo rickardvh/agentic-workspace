@@ -108,7 +108,7 @@
     "target": {
       "kind": "python",
       "layout_version": "command-generation/python-target-layout/v1",
-      "package_name": "agentic-verification"
+      "package_name": "agentic-workspace-verification"
     }
   },
   "id": "verification-cli",
@@ -207,7 +207,7 @@
       "generation_status": "runtime-backed-read-only-adapter",
       "kind": "python",
       "maturity_level_ref": "runtime-backed-read-only-adapter",
-      "package_name": "agentic-verification",
+      "package_name": "agentic-workspace-verification",
       "test_environment": "python-dev"
     },
     {
@@ -223,7 +223,7 @@
     }
   ],
   "version_metadata": {
-    "distribution": "agentic-verification",
+    "distribution": "agentic-workspace-verification",
     "fallback_version": "0.1.0",
     "source": "python-package-metadata"
   }

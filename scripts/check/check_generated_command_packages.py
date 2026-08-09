@@ -5454,12 +5454,20 @@ def _validate_static_surfaces() -> list[str]:
                 if isinstance(command, dict) and command.get("status") == "generated":
                     errors.extend(_validate_generated_command_projection_boundary(package_id=str(package_id), command=command))
         expected_python_promotions = {
-            "root-workspace": ("agentic-workspace", "generated/workspace/python"),
-            "planning-bootstrap": ("agentic-planning", "generated/planning/python"),
-            "memory-bootstrap": ("agentic-memory", "generated/memory/python"),
-            "verification-cli": ("agentic-verification", "generated/verification/python"),
+            "root-workspace": ("agentic-workspace", "agentic-workspace", "generated/workspace/python"),
+            "planning-bootstrap": (
+                "agentic-planning",
+                "agentic-workspace-planning",
+                "generated/planning/python",
+            ),
+            "memory-bootstrap": ("agentic-memory", "agentic-workspace-memory", "generated/memory/python"),
+            "verification-cli": (
+                "agentic-verification",
+                "agentic-workspace-verification",
+                "generated/verification/python",
+            ),
         }
-        for package_id, (program, generated_root) in expected_python_promotions.items():
+        for package_id, (program, distribution, generated_root) in expected_python_promotions.items():
             package = packages.get(package_id)
             if not isinstance(package, dict):
                 errors.append(f"command_package_ir.json is missing package {package_id!r}")
@@ -5490,8 +5498,10 @@ def _validate_static_surfaces() -> list[str]:
             else:
                 if version_metadata.get("source") != "python-package-metadata":
                     errors.append(f"command_package_ir.json package {package_id!r} version_metadata source is not python-package-metadata")
-                if version_metadata.get("distribution") != program:
-                    errors.append(f"command_package_ir.json package {package_id!r} version_metadata distribution drifted from {program!r}")
+                if version_metadata.get("distribution") != distribution:
+                    errors.append(
+                        f"command_package_ir.json package {package_id!r} version_metadata distribution drifted from {distribution!r}"
+                    )
                 if not str(version_metadata.get("fallback_version", "")).strip():
                     errors.append(f"command_package_ir.json package {package_id!r} version_metadata fallback_version is missing")
             if python_target.get("generated_root") != generated_root:

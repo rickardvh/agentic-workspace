@@ -41,20 +41,29 @@
     },
     "source": "src/agentic_workspace/contracts/command_package_ir.json"
   },
+  "author": "Rickard von Haugwitz",
   "bin": {
     "agentic-verification": "./src/cli.mjs"
   },
+  "bugs": {
+    "url": "https://github.com/rickardvh/agentic-workspace/issues"
+  },
+  "description": "Generated Agentic Workspace command adapter distributed as an exact GitHub release asset.",
   "engines": {
     "node": ">=20"
   },
   "files": [
     "src",
-    "resources"
+    "resources",
+    "LICENSE"
   ],
+  "homepage": "https://github.com/rickardvh/agentic-workspace",
+  "license": "MIT",
   "name": "@agentic-workspace/verification-cli",
-  "private": false,
-  "publishConfig": {
-    "access": "public"
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rickardvh/agentic-workspace"
   },
   "scripts": {
     "test": "node --test test/command-package.test.mjs"

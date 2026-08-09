@@ -75,7 +75,7 @@ def _console_script(env_root: Path, name: str) -> Path:
 def _build_python_artifacts(dist: Path) -> list[Path]:
     uv = shutil.which("uv") or "uv"
     _run([uv, "build", "--wheel", "--out-dir", dist], cwd=REPO_ROOT)
-    for package in ("agentic-memory", "agentic-planning", "agentic-verification"):
+    for package in ("agentic-workspace-memory", "agentic-workspace-planning", "agentic-workspace-verification"):
         _run([uv, "build", "--wheel", "--package", package, "--out-dir", dist], cwd=REPO_ROOT)
     wheels = sorted(dist.glob("*.whl"))
     if len(wheels) < 4:
@@ -295,7 +295,12 @@ def _mutation_scenarios(
 
 def _reverse_dependency_violations() -> list[str]:
     violations: list[str] = []
-    allowed = {"agentic-workspace", "agentic-memory", "agentic-planning", "agentic-verification"}
+    allowed = {
+        "agentic-workspace",
+        "agentic-workspace-memory",
+        "agentic-workspace-planning",
+        "agentic-workspace-verification",
+    }
     for manifest in [REPO_ROOT / "pyproject.toml", *(REPO_ROOT / "packages").glob("*/pyproject.toml")]:
         project = tomllib.loads(manifest.read_text(encoding="utf-8"))["project"]
         for dependency in project.get("dependencies", []):

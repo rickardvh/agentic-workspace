@@ -42,9 +42,9 @@ Update this page directly when any of the following happens:
 
 ## Current Stable External Products
 
-- Agentic Memory, distributed today as `agentic-memory`
-- Agentic Planning, distributed today as `agentic-planning`
-- Agentic Verification, distributed today as `agentic-verification`
+- Agentic Memory, distributed as the exact-release asset `agentic-workspace-memory`
+- Agentic Planning, distributed as the exact-release asset `agentic-workspace-planning`
+- Agentic Verification, distributed as the exact-release asset `agentic-workspace-verification`
 
 ## Current Composition Layer
 
@@ -86,4 +86,3 @@ Current stance on shared tooling:
 
 - prefer one managed source over new shared helpers when one module still clearly owns the behavior
 - extract broader shared tooling only after cross-module reuse and maintenance cost are both clearly proven
-

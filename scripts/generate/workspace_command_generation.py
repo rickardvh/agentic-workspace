@@ -136,11 +136,7 @@ def _host_primitive_definitions(manifest: dict[str, object], *, repo_root: Path)
                 continue
             effect_hints = command.get("effect_hints", {})
             effects = dict(effect_hints) if isinstance(effect_hints, dict) else {}
-            conformance_refs = [
-                str(ref)
-                for ref in command.get("conformance_refs", [])
-                if isinstance(ref, str) and ref.strip()
-            ]
+            conformance_refs = [str(ref) for ref in command.get("conformance_refs", []) if isinstance(ref, str) and ref.strip()]
             for operation_ref in _operation_refs(command):
                 operation_path = str(operation_ref.get("path", ""))
                 source = operation_contract_root / operation_path
@@ -247,8 +243,9 @@ def _typescript_release_package_metadata(*, repo_root: Path) -> dict[str, dict[s
         return {}
     ownership = json.loads(ownership_path.read_text(encoding="utf-8"))
     packages = ownership.get("typescript_packages", [])
+    project_identity = ownership.get("project_identity", {})
     return {
-        str(package["package_json"]): package
+        str(package["package_json"]): {**package, "project_identity": project_identity}
         for package in packages
         if isinstance(package, dict) and isinstance(package.get("package_json"), str)
     }
@@ -274,10 +271,32 @@ def _normalize_releaseable_typescript_package_json(
         # The coordinated release workflow owns package versions; generation owns
         # the publishable package shape around that checked-in release value.
         payload["version"] = existing_version
-    payload["private"] = False
+    identity = metadata.get("project_identity", {})
+    if not isinstance(identity, dict):
+        identity = {}
+    release_asset_only = metadata.get("release_policy") == "release-asset-only"
+    payload["private"] = release_asset_only
     payload["engines"] = {"node": str(metadata.get("runtime_requirement", "node>=20")).removeprefix("node")}
-    payload["publishConfig"] = {"access": "public"}
+    if release_asset_only:
+        payload.pop("publishConfig", None)
+    else:
+        payload["publishConfig"] = {"access": "public"}
+    payload["license"] = str(identity.get("license_spdx", ""))
+    payload["author"] = str(identity.get("author", ""))
+    payload["homepage"] = str(identity.get("homepage", ""))
+    payload["repository"] = {"type": "git", "url": str(identity.get("repository", ""))}
+    payload["bugs"] = {"url": str(identity.get("issues", ""))}
+    payload["description"] = "Generated Agentic Workspace command adapter distributed as an exact GitHub release asset."
+    files = [str(item) for item in payload.get("files", [])]
+    if "LICENSE" not in files:
+        files.append("LICENSE")
+    payload["files"] = files
     return GeneratedOutput(output.path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def _typescript_license_outputs(*, release_metadata: dict[str, dict[str, object]], repo_root: Path) -> list[GeneratedOutput]:
+    license_text = (repo_root / "LICENSE").read_text(encoding="utf-8")
+    return [GeneratedOutput(repo_root / Path(package_json).parent / "LICENSE", license_text) for package_json in sorted(release_metadata)]
 
 
 def _typescript_sample_command_path(manifest: dict[str, object]) -> tuple[list[str], bool]:
@@ -324,7 +343,7 @@ def _patch_workspace_typescript_sample_command_test(
     content = output.content
     content = content.replace(
         "assert.deepEqual(packageJson.files, ['src', 'resources']);",
-        "assert.deepEqual(packageJson.files, ['src', 'resources', 'external_consumer_profile.json', 'external_contract_bundle.json', 'external_operation_conformance_receipts.json']);",
+        "assert.deepEqual(packageJson.files, ['src', 'resources', 'external_consumer_profile.json', 'external_contract_bundle.json', 'external_operation_conformance_receipts.json', 'LICENSE']);",
     )
     content = content.replace(
         "assert.match(result.stderr, /Unsupported generated command: __unsupported__/);",
@@ -332,11 +351,11 @@ def _patch_workspace_typescript_sample_command_test(
     )
     content = content.replace(
         f'[{json.dumps(sample_command)}, "--format", "json"]',
-        f"[...{rendered_sample_path}, \"--format\", \"json\"]",
+        f'[...{rendered_sample_path}, "--format", "json"]',
     )
     content = content.replace(
         f'[{json.dumps(sample_command)}, "--target", "__SPACED_TARGET__"]',
-        f"[...{rendered_sample_path}, \"--target\", \"__SPACED_TARGET__\"]",
+        f'[...{rendered_sample_path}, "--target", "__SPACED_TARGET__"]',
     )
     if not subcommands_required:
         return GeneratedOutput(output.path, content)
@@ -346,7 +365,7 @@ def _patch_workspace_typescript_sample_command_test(
         "  const spacedTarget = fileURLToPath(new URL('../tmp target with spaces', import.meta.url));\n"
         "  mkdirSync(spacedTarget, { recursive: true });\n"
         "  try {\n"
-        f"    const args = [...{rendered_sample_path}, \"--target\", \"__SPACED_TARGET__\"].map((token) => token === '__SPACED_TARGET__' ? spacedTarget : token);\n"
+        f'    const args = [...{rendered_sample_path}, "--target", "__SPACED_TARGET__"].map((token) => token === \'__SPACED_TARGET__\' ? spacedTarget : token);\n'
         "    const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });\n"
         "    assert.equal(result.status, 0);\n"
         "    assert.doesNotMatch(result.stderr, /runtime handoff/i);\n"
@@ -360,7 +379,7 @@ def _patch_workspace_typescript_sample_command_test(
         + "\n"
         + "test('generated runnable adapter rejects command without required subcommand', () => {\n"
         + "  const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));\n"
-        + f"  const result = spawnSync(process.execPath, [cli, ...{rendered_root_path}, \"--format\", \"json\"], {{ encoding: 'utf8' }});\n"
+        + f'  const result = spawnSync(process.execPath, [cli, ...{rendered_root_path}, "--format", "json"], {{ encoding: \'utf8\' }});\n'
         + "  assert.equal(result.status, 2);\n"
         + "  assert.equal(result.stdout, '');\n"
         + f"  assert.match(result.stderr, /missing subcommand for {sample_command}/);\n"
@@ -372,6 +391,20 @@ def _patch_workspace_typescript_sample_command_test(
     return GeneratedOutput(output.path, content)
 
 
+def _patch_typescript_license_test(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+    path = output.path if output.path.is_absolute() else repo_root / output.path
+    relative = path.relative_to(repo_root).as_posix()
+    if not relative.startswith("generated/") or not relative.endswith("/typescript/test/command-package.test.mjs"):
+        return output
+    return GeneratedOutput(
+        output.path,
+        output.content.replace(
+            "assert.deepEqual(packageJson.files, ['src', 'resources']);",
+            "assert.deepEqual(packageJson.files, ['src', 'resources', 'LICENSE']);",
+        ),
+    )
+
+
 def _patch_typescript_strict_preflight_gate(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
     path = output.path if output.path.is_absolute() else repo_root / output.path
     relative = path.relative_to(repo_root).as_posix()
@@ -380,9 +413,7 @@ def _patch_typescript_strict_preflight_gate(output: GeneratedOutput, *, repo_roo
     if "Strict preflight gate is enabled." in output.content:
         return output
     invocation = "  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);\n"
-    normalized_invocation = (
-        "  const invocation = parseInvocation(commandDefinitionByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command]);\n"
-    )
+    normalized_invocation = "  const invocation = parseInvocation(commandDefinitionByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command]);\n"
     selected_invocation = normalized_invocation if normalized_invocation in output.content else invocation
     anchor = (
         selected_invocation
@@ -390,8 +421,7 @@ def _patch_typescript_strict_preflight_gate(output: GeneratedOutput, *, repo_roo
         + "  const operationPath = invocation.operationRef?.path;\n"
     )
     inserted = (
-        anchor
-        + "  if (invocation.values.strict_preflight && !invocation.values.preflight_token) {\n"
+        anchor + "  if (invocation.values.strict_preflight && !invocation.values.preflight_token) {\n"
         "    console.error(\"Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.\");\n"
         "    process.exit(2);\n"
         "  }\n"
@@ -407,9 +437,7 @@ def _patch_typescript_runtime_template_ops(output: GeneratedOutput, *, repo_root
     if not relative.startswith("generated/") or not relative.endswith("/typescript/src/runtime.mjs"):
         return output
     content = output.content
-    count_anchor = (
-        "  if (keys.length === 1 && keys[0] === '$count') return Array.isArray(values[String(template.$count)]) ? values[String(template.$count)].length : 0;\n"
-    )
+    count_anchor = "  if (keys.length === 1 && keys[0] === '$count') return Array.isArray(values[String(template.$count)]) ? values[String(template.$count)].length : 0;\n"
     if "Object.prototype.hasOwnProperty.call(template, '$exists_status')" not in content and count_anchor in content:
         content = content.replace(
             count_anchor,
@@ -916,17 +944,20 @@ def render_workspace_command_package_outputs(
         host_manifest=workspace_command_generation_host_manifest(repo_root=repo_root),
     )
     release_metadata = _typescript_release_package_metadata(repo_root=repo_root)
-    return [
-        _patch_external_consumer_exports(
-            _patch_typescript_runtime_template_ops(
-                _patch_typescript_strict_preflight_gate(
-                    _patch_workspace_typescript_sample_command_test(
-                        _patch_python_operation_exit_status(
-                            _patch_python_structured_usage_errors(
-                                _patch_planning_python_targeted_write_preflight_values(
-                                    _patch_typescript_structured_usage_errors(
-                                        _normalize_releaseable_typescript_package_json(
-                                            output, release_metadata=release_metadata, repo_root=repo_root
+    normalized_outputs = [
+        _patch_typescript_license_test(
+            _patch_external_consumer_exports(
+                _patch_typescript_runtime_template_ops(
+                    _patch_typescript_strict_preflight_gate(
+                        _patch_workspace_typescript_sample_command_test(
+                            _patch_python_operation_exit_status(
+                                _patch_python_structured_usage_errors(
+                                    _patch_planning_python_targeted_write_preflight_values(
+                                        _patch_typescript_structured_usage_errors(
+                                            _normalize_releaseable_typescript_package_json(
+                                                output, release_metadata=release_metadata, repo_root=repo_root
+                                            ),
+                                            repo_root=repo_root,
                                         ),
                                         repo_root=repo_root,
                                     ),
@@ -935,9 +966,9 @@ def render_workspace_command_package_outputs(
                                 repo_root=repo_root,
                             ),
                             repo_root=repo_root,
+                            manifest=effective_manifest,
                         ),
                         repo_root=repo_root,
-                        manifest=effective_manifest,
                     ),
                     repo_root=repo_root,
                 ),
@@ -947,6 +978,7 @@ def render_workspace_command_package_outputs(
         )
         for output in outputs
     ]
+    return [*normalized_outputs, *_typescript_license_outputs(release_metadata=release_metadata, repo_root=repo_root)]
 
 
 def _patch_external_consumer_exports(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
