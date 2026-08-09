@@ -34,6 +34,66 @@ stale_when = [".agentic-workspace/memory/repo/**/*.md"]
 routing_only = true
 high_level = true
 
+[notes.".agentic-workspace/memory/WORKFLOW.md"]
+note_type = "workflow-policy"
+canonical_home = ".agentic-workspace/memory/WORKFLOW.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["memory", "planning", "routing"]
+routes_from = [".agentic-workspace/memory/repo/manifest.toml", ".agentic-workspace/memory/repo/index.md"]
+stale_when = ["packages/memory/**", ".agentic-workspace/memory/repo/manifest.toml"]
+
+[notes.".agentic-workspace/memory/repo/domains/memory-package-context.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/memory-package-context.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["architecture", "routing"]
+routes_from = ["packages/memory/**", ".agentic-workspace/memory/repo/index.md"]
+stale_when = ["packages/memory/**"]
+
+[notes.".agentic-workspace/memory/repo/runbooks/package-context-inspection.md"]
+note_type = "runbook"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/package-context-inspection.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["memory-system"]
+surfaces = ["operations", "routing"]
+routes_from = ["packages/memory/**", ".agentic-workspace/memory/repo/domains/memory-package-context.md"]
+stale_when = ["packages/memory/**"]
+
+[notes.".agentic-workspace/memory/repo/domains/vague-prompt-domain-understanding.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/vague-prompt-domain-understanding.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["workspace-runtime"]
+surfaces = ["intent", "routing"]
+routes_from = [".agentic-workspace/docs/reporting-contract.md"]
+stale_when = ["src/agentic_workspace/reporting_support.py", ".agentic-workspace/docs/reporting-contract.md"]
+
+[notes.".agentic-workspace/memory/repo/runbooks/vague-instruction-failure-capture.md"]
+note_type = "runbook"
+canonical_home = ".agentic-workspace/memory/repo/runbooks/vague-instruction-failure-capture.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+subsystems = ["workspace-runtime"]
+surfaces = ["intent", "operations", "routing"]
+routes_from = [".agentic-workspace/docs/reporting-contract.md", ".agentic-workspace/memory/repo/domains/vague-prompt-domain-understanding.md"]
+stale_when = ["src/agentic_workspace/reporting_support.py", ".agentic-workspace/docs/reporting-contract.md"]
+
 [notes.".agentic-workspace/memory/repo/domains/README.md"]
 note_type = "domain"
 canonical_home = ".agentic-workspace/memory/repo/domains/README.md"

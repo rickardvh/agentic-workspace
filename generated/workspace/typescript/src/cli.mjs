@@ -5411,6 +5411,16 @@ const commandDefinitions = [
           ],
           "help": "Comma-separated JSON fields to return from the selected report payload, such as answer.closeout_protocol.",
           "name": "select"
+        },
+        {
+          "choices": [
+            "strict-current"
+          ],
+          "flags": [
+            "--fail-on"
+          ],
+          "help": "Assert the named versioned health policy and exit non-zero when current state violates it.",
+          "name": "fail_on"
         }
       ]
     },
@@ -5734,6 +5744,14 @@ const commandDefinitions = [
         {
           "action": "store_true",
           "flags": [
+            "--verbose"
+          ],
+          "help": "Show the full lifecycle, module, configuration, and provenance payload instead of the ordinary decision envelope.",
+          "name": "verbose"
+        },
+        {
+          "action": "store_true",
+          "flags": [
             "--dry-run"
           ],
           "help": "Show planned changes without mutating files.",
@@ -5857,6 +5875,14 @@ const commandDefinitions = [
           ],
           "help": "Opt in to checking in the full generic package payload mirror instead of the ordinary necessary-surface footprint.",
           "name": "mirror_payload"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Show the full lifecycle, module, configuration, and provenance payload instead of the ordinary decision envelope.",
+          "name": "verbose"
         },
         {
           "action": "store_true",

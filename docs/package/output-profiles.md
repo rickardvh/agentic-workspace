@@ -40,3 +40,30 @@ When adding a new CLI command or expanding an existing payload, add or update te
 
 - required next-decision fields are present
 - inactive diagnostics or provenance fields are absent
+
+## Enforced Budgets
+
+Named ordinary profiles declare four limits in the versioned
+`workspace-output-profile-budgets/v2` contract exposed by the
+`operational_compression` report:
+
+- UTF-8 JSON bytes
+- recursive field count
+- estimated tokens (`ceil(json_bytes / 4)`, used only as a stable regression estimate)
+- non-empty human-render lines
+
+The package tests exercise cold and warm `init` plus ordinary `start`, `report`,
+and `doctor` fixtures. A budget increase is a reviewed contract change, not a
+side effect of adding another default field. Ordinary `init` JSON uses a
+`decision-envelope/v1`; `init --verbose --format json` is the exact expansion
+route for module reports, config, effects, provenance, and the full lifecycle
+plan.
+
+## Progress Without Log Noise
+
+Compact validation commands buffer successful child output, but emit a
+`[progress]` heartbeat to stderr every 30 seconds while a command remains
+running. The interval can be shortened with
+`--progress-interval-seconds <seconds>` for a known proof environment. The
+heartbeat reports only the label and elapsed time; detailed child output stays
+in the failure log when the command fails.

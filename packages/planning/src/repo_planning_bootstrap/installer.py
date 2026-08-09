@@ -43,6 +43,7 @@ PLANNING_OWNER_SELECTION_PATH = Path(".agentic-workspace") / "local" / "planning
 PLANNING_OWNER_SELECTION_RECEIPT_PATH = Path(".agentic-workspace") / "local" / "planning" / "owner-selection-receipt.json"
 PLANNING_RECONCILIATION_PROPOSAL_ROOT = Path(".agentic-workspace") / "local" / "planning" / "reconciliation-proposals"
 PLANNING_RECONCILIATION_RECEIPT_ROOT = Path(".agentic-workspace") / "local" / "planning" / "reconciliation-receipts"
+PLANNING_ABSENT_RELATION_SUBJECT = "__absent__"
 PLANNING_ISSUE_RELATION_ROOT = PLANNING_MANAGED_ROOT / "issue-relations"
 PLANNING_INTEGRATION_PROPOSAL_ROOT = PLANNING_MANAGED_ROOT / "integration-proposals"
 PLANNING_INTEGRATION_RECEIPT_ROOT = PLANNING_MANAGED_ROOT / "integration-receipts"
@@ -3435,11 +3436,10 @@ def _reconcile_lane_current_slice(
         }
     actual_owner_surface = _planning_surface_relative(target_root, lane_path)
     current_slice = str(lane_record.get("current_slice") or "").strip()
+    actual_subject = current_slice or PLANNING_ABSENT_RELATION_SUBJECT
     requested_subject = subject.strip()
-    subject_id = requested_subject or current_slice
-    if not subject_id:
-        subject_id = f"{lane_id}-slice"
-    actual_relation_identity = f"lane:{lane_id}:current_slice:{current_slice}"
+    subject_id = requested_subject or actual_subject
+    actual_relation_identity = f"lane:{lane_id}:current_slice:{actual_subject}"
     requested_transition = (transition or "restore").strip()
     if requested_transition not in {"restore", "relink", "supersede", "cancel", "human"}:
         return {
@@ -3573,14 +3573,14 @@ def _reconcile_lane_current_slice(
             "applied": False,
             "dry_run": dry_run,
         }
-    if requested_subject and requested_subject != current_slice:
+    if requested_subject and requested_subject != actual_subject:
         return {
             "kind": "planning-lane-current-slice-reconciliation/v1",
             "status": "blocked",
             "reason_code": "subject-mismatch",
             "lane": lane_id,
             "expected_subject": requested_subject,
-            "actual_subject": current_slice,
+            "actual_subject": actual_subject,
             "applied": False,
             "dry_run": dry_run,
         }
@@ -3621,7 +3621,8 @@ def _reconcile_lane_current_slice(
         ),
         {},
     )
-    if not isinstance(selected_slice, dict) or not selected_slice:
+    absent_relation_transition = not current_slice and requested_transition in {"supersede", "cancel"}
+    if (not isinstance(selected_slice, dict) or not selected_slice) and not absent_relation_transition:
         return {
             "kind": "planning-lane-current-slice-reconciliation/v1",
             "status": "blocked",
@@ -3821,7 +3822,7 @@ def _reconcile_lane_current_slice(
         "transition": requested_transition,
         "owner_surface": actual_owner_surface,
         "relation_identity": actual_relation_identity,
-        "subject_id": current_slice,
+        "subject_id": actual_subject,
         "source_owner": target_execplan,
         "source_owner_revision": source_owner_revision,
         "lane_revision_before": before_lane_revision,
@@ -3895,7 +3896,7 @@ def _reconcile_lane_current_slice(
             {
                 "kind": "updated" if apply and not dry_run else "would update",
                 "path": _planning_surface_relative(target_root, lane_path),
-                "detail": f"{requested_transition} lane current-slice relation '{current_slice}' on lane '{lane_id}'",
+                "detail": f"{requested_transition} lane current-slice relation '{actual_subject}' on lane '{lane_id}'",
             },
             {
                 "kind": "updated" if apply and not dry_run else "would update",
@@ -6513,41 +6514,70 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
             reason_code = "multiple-active-slices"
         if not reason_code:
             continue
-        recovery_slice = current_slice or (str(active_slices[0].get("id", "")).strip() if active_slices else f"{lane_id}-slice")
-        relation_identity = f"lane:{lane_id}:current_slice:{recovery_slice}"
+        recovery_slice = current_slice or (str(active_slices[0].get("id", "")).strip() if active_slices else "")
+        relation_subject = current_slice or PLANNING_ABSENT_RELATION_SUBJECT
+        relation_identity = f"lane:{lane_id}:current_slice:{relation_subject}"
         current_lane_revision = _record_revision(lane_record) if isinstance(lane_record, dict) else ""
         current_planning_revision = str(planning_revision(target_root).get("revision_id") or "")
-        repair_route = (
+        human_repair_route = (
             f"{_workspace_cli_invoke(target_root)} planning reconcile --lane {lane_id} "
             f"--owner-surface {path or (PLANNING_MANAGED_ROOT / 'lanes').as_posix()} "
-            f"--relation-identity {relation_identity} --subject {recovery_slice} "
+            f"--relation-identity {relation_identity} --subject {relation_subject} "
             f"--expect-lane-revision {current_lane_revision} --expect-planning-revision {current_planning_revision} "
             "--transition human --target . --format json"
         )
-        repair_options = [
-            {
-                "action": "restore-referenced-owner",
-                "description": "Restore the missing execplan or lane owner named by the current relation.",
-            },
-            {
-                "action": "relink-existing-owner",
-                "description": "Relink lane.current_slice to an existing admitted execplan for the same intended slice.",
-            },
-            {
-                "action": "supersede-stale-relation",
-                "description": "Record an explicit supersede/archive/cancel transition that preserves residual intent and proof ownership.",
-            },
+        repair_route = human_repair_route
+        repair_options: list[dict[str, str]] = []
+        if reason_code == "active-lane-current-slice-missing" and len(active_slices) == 1:
+            replacement_execplan = str(active_slices[0].get("execplan_ref") or active_slices[0].get("execplan") or "").strip()
+            if replacement_execplan and (target_root / replacement_execplan).is_file():
+                supersede_preview = (
+                    f"{_workspace_cli_invoke(target_root)} planning reconcile --lane {lane_id} "
+                    f"--owner-surface {path or (PLANNING_MANAGED_ROOT / 'lanes').as_posix()} "
+                    f"--relation-identity {relation_identity} --subject {relation_subject} "
+                    f"--expect-lane-revision {current_lane_revision} --expect-planning-revision {current_planning_revision} "
+                    f"--transition supersede --expected-execplan {replacement_execplan} --target . --format json"
+                )
+                repair_route = supersede_preview
+                repair_options.append(
+                    {
+                        "action": "supersede-absent-relation",
+                        "description": "Select the one executable active slice as the guarded current-slice replacement.",
+                        "preview_command": supersede_preview,
+                        "apply_command": f"{supersede_preview} --apply-lane-current-slice-reconcile",
+                    }
+                )
+        if reason_code != "active-lane-current-slice-missing":
+            repair_options.extend(
+                [
+                    {
+                        "action": "restore-referenced-owner",
+                        "description": "Restore the missing execplan or lane owner named by the current relation.",
+                    },
+                    {
+                        "action": "relink-existing-owner",
+                        "description": "Relink lane.current_slice to an existing admitted execplan for the same intended slice.",
+                    },
+                    {
+                        "action": "supersede-stale-relation",
+                        "description": "Record an explicit supersede/archive/cancel transition that preserves residual intent and proof ownership.",
+                    },
+                ]
+            )
+        repair_options.append(
             {
                 "action": "request-human-selection",
                 "description": "Ask for a concrete owner choice when the intended relation is ambiguous.",
-            },
-        ]
+                "command": human_repair_route,
+            }
+        )
         warnings.append(
             {
                 "warning_class": "lane_current_slice_non_executable",
                 "path": path or (PLANNING_MANAGED_ROOT / "lanes").as_posix(),
                 "message": (
-                    f"Lane '{lane_id}' has non-executable current/live slice relation ({reason_code}) for slice '{recovery_slice}'."
+                    f"Lane '{lane_id}' has non-executable current/live slice relation ({reason_code}) for slice "
+                    f"'{recovery_slice or PLANNING_ABSENT_RELATION_SUBJECT}'."
                 ),
                 "suggested_fix": (
                     f"Reconcile lane '{lane_id}' current slice '{recovery_slice}' by restoring the referenced owner, "
@@ -6558,6 +6588,8 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
                     "relation": "lane.current_slice",
                     "lane_id": lane_id,
                     "current_slice": current_slice,
+                    "relation_identity": relation_identity,
+                    "subject_id": relation_subject,
                     "execplan_ref": execplan_ref,
                     "reason_code": reason_code,
                     "repair_route": repair_route,
@@ -6566,7 +6598,7 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
                         target_root=target_root,
                         owner_surface=path or (PLANNING_MANAGED_ROOT / "lanes").as_posix(),
                         relation="lane.current_slice",
-                        subject_id=recovery_slice,
+                        subject_id=relation_subject,
                         reason_code=reason_code,
                         repair_command=repair_route,
                         repair_options=repair_options,

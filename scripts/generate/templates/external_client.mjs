@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 const profileUrl = new URL('../external_consumer_profile.json', import.meta.url);
 const conformanceReceiptsUrl = new URL('../external_operation_conformance_receipts.json', import.meta.url);
 const bundleUrl = new URL('../external_contract_bundle.json', import.meta.url);
+const packageUrl = new URL('../package.json', import.meta.url);
 const readinessTransports = ['cli-json', 'python', 'typescript', 'vendor-neutral'];
 const readinessExecutors = { 'cli-json': 'direct-cli-json', python: 'generated-python-client', typescript: 'generated-typescript-client', 'vendor-neutral': 'packed-typescript-client' };
 const readinessCases = ['absent', 'disabled', 'incompatible', 'malformed', 'retryable', 'additive-field', 'mutation-applied', 'mutation-noop', 'mutation-rejected', 'mutation-failed'];
@@ -84,14 +85,15 @@ function conformanceReadiness(entry, profile, receiptStore) {
 export function externalReadinessReport(operationIds, { allowRuntimeBacked = false } = {}) {
   const profile = externalConsumerProfile();
   const receiptStore = externalOperationConformanceReceipts();
-  const entries = new Map(profile.operations.map((entry) => [entry.id, entry])); const supported = [], excluded = [];
+  const entries = new Map(profile.operations.map((entry) => [entry.id, entry])); const supported = [], supportedEvidence = [], excluded = [];
   for (const id of operationIds) { const entry = entries.get(id) ?? {}, c = entry.external_consumption ?? {}, r = entry.operation_resources ?? {}, t = entry.targets ?? {}, s = entry.schemas ?? {}, refs = entry.conformance ?? [], missing = [];
     for (const lang of ['python', 'typescript']) { if (!r[lang]?.exists) missing.push(`released-${lang}-resource`); if (!['adapter', 'mutation-capable-adapter'].includes(t[lang]?.status)) missing.push(`released-${lang}-adapter`); }
     if (!s.input?.length || !s.output?.length) missing.push('input-output-schema-coverage'); if (!refs.length) missing.push('conformance-reference'); const status = c.status ?? 'unavailable'; if (status === 'runtime-backed' && !c.runtime_exceptions?.length) missing.push('runtime-exception-disposition');
     const conformance = conformanceReadiness(entry, profile, receiptStore); missing.push(...conformance.missing);
     const allowedStatuses = new Set(allowRuntimeBacked ? ['supported', 'runtime-backed'] : ['supported']);
-    if (allowedStatuses.has(status) && !missing.length) supported.push(id); else excluded.push({id, status, missing_evidence: missing, conformance_refs: refs, conformance_result: conformance.result}); }
-  return {kind: 'agentic-workspace/external-readiness-report/v1', status: !excluded.length ? 'ready' : supported.length ? 'subset-only' : 'not-ready', supported_operations: supported, excluded_operations: excluded};
+    if (allowedStatuses.has(status) && !missing.length) { supported.push(id); supportedEvidence.push({id, status: 'ready', support_status: status, conformance_refs: refs, conformance_result: conformance.result, receipt_ref: conformance.result.receipt_ref ?? ''}); } else excluded.push({id, status, missing_evidence: missing, conformance_refs: refs, conformance_result: conformance.result}); }
+  const notAdvertised = [...entries.values()].filter((entry) => (entry.external_consumption?.status ?? 'unavailable') !== 'supported').sort((left, right) => String(left.id).localeCompare(String(right.id))).map((entry) => ({id: String(entry.id), status: entry.external_consumption?.status ?? 'unavailable', reason: entry.external_consumption?.status === 'runtime-backed' ? 'runtime-backed opt-in required' : 'operation is not declared externally supported'}));
+  return {kind: 'agentic-workspace/external-readiness-report/v1', status: !excluded.length ? 'ready' : supported.length ? 'subset-only' : 'not-ready', supported_operations: supported, supported_operation_evidence: supportedEvidence, excluded_operations: excluded, operation_accounting: {profile_operation_count: entries.size, requested_operation_count: operationIds.length, ready_requested_count: supported.length, excluded_requested_count: excluded.length, not_advertised_count: notAdvertised.length, not_advertised_sample: notAdvertised.slice(0, 32), sample_limit: 32}};
 }
 export function externalContractBundle() { return JSON.parse(readFileSync(bundleUrl, 'utf8')); }
 export function externalConformanceProfile(operationIds = null) {
@@ -166,7 +168,14 @@ export function detectWorkspace(target) {
   const root = resolve(target);
   for (const name of ['config.local.toml', 'config.toml']) {
     const path = join(root, '.agentic-workspace', name);
-    try { const text = readFileSync(path, 'utf8'); return { status: /enabled\s*=\s*false/.test(text) ? 'disabled' : 'enabled', target: root, config: name }; }
+    try {
+      const text = readFileSync(path, 'utf8');
+      if (/enabled\s*=\s*false/.test(text)) return { status: 'disabled', target: root, config: name };
+      const compatibility = text.match(/^exact_version\s*=\s*["']([^"']+)["']\s*$/m);
+      const clientVersion = JSON.parse(readFileSync(packageUrl, 'utf8')).version;
+      if (compatibility && compatibility[1] !== clientVersion) return { status: 'incompatible', target: root, config: name, reason: 'exact-client-version-mismatch', expected_version: compatibility[1], client_version: clientVersion };
+      return { status: 'enabled', target: root, config: name };
+    }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
   return { status: 'absent', target: root };

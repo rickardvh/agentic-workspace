@@ -38,6 +38,38 @@ def test_semver_repair_only_pr_reports_that_it_will_not_publish() -> None:
     assert "will not open a release PR" in packet["next_action"]
 
 
+def test_fingerprint_only_pr_does_not_require_semver_release() -> None:
+    module = _load_module()
+    ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
+
+    packet = module.semver_pr_status(
+        labels=[],
+        changed_files=["generated/.agentic-workspace-cli-fingerprint.json", "docs/maintenance.md"],
+        ownership=ownership,
+    )
+
+    assert packet["status"] == "no-release-needed"
+    assert packet["package_affecting"] is False
+    assert packet["path_classification"]["integrity_metadata_paths"] == ["generated/.agentic-workspace-cli-fingerprint.json"]
+
+
+def test_fingerprint_cannot_lower_a_generated_package_change() -> None:
+    module = _load_module()
+    ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
+
+    packet = module.semver_pr_status(
+        labels=[],
+        changed_files=[
+            "generated/.agentic-workspace-cli-fingerprint.json",
+            "generated/workspace/typescript/cli.mjs",
+        ],
+        ownership=ownership,
+    )
+
+    assert packet["status"] == "blocked-semver-label-selection"
+    assert packet["package_affecting"] is True
+
+
 def test_package_affecting_semver_pr_requires_release_changeset() -> None:
     module = _load_module()
     ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))

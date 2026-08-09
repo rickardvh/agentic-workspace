@@ -713,6 +713,27 @@ def _argv_contains_sequence(argv: list[str], sequence: Any) -> bool:
     return GeneratedOutput(output.path, content.replace(old_helpers, new_helpers))
 
 
+def _patch_python_operation_exit_status(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+    path = output.path if output.path.is_absolute() else repo_root / output.path
+    relative = path.relative_to(repo_root).as_posix()
+    if relative != "generated/workspace/python/primitives/operation_executor.py":
+        return output
+    old_return = """    if isinstance(emitted, str):
+        print(emitted, end='')
+    return 0
+"""
+    new_return = """    if isinstance(emitted, str):
+        print(emitted, end='')
+    exit_status = values.get('exit_status')
+    if not isinstance(exit_status, int) and isinstance(values.get('result'), Mapping):
+        exit_status = values['result'].get('exit_status')
+    return exit_status if isinstance(exit_status, int) else 0
+"""
+    if old_return not in output.content:
+        return output
+    return GeneratedOutput(output.path, output.content.replace(old_return, new_return, 1))
+
+
 def _patch_planning_python_targeted_write_preflight_values(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
     path = output.path if output.path.is_absolute() else repo_root / output.path
     relative = path.relative_to(repo_root).as_posix()
@@ -897,28 +918,33 @@ def render_workspace_command_package_outputs(
     release_metadata = _typescript_release_package_metadata(repo_root=repo_root)
     return [
         _patch_external_consumer_exports(
-        _patch_typescript_runtime_template_ops(
-            _patch_typescript_strict_preflight_gate(
-                _patch_workspace_typescript_sample_command_test(
-                    _patch_python_structured_usage_errors(
-                        _patch_planning_python_targeted_write_preflight_values(
-                            _patch_typescript_structured_usage_errors(
-                                _normalize_releaseable_typescript_package_json(
-                                    output, release_metadata=release_metadata, repo_root=repo_root
+            _patch_typescript_runtime_template_ops(
+                _patch_typescript_strict_preflight_gate(
+                    _patch_workspace_typescript_sample_command_test(
+                        _patch_python_operation_exit_status(
+                            _patch_python_structured_usage_errors(
+                                _patch_planning_python_targeted_write_preflight_values(
+                                    _patch_typescript_structured_usage_errors(
+                                        _normalize_releaseable_typescript_package_json(
+                                            output, release_metadata=release_metadata, repo_root=repo_root
+                                        ),
+                                        repo_root=repo_root,
+                                    ),
+                                    repo_root=repo_root,
                                 ),
                                 repo_root=repo_root,
                             ),
                             repo_root=repo_root,
                         ),
                         repo_root=repo_root,
+                        manifest=effective_manifest,
                     ),
                     repo_root=repo_root,
-                    manifest=effective_manifest,
                 ),
                 repo_root=repo_root,
             ),
             repo_root=repo_root,
-        ), repo_root=repo_root)
+        )
         for output in outputs
     ]
 
@@ -985,7 +1011,6 @@ from ..cli import build_generated_parser
         files.append("external_operation_conformance_receipts.json")
     payload["files"] = files
     return GeneratedOutput(output.path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
-
 
 
 def generate_workspace_command_packages(*, repo_root: Path = REPO_ROOT, check: bool) -> list[str]:

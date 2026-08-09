@@ -716,7 +716,7 @@ def external_readiness_report(operation_ids: Sequence[str], *, allow_runtime_bac
     profile = external_consumer_profile()
     receipt_store = external_operation_conformance_receipts()
     entries = {entry["id"]: entry for entry in profile["operations"]}
-    supported, excluded = [], []
+    supported, supported_evidence, excluded = [], [], []
     for operation_id in operation_ids:
         entry = entries.get(operation_id, {})
         consumption = entry.get("external_consumption", {})
@@ -733,9 +733,12 @@ def external_readiness_report(operation_ids: Sequence[str], *, allow_runtime_bac
         status = consumption.get("status", "unavailable")
         if status == "runtime-backed" and not consumption.get("runtime_exceptions"): missing.append("runtime-exception-disposition")
         allowed_statuses = {"supported"} | ({"runtime-backed"} if allow_runtime_backed else set())
-        if status in allowed_statuses and not missing: supported.append(operation_id)
+        if status in allowed_statuses and not missing:
+            supported.append(operation_id)
+            supported_evidence.append({"id": operation_id, "status": "ready", "support_status": status, "conformance_refs": conformance, "conformance_result": conformance_result, "receipt_ref": conformance_result.get("receipt_ref", "")})
         else: excluded.append({"id": operation_id, "status": status, "missing_evidence": missing, "conformance_refs": conformance, "conformance_result": conformance_result})
-    return {"kind": "agentic-workspace/external-readiness-report/v1", "status": "ready" if not excluded else "subset-only" if supported else "not-ready", "supported_operations": supported, "excluded_operations": excluded}
+    not_advertised = [{"id": operation_id, "status": entry.get("external_consumption", {}).get("status", "unavailable"), "reason": "runtime-backed opt-in required" if entry.get("external_consumption", {}).get("status") == "runtime-backed" else "operation is not declared externally supported"} for operation_id, entry in sorted(entries.items()) if entry.get("external_consumption", {}).get("status", "unavailable") != "supported"]
+    return {"kind": "agentic-workspace/external-readiness-report/v1", "status": "ready" if not excluded else "subset-only" if supported else "not-ready", "supported_operations": supported, "supported_operation_evidence": supported_evidence, "excluded_operations": excluded, "operation_accounting": {"profile_operation_count": len(entries), "requested_operation_count": len(operation_ids), "ready_requested_count": len(supported), "excluded_requested_count": len(excluded), "not_advertised_count": len(not_advertised), "not_advertised_sample": not_advertised[:32], "sample_limit": 32}}
 
 
 def require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:

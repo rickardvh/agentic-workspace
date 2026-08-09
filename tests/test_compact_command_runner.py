@@ -100,6 +100,36 @@ def test_compact_runner_success_writes_machine_readable_result(tmp_path, capsys)
     assert abs(manifest["summed_work_seconds"] - manifest["critical_path_seconds"]) < 0.01
 
 
+def test_compact_runner_reports_bounded_progress_without_streaming_child_output(tmp_path, capsys) -> None:
+    runner = _load_runner()
+    runner.REPO_ROOT = tmp_path
+    runner.LOG_ROOT = tmp_path / "scratch" / "command-logs"
+    runner.RESULT_ROOT = tmp_path / "scratch" / "validation-results"
+
+    returncode = runner.main(
+        [
+            "--label",
+            "long proof",
+            "--progress-interval-seconds",
+            "0.05",
+            "--",
+            sys.executable,
+            "-c",
+            "import time; print('captured detail', flush=True); time.sleep(0.14)",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    progress_lines = [line for line in captured.err.splitlines() if line.startswith("[progress]")]
+    assert returncode == 0
+    assert 1 <= len(progress_lines) <= 6
+    assert all("long proof still running" in line for line in progress_lines)
+    assert all("output buffered" in line for line in progress_lines)
+    assert "captured detail" not in captured.out
+    assert "captured detail" not in captured.err
+    assert "[ok] long proof" in captured.out
+
+
 def test_compact_runner_rejects_duplicate_constituent_in_same_run(tmp_path, capsys) -> None:
     runner = _load_runner()
     runner.REPO_ROOT = tmp_path
