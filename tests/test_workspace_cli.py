@@ -4325,6 +4325,101 @@ def test_planning_front_door_lane_activation_recovery_does_not_fabricate_plan(tm
     assert "planning_lane_schema_invalid" not in startup_text
 
 
+def test_missing_current_slice_repair_commands_replay_unchanged(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "lane-create",
+                "--id",
+                "lane-alpha",
+                "--title",
+                "Lane Alpha",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "slice-one",
+                "--title",
+                "Slice One",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/lane-alpha.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["status"] = "active"
+    lane["current_slice"] = ""
+    lane["slice_sequence"] = [
+        {
+            "id": "slice-one",
+            "title": "Slice One",
+            "status": "active",
+            "execplan_ref": ".agentic-workspace/planning/execplans/slice-one.plan.json",
+            "depends_on": [],
+            "purpose_for_lane": "Executable replacement.",
+        }
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+
+    assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
+    summary = json.loads(capsys.readouterr().out)
+    warning = next(
+        item
+        for item in summary["planning_surface_health"]["warnings"]
+        if item["repair_affordance"]["reason_code"] == "active-lane-current-slice-missing"
+    )
+    option = next(item for item in warning["repair_affordance"]["repair_options"] if item["action"] == "supersede-absent-relation")
+
+    monkeypatch.chdir(tmp_path)
+    preview_args = shlex.split(option["preview_command"])
+    preview_args = preview_args[preview_args.index("planning") :]
+    assert cli.main(preview_args) == 0
+    preview = json.loads(capsys.readouterr().out)["lane_current_slice_reconciliation"]
+    assert preview["status"] == "preview", preview
+    assert preview["relation_identity"] == "lane:lane-alpha:current_slice:__absent__"
+    assert preview["subject_id"] == "__absent__"
+
+    apply_args = shlex.split(option["apply_command"])
+    apply_args = apply_args[apply_args.index("planning") :]
+    assert cli.main(apply_args) == 0
+    applied = json.loads(capsys.readouterr().out)["lane_current_slice_reconciliation"]
+    assert applied["status"] == "applied"
+    assert json.loads(lane_path.read_text(encoding="utf-8"))["current_slice"] == "slice-one"
+
+    assert cli.main(apply_args) == 0
+    replay = json.loads(capsys.readouterr().out)["lane_current_slice_reconciliation"]
+    assert replay["status"] == "already-applied"
+    assert replay["reason_code"] == "idempotent-replay"
+
+    assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
+    post_summary = json.loads(capsys.readouterr().out)
+    assert not [
+        item
+        for item in post_summary["planning_surface_health"]["warnings"]
+        if item.get("repair_affordance", {}).get("reason_code") == "active-lane-current-slice-missing"
+    ]
+
+
 def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

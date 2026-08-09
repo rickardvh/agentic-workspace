@@ -483,6 +483,99 @@ def test_lane_current_slice_reconcile_requires_exact_guards_and_is_idempotent(tm
     assert replay["reason_code"] == "idempotent-replay"
 
 
+def test_missing_current_slice_emits_replayable_absent_relation_transaction(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["status"] = "active"
+    lane["current_slice"] = ""
+    lane["slice_sequence"] = [
+        {
+            "id": "slice-one",
+            "title": "Slice One",
+            "status": "active",
+            "execplan_ref": ".agentic-workspace/planning/execplans/slice-one.plan.json",
+            "depends_on": [],
+            "purpose_for_lane": "The one executable replacement for an absent relation.",
+        }
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+    _write_execplan_fixture(tmp_path / ".agentic-workspace/planning/execplans/slice-one.plan.json", item_id="slice-one", status="planned")
+
+    warning = next(
+        item
+        for item in planning_summary(target=tmp_path, profile="compact")["planning_surface_health"]["warnings"]
+        if item["repair_affordance"]["reason_code"] == "active-lane-current-slice-missing"
+    )
+    affordance = warning["repair_affordance"]
+    option = next(item for item in affordance["repair_options"] if item["action"] == "supersede-absent-relation")
+    assert affordance["relation_identity"] == "lane:activation-lane:current_slice:__absent__"
+    assert affordance["subject_id"] == "__absent__"
+    assert "--subject __absent__" in option["preview_command"]
+    assert option["apply_command"].endswith("--apply-lane-current-slice-reconcile")
+    assert not [item for item in affordance["repair_options"] if item["action"] in {"restore-referenced-owner", "relink-existing-owner"}]
+
+    preview = planning_reconcile(
+        target=tmp_path,
+        lane="activation-lane",
+        transition="supersede",
+        expected_execplan=".agentic-workspace/planning/execplans/slice-one.plan.json",
+    )["lane_current_slice_reconciliation"]
+    assert preview["status"] == "preview"
+    assert preview["relation_identity"] == affordance["relation_identity"]
+    assert preview["subject_id"] == affordance["subject_id"]
+
+    mismatched = planning_reconcile(
+        target=tmp_path,
+        lane="activation-lane",
+        owner_surface=preview["owner_surface"],
+        relation_identity=preview["relation_identity"],
+        subject="slice-one",
+        expected_lane_revision=preview["current_lane_revision"],
+        expected_planning_revision=preview["current_planning_revision"],
+        transition="supersede",
+        expected_execplan=".agentic-workspace/planning/execplans/slice-one.plan.json",
+        apply_lane_current_slice_reconcile=True,
+    )["lane_current_slice_reconciliation"]
+    assert mismatched["reason_code"] == "subject-mismatch"
+
+    applied = planning_reconcile(
+        target=tmp_path,
+        lane="activation-lane",
+        owner_surface=preview["owner_surface"],
+        relation_identity=preview["relation_identity"],
+        subject=preview["subject_id"],
+        expected_lane_revision=preview["current_lane_revision"],
+        expected_planning_revision=preview["current_planning_revision"],
+        transition="supersede",
+        expected_execplan=".agentic-workspace/planning/execplans/slice-one.plan.json",
+        apply_lane_current_slice_reconcile=True,
+    )["lane_current_slice_reconciliation"]
+    assert applied["status"] == "applied"
+    assert applied["receipt"]["subject_id"] == "__absent__"
+    assert json.loads(lane_path.read_text(encoding="utf-8"))["current_slice"] == "slice-one"
+    post_warnings = planning_summary(target=tmp_path, profile="compact")["planning_surface_health"]["warnings"]
+    assert not [
+        item for item in post_warnings if item.get("repair_affordance", {}).get("reason_code") == "active-lane-current-slice-missing"
+    ]
+
+    replay = planning_reconcile(
+        target=tmp_path,
+        lane="activation-lane",
+        owner_surface=preview["owner_surface"],
+        relation_identity=preview["relation_identity"],
+        subject=preview["subject_id"],
+        expected_lane_revision=preview["current_lane_revision"],
+        expected_planning_revision=preview["current_planning_revision"],
+        transition="supersede",
+        expected_execplan=".agentic-workspace/planning/execplans/slice-one.plan.json",
+        apply_lane_current_slice_reconcile=True,
+    )["lane_current_slice_reconciliation"]
+    assert replay["status"] == "already-applied"
+    assert replay["reason_code"] == "idempotent-replay"
+
+
 def test_lane_current_slice_reconcile_supersede_and_cancel_are_distinct_transactions(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
