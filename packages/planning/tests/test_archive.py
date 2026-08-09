@@ -215,46 +215,69 @@ def test_compact_retained_archive_is_available_through_public_cli(tmp_path: Path
 
 def test_retention_batch_keeps_hundreds_of_closeouts_within_checked_in_budget(tmp_path: Path) -> None:
     archive_root = tmp_path / ".agentic-workspace/planning/execplans/archive"
-    archive_root.mkdir(parents=True)
-    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
-    for index in range(3):
+    evidence_root = tmp_path / ".agentic-workspace/planning/closeout-evidence"
+    export_root = tmp_path / ".agentic-workspace/local/planning-archive-exports"
+    install_bootstrap(target=tmp_path)
+    batch_size = 20
+    total_count = 200
+
+    for index in range(total_count):
         plan_id = f"history-{index:03d}"
-        record_path = tmp_path / ".agentic-workspace/planning/execplans" / f"{plan_id}.plan.json"
-        _write_execplan_record(record_path, status="completed")
-        record = json.loads(record_path.read_text(encoding="utf-8"))
-        record["id"] = plan_id
-        record["title"] = f"Retained {plan_id}"
-        record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-        closed = archive_execplan(plan_id, target=tmp_path, apply_cleanup=True, retain_archive=True)
+        created = installer_mod.create_execplan_scaffold(
+            plan_id=plan_id,
+            title=f"Retained {plan_id}",
+            target=tmp_path,
+            prep_only=True,
+        )
+        assert any(action.kind == "created" for action in created.actions)
+        closed = installer_mod.closeout_execplan(
+            plan_id,
+            target=tmp_path,
+            proof_from="supported lifecycle scale fixture",
+            retain_archive=True,
+            what_happened=f"Completed {plan_id} through the supported Planning lifecycle.",
+            scope_touched="Planning retention scale fixture",
+            changed_surfaces="canonical execplan, archive, and closeout evidence",
+            review_summary="Supported lifecycle closeout reviewed.",
+            outcome_summary=f"Delivered {plan_id}",
+        )
+        assert not closed.warnings
         assert (archive_root / f"{plan_id}.plan.json").exists(), [(action.kind, action.detail) for action in closed.actions]
 
-    for index in range(3, 200):
-        path = archive_root / f"history-{index:03d}.plan.json"
-        path.write_text(
-            json.dumps(_retained_archive_record(f"history-{index:03d}", padding=4_000), indent=2) + "\n",
-            encoding="utf-8",
-        )
+        archives = list(archive_root.glob("*.plan.json"))
+        assert len(archives) <= batch_size
+        assert sum(path.stat().st_size for path in archives) < 512 * 1024
+        if (index + 1) % batch_size == 0:
+            preview = installer_mod.archive_execplan(
+                "all-archived",
+                target=tmp_path,
+                compact_retained=True,
+                dry_run=True,
+            )
+            assert preview.operation_receipt["candidate_count"] == batch_size
+            assert preview.operation_receipt["receipt_bytes"] < preview.operation_receipt["source_bytes"]
+            applied = installer_mod.archive_execplan(
+                "all-archived",
+                target=tmp_path,
+                compact_retained=True,
+                apply_cleanup=True,
+            )
+            assert applied.operation_receipt["candidate_count"] == batch_size
+            assert not list(archive_root.glob("*.plan.json"))
+            receipts = list(evidence_root.glob("*.closeout.json"))
+            assert len(receipts) == index + 1
+            assert sum(path.stat().st_size for path in receipts) < 2 * 1024 * 1024
 
-    preview = installer_mod.archive_execplan(
-        "all-archived",
-        target=tmp_path,
-        compact_retained=True,
-        dry_run=True,
-    )
-    assert preview.operation_receipt["candidate_count"] == 200
-    assert preview.operation_receipt["receipt_bytes"] < preview.operation_receipt["source_bytes"] / 2
-
-    applied = installer_mod.archive_execplan(
-        "all-archived",
-        target=tmp_path,
-        compact_retained=True,
-        apply_cleanup=True,
-    )
-    receipts = list((tmp_path / ".agentic-workspace/planning/closeout-evidence").glob("*.closeout.json"))
-    assert applied.operation_receipt["candidate_count"] == 200
+    receipts = list(evidence_root.glob("*.closeout.json"))
     assert not list(archive_root.glob("*.plan.json"))
-    assert len(receipts) == 200
+    assert len(receipts) == total_count
     assert sum(path.stat().st_size for path in receipts) < 2 * 1024 * 1024
+    for plan_id in ("history-000", "history-199"):
+        receipt = json.loads((evidence_root / f"{plan_id}.closeout.json").read_text(encoding="utf-8"))
+        exported = export_root / f"{plan_id}.plan.json"
+        assert exported.exists()
+        assert receipt["retention"]["source_sha256"] == hashlib.sha256(exported.read_bytes()).hexdigest()
+        assert json.loads(receipt["retention"]["dropped_top_level_fields"])
 
 
 def test_archive_execplan_removes_completed_plan_after_distillation(tmp_path: Path) -> None:
