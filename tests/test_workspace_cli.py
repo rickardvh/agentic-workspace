@@ -11429,6 +11429,15 @@ def test_session_improvement_intake_separates_session_and_repo_wide_scopes(tmp_p
     assert "--section improvement_intake --format json" in unavailable["repo_wide_existing"]["full_scan_command"]
     assert "large_file" not in json.dumps(unavailable)
 
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "improvement_intake", "--format", "json"]) == 0
+    missing_cache_intake = json.loads(capsys.readouterr().out)["answer"]
+    assert missing_cache_intake["session_admission"] == {
+        "status": "unavailable",
+        "candidate_count": 0,
+        "missing_cache": True,
+        "decision": "not-a-candidate-until-session-evidence-is-captured",
+    }
+
     cache_path.write_text(
         json.dumps(
             {
@@ -11451,6 +11460,29 @@ def test_session_improvement_intake_separates_session_and_repo_wide_scopes(tmp_p
     repo_wide = json.loads(capsys.readouterr().out)["answer"]
     assert repo_wide["intake_scope"]["status"] == "explicit_repo_wide_requested"
     assert "repo_wide_existing_candidates" in repo_wide
+    assert repo_wide["session_admission"]["status"] == "session_observed"
+    assert repo_wide["session_admission"]["candidate_count"] == 1
+    assert any(
+        item["source"] == "session_improvement_intake.session_observed_signals" and item["routing_decision"]["status"] == "candidate"
+        for item in repo_wide["candidate_sample"]
+    )
+
+    cache_path.write_text(
+        json.dumps(
+            {
+                "status": "unresolved",
+                "signals": ["The opaque proof run exceeded 12 minutes without progress reporting"],
+                "routing_decision": "route_now",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "improvement_intake", "--format", "json"]) == 0
+    long_proof = json.loads(capsys.readouterr().out)["answer"]
+    decision = next(item for item in long_proof["candidate_sample"] if "12 minutes" in item["symptom"])
+    assert decision["routing_decision"]["status"] == "candidate"
+    assert decision["routing_decision"]["owner"] == "workspace"
+    assert decision["routing_decision"]["confidence"] == "high"
 
 
 def test_selected_dogfooding_report_sections_stay_compact(tmp_path: Path, capsys) -> None:
@@ -11496,24 +11528,35 @@ def test_repo_friction_prioritizes_tracked_source_and_explains_deduplicated_inta
     generated = tmp_path / "generated/workspace/python/large.py"
     generated.parent.mkdir(parents=True, exist_ok=True)
     generated.write_text("\n".join("generated" for _ in range(800)) + "\n", encoding="utf-8")
-    validation_plan = tmp_path / "docs/maintainer/validation-runtime-2435/validation-plan.json"
-    validation_plan.parent.mkdir(parents=True, exist_ok=True)
-    validation_plan.write_text(
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("check: test-workspace lint-workspace\n\ntest-workspace:\n\nlint-workspace:\n", encoding="utf-8")
+    setup_findings = tmp_path / "tools/setup-findings.json"
+    setup_findings.parent.mkdir(parents=True, exist_ok=True)
+    setup_findings.write_text(
         json.dumps(
             {
-                "constituents": [{"id": "test.workspace", "command": "make test-workspace", "dependencies": []}],
-                "trace_fixtures": [
+                "kind": "workspace-setup-findings/v1",
+                "findings": [
                     {
-                        "id": "full",
-                        "command": "make check-bounded-parallel",
-                        "events": [{"constituent_id": "test.workspace", "outcome": "passed"}],
+                        "class": "repo_friction_evidence",
+                        "summary": f"Validation run #{issue} collided with run id 123456",
+                        "confidence": 0.95,
+                        "refs": [f"#{issue}"],
+                        "observed_during": "proof",
+                        "cost": "rerun",
+                        "suspected_owner": "validation runtime",
+                        "signal_kind": "validation_friction",
+                        "likely_remediation": "validation",
+                        "recurrence": "repeated",
+                        "issue_ref": f"#{issue}",
                     }
+                    for issue in (2443, 2444)
                 ],
             }
         ),
         encoding="utf-8",
     )
-    subprocess.run(["git", "add", *tracked_files, validation_plan.relative_to(tmp_path).as_posix()], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", *tracked_files, "Makefile", "tools/setup-findings.json"], cwd=tmp_path, check=True)
 
     assert cli.main(["report", "--target", str(tmp_path), "--section", "repo_friction", "--format", "json"]) == 0
     friction = json.loads(capsys.readouterr().out)["answer"]
@@ -11525,38 +11568,27 @@ def test_repo_friction_prioritizes_tracked_source_and_explains_deduplicated_inta
     assert generated.relative_to(tmp_path).as_posix() not in json.dumps(friction["large_file_hotspots"])
     assert friction["proof_route_completeness"]["status"] == "complete"
     assert friction["proof_route_completeness"]["classification"] == "declared-dependency-closure"
+    assert friction["scan_budget"]["elapsed_ms"] < friction["scan_budget"]["default_elapsed_budget_ms"]
+    assert friction["scan_budget"]["history_strategy"].startswith("one bulk git history query")
 
     assert cli.main(["report", "--target", str(tmp_path), "--section", "improvement_intake", "--format", "json"]) == 0
     intake = json.loads(capsys.readouterr().out)["answer"]
-    assert intake["candidate_count"] == 3
+    assert intake["candidate_count"] == 4
     assert all(item["evidence_fingerprint"] for item in intake["candidate_sample"])
     assert all(item["routing_decision"]["reason"] for item in intake["candidate_sample"])
     assert all(item["routing_decision"]["owner"] for item in intake["candidate_sample"])
 
-    duplicate_candidates = [
-        {
-            **workspace_runtime_core._improvement_signal_candidate(
-                kind="validation_friction",
-                observed_during="proof",
-                symptom=f"Validation run #{issue} collided with run id 123456",
-                cost="rerun",
-                suspected_owner="validation runtime",
-                likely_remediation="validation",
-                confidence="high",
-                recurrence="repeated",
-                immediate_action="route",
-                retention="shrink_after_fix",
-                source="setup_findings.promotable.repo_friction_evidence",
-            ),
-            "issue_ref": f"#{issue}",
-        }
-        for issue in (2443, 2444)
-    ]
-    deduped = workspace_runtime_core._dedupe_improvement_candidates(duplicate_candidates)
-    assert len(deduped) == 1
-    assert deduped[0]["equivalent_evidence_count"] == 2
-    assert deduped[0]["routing_decision"]["status"] == "existing-owner"
-    assert deduped[0]["routing_decision"]["equivalent_issue_refs"] == ["#2443", "#2444"]
+    existing_owner = next(
+        item for item in intake["candidate_sample"] if item["routing_decision"].get("equivalent_issue_refs") == ["#2443", "#2444"]
+    )
+    assert existing_owner["equivalent_evidence_count"] == 2
+    assert existing_owner["routing_decision"]["equivalent_issue_refs"] == ["#2443", "#2444"]
+
+    makefile.write_text("check: missing-proof-target\n", encoding="utf-8")
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "repo_friction", "--format", "json"]) == 0
+    incomplete = json.loads(capsys.readouterr().out)["answer"]["proof_route_completeness"]
+    assert incomplete["status"] == "incomplete"
+    assert incomplete["missing_constituent_ids"] == ["missing-proof-target"]
 
     findings = workspace_runtime_core._structured_findings_payload(
         source_payload={

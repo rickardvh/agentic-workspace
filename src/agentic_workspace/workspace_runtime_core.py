@@ -5621,8 +5621,18 @@ def _dedupe_improvement_candidates(candidates: list[dict[str, Any]]) -> list[dic
     deduped: list[dict[str, Any]] = []
     for fingerprint, records in grouped.items():
         candidate = copy.deepcopy(records[0])
-        issue_refs = sorted({str(record.get("issue_ref") or "").strip() for record in records if record.get("issue_ref")})
-        candidate["equivalent_evidence_count"] = len(records)
+        issue_refs = sorted(
+            {
+                ref
+                for record in records
+                for ref in [
+                    str(record.get("issue_ref") or "").strip(),
+                    *[str(item).strip() for item in _list_payload(_as_dict(record.get("routing_decision")).get("equivalent_issue_refs"))],
+                ]
+                if ref
+            }
+        )
+        candidate["equivalent_evidence_count"] = sum(max(1, int(record.get("equivalent_evidence_count") or 1)) for record in records)
         candidate["evidence_exemplars"] = [str(record.get("symptom") or "") for record in records[:3]]
         if issue_refs:
             candidate["issue_ref"] = issue_refs[0]
@@ -5767,6 +5777,52 @@ def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, A
                     candidate[optional_field] = copy.deepcopy(item[optional_field])
             candidates.append(candidate)
     return _dedupe_improvement_candidates(candidates)[:5]
+
+
+def _improvement_signal_candidates_from_session_intake(
+    *, target_root: Path | None, config: WorkspaceConfig | None
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if target_root is None or config is None:
+        return [], {"status": "not-evaluated", "reason": "workspace context unavailable"}
+    session_intake = _session_improvement_intake_payload(target_root=target_root, config=config, cli_invoke=config.cli_invoke)
+    status = str(session_intake.get("status") or "unknown")
+    candidates: list[dict[str, Any]] = []
+    active_outcomes = {"unresolved", "recorded_chat_only", "recorded_session_only", "routed_to_issue"}
+    destinations = [
+        str(item)
+        for decision in _list_payload(session_intake.get("routing_decisions"))
+        if isinstance(decision, dict)
+        for item in _list_payload(decision.get("destinations"))
+        if str(item).strip()
+    ]
+    issue_ref = next((item for item in destinations if re.fullmatch(r"#\d+", item)), "")
+    for signal in _list_payload(session_intake.get("session_observed_signals")):
+        if not isinstance(signal, dict) or str(signal.get("outcome") or "") not in active_outcomes:
+            continue
+        candidate = _improvement_signal_candidate(
+            kind="workflow_cost",
+            observed_during="current agent session",
+            symptom=str(signal.get("signal") or "session friction needs an explicit intake decision"),
+            cost="Current-session friction can repeat or disappear unless it enters the durable intake route.",
+            suspected_owner="workspace",
+            likely_remediation="agent_aid",
+            confidence="high" if "minute" in str(signal.get("signal") or "").lower() else "medium",
+            recurrence="repeated" if "repeat" in str(signal.get("signal") or "").lower() else "first_seen",
+            immediate_action="route",
+            retention="shrink_after_fix",
+            source="session_improvement_intake.session_observed_signals",
+        )
+        if issue_ref:
+            candidate["issue_ref"] = issue_ref
+        candidates.append(candidate)
+    return candidates, {
+        "status": status,
+        "candidate_count": len(candidates),
+        "missing_cache": status == "unavailable",
+        "decision": (
+            "not-a-candidate-until-session-evidence-is-captured" if status == "unavailable" else "normalized-through-shared-intake"
+        ),
+    }
 
 
 def _improvement_pressure_state(candidate: dict[str, Any]) -> str:
@@ -6019,7 +6075,9 @@ def _improvement_intake_payload(
 ) -> dict[str, Any]:
     setup_findings = _setup_findings_input_payload(target_root=target_root) if target_root is not None else None
     review_enabled = bool(config and "review_artifacts" in config.advanced_features)
-    signal_candidates = _improvement_signal_candidates_from_repo_friction(repo_friction)
+    repo_candidates = _improvement_signal_candidates_from_repo_friction(repo_friction)
+    session_candidates, session_admission = _improvement_signal_candidates_from_session_intake(target_root=target_root, config=config)
+    signal_candidates = _dedupe_improvement_candidates([*repo_candidates, *session_candidates])[:5]
     source_checkout = _is_agentic_workspace_source_checkout(target_root)
     subtypes: list[dict[str, Any]] = [
         {
@@ -6104,7 +6162,7 @@ def _improvement_intake_payload(
             "status": "explicit_repo_wide_requested" if isinstance(repo_friction, dict) else "session_scoped_default",
             "session_section": "session_improvement_intake",
             "repo_wide_section": "improvement_intake",
-            "rule": "Fresh session signals stay in session_improvement_intake; repo-wide diagnostics are available when this section is requested explicitly.",
+            "rule": "Fresh admitted session signals and repo-wide findings share one normalization, fingerprint, deduplication, and candidacy path; the session section remains the capture surface.",
         },
         "audience_boundary": {
             "status": "source-checkout" if source_checkout else "target-repo",
@@ -6155,6 +6213,7 @@ def _improvement_intake_payload(
             "Preserve provenance and confidence when a signal is routed.",
         ],
         "improvement_signal_candidates": signal_candidates,
+        "session_admission": session_admission,
         "candidate_decisions": [copy.deepcopy(item.get("routing_decision", {})) for item in signal_candidates],
         "non_candidate_decisions": []
         if signal_candidates

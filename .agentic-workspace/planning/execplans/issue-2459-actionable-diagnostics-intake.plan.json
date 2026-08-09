@@ -3,9 +3,9 @@
   "id": "issue-2459-actionable-diagnostics-intake",
   "title": "Make diagnostics source-aware and improvement intake actionable",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "shaping",
-  "revision": 3,
+  "lifecycle": "closed",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Ordinary diagnostics prioritize Git-tracked source, aggregate equivalent evidence, explain intake decisions, and derive full-proof completeness from declared dependency authority.",
     "non_goals": [
@@ -83,5 +83,59 @@
       "target": "planning://delegation/keep-local",
       "revision": 1
     }
-  ]
+  ],
+  "active_milestone": {
+    "status": "completed",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "what happened": "Completed ordinary-path owner deduplication, admitted session evidence normalization, maintained proof closure discovery, bounded bulk history metrics, and corrected proof-route/manual-evidence closeout classification.",
+    "scope touched": "diagnostic intake, repo-friction reporting, and proof-route closeout classification",
+    "changed surfaces": "src/agentic_workspace/reporting_support.py, src/agentic_workspace/workspace_runtime_core.py, tests/test_workspace_cli.py, .agentic-workspace/config.toml, src/agentic_workspace/workspace_runtime_proof.py, tests/test_workspace_proof_cli.py",
+    "validations run": "3 diagnostic/intake tests, 3 route-classification tests, 44 routed proof tests, typecheck, and runtime mirror report passed",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "All blocker acceptance paths are public-report fixtures; budget evidence is explicit; manual review remains a completion obligation without becoming a route-authority defect.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Issue 2459 intent is satisfied with public ordinary-path proof.",
+    "validation confirmed": "3 diagnostic/intake tests, 3 route-classification tests, 44 routed proof tests, typecheck, and runtime mirror report passed",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "3 diagnostic/intake tests, 3 route-classification tests, 44 routed proof tests, typecheck, and runtime mirror report passed",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "proof_report": {
+    "validation proof": "3 diagnostic/intake tests, 3 route-classification tests, 44 routed proof tests, typecheck, and runtime mirror report passed",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "3 diagnostic/intake tests, 3 route-classification tests, 44 routed proof tests, typecheck, and runtime mirror report passed"
+  }
 }
