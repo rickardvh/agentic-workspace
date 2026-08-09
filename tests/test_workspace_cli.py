@@ -1087,7 +1087,7 @@ def test_repeated_singular_module_alias_accumulates_module_selection(tmp_path: P
 
 def test_lifecycle_guidance_uses_canonical_modules_option(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--modules", "planning,memory", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+    assert cli.main(["init", "--modules", "planning,memory", "--target", str(tmp_path), "--dry-run", "--verbose", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
     command_text = json.dumps(payload["lifecycle_plan"])
@@ -1106,6 +1106,7 @@ def test_init_ordinary_footprint_omits_package_payload_and_writes_receipt(tmp_pa
                 str(tmp_path),
                 "--modules",
                 "planning,memory",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -1149,6 +1150,7 @@ def test_init_adopts_local_state_and_uses_local_scratch_handoff(tmp_path: Path, 
                 str(tmp_path),
                 "--modules",
                 "planning,memory",
+                "--verbose",
                 "--format",
                 "json",
             ]
@@ -5837,6 +5839,97 @@ def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Pa
     assert "implementation_allowed cannot bypass workflow" in payload["workflow_participation"]["rule"]
 
 
+def _recursive_json_field_count(value: object) -> int:
+    if isinstance(value, dict):
+        return len(value) + sum(_recursive_json_field_count(item) for item in value.values())
+    if isinstance(value, list):
+        return sum(_recursive_json_field_count(item) for item in value)
+    return 0
+
+
+def _assert_versioned_output_budget(payload: dict[str, object], budget: dict[str, object]) -> None:
+    encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    assert len(encoded) <= int(budget["max_json_bytes"])
+    assert _recursive_json_field_count(payload) <= int(budget["max_field_count"])
+    assert (len(encoded) + 3) // 4 <= int(budget["max_estimated_tokens"])
+
+
+def test_lifecycle_defaults_obey_versioned_output_budgets(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["init", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+    cold_init = json.loads(capsys.readouterr().out)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    applied_init = json.loads(capsys.readouterr().out)
+    assert cli.main(["init", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+    warm_init = json.loads(capsys.readouterr().out)
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix one docs typo", "--format", "json"]) == 0
+    start = json.loads(capsys.readouterr().out)
+    assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
+    doctor = json.loads(capsys.readouterr().out)
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "operational_compression", "--format", "json"]) == 0
+    measures = json.loads(capsys.readouterr().out)["answer"]["measures"]
+    budget_contract = measures["ordinary_default_output_budget"]
+    budgets = {item["surface"]: item for item in budget_contract["representative_surfaces"]}
+
+    assert budget_contract["schema_version"] == "workspace-output-profile-budgets/v2"
+    for required_dimension in ("json_bytes", "field_count", "estimated_tokens", "human_lines"):
+        assert required_dimension in budget_contract["measurement"]
+    for payload in (cold_init, applied_init, warm_init):
+        _assert_versioned_output_budget(payload, budgets["init"])
+        assert payload["kind"] == "agentic-workspace/lifecycle-decision-envelope/v1"
+        assert payload["profile"] == "decision-envelope/v1"
+        assert "--verbose" in payload["detail"]["verbose_command"]
+        assert "module_reports" not in payload
+        assert "config" not in payload
+    _assert_versioned_output_budget(start, budgets["start"])
+    _assert_versioned_output_budget(report, budgets["report"])
+    _assert_versioned_output_budget(doctor, budgets["doctor"])
+    assert cold_init.keys() == warm_init.keys()
+    assert cold_init["decision"]["mutation"] == "planned-only"
+    assert applied_init["decision"]["mutation"] == "applied"
+
+    assert cli.main(["init", "--target", str(tmp_path), "--dry-run", "--verbose", "--format", "json"]) == 0
+    verbose_init = json.loads(capsys.readouterr().out)
+    assert "module_reports" in verbose_init
+    assert "config" in verbose_init
+
+    text_commands = [
+        ["init", "--target", str(tmp_path), "--dry-run"],
+        ["start", "--target", str(tmp_path), "--task", "Fix one docs typo"],
+        ["report", "--target", str(tmp_path)],
+        ["doctor", "--target", str(tmp_path)],
+    ]
+    for argv, surface in zip(text_commands, ("init", "start", "report", "doctor"), strict=True):
+        assert cli.main(argv) == 0
+        human_lines = [line for line in capsys.readouterr().out.splitlines() if line.strip()]
+        assert len(human_lines) <= int(budgets[surface]["max_human_lines"])
+
+
+def test_init_default_skips_verbose_config_projection(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    original = workspace_runtime_core._config_payload
+    calls: list[object] = []
+
+    def recording_config_payload(*args, **kwargs):
+        calls.append((args, kwargs))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(workspace_runtime_core, "_config_payload", recording_config_payload)
+
+    assert cli.main(["init", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+    compact = json.loads(capsys.readouterr().out)
+    assert compact["profile"] == "decision-envelope/v1"
+    assert calls == []
+
+    assert cli.main(["init", "--target", str(tmp_path), "--dry-run", "--verbose", "--format", "json"]) == 0
+    verbose = json.loads(capsys.readouterr().out)
+    assert calls
+    assert "config" in verbose
+
+
 def test_operational_compression_surfaces_checked_default_output_budget(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -5850,6 +5943,8 @@ def test_operational_compression_surfaces_checked_default_output_budget(tmp_path
     surfaces = {item["surface"]: item for item in budget["representative_surfaces"]}
 
     assert budget["status"] == "checked"
+    assert budget["kind"] == "workspace-ordinary-default-output-budget/v2"
+    assert budget["schema_version"] == "workspace-output-profile-budgets/v2"
     assert budget["advisory_only"] is False
     assert inventory["status"] == "checked"
     assert inventory["budget_proven_count"] >= 2
@@ -5861,7 +5956,13 @@ def test_operational_compression_surfaces_checked_default_output_budget(tmp_path
         "proof",
     }
     assert surfaces["start"]["status"] == "budget-proven"
-    assert surfaces["summary"]["status"] == "retained-with-evidence"
+    assert surfaces["init"]["status"] == "budget-proven"
+    assert surfaces["doctor"]["status"] == "budget-proven"
+    assert all(
+        key in surfaces["init"]
+        for key in ("max_json_bytes", "max_field_count", "max_estimated_tokens", "max_human_lines", "expansion_trigger")
+    )
+    assert surfaces["summary"]["status"] == "budget-proven"
     assert budget["selector_relocations"][0]["default_state"] == "selector-routed"
 
 

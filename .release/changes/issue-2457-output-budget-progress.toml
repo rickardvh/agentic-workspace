@@ -1,0 +1,3 @@
+kind = "patch"
+summary = "Enforce lifecycle output budgets and report bounded progress for long-running validation commands."
+issue = 2457

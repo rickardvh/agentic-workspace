@@ -51907,6 +51907,7 @@ _cleanup_legacy_local_scratch: Any = _workspace_runtime_core._cleanup_legacy_loc
 _workspace_status_report: Any = _workspace_runtime_core._workspace_status_report
 _workspace_init_or_upgrade_report: Any = _workspace_runtime_core._workspace_init_or_upgrade_report
 _run_init: Any = _workspace_runtime_core._run_init
+_run_init_lifecycle_adapter: Any = _workspace_runtime_core._run_init_lifecycle_adapter
 _run_legacy_scratch_cleanup: Any = _workspace_runtime_core._run_legacy_scratch_cleanup
 _run_lazy_report_section_command: Any = _workspace_runtime_core._run_lazy_report_section_command
 _run_report_command: Any = _workspace_runtime_core._run_report_command

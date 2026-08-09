@@ -1,0 +1,84 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2457-output-budget-progress",
+  "title": "Enforce output budgets and bounded progress reporting",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "shaping",
+  "revision": 1,
+  "intent": {
+    "outcome": "Enforce versioned decision-envelope budgets across ordinary lifecycle output and give long-running compact validation commands bounded periodic progress without flooding logs.",
+    "non_goals": [
+      "Do not hide blockers, proof gaps, uncertainty, residue, or claim boundaries to meet a budget.",
+      "Do not introduce parallel compact APIs or truncate payloads after constructing them.",
+      "Do not stream captured child output during successful validation runs."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2457",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Define byte, field, line, and estimated-token ceilings for named ordinary profiles.",
+      "Compress ordinary init output into a decision envelope while retaining explicit verbose drill-down.",
+      "Enforce representative cold and warm init/start/report/doctor budgets in package tests.",
+      "Emit bounded periodic progress from the compact command runner while child output remains captured."
+    ],
+    "effects": [
+      "src/agentic_workspace/contracts/cli_option_groups.json and generated command adapters gain init --verbose.",
+      "src/agentic_workspace/workspace_runtime_core.py owns init projection and operational-compression budget evidence.",
+      "scripts/check/run_compact_command.py reports elapsed progress at a configurable positive interval.",
+      "Focused tests and docs lock output and progress contracts."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected",
+      "owner": "issue #2457"
+    },
+    "proof_posture": {
+      "state": "required",
+      "refs": [
+        "tests/test_output_profile_budgets.py",
+        "tests/test_compact_command_runner.py",
+        "scripts/check/check_generated_command_packages.py"
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2457",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2457",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Implement the shared budget contract, init decision envelope, representative lifecycle fixtures, and bounded progress heartbeat.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Enforce output budgets and bounded progress reporting is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run pytest tests/test_output_profile_budgets.py tests/test_compact_command_runner.py -q",
+      "uv run pytest tests/test_workspace_cli.py -k 'ordinary_default_output_budget or init_default' -q",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "make typecheck"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": []
+}

@@ -17,6 +17,7 @@ LOG_ROOT = REPO_ROOT / "scratch" / "command-logs"
 RESULT_ROOT = REPO_ROOT / "scratch" / "validation-results"
 PLAN_PATH = REPO_ROOT / "docs" / "maintainer" / "validation-runtime-2435" / "validation-plan.json"
 DEFAULT_FAILURE_TAIL_LINES = 80
+DEFAULT_PROGRESS_INTERVAL_SECONDS = 30.0
 TIMEOUT_EXIT_CODE = 124
 DUPLICATE_EXIT_CODE = 125
 MANIFEST_LOCK_WAIT_SECONDS = 10.0
@@ -183,9 +184,7 @@ def _load_plan_metadata(label: str) -> dict[str, object]:
     if not isinstance(metadata, dict):
         return {}
     constituent_id = str(metadata.get("id") or "")
-    constituents = {
-        str(item.get("id")): item for item in plan.get("constituents", []) if isinstance(item, dict) and item.get("id")
-    }
+    constituents = {str(item.get("id")): item for item in plan.get("constituents", []) if isinstance(item, dict) and item.get("id")}
     constituent = constituents.get(constituent_id, {})
     merged = dict(constituent)
     merged.update(metadata)
@@ -365,6 +364,8 @@ def _run_command(
     *,
     cwd: Path,
     timeout_seconds: float | None,
+    progress_interval_seconds: float,
+    progress_label: str,
 ) -> tuple[int | None, str, str, bool]:
     popen_kwargs: dict[str, object] = {
         "cwd": cwd,
@@ -380,15 +381,31 @@ def _run_command(
         popen_kwargs["start_new_session"] = True
 
     process = subprocess.Popen(command, **popen_kwargs)
-    try:
-        stdout, stderr = process.communicate(timeout=timeout_seconds)
-        return process.returncode, stdout or "", stderr or "", False
-    except subprocess.TimeoutExpired as exc:
-        _terminate_process_tree(process)
-        stdout, stderr = process.communicate()
-        combined_stdout = _combine_output(exc.stdout, stdout)
-        combined_stderr = _combine_output(exc.stderr, stderr)
-        return None, combined_stdout, combined_stderr, True
+    started = time.monotonic()
+    deadline = started + timeout_seconds if timeout_seconds is not None else None
+    next_progress = started + progress_interval_seconds
+    while True:
+        now = time.monotonic()
+        wait_until = next_progress if deadline is None else min(next_progress, deadline)
+        wait_seconds = max(0.001, wait_until - now)
+        try:
+            stdout, stderr = process.communicate(timeout=wait_seconds)
+            return process.returncode, stdout or "", stderr or "", False
+        except subprocess.TimeoutExpired as exc:
+            now = time.monotonic()
+            if deadline is not None and now >= deadline:
+                _terminate_process_tree(process)
+                stdout, stderr = process.communicate()
+                combined_stdout = _combine_output(exc.stdout, stdout)
+                combined_stderr = _combine_output(exc.stderr, stderr)
+                return None, combined_stdout, combined_stderr, True
+            elapsed = now - started
+            print(
+                f"[progress] {progress_label} still running ({_format_duration(elapsed)} elapsed; output buffered)",
+                file=sys.stderr,
+                flush=True,
+            )
+            next_progress = now + progress_interval_seconds
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -423,6 +440,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=_positive_float,
         default=None,
         help="Fail with compact timeout output after this many seconds.",
+    )
+    parser.add_argument(
+        "--progress-interval-seconds",
+        type=_positive_float,
+        default=DEFAULT_PROGRESS_INTERVAL_SECONDS,
+        help="Emit a compact still-running heartbeat after this many seconds (default: 30).",
     )
     parser.add_argument(
         "--failure-tail-lines",
@@ -481,6 +504,8 @@ def main(argv: list[str] | None = None) -> int:
         args.command,
         cwd=working_directory,
         timeout_seconds=args.timeout_seconds,
+        progress_interval_seconds=args.progress_interval_seconds,
+        progress_label=args.label,
     )
     duration_seconds = time.perf_counter() - started
     duration = _format_duration(duration_seconds)
