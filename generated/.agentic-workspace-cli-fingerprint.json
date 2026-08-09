@@ -1,5 +1,5 @@
 {
-  "file_count": 1150,
+  "file_count": 1151,
   "file_paths": [
     "generated/memory/python/__init__.py",
     "generated/memory/python/_contracts/operations/memory.adopt.lifecycle.json",
@@ -729,6 +729,7 @@
     "scripts/release/coordinated_release.py",
     "scripts/release/patch_workspace_release_wheel.py",
     "scripts/release/promote_command_generation_release.py",
+    "scripts/release/release_ownership.py",
     "scripts/render_agent_docs.py",
     "scripts/run_agentic_workspace.py",
     "src/agentic_workspace/__init__.py",
@@ -1872,7 +1873,7 @@
     "scripts/git_hooks/pre_commit.py": "b8864dec7a09b9a8d2f952db568e4f53751e0d28",
     "scripts/github/inspect_pr_checks.py": "399bed4bb89a73221a34c8227a86f66a0f4f09cf",
     "scripts/github/pr_comment_delta.py": "3f214000cab964efef134601de46e66604d11cf9",
-    "scripts/github/release_recovery_status.py": "c9452e2bf203a0dec0c0ae840a9e73f6f944afa4",
+    "scripts/github/release_recovery_status.py": "e34513b44109bd62f621876d190891f4e40b88cb",
     "scripts/install_git_hooks.py": "de89c873d801adfa6d84dd8606edaaf8ce6959ba",
     "scripts/model_cli_harness/build_sbx_codex_template.py": "fd91bf5996bc2a95aed30e2645f6ac4e38bb032b",
     "scripts/model_cli_harness/external_agent_evaluation_lane.py": "0b8243bac4a9950d29ae580765db09006a089c7b",
@@ -1882,6 +1883,7 @@
     "scripts/release/coordinated_release.py": "86966aa825e953f558bddf821aaedd2681367065",
     "scripts/release/patch_workspace_release_wheel.py": "2742046cf933eb6a7656080ac936c93436bd5f7a",
     "scripts/release/promote_command_generation_release.py": "c8ab5e1df992585540f23b526417e9ce68f6e63a",
+    "scripts/release/release_ownership.py": "3af627989b1a92c97c81056a3ce5d5e29c5b5a9a",
     "scripts/render_agent_docs.py": "d6883f8b7999ee8b0134c35d4c956550eff4c13a",
     "scripts/run_agentic_workspace.py": "9d7efe2eb74742bece7e6f3e7b50d61f25789f19",
     "src/agentic_workspace/__init__.py": "1d229549586cd82ca74b8a5371bbac24806168f3",
@@ -2305,7 +2307,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "a54e1329919341d768f0ebd512d6c3d7148759da"
   },
-  "git_index_identity": "cde5012b88cd2f577016d03f4ff91516e800d91afd376ebcb0085cf7c53e0935",
+  "git_index_identity": "b8429752d6fbdd74121999fdd1f4328c71e9fce49ff5d97a08ff66c2471fbd08",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
 }
