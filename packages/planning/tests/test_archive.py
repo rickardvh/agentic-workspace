@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import sys as _sys
 import time
 
@@ -58,6 +59,225 @@ def test_archive_size_guardrail_warns_before_oversized_archive_write(tmp_path: P
     assert warning["warning_class"] == "archive_size_guardrail_blocked"
     assert warning["path"] == ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json"
     assert "max_bytes=10" in warning["message"]
+
+
+def _retained_archive_record(plan_id: str, *, padding: int = 0) -> dict[str, object]:
+    return {
+        "kind": "planning-execplan/v1",
+        "id": plan_id,
+        "title": f"Retained {plan_id}",
+        "owner_level": "slice",
+        "revision": 1,
+        "active_milestone": {"status": "completed"},
+        "execution_summary": {
+            "outcome delivered": f"Delivered {plan_id}",
+            "follow-on routed to": "none",
+        },
+        "proof_report": {"validation proof": "pytest"},
+        "intent_satisfaction": {
+            "was original intent fully satisfied?": "yes",
+            "unsolved intent passed to": "none",
+        },
+        "closure_check": {
+            "closeout scope": "slice",
+            "larger-intent status": "closed",
+            "closure decision": "archive-and-close",
+            "reopen trigger": "new contradictory evidence",
+        },
+        "large_historical_evidence": "x" * padding,
+    }
+
+
+def test_compact_retained_archive_reports_loss_and_exports_before_removal(tmp_path: Path) -> None:
+    archive = tmp_path / ".agentic-workspace/planning/execplans/archive/old.plan.json"
+    archive.parent.mkdir(parents=True)
+    archive.write_text(json.dumps(_retained_archive_record("old", padding=20_000), indent=2) + "\n", encoding="utf-8")
+
+    preview = installer_mod.archive_execplan(
+        "old",
+        target=tmp_path,
+        compact_retained=True,
+        dry_run=True,
+    )
+
+    assert archive.exists()
+    assert preview.operation_receipt["retrievable"] is True
+    assert preview.operation_receipt["source_bytes"] > preview.operation_receipt["receipt_bytes"]
+    assert "large_historical_evidence" in preview.operation_receipt["dropped_top_level_fields"]
+    assert any(action.kind == "would export" for action in preview.actions)
+    assert any(action.kind == "would remove" for action in preview.actions)
+
+    applied = installer_mod.archive_execplan(
+        "old",
+        target=tmp_path,
+        compact_retained=True,
+        apply_cleanup=True,
+    )
+
+    receipt = tmp_path / ".agentic-workspace/planning/closeout-evidence/old.closeout.json"
+    exported = tmp_path / ".agentic-workspace/local/planning-archive-exports/old.plan.json"
+    assert applied.reason_code == "retention-applied"
+    assert not archive.exists()
+    assert receipt.exists()
+    assert exported.exists()
+    receipt_payload = json.loads(receipt.read_text(encoding="utf-8"))
+    assert receipt_payload["retention"]["source_sha256"] == hashlib.sha256(exported.read_bytes()).hexdigest()
+    assert receipt_payload["outcome"] == "Delivered old"
+    last_closeout = json.loads((tmp_path / ".agentic-workspace/local/planning-last-closeout.json").read_text(encoding="utf-8"))
+    assert last_closeout["evidence_path"] == ".agentic-workspace/planning/closeout-evidence/old.closeout.json"
+
+    from agentic_workspace import workspace_runtime_core
+
+    recovered = workspace_runtime_core._closeout_planning_record_for_report(active_planning_record={}, target_root=tmp_path)
+    assert recovered["outcome"] == "Delivered old"
+    assert recovered["proof_report"]["validation proof"] == "pytest"
+    assert recovered["residual"] == {"status": "closed", "owner": "none"}
+    assert recovered["_closeout_evidence_source"]["path"] == last_closeout["evidence_path"]
+    assert not archive.exists()
+
+
+def test_compaction_fails_closed_for_unresolved_or_stale_continuation(tmp_path: Path) -> None:
+    archive = tmp_path / ".agentic-workspace/planning/execplans/archive/open.plan.json"
+    archive.parent.mkdir(parents=True)
+    record = _retained_archive_record("open")
+    record["intent_satisfaction"] = {
+        "was original intent fully satisfied?": "no",
+        "unsolved intent passed to": "none",
+    }
+    record["closure_check"] = {
+        "closeout scope": "slice",
+        "larger-intent status": "open",
+        "closure decision": "archive-but-keep-lane-open",
+    }
+    archive.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    missing = installer_mod.archive_execplan("open", target=tmp_path, compact_retained=True, apply_cleanup=True)
+    assert missing.reason_code == "unresolved-intent-continuation-required"
+    assert archive.exists()
+    assert not (tmp_path / ".agentic-workspace/local/planning-archive-exports/open.plan.json").exists()
+
+    record["intent_satisfaction"]["unsolved intent passed to"] = ".agentic-workspace/planning/lanes/missing.lane.json"
+    archive.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    stale = installer_mod.archive_execplan("open", target=tmp_path, compact_retained=True, apply_cleanup=True)
+    assert stale.reason_code == "unresolved-intent-continuation-required"
+
+    owner = tmp_path / ".agentic-workspace/planning/lanes/follow-on.lane.json"
+    owner.parent.mkdir(parents=True)
+    owner.write_text("{}\n", encoding="utf-8")
+    record["intent_satisfaction"]["unsolved intent passed to"] = owner.relative_to(tmp_path).as_posix()
+    archive.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    routed = installer_mod.archive_execplan("open", target=tmp_path, compact_retained=True, apply_cleanup=True)
+    assert routed.reason_code == "retention-applied"
+    receipt = json.loads((tmp_path / ".agentic-workspace/planning/closeout-evidence/open.closeout.json").read_text(encoding="utf-8"))
+    assert receipt["residual"] == {"status": "open", "owner": owner.relative_to(tmp_path).as_posix()}
+
+
+def test_batch_preflights_every_continuation_before_any_mutation(tmp_path: Path) -> None:
+    archive_root = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    archive_root.mkdir(parents=True)
+    (archive_root / "a-safe.plan.json").write_text(json.dumps(_retained_archive_record("a-safe")) + "\n", encoding="utf-8")
+    unsafe = _retained_archive_record("z-unsafe")
+    unsafe["intent_satisfaction"] = {"was original intent fully satisfied?": "no", "unsolved intent passed to": "none"}
+    unsafe["closure_check"] = {"larger-intent status": "open", "closure decision": "archive-but-keep-lane-open"}
+    (archive_root / "z-unsafe.plan.json").write_text(json.dumps(unsafe) + "\n", encoding="utf-8")
+
+    result = installer_mod.archive_execplan("all-archived", target=tmp_path, compact_retained=True, apply_cleanup=True)
+    assert result.reason_code == "batch-preflight-blocked-before-mutation"
+    assert len(list(archive_root.glob("*.plan.json"))) == 2
+    assert not (tmp_path / ".agentic-workspace/planning/closeout-evidence").exists()
+
+
+def test_compact_retained_archive_is_available_through_public_cli(tmp_path: Path, capsys) -> None:
+    archive = tmp_path / ".agentic-workspace/planning/execplans/archive/cli.plan.json"
+    archive.parent.mkdir(parents=True)
+    archive.write_text(json.dumps(_retained_archive_record("cli", padding=1_000), indent=2) + "\n", encoding="utf-8")
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "cli",
+                "--target",
+                str(tmp_path),
+                "--compact-retained",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["operation_receipt"]["kind"] == "planning-archive-retention-loss-accounting/v1"
+    assert payload["mutation_applied"] is False
+    assert archive.exists()
+
+
+def test_retention_batch_keeps_hundreds_of_closeouts_within_checked_in_budget(tmp_path: Path) -> None:
+    archive_root = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    evidence_root = tmp_path / ".agentic-workspace/planning/closeout-evidence"
+    export_root = tmp_path / ".agentic-workspace/local/planning-archive-exports"
+    install_bootstrap(target=tmp_path)
+    batch_size = 20
+    total_count = 200
+
+    for index in range(total_count):
+        plan_id = f"history-{index:03d}"
+        created = installer_mod.create_execplan_scaffold(
+            plan_id=plan_id,
+            title=f"Retained {plan_id}",
+            target=tmp_path,
+            prep_only=True,
+        )
+        assert any(action.kind == "created" for action in created.actions)
+        closed = installer_mod.closeout_execplan(
+            plan_id,
+            target=tmp_path,
+            proof_from="supported lifecycle scale fixture",
+            retain_archive=True,
+            what_happened=f"Completed {plan_id} through the supported Planning lifecycle.",
+            scope_touched="Planning retention scale fixture",
+            changed_surfaces="canonical execplan, archive, and closeout evidence",
+            review_summary="Supported lifecycle closeout reviewed.",
+            outcome_summary=f"Delivered {plan_id}",
+        )
+        assert not closed.warnings
+        assert (archive_root / f"{plan_id}.plan.json").exists(), [(action.kind, action.detail) for action in closed.actions]
+
+        archives = list(archive_root.glob("*.plan.json"))
+        assert len(archives) <= batch_size
+        assert sum(path.stat().st_size for path in archives) < 512 * 1024
+        if (index + 1) % batch_size == 0:
+            preview = installer_mod.archive_execplan(
+                "all-archived",
+                target=tmp_path,
+                compact_retained=True,
+                dry_run=True,
+            )
+            assert preview.operation_receipt["candidate_count"] == batch_size
+            assert preview.operation_receipt["receipt_bytes"] < preview.operation_receipt["source_bytes"]
+            applied = installer_mod.archive_execplan(
+                "all-archived",
+                target=tmp_path,
+                compact_retained=True,
+                apply_cleanup=True,
+            )
+            assert applied.operation_receipt["candidate_count"] == batch_size
+            assert not list(archive_root.glob("*.plan.json"))
+            receipts = list(evidence_root.glob("*.closeout.json"))
+            assert len(receipts) == index + 1
+            assert sum(path.stat().st_size for path in receipts) < 2 * 1024 * 1024
+
+    receipts = list(evidence_root.glob("*.closeout.json"))
+    assert not list(archive_root.glob("*.plan.json"))
+    assert len(receipts) == total_count
+    assert sum(path.stat().st_size for path in receipts) < 2 * 1024 * 1024
+    for plan_id in ("history-000", "history-199"):
+        receipt = json.loads((evidence_root / f"{plan_id}.closeout.json").read_text(encoding="utf-8"))
+        exported = export_root / f"{plan_id}.plan.json"
+        assert exported.exists()
+        assert receipt["retention"]["source_sha256"] == hashlib.sha256(exported.read_bytes()).hexdigest()
+        assert json.loads(receipt["retention"]["dropped_top_level_fields"])
 
 
 def test_archive_execplan_removes_completed_plan_after_distillation(tmp_path: Path) -> None:

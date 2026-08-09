@@ -72,6 +72,67 @@ def test_json_payload_budget_failure_reports_largest_contributors() -> None:
     assert "context.large" in message
 
 
+def test_archive_retention_policy_reports_versioned_host_budgets_and_migration_route(tmp_path: Path) -> None:
+    archive_root = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    receipt_root = tmp_path / ".agentic-workspace/planning/closeout-evidence"
+    archive_root.mkdir(parents=True)
+    receipt_root.mkdir(parents=True)
+    for index in range(101):
+        _write(archive_root / f"plan-{index:03d}.plan.json", json.dumps({"title": str(index), "closeout_distillation": {}}))
+    _write(receipt_root / "prior.closeout.json", json.dumps({"kind": "planning-closeout-evidence/v1"}))
+
+    measure = workspace_runtime_core._archived_plan_distillation_measure(target=tmp_path)
+    policy = workspace_runtime_core._archive_retention_policy(
+        archived_distillation=measure,
+        artifact_footprint={
+            "classes": [
+                {
+                    "id": "archived_execplans",
+                    "pressure": "attention",
+                    "sample": [".agentic-workspace/planning/execplans/archive/plan-000.plan.json"],
+                }
+            ]
+        },
+    )
+
+    assert policy["kind"] == "workspace-archive-retention-policy/v2"
+    assert policy["policy_version"] == "planning-archive-retention/v2"
+    assert policy["budget_status"] == "exceeded"
+    assert policy["budgets"]["full_archive_file_count"] == {"actual": 101, "maximum": 100, "status": "exceeded"}
+    assert policy["trend"]["compact_receipts"] == 1
+    assert "--compact-retained --dry-run" in policy["dry_run_command"]
+    assert policy["ordinary_route_exclusion"]["startup"] == "excluded"
+
+
+def test_ordinary_start_does_not_read_or_emit_large_planning_archive_corpus(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    archive_root = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    archive_root.mkdir(parents=True, exist_ok=True)
+    for index in range(250):
+        (archive_root / f"historical-{index:03d}.plan.json").write_text(
+            json.dumps({"kind": "planning-execplan/v1", "id": f"historical-{index:03d}"}) + "\n", encoding="utf-8"
+        )
+
+    archive_reads: list[str] = []
+    original_read_text = Path.read_text
+
+    def observed_read_text(path: Path, *args: Any, **kwargs: Any) -> str:
+        if "/planning/execplans/archive/" in path.as_posix():
+            archive_reads.append(path.as_posix())
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", observed_read_text)
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect current routing", "--format", "json"]) == 0
+    rendered = capsys.readouterr().out
+    assert archive_reads == []
+    assert "historical-000" not in rendered
+    assert len(rendered.encode("utf-8")) < 64_000
+
+
 def test_selector_validation_error_does_not_project_valid_values_or_build_full_inventory(monkeypatch) -> None:
     class ExplodingCopy:
         def __deepcopy__(self, memo: dict[int, object]) -> object:

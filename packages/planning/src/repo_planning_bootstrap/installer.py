@@ -19921,6 +19921,8 @@ def archive_execplan(
     discard_summary: str | None = None,
     continuation_summary: str | None = None,
     retain_archive: bool = False,
+    compact_retained: bool = False,
+    export_dir: str | Path | None = None,
     expected_planning_revision: str = "",
     decision_point_carry_key: str = "",
     prune_decision_point_carry_key: str = "",
@@ -19929,6 +19931,13 @@ def archive_execplan(
     result = InstallResult(target_root=target_root, message=f"Archive execplan '{plan}'", dry_run=dry_run)
     if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
         return result
+    if compact_retained and str(plan).strip().lower() == "all-archived":
+        return _compact_all_retained_execplans(
+            target_root=target_root,
+            dry_run=dry_run,
+            apply_cleanup=apply_cleanup,
+            export_dir=export_dir,
+        )
     plan_path = _resolve_execplan_path(target_root, plan)
     if plan_path is None or not plan_path.exists():
         result.add("manual review", target_root / plan, "execplan was not found")
@@ -19936,6 +19945,14 @@ def archive_execplan(
 
     archive_dir = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive"
     if archive_dir in plan_path.parents:
+        if compact_retained:
+            return _compact_retained_execplan(
+                plan_path=plan_path,
+                target_root=target_root,
+                dry_run=dry_run,
+                apply_cleanup=apply_cleanup,
+                export_dir=export_dir,
+            )
         if prepare_closeout:
             return _prepare_archived_execplan_closeout(
                 plan_path=plan_path,
@@ -20743,6 +20760,231 @@ def archive_execplan(
                     plan_id=plan_path.name[: -len(".plan.json")] if plan_path.name.endswith(".plan.json") else plan_path.stem,
                 )
         result.add("closed", plan_path, "completed execplan removed from Planning after closeout distillation")
+    return result
+
+
+def _planning_archive_export_root(*, target_root: Path, export_dir: str | Path | None) -> Path:
+    requested = Path(export_dir) if export_dir else Path(".agentic-workspace/local/planning-archive-exports")
+    candidate = requested if requested.is_absolute() else target_root / requested
+    resolved = candidate.resolve(strict=False)
+    managed_root = (target_root / ".agentic-workspace" / "planning").resolve(strict=False)
+    if resolved == target_root.resolve() or resolved == managed_root or managed_root in resolved.parents:
+        raise ValueError("archive export must be outside checked-in .agentic-workspace/planning state")
+    for parent in (candidate, *candidate.parents):
+        if parent == target_root.parent:
+            break
+        is_junction = getattr(parent, "is_junction", lambda: False)
+        if parent.exists() and (parent.is_symlink() or is_junction()):
+            raise ValueError(f"archive export path crosses a link or junction: {parent}")
+    return resolved
+
+
+def _compact_retained_execplan(
+    *,
+    plan_path: Path,
+    target_root: Path,
+    dry_run: bool,
+    apply_cleanup: bool,
+    export_dir: str | Path | None,
+) -> InstallResult:
+    result = InstallResult(target_root=target_root, message=f"Compact retained execplan '{plan_path.name}'", dry_run=dry_run)
+    if not apply_cleanup and not dry_run:
+        result.add("manual review", plan_path, "rerun with --apply-cleanup after reviewing the dry-run loss accounting")
+        result.reason_code = "explicit-retention-apply-required"
+        return result
+    try:
+        export_root = _planning_archive_export_root(target_root=target_root, export_dir=export_dir)
+    except ValueError as exc:
+        result.add("blocked-with-reason", plan_path, str(exc))
+        result.reason_code = "unsafe-export-path"
+        return result
+    raw = plan_path.read_bytes()
+    try:
+        record = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        result.add("blocked-with-reason", plan_path, f"retained archive is not valid UTF-8 JSON: {exc}")
+        result.reason_code = "invalid-retained-archive"
+        return result
+    if not isinstance(record, dict):
+        result.add("blocked-with-reason", plan_path, "retained archive must contain a JSON object")
+        result.reason_code = "invalid-retained-archive"
+        return result
+
+    continuity_blocker = _retained_archive_continuity_blocker(target_root=target_root, record=record)
+    if continuity_blocker:
+        result.add("blocked-with-reason", plan_path, continuity_blocker)
+        result.reason_code = "unresolved-intent-continuation-required"
+        return result
+
+    export_path = export_root / plan_path.name
+    source_sha256 = hashlib.sha256(raw).hexdigest()
+    if export_path.exists() and hashlib.sha256(export_path.read_bytes()).hexdigest() != source_sha256:
+        result.add("blocked-with-reason", export_path, "export destination exists with different content; no state changed")
+        result.reason_code = "export-conflict"
+        return result
+
+    receipt_path = _closeout_evidence_record_path(target_root=target_root, destination_record=plan_path)
+    if receipt_path.exists():
+        result.add("blocked-with-reason", receipt_path, "compact receipt already exists; use its retained source identity before retrying")
+        result.reason_code = "receipt-conflict"
+        return result
+    receipt = _closeout_evidence_record(
+        closeout_record=record,
+        plan_path=plan_path,
+        target_root=target_root,
+        intended_archive_path=plan_path,
+        reason="full retained archive exported and replaced by compact durable receipt",
+        retention_state="compact-durable-receipt",
+    )
+    dropped_fields = sorted(set(str(key) for key in record) - set(str(key) for key in receipt))
+    try:
+        export_locator = export_path.relative_to(target_root.resolve()).as_posix()
+    except ValueError:
+        export_locator = export_path.as_posix()
+    receipt["retention"].update(
+        {
+            "policy": "planning-archive-retention/v2",
+            "source_sha256": source_sha256,
+            "source_bytes": str(len(raw)),
+            "export_path": export_locator,
+            "retrieval": "copy the exported JSON back to the recorded intended_archive path",
+            "dropped_top_level_fields": json.dumps(dropped_fields, separators=(",", ":")),
+        }
+    )
+    receipt_bytes = (json.dumps(receipt, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    result.operation_receipt = {
+        "kind": "planning-archive-retention-loss-accounting/v1",
+        "policy": "planning-archive-retention/v2",
+        "source": plan_path.relative_to(target_root).as_posix(),
+        "source_sha256": source_sha256,
+        "source_bytes": len(raw),
+        "receipt": receipt_path.relative_to(target_root).as_posix(),
+        "receipt_bytes": len(receipt_bytes),
+        "export": export_path.as_posix(),
+        "dropped_top_level_fields": dropped_fields,
+        "retrievable": True,
+        "mutation_applied": bool(apply_cleanup and not dry_run),
+    }
+    action_prefix = "would " if dry_run else ""
+    result.add(f"{action_prefix}export".strip(), export_path, f"full evidence sha256:{source_sha256}; {len(raw)} bytes")
+    result.add(
+        f"{action_prefix}create compact receipt".strip(),
+        receipt_path,
+        f"{len(receipt_bytes)} bytes; dropped top-level fields: {', '.join(dropped_fields) or 'none'}",
+    )
+    result.add(f"{action_prefix}remove".strip(), plan_path, "remove full archive from ordinary checked-in Planning history")
+    if dry_run:
+        return result
+
+    export_path.parent.mkdir(parents=True, exist_ok=True)
+    if not export_path.exists():
+        shutil.copy2(plan_path, export_path)
+    _write_closeout_evidence_record(record_path=receipt_path, record=receipt)
+    _write_last_closeout_context(
+        target_root=target_root,
+        plan_path=plan_path,
+        evidence_path=receipt_path,
+        plan_id=str(receipt.get("plan_id") or plan_path.stem),
+    )
+    plan_path.unlink()
+    result.reason_code = "retention-applied"
+    return result
+
+
+def _retained_archive_continuity_blocker(*, target_root: Path, record: dict[str, Any]) -> str:
+    """Fail closed before compaction can remove unresolved continuation authority."""
+    closure = _record_section_dict(record, "closure_check") or {}
+    intent = _record_section_dict(record, "intent_satisfaction") or {}
+    larger_status = str(closure.get("larger-intent status") or "").strip().lower()
+    intent_status = str(intent.get("was original intent fully satisfied?") or "").strip().lower()
+    decision = str(closure.get("closure decision") or "").strip().lower()
+    if intent_status in {"yes", "true"} and larger_status in {"closed", "complete", "completed"} and decision == "archive-and-close":
+        return ""
+
+    owner = ""
+    for section, owner_field in (
+        (_record_mapping(record, "continuation"), "owner"),
+        (intent, "unsolved intent passed to"),
+        (_record_section_dict(record, "required_continuation") or {}, "owner surface"),
+        (_record_section_dict(record, "durable_residue") or {}, "canonical owner now"),
+    ):
+        candidate = str(section.get(owner_field) or "").strip()
+        if candidate.lower() not in {"", "none", "n/a", "none yet", "unknown", "tbd"}:
+            owner = candidate
+            break
+    if not owner:
+        return "larger intent is unresolved and no explicit continuation owner is recorded; no state changed"
+    if _issue_refs_from_text(owner):
+        return ""
+    normalized = owner.replace("\\", "/").rstrip(".,;:")
+    if normalized.startswith(".agentic-workspace/"):
+        owner_path = target_root / normalized
+        if owner_path.exists() and "/archive/" not in normalized:
+            return ""
+    return "larger intent names a stale or ambiguous continuation owner; route it to a current checked-in owner or issue before compaction"
+
+
+def _compact_all_retained_execplans(
+    *,
+    target_root: Path,
+    dry_run: bool,
+    apply_cleanup: bool,
+    export_dir: str | Path | None,
+) -> InstallResult:
+    result = InstallResult(target_root=target_root, message="Compact all retained execplans", dry_run=dry_run)
+    archive_root = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive"
+    plan_paths = sorted(archive_root.glob("*.plan.json")) if archive_root.exists() else []
+    children: list[dict[str, Any]] = []
+    if not dry_run:
+        previews = [
+            _compact_retained_execplan(
+                plan_path=plan_path,
+                target_root=target_root,
+                dry_run=True,
+                apply_cleanup=False,
+                export_dir=export_dir,
+            )
+            for plan_path in plan_paths
+        ]
+        blocked = next(
+            (preview for preview in previews if any(action.kind == "blocked-with-reason" for action in preview.actions)),
+            None,
+        )
+        if blocked is not None:
+            result.actions.extend(blocked.actions)
+            result.warnings.extend(blocked.warnings)
+            result.reason_code = "batch-preflight-blocked-before-mutation"
+            result.operation_receipt = {
+                "kind": "planning-archive-retention-batch-receipt/v1",
+                "policy": "planning-archive-retention/v2",
+                "candidate_count": len(plan_paths),
+                "mutation_applied": False,
+                "blocked_before_mutation": True,
+            }
+            return result
+    for plan_path in plan_paths:
+        child = _compact_retained_execplan(
+            plan_path=plan_path,
+            target_root=target_root,
+            dry_run=dry_run,
+            apply_cleanup=apply_cleanup,
+            export_dir=export_dir,
+        )
+        result.actions.extend(child.actions)
+        result.warnings.extend(child.warnings)
+        children.append(child.operation_receipt or {"source": plan_path.relative_to(target_root).as_posix(), "status": child.reason_code})
+        if any(action.kind == "blocked-with-reason" for action in child.actions):
+            result.reason_code = "batch-stopped-before-unsafe-entry"
+            break
+    result.operation_receipt = {
+        "kind": "planning-archive-retention-batch-receipt/v1",
+        "policy": "planning-archive-retention/v2",
+        "candidate_count": len(children),
+        "source_bytes": sum(int(item.get("source_bytes") or 0) for item in children),
+        "receipt_bytes": sum(int(item.get("receipt_bytes") or 0) for item in children),
+        "entries": children,
+        "mutation_applied": bool(apply_cleanup and not dry_run and result.reason_code != "batch-stopped-before-unsafe-entry"),
+    }
     return result
 
 
