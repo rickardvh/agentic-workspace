@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,18 @@ def _sha256_json(value: Any) -> str:
     return "sha256:" + hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
-def evaluate_security_supply_chain(root: Path = REPO_ROOT) -> dict[str, Any]:
+def _sha256_file(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _source_identity(root: Path) -> str:
+    completed = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=False)
+    return completed.stdout.strip() if completed.returncode == 0 else "unversioned:" + _sha256_file(root / "uv.lock")
+
+
+def evaluate_security_supply_chain(
+    root: Path = REPO_ROOT, *, source_identity: str | None = None, artifact_dir: Path | None = None
+) -> dict[str, Any]:
     policy_path = root / POLICY_PATH
     failures: list[dict[str, str]] = []
     if not policy_path.is_file():
@@ -53,7 +65,14 @@ def evaluate_security_supply_chain(root: Path = REPO_ROOT) -> dict[str, Any]:
             action = match.group("action")
             if not PINNED_ACTION.fullmatch(action):
                 unpinned.append(f"{relative}: {action}")
-    action_ok = not missing_workflows and not unpinned and not missing_permissions
+    overbroad_permissions: list[str] = []
+    for relative, text in workflow_text.items():
+        observed_writes = set(re.findall(r"(?m)^\s*([a-z-]+):\s*write(?:\s+#.*)?$", text))
+        allowed_writes = set(policy.get("allowed_write_permissions", {}).get(relative, []))
+        unexpected = sorted(observed_writes - allowed_writes)
+        if unexpected:
+            overbroad_permissions.append(f"{relative}: {','.join(unexpected)}")
+    action_ok = not missing_workflows and not unpinned and not missing_permissions and not overbroad_permissions
     controls.append(
         {
             "id": "immutable-least-privilege-actions",
@@ -61,21 +80,43 @@ def evaluate_security_supply_chain(root: Path = REPO_ROOT) -> dict[str, Any]:
             "missing_workflows": missing_workflows,
             "unpinned": unpinned,
             "missing_permissions": missing_permissions,
+            "overbroad_permissions": sorted(set(overbroad_permissions)),
         }
     )
     if not action_ok:
         failures.append(
             {
                 "control": "immutable-least-privilege-actions",
-                "detail": f"missing={missing_workflows}; unpinned={unpinned}; missing_permissions={missing_permissions}",
+                "detail": f"missing={missing_workflows}; unpinned={unpinned}; missing_permissions={missing_permissions}; overbroad={sorted(set(overbroad_permissions))}",
             }
         )
 
     security_text = workflow_text.get(".github/workflows/security.yml", "")
+    scanner_actions = {
+        "dependency-review": "actions/dependency-review-action@",
+        "codeql": "github/codeql-action/analyze@",
+        "secret-scan": "gitleaks/gitleaks-action@",
+    }
     missing_jobs = [job for job in policy["required_security_jobs"] if re.search(rf"(?m)^  {re.escape(job)}:\s*$", security_text) is None]
-    controls.append({"id": "blocking-security-scans", "status": "pass" if not missing_jobs else "fail", "missing_jobs": missing_jobs})
-    if missing_jobs:
-        failures.append({"control": "blocking-security-scans", "detail": f"missing jobs: {', '.join(missing_jobs)}"})
+    missing_scanners = [job for job, action in scanner_actions.items() if action not in security_text]
+    non_blocking = bool(re.search(r"(?m)^\s*continue-on-error:\s*true\s*$", security_text))
+    scans_ok = not missing_jobs and not missing_scanners and not non_blocking
+    controls.append(
+        {
+            "id": "blocking-security-scans",
+            "status": "pass" if scans_ok else "fail",
+            "missing_jobs": missing_jobs,
+            "missing_scanners": missing_scanners,
+            "non_blocking": non_blocking,
+        }
+    )
+    if not scans_ok:
+        failures.append(
+            {
+                "control": "blocking-security-scans",
+                "detail": f"missing jobs={missing_jobs}; missing scanners={missing_scanners}; non_blocking={non_blocking}",
+            }
+        )
 
     trusted_path = root / policy["trusted_shell_implementation"]
     source_files = list((root / "src").rglob("*.py")) if (root / "src").exists() else []
@@ -113,21 +154,58 @@ def evaluate_security_supply_chain(root: Path = REPO_ROOT) -> dict[str, Any]:
     if missing_release:
         failures.append({"control": "release-provenance", "detail": f"missing release controls: {', '.join(missing_release)}"})
 
-    lock_ok = (root / "uv.lock").is_file()
-    controls.append({"id": "locked-generator-and-runtime-dependencies", "status": "pass" if lock_ok else "fail", "lock": "uv.lock"})
+    lock_path = root / "uv.lock"
+    unlocked_syncs = [relative for relative, text in workflow_text.items() if re.search(r"(?m)^\s*uv sync(?![^\n]*--locked)", text)]
+    lock_ok = lock_path.is_file() and not unlocked_syncs
+    controls.append(
+        {
+            "id": "locked-generator-and-runtime-dependencies",
+            "status": "pass" if lock_ok else "fail",
+            "lock": "uv.lock",
+            "unlocked_workflows": unlocked_syncs,
+        }
+    )
     if not lock_ok:
-        failures.append({"control": "locked-generator-and-runtime-dependencies", "detail": "uv.lock is missing"})
+        failures.append(
+            {
+                "control": "locked-generator-and-runtime-dependencies",
+                "detail": f"uv.lock missing or unlocked workflow syncs: {unlocked_syncs}",
+            }
+        )
 
+    security_paths = [
+        POLICY_PATH,
+        Path("scripts/check/check_security_supply_chain.py"),
+        Path("uv.lock"),
+        *[Path(path) for path in policy["required_workflows"]],
+    ]
+    artifacts: dict[str, str] = {}
+    if artifact_dir is not None:
+        artifacts = {
+            path.relative_to(artifact_dir).as_posix(): _sha256_file(path)
+            for path in sorted(artifact_dir.rglob("*"))
+            if path.is_file() and path.name != "security-supply-chain-readiness.json"
+        }
     subject = {
+        "source_identity": source_identity or _source_identity(root),
         "policy": policy,
+        "security_surface_hashes": {path.as_posix(): _sha256_file(root / path) for path in security_paths if (root / path).is_file()},
         "workflow_action_refs": sorted(match.group("action") for text in workflow_text.values() for match in ACTION_REF.finditer(text)),
         "trusted_shell_paths": shell_true_paths,
+        "release_subject": {
+            "manifest": "agentic-workspace-release-manifest.json",
+            "checksums": "SHA256SUMS",
+            "sbom": "agentic-workspace.spdx.json",
+            "attestation": "build-provenance",
+            "artifacts": artifacts,
+        },
     }
     return {
         "kind": "agentic-workspace/security-supply-chain-readiness/v1",
         "status": "ready" if not failures else "blocked",
         "policy": policy["kind"],
         "subject_fingerprint": _sha256_json(subject),
+        "subject": subject,
         "controls": controls,
         "failures": failures,
         "release_promotion_allowed": not failures,
@@ -140,8 +218,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--format", choices=("json", "text"), default="text")
     parser.add_argument("--output")
+    parser.add_argument("--source-identity")
+    parser.add_argument("--artifact-dir", type=Path)
     args = parser.parse_args(argv)
-    receipt = evaluate_security_supply_chain()
+    receipt = evaluate_security_supply_chain(source_identity=args.source_identity, artifact_dir=args.artifact_dir)
     rendered = json.dumps(receipt, indent=2, sort_keys=True) + "\n"
     if args.output:
         output = Path(args.output)

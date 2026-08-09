@@ -18,6 +18,7 @@ def _copy_security_surface(target: Path) -> None:
         "uv.lock",
         "src/agentic_workspace/trusted_execution.py",
         "src/agentic_workspace/contracts/security_supply_chain_policy.json",
+        "scripts/check/check_security_supply_chain.py",
     ]
     for relative in paths:
         destination = target / relative
@@ -68,3 +69,59 @@ def test_new_unadmitted_shell_boundary_blocks_release_readiness(tmp_path: Path) 
     assert receipt["status"] == "blocked"
     shell = next(control for control in receipt["controls"] if control["id"] == "trusted-shell-admission")
     assert "src/agentic_workspace/unsafe.py" in shell["shell_true_paths"]
+
+
+def test_exact_subject_changes_with_lock_workflow_checker_and_source(tmp_path: Path) -> None:
+    _copy_security_surface(tmp_path)
+    baseline = evaluate_security_supply_chain(tmp_path)["subject_fingerprint"]
+    for relative in ("uv.lock", ".github/workflows/ci.yml", "scripts/check/check_security_supply_chain.py"):
+        path = tmp_path / relative
+        original = path.read_text(encoding="utf-8")
+        path.write_text(original + "\n# freshness change\n", encoding="utf-8")
+        assert evaluate_security_supply_chain(tmp_path)["subject_fingerprint"] != baseline
+        path.write_text(original, encoding="utf-8")
+    artifacts = tmp_path / "dist"
+    artifacts.mkdir()
+    (artifacts / "candidate.whl").write_bytes(b"candidate-a")
+    first = evaluate_security_supply_chain(tmp_path, source_identity="commit-a", artifact_dir=artifacts)
+    (artifacts / "candidate.whl").write_bytes(b"candidate-b")
+    second = evaluate_security_supply_chain(tmp_path, source_identity="commit-a", artifact_dir=artifacts)
+    third = evaluate_security_supply_chain(tmp_path, source_identity="commit-b", artifact_dir=artifacts)
+    assert first["subject_fingerprint"] != second["subject_fingerprint"]
+    assert second["subject_fingerprint"] != third["subject_fingerprint"]
+
+
+def test_semantic_permission_scanner_and_locked_sync_fail_closed(tmp_path: Path) -> None:
+    _copy_security_surface(tmp_path)
+    security = tmp_path / ".github/workflows/security.yml"
+    original = security.read_text(encoding="utf-8")
+    mutations = (
+        ("contents: read", "contents: write", "immutable-least-privilege-actions"),
+        ("gitleaks/gitleaks-action@", "example/no-op@", "blocking-security-scans"),
+        ("runs-on: ubuntu-latest", "continue-on-error: true\n    runs-on: ubuntu-latest", "blocking-security-scans"),
+        ("uv sync --locked", "uv sync", "locked-generator-and-runtime-dependencies"),
+    )
+    for old, new, control in mutations:
+        security.write_text(original.replace(old, new, 1), encoding="utf-8")
+        receipt = evaluate_security_supply_chain(tmp_path)
+        assert receipt["status"] == "blocked"
+        assert any(failure["control"] == control for failure in receipt["failures"])
+    security.write_text(original, encoding="utf-8")
+
+
+def test_release_promotion_requires_matching_current_security_receipt() -> None:
+    receipt = evaluate_security_supply_chain(REPO_ROOT)
+    accepted = workspace_runtime_core._security_readiness_promotion_input(
+        receipt=receipt, expected_subject_fingerprint=receipt["subject_fingerprint"]
+    )
+    assert accepted["status"] == "accepted"
+    for candidate, reason in (
+        (None, "missing-security-readiness"),
+        ({**receipt, "subject_fingerprint": "sha256:stale"}, "stale-or-mismatched-security-readiness"),
+        ({**receipt, "status": "blocked", "release_promotion_allowed": False}, "failed-security-readiness"),
+    ):
+        blocked = workspace_runtime_core._security_readiness_promotion_input(
+            receipt=candidate, expected_subject_fingerprint=receipt["subject_fingerprint"]
+        )
+        assert blocked["status"] == "blocked"
+        assert blocked["reason"] == reason

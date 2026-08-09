@@ -97,9 +97,6 @@ jobs:
       - name: Run built package smoke tests
         run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
 
-      - name: Record security and supply-chain readiness
-        run: uv run python scripts/check/check_security_supply_chain.py --format json --output dist/security-supply-chain-readiness.json
-
       - name: Generate release SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
         with:
@@ -135,7 +132,10 @@ jobs:
           done
 
       - name: Generate checksums and release manifest
+        env:
+          SECURITY_READINESS_COMMAND: uv run python scripts/check/check_security_supply_chain.py --format json --source-identity ${{ github.sha }} --artifact-dir dist --output dist/security-supply-chain-readiness.json
         run: |
+          $SECURITY_READINESS_COMMAND
           python - <<'PY'
           import hashlib
           import json

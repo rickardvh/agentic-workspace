@@ -12137,6 +12137,28 @@ def _security_supply_chain_readiness_payload(*, target_root: Path) -> dict[str, 
     return payload if isinstance(payload, dict) else {}
 
 
+def _security_readiness_promotion_input(*, receipt: dict[str, Any] | None, expected_subject_fingerprint: str) -> dict[str, Any]:
+    reason = "accepted-current-security-readiness"
+    if not isinstance(receipt, dict):
+        reason = "missing-security-readiness"
+    elif receipt.get("kind") != "agentic-workspace/security-supply-chain-readiness/v1":
+        reason = "unsupported-security-readiness"
+    elif receipt.get("subject_fingerprint") != expected_subject_fingerprint:
+        reason = "stale-or-mismatched-security-readiness"
+    elif receipt.get("status") != "ready" or receipt.get("release_promotion_allowed") is not True:
+        reason = "failed-security-readiness"
+    accepted = reason == "accepted-current-security-readiness"
+    return {
+        "kind": "agentic-workspace/release-promotion-input/v1",
+        "input": "security-supply-chain-readiness",
+        "status": "accepted" if accepted else "blocked",
+        "reason": reason,
+        "owner": "security-supply-chain",
+        "subject_fingerprint": expected_subject_fingerprint,
+        "receipt": receipt if accepted else None,
+    }
+
+
 def _release_recovery_payload(
     *,
     target_root: Path,

@@ -28,5 +28,10 @@
     "artifact-attestation"
   ],
   "action_pin_policy": "full-commit-sha",
+  "allowed_write_permissions": {
+    ".github/workflows/release.yml": ["attestations", "contents", "id-token"],
+    ".github/workflows/release-from-semver-label.yml": ["actions", "contents", "pull-requests"],
+    ".github/workflows/security.yml": ["security-events"]
+  },
   "branch_enforcement_owner": "#2454"
 }
