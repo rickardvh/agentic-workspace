@@ -104,6 +104,35 @@ def test_archive_retention_policy_reports_versioned_host_budgets_and_migration_r
     assert policy["ordinary_route_exclusion"]["startup"] == "excluded"
 
 
+def test_ordinary_start_does_not_read_or_emit_large_planning_archive_corpus(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    archive_root = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    archive_root.mkdir(parents=True, exist_ok=True)
+    for index in range(250):
+        (archive_root / f"historical-{index:03d}.plan.json").write_text(
+            json.dumps({"kind": "planning-execplan/v1", "id": f"historical-{index:03d}"}) + "\n", encoding="utf-8"
+        )
+
+    archive_reads: list[str] = []
+    original_read_text = Path.read_text
+
+    def observed_read_text(path: Path, *args: Any, **kwargs: Any) -> str:
+        if "/planning/execplans/archive/" in path.as_posix():
+            archive_reads.append(path.as_posix())
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", observed_read_text)
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect current routing", "--format", "json"]) == 0
+    rendered = capsys.readouterr().out
+    assert archive_reads == []
+    assert "historical-000" not in rendered
+    assert len(rendered.encode("utf-8")) < 64_000
+
+
 def test_selector_validation_error_does_not_project_valid_values_or_build_full_inventory(monkeypatch) -> None:
     class ExplodingCopy:
         def __deepcopy__(self, memo: dict[int, object]) -> object:

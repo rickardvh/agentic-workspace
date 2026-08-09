@@ -20778,6 +20778,12 @@ def _compact_retained_execplan(
         result.reason_code = "invalid-retained-archive"
         return result
 
+    continuity_blocker = _retained_archive_continuity_blocker(target_root=target_root, record=record)
+    if continuity_blocker:
+        result.add("blocked-with-reason", plan_path, continuity_blocker)
+        result.reason_code = "unresolved-intent-continuation-required"
+        return result
+
     export_path = export_root / plan_path.name
     source_sha256 = hashlib.sha256(raw).hexdigest()
     if export_path.exists() and hashlib.sha256(export_path.read_bytes()).hexdigest() != source_sha256:
@@ -20842,9 +20848,48 @@ def _compact_retained_execplan(
     if not export_path.exists():
         shutil.copy2(plan_path, export_path)
     _write_closeout_evidence_record(record_path=receipt_path, record=receipt)
+    _write_last_closeout_context(
+        target_root=target_root,
+        plan_path=plan_path,
+        evidence_path=receipt_path,
+        plan_id=str(receipt.get("plan_id") or plan_path.stem),
+    )
     plan_path.unlink()
     result.reason_code = "retention-applied"
     return result
+
+
+def _retained_archive_continuity_blocker(*, target_root: Path, record: dict[str, Any]) -> str:
+    """Fail closed before compaction can remove unresolved continuation authority."""
+    closure = _record_section_dict(record, "closure_check") or {}
+    intent = _record_section_dict(record, "intent_satisfaction") or {}
+    larger_status = str(closure.get("larger-intent status") or "").strip().lower()
+    intent_status = str(intent.get("was original intent fully satisfied?") or "").strip().lower()
+    decision = str(closure.get("closure decision") or "").strip().lower()
+    if intent_status in {"yes", "true"} and larger_status in {"closed", "complete", "completed"} and decision == "archive-and-close":
+        return ""
+
+    owner = ""
+    for section, owner_field in (
+        (_record_mapping(record, "continuation"), "owner"),
+        (intent, "unsolved intent passed to"),
+        (_record_section_dict(record, "required_continuation") or {}, "owner surface"),
+        (_record_section_dict(record, "durable_residue") or {}, "canonical owner now"),
+    ):
+        candidate = str(section.get(owner_field) or "").strip()
+        if candidate.lower() not in {"", "none", "n/a", "none yet", "unknown", "tbd"}:
+            owner = candidate
+            break
+    if not owner:
+        return "larger intent is unresolved and no explicit continuation owner is recorded; no state changed"
+    if _issue_refs_from_text(owner):
+        return ""
+    normalized = owner.replace("\\", "/").rstrip(".,;:")
+    if normalized.startswith(".agentic-workspace/"):
+        owner_path = target_root / normalized
+        if owner_path.exists() and "/archive/" not in normalized:
+            return ""
+    return "larger intent names a stale or ambiguous continuation owner; route it to a current checked-in owner or issue before compaction"
 
 
 def _compact_all_retained_execplans(
