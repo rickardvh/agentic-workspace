@@ -19904,6 +19904,114 @@ def _prune_decision_point_carry_for_plan(*, plan_path: Path, target_root: Path, 
     return True
 
 
+def _archive_closure_decision_is_valid(
+    *,
+    result: InstallResult,
+    closure_decision: str,
+    fully_satisfied: str,
+    larger_intent_status: str,
+    unsolved_intent: str,
+    plan_path: Path,
+    target_root: Path,
+) -> bool:
+    if closure_decision == "archive-and-close":
+        if fully_satisfied not in {"yes", "true"} or larger_intent_status not in ARCHIVE_AND_CLOSE_LARGER_INTENT_VALUES:
+            suggested = (
+                " Use `closed` when the larger intent is fully satisfied."
+                if larger_intent_status in {"satisfied", "done", "archive", "archived"}
+                else ""
+            )
+            result.warnings.append(
+                {
+                    "warning_class": "archive_intent_not_fully_satisfied",
+                    "path": plan_path.relative_to(target_root).as_posix(),
+                    "message": "Archive-and-close requires explicit larger-intent closure evidence.",
+                }
+            )
+            result.add(
+                "manual review",
+                plan_path,
+                (
+                    "record larger-intent closure honestly before using `archive-and-close`: "
+                    "`intent_satisfaction.was original intent fully satisfied?` must be `yes` or `true`, "
+                    "and `closure_check.larger-intent status` must be one of `closed`, `complete`, or `completed`." + suggested
+                ),
+            )
+            return False
+        if unsolved_intent and unsolved_intent.lower() not in {"none", "n/a", "none yet"}:
+            result.warnings.append(
+                {
+                    "warning_class": "archive_intent_not_fully_satisfied",
+                    "path": plan_path.relative_to(target_root).as_posix(),
+                    "message": "Archive-and-close cannot leave unsolved intent routed elsewhere.",
+                }
+            )
+            result.add(
+                "manual review",
+                plan_path,
+                (
+                    "remove unsolved intent routing or switch to `archive-but-keep-lane-open`: "
+                    "`intent_satisfaction.unsolved intent passed to` must be `none`, `n/a`, or `none yet` for `archive-and-close`"
+                ),
+            )
+            return False
+    elif closure_decision == "archive-but-keep-lane-open":
+        if fully_satisfied not in {"yes", "true", "no", "false"} or larger_intent_status not in ARCHIVE_KEEP_OPEN_LARGER_INTENT_VALUES:
+            result.warnings.append(
+                {
+                    "warning_class": "archive_intent_not_fully_satisfied",
+                    "path": plan_path.relative_to(target_root).as_posix(),
+                    "message": "Archive-but-keep-lane-open requires explicit evidence that the larger intent remains open.",
+                }
+            )
+            result.add(
+                "manual review",
+                plan_path,
+                (
+                    "align `Intent Satisfaction` and `Closure Check` with `archive-but-keep-lane-open`: "
+                    "`intent_satisfaction.was original intent fully satisfied?` must explicitly answer the bounded/source intent, "
+                    "and `closure_check.larger-intent status` must be one of `open`, `partial`, or `unfinished`"
+                ),
+            )
+            return False
+        if not unsolved_intent or unsolved_intent.lower() in {"none", "n/a", "none yet"}:
+            result.warnings.append(
+                {
+                    "warning_class": "archive_missing_required_follow_on",
+                    "path": plan_path.relative_to(target_root).as_posix(),
+                    "message": "Partial-intent archive must name the checked-in owner that now carries the unsolved intent.",
+                }
+            )
+            result.add(
+                "manual review",
+                plan_path,
+                (
+                    "record the routed unsolved intent before archiving a partial slice: "
+                    "`intent_satisfaction.unsolved intent passed to` must name the checked-in continuation owner"
+                ),
+            )
+            return False
+    else:
+        suggested = " Use `archive-and-close` for fully completed work." if closure_decision in {"archive", "close", "close-lane"} else ""
+        result.warnings.append(
+            {
+                "warning_class": "archive_missing_closure_check",
+                "path": plan_path.relative_to(target_root).as_posix(),
+                "message": f"Closure Check uses an unsupported closure decision: {closure_decision}.",
+            }
+        )
+        result.add(
+            "manual review",
+            plan_path,
+            (
+                "use a supported closure decision: "
+                "`closure_check.closure decision` must be one of `archive-and-close` or `archive-but-keep-lane-open`." + suggested
+            ),
+        )
+        return False
+    return True
+
+
 def archive_execplan(
     plan: str,
     *,
@@ -20343,100 +20451,15 @@ def archive_execplan(
             "switch to `archive-but-keep-lane-open` or close the recorded larger-intent continuation before archiving",
         )
         return result
-    if closure_decision == "archive-and-close":
-        if fully_satisfied not in {"yes", "true"} or larger_intent_status not in ARCHIVE_AND_CLOSE_LARGER_INTENT_VALUES:
-            suggested = (
-                " Use `closed` when the larger intent is fully satisfied."
-                if larger_intent_status in {"satisfied", "done", "archive", "archived"}
-                else ""
-            )
-            result.warnings.append(
-                {
-                    "warning_class": "archive_intent_not_fully_satisfied",
-                    "path": plan_path.relative_to(target_root).as_posix(),
-                    "message": "Archive-and-close requires explicit larger-intent closure evidence.",
-                }
-            )
-            result.add(
-                "manual review",
-                plan_path,
-                (
-                    "record larger-intent closure honestly before using `archive-and-close`: "
-                    "`intent_satisfaction.was original intent fully satisfied?` must be `yes` or `true`, "
-                    "and `closure_check.larger-intent status` must be one of `closed`, `complete`, or `completed`." + suggested
-                ),
-            )
-            return result
-        if unsolved_intent and unsolved_intent.lower() not in {"none", "n/a", "none yet"}:
-            result.warnings.append(
-                {
-                    "warning_class": "archive_intent_not_fully_satisfied",
-                    "path": plan_path.relative_to(target_root).as_posix(),
-                    "message": "Archive-and-close cannot leave unsolved intent routed elsewhere.",
-                }
-            )
-            result.add(
-                "manual review",
-                plan_path,
-                (
-                    "remove unsolved intent routing or switch to `archive-but-keep-lane-open`: "
-                    "`intent_satisfaction.unsolved intent passed to` must be `none`, `n/a`, or `none yet` for `archive-and-close`"
-                ),
-            )
-            return result
-    elif closure_decision == "archive-but-keep-lane-open":
-        if fully_satisfied not in {"yes", "true", "no", "false"} or larger_intent_status not in ARCHIVE_KEEP_OPEN_LARGER_INTENT_VALUES:
-            result.warnings.append(
-                {
-                    "warning_class": "archive_intent_not_fully_satisfied",
-                    "path": plan_path.relative_to(target_root).as_posix(),
-                    "message": "Archive-but-keep-lane-open requires explicit evidence that the larger intent remains open.",
-                }
-            )
-            result.add(
-                "manual review",
-                plan_path,
-                (
-                    "align `Intent Satisfaction` and `Closure Check` with `archive-but-keep-lane-open`: "
-                    "`intent_satisfaction.was original intent fully satisfied?` must explicitly answer the bounded/source intent, "
-                    "and `closure_check.larger-intent status` must be one of `open`, `partial`, or `unfinished`"
-                ),
-            )
-            return result
-        if not unsolved_intent or unsolved_intent.lower() in {"none", "n/a", "none yet"}:
-            result.warnings.append(
-                {
-                    "warning_class": "archive_missing_required_follow_on",
-                    "path": plan_path.relative_to(target_root).as_posix(),
-                    "message": "Partial-intent archive must name the checked-in owner that now carries the unsolved intent.",
-                }
-            )
-            result.add(
-                "manual review",
-                plan_path,
-                (
-                    "record the routed unsolved intent before archiving a partial slice: "
-                    "`intent_satisfaction.unsolved intent passed to` must name the checked-in continuation owner"
-                ),
-            )
-            return result
-    else:
-        suggested = " Use `archive-and-close` for fully completed work." if closure_decision in {"archive", "close", "close-lane"} else ""
-        result.warnings.append(
-            {
-                "warning_class": "archive_missing_closure_check",
-                "path": plan_path.relative_to(target_root).as_posix(),
-                "message": f"Closure Check uses an unsupported closure decision: {closure_decision}.",
-            }
-        )
-        result.add(
-            "manual review",
-            plan_path,
-            (
-                "use a supported closure decision: "
-                "`closure_check.closure decision` must be one of `archive-and-close` or `archive-but-keep-lane-open`." + suggested
-            ),
-        )
+    if not _archive_closure_decision_is_valid(
+        result=result,
+        closure_decision=closure_decision,
+        fully_satisfied=fully_satisfied,
+        larger_intent_status=larger_intent_status,
+        unsolved_intent=unsolved_intent,
+        plan_path=plan_path,
+        target_root=target_root,
+    ):
         return result
     durable_residue_message = _invalid_durable_residue_message(durable_residue)
     if durable_residue_message is not None:

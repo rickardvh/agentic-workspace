@@ -12,7 +12,6 @@ from agentic_workspace.contract_tooling import python_runtime_projection_invento
 
 LARGE_RUNTIME_PATHS = {
     "src/agentic_workspace/workspace_runtime_core.py",
-    "src/agentic_workspace/workspace_runtime_primitives.py",
     "packages/planning/src/repo_planning_bootstrap/installer.py",
     "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
     "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
@@ -20,7 +19,6 @@ LARGE_RUNTIME_PATHS = {
 
 SOURCE_MODULE_BY_PATH = {
     "src/agentic_workspace/workspace_runtime_core.py": "agentic_workspace.workspace_runtime_core",
-    "src/agentic_workspace/workspace_runtime_primitives.py": "agentic_workspace.workspace_runtime_primitives",
     "packages/planning/src/repo_planning_bootstrap/installer.py": "repo_planning_bootstrap.installer",
     "packages/planning/src/repo_planning_bootstrap/runtime_projection.py": "repo_planning_bootstrap.runtime_projection",
     "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py": "repo_memory_bootstrap.runtime_primitives",
@@ -28,23 +26,10 @@ SOURCE_MODULE_BY_PATH = {
 
 SYMBOL_PROOF_HINTS = {
     (
-        "src/agentic_workspace/workspace_runtime_primitives.py",
-        "_run_external_intent_refresh_github_adapter",
-    ): [
-        'uv run pytest tests/test_workspace_summary_cli.py -q -k "external_intent_refresh_applies_stale_candidate_reconciliation"',
-    ],
-    (
         "src/agentic_workspace/workspace_runtime_core.py",
         "_run_external_intent_refresh_github_adapter",
     ): [
         'uv run pytest tests/test_workspace_summary_cli.py -q -k "external_intent_refresh_applies_stale_candidate_reconciliation"',
-    ],
-    (
-        "src/agentic_workspace/workspace_runtime_primitives.py",
-        "_proof_selection_for_changed_paths",
-    ): [
-        'uv run pytest tests/test_workspace_implement_cli.py -q -k "proof or changed_path"',
-        "uv run pytest tests/test_workspace_proof_cli.py -q",
     ],
     (
         "src/agentic_workspace/workspace_runtime_core.py",

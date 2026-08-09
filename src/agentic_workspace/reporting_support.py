@@ -1354,6 +1354,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                 "large_file_hotspots": compact_collection(answer.get("large_file_hotspots")),
                 "concept_surface_hotspots": compact_collection(answer.get("concept_surface_hotspots")),
                 "regenerable_cache_hotspots": compact_collection(answer.get("regenerable_cache_hotspots")),
+                "runtime_implementation_ownership": answer.get("runtime_implementation_ownership", {}),
                 "external_evidence_count": len(_support_list_payload(answer.get("external_evidence"))),
                 "proof_route_completeness": answer.get("proof_route_completeness", {}),
                 "capture_shortcut": answer.get("capture_shortcut", {}),
@@ -3446,6 +3447,56 @@ def _enforceable_workflow_effective_item(*, target_root: Path) -> dict[str, Any]
     }
 
 
+def _runtime_implementation_owner_friction_metrics(target_root: Path) -> dict[str, Any]:
+    policy_path = target_root / "src/agentic_workspace/contracts/runtime_implementation_ownership.json"
+    try:
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        core_source = (target_root / str(policy["canonical_owner"])).read_text(encoding="utf-8")
+        facade_source = (target_root / str(policy["compatibility_facade"])).read_text(encoding="utf-8")
+        core_tree = ast.parse(core_source)
+        facade_tree = ast.parse(facade_source)
+    except (OSError, SyntaxError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError):
+        return {"status": "unavailable"}
+    definition_types = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+    core_names = {node.name for node in core_tree.body if isinstance(node, definition_types)}
+    facade_names = {node.name for node in facade_tree.body if isinstance(node, definition_types)}
+    audited_segments: list[int] = []
+    audited_fan_out: list[int] = []
+    for relative in policy.get("review_scale", {}).get("paths", []):
+        try:
+            tree = ast.parse((target_root / str(relative)).read_text(encoding="utf-8"))
+        except (OSError, SyntaxError, UnicodeDecodeError):
+            continue
+        for node in tree.body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            segments = [
+                int(getattr(child, "end_lineno", child.lineno)) - int(child.lineno) + 1
+                for child in node.body
+                if not isinstance(child, definition_types)
+            ]
+            audited_segments.append(max(segments, default=0))
+            audited_fan_out.append(
+                len({child.func.id for child in ast.walk(node) if isinstance(child, ast.Call) and isinstance(child.func, ast.Name)})
+            )
+    return {
+        "status": "measured",
+        "canonical_owner": policy["canonical_owner"],
+        "compatibility_facade": policy["compatibility_facade"],
+        "before": policy.get("migration_baseline", {}),
+        "after": {
+            "shared_top_level_definitions": len(core_names & facade_names),
+            "compatibility_facade_lines": len(facade_source.splitlines()),
+            "largest_audited_policy_effect_segment_lines": max(audited_segments, default=0),
+            "max_direct_fan_out": max(audited_fan_out, default=0),
+        },
+        "representative_working_set": policy.get("review_scale", {}).get("representative_working_set", {}),
+        "exception_lifecycle": policy.get("review_scale", {}).get("exception_lifecycle", {}),
+        "enforcement_owner": "scripts/check/check_runtime_implementation_ownership.py",
+        "rule": "Repo-friction reports metrics; the runtime ownership checker owns enforcement.",
+    }
+
+
 def repo_friction_payload(
     *,
     target_root: Path,
@@ -3504,6 +3555,7 @@ def repo_friction_payload(
             "status": "allowed-with-bounds",
             "bounded_by": ["correctness", "ownership", "proof", "portability"],
         },
+        "runtime_implementation_ownership": _runtime_implementation_owner_friction_metrics(target_root),
         "friction_response_order": [
             {
                 "step": 1,

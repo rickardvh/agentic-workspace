@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import argparse
 import ast
+import contextlib
 import copy
 import difflib
 import fnmatch
 import hashlib
 import importlib
 import importlib.metadata
+import io
 import json
 import os
 import re
@@ -34,9 +36,9 @@ from typing import Any, cast, overload
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
-from agentic_workspace.actionability import derive_actionability, proposed_action_input_revision
+from agentic_workspace.actionability import derive_actionability, operation_invocation, proposed_action_input_revision
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
-from agentic_workspace.authority_envelope import admit_live_mutation_boundary
+from agentic_workspace.authority_envelope import admit_live_mutation_boundary, revalidate_mutation_baseline
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_ASSURANCE_LEVEL,
@@ -136,6 +138,8 @@ from agentic_workspace.current_work_context import (
     startup_route_identity,
     startup_route_identity_check,
 )
+from agentic_workspace.evaluation import evaluation_summary
+from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
 from agentic_workspace.reporting_support import (
@@ -156,6 +160,7 @@ from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.target_evidence import assignment_decision_from_policy, target_evidence_posture
+from agentic_workspace.trusted_execution import run_trusted_shell
 from agentic_workspace.workspace_output import (
     _display_path,
     _emit_init_text,
@@ -173,6 +178,7 @@ from agentic_workspace.workspace_runtime_generated_surface import (
 from agentic_workspace.workspace_runtime_projection import (
     _authority_boundary_payload,
     _compact_authority_boundary,
+    _compact_authority_text,  # noqa: F401 - compatibility re-export for generated runtime inventory
     _tiny_action_effect,
     _workflow_participation_payload,
 )
@@ -183,6 +189,9 @@ from agentic_workspace.workspace_selector_validation import (
     _selector_prevalidation_error,
     _selector_tokens,
 )
+
+_workspace_runtime_core = sys.modules[__name__]
+CANONICAL_RUNTIME_OWNER = "agentic_workspace.workspace_runtime_core"
 
 
 # Lazy compatibility forwarders for entrypoints owned by extracted runtime modules.
@@ -284,6 +293,12 @@ def _proof_payload(*args: Any, **kwargs: Any) -> Any:
 
 def _proof_selection_for_changed_paths(*args: Any, **kwargs: Any) -> Any:
     from agentic_workspace.workspace_runtime_proof import _proof_selection_for_changed_paths as owner
+
+    return owner(*args, **kwargs)
+
+
+def _proof_receipt_reconciliation_payload(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload as owner
 
     return owner(*args, **kwargs)
 
@@ -2248,7 +2263,9 @@ def _installed_state_compatibility_payload(
     if provenance_status.get("status") in {"invalid"}:
         payload_provenance_drift = "invalid-provenance"
     elif provenance_status.get("status") == "missing" and initialized_payload_present:
-        payload_provenance_drift = "none" if _minimal_bootstrap_footprint_detected(target_root=target_root) else "missing-provenance"
+        payload_provenance_drift = (
+            "none" if _workspace_runtime_core._minimal_bootstrap_footprint_detected(target_root=target_root) else "missing-provenance"
+        )
     elif installed_version and _version_key(installed_version) > _version_key(__version__):
         payload_provenance_drift = "executable-too-old"
     elif installed_version and _version_key(installed_version) < _version_key(__version__):
@@ -9650,37 +9667,43 @@ def _run_lifecycle_command(
 ) -> dict[str, Any]:
     if command_name == "upgrade" and local_only_repo_root is None and _has_local_only_workspace_state(target_root=target_root):
         local_only_repo_root = target_root
-    registry = _module_registry(descriptors=descriptors, target_root=target_root)
-    resolved_footprint_profile = _resolve_bootstrap_footprint_profile(
+    resolved_footprint_profile = _workspace_runtime_core._resolve_bootstrap_footprint_profile(
         target_root=target_root, requested_profile=footprint_profile, mirror_payload=mirror_payload
     )
-    if command_name == "install" and _uses_minimal_bootstrap_footprint(resolved_footprint_profile):
-        reports = [
-            _minimal_module_footprint_report(
+    if command_name == "install" and _workspace_runtime_core._uses_minimal_bootstrap_footprint(resolved_footprint_profile):
+        return _workspace_runtime_core._run_lifecycle_command(
+            command_name=command_name,
+            target_root=target_root,
+            local_only_repo_root=local_only_repo_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            dry_run=dry_run,
+            non_interactive=non_interactive,
+            config=config,
+            compact_status=compact_status,
+            module_scope_explicit=module_scope_explicit,
+            to_payload_target=to_payload_target,
+            footprint_profile=resolved_footprint_profile,
+            mirror_payload=mirror_payload,
+            include_local_footprint=include_local_footprint,
+        )
+    registry = _module_registry(descriptors=descriptors, target_root=target_root)
+    reports = [
+        _normalize_module_report_startup_paths(
+            _invoke_module_command(
+                command_name=command_name,
                 module_name=module_name,
+                descriptor=descriptors[module_name],
                 target_root=target_root,
                 dry_run=dry_run,
-                command_name=command_name,
-                footprint_profile=resolved_footprint_profile,
-            )
-            for module_name in selected_modules
-        ]
-    else:
-        reports = [
-            _normalize_module_report_startup_paths(
-                _invoke_module_command(
-                    command_name=command_name,
-                    module_name=module_name,
-                    descriptor=descriptors[module_name],
-                    target_root=target_root,
-                    dry_run=dry_run,
-                    force=False,
-                ),
-                target_root=target_root,
-                config=config,
-            )
-            for module_name in selected_modules
-        ]
+                force=False,
+            ),
+            target_root=target_root,
+            config=config,
+        )
+        for module_name in selected_modules
+    ]
     if command_name in {"status", "doctor"}:
         reports.append(
             _workspace_status_report(
@@ -9735,8 +9758,8 @@ def _run_lifecycle_command(
                 local_only_repo_root=local_only_repo_root,
             )
         )
-    if command_name in {"status", "doctor"} and _minimal_bootstrap_footprint_detected(target_root=target_root):
-        reports = [_filter_minimal_bootstrap_module_report(report) for report in reports]
+    if command_name in {"status", "doctor"} and _workspace_runtime_core._minimal_bootstrap_footprint_detected(target_root=target_root):
+        reports = [_workspace_runtime_core._filter_minimal_bootstrap_module_report(report) for report in reports]
     summary = _summarise_reports(target_root=target_root, reports=reports, descriptors=descriptors, command_name=command_name)
     warnings: list[str] = []
     placeholders: list[str] = []
@@ -9756,7 +9779,9 @@ def _run_lifecycle_command(
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
     skill_dependency_diagnostics = (
-        _skill_dependency_diagnostics(target_root=target_root, selected_modules=selected_modules) if command_name == "doctor" else []
+        _workspace_runtime_core._skill_dependency_diagnostics(target_root=target_root, selected_modules=selected_modules)
+        if command_name == "doctor"
+        else []
     )
     skill_dependency_warnings = [str(item["message"]) for item in skill_dependency_diagnostics]
     warnings.extend(skill_dependency_warnings)
@@ -9785,8 +9810,6 @@ def _run_lifecycle_command(
         "preset": resolved_preset,
         "dry_run": dry_run,
         "non_interactive": non_interactive,
-        "footprint_profile": resolved_footprint_profile,
-        "payload_mirror": not _uses_minimal_bootstrap_footprint(resolved_footprint_profile),
         "health": "healthy" if not warnings else "attention-needed",
         "created": summary["created"],
         "updated_managed": summary["updated_managed"],
@@ -9839,16 +9862,10 @@ def _run_lifecycle_command(
         "reports": reports,
         "config": _config_payload(config=config),
     }
-    if command_name == "install":
-        payload["bootstrap_footprint"] = _bootstrap_footprint_payload(
-            target_root=target_root,
-            profile=resolved_footprint_profile,
-            reports=reports,
-            prompt_path=None,
-            handoff_record_path=None,
-        )
     if cli_compatibility_warnings:
         payload["executable_drift_warnings"] = cli_compatibility_warnings
+    if installed_state_compatibility.get("status") != "compatible":
+        payload["health"] = "attention-needed"
     payload["lifecycle_plan"] = _lifecycle_plan_payload(
         payload=payload,
         command_name=command_name,
@@ -9865,7 +9882,7 @@ def _run_lifecycle_command(
             reports, target_root=target_root, cli_invoke=config.cli_invoke, command_name=command_name
         )
         if command_name == "doctor" and skill_dependency_diagnostics:
-            dependency_repair_actions, dependency_manual_actions = _skill_dependency_repair_actions(
+            dependency_repair_actions, dependency_manual_actions = _workspace_runtime_core._skill_dependency_repair_actions(
                 diagnostics=skill_dependency_diagnostics,
                 target_root=target_root,
                 cli_invoke=config.cli_invoke,
@@ -9885,6 +9902,71 @@ def _run_lifecycle_command(
         payload["repair_plan"] = _repair_plan_payload(
             command_name=command_name, repair_actions=repair_actions, manual_review_actions=manual_review_actions
         )
+        payload["payload_closure_plan"] = _payload_doctor_closure_plan(
+            command_name=command_name,
+            target_root=target_root,
+            selected_modules=selected_modules,
+            installed_state_compatibility=installed_state_compatibility,
+            repair_actions=repair_actions,
+            manual_review_actions=manual_review_actions,
+            reports=reports,
+            cli_invoke=config.cli_invoke,
+        )
+        closure_primary = _as_dict(payload["payload_closure_plan"].get("primary_next_action"))
+        if closure_primary and not isinstance(closure_primary.get("operation_invocation"), dict):
+            rendering = str(closure_primary.get("command") or closure_primary.get("run") or "")
+            closure_action = str(closure_primary.get("action") or "")
+            raw_operation_id = (
+                command_name
+                if closure_action in {"", "no-immediate-action"}
+                else str(closure_primary.get("operation_id") or closure_primary.get("id") or closure_action or command_name)
+            )
+            operation_id = (
+                "".join(char.lower() if char.isalnum() or char in {"_", ".", "-"} else "-" for char in raw_operation_id).strip("-.")
+                or command_name
+            )
+            closure_primary["operation_invocation"] = operation_invocation(
+                operation_id=operation_id,
+                arguments={"target": "./repo", "format": "json"},
+                effect_class="read-only-report",
+                authority_class="operation-contract",
+                expected_transition=str(closure_primary.get("expected_transition") or closure_primary.get("state_transition") or ""),
+                preconditions={
+                    "target": "./repo",
+                    "action": str(closure_primary.get("action") or ""),
+                    "required_before_claim": True,
+                },
+                owner_context_revision={
+                    "command": command_name,
+                    "target": "./repo",
+                    "closure_action": str(closure_primary.get("action") or ""),
+                },
+                mutation_boundary={
+                    "effect_class": "read-only-report",
+                    "writes_repo_state": False,
+                    "transport": "local-cli",
+                },
+                proof_requirements=[
+                    {
+                        "command": rendering or f"agentic-workspace {command_name} --target ./repo --format json",
+                        "claim": "payload closure state refreshed",
+                    }
+                ],
+                command_rendering=rendering,
+            )
+        actionability = derive_actionability(
+            command_name=command_name,
+            health=str(payload.get("health") or "unknown"),
+            warnings=_list_payload(payload.get("warnings")),
+            repair_actions=repair_actions,
+            manual_review_actions=manual_review_actions,
+            proposed_next_action=closure_primary,
+            claim_limits=_list_payload(payload.get("needs_review")),
+            current_input_revision=proposed_action_input_revision(closure_primary),
+        )
+        payload["actionability"] = actionability
+        payload["action_required"] = actionability["action_required"]
+        payload["next_action"] = actionability["next_action"]
         if compact_status and command_name in {"status", "doctor"}:
             payload = _compact_status_payload(payload, cli_invoke=config.cli_invoke)
     return payload
@@ -10115,13 +10197,28 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             command="agentic-workspace report --target ./repo --section operational_compression --format json", cli_invoke=cli_invoke
         ),
     }
-    if str(payload.get("health", "")) == "healthy":
+    payload_closure_plan = payload_closure_plan if isinstance(payload_closure_plan, dict) else {}
+    closure_attention = (
+        isinstance(payload_closure_plan, dict)
+        and str(payload_closure_plan.get("status", "")) == "attention"
+        and bool(payload_closure_plan.get("payload_action_required"))
+        and command_name == "doctor"
+    )
+    if str(payload.get("health", "")) == "healthy" and not closure_attention:
         payload["next_action"] = {"action": "no-immediate-action", "summary": "No immediate lifecycle action is required.", "commands": []}
     else:
         detail_command = _command_with_cli_invoke(
             command=f"agentic-workspace {command_name} --target ./repo --verbose --format json", cli_invoke=cli_invoke
         )
-        if command_name == "status":
+        if closure_attention:
+            primary = payload_closure_plan.get("primary_next_action", {}) if isinstance(payload_closure_plan, dict) else {}
+            primary_command = str(primary.get("command", "")) if isinstance(primary, dict) else ""
+            commands = [primary_command] if primary_command else [detail_command]
+            action = (
+                str(primary.get("action", "follow-payload-closure-plan")) if isinstance(primary, dict) else "follow-payload-closure-plan"
+            )
+            summary = "Follow the payload_closure_summary primary action before making payload freshness or doctor-closure claims."
+        elif command_name == "status":
             inspect_command = _command_with_cli_invoke(
                 command="agentic-workspace doctor --target ./repo --format json", cli_invoke=cli_invoke
             )
@@ -10139,9 +10236,20 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             "run": commands[0],
             "commands": commands,
             "detail_command": detail_command,
+            "operation_invocation": operation_invocation(
+                operation_id="doctor" if command_name == "status" else command_name,
+                arguments={"target": "./repo", "format": "json"},
+                effect_class="read-only-report",
+                authority_class="operation-contract",
+                preconditions={"target": "./repo", "action": action, "required_before_claim": bool(closure_attention)},
+                owner_context_revision={"command": command_name, "target": "./repo", "action": action},
+                mutation_boundary={"effect_class": "read-only-report", "writes_repo_state": False, "transport": "local-cli"},
+                proof_requirements=[{"command": commands[0], "claim": "lifecycle state inspected"}],
+                command_rendering=commands[0],
+            ),
         }
     proposed_action = _as_dict(payload.get("next_action"))
-    actionability = derive_actionability(
+    actionability = _as_dict(payload.get("actionability")) or derive_actionability(
         command_name=command_name,
         health=str(payload.get("health") or "unknown"),
         warnings=_list_payload(payload.get("warnings")),
@@ -10557,6 +10665,18 @@ def _lifecycle_plan_payload(
         },
         "next_safe_command": {"status": next_status, "command": review_command if review_required else next_command, "reason": next_reason},
     }
+    installed_state = payload.get("installed_state_compatibility", {})
+    if isinstance(installed_state, dict) and command_name in {"doctor", "status", "upgrade"}:
+        plan["payload_closure_plan"] = _payload_doctor_closure_plan(
+            command_name=command_name,
+            target_root=target_root,
+            selected_modules=selected_modules,
+            installed_state_compatibility=installed_state,
+            repair_actions=[],
+            manual_review_actions=[],
+            reports=[report for report in payload.get("reports", []) if isinstance(report, dict)],
+            cli_invoke=cli_invoke,
+        )
     if command_name == "upgrade":
         plan["root_upgrade_front_door"] = _root_upgrade_front_door_payload(
             target_root=target_root,
@@ -21633,28 +21753,18 @@ def _completion_gate_claim_authorization(
 ) -> dict[str, Any]:
     all_claim_classes = [
         "partial_progress",
-        "local_pr_complete",
         "slice_complete",
-        "leaf_issue_complete",
         "lane_complete",
-        "parent_issue_complete",
         "parent_complete",
         "full_intent_complete",
         "issue_closure",
     ]
     rank = {
         "partial_progress": 0,
-        "local_pr_complete": 1,
-        "local_pr": 1,
         "slice_complete": 1,
         "slice": 1,
-        "leaf_issue_complete": 2,
-        "leaf_issue": 2,
-        "issue_complete": 2,
-        "lane_complete": 3,
-        "lane": 3,
-        "parent_issue_complete": 3,
-        "parent_issue": 3,
+        "lane_complete": 2,
+        "lane": 2,
         "parent_complete": 3,
         "parent": 3,
         "full_intent_complete": 4,
@@ -21675,7 +21785,7 @@ def _completion_gate_claim_authorization(
         if requested_rank >= rank["full_intent_complete"] and issue_refs:
             allowed_claim_classes.append("issue_closure")
     elif proof_records_slice and status in {"blocked", "continue-required"} and not human_accepted_partial:
-        allowed_claim_classes = ["partial_progress", "local_pr_complete", "slice_complete"]
+        allowed_claim_classes = ["partial_progress", "slice_complete"]
     elif human_accepted_partial or status == "continue-required":
         allowed_claim_classes = ["partial_progress"]
     else:
@@ -21690,6 +21800,31 @@ def _completion_gate_claim_authorization(
         }
         for ref in sorted(issue_refs)
     ]
+    issue_closure_authorized = "issue_closure" in allowed_claim_classes
+    blocked_parent_or_issue = bool(
+        {"lane_complete", "parent_complete", "full_intent_complete", "issue_closure"} & set(blocked_claim_classes)
+    )
+    closure_keyword_guard = {
+        "kind": "agentic-workspace/closure-keyword-guard/v1",
+        "status": "authorized" if issue_closure_authorized else "blocked",
+        "severity": "strong-warning" if blocked_parent_or_issue else "advisory",
+        "unsafe_when_blocked": ["close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"],
+        "safe_reference_words": ["refs", "references", "related to", "progress toward"],
+        "safe_reference_template": "Refs {issue}; does not close.",
+        "targets": [
+            {
+                "target": ref,
+                "closure_keywords_authorized": issue_closure_authorized,
+                "safe_reference": f"Refs {ref}; does not close.",
+                "unsafe_examples": [f"Closes {ref}", f"Fixes {ref}", f"Resolves {ref}"] if not issue_closure_authorized else [],
+            }
+            for ref in sorted(issue_refs)
+        ],
+        "rule": (
+            "When issue_closure is blocked, renderers and PR bodies must use reference wording rather than host "
+            "closure keywords. This guard is host-agnostic; listed keywords are renderer examples."
+        ),
+    }
     unsafe_examples = [] if active_intent_satisfied else ["done", "implemented", "complete", "finished", "all", "full intent complete"]
     if not active_intent_satisfied:
         unsafe_examples.extend(f"Closes {ref}" for ref in sorted(issue_refs))
@@ -21698,6 +21833,7 @@ def _completion_gate_claim_authorization(
         "allowed_claim_classes": allowed_claim_classes,
         "blocked_claim_classes": blocked_claim_classes,
         "closure_actions": closure_actions,
+        "closure_keyword_guard": closure_keyword_guard,
         "renderer_rule": (
             "Renderers must choose only templates whose required claim class and closure action are authorized here; "
             "unsafe prose examples are diagnostics, not the enforcement model."
@@ -22394,6 +22530,82 @@ def _fast_closeout_claim_boundary_payload(
     return closeout_claim_boundary_payload(source_payload, cli_invoke=cli_invoke, target_arg="./repo")
 
 
+def _closeout_trust_strict_gate(
+    *, strict_closeout: bool, trust: str, reason: str = "", active_planning_record: bool = False
+) -> dict[str, Any]:
+    if not strict_closeout:
+        status = "disabled"
+        blocking = False
+        summary = "Strict closeout is disabled in assurance config."
+    elif not active_planning_record and trust == "normal":
+        status = "not-applicable"
+        blocking = False
+        summary = "Strict closeout has no active planning record to gate; use normal direct-work proof and issue checks."
+    elif trust == "normal":
+        status = "allowed"
+        blocking = False
+        summary = "Strict closeout is satisfied by the available planning and closeout-trust evidence."
+    elif trust == "lower-trust":
+        status = "blocked"
+        blocking = True
+        summary = "Strict closeout blocks closure until lower-trust planning residue or package evidence is resolved."
+    else:
+        status = "requires-review"
+        blocking = True
+        summary = "Strict closeout requires review because closeout evidence is unavailable or incomplete."
+    return {
+        "status": status,
+        "strict_closeout": strict_closeout,
+        "blocking": blocking,
+        "reason": reason,
+        "summary": summary,
+        "source": "assurance.strict_closeout",
+    }
+
+
+def _closeout_trust_terminal_action(*, trust: str, recommended_next_action: str, cli_invoke: str) -> dict[str, Any]:
+    blocking = trust != "normal"
+    return {
+        "next_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
+        )
+        if blocking
+        else "none",
+        "why": "Lower-trust closeout signals need routed residue before closure is reliable."
+        if trust == "lower-trust"
+        else "Closeout trust is unavailable; recover planning output before claiming closure."
+        if blocking
+        else "No closeout trust blocker is visible; use normal proof and issue-state checks.",
+        "blocking": blocking,
+        "recommended_next_action": recommended_next_action,
+        "changes_closure": "Route missing planning residue, rerun summary/reconcile, then close only when lower_trust_closeout_count is 0."
+        if trust == "lower-trust"
+        else "Recover planning closeout evidence; closure is blocked until closeout_trust is present."
+        if blocking
+        else "None for closeout trust; closure changes only if proof, intent satisfaction, issue state, or new residue changes.",
+    }
+
+
+def _closeout_trust_durable_residue_action(*, trust: str, cli_invoke: str) -> dict[str, Any]:
+    action = {
+        "action": "route-durable-residue",
+        "visible_states": ["none-found", "capture", "route-to-owner", "dismissed"],
+        "summary": "Review lower-trust closeout signals and route missing residue to planning, Memory, docs, checks, or issue follow-up."
+        if trust == "lower-trust"
+        else "If closeout produced reusable learning, route it to the narrowest durable owner; otherwise record no durable residue.",
+        "command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
+        ),
+        "risk": "read-only routing; mutations happen only through the selected owner surface",
+        "required_inputs": ["validation result", "issue or lane scope", "future relevance of any learning"],
+        "destinations": ["none", "planning", "Memory", "docs", "contracts/checks", "issue follow-up", "review/archive evidence"],
+        "destination_rule": "future work goes to planning; reusable non-canonical knowledge goes to Memory; stable rules go to docs/contracts/checks; evidence-only stays in review/archive; otherwise choose none",
+        "next_proof": "rerun summary/reconcile after routing residue before closing the issue or lane",
+    }
+    action["run"] = action["command"]
+    return action
+
+
 def _report_closeout_trust_payload(
     *,
     module_reports: list[dict[str, Any]],
@@ -22413,77 +22625,6 @@ def _report_closeout_trust_payload(
         cli_invoke=cli_invoke,
         compact=True,
     )
-
-    def strict_gate(*, trust: str, reason: str = "", active_planning_record: bool = False) -> dict[str, Any]:
-        if not strict_closeout:
-            status = "disabled"
-            blocking = False
-            summary = "Strict closeout is disabled in assurance config."
-        elif not active_planning_record and trust == "normal":
-            status = "not-applicable"
-            blocking = False
-            summary = "Strict closeout has no active planning record to gate; use normal direct-work proof and issue checks."
-        elif trust == "normal":
-            status = "allowed"
-            blocking = False
-            summary = "Strict closeout is satisfied by the available planning and closeout-trust evidence."
-        elif trust == "lower-trust":
-            status = "blocked"
-            blocking = True
-            summary = "Strict closeout blocks closure until lower-trust planning residue or package evidence is resolved."
-        else:
-            status = "requires-review"
-            blocking = True
-            summary = "Strict closeout requires review because closeout evidence is unavailable or incomplete."
-        return {
-            "status": status,
-            "strict_closeout": strict_closeout,
-            "blocking": blocking,
-            "reason": reason,
-            "summary": summary,
-            "source": "assurance.strict_closeout",
-        }
-
-    def terminal_action(*, trust: str, recommended_next_action: str) -> dict[str, Any]:
-        blocking = trust != "normal"
-        return {
-            "next_command": _command_with_cli_invoke(
-                command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
-            )
-            if blocking
-            else "none",
-            "why": "Lower-trust closeout signals need routed residue before closure is reliable."
-            if trust == "lower-trust"
-            else "Closeout trust is unavailable; recover planning output before claiming closure."
-            if blocking
-            else "No closeout trust blocker is visible; use normal proof and issue-state checks.",
-            "blocking": blocking,
-            "recommended_next_action": recommended_next_action,
-            "changes_closure": "Route missing planning residue, rerun summary/reconcile, then close only when lower_trust_closeout_count is 0."
-            if trust == "lower-trust"
-            else "Recover planning closeout evidence; closure is blocked until closeout_trust is present."
-            if blocking
-            else "None for closeout trust; closure changes only if proof, intent satisfaction, issue state, or new residue changes.",
-        }
-
-    def durable_residue_action(*, trust: str) -> dict[str, Any]:
-        action = {
-            "action": "route-durable-residue",
-            "visible_states": ["none-found", "capture", "route-to-owner", "dismissed"],
-            "summary": "Review lower-trust closeout signals and route missing residue to planning, Memory, docs, checks, or issue follow-up."
-            if trust == "lower-trust"
-            else "If closeout produced reusable learning, route it to the narrowest durable owner; otherwise record no durable residue.",
-            "command": _command_with_cli_invoke(
-                command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
-            ),
-            "risk": "read-only routing; mutations happen only through the selected owner surface",
-            "required_inputs": ["validation result", "issue or lane scope", "future relevance of any learning"],
-            "destinations": ["none", "planning", "Memory", "docs", "contracts/checks", "issue follow-up", "review/archive evidence"],
-            "destination_rule": "future work goes to planning; reusable non-canonical knowledge goes to Memory; stable rules go to docs/contracts/checks; evidence-only stays in review/archive; otherwise choose none",
-            "next_proof": "rerun summary/reconcile after routing residue before closing the issue or lane",
-        }
-        action["run"] = action["command"]
-        return action
 
     def current_task_switch_scope() -> dict[str, Any]:
         if target_root is None or config is None or not normalized_changed_paths or not str(task_text or "").strip():
@@ -22807,7 +22948,12 @@ def _report_closeout_trust_payload(
     )
     planning_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"), None)
     if not isinstance(planning_report, dict):
-        gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
+        gate = _closeout_trust_strict_gate(
+            strict_closeout=strict_closeout,
+            trust="unavailable",
+            reason="planning module is not installed",
+            active_planning_record=False,
+        )
         intent_check = _intent_satisfaction_check_payload(planning_report={}, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report={})
         active_intent_contract = _active_intent_contract_payload(task_text=None, acceptance={}, active_planning_record={})
@@ -22826,7 +22972,7 @@ def _report_closeout_trust_payload(
             assurance_requirements=assurance_requirements,
         )
         assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
-        residue_action = durable_residue_action(trust="unavailable")
+        residue_action = _closeout_trust_durable_residue_action(trust="unavailable", cli_invoke=cli_invoke)
         completion_gate = _completion_gate_payload(
             active_planning_record={},
             intent_check=intent_check,
@@ -22870,8 +23016,10 @@ def _report_closeout_trust_payload(
                 planning_report={}, intent_validation={}, target_root=target_root
             ),
             "durable_residue_action": residue_action,
-            "terminal_action": terminal_action(
-                trust="unavailable", recommended_next_action="Install or run planning report before trusting closeout state."
+            "terminal_action": _closeout_trust_terminal_action(
+                trust="unavailable",
+                recommended_next_action="Install or run planning report before trusting closeout state.",
+                cli_invoke=cli_invoke,
             ),
             "completion_options": completion_options,
             "closeout_protocol": _closeout_protocol_payload(
@@ -22890,7 +23038,12 @@ def _report_closeout_trust_payload(
         }
     intent_validation = planning_report.get("intent_validation", {})
     if not isinstance(intent_validation, dict):
-        gate = strict_gate(trust="unavailable", reason="planning intent validation is unavailable", active_planning_record=False)
+        gate = _closeout_trust_strict_gate(
+            strict_closeout=strict_closeout,
+            trust="unavailable",
+            reason="planning intent validation is unavailable",
+            active_planning_record=False,
+        )
         intent_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
         active_intent_contract = _active_intent_contract_payload(task_text=None, acceptance={}, active_planning_record={})
@@ -22911,7 +23064,7 @@ def _report_closeout_trust_payload(
             assurance_requirements=assurance_requirements,
         )
         assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
-        residue_action = durable_residue_action(trust="unavailable")
+        residue_action = _closeout_trust_durable_residue_action(trust="unavailable", cli_invoke=cli_invoke)
         completion_gate = _completion_gate_payload(
             active_planning_record={},
             intent_check=intent_check,
@@ -22955,8 +23108,10 @@ def _report_closeout_trust_payload(
                 planning_report=planning_report, intent_validation={}, target_root=target_root
             ),
             "durable_residue_action": residue_action,
-            "terminal_action": terminal_action(
-                trust="unavailable", recommended_next_action="Inspect planning report before trusting closeout state."
+            "terminal_action": _closeout_trust_terminal_action(
+                trust="unavailable",
+                recommended_next_action="Inspect planning report before trusting closeout state.",
+                cli_invoke=cli_invoke,
             ),
             "completion_options": completion_options,
             "closeout_protocol": _closeout_protocol_payload(
@@ -23124,12 +23279,13 @@ def _report_closeout_trust_payload(
             recommended_next_action = str(
                 slice_closeout_evidence.get("recovery_command") or "Select relevant closeout evidence explicitly."
             )
-    gate = strict_gate(
+    gate = _closeout_trust_strict_gate(
+        strict_closeout=strict_closeout,
         trust=trust,
         reason="active planning record present" if active_planning_record else "no active planning record",
         active_planning_record=active_planning_record,
     )
-    residue_action = durable_residue_action(trust=trust)
+    residue_action = _closeout_trust_durable_residue_action(trust=trust, cli_invoke=cli_invoke)
     completion_gate = _completion_gate_payload(
         active_planning_record=raw_active_planning_record,
         intent_check=intent_satisfaction_check,
@@ -23372,7 +23528,9 @@ def _report_closeout_trust_payload(
             planning_report=planning_report, intent_validation=intent_validation, target_root=target_root
         ),
         "durable_residue_action": residue_action,
-        "terminal_action": terminal_action(trust=trust, recommended_next_action=recommended_next_action),
+        "terminal_action": _closeout_trust_terminal_action(
+            trust=trust, recommended_next_action=recommended_next_action, cli_invoke=cli_invoke
+        ),
         "completion_options": completion_options,
         "terminal_outcome_contract": terminal_outcome_contract,
         "final_response_rendering": final_response_rendering,
@@ -28600,7 +28758,7 @@ def _attach_summary_task_posture_packet(
     changed_paths: list[str],
     cli_invoke: str,
 ) -> None:
-    summary["decision_point_carry_status"] = _decision_point_carry_status(
+    summary["decision_point_carry_status"] = _workspace_runtime_core._decision_point_carry_status(
         target_root=target_root,
         task_text=task_text,
     )
@@ -30975,6 +31133,35 @@ def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke
     primitive_path = target_root / "src" / "agentic_workspace" / "workspace_runtime_primitives.py"
     relative_core = "src/agentic_workspace/workspace_runtime_core.py"
     relative_primitives = "src/agentic_workspace/workspace_runtime_primitives.py"
+    try:
+        primitive_source = primitive_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        primitive_source = ""
+    if "sys.modules[__name__] = _canonical_runtime" in primitive_source:
+        core_tree = _parse_python_module(core_path)
+        primitive_tree = _parse_python_module(primitive_path)
+        definition_types = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+        core_names = {node.name for node in getattr(core_tree, "body", []) if isinstance(node, definition_types)}
+        primitive_names = (
+            {node.name for node in getattr(primitive_tree, "body", []) if isinstance(node, definition_types)}
+            if primitive_tree is not None
+            else set()
+        )
+        return {
+            "kind": "agentic-workspace/runtime-mirror-surface-consistency/v1",
+            "status": "collapsed_to_canonical_owner",
+            "proof_strength": "module-identity-alias-plus-zero-definition-budget",
+            "semantic_equivalence_checked": True,
+            "mirrored_surface_count": 0,
+            "records": [],
+            "canonical_owner": relative_core,
+            "compatibility_facade": relative_primitives,
+            "shared_top_level_definition_count": len(core_names & primitive_names),
+            "compatibility_facade_lines": len(primitive_source.splitlines()),
+            "recommended_next_action": "Keep runtime behavior in the canonical owner and the compatibility facade definition-free.",
+            "proof_command": "uv run python scripts/check/check_runtime_implementation_ownership.py",
+            "rule": "The historical mirror section remains as a compatibility selector; ownership enforcement now belongs to the runtime implementation ownership checker.",
+        }
     surfaces = [
         {
             "mirrored_surface": "pr_comment_attention",
@@ -35553,6 +35740,7 @@ def _local_chat_checkpoint_record(
     open_blockers: list[str],
     dirty_state_summary: str | None,
     preserve_existing: bool,
+    final_response_admission: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     path = _local_chat_checkpoint_path(target_root)
     existing: dict[str, Any] = {}
@@ -35695,6 +35883,23 @@ def _local_chat_checkpoint_record(
             "durable_decisions_require_durable_source": True,
         },
     }
+    if final_response_admission:
+        previous_admission = _as_dict(existing.get("final_response_admission"))
+        previous_slices = [item for item in _list_payload(previous_admission.get("slices")) if isinstance(item, dict)]
+        slice_record = _as_dict(final_response_admission)
+        record["final_response_admission"] = {
+            "kind": "agentic-workspace/local-final-response-admission-checkpoint/v1",
+            "status": "present",
+            "slice_count": len(previous_slices) + 1,
+            "slices": [*previous_slices[-9:], slice_record],
+            "latest_slice": slice_record,
+            "local_only": True,
+            "not_closure_evidence": True,
+            "rule": (
+                "Admission slices preserve host resume custody across compaction; durable completion claims "
+                "still require closeout_trust and proof receipts."
+            ),
+        }
     if record["current_pr"] in {None, ""}:
         record.pop("current_pr", None)
     return record, warnings
@@ -35712,6 +35917,7 @@ def _write_local_chat_checkpoint(
     open_blockers: list[str],
     dirty_state_summary: str | None,
     preserve_existing: bool,
+    final_response_admission: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path = _local_chat_checkpoint_path(target_root)
     try:
@@ -35732,6 +35938,7 @@ def _write_local_chat_checkpoint(
         open_blockers=open_blockers,
         dirty_state_summary=dirty_state_summary,
         preserve_existing=preserve_existing,
+        final_response_admission=final_response_admission,
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -46863,6 +47070,18 @@ def _record_proof_receipt_payload(
         )
     if failure_summary is not None:
         receipt["failure_summary"] = failure_summary
+    assignment_context = _proof_receipt_assignment_context(target_root=target_root)
+    target_context = _as_dict(assignment_context.get("target_context"))
+    if target_context:
+        receipt["target_context"] = target_context
+        receipt["target_context_authority"] = {
+            "source_ref": assignment_context["source_ref"],
+            "revision": assignment_context.get("revision", ""),
+            "status": assignment_context["status"],
+            "rule": assignment_context["rule"],
+        }
+    else:
+        receipt["calibration"] = assignment_context
     proof_reuse_cache = _write_proof_reuse_cache_from_receipt(
         target_root=target_root,
         command=command,
@@ -46884,7 +47103,7 @@ def _record_proof_receipt_payload(
                     "result": result,
                     "changed_paths": receipt["changed_paths"],
                     "proof_subject": receipt.get("proof_subject", {}),
-                    "recorded_at": receipt["recorded_at"],
+                    "target_context": target_context,
                 },
                 sort_keys=True,
                 ensure_ascii=True,
@@ -46906,8 +47125,41 @@ def _record_proof_receipt_payload(
                 "confidence": "high",
             },
         )
+        if target_context:
+            proof_outcome = "success" if admission.get("proof_sufficient") else "failed"
+            try:
+                calibration_admission = {
+                    "status": "recorded",
+                    "record": _record_aw_proof_delegation_outcome(
+                        target_root=target_root,
+                        delegation_target=target_context["delegation_target"],
+                        task_class=target_context["task_class"],
+                        scope_class=target_context["scope_class"],
+                        outcome=proof_outcome,
+                        proof_receipt_ref=producer_receipt_ref,
+                        idempotency_key=producer_receipt_id,
+                        review_burden="light" if proof_outcome == "success" else "high",
+                        handoff_sufficiency="sufficient" if proof_outcome == "success" else "insufficient",
+                        escalation_required=proof_outcome != "success",
+                    )["recorded"],
+                    "target_context": target_context,
+                    "source_ref": producer_receipt_ref,
+                    "rule": "Ordinary proof receipts feed delegation evidence only after producer-store resolution and target-context matching.",
+                }
+            except WorkspaceUsageError as exc:
+                if "duplicate evidence" not in str(exc):
+                    raise
+                calibration_admission = {
+                    "status": "already-recorded",
+                    "target_context": target_context,
+                    "source_ref": producer_receipt_ref,
+                    "rule": "Duplicate proof calibration is idempotent for the same target/task/scope/provenance key.",
+                }
+        else:
+            calibration_admission = assignment_context
     else:
         producer_receipt_ref = ""
+        calibration_admission = {"status": "dry-run", "rule": "Dry runs do not write producer receipts or calibration evidence."}
     review_stack_transition = record_review_stack_transition(
         target_root=target_root,
         phase="review-proof",
@@ -46941,6 +47193,7 @@ def _record_proof_receipt_payload(
         "history_path": PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix(),
         "receipt": receipt,
         "trusted_producer_receipt_ref": producer_receipt_ref,
+        "calibration_admission": calibration_admission,
         "proof_reuse_cache": proof_reuse_cache,
         "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
     }
@@ -47173,11 +47426,54 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     payload.pop("available_selectors", None)
         _emit_payload(payload=payload, format_name=args.format)
     else:
-        summary_profile = _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
+        summary_profile = _diagnostic_profile(args, default="tiny")
+        reuse_query = {
+            "profile": summary_profile,
+            "format": str(args.format),
+            "task": str(getattr(args, "task", None) or ""),
+            "changed": changed_paths,
+            "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
+        }
+        reuse_context: dict[str, Any] | None = None
+        if args.format == "json" and summary_profile == "tiny":
+            full_detail_command = _command_with_cli_invoke(
+                command=f"agentic-workspace summary --target {target_root.as_posix()} --verbose --format json",
+                cli_invoke=config.cli_invoke,
+            )
+            reused, reuse_context = lookup_projection_reuse(
+                root=target_root,
+                operation="summary",
+                query=reuse_query,
+                full_detail_command=full_detail_command,
+            )
+            if reused is not None:
+                _emit_payload(payload=reused, format_name=args.format)
+                return 0
+        summary_started_at = time.perf_counter()
         summary = planning_summary(
             target=target_root.as_posix(), profile=summary_profile, task_text=getattr(args, "task", None), changed_paths=changed_paths
         )
+        summary_elapsed_ms = round((time.perf_counter() - summary_started_at) * 1000, 3)
         if isinstance(summary, dict):
+            if summary_elapsed_ms > 2_000:
+                summary["summary_runtime"] = {
+                    "kind": "agentic-workspace/summary-runtime/v1",
+                    "status": "slow",
+                    "profile": summary_profile,
+                    "elapsed_ms": summary_elapsed_ms,
+                    "slow_section": "planning_summary",
+                    "detail_command": _command_with_cli_invoke(
+                        command=f"agentic-workspace summary --target {target_root.as_posix()} --verbose --format json",
+                        cli_invoke=config.cli_invoke,
+                    ),
+                    "rule": "Ordinary summary uses the tiny profile; broad diagnostics require --verbose or an explicit selector.",
+                }
+            if reuse_context and reuse_context.get("degraded_findings"):
+                summary["projection_reuse"] = {
+                    "status": "degraded",
+                    "findings": reuse_context["degraded_findings"],
+                    "rule": "Projection reuse was disabled; this compact payload was rebuilt from authoritative sources.",
+                }
             if summary_profile == "full":
                 summary["memory_consult"] = _memory_consult_payload(
                     target_root=target_root, changed_paths=changed_paths, compact=False, cli_invoke=config.cli_invoke
@@ -47209,8 +47505,12 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     cli_invoke=config.cli_invoke,
                 )
         summary = _rewrite_module_cli_commands(summary)
+        if reuse_context is not None:
+            record_projection_reuse(root=target_root, operation="summary", query=reuse_query, context=reuse_context, payload=summary)
         if args.format == "json":
             print(format_summary_json(summary))
+        elif summary_profile == "tiny":
+            _print_tiny_summary(summary)
         else:
             _print_summary(summary)
     return 0
@@ -47424,6 +47724,30 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     if section in {"external_work_reconciliation", "external_work_delta"}:
         _ensure_external_intent_cache_if_available(target_root=target_root)
     if profile == "router" and section is None:
+        reuse_query: dict[str, Any] | None = None
+        reuse_context: dict[str, Any] | None = None
+        if args.format == "json" and not select:
+            reuse_query = {
+                "profile": profile,
+                "modules": selected_modules,
+                "preset": resolved_preset or "",
+                "task": str(task_text or ""),
+                "changed": changed_paths,
+                "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
+            }
+            full_detail_command = _command_with_cli_invoke(
+                command=f"agentic-workspace report --target {target_root.as_posix()} --verbose --format json",
+                cli_invoke=config.cli_invoke,
+            )
+            reused, reuse_context = lookup_projection_reuse(
+                root=target_root,
+                operation="report",
+                query=reuse_query,
+                full_detail_command=full_detail_command,
+            )
+            if reused is not None and not select:
+                _emit_payload(payload=reused, format_name=args.format)
+                return 0
         payload = _run_report_router_command(
             target_root=target_root,
             selected_modules=selected_modules,
@@ -47431,6 +47755,14 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             descriptors=descriptors,
             config=config,
         )
+        if reuse_context and reuse_context.get("degraded_findings"):
+            payload["projection_reuse"] = {
+                "status": "degraded",
+                "findings": reuse_context["degraded_findings"],
+                "rule": "Projection reuse was disabled; this compact payload was rebuilt from authoritative sources.",
+            }
+        if not select and reuse_query is not None and reuse_context is not None:
+            record_projection_reuse(root=target_root, operation="report", query=reuse_query, context=reuse_context, payload=payload)
         if select:
             payload = _select_payload_fields(payload, select=select, source_command="report")
         payload = _rewrite_module_cli_commands(payload)
@@ -47707,6 +48039,29 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         for selector in ("installed_state_compatibility", "payload_closure_plan")
         if select is not None
     )
+    profile = _diagnostic_profile(args, default="tiny")
+    reuse_query = {
+        "profile": profile,
+        "modules": selected_modules,
+        "preset": resolved_preset or "",
+        "format": str(args.format),
+        "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
+    }
+    reuse_context: dict[str, Any] | None = None
+    if command_name == "doctor" and args.format == "json" and not select and profile == "tiny":
+        full_detail_command = _command_with_cli_invoke(
+            command=f"agentic-workspace doctor --target {target_root.as_posix()} --verbose --format json",
+            cli_invoke=config.cli_invoke,
+        )
+        reused, reuse_context = lookup_projection_reuse(
+            root=target_root,
+            operation="doctor",
+            query=reuse_query,
+            full_detail_command=full_detail_command,
+        )
+        if reused is not None:
+            _emit_payload(payload=reused, format_name=args.format)
+            return 0
     payload = _run_lifecycle_command(
         command_name=command_name,
         target_root=target_root,
@@ -47717,11 +48072,13 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         dry_run=False,
         non_interactive=bool(getattr(args, "non_interactive", False)),
         config=config,
-        compact_status=_diagnostic_profile(args, default="tiny") == "tiny" and not detail_selector_requested,
+        compact_status=profile == "tiny" and not detail_selector_requested,
         module_scope_explicit=bool(getattr(args, "modules", None)),
     )
+    if reuse_context is not None:
+        record_projection_reuse(root=target_root, operation="doctor", query=reuse_query, context=reuse_context, payload=payload)
     if command_name in {"doctor", "status"}:
-        payload["decision_point_carry_status"] = _decision_point_carry_status(target_root=target_root)
+        payload["decision_point_carry_status"] = _workspace_runtime_core._decision_point_carry_status(target_root=target_root)
     if select:
         payload = _select_payload_fields(payload, select=select, source_command=command_name)
     _emit_payload(payload=payload, format_name=args.format)
@@ -47888,7 +48245,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
     )
     if legacy_cleanup_requested:
         apply_cleanup = bool(getattr(args, "apply_legacy_scratch_cleanup", False)) and not bool(getattr(args, "dry_run", False))
-        payload = _run_legacy_scratch_cleanup(
+        payload = _workspace_runtime_core._run_legacy_scratch_cleanup(
             target_root=target_root,
             config=config,
             dry_run=not apply_cleanup,
@@ -47896,7 +48253,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_payload(payload=payload, format_name=args.format)
+        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
     if command_name == "upgrade" and bool(getattr(args, "repair_managed_local_instructions", False)):
         payload = _run_managed_local_instructions_repair(
@@ -47907,7 +48264,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_payload(payload=payload, format_name=args.format)
+        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
     if command_name == "upgrade" and bool(getattr(args, "repair_root_startup_pointer", False)):
         payload = _run_root_startup_pointer_repair(
@@ -47918,7 +48275,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_payload(payload=payload, format_name=args.format)
+        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
     if command_name == "upgrade" and bool(getattr(args, "adopt_local_only", False)):
         adoption_modules = [entry.name for entry in _module_registry(descriptors=descriptors, target_root=target_root) if entry.installed]
@@ -47930,10 +48287,10 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_payload(payload=payload, format_name=args.format)
+        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
     if command_name == "upgrade" and bool(getattr(args, "to_necessary_surfaces", False)):
-        migration = _necessary_surfaces_migration_payload(
+        migration = _workspace_runtime_core._necessary_surfaces_migration_payload(
             target_root=target_root,
             selected_modules=selected_modules,
             config=config,
@@ -47955,7 +48312,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             "reports": [report],
             **summary,
         }
-        _emit_payload(payload=payload, format_name=args.format)
+        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
     payload = _run_lifecycle_command(
         command_name=command_name,
@@ -47972,7 +48329,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
         footprint_profile=getattr(args, "footprint_profile", None),
         mirror_payload=bool(getattr(args, "mirror_payload", False)),
     )
-    _emit_payload(payload=payload, format_name=args.format)
+    _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
     return 0
 
 
@@ -48369,37 +48726,52 @@ def _render_workspace_operation_prompt(values: dict[str, Any], _arguments: dict[
 
 
 def _append_workspace_operation_delegation_outcome(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
-    return _record_delegation_outcome(
-        target_root=values["target_root"],
-        delegation_target=str(values.get("delegation_target") or ""),
-        task_class=str(values.get("task_class") or ""),
-        scope_class=str(values.get("scope_class") or ""),
-        outcome=str(values.get("outcome") or ""),
-        handoff_sufficiency=str(values.get("handoff_sufficiency") or ""),
-        review_burden=str(values.get("review_burden") or ""),
-        escalation_required=bool(values.get("escalation_required", False)),
-        operation=str(values.get("operation") or "submit"),
-        predecessor_id=str(values.get("predecessor_id") or ""),
-        authority=str(values.get("authority") or "local-outcome-ledger"),
-        confidence=str(values.get("confidence") or "medium"),
-        source_type=str(values.get("source_type") or ""),
-        source_ref=str(values.get("source_ref") or ""),
-        producer_class=str(values.get("producer_class") or ""),
-        route_outcome=str(values.get("route_outcome") or ""),
-        assignment_route=str(values.get("assignment_route") or ""),
-        proof_observation=str(values.get("proof_observation") or ""),
-        review_observation=str(values.get("review_observation") or ""),
-        handoff_burden=str(values.get("handoff_burden") or ""),
-        repair_burden=str(values.get("repair_burden") or ""),
-        retry_burden=str(values.get("retry_burden") or ""),
-        restart_burden=str(values.get("restart_burden") or ""),
-        expected_burden=str(values.get("expected_burden") or ""),
-        observed_burden=str(values.get("observed_burden") or ""),
-        scope_drift=str(values.get("scope_drift") or "none"),
-        contradiction_state=str(values.get("contradiction_state") or "none"),
-        uncertainty_state=str(values.get("uncertainty_state") or ""),
-        idempotency_key=str(values.get("idempotency_key") or ""),
-    )
+    try:
+        return _record_delegation_outcome(
+            target_root=values["target_root"],
+            delegation_target=str(values.get("delegation_target") or ""),
+            task_class=str(values.get("task_class") or ""),
+            scope_class=str(values.get("scope_class") or ""),
+            outcome=str(values.get("outcome") or ""),
+            handoff_sufficiency=str(values.get("handoff_sufficiency") or ""),
+            review_burden=str(values.get("review_burden") or ""),
+            escalation_required=bool(values.get("escalation_required", False)),
+            operation=str(values.get("operation") or "submit"),
+            predecessor_id=str(values.get("predecessor_id") or ""),
+            authority=str(values.get("authority") or "local-outcome-ledger"),
+            confidence=str(values.get("confidence") or "medium"),
+            source_type=str(values.get("source_type") or ""),
+            source_ref=str(values.get("source_ref") or ""),
+            producer_class=str(values.get("producer_class") or ""),
+            route_outcome=str(values.get("route_outcome") or ""),
+            assignment_route=str(values.get("assignment_route") or ""),
+            proof_observation=str(values.get("proof_observation") or ""),
+            review_observation=str(values.get("review_observation") or ""),
+            handoff_burden=str(values.get("handoff_burden") or ""),
+            repair_burden=str(values.get("repair_burden") or ""),
+            retry_burden=str(values.get("retry_burden") or ""),
+            restart_burden=str(values.get("restart_burden") or ""),
+            expected_burden=str(values.get("expected_burden") or ""),
+            observed_burden=str(values.get("observed_burden") or ""),
+            scope_drift=str(values.get("scope_drift") or "none"),
+            contradiction_state=str(values.get("contradiction_state") or "none"),
+            uncertainty_state=str(values.get("uncertainty_state") or ""),
+            idempotency_key=str(values.get("idempotency_key") or ""),
+        )
+    except WorkspaceUsageError as exc:
+        if str(values.get("format") or "text") != "json":
+            raise
+        return {
+            "kind": "agentic-workspace/operation-failure/v1",
+            "status": "rejected",
+            "message": str(exc),
+            "command": "note-delegation-outcome",
+            "exit_status": 2,
+            "failure_class": str(getattr(exc, "failure_class", "invalid-delegation-outcome")),
+            "safe_to_retry": True,
+            "safe_recovery": str(getattr(exc, "safe_recovery", "Correct the rejected delegation outcome before retrying.")),
+            "completion_boundary": "mutation-not-applied",
+        }
 
 
 def _load_workspace_operation_system_intent_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> WorkspaceConfig:
@@ -52374,6 +52746,68 @@ def _capability_resolution_for_profile(*, profile: DelegationTargetProfile, capa
     }
 
 
+class DelegationOutcomeRejection(WorkspaceUsageError):
+    def __init__(self, message: str, *, failure_class: str, safe_recovery: str) -> None:
+        super().__init__(message)
+        self.failure_class = failure_class
+        self.safe_recovery = safe_recovery
+
+
+def _delegation_outcome_identity(existing: DelegationOutcomeRecord, index: int) -> str:
+    return existing.record_id or (
+        f"{existing.delegation_target}:{existing.task_class}:{existing.scope_class}:{existing.recorded_at}:{index}"
+    )
+
+
+def _delegation_outcome_transition_predecessor(
+    *,
+    records: Sequence[DelegationOutcomeRecord],
+    operation: str,
+    predecessor_id: str,
+    delegation_target: str,
+    task_class: str,
+    scope_class: str,
+) -> DelegationOutcomeRecord | None:
+    if operation == "submit":
+        return None
+    by_id = {_delegation_outcome_identity(existing, index): existing for index, existing in enumerate(records)}
+    if predecessor_id not in by_id:
+        raise DelegationOutcomeRejection(
+            "note-delegation-outcome transition operations require --predecessor-id for an existing record.",
+            failure_class="invalid-lifecycle-transition",
+            safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+        )
+    predecessor = by_id[predecessor_id]
+    if (predecessor.delegation_target, predecessor.task_class, predecessor.scope_class) != (
+        delegation_target,
+        task_class,
+        scope_class,
+    ):
+        raise DelegationOutcomeRejection(
+            "note-delegation-outcome transition predecessor must match target/task/scope.",
+            failure_class="invalid-lifecycle-transition",
+            safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+        )
+    if predecessor.admission_state not in {"accepted", "accepted-normalized", "recovered", "compacted-summary"}:
+        raise DelegationOutcomeRejection(
+            "note-delegation-outcome transition predecessor must be current admitted evidence.",
+            failure_class="invalid-lifecycle-transition",
+            safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+        )
+    transitioned_predecessors = {
+        existing.predecessor_id
+        for existing in records
+        if existing.operation in {"correct-or-dispute", "supersede", "prune-or-compact"} and existing.predecessor_id
+    }
+    if predecessor_id in transitioned_predecessors:
+        raise DelegationOutcomeRejection(
+            "note-delegation-outcome transition predecessor is already superseded, disputed, or compacted.",
+            failure_class="invalid-lifecycle-transition",
+            safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+        )
+    return predecessor
+
+
 def _record_delegation_outcome(
     *,
     target_root: Path,
@@ -52474,12 +52908,6 @@ def _record_delegation_outcome(
     elif normalized_authority != trusted_authority_for_producer:
         normalized_authority = "model-self-report"
 
-    def _identity(existing: DelegationOutcomeRecord, index: int) -> str:
-        return (
-            existing.record_id
-            or f"{existing.delegation_target}:{existing.task_class}:{existing.scope_class}:{existing.recorded_at}:{index}"
-        )
-
     def _record_payload(existing: DelegationOutcomeRecord) -> dict[str, Any]:
         return {
             "recorded_at": existing.recorded_at,
@@ -52515,27 +52943,14 @@ def _record_delegation_outcome(
             "idempotency_key": existing.idempotency_key,
         }
 
-    by_id = {_identity(existing, index): (index, existing) for index, existing in enumerate(records)}
-    transitioned_predecessors = {
-        existing.predecessor_id
-        for existing in records
-        if existing.operation in {"correct-or-dispute", "supersede", "prune-or-compact"} and existing.predecessor_id
-    }
-    predecessor: DelegationOutcomeRecord | None = None
-    if normalized_operation != "submit" and normalized_predecessor not in by_id:
-        raise WorkspaceUsageError("note-delegation-outcome transition operations require --predecessor-id for an existing record.")
-    if normalized_operation != "submit":
-        predecessor = by_id[normalized_predecessor][1]
-        if (
-            predecessor.delegation_target,
-            predecessor.task_class,
-            predecessor.scope_class,
-        ) != (normalized_target, normalized_task, normalized_scope):
-            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must match target/task/scope.")
-        if predecessor.admission_state not in {"accepted", "accepted-normalized", "recovered", "compacted-summary"}:
-            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must be current admitted evidence.")
-        if normalized_predecessor in transitioned_predecessors:
-            raise WorkspaceUsageError("note-delegation-outcome transition predecessor is already superseded, disputed, or compacted.")
+    predecessor = _delegation_outcome_transition_predecessor(
+        records=records,
+        operation=normalized_operation,
+        predecessor_id=normalized_predecessor,
+        delegation_target=normalized_target,
+        task_class=normalized_task,
+        scope_class=normalized_scope,
+    )
     today = date.today().isoformat()
     generated_idempotency_key = (
         f"{normalized_operation}:{normalized_target}:{normalized_task}:{normalized_scope}:"
@@ -52561,8 +52976,10 @@ def _record_delegation_outcome(
                 existing.source_ref or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
                 existing.idempotency_key,
             ) == duplicate_key and existing.admission_state in {"accepted", "accepted-normalized", "recovered"}:
-                raise WorkspaceUsageError(
-                    "note-delegation-outcome duplicate evidence for target/task/scope/provenance must use a lifecycle transition."
+                raise DelegationOutcomeRejection(
+                    "note-delegation-outcome duplicate evidence for target/task/scope/provenance must use a lifecycle transition.",
+                    failure_class="duplicate-mutation",
+                    safe_recovery="Use an explicit lifecycle transition that references the current record.",
                 )
     record_suffix = re.sub(r"[^A-Za-z0-9_.-]+", "-", record_idempotency_key).strip("-")[:48] or str(len(records))
     record_id = f"{normalized_target}:{normalized_task}:{normalized_scope}:{today}:{record_suffix}"
@@ -52611,7 +53028,7 @@ def _record_delegation_outcome(
                 and existing.task_class == normalized_task
                 and existing.scope_class == normalized_scope
                 and (
-                    _identity(existing, index) == normalized_predecessor
+                    _delegation_outcome_identity(existing, index) == normalized_predecessor
                     or existing.admission_state in {"superseded", "disputed", "compacted-raw"}
                 )
             )
@@ -52630,7 +53047,7 @@ def _record_delegation_outcome(
     ]
     evicted_lineage = [
         {
-            "record_id": _identity(pending_records[index], index),
+            "record_id": _delegation_outcome_identity(pending_records[index], index),
             "recorded_at": pending_records[index].recorded_at,
             "operation": pending_records[index].operation,
             "authority": pending_records[index].authority,
@@ -54612,9 +55029,11 @@ def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:
 
 
 def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str | None, select: str | None = None) -> None:
-    full_payload = _skills_payload(target_root=target_root, task_text=task_text)
+    full_payload = _workspace_runtime_core._skills_payload(target_root=target_root, task_text=task_text)
     payload = (
-        _skills_recommendation_first_payload(full_payload, target_root=target_root, task_text=task_text) if task_text else full_payload
+        _workspace_runtime_core._skills_recommendation_first_payload(full_payload, target_root=target_root, task_text=task_text)
+        if task_text
+        else full_payload
     )
     if select:
         payload = _select_payload_fields(full_payload, select=select, source_command="skills")
@@ -55451,7 +55870,7 @@ def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: P
 
 def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
     if format_name == "json":
-        print(json.dumps(serialise_value(payload), separators=(",", ":")))
+        print(json.dumps(serialise_value(payload), indent=2))
         return
     if payload.get("kind") == "agentic-workspace/disabled-state/v1":
         print(f"Agentic Workspace is disabled for {payload.get('target', '.')}.")
@@ -55581,3 +56000,2269 @@ def _dedupe(values: list[str]) -> list[str]:
     for value in values:
         _append_unique(ordered, value)
     return ordered
+
+
+def _local_scratch_nested_repo_paths(*, target_root: Path) -> list[str]:
+    scratch_root = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
+    if not scratch_root.is_dir():
+        return []
+    return []
+
+
+def _payload_doctor_closure_plan(
+    *,
+    command_name: str,
+    target_root: Path,
+    selected_modules: list[str],
+    installed_state_compatibility: dict[str, Any],
+    repair_actions: list[dict[str, Any]],
+    manual_review_actions: list[dict[str, Any]],
+    reports: list[dict[str, Any]],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    target = target_root.as_posix()
+    source_checkout = _is_agentic_workspace_source_checkout(target_root)
+    payload_state = installed_state_compatibility.get("payload", {})
+    payload_state = payload_state if isinstance(payload_state, dict) else {}
+    action_state = installed_state_compatibility.get("action_state", {})
+    action_state = action_state if isinstance(action_state, dict) else {}
+    action_state_name = str(action_state.get("state") or "no_repair_needed")
+    payload_status = str(payload_state.get("status", "unknown"))
+    provenance = payload_state.get("provenance", {})
+    provenance_status = str(provenance.get("status", "unknown")) if isinstance(provenance, dict) else "unknown"
+    provenance_drift = str(payload_state.get("provenance_drift", "unknown"))
+    installed_payload_needs_sync = action_state_name == "safe_payload_sync_available" or payload_status == "sync-required"
+    scratch_repos = _local_scratch_nested_repo_paths(target_root=target_root)
+    installed_lane_proof_commands = [
+        _command_with_cli_invoke(command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke),
+        _command_with_cli_invoke(command=f"agentic-workspace status --target {target} --format json", cli_invoke=cli_invoke),
+        "git diff --check",
+    ]
+    source_checkout_proof_commands = [
+        "make test-workspace",
+        "make maintainer-surfaces",
+        "uv run python scripts/generate/generate_command_packages.py --check",
+        "make absolute-paths",
+    ]
+    proof_commands = [*installed_lane_proof_commands]
+    if source_checkout:
+        proof_commands[2:2] = source_checkout_proof_commands
+    installed_dry_run = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --dry-run --format json", cli_invoke=cli_invoke
+    )
+    installed_apply = _command_with_cli_invoke(command=f"agentic-workspace upgrade --target {target} --format json", cli_invoke=cli_invoke)
+    scratch_roots = [WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix()] if (target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH).exists() else []
+    scratch_scope = " ".join(scratch_roots) if scratch_roots else WORKSPACE_LOCAL_SCRATCH_ROOT_PATH.as_posix()
+    scratch_dry_run_command = f"git clean -ndx -- {scratch_scope}"
+    scratch_cleanup_command = f"git clean -fdx -- {scratch_scope}"
+    source_mirror_paths = []
+    if source_checkout:
+        for relative in WORKSPACE_PAYLOAD_FILES:
+            source_mirror_paths.append(_display_path(_workspace_payload_source(relative).as_posix(), target_root))
+        for module_path in MODULE_UPGRADE_SOURCE_PATHS.values():
+            _append_unique(source_mirror_paths, module_path.as_posix())
+    surface_classes = [
+        {
+            "id": "installed_payload",
+            "status": action_state_name if action_state_name != "no_repair_needed" else "compatible",
+            "action_state": action_state,
+            "dry_run_command": installed_dry_run,
+            "apply_command": installed_apply,
+            "rule": "Sync installed target-repo payload before claiming doctor compatibility.",
+        },
+        {
+            "id": "source_payload_mirrors",
+            "status": "check-required" if source_checkout else "not-source-checkout",
+            "paths": sorted(source_mirror_paths),
+            "check_command": "make maintainer-surfaces" if source_checkout else None,
+            "not_applicable_reason": None
+            if source_checkout
+            else "Source payload mirror checks require an agentic-workspace source checkout.",
+            "rule": "When the invoked CLI is a source checkout, verify source payload mirrors with the maintainer surface lane.",
+        },
+        {
+            "id": "generated_payload_projections",
+            "status": "check-required" if source_checkout else "not-source-checkout",
+            "refresh_command": "uv run python scripts/generate/generate_command_packages.py" if source_checkout else None,
+            "check_command": "uv run python scripts/generate/generate_command_packages.py --check" if source_checkout else None,
+            "not_applicable_reason": None
+            if source_checkout
+            else "Generated command-package projection checks are source-checkout maintainer proof.",
+            "rule": "Refresh generated command-package projections before broad tests discover stale generated targets.",
+        },
+        {
+            "id": "local_scratch_blockers",
+            "status": "ignored-local-only" if scratch_roots else "clear",
+            "nested_repo_paths": scratch_repos,
+            "dry_run_command": scratch_dry_run_command,
+            "cleanup_command_after_review": scratch_cleanup_command,
+            "rule": "Ignore AW local scratch contents for payload closure; cleanup remains explicitly scoped to local scratch roots.",
+        },
+        {
+            "id": "provenance",
+            "status": "normalize-required"
+            if provenance_drift not in {"none", "unknown"} or provenance_status in {"missing", "invalid"}
+            else "check-required",
+            "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+            "normalize_command": installed_apply,
+            "hygiene_check": "make absolute-paths" if source_checkout else None,
+            "hygiene_status": "source-checkout-required" if source_checkout else "not-applicable",
+            "rule": "Payload provenance must stay repo-portable and free of machine-local absolute paths.",
+        },
+        {
+            "id": "proof",
+            "status": "required",
+            "commands": proof_commands,
+            "rule": "Run this proof lane after repair steps so later checks do not reveal omitted payload-surface work.",
+        },
+    ]
+    repair_sequence: list[dict[str, Any]] = [
+        {
+            "id": "inspect_installed_payload",
+            "surface_class": "installed_payload",
+            "command": installed_dry_run,
+            "when": "installed payload status is not compatible or doctor reports managed payload drift",
+        },
+        {
+            "id": "apply_installed_payload",
+            "surface_class": "installed_payload",
+            "command": installed_apply,
+            "when": "dry-run shows only managed payload sync or provenance normalization",
+        },
+    ]
+    if source_checkout:
+        repair_sequence.extend(
+            [
+                {
+                    "id": "check_source_payload_mirrors",
+                    "surface_class": "source_payload_mirrors",
+                    "command": "make maintainer-surfaces",
+                    "when": "running from an agentic-workspace source checkout or touching payload mirrors",
+                },
+                {
+                    "id": "refresh_generated_projections",
+                    "surface_class": "generated_payload_projections",
+                    "command": "uv run python scripts/generate/generate_command_packages.py",
+                    "when": "source payload mirrors or generated command-package inputs changed",
+                },
+            ]
+        )
+    repair_sequence.extend(
+        [
+            {
+                "id": "review_local_scratch_cleanup",
+                "surface_class": "local_scratch_blockers",
+                "command": scratch_dry_run_command,
+                "when": "manual scratch cleanup is explicitly requested",
+            },
+            {
+                "id": "normalize_provenance",
+                "surface_class": "provenance",
+                "command": installed_apply,
+                "when": "payload provenance is missing, invalid, stale, or contains local absolute paths",
+            },
+            {"id": "run_final_proof", "surface_class": "proof", "commands": proof_commands, "when": "all repair steps are complete"},
+        ]
+    )
+    plan_status = "attention" if installed_payload_needs_sync or repair_actions or manual_review_actions else "available"
+    payload_action_required = installed_payload_needs_sync or bool(repair_actions)
+    if installed_payload_needs_sync:
+        primary_next_action = {
+            "action": "inspect-installed-payload-sync",
+            "surface_class": "installed_payload",
+            "command": installed_dry_run,
+            "run": installed_dry_run,
+            "next": installed_apply,
+        }
+    elif scratch_repos:
+        primary_next_action = {
+            "action": "review-local-scratch-cleanup",
+            "surface_class": "local_scratch_blockers",
+            "command": scratch_dry_run_command,
+            "run": scratch_dry_run_command,
+            "next": scratch_cleanup_command,
+        }
+    elif repair_actions:
+        repair_command = str(repair_actions[0].get("dry_run") or repair_actions[0].get("command") or "")
+        primary_next_action = {
+            "action": str(repair_actions[0].get("action", "inspect-safe-repair")),
+            "surface_class": "installed_payload",
+            "command": repair_command,
+            "run": repair_command,
+            "next": repair_actions[0].get("command"),
+        }
+    else:
+        primary_next_action = {
+            "action": "run-payload-closure-proof",
+            "surface_class": "proof",
+            "command": proof_commands[0],
+            "run": proof_commands[0],
+            "next": proof_commands,
+        }
+    return {
+        "kind": "agentic-workspace/payload-doctor-closure-plan/v1",
+        "command": command_name,
+        "status": plan_status,
+        "action_state": action_state,
+        "target_root": target,
+        "selected_modules": list(selected_modules),
+        "source_checkout": source_checkout,
+        "surface_classes": surface_classes,
+        "repair_sequence": repair_sequence,
+        "primary_next_action": primary_next_action,
+        "payload_action_required": payload_action_required,
+        "repair_action_count": len(repair_actions),
+        "manual_review_action_count": len(manual_review_actions),
+        "report_count": len(reports),
+        "rule": (
+            "Payload closure is one lane: installed payload sync, source mirror checks, generated projections, "
+            "scratch cleanup, provenance normalization, and proof stay visible together."
+        ),
+    }
+
+
+def _final_response_admission_checkpoint_state(*, target_root: Path) -> dict[str, Any]:
+    path = _local_chat_checkpoint_path(target_root)
+    if not path.exists():
+        return {"checkpoint_status": "absent", "slice_count": 0}
+    try:
+        checkpoint = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return {"checkpoint_status": "unreadable", "reason": exc.__class__.__name__, "slice_count": 0}
+    admission = _as_dict(_as_dict(checkpoint).get("final_response_admission"))
+    return {
+        "checkpoint_status": "present",
+        "slice_count": int(admission.get("slice_count") or 0),
+        "latest_slice": _as_dict(admission.get("latest_slice")),
+    }
+
+
+def _final_response_continuation_argv(*, target_root: Path, terminal_outcome_contract: dict[str, Any]) -> tuple[str, list[str]]:
+    option_ids = {str(item) for item in _list_payload(terminal_outcome_contract.get("safe_continuation_option_ids"))}
+    if "run-proof" in option_ids:
+        return (
+            "proof.report",
+            ["proof", "--target", str(target_root), "--format", "json"],
+        )
+    return (
+        "report.closeout_claim_boundary",
+        ["report", "--target", str(target_root), "--section", "closeout_claim_boundary", "--format", "json"],
+    )
+
+
+def _run_final_response_continuation_operation(
+    *, target_root: Path, terminal_outcome_contract: dict[str, Any], request: dict[str, Any]
+) -> dict[str, Any]:
+    operation_id, cli_args = _final_response_continuation_argv(
+        target_root=target_root,
+        terminal_outcome_contract=terminal_outcome_contract,
+    )
+    command = [
+        sys.executable,
+        "-c",
+        "from agentic_workspace.cli import main; raise SystemExit(main())",
+        *cli_args,
+    ]
+    started_at = datetime.now(timezone.utc).isoformat()
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=target_root,
+            text=True,
+            capture_output=True,
+            timeout=90,
+            check=False,
+        )
+        stdout_text = completed.stdout.strip()
+        stderr_text = completed.stderr.strip()
+        stdout_payload: dict[str, Any] = {}
+        if stdout_text:
+            with contextlib.suppress(json.JSONDecodeError):
+                loaded = json.loads(stdout_text)
+                if isinstance(loaded, dict):
+                    stdout_payload = loaded
+        exit_code = int(completed.returncode)
+        status = "executed" if exit_code == 0 else "failed"
+    except (OSError, subprocess.SubprocessError) as exc:
+        stdout_text = ""
+        stderr_text = str(exc)
+        stdout_payload = {}
+        exit_code = 1
+        status = "failed"
+    completed_at = datetime.now(timezone.utc).isoformat()
+    invoked_action = str(request.get("auto_resume_action") or terminal_outcome_contract.get("required_next_action") or operation_id)
+    return {
+        "kind": "agentic-workspace/final-response-resume-result/v1",
+        "status": status,
+        "invoked_action": invoked_action,
+        "invoked_operation": operation_id,
+        "command": " ".join(shlex.quote(part) for part in cli_args),
+        "exit_code": exit_code,
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "stdout_kind": str(stdout_payload.get("kind") or ""),
+        "stdout_status": str(stdout_payload.get("status") or ""),
+        "stderr_excerpt": stderr_text[:500],
+        "custody": "agent",
+        "after_state_patch": {
+            "required_next_action": invoked_action,
+            "custody_owner": "agent",
+            "continuation_slice": "post-admission-resume",
+            "continuation_operation": operation_id,
+            "continuation_exit_code": exit_code,
+        },
+        "rule": "The host admission command executed an ordinary AW continuation operation instead of recording a simulated resume.",
+    }
+
+
+def _executor_binding_terms(binding: dict[str, Any]) -> list[str]:
+    terms: list[str] = []
+    for value in [
+        binding.get("owner_id"),
+        binding.get("owner_ref"),
+        *_list_payload(binding.get("owner_refs")),
+        *_list_payload(binding.get("issue_refs")),
+    ]:
+        text = str(value or "").strip()
+        if text:
+            terms.append(text)
+    for section_name in ("owner_identity", "target_identity", "assignment", "evaluation", "proof_obligation", "mutation_baseline"):
+        section = _as_dict(binding.get(section_name))
+        for value in section.values():
+            if isinstance(value, (str, int, float)):
+                text = str(value or "").strip()
+                if text:
+                    terms.append(text)
+    external_intent = _as_dict(binding.get("external_intent"))
+    for value in [
+        external_intent.get("item_id"),
+        external_intent.get("provider"),
+        external_intent.get("external_revision"),
+        external_intent.get("evidence_revision_hash"),
+        *_list_payload(external_intent.get("issue_refs")),
+    ]:
+        text = str(value or "").strip()
+        if text:
+            terms.append(text)
+    for value in _as_dict(external_intent.get("bounded_task")).values():
+        if isinstance(value, (str, int, float)):
+            text = str(value or "").strip()
+            if text:
+                terms.append(text)
+    return _dedupe(terms)
+
+
+def _executor_binding_fingerprint_payload(binding: dict[str, Any]) -> dict[str, Any]:
+    legacy_owner_identity = {
+        "owner_id": binding.get("owner_id"),
+        "owner_ref": binding.get("owner_ref"),
+        "current_work_id": binding.get("current_work_id"),
+    }
+    legacy_mutation_baseline = {
+        "head": _as_dict(binding.get("input_revision")).get("head"),
+        "resolved_at": _as_dict(binding.get("input_revision")).get("resolved_at"),
+    }
+    return {
+        "owner_identity": _as_dict(binding.get("owner_identity")) or legacy_owner_identity,
+        "target_identity": _as_dict(binding.get("target_identity")),
+        "assignment": _as_dict(binding.get("assignment")),
+        "evaluation": _as_dict(binding.get("evaluation")),
+        "proof_obligation": _as_dict(binding.get("proof_obligation")),
+        "mutation_baseline": _as_dict(binding.get("mutation_baseline")) or legacy_mutation_baseline,
+        "external_intent": _as_dict(binding.get("external_intent")),
+    }
+
+
+def _executor_binding_invocation_scope_payload(binding: dict[str, Any]) -> dict[str, Any]:
+    owner_identity = _as_dict(binding.get("owner_identity"))
+    target_identity = _as_dict(binding.get("target_identity"))
+    assignment = _as_dict(binding.get("assignment"))
+    evaluation = _as_dict(binding.get("evaluation"))
+    proof_obligation = _as_dict(binding.get("proof_obligation"))
+    external_intent = _as_dict(binding.get("external_intent"))
+    return {
+        "owner_identity": {
+            "owner_id": owner_identity.get("owner_id"),
+            "owner_ref": owner_identity.get("owner_ref"),
+            "owner_relation": owner_identity.get("owner_relation"),
+            "current_work_id": owner_identity.get("current_work_id"),
+        },
+        "target_identity": {
+            "target_identity_ref": target_identity.get("target_identity_ref"),
+            "selected_target": target_identity.get("selected_target"),
+            "execution_methods": target_identity.get("execution_methods") or [],
+            "capability_classes": target_identity.get("capability_classes") or [],
+            "location": target_identity.get("location"),
+            "strength": target_identity.get("strength"),
+        },
+        "assignment": {
+            "status": assignment.get("status"),
+            "policy": assignment.get("policy"),
+            "selected_target": assignment.get("selected_target"),
+            "target_identity_ref": assignment.get("target_identity_ref"),
+            "context_key": assignment.get("context_key"),
+            "implementation_allowed": assignment.get("implementation_allowed"),
+            "assignment_decision_revision": assignment.get("assignment_decision_revision"),
+            "allowed_effects": assignment.get("allowed_effects") or [],
+            "allowed_paths": assignment.get("allowed_paths") or [],
+            "stop_conditions": assignment.get("stop_conditions") or [],
+            "proof_obligation_id": assignment.get("proof_obligation_id"),
+        },
+        "evaluation": {
+            "status": evaluation.get("status"),
+            "freshness_status": evaluation.get("freshness_status"),
+            "evaluation_id": evaluation.get("evaluation_id"),
+            "revision": evaluation.get("revision"),
+            "current_result_identity": evaluation.get("current_result_identity"),
+        },
+        "proof_obligation": {
+            "status": proof_obligation.get("status"),
+            "receipt_status": proof_obligation.get("receipt_status"),
+            "selected_proof_identity": proof_obligation.get("selected_proof_identity"),
+            "proof_subject_fingerprint": proof_obligation.get("proof_subject_fingerprint"),
+            "required_commands": proof_obligation.get("required_commands") or [],
+        },
+        "external_intent": {
+            "status": external_intent.get("status"),
+            "provider": external_intent.get("provider"),
+            "item_id": external_intent.get("item_id"),
+            "external_revision": external_intent.get("external_revision"),
+            "evidence_revision_hash": external_intent.get("evidence_revision_hash"),
+            "bounded_task": external_intent.get("bounded_task"),
+        },
+    }
+
+
+def _executor_binding_fingerprint(payload: dict[str, Any]) -> str:
+    normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(normalized.encode()).hexdigest()[:24]
+
+
+def _executor_binding_invalidity(binding: dict[str, Any]) -> dict[str, Any]:
+    if str(binding.get("status") or "") != "bound":
+        return {
+            "status": "rejected",
+            "reason": "no-live-owner-binding",
+            "repair": "Resolve a live Planning/current-work owner before running Autopilot.",
+        }
+    availability = _as_dict(binding.get("availability"))
+    if availability and str(availability.get("status") or "") not in {"", "available"}:
+        return {
+            "status": "rejected",
+            "reason": str(availability.get("reason") or availability.get("status") or "executor-unavailable"),
+            "repair": str(availability.get("repair") or "Select an available executor target before running Autopilot."),
+        }
+    validity = _as_dict(binding.get("validity"))
+    if str(validity.get("status") or "accepted") in {"rejected", "stale", "superseded", "blocked"}:
+        return {
+            "status": "rejected",
+            "reason": str(validity.get("reason") or "invalid-executor-binding"),
+            "repair": str(validity.get("repair") or "Re-resolve the Autopilot executor binding before continuing."),
+        }
+    required_sections = {
+        "assignment": "missing-assignment-authority",
+        "proof_obligation": "missing-proof-obligation-authority",
+        "mutation_baseline": "missing-mutation-baseline-authority",
+        "external_intent": "missing-external-intent-authority",
+    }
+    for section_name, reason in required_sections.items():
+        if not _as_dict(binding.get(section_name)):
+            return {
+                "status": "rejected",
+                "reason": reason,
+                "repair": f"Resolve authoritative {section_name} before running Autopilot.",
+            }
+    evaluation = _as_dict(binding.get("evaluation"))
+    if not evaluation:
+        return {
+            "status": "rejected",
+            "reason": "missing-evaluation-authority",
+            "repair": "Resolve evaluation authority or an authoritative not-required evaluation state before running Autopilot.",
+        }
+    invalid_sections = {
+        "assignment": {"", "blocked", "blocked-target-mismatch", "handoff-required", "no-safe-route", "missing"},
+        "evaluation": {"", "missing", "rejected", "stale", "stale-bound", "legacy-unbound", "superseded", "failed"},
+        "proof_obligation": {
+            "",
+            "missing",
+            "rejected",
+            "stale",
+            "superseded",
+            "failed",
+            "attention",
+            "not-recorded",
+            "untrusted-record",
+            "record-stale-untrusted",
+        },
+        "mutation_baseline": {"", "missing", "stale", "mismatch", "rejected", "failed"},
+        "external_intent": {"", "missing", "rejected", "stale", "ambiguous", "changed", "failed"},
+    }
+    for section_name, invalid_statuses in invalid_sections.items():
+        section = _as_dict(binding.get(section_name))
+        if section_name == "evaluation":
+            section_status = str(section.get("freshness_status") or section.get("status") or section.get("state") or "")
+        elif section_name == "proof_obligation":
+            section_status = str(section.get("receipt_status") or section.get("freshness_status") or section.get("status") or "")
+        elif section_name == "mutation_baseline":
+            section_status = str(section.get("revalidation_status") or section.get("status") or section.get("state") or "")
+        else:
+            section_status = str(section.get("status") or section.get("state") or "")
+        if section_status in invalid_statuses:
+            return {
+                "status": "rejected",
+                "reason": str(section.get("reason") or section.get("reason_code") or f"{section_name}-invalid"),
+                "repair": str(section.get("repair") or section.get("repair_route") or f"Refresh {section_name} before running Autopilot."),
+            }
+    return {"status": "accepted", "reason": "fresh-live-executor-binding"}
+
+
+def _external_intent_evidence_hash(*, evidence_payload: dict[str, Any], item: dict[str, Any]) -> str:
+    revision_basis = {
+        "refreshed_at": evidence_payload.get("refreshed_at") or _as_dict(evidence_payload.get("refresh_metadata")).get("refreshed_at"),
+        "refresh_revision": _as_dict(evidence_payload.get("refresh_metadata")).get("revision")
+        or _as_dict(evidence_payload.get("provenance")).get("refresh_id"),
+        "item": item,
+    }
+    return _executor_binding_fingerprint(revision_basis)
+
+
+def _executor_external_intent_authority(
+    *,
+    target_root: Path,
+    context: dict[str, Any],
+    owner_identity: dict[str, Any],
+    assignment: dict[str, Any],
+    task_text: str,
+) -> dict[str, Any]:
+    issue_refs = _normalize_external_intent_issue_refs([str(ref) for ref in _list_payload(context.get("issue_refs")) if str(ref).strip()])
+    supplied = _as_dict(context.get("external_intent") or context.get("external_intent_authority"))
+    if not issue_refs:
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "not-applicable",
+            "reason": "no-external-issue-ref-in-current-work",
+            "issue_refs": [],
+            "source": "resolve_current_work_context",
+        }
+    if len(issue_refs) != 1:
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "ambiguous",
+            "reason": "ambiguous-external-intent-refs",
+            "issue_refs": issue_refs,
+            "expected_authority": supplied,
+            "repair": "Select exactly one external issue-backed child before rendering an Autopilot executor invocation.",
+        }
+    issue_ref = issue_refs[0]
+    evidence_path, evidence_relative_path, storage = _external_intent_evidence_read_location(target_root)
+    if not evidence_path.exists():
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "missing",
+            "reason": "missing-external-intent-evidence",
+            "issue_refs": issue_refs,
+            "source_path": evidence_relative_path,
+            "storage": storage,
+            "expected_authority": supplied,
+            "repair": f"Refresh external intent evidence for {issue_ref} before running Autopilot.",
+        }
+    try:
+        evidence_payload = json.loads(evidence_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "rejected",
+            "reason": "unreadable-external-intent-evidence",
+            "diagnostic": str(exc),
+            "issue_refs": issue_refs,
+            "source_path": evidence_relative_path,
+            "storage": storage,
+            "expected_authority": supplied,
+            "repair": f"Refresh external intent evidence for {issue_ref} before running Autopilot.",
+        }
+    items = [item for item in _list_payload(_as_dict(evidence_payload).get("items")) if isinstance(item, dict)]
+
+    def item_ref(item: dict[str, Any]) -> str:
+        raw = str(item.get("id") or item.get("number") or "").strip()
+        if raw.isdigit():
+            return f"#{raw}"
+        return raw
+
+    matches = [item for item in items if item_ref(item) == issue_ref]
+    if len(matches) != 1:
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "missing" if not matches else "ambiguous",
+            "reason": "missing-external-intent-item" if not matches else "ambiguous-external-intent-item",
+            "issue_refs": issue_refs,
+            "matched_item_count": len(matches),
+            "source_path": evidence_relative_path,
+            "storage": storage,
+            "expected_authority": supplied,
+            "repair": f"Refresh external intent evidence for {issue_ref} before running Autopilot.",
+        }
+    item = matches[0]
+    freshness = _as_dict(item.get("freshness"))
+    observed_at = str(item.get("observed_at") or item.get("updated_at") or freshness.get("observed_at") or "").strip()
+    expires_at = str(freshness.get("expires_at") or "").strip()
+    expires_at_dt = _parse_external_intent_timestamp(expires_at)
+    if not observed_at or (expires_at_dt is not None and expires_at_dt < datetime.now(timezone.utc)):
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "stale",
+            "reason": "stale-external-intent-evidence",
+            "issue_refs": issue_refs,
+            "item_id": issue_ref,
+            "observed_at": observed_at,
+            "expires_at": expires_at,
+            "source_path": evidence_relative_path,
+            "storage": storage,
+            "expected_authority": supplied,
+            "repair": f"Refresh external intent evidence for {issue_ref} before running Autopilot.",
+        }
+    evidence_hash = _external_intent_evidence_hash(evidence_payload=_as_dict(evidence_payload), item=item)
+    external_revision = str(item.get("external_revision") or item.get("updated_at") or "").strip()
+    expected_item_id = str(supplied.get("item_id") or supplied.get("id") or "").strip()
+    expected_revision = str(supplied.get("external_revision") or "").strip()
+    expected_hash = str(supplied.get("evidence_revision_hash") or supplied.get("revision") or "").strip()
+    if (
+        (expected_item_id and expected_item_id != issue_ref)
+        or (expected_revision and expected_revision != external_revision)
+        or (expected_hash and expected_hash != evidence_hash)
+    ):
+        return {
+            "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+            "status": "changed",
+            "reason": "external-intent-authority-changed",
+            "issue_refs": issue_refs,
+            "item_id": issue_ref,
+            "external_revision": external_revision,
+            "evidence_revision_hash": evidence_hash,
+            "expected_authority": supplied,
+            "source_path": evidence_relative_path,
+            "storage": storage,
+            "repair": "Re-resolve the executor binding against the current external issue revision.",
+        }
+    bounded_task = {
+        "issue_ref": issue_ref,
+        "task": str(item.get("title") or task_text or "").strip(),
+        "outcome": str(item.get("outcome") or item.get("title") or task_text or "").strip(),
+        "constraints": _list_payload(item.get("negative_invariants")),
+        "allowed_paths": _list_payload(assignment.get("allowed_paths")),
+        "owner_relation": str(owner_identity.get("owner_relation") or "").strip(),
+    }
+    return {
+        "kind": "agentic-workspace/autopilot-external-intent-binding/v1",
+        "status": "accepted",
+        "provider": str(item.get("system") or _as_dict(item.get("provenance")).get("provider_class") or "").strip(),
+        "provider_detail": _as_dict(item.get("provider_detail")),
+        "item_id": issue_ref,
+        "item_identity": {
+            "system": str(item.get("system") or "").strip(),
+            "id": issue_ref,
+            "url": str(item.get("url") or "").strip(),
+            "source_repository": str(item.get("source_repository") or "").strip(),
+        },
+        "external_revision": external_revision,
+        "evidence_revision_hash": evidence_hash,
+        "observed_at": observed_at,
+        "expires_at": expires_at,
+        "source_path": evidence_relative_path,
+        "storage": storage,
+        "owner_relation": {
+            "owner_id": owner_identity.get("owner_id"),
+            "owner_ref": owner_identity.get("owner_ref"),
+            "relation": owner_identity.get("owner_relation"),
+            "issue_owner": _as_dict(item.get("owner")),
+            "parent_id": str(item.get("parent_id") or "").strip(),
+        },
+        "bounded_task": bounded_task,
+        "expected_authority": supplied,
+        "rule": "Autopilot executor scope is rendered from this refreshed external-intent item, not from generic caller task context.",
+    }
+
+
+def _executor_context_changed_paths(context: dict[str, Any]) -> list[str]:
+    for key in ("changed_paths", "allowed_paths"):
+        values = [str(path) for path in _list_payload(context.get(key)) if str(path).strip()]
+        if values:
+            return values
+    return []
+
+
+def _executor_context_task_text(context: dict[str, Any]) -> str:
+    for key in ("task", "task_text", "objective", "current_slice"):
+        value = str(context.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _executor_evaluation_matches(
+    *,
+    summary_item: dict[str, Any],
+    expected: dict[str, Any],
+    assignment: dict[str, Any],
+    owner_identity: dict[str, Any],
+    required: bool,
+) -> bool:
+    admission = _as_dict(summary_item.get("fresh_result_admission"))
+    identity = _as_dict(admission.get("current_result_identity"))
+    expected_evaluation_id = str(expected.get("evaluation_id") or "").strip()
+    if expected_evaluation_id and str(summary_item.get("evaluation_id") or "").strip() != expected_evaluation_id:
+        return False
+    expected_target = str(assignment.get("target_identity_ref") or expected.get("target_identity_ref") or "").strip()
+    observed_target = str(identity.get("target_identity_ref") or "").strip()
+    if expected_target and (observed_target != expected_target if required else observed_target and observed_target != expected_target):
+        return False
+    expected_assignment = str(assignment.get("assignment_revision") or expected.get("assignment_revision") or "").strip()
+    observed_assignment = str(identity.get("assignment_revision") or "").strip()
+    if expected_assignment and (
+        observed_assignment != expected_assignment if required else observed_assignment and observed_assignment != expected_assignment
+    ):
+        return False
+    expected_owner = str(owner_identity.get("owner_id") or expected.get("owner_id") or "").strip()
+    owner = _as_dict(summary_item.get("owner"))
+    observed_owner = str(owner.get("id") or owner.get("owner_id") or "").strip()
+    if expected_owner and (observed_owner != expected_owner if required else observed_owner and observed_owner != expected_owner):
+        return False
+    return True
+
+
+def _executor_evaluation_expected_required(expected: dict[str, Any]) -> bool:
+    if not expected:
+        return False
+    expected_status = str(expected.get("freshness_status") or expected.get("status") or expected.get("state") or "").strip()
+    if expected_status in {"not-required", "not_required", "not-applicable", "not_applicable"}:
+        return False
+    if expected.get("required") is True:
+        return True
+    if expected_status in {"required", "accepted", "fresh-bound", "fresh", "stale", "missing", "rejected"}:
+        return True
+    return bool(str(expected.get("evaluation_id") or expected.get("current_result_identity") or "").strip())
+
+
+def _executor_evaluation_authority(
+    *,
+    target_root: Path,
+    context: dict[str, Any],
+    assignment: dict[str, Any],
+    owner_identity: dict[str, Any],
+) -> dict[str, Any]:
+    expected = _as_dict(context.get("evaluation") or context.get("evaluation_authority"))
+    expected_required = _executor_evaluation_expected_required(expected)
+    summary = evaluation_summary(target_root=target_root)
+    summaries = [item for item in _list_payload(summary.get("summaries")) if isinstance(item, dict)]
+    if not summaries:
+        if expected_required:
+            return {
+                "status": "missing",
+                "freshness_status": "missing",
+                "reason": "missing-required-evaluation-summary",
+                "source": "evaluation_summary",
+                "required": True,
+                "expected_authority": expected,
+                "rule": "A required evaluation cannot silently downgrade to not-required when no live summary is present.",
+            }
+        return {
+            "status": "not-required",
+            "freshness_status": "not-required",
+            "reason": "no-registered-evaluations",
+            "source": "evaluation_summary",
+            "expected_authority": expected,
+        }
+    relevant = [
+        item
+        for item in summaries
+        if _executor_evaluation_matches(
+            summary_item=item,
+            expected=expected,
+            assignment=assignment,
+            owner_identity=owner_identity,
+            required=expected_required,
+        )
+    ]
+    if not relevant:
+        return {
+            "status": "missing" if expected_required else "not-required",
+            "freshness_status": "missing" if expected_required else "not-required",
+            "reason": "missing-relevant-evaluation" if expected_required else "no-relevant-evaluation-required",
+            "source": "evaluation_summary",
+            "expected_authority": expected,
+            "ignored_evaluation_count": len(summaries),
+            "rule": "Autopilot ignores unrelated evaluation summaries; only current owner/target/assignment matches can bind the executor.",
+        }
+    current = next(
+        (
+            item
+            for item in relevant
+            if _as_dict(item.get("fresh_result_admission")).get("status") != "fresh-bound"
+            or _as_dict(item.get("conclusion_readiness")).get("ready") is not True
+        ),
+        relevant[-1],
+    )
+    admission = _as_dict(current.get("fresh_result_admission"))
+    readiness = _as_dict(current.get("conclusion_readiness"))
+    status = (
+        "accepted"
+        if admission.get("status") == "fresh-bound" and readiness.get("ready") is True
+        else str(admission.get("status") or "missing")
+    )
+    return {
+        "status": status,
+        "freshness_status": str(admission.get("status") or "missing"),
+        "evaluation_id": current.get("evaluation_id"),
+        "revision": current.get("revision"),
+        "current_result_identity": admission.get("current_result_identity"),
+        "conclusion_readiness": readiness,
+        "reason": readiness.get("reason_code") or admission.get("status") or "evaluation-not-ready",
+        "source": "evaluation_summary",
+        "expected_authority": expected,
+        "matched_evaluation_count": len(relevant),
+        "ignored_evaluation_count": len(summaries) - len(relevant),
+    }
+
+
+def _executor_invocation_plan(
+    *,
+    binding_fingerprint: str,
+    owner_identity: dict[str, Any],
+    target_binding: dict[str, Any],
+    assignment: dict[str, Any],
+    proof_obligation: dict[str, Any],
+    external_intent: dict[str, Any],
+    task_text: str,
+) -> dict[str, Any]:
+    bounded_task = _as_dict(external_intent.get("bounded_task"))
+    task_scope = str(bounded_task.get("task") or bounded_task.get("outcome") or "").strip()
+    if not task_scope:
+        task_scope = task_text or str(assignment.get("context_key") or owner_identity.get("current_work_id") or "")
+    plan = {
+        "kind": "agentic-workspace/autopilot-executor-invocation/v1",
+        "role": "ordinary-executor",
+        "task_scope": task_scope,
+        "external_intent": external_intent,
+        "owner_identity": owner_identity,
+        "target": {
+            "target_identity_ref": target_binding.get("target_identity_ref"),
+            "selected_target": target_binding.get("selected_target"),
+            "execution_methods": target_binding.get("execution_methods") or [],
+        },
+        "allowed_effects": assignment.get("allowed_effects") or [],
+        "allowed_paths": assignment.get("allowed_paths") or [],
+        "stop_conditions": assignment.get("stop_conditions") or [],
+        "proof_obligation": proof_obligation,
+        "return_schema": "agentic-workspace/terminal-outcome-contract/v1",
+        "binding_fingerprint": binding_fingerprint,
+    }
+    plan["invocation_revision"] = binding_fingerprint
+    plan["rule"] = "Executor commands must be rendered from this typed invocation after each binding change."
+    return plan
+
+
+def _executor_required_proof_commands_from_authority(proof_authority: dict[str, Any]) -> list[str]:
+    required_proof = _as_dict(proof_authority.get("required_proof"))
+    for value in (
+        proof_authority.get("required_commands"),
+        proof_authority.get("commands"),
+        required_proof.get("commands"),
+        required_proof.get("required_commands"),
+    ):
+        commands = [str(command).strip() for command in _list_payload(value) if str(command).strip()]
+        if commands:
+            return _dedupe(commands)
+    return []
+
+
+def _executor_required_proof_commands_from_reconciliation(reconciliation: dict[str, Any]) -> list[str]:
+    commands: list[str] = []
+    for item in _list_payload(reconciliation.get("commands")):
+        if isinstance(item, dict):
+            command = str(item.get("command") or "").strip()
+        else:
+            command = str(item or "").strip()
+        if command:
+            commands.append(command)
+    return _dedupe(commands)
+
+
+def _executor_selected_proof_commands_from_selection(proof_selection: dict[str, Any], required_commands: list[str]) -> list[dict[str, Any]]:
+    selected_commands = [item for item in _list_payload(proof_selection.get("selected_commands")) if isinstance(item, dict)]
+    if selected_commands:
+        return selected_commands
+    return [{"command": command, "required": True, "proof_requirement_tier": "selected_required"} for command in required_commands]
+
+
+def _executor_proof_authority(*, target_root: Path, context: dict[str, Any], changed_paths: list[str], task_text: str) -> dict[str, Any]:
+    supplied = _as_dict(
+        context.get("proof_obligation")
+        or context.get("selected_proof_obligation")
+        or context.get("proof_authority")
+        or context.get("proof")
+    )
+    expected_reconciliation = _as_dict(context.get("proof_receipt_reconciliation"))
+    required_commands = _executor_required_proof_commands_from_authority(supplied)
+    if not required_commands:
+        required_commands = _executor_required_proof_commands_from_reconciliation(expected_reconciliation)
+    selected_commands: list[dict[str, Any]] = []
+    if not required_commands and changed_paths:
+        proof_selection = _proof_selection_for_changed_paths(
+            changed_paths=changed_paths,
+            target_root=target_root,
+            task_text=task_text,
+            include_durable_intent=False,
+        )
+        proof_obligations = _as_dict(proof_selection.get("proof_obligations"))
+        required_commands = _executor_required_proof_commands_from_authority(proof_obligations)
+        selected_commands = _executor_selected_proof_commands_from_selection(proof_selection, required_commands)
+    else:
+        selected_commands = [
+            {"command": command, "required": True, "proof_requirement_tier": "selected_required"} for command in required_commands
+        ]
+    if not required_commands:
+        supplied_status = str(supplied.get("receipt_status") or supplied.get("status") or "").strip()
+        if not supplied and not expected_reconciliation:
+            return {
+                "status": "missing",
+                "receipt_status": "missing",
+                "reason": "missing-selected-proof-obligation",
+                "repair": "Run proof selection and record an accepted live proof obligation before running Autopilot.",
+            }
+        if supplied_status not in {"not-required", "not_required", "not-applicable", "not_applicable"}:
+            return {
+                "status": "missing",
+                "receipt_status": "missing",
+                "reason": "missing-live-proof-reconciliation",
+                "expected_authority": supplied,
+                "expected_reconciliation": expected_reconciliation,
+                "source": "caller-expected-proof",
+                "repair": "Resolve proof receipt reconciliation from the current selected proof obligation before running Autopilot.",
+            }
+        return {
+            "status": "accepted",
+            "receipt_status": "not-required",
+            "reason": "no-required-proof-command-selected",
+            "source": "live-proof-selection",
+            "expected_authority": supplied,
+            "expected_reconciliation": expected_reconciliation,
+        }
+    live_reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=target_root,
+        required_commands=required_commands,
+        changed_paths=changed_paths,
+        selected_commands=selected_commands,
+    )
+    expected_identity = _as_dict(expected_reconciliation.get("selected_proof_identity") or supplied.get("selected_proof_identity"))
+    live_identity = _as_dict(live_reconciliation.get("selected_proof_identity"))
+    expected_fingerprint = str(
+        expected_identity.get("proof_subject_fingerprint") or supplied.get("proof_subject_fingerprint") or ""
+    ).strip()
+    live_fingerprint = str(live_identity.get("proof_subject_fingerprint") or "").strip()
+    if expected_fingerprint and live_fingerprint and expected_fingerprint != live_fingerprint:
+        return {
+            "status": "rejected",
+            "receipt_status": "rejected",
+            "reason": "selected-proof-authority-changed",
+            "selected_proof_identity": live_identity,
+            "proof_subject_fingerprint": live_fingerprint,
+            "expected_authority": supplied,
+            "expected_reconciliation": expected_reconciliation,
+            "live_reconciliation": live_reconciliation,
+            "source": "live_proof_receipt_reconciliation",
+            "repair": "Re-resolve proof selection and record receipts for the current selected proof obligation.",
+        }
+    accepted = live_reconciliation.get("status") == "accepted"
+    return {
+        "status": "accepted" if accepted else "missing",
+        "receipt_status": "fresh" if accepted else str(live_reconciliation.get("status") or "missing"),
+        "selected_proof_identity": live_identity,
+        "proof_subject_fingerprint": live_fingerprint or supplied.get("proof_subject_fingerprint"),
+        "required_commands": required_commands,
+        "reason": "live-proof-receipt-reconciliation" if accepted else "missing-live-proof-reconciliation",
+        "source": "live_proof_receipt_reconciliation",
+        "expected_authority": supplied,
+        "expected_reconciliation": expected_reconciliation,
+        "live_reconciliation": live_reconciliation,
+        "rule": "Context proof fields are expectations only; Autopilot binds only live proof receipt reconciliation resolved at executor-bind time.",
+    }
+
+
+def _executor_mutation_baseline_authority(
+    *, target_root: Path, context: dict[str, Any], assignment_identity: dict[str, Any]
+) -> dict[str, Any]:
+    expected = _as_dict(
+        context.get("expected_mutation_baseline") or context.get("mutation_baseline") or assignment_identity.get("mutation_baseline")
+    )
+    if not expected:
+        return {
+            "status": "missing",
+            "revalidation_status": "missing",
+            "reason": "missing-mutation-baseline",
+            "repair": "Resolve and revalidate the current mutation baseline before running Autopilot.",
+        }
+    allowed_paths = [str(path) for path in _list_payload(assignment_identity.get("allowed_paths")) if str(path).strip()]
+    revalidation = revalidate_mutation_baseline(
+        target_root=target_root,
+        expected=expected,
+        assignment_target_identity_ref=str(assignment_identity.get("target_identity_ref") or "") or None,
+        allowed_paths=allowed_paths or None,
+    )
+    return {
+        **expected,
+        "status": "fresh" if revalidation.get("admitted") else "rejected",
+        "revalidation_status": "fresh" if revalidation.get("admitted") else "rejected",
+        "revalidation": revalidation,
+        "reason": revalidation.get("repair") if not revalidation.get("admitted") else "mutation-baseline-revalidated",
+        "source": "revalidate_mutation_baseline",
+    }
+
+
+def _executor_availability(
+    *,
+    owner_id: str,
+    assignment: dict[str, Any],
+    target_binding: dict[str, Any],
+    selected_target: dict[str, Any],
+    assignment_policy: dict[str, Any],
+    delegation_decision: dict[str, Any],
+) -> dict[str, Any]:
+    if not owner_id:
+        return {
+            "status": "unavailable",
+            "reason": "no-live-owner-binding",
+            "repair": "Resolve a live Planning/current-work owner before running Autopilot.",
+        }
+    if not selected_target:
+        return {
+            "status": "unavailable",
+            "reason": "missing-selected-executor-target",
+            "repair": "Resolve an authoritative executor target before running Autopilot.",
+        }
+    execution_methods = [str(method) for method in _list_payload(selected_target.get("execution_methods")) if str(method).strip()]
+    automatic_methods = [method for method in execution_methods if method in {"internal", "cli", "api"}]
+    if not execution_methods:
+        return {
+            "status": "unavailable",
+            "reason": "missing-execution-method",
+            "repair": "Select a target with an executable method before running Autopilot.",
+        }
+    manual_transport = _manual_transport_admission_payload(
+        assignment_policy=assignment_policy,
+        target_execution_methods=execution_methods,
+        handoff_required=bool(delegation_decision.get("handoff_command")),
+    )
+    if not automatic_methods and not manual_transport.get("export_allowed"):
+        return {
+            "status": "unavailable",
+            "reason": "transport-policy-blocked",
+            "repair": str(manual_transport.get("repair") or "Enable transport or choose an automatic executor target."),
+            "manual_transport": manual_transport,
+        }
+    if assignment.get("implementation_allowed") is False:
+        return {
+            "status": "unavailable",
+            "reason": str(assignment.get("reason") or assignment.get("gate_status") or "assignment-gate-blocked"),
+            "repair": str(assignment.get("required_next_action") or "Resolve assignment gate before running Autopilot."),
+            "manual_transport": manual_transport,
+        }
+    if str(target_binding.get("target_identity_status") or "") in {"missing", "stale", "rejected", "unknown"}:
+        return {
+            "status": "unavailable",
+            "reason": "target-identity-not-current",
+            "repair": "Refresh target identity before running Autopilot.",
+            "manual_transport": manual_transport,
+        }
+    return {
+        "status": "available",
+        "execution_methods": execution_methods,
+        "automatic_methods": automatic_methods,
+        "manual_transport": manual_transport,
+    }
+
+
+def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
+    context = resolve_current_work_context(root=target_root, task="", relation_hint="plan-continuation")
+    owner_binding = _as_dict(context.get("owner_binding"))
+    owner_id = str(context.get("selected_plan_id") or context.get("plan_id") or owner_binding.get("owner_id") or "").strip()
+    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_module_operations()))
+    changed_paths = _executor_context_changed_paths(context)
+    task_text = _executor_context_task_text(context)
+    execution_posture = _as_dict(context.get("execution_posture"))
+    if not execution_posture:
+        execution_posture = _execution_posture_payload(
+            config=config,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            target_root=target_root,
+        )
+    target_identity = target_identity_posture(local_override=config.local_override, target_root=target_root)
+    current_target_identity = _as_dict(target_identity.get("current_target_identity"))
+    target_subject = _as_dict(current_target_identity.get("subject"))
+    assignment_policy = _as_dict(execution_posture.get("assignment_policy"))
+    assignment_gate = _as_dict(execution_posture.get("assignment_gate"))
+    delegation_decision = _as_dict(execution_posture.get("delegation_decision"))
+    selected_target = _as_dict(execution_posture.get("selected_target"))
+    assignment_identity = (
+        _assignment_identity_payload(
+            assignment_gate=assignment_gate,
+            assignment_policy=assignment_policy,
+            delegation_decision=delegation_decision,
+        )
+        if assignment_gate
+        else {}
+    )
+    revision = _as_dict(context.get("revision"))
+    target_identity_ref = str(
+        assignment_identity.get("target_identity_ref") or target_subject.get("stable_target_id") or target_root.as_posix()
+    ).strip()
+    current_work_id = str(context.get("id") or "")
+    owner_identity = {
+        "owner_id": owner_id,
+        "owner_ref": str(_as_dict(context.get("provenance")).get("plan_id") or "").strip(),
+        "owner_relation": str(owner_binding.get("relation") or ""),
+        "current_work_id": current_work_id,
+        "owner_revision": str(context.get("owner_revision") or revision.get("owner_revision") or revision.get("head") or "").strip(),
+        "external_intent_revision": _executor_binding_fingerprint(
+            {
+                "task_text": task_text,
+                "current_slice": context.get("current_slice"),
+                "issue_refs": _list_payload(context.get("issue_refs")),
+                "plan_refs": _list_payload(context.get("plan_refs")),
+            }
+        ),
+    }
+    target_binding = {
+        "target_root": target_root.as_posix(),
+        "worktree": str(context.get("worktree") or "."),
+        "branch": str(context.get("branch") or ""),
+        "head": str(revision.get("head") or context.get("head") or ""),
+        "current_target": target_identity.get("current_target"),
+        "target_identity_ref": target_identity_ref,
+        "target_identity_status": current_target_identity.get("status"),
+        "selected_target": selected_target.get("name"),
+        "target_revision": assignment_identity.get("target_revision"),
+        "execution_methods": selected_target.get("execution_methods") or [],
+        "capability_classes": selected_target.get("capability_classes") or [],
+        "location": selected_target.get("location"),
+        "strength": selected_target.get("strength"),
+    }
+    assignment = {
+        "status": str(assignment_gate.get("status") or "missing"),
+        "policy": str(assignment_gate.get("assignment_policy") or assignment_identity.get("assignment_policy") or ""),
+        "selected_target": assignment_gate.get("selected_target") or assignment_identity.get("target"),
+        "current_target": target_identity.get("current_target"),
+        "target_identity_ref": target_identity_ref,
+        "context_key": assignment_identity.get("slice_id") or current_work_id,
+        "claim_boundary": assignment_gate.get("claim_boundary"),
+        "required_next_action": assignment_gate.get("required_next_action"),
+        "implementation_allowed": assignment_gate.get("implementation_allowed"),
+        "assignment_revision": assignment_identity.get("revision"),
+        "assignment_decision_revision": assignment_identity.get("assignment_decision_revision"),
+        "allowed_effects": assignment_identity.get("allowed_effects") or [],
+        "allowed_paths": assignment_identity.get("allowed_paths") or [],
+        "stop_conditions": assignment_identity.get("stop_conditions") or [],
+        "proof_obligation_id": assignment_identity.get("proof_obligation_id"),
+    }
+    evaluation = _executor_evaluation_authority(
+        target_root=target_root,
+        context=context,
+        assignment=assignment,
+        owner_identity=owner_identity,
+    )
+    external_intent = _executor_external_intent_authority(
+        target_root=target_root,
+        context=context,
+        owner_identity=owner_identity,
+        assignment=assignment,
+        task_text=task_text,
+    )
+    if str(external_intent.get("status") or "") == "accepted":
+        owner_identity["external_intent_revision"] = str(external_intent.get("evidence_revision_hash") or "").strip()
+    proof_obligation = _executor_proof_authority(
+        target_root=target_root,
+        context=context,
+        changed_paths=changed_paths,
+        task_text=task_text,
+    )
+    mutation_baseline = _executor_mutation_baseline_authority(
+        target_root=target_root,
+        context=context,
+        assignment_identity=assignment_identity,
+    )
+    availability = _executor_availability(
+        owner_id=owner_id,
+        assignment=assignment,
+        target_binding=target_binding,
+        selected_target=selected_target,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+    fingerprint_payload = {
+        "owner_identity": owner_identity,
+        "target_identity": target_binding,
+        "assignment": assignment,
+        "evaluation": evaluation,
+        "proof_obligation": proof_obligation,
+        "mutation_baseline": mutation_baseline,
+        "external_intent": external_intent,
+    }
+    binding_fingerprint = _executor_binding_fingerprint(fingerprint_payload)
+    executor_invocation = _executor_invocation_plan(
+        binding_fingerprint=binding_fingerprint,
+        owner_identity=owner_identity,
+        target_binding=target_binding,
+        assignment=assignment,
+        proof_obligation=proof_obligation,
+        external_intent=external_intent,
+        task_text=task_text,
+    )
+    binding = {
+        "kind": "agentic-workspace/autopilot-executor-binding/v1",
+        "status": "bound" if owner_id else "unbound",
+        "slice": slice_number,
+        "owner_id": owner_id,
+        "owner_ref": str(_as_dict(context.get("provenance")).get("plan_id") or "").strip(),
+        "owner_refs": _list_payload(context.get("plan_refs")),
+        "issue_refs": _list_payload(context.get("issue_refs")),
+        "current_work_id": str(context.get("id") or ""),
+        "input_revision": {
+            "head": str(_as_dict(context.get("revision")).get("head") or ""),
+            "resolved_at": str(_as_dict(context.get("freshness")).get("resolved_at") or ""),
+        },
+        "owner_identity": owner_identity,
+        "target_identity": target_binding,
+        "assignment": assignment,
+        "evaluation": evaluation,
+        "proof_obligation": proof_obligation,
+        "mutation_baseline": mutation_baseline,
+        "external_intent": external_intent,
+        "availability": availability,
+        "executor_invocation": executor_invocation,
+        "binding_fingerprint": binding_fingerprint,
+        "source": "resolve_current_work_context",
+        "rule": "Autopilot resolves this binding before every executor slice from authoritative owner, target, assignment, evaluation, proof, and mutation-baseline state.",
+    }
+    binding["validity"] = _executor_binding_invalidity(binding)
+    return binding
+
+
+def _executor_binding_change_guard(
+    *, executor_command: str, previous_binding: dict[str, Any], current_binding: dict[str, Any]
+) -> dict[str, Any]:
+    invalidity = _executor_binding_invalidity(current_binding)
+    if invalidity.get("status") == "rejected":
+        return {
+            "status": "no-valid-executor",
+            "reason": invalidity.get("reason"),
+            "repair": invalidity.get("repair"),
+            "current_binding_fingerprint": current_binding.get("binding_fingerprint"),
+            "binding_status": current_binding.get("status"),
+            "rule": "Autopilot must stop before invoking an executor when the live owner, target, assignment, evaluation, proof, or mutation-baseline binding is invalid.",
+        }
+    previous_owner = str(previous_binding.get("owner_id") or "").strip()
+    current_owner = str(current_binding.get("owner_id") or "").strip()
+    previous_fingerprint = str(previous_binding.get("binding_fingerprint") or "").strip()
+    current_fingerprint = str(current_binding.get("binding_fingerprint") or "").strip()
+    if previous_binding and not previous_fingerprint:
+        previous_fingerprint = _executor_binding_fingerprint(_executor_binding_fingerprint_payload(previous_binding))
+    if current_binding and not current_fingerprint:
+        current_fingerprint = _executor_binding_fingerprint(_executor_binding_fingerprint_payload(current_binding))
+    if not previous_owner or not current_owner or previous_fingerprint == current_fingerprint:
+        return {
+            "status": "valid",
+            "reason": "binding unchanged or first slice",
+            "current_binding_fingerprint": current_fingerprint,
+        }
+    previous_scope_fingerprint = _executor_binding_fingerprint(_executor_binding_invocation_scope_payload(previous_binding))
+    current_scope_fingerprint = _executor_binding_fingerprint(_executor_binding_invocation_scope_payload(current_binding))
+    if previous_scope_fingerprint == current_scope_fingerprint:
+        return {
+            "status": "valid",
+            "reason": "executor invocation scope unchanged; mutation baseline revalidated",
+            "previous_binding_fingerprint": previous_fingerprint,
+            "current_binding_fingerprint": current_fingerprint,
+            "current_invocation_scope_fingerprint": current_scope_fingerprint,
+        }
+    previous_terms = _executor_binding_terms(previous_binding)
+    current_terms = _executor_binding_terms(current_binding)
+    command_text_value = str(executor_command or "")
+    current_invocation = _as_dict(current_binding.get("executor_invocation"))
+    current_invocation_revision = str(current_invocation.get("invocation_revision") or current_fingerprint).strip()
+    names_current_invocation = bool(current_invocation_revision and current_invocation_revision in command_text_value)
+    if not names_current_invocation:
+        return {
+            "status": "stale-binding",
+            "reason": "executor invocation lacks current typed binding revision after active binding changed",
+            "previous_owner_id": previous_owner,
+            "current_owner_id": current_owner,
+            "previous_terms": previous_terms,
+            "current_terms": current_terms,
+            "previous_binding_fingerprint": previous_fingerprint,
+            "current_binding_fingerprint": current_fingerprint,
+            "current_invocation_revision": current_invocation_revision,
+            "current_executor_invocation": current_invocation,
+            "binding_payload_fields": list(_executor_binding_fingerprint_payload(current_binding)),
+            "repair": "Render a fresh executor command from the newly admitted owner and external intent before running Autopilot again.",
+        }
+    return {
+        "status": "rebound",
+        "reason": "active binding changed; executor invocation carries the current binding fingerprint",
+        "previous_owner_id": previous_owner,
+        "current_owner_id": current_owner,
+        "previous_binding_fingerprint": previous_fingerprint,
+        "current_binding_fingerprint": current_fingerprint,
+        "current_invocation_revision": current_invocation_revision,
+        "current_executor_invocation": current_invocation,
+        "binding_payload_fields": list(_executor_binding_fingerprint_payload(current_binding)),
+    }
+
+
+def _final_response_closeout_trust_for_admission(*, target_root: Path) -> tuple[dict[str, Any], WorkspaceConfig]:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
+    selected_modules, _resolved_preset = _selected_modules(
+        command_name="report",
+        preset_name=None,
+        module_arg=None,
+        target_root=target_root,
+        descriptors=descriptors,
+        config=config,
+    )
+    report_command = [
+        sys.executable,
+        "-c",
+        "from agentic_workspace.cli import main; raise SystemExit(main())",
+        "report",
+        "--target",
+        str(target_root),
+        "--section",
+        "closeout_trust",
+        "--format",
+        "json",
+    ]
+    with contextlib.suppress(OSError, subprocess.SubprocessError, json.JSONDecodeError, UnicodeDecodeError):
+        completed = subprocess.run(
+            report_command,
+            cwd=target_root,
+            text=True,
+            capture_output=True,
+            timeout=90,
+            check=False,
+        )
+        if completed.returncode == 0 and completed.stdout.strip():
+            routed_payload = json.loads(completed.stdout)
+            answer = _as_dict(_as_dict(routed_payload).get("answer"))
+            if answer:
+                return (answer, config)
+    routed = _run_lazy_report_section_command(
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=_resolved_preset,
+        config=config,
+        section="closeout_trust",
+    )
+    if routed:
+        answer = _as_dict(routed.get("answer"))
+        if answer:
+            return (answer, config)
+    module_reports = _selected_module_reports(target_root=target_root, selected_modules=selected_modules)
+    return (
+        _report_closeout_trust_payload(
+            module_reports=module_reports,
+            target_root=target_root,
+            config=config,
+            cli_invoke=config.cli_invoke,
+        ),
+        config,
+    )
+
+
+def _current_assignment_lifecycle_record(*, target_root: Path) -> dict[str, Any]:
+    assignment_root = target_root / ".agentic-workspace" / "planning" / "assignments"
+    if not assignment_root.exists():
+        return {}
+    candidates: list[tuple[str, str, str, dict[str, Any]]] = []
+    for path in sorted(assignment_root.glob("*.assignment.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        attempt = _as_dict(payload.get("current_attempt"))
+        observed = str(attempt.get("updated_at") or payload.get("updated_at") or payload.get("created_at") or "").strip()
+        status_rank = "1" if str(payload.get("status") or "").strip() == "current" else "0"
+        try:
+            source_path = path.relative_to(target_root).as_posix()
+        except ValueError:
+            source_path = path.as_posix()
+        candidates.append((status_rank, observed, source_path, {**payload, "_source_path": source_path}))
+    if not candidates:
+        return {}
+    return sorted(candidates, key=lambda item: (item[0], item[1], item[2]))[-1][3]
+
+
+def _delegated_worker_kernel_payload(*, target_root: Path) -> dict[str, Any]:
+    assignment = _current_assignment_lifecycle_record(target_root=target_root)
+    if not assignment:
+        return {
+            "kind": "agentic-workspace/delegated-worker-kernel/v1",
+            "status": "direct-compatible",
+            "executor_boundary": "autopilot.run",
+            "return_admission": "final-response.admit",
+            "assignment": {"state": "not-applicable"},
+            "route_consumers": ["start", "implement", "skills"],
+            "worker_limit": "No active assignment is present; direct work still uses ordinary final-response admission and cannot bypass proof.",
+        }
+    gate = _as_dict(assignment.get("assignment_gate"))
+    attempt = _as_dict(assignment.get("current_attempt"))
+    delegation = _as_dict(assignment.get("delegation_decision"))
+    next_step = _as_dict(delegation.get("delegation_next_step"))
+    assignment_status = str(assignment.get("status") or "").strip()
+    attempt_status = str(attempt.get("status") or "").strip()
+    stale = assignment_status != "current" or attempt_status in {"cancelled", "closed", "integrated", "reassigned", "superseded"}
+    run_id = str(attempt.get("run_id") or next_step.get("handoff_run_id") or "").strip()
+    return {
+        "kind": "agentic-workspace/delegated-worker-kernel/v1",
+        "status": "blocked-stale-assignment" if stale else "assignment-bound",
+        "executor_boundary": "autopilot.run",
+        "return_admission": "final-response.admit",
+        "assignment": {
+            "assignment_id": str(assignment.get("assignment_id") or "").strip(),
+            "assignment_revision": str(assignment.get("current_revision") or "").strip(),
+            "source_path": str(assignment.get("_source_path") or "").strip(),
+            "status": assignment_status,
+            "run_id": run_id,
+            "attempt_status": attempt_status,
+            "role": str(gate.get("role") or "").strip(),
+            "target": str(assignment.get("target_name") or attempt.get("owner") or gate.get("selected_target") or "").strip(),
+        },
+        "scope": {
+            "allowed_paths": [str(item) for item in _list_payload(gate.get("allowed_paths")) if str(item).strip()],
+            "allowed_effects": [str(item) for item in _list_payload(gate.get("allowed_effects")) if str(item).strip()],
+            "proof_obligation": _as_dict(gate.get("proof_obligation")),
+            "mutation_baseline": gate.get("mutation_baseline"),
+            "stop_conditions": [str(item) for item in _list_payload(gate.get("stop_conditions")) if str(item).strip()],
+        },
+        "admission": {
+            "status": "blocked" if stale else "allowed",
+            "reason_code": "stale-or-terminal-assignment" if stale else "current-assignment",
+            "return_schema": str(next_step.get("return_schema") or "delegated-return/v1"),
+            "next_owner": str(attempt.get("owner") or assignment.get("target_name") or gate.get("selected_target") or "").strip(),
+        },
+        "route_consumers": {
+            "start": "projects the active assignment lifecycle before ordinary route advice",
+            "implement": "must keep mutations within assignment allowed paths, effects, proof obligation, and mutation baseline",
+            "skills": "must bind assignment skills to lifecycle operation receipts before returned-result admission",
+        },
+        "worker_limit": "Delegated executor output is a candidate return only; it cannot integrate, close, widen scope, or bypass final-response and assignment-result admission.",
+    }
+
+
+def _run_final_response_executor_loop(
+    *,
+    target_root: Path,
+    args: argparse.Namespace,
+    executor_command: str,
+    attempt_source: str,
+) -> dict[str, Any]:
+    slices: list[dict[str, Any]] = []
+    previous_admission: dict[str, Any] = {}
+    previous_continuation: dict[str, Any] = {}
+    previous_executor_binding: dict[str, Any] = {}
+    final_payload: dict[str, Any] = {}
+    slice_number = 0
+    while True:
+        slice_number += 1
+        executor_binding = _active_executor_binding(target_root=target_root, slice_number=slice_number)
+        binding_guard = _executor_binding_change_guard(
+            executor_command=executor_command,
+            previous_binding=previous_executor_binding,
+            current_binding=executor_binding,
+        )
+        if (
+            str(getattr(args, "command", "") or "") != "autopilot"
+            and binding_guard.get("status") == "no-valid-executor"
+            and binding_guard.get("reason") == "no-live-owner-binding"
+        ):
+            binding_guard = {
+                "status": "valid",
+                "reason": "final-response executor boundary does not require an Autopilot Planning owner",
+                "current_binding_fingerprint": executor_binding.get("binding_fingerprint"),
+            }
+        if binding_guard.get("status") in {"stale-binding", "no-valid-executor"}:
+            stop_status = str(binding_guard.get("status") or "executor-binding-invalid").replace("-", "_")
+            failed_executor = {
+                "kind": "agentic-workspace/final-response-executor-result/v1",
+                "slice": slice_number,
+                "command": executor_command,
+                "exit_code": None,
+                "stdout_present": False,
+                "stderr_excerpt": "",
+                "binding_guard": binding_guard,
+                "binding": executor_binding,
+            }
+            final_payload = {
+                "kind": "agentic-workspace/final-response-admission-result/v1",
+                "status": stop_status,
+                "ordinary_execution_loop": {
+                    "status": stop_status,
+                    "vendor_neutral": True,
+                    "depends_on_codex_goal_mode": False,
+                    "depends_on_model_cli_harness": False,
+                    "slice_count": slice_number,
+                    "slices": slices,
+                    "failed_executor": failed_executor,
+                    "custody": "agent",
+                    "binding": executor_binding,
+                    "binding_guard": binding_guard,
+                    "rule": "Autopilot must re-resolve executor task binding after admitted owner, target, assignment, proof, evaluation, or mutation-baseline changes; invalid bindings fail closed before execution.",
+                },
+            }
+            raise WorkspaceUsageError(
+                f"--executor-command has invalid executor binding ({binding_guard['reason']}): {binding_guard['repair']}"
+            )
+        delegated_worker_kernel = (
+            _delegated_worker_kernel_payload(target_root=target_root) if str(getattr(args, "command", "") or "") == "autopilot" else {}
+        )
+        if delegated_worker_kernel.get("status") == "blocked-stale-assignment":
+            failed_executor = {
+                "kind": "agentic-workspace/final-response-executor-result/v1",
+                "slice": slice_number,
+                "command": executor_command,
+                "exit_code": None,
+                "stdout_present": False,
+                "stderr_excerpt": "",
+                "binding": executor_binding,
+                "binding_guard": binding_guard,
+                "delegated_worker_kernel": delegated_worker_kernel,
+            }
+            final_payload = {
+                "kind": "agentic-workspace/final-response-admission-result/v1",
+                "status": "stale_assignment_blocked",
+                "ordinary_execution_loop": {
+                    "status": "stale_assignment_blocked",
+                    "vendor_neutral": True,
+                    "depends_on_codex_goal_mode": False,
+                    "depends_on_model_cli_harness": False,
+                    "slice_count": slice_number,
+                    "slices": slices,
+                    "failed_executor": failed_executor,
+                    "custody": "agent",
+                    "delegated_worker_kernel": delegated_worker_kernel,
+                    "rule": "Autopilot refuses delegated execution when the active assignment is stale, terminal, or no longer current.",
+                },
+            }
+            raise WorkspaceUsageError("--executor-command is blocked by a stale or terminal assignment lifecycle.")
+        env = os.environ.copy()
+        env["AGENTIC_WORKSPACE_FINAL_RESPONSE_SLICE"] = str(slice_number)
+        env["AGENTIC_WORKSPACE_FINAL_RESPONSE_CUSTODY"] = "agent"
+        env["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING"] = json.dumps(executor_binding, sort_keys=True)
+        env["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING_GUARD"] = json.dumps(binding_guard, sort_keys=True)
+        if delegated_worker_kernel:
+            env["AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL"] = json.dumps(delegated_worker_kernel, sort_keys=True)
+        if previous_admission:
+            env["AGENTIC_WORKSPACE_FINAL_RESPONSE_PREVIOUS_ADMISSION"] = json.dumps(previous_admission, sort_keys=True)
+            previous_after_state = _as_dict(_as_dict(previous_admission.get("resume_transition")).get("after_state"))
+            env["AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION_STATE"] = json.dumps(previous_after_state, sort_keys=True)
+            env["AGENTIC_WORKSPACE_FINAL_RESPONSE_ACTIVE_OBJECTIVE"] = str(previous_after_state.get("required_next_action") or "")
+        if previous_continuation:
+            env["AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION"] = str(
+                previous_continuation.get("command") or previous_continuation.get("invoked_action") or ""
+            )
+
+        started_at = datetime.now(timezone.utc).isoformat()
+        completed_at = started_at
+        try:
+            result = run_trusted_shell(
+                executor_command,
+                trust_source="explicit-user-executor-command",
+                admitted=True,
+                cwd=str(target_root),
+                env=env,
+            )
+            completed_at = datetime.now(timezone.utc).isoformat()
+        except OSError as exc:
+            raise WorkspaceUsageError(f"--executor-command could not be executed: {executor_command}") from exc
+
+        executor_record = {
+            "kind": "agentic-workspace/final-response-executor-result/v1",
+            "slice": slice_number,
+            "command": executor_command,
+            "exit_code": result.returncode,
+            "started_at": started_at,
+            "completed_at": completed_at,
+            "stdout_present": bool(result.stdout.strip()),
+            "stderr_excerpt": (result.stderr or "")[:500],
+            "binding": executor_binding,
+            "binding_guard": binding_guard,
+        }
+        if delegated_worker_kernel:
+            executor_record["delegated_worker_kernel"] = delegated_worker_kernel
+        if result.returncode != 0:
+            final_payload = {
+                "kind": "agentic-workspace/final-response-admission-result/v1",
+                "status": "executor_failed",
+                "ordinary_execution_loop": {
+                    "status": "executor_failed",
+                    "vendor_neutral": True,
+                    "depends_on_codex_goal_mode": False,
+                    "depends_on_model_cli_harness": False,
+                    "slice_count": slice_number,
+                    "slices": slices,
+                    "failed_executor": executor_record,
+                    "custody": "agent",
+                    "rule": "Executor failures keep custody with the invoking host; they are not accepted terminal finals.",
+                },
+            }
+            raise WorkspaceUsageError(
+                f"--executor-command failed with exit code {result.returncode}: {(result.stderr or result.stdout or '').strip()[:500]}"
+            )
+
+        closeout_trust, _config = _final_response_closeout_trust_for_admission(target_root=target_root)
+        terminal_outcome_contract = _as_dict(
+            closeout_trust.get("terminal_outcome_contract")
+            or _as_dict(closeout_trust.get("closeout_protocol")).get("terminal_outcome_contract")
+        )
+        before_state = _final_response_admission_checkpoint_state(target_root=target_root)
+
+        def execute_resume(request: dict[str, Any]) -> dict[str, Any]:
+            return _run_final_response_continuation_operation(
+                target_root=target_root,
+                terminal_outcome_contract=terminal_outcome_contract,
+                request=request,
+            )
+
+        admission = _terminal_final_response_admission(
+            terminal_outcome_contract=terminal_outcome_contract,
+            final_response_attempt={
+                "source": attempt_source,
+                "claim": result.stdout.strip(),
+                "after_compaction": bool(getattr(args, "after_compaction", False)) or slice_number > 1,
+            },
+            resume_state={
+                "phase": "ordinary-final-response-executor-loop",
+                "checkpoint": before_state,
+                "slice": slice_number,
+            },
+            resume_executor=execute_resume,
+        )
+        executor_result = _as_dict(_as_dict(admission.get("resume_transition")).get("executor_result"))
+        continuation_summary = (
+            f"{executor_result.get('invoked_operation', 'none')} exit={executor_result.get('exit_code', 'n/a')}"
+            if executor_result
+            else "no continuation required"
+        )
+        slice_record = {
+            "observed_at": datetime.now(timezone.utc).isoformat(),
+            "terminal_state": terminal_outcome_contract.get("state"),
+            "attempt_source": attempt_source,
+            "attempt_present": bool(result.stdout.strip()),
+            "admission_status": admission.get("status"),
+            "continuation_operation": executor_result.get("invoked_operation", ""),
+            "continuation_exit_code": executor_result.get("exit_code"),
+            "after_compaction": bool(getattr(args, "after_compaction", False)) or slice_number > 1,
+            "ordinary_execution_slice": slice_number,
+            "executor_binding": executor_binding,
+            "executor_binding_guard": binding_guard,
+        }
+        if delegated_worker_kernel:
+            slice_record["delegated_worker_kernel"] = delegated_worker_kernel
+        checkpoint_write = _write_local_chat_checkpoint(
+            target_root=target_root,
+            task="final-response admission resume checkpoint",
+            issue_refs=[],
+            pr=None,
+            durable_sources=["agentic-workspace report --section closeout_trust"],
+            last_proof=[continuation_summary],
+            next_safe_command=str(executor_result.get("command") or terminal_outcome_contract.get("required_next_action") or ""),
+            open_blockers=[]
+            if terminal_outcome_contract.get("final_response_authorized")
+            else ["terminal final rejected while CONTINUE remains"],
+            dirty_state_summary="final-response admission boundary persisted after ordinary executor slice",
+            preserve_existing=True,
+            final_response_admission=slice_record,
+        )
+        after_state = _final_response_admission_checkpoint_state(target_root=target_root)
+        slice_payload = {
+            "slice": slice_number,
+            "executor": executor_record,
+            "terminal_state": terminal_outcome_contract.get("state"),
+            "admission_status": admission.get("status"),
+            "continuation_operation": executor_result,
+            "checkpoint_write": checkpoint_write,
+            "checkpoint_before": before_state,
+            "checkpoint_after": after_state,
+            "executor_binding": executor_binding,
+            "executor_binding_guard": binding_guard,
+        }
+        if delegated_worker_kernel:
+            slice_payload["delegated_worker_kernel"] = delegated_worker_kernel
+        slices.append(slice_payload)
+        previous_admission = admission
+        previous_continuation = executor_result
+        previous_executor_binding = executor_binding
+
+        final_payload = {
+            "kind": "agentic-workspace/final-response-admission-result/v1",
+            "status": admission.get("status"),
+            "terminal_outcome_contract": terminal_outcome_contract,
+            "admission": admission,
+            "continuation_operation": executor_result,
+            "checkpoint_write": checkpoint_write,
+            "checkpoint_before": before_state,
+            "checkpoint_after": after_state,
+            "ordinary_execution_loop": {
+                "status": "completed" if admission.get("status") != "rejected_auto_resumed" else "continued",
+                "vendor_neutral": True,
+                "depends_on_codex_goal_mode": False,
+                "depends_on_model_cli_harness": False,
+                "executor_attempt_source": "stdout",
+                "preserved_state_fields": [
+                    "AGENTIC_WORKSPACE_FINAL_RESPONSE_PREVIOUS_ADMISSION",
+                    "AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION",
+                    "AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION_STATE",
+                    "AGENTIC_WORKSPACE_FINAL_RESPONSE_ACTIVE_OBJECTIVE",
+                    "AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING",
+                    "AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL",
+                ],
+                "custody": "agent" if admission.get("status") == "rejected_auto_resumed" else "completed-outcome",
+                "slice_count": slice_number,
+                "slices": slices,
+                "latest_executor_binding": executor_binding,
+                "latest_executor_binding_guard": binding_guard,
+                **({"delegated_worker_kernel": delegated_worker_kernel} if delegated_worker_kernel else {}),
+                "rule": "The package-owned ordinary loop admits every model-authored executor response and re-enters execution while CONTINUE remains.",
+            },
+            "rule": "This command is the vendor-neutral ordinary execution boundary for model-authored final responses.",
+        }
+        if admission.get("status") != "rejected_auto_resumed":
+            return final_payload
+
+
+def _run_final_response_admit_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="final-response", target_root=target_root)
+    if getattr(args, "final_response_command", None) != "admit":
+        raise WorkspaceUsageError(f"Unsupported final-response command: {getattr(args, 'final_response_command', None)}")
+    attempt_source = str(getattr(args, "source", "") or "model-authored-final-response").strip()
+    executor_command = str(getattr(args, "executor_command", "") or "").strip()
+    if executor_command:
+        payload = _run_final_response_executor_loop(
+            target_root=target_root,
+            args=args,
+            executor_command=executor_command,
+            attempt_source=attempt_source,
+        )
+        _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
+        return 0
+    closeout_trust, _config = _final_response_closeout_trust_for_admission(target_root=target_root)
+    terminal_outcome_contract = _as_dict(
+        closeout_trust.get("terminal_outcome_contract")
+        or _as_dict(closeout_trust.get("closeout_protocol")).get("terminal_outcome_contract")
+    )
+    before_state = _final_response_admission_checkpoint_state(target_root=target_root)
+    attempt_file = str(getattr(args, "attempt_file", "") or "").strip()
+    attempt_text = str(getattr(args, "attempt", "") or "").strip()
+    if attempt_file:
+        attempt_path = Path(attempt_file)
+        try:
+            attempt_text = attempt_path.read_text(encoding="utf-8-sig").strip()
+        except OSError as exc:
+            raise WorkspaceUsageError(f"--attempt-file could not be read: {attempt_file}") from exc
+
+    def execute_resume(request: dict[str, Any]) -> dict[str, Any]:
+        return _run_final_response_continuation_operation(
+            target_root=target_root,
+            terminal_outcome_contract=terminal_outcome_contract,
+            request=request,
+        )
+
+    admission = _terminal_final_response_admission(
+        terminal_outcome_contract=terminal_outcome_contract,
+        final_response_attempt={
+            "source": attempt_source,
+            "claim": attempt_text,
+            "after_compaction": bool(getattr(args, "after_compaction", False)),
+        },
+        resume_state={
+            "phase": "host-final-response-admission",
+            "checkpoint": before_state,
+        },
+        resume_executor=execute_resume,
+    )
+    executor_result = _as_dict(_as_dict(admission.get("resume_transition")).get("executor_result"))
+    continuation_summary = (
+        f"{executor_result.get('invoked_operation', 'none')} exit={executor_result.get('exit_code', 'n/a')}"
+        if executor_result
+        else "no continuation required"
+    )
+    slice_record = {
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+        "terminal_state": terminal_outcome_contract.get("state"),
+        "attempt_source": attempt_source,
+        "attempt_present": bool(attempt_text),
+        "admission_status": admission.get("status"),
+        "continuation_operation": executor_result.get("invoked_operation", ""),
+        "continuation_exit_code": executor_result.get("exit_code"),
+        "after_compaction": bool(getattr(args, "after_compaction", False)),
+    }
+    checkpoint_write = _write_local_chat_checkpoint(
+        target_root=target_root,
+        task="final-response admission resume checkpoint",
+        issue_refs=[],
+        pr=None,
+        durable_sources=["agentic-workspace report --section closeout_trust"],
+        last_proof=[continuation_summary],
+        next_safe_command=str(executor_result.get("command") or terminal_outcome_contract.get("required_next_action") or ""),
+        open_blockers=[]
+        if terminal_outcome_contract.get("final_response_authorized")
+        else ["terminal final rejected while CONTINUE remains"],
+        dirty_state_summary="final-response admission boundary persisted after host continuation",
+        preserve_existing=True,
+        final_response_admission=slice_record,
+    )
+    after_state = _final_response_admission_checkpoint_state(target_root=target_root)
+    payload = {
+        "kind": "agentic-workspace/final-response-admission-result/v1",
+        "status": admission.get("status"),
+        "terminal_outcome_contract": terminal_outcome_contract,
+        "admission": admission,
+        "continuation_operation": executor_result,
+        "checkpoint_write": checkpoint_write,
+        "checkpoint_before": before_state,
+        "checkpoint_after": after_state,
+        "rule": "This command is the host admission boundary for model-authored final responses.",
+    }
+    _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
+    return 0
+
+
+def _run_autopilot_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if getattr(args, "target", None) else _resolve_target_root(None)
+    _validate_target_root(command_name="autopilot", target_root=target_root)
+    config = _load_workspace_config(target_root=target_root)
+    if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="autopilot", config=config):
+        _emit_payload(payload=disabled_payload, format_name=getattr(args, "format", "text"))
+        return 0
+    executor_command = str(getattr(args, "executor_command", "") or "").strip()
+    if not executor_command:
+        raise WorkspaceUsageError("autopilot requires --executor-command.")
+    payload = _run_final_response_executor_loop(
+        target_root=target_root,
+        args=args,
+        executor_command=executor_command,
+        attempt_source=str(getattr(args, "source", "") or "autopilot-executor-stdout").strip(),
+    )
+    payload["ordinary_autopilot_route"] = {
+        "kind": "agentic-workspace/ordinary-autopilot-route/v1",
+        "status": "entered",
+        "entrypoint": "agentic-workspace autopilot --executor-command",
+        "admission_operation": "final-response.admit",
+        "ordinary_host_path_unavoidable": True,
+        "depends_on_codex_goal_mode": False,
+        "depends_on_model_cli_harness": False,
+        "effect_contract": "executor-mode-conservative",
+        "rule": "The canonical ordinary autopilot route delegates all executor finals through final-response admission before output.",
+    }
+    payload["delegated_worker_kernel"] = _as_dict(_as_dict(payload.get("ordinary_execution_loop")).get("delegated_worker_kernel")) or (
+        _delegated_worker_kernel_payload(target_root=target_root)
+    )
+    payload["rule"] = "This command is the canonical ordinary AW/autopilot execution boundary for model-authored final responses."
+    _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
+    return 0
+
+
+def _proof_receipt_assignment_context(*, target_root: Path) -> dict[str, Any]:
+    return _trusted_producer_assignment_context(target_root=target_root)
+
+
+def _print_tiny_summary(summary: dict[str, Any]) -> None:
+    todo = summary.get("todo", {}) if isinstance(summary.get("todo"), dict) else {}
+    health = summary.get("planning_surface_health", {}) if isinstance(summary.get("planning_surface_health"), dict) else {}
+    decision = summary.get("decision_packet", {}) if isinstance(summary.get("decision_packet"), dict) else {}
+    print(f"Target: {summary.get('target_root', '')}")
+    print("Profile: tiny")
+    print(f"Planning health: {health.get('status', 'unknown')}")
+    print(f"Active work: {todo.get('active_count', 0)}")
+    print(f"Queued work: {todo.get('queued_count', 0)}")
+    if next_action := decision.get("next_action"):
+        print(f"Next action: {next_action}")
+    print("Detail: agentic-workspace summary --verbose --format json")
+
+
+def _run_planning_handoff_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(getattr(args, "target", None))
+    _validate_target_root(command_name="planning", target_root=target_root)
+    config = _load_workspace_config(target_root=target_root)
+    if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="planning handoff", config=config):
+        _emit_payload(payload=disabled_payload, format_name=getattr(args, "format", "text"))
+        return 0
+    from agentic_workspace.workspace_runtime_proof import _proof_route_transition_gate_payload
+
+    proof_route_gate = _proof_route_transition_gate_payload(
+        target_root=target_root,
+        transition="planning-handoff",
+        changed_paths=_changed_surface_paths(getattr(args, "changed_surfaces", None)),
+        scope=str(getattr(args, "scope", "") or ""),
+        current_work_id=str(getattr(args, "current_work_id", "") or ""),
+    )
+    if proof_route_gate["status"] == "blocked":
+        _emit_payload(
+            payload={
+                "kind": "agentic-workspace/planning-handoff-proof-route-gate/v1",
+                "status": "blocked",
+                "proof_route_transition_gate": proof_route_gate,
+                "rule": "Planning handoff output is not admitted while persisted proof-route lifecycle findings remain open.",
+            },
+            format_name=getattr(args, "format", "text"),
+        )
+        return 0
+
+    argv = ["handoff"]
+    option_specs = [
+        ("--target", "target", "value"),
+        ("--scope", "scope", "value"),
+        ("--changed-surfaces", "changed_surfaces", "value"),
+        ("--current-work-id", "current_work_id", "value"),
+        ("--audit-page-size", "audit_page_size", "value"),
+        ("--verbose", "verbose", "flag"),
+        ("--format", "format", "value"),
+    ]
+    for option, attr, kind in option_specs:
+        value = getattr(args, attr, None)
+        if kind == "flag":
+            if bool(value):
+                argv.append(option)
+        elif value not in (None, "", []):
+            argv.extend([option, str(value)])
+    try:
+        module = __import__("repo_planning_bootstrap.cli", fromlist=["main"])
+        module_main = getattr(module, "main")
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            result = module_main(argv)
+        output = buffer.getvalue()
+        for old, new in (
+            ("agentic-planning reconcile ", "agentic-workspace reconcile "),
+            ("agentic-planning summary ", "agentic-workspace summary "),
+            ("agentic-planning doctor ", "agentic-workspace doctor "),
+            ("agentic-planning ", "agentic-workspace planning "),
+            ("agentic-memory ", "agentic-workspace memory "),
+        ):
+            output = output.replace(old, new)
+        print(output, end="")
+        return int(result or 0)
+    except ImportError as exc:
+        raise WorkspaceUsageError("The planning module must be installed to use planning handoff.") from exc
+
+
+def _changed_surface_paths(value: Any) -> list[str]:
+    if value in (None, "", []):
+        return []
+    values = value if isinstance(value, (list, tuple)) else [value]
+    parts: list[str] = []
+    for item in values:
+        for comma_part in str(item).split(","):
+            stripped = comma_part.strip()
+            if not stripped:
+                continue
+            try:
+                tokens = shlex.split(stripped)
+            except ValueError:
+                tokens = [stripped]
+            parts.extend(tokens or [stripped])
+    return _normalize_changed_paths(parts)
+
+
+def _run_planning_closeout_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(getattr(args, "target", None))
+    _validate_target_root(command_name="planning", target_root=target_root)
+    config = _load_workspace_config(target_root=target_root)
+    if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="planning closeout", config=config):
+        _emit_payload(payload=disabled_payload, format_name=getattr(args, "format", "text"))
+        return 0
+    from agentic_workspace.workspace_runtime_proof import _proof_route_transition_gate_payload
+
+    proof_route_gate = _proof_route_transition_gate_payload(
+        target_root=target_root,
+        transition="planning-closeout",
+        changed_paths=_changed_surface_paths(getattr(args, "changed_surfaces", None)),
+        scope=str(getattr(args, "scope", "") or ""),
+        current_work_id=str(getattr(args, "current_work_id", "") or ""),
+    )
+    if proof_route_gate["status"] == "blocked":
+        _emit_payload(
+            payload={
+                "kind": "agentic-workspace/planning-closeout-proof-route-gate/v1",
+                "status": "blocked",
+                "proof_route_transition_gate": proof_route_gate,
+                "rule": "Planning closeout is not admitted while persisted proof-route lifecycle findings remain open.",
+            },
+            format_name=getattr(args, "format", "text"),
+        )
+        return 0
+
+    argv = ["closeout"]
+    plan = getattr(args, "plan", None)
+    if plan not in (None, "", []):
+        argv.append(str(plan))
+    option_specs = [
+        ("--target", "target", "value"),
+        ("--scope", "scope", "value"),
+        ("--proof", "proof", "value"),
+        ("--residual-work", "residual_work", "value"),
+        ("--parent-contribution", "parent_contribution", "value"),
+        ("--parent-close-permission", "parent_close_permission", "value"),
+        ("--next-owner", "next_owner", "value"),
+        ("--skipped-reason", "skipped_reason", "value"),
+        ("--proof-result", "proof_result", "value"),
+        ("--quality-concern", "quality_concern", "value"),
+        ("--decomposition-adjustment", "decomposition_adjustment", "value"),
+        ("--reason", "reason", "value"),
+        ("--issue", "issue", "value"),
+        ("--parent-lane-closeout", "parent_lane_closeout", "value"),
+        ("--closure-decision", "closure_decision", "value"),
+        ("--intent-satisfied", "intent_satisfied", "value"),
+        ("--unsolved-intent", "unsolved_intent", "value"),
+        ("--intent-evidence", "intent_evidence", "value"),
+        ("--closure-reason", "closure_reason", "value"),
+        ("--closure-evidence", "closure_evidence", "value"),
+        ("--reopen-trigger", "reopen_trigger", "value"),
+        ("--discard-summary", "discard_summary", "value"),
+        ("--continuation-summary", "continuation_summary", "value"),
+        ("--claim-level", "claim_level", "value"),
+        ("--intent-status", "intent_status", "value"),
+        ("--residue", "residue", "value"),
+        ("--proof-from", "proof_from", "value"),
+        ("--residue-owner", "residue_owner", "value"),
+        ("--what-happened", "what_happened", "value"),
+        ("--scope-touched", "scope_touched", "value"),
+        ("--changed-surfaces", "changed_surfaces", "value"),
+        ("--review-summary", "review_summary", "value"),
+        ("--outcome-summary", "outcome_summary", "value"),
+        ("--expect-planning-revision", "expect_planning_revision", "value"),
+        ("--activate", "activate", "flag"),
+        ("--queue", "queue", "flag"),
+        ("--switch-active", "switch_active", "flag"),
+        ("--prep-only", "prep_only", "flag"),
+        ("--overwrite", "overwrite", "flag"),
+        ("--remove-source", "remove_source", "flag"),
+        ("--dry-run", "dry_run", "flag"),
+        ("--render-markdown", "render_markdown", "flag"),
+        ("--apply-cleanup", "apply_cleanup", "flag"),
+        ("--retain-archive", "retain_archive", "flag"),
+        ("--discard-archive", "discard_archive", "flag"),
+        ("--verbose", "verbose", "flag"),
+        ("--format", "format", "value"),
+    ]
+    for option, attr, kind in option_specs:
+        value = getattr(args, attr, None)
+        if kind == "flag":
+            if bool(value):
+                argv.append(option)
+        elif value not in (None, "", []):
+            argv.extend([option, str(value)])
+    paths = getattr(args, "paths", None)
+    if isinstance(paths, str):
+        paths = [paths]
+    for path in paths or []:
+        argv.extend(["--path", str(path)])
+
+    try:
+        module = __import__("repo_planning_bootstrap.cli", fromlist=["main"])
+        module_main = getattr(module, "main")
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            result = module_main(argv)
+        output = buffer.getvalue()
+        for old, new in (
+            ("agentic-planning reconcile ", "agentic-workspace reconcile "),
+            ("agentic-planning summary ", "agentic-workspace summary "),
+            ("agentic-planning doctor ", "agentic-workspace doctor "),
+            ("agentic-planning ", "agentic-workspace planning "),
+            ("agentic-memory ", "agentic-workspace memory "),
+        ):
+            output = output.replace(old, new)
+        if getattr(args, "format", "text") == "json" and output.strip():
+            try:
+                closeout_payload = json.loads(output)
+            except json.JSONDecodeError:
+                closeout_payload = None
+            if isinstance(closeout_payload, dict) and int(result or 0) == 0 and not bool(getattr(args, "dry_run", False)):
+                transition = record_review_stack_transition(
+                    target_root=target_root,
+                    phase="review-closeout-ready",
+                    phase_after="review-closed",
+                    command=command_text("agentic-workspace", ["planning", *argv]),
+                    outcome="executed",
+                    next_action_id="review-stack-closeout-recorded",
+                    changed_paths=_changed_surface_paths(getattr(args, "changed_surfaces", None)),
+                    command_exit_code=0,
+                )
+                if transition.get("status") != "skipped":
+                    closeout_payload["review_stack_transition"] = transition
+                    closeout_payload["calibration_admissions"] = [
+                        _record_trusted_assignment_outcome_from_ordinary_boundary(
+                            target_root=target_root,
+                            producer_class="closeout-outcome",
+                            outcome="success",
+                            source_payload={"kind": "review-stack-transition", **transition},
+                            idempotency_key=(
+                                f"closeout-outcome:review-stack:{transition.get('pr_number', '')}:"
+                                f"{transition.get('path', '')}:review-closed"
+                            ),
+                            handoff_sufficiency="sufficient",
+                            review_burden="light",
+                            escalation_required=False,
+                        ),
+                        _record_trusted_assignment_outcome_from_ordinary_boundary(
+                            target_root=target_root,
+                            producer_class="handoff-outcome",
+                            outcome="success",
+                            source_payload={"kind": "review-stack-transition", **transition},
+                            idempotency_key=(
+                                f"handoff-outcome:review-stack:{transition.get('pr_number', '')}:"
+                                f"{transition.get('path', '')}:closeout-handoff-accepted"
+                            ),
+                            handoff_sufficiency="sufficient",
+                            review_burden="light",
+                            escalation_required=False,
+                        ),
+                    ]
+                    output = json.dumps(closeout_payload, indent=2) + "\n"
+            if (
+                isinstance(closeout_payload, dict)
+                and int(result or 0) != 0
+                or (isinstance(closeout_payload, dict) and closeout_payload.get("warnings"))
+            ):
+                warnings = _list_payload(closeout_payload.get("warnings")) if isinstance(closeout_payload, dict) else []
+                warning = next((item for item in reversed(warnings) if isinstance(item, dict) and item.get("warning_class")), {})
+                suggested = str(warning.get("suggested_fix") or "").strip()
+                warning_class = str(warning.get("warning_class") or "planning-closeout-precondition")
+                plan_token = f" {plan}" if plan not in (None, "", []) else ""
+                if warning_class in {"closeout_missing_proof", "closeout_receipt_unusable"}:
+                    next_safe_command = (
+                        f"agentic-workspace planning closeout{plan_token} --target . "
+                        '--proof-from "<proof command or evidence>" --format json'
+                    )
+                elif warning_class == "closeout_missing_finish_run_evidence":
+                    next_safe_command = (
+                        f"agentic-workspace planning closeout{plan_token} --target . --proof-from last "
+                        '--what-happened "<summary>" --scope-touched "<scope>" '
+                        '--changed-surfaces "<paths>" --review-summary "<review>" '
+                        '--outcome-summary "<outcome>" --format json'
+                    )
+                else:
+                    next_safe_command = f"agentic-workspace planning closeout{plan_token} --target . --proof-from last --format json"
+                closeout_payload["recovery"] = {
+                    "status": "blocked",
+                    "blocking_rule": warning_class,
+                    "blocking_field": str(warning.get("path") or "planning closeout evidence"),
+                    "next_safe_command": next_safe_command,
+                    "guidance": suggested,
+                    "stop_condition": "Do not retry archive mechanics until this closeout precondition is satisfied.",
+                }
+                output = json.dumps(closeout_payload, indent=2) + "\n"
+        print(output, end="")
+        return int(result or 0)
+    except ImportError as exc:
+        raise WorkspaceUsageError("The planning module must be installed to use planning closeout.") from exc
+
+
+def _lifecycle_count(value: Any) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, (list, tuple, set, dict)):
+        return len(value)
+    return 0
+
+
+def _lifecycle_mutation_summary_payload(
+    *, args: argparse.Namespace, payload: dict[str, Any], target_root: Path, config: WorkspaceConfig
+) -> dict[str, Any]:
+    """Build the compact upgrade decision and its selectable detail aliases."""
+
+    command_name = str(args.command)
+    changed_keys = ("created", "updated_managed", "removed", "generated_artifacts")
+    attention_keys = ("needs_review", "warnings")
+    changed_count = sum(_lifecycle_count(payload.get(key)) for key in ("created", "updated_managed", "removed"))
+    manual_attention_count = sum(_lifecycle_count(payload.get(key)) for key in attention_keys)
+    changed_paths = sorted({str(path) for key in changed_keys for path in payload.get(key, [])})
+    manual_attention_paths = sorted({str(path) for key in attention_keys for path in payload.get(key, [])})
+    compatibility = _as_dict(payload.get("installed_state_compatibility"))
+    action_state = _as_dict(compatibility.get("action_state"))
+    apply_command = str(action_state.get("apply_command") or "").strip()
+    next_command = (
+        apply_command
+        if bool(getattr(args, "dry_run", False)) and apply_command
+        else _command_with_cli_invoke(
+            command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=config.cli_invoke
+        )
+    )
+    invocation_flags = ["--to-payload-target"]
+    modules = getattr(args, "modules", None)
+    preset = getattr(args, "preset", None)
+    if modules:
+        invocation_flags.extend(["--modules", str(modules)])
+    if preset:
+        invocation_flags.extend(["--preset", str(preset)])
+    if bool(getattr(args, "non_interactive", False)):
+        invocation_flags.append("--non-interactive")
+    if bool(getattr(args, "dry_run", False)):
+        invocation_flags.append("--dry-run")
+    select_fields = "changed_count,changed_paths,manual_attention_count,manual_attention_paths"
+    return {
+        "kind": "agentic-workspace/lifecycle-mutation-summary/v1",
+        "command": command_name,
+        "status": compatibility.get("status") or payload.get("health") or ("attention-needed" if manual_attention_count else "ready"),
+        "dry_run": bool(getattr(args, "dry_run", False)),
+        "changed_count": changed_count,
+        "changed_paths": changed_paths,
+        "manual_attention_count": manual_attention_count,
+        "manual_attention_paths": manual_attention_paths,
+        "safe_explicit_apply": action_state.get("safe_to_apply") is True,
+        "next_action": {"command": next_command},
+        "detail_commands": {
+            "verbose": _command_with_cli_invoke(
+                command=f"agentic-workspace upgrade --target {target_root.as_posix()} --to-payload-target --verbose --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "select": _command_with_cli_invoke(
+                command=(
+                    f"agentic-workspace upgrade --target {target_root.as_posix()} {' '.join(invocation_flags)} "
+                    f"--select {select_fields} --format json"
+                ),
+                cli_invoke=config.cli_invoke,
+            ),
+        },
+        "rule": "Default lifecycle output answers the decision question; select changed paths or manual attention without loading verbose output.",
+    }
+
+
+def _emit_lifecycle_mutation_result(
+    *, args: argparse.Namespace, payload: dict[str, Any], target_root: Path, config: WorkspaceConfig
+) -> None:
+    command_name = str(args.command)
+    select = getattr(args, "select", None)
+    compact_payload_route = command_name == "upgrade" and bool(getattr(args, "to_payload_target", False))
+    if select:
+        selectable_payload = (
+            _lifecycle_mutation_summary_payload(args=args, payload=payload, target_root=target_root, config=config)
+            if compact_payload_route
+            else payload
+        )
+        _emit_payload(
+            payload=_select_payload_fields(selectable_payload, select=select, source_command=command_name), format_name=args.format
+        )
+        return
+    if not compact_payload_route or bool(getattr(args, "verbose", False)):
+        _emit_payload(payload=payload, format_name=args.format)
+        return
+    _emit_payload(
+        payload=_lifecycle_mutation_summary_payload(args=args, payload=payload, target_root=target_root, config=config),
+        format_name=args.format,
+    )

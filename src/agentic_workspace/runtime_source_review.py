@@ -21,6 +21,7 @@ GENERATED_CLI_RUNTIME_SOURCE_EDIT_PATHS = {
 }
 
 GENERATED_CLI_RUNTIME_SOURCE_MODULE_PATHS = {
+    "agentic_workspace.workspace_runtime_core": "src/agentic_workspace/workspace_runtime_core.py",
     "agentic_workspace.workspace_runtime_primitives": "src/agentic_workspace/workspace_runtime_primitives.py",
     "repo_planning_bootstrap.installer": "packages/planning/src/repo_planning_bootstrap/installer.py",
     "repo_planning_bootstrap.runtime_projection": "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
@@ -30,60 +31,7 @@ GENERATED_CLI_RUNTIME_SOURCE_MODULE_PATHS = {
     "repo_verification_bootstrap.runtime_primitives": "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
 }
 
-MIRRORED_RUNTIME_PAYLOAD_HELPER_PAIRS = [
-    {
-        "id": "workspace-runtime-core-primitives-payload-helpers",
-        "paths": [
-            "src/agentic_workspace/workspace_runtime_core.py",
-            "src/agentic_workspace/workspace_runtime_primitives.py",
-        ],
-        "why": (
-            "workspace runtime payload/helper behavior is currently mirrored between the hand-owned core surface "
-            "and the generated-CLI primitive runtime surface"
-        ),
-        "smallest_parity_proof_command": (
-            'uv run pytest tests/test_workspace_summary_cli.py -q -k "external_intent_refresh_applies_stale_candidate_reconciliation"'
-        ),
-        "maintainer_check_command": (
-            "uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership --format json"
-        ),
-        "represented_regression": (
-            "#1802-style startup path passed while external-intent refresh used the unsynced primitives runtime path"
-        ),
-        "regions": [
-            {
-                "id": "external-issue-intake-helper-region",
-                "kind": "declared-region",
-                "anchors_by_path": {
-                    "src/agentic_workspace/workspace_runtime_core.py": {
-                        "start_symbol": "_planning_candidate_suggestions_from_external_items",
-                        "end_symbol": "_stale_planning_candidate_reconciliation",
-                    },
-                    "src/agentic_workspace/workspace_runtime_primitives.py": {
-                        "start_symbol": "_planning_candidate_suggestions_from_external_items",
-                        "end_symbol": "_stale_planning_candidate_reconciliation",
-                    },
-                },
-            },
-            {
-                "id": "external-intent-refresh-payload",
-                "kind": "declared-symbol",
-                "symbols_by_path": {
-                    "src/agentic_workspace/workspace_runtime_core.py": ["_refresh_github_external_intent_evidence"],
-                    "src/agentic_workspace/workspace_runtime_primitives.py": ["_refresh_github_external_intent_evidence"],
-                },
-            },
-            {
-                "id": "open-issue-intake-payload",
-                "kind": "declared-symbol",
-                "symbols_by_path": {
-                    "src/agentic_workspace/workspace_runtime_core.py": ["_open_issue_intake_payload"],
-                    "src/agentic_workspace/workspace_runtime_primitives.py": ["_open_issue_intake_payload"],
-                },
-            },
-        ],
-    }
-]
+MIRRORED_RUNTIME_PAYLOAD_HELPER_PAIRS: list[dict[str, Any]] = []
 
 
 def _dedupe(values: list[str]) -> list[str]:

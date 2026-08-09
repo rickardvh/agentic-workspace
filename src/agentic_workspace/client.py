@@ -666,7 +666,15 @@ def invoke_operation(
     try:
         payload = json.loads(stream)
     except json.JSONDecodeError as exc:
-        raise AWClientError("malformed", "AW returned non-JSON output", {"exit_code": completed.returncode}) from exc
+        raise AWClientError(
+            "malformed",
+            "AW returned non-JSON output",
+            {
+                "exit_code": completed.returncode,
+                "stdout_tail": completed.stdout[-2000:],
+                "stderr_tail": completed.stderr[-2000:],
+            },
+        ) from exc
     if completed.returncode:
         _validate_failure(entry, payload)
         kind = str(payload.get("status", "failed")) if isinstance(payload, dict) else "failed"
