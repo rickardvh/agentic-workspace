@@ -3,9 +3,9 @@
   "id": "issue-2445-generated-semver-ownership",
   "title": "Separate generated freshness metadata from semver-bearing package changes",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "shaping",
-  "revision": 3,
+  "lifecycle": "closed",
+  "phase": "complete",
+  "revision": 5,
   "intent": {
     "outcome": "Release ownership distinguishes exact integrity-only generated metadata from semver-bearing generated output, and every semver consumer applies the same strongest-change classification.",
     "non_goals": [
@@ -85,5 +85,59 @@
       "target": "planning://delegation/keep-local",
       "revision": 1
     }
-  ]
+  ],
+  "active_milestone": {
+    "status": "completed",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "what happened": "Separated integrity-only generated fingerprint changes from semver-bearing package changes through one manifest-owned classifier.",
+    "scope touched": "Release semver classification, recovery reporting, generated fingerprint ownership, and focused regression proof.",
+    "changed surfaces": "Release workflow checker, recovery report, contracts, tests, generated fingerprint, and release note.",
+    "validations run": "uv run pytest tests/test_release_workflows.py tests/test_workspace_release_recovery_cli.py -q; uv run python scripts/check/check_generated_command_packages.py",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "The implementation matches #2445 and retains generated freshness as a separate mandatory gate.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Generated integrity metadata no longer requires a semver bump by itself, while source and package changes still do.",
+    "validation confirmed": "uv run pytest tests/test_release_workflows.py tests/test_workspace_release_recovery_cli.py -q; uv run python scripts/check/check_generated_command_packages.py",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "uv run pytest tests/test_release_workflows.py tests/test_workspace_release_recovery_cli.py -q; uv run python scripts/check/check_generated_command_packages.py",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_release_workflows.py tests/test_workspace_release_recovery_cli.py -q; uv run python scripts/check/check_generated_command_packages.py",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run pytest tests/test_release_workflows.py tests/test_workspace_release_recovery_cli.py -q; uv run python scripts/check/check_generated_command_packages.py"
+  }
 }
