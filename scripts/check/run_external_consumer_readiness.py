@@ -249,7 +249,9 @@ def _mutation_scenarios(
         or ledger.read_bytes() != before
         or sentinel.read_text(encoding="utf-8") != "preserve-me"
     ):
-        raise ReadinessCheckError(f"{language} duplicate mutation was not safely blocked")
+        raise ReadinessCheckError(
+            f"{language} duplicate mutation was not safely blocked: {json.dumps(duplicate, sort_keys=True)}"
+        )
     rejected = dict(request)
     rejected["values"] = {**MUTATION_VALUES, "operation": "correct-or-dispute", "predecessor_id": "missing-predecessor"}
     rejected_result = call(rejected)

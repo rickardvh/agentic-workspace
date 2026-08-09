@@ -48726,37 +48726,52 @@ def _render_workspace_operation_prompt(values: dict[str, Any], _arguments: dict[
 
 
 def _append_workspace_operation_delegation_outcome(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
-    return _record_delegation_outcome(
-        target_root=values["target_root"],
-        delegation_target=str(values.get("delegation_target") or ""),
-        task_class=str(values.get("task_class") or ""),
-        scope_class=str(values.get("scope_class") or ""),
-        outcome=str(values.get("outcome") or ""),
-        handoff_sufficiency=str(values.get("handoff_sufficiency") or ""),
-        review_burden=str(values.get("review_burden") or ""),
-        escalation_required=bool(values.get("escalation_required", False)),
-        operation=str(values.get("operation") or "submit"),
-        predecessor_id=str(values.get("predecessor_id") or ""),
-        authority=str(values.get("authority") or "local-outcome-ledger"),
-        confidence=str(values.get("confidence") or "medium"),
-        source_type=str(values.get("source_type") or ""),
-        source_ref=str(values.get("source_ref") or ""),
-        producer_class=str(values.get("producer_class") or ""),
-        route_outcome=str(values.get("route_outcome") or ""),
-        assignment_route=str(values.get("assignment_route") or ""),
-        proof_observation=str(values.get("proof_observation") or ""),
-        review_observation=str(values.get("review_observation") or ""),
-        handoff_burden=str(values.get("handoff_burden") or ""),
-        repair_burden=str(values.get("repair_burden") or ""),
-        retry_burden=str(values.get("retry_burden") or ""),
-        restart_burden=str(values.get("restart_burden") or ""),
-        expected_burden=str(values.get("expected_burden") or ""),
-        observed_burden=str(values.get("observed_burden") or ""),
-        scope_drift=str(values.get("scope_drift") or "none"),
-        contradiction_state=str(values.get("contradiction_state") or "none"),
-        uncertainty_state=str(values.get("uncertainty_state") or ""),
-        idempotency_key=str(values.get("idempotency_key") or ""),
-    )
+    try:
+        return _record_delegation_outcome(
+            target_root=values["target_root"],
+            delegation_target=str(values.get("delegation_target") or ""),
+            task_class=str(values.get("task_class") or ""),
+            scope_class=str(values.get("scope_class") or ""),
+            outcome=str(values.get("outcome") or ""),
+            handoff_sufficiency=str(values.get("handoff_sufficiency") or ""),
+            review_burden=str(values.get("review_burden") or ""),
+            escalation_required=bool(values.get("escalation_required", False)),
+            operation=str(values.get("operation") or "submit"),
+            predecessor_id=str(values.get("predecessor_id") or ""),
+            authority=str(values.get("authority") or "local-outcome-ledger"),
+            confidence=str(values.get("confidence") or "medium"),
+            source_type=str(values.get("source_type") or ""),
+            source_ref=str(values.get("source_ref") or ""),
+            producer_class=str(values.get("producer_class") or ""),
+            route_outcome=str(values.get("route_outcome") or ""),
+            assignment_route=str(values.get("assignment_route") or ""),
+            proof_observation=str(values.get("proof_observation") or ""),
+            review_observation=str(values.get("review_observation") or ""),
+            handoff_burden=str(values.get("handoff_burden") or ""),
+            repair_burden=str(values.get("repair_burden") or ""),
+            retry_burden=str(values.get("retry_burden") or ""),
+            restart_burden=str(values.get("restart_burden") or ""),
+            expected_burden=str(values.get("expected_burden") or ""),
+            observed_burden=str(values.get("observed_burden") or ""),
+            scope_drift=str(values.get("scope_drift") or "none"),
+            contradiction_state=str(values.get("contradiction_state") or "none"),
+            uncertainty_state=str(values.get("uncertainty_state") or ""),
+            idempotency_key=str(values.get("idempotency_key") or ""),
+        )
+    except WorkspaceUsageError as exc:
+        if str(values.get("format") or "text") != "json":
+            raise
+        return {
+            "kind": "agentic-workspace/operation-failure/v1",
+            "status": "rejected",
+            "message": str(exc),
+            "command": "note-delegation-outcome",
+            "exit_status": 2,
+            "failure_class": str(getattr(exc, "failure_class", "invalid-delegation-outcome")),
+            "safe_to_retry": True,
+            "safe_recovery": str(getattr(exc, "safe_recovery", "Correct the rejected delegation outcome before retrying.")),
+            "completion_boundary": "mutation-not-applied",
+        }
 
 
 def _load_workspace_operation_system_intent_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> WorkspaceConfig:
@@ -52731,6 +52746,68 @@ def _capability_resolution_for_profile(*, profile: DelegationTargetProfile, capa
     }
 
 
+class DelegationOutcomeRejection(WorkspaceUsageError):
+    def __init__(self, message: str, *, failure_class: str, safe_recovery: str) -> None:
+        super().__init__(message)
+        self.failure_class = failure_class
+        self.safe_recovery = safe_recovery
+
+
+def _delegation_outcome_identity(existing: DelegationOutcomeRecord, index: int) -> str:
+    return existing.record_id or (
+        f"{existing.delegation_target}:{existing.task_class}:{existing.scope_class}:{existing.recorded_at}:{index}"
+    )
+
+
+def _delegation_outcome_transition_predecessor(
+    *,
+    records: Sequence[DelegationOutcomeRecord],
+    operation: str,
+    predecessor_id: str,
+    delegation_target: str,
+    task_class: str,
+    scope_class: str,
+) -> DelegationOutcomeRecord | None:
+    if operation == "submit":
+        return None
+    by_id = {_delegation_outcome_identity(existing, index): existing for index, existing in enumerate(records)}
+    if predecessor_id not in by_id:
+        raise DelegationOutcomeRejection(
+            "note-delegation-outcome transition operations require --predecessor-id for an existing record.",
+            failure_class="invalid-lifecycle-transition",
+            safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+        )
+    predecessor = by_id[predecessor_id]
+    if (predecessor.delegation_target, predecessor.task_class, predecessor.scope_class) != (
+        delegation_target,
+        task_class,
+        scope_class,
+    ):
+        raise DelegationOutcomeRejection(
+            "note-delegation-outcome transition predecessor must match target/task/scope.",
+            failure_class="invalid-lifecycle-transition",
+            safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+        )
+    if predecessor.admission_state not in {"accepted", "accepted-normalized", "recovered", "compacted-summary"}:
+        raise DelegationOutcomeRejection(
+            "note-delegation-outcome transition predecessor must be current admitted evidence.",
+            failure_class="invalid-lifecycle-transition",
+            safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+        )
+    transitioned_predecessors = {
+        existing.predecessor_id
+        for existing in records
+        if existing.operation in {"correct-or-dispute", "supersede", "prune-or-compact"} and existing.predecessor_id
+    }
+    if predecessor_id in transitioned_predecessors:
+        raise DelegationOutcomeRejection(
+            "note-delegation-outcome transition predecessor is already superseded, disputed, or compacted.",
+            failure_class="invalid-lifecycle-transition",
+            safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+        )
+    return predecessor
+
+
 def _record_delegation_outcome(
     *,
     target_root: Path,
@@ -52831,12 +52908,6 @@ def _record_delegation_outcome(
     elif normalized_authority != trusted_authority_for_producer:
         normalized_authority = "model-self-report"
 
-    def _identity(existing: DelegationOutcomeRecord, index: int) -> str:
-        return (
-            existing.record_id
-            or f"{existing.delegation_target}:{existing.task_class}:{existing.scope_class}:{existing.recorded_at}:{index}"
-        )
-
     def _record_payload(existing: DelegationOutcomeRecord) -> dict[str, Any]:
         return {
             "recorded_at": existing.recorded_at,
@@ -52872,27 +52943,14 @@ def _record_delegation_outcome(
             "idempotency_key": existing.idempotency_key,
         }
 
-    by_id = {_identity(existing, index): (index, existing) for index, existing in enumerate(records)}
-    transitioned_predecessors = {
-        existing.predecessor_id
-        for existing in records
-        if existing.operation in {"correct-or-dispute", "supersede", "prune-or-compact"} and existing.predecessor_id
-    }
-    predecessor: DelegationOutcomeRecord | None = None
-    if normalized_operation != "submit" and normalized_predecessor not in by_id:
-        raise WorkspaceUsageError("note-delegation-outcome transition operations require --predecessor-id for an existing record.")
-    if normalized_operation != "submit":
-        predecessor = by_id[normalized_predecessor][1]
-        if (
-            predecessor.delegation_target,
-            predecessor.task_class,
-            predecessor.scope_class,
-        ) != (normalized_target, normalized_task, normalized_scope):
-            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must match target/task/scope.")
-        if predecessor.admission_state not in {"accepted", "accepted-normalized", "recovered", "compacted-summary"}:
-            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must be current admitted evidence.")
-        if normalized_predecessor in transitioned_predecessors:
-            raise WorkspaceUsageError("note-delegation-outcome transition predecessor is already superseded, disputed, or compacted.")
+    predecessor = _delegation_outcome_transition_predecessor(
+        records=records,
+        operation=normalized_operation,
+        predecessor_id=normalized_predecessor,
+        delegation_target=normalized_target,
+        task_class=normalized_task,
+        scope_class=normalized_scope,
+    )
     today = date.today().isoformat()
     generated_idempotency_key = (
         f"{normalized_operation}:{normalized_target}:{normalized_task}:{normalized_scope}:"
@@ -52918,8 +52976,10 @@ def _record_delegation_outcome(
                 existing.source_ref or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
                 existing.idempotency_key,
             ) == duplicate_key and existing.admission_state in {"accepted", "accepted-normalized", "recovered"}:
-                raise WorkspaceUsageError(
-                    "note-delegation-outcome duplicate evidence for target/task/scope/provenance must use a lifecycle transition."
+                raise DelegationOutcomeRejection(
+                    "note-delegation-outcome duplicate evidence for target/task/scope/provenance must use a lifecycle transition.",
+                    failure_class="duplicate-mutation",
+                    safe_recovery="Use an explicit lifecycle transition that references the current record.",
                 )
     record_suffix = re.sub(r"[^A-Za-z0-9_.-]+", "-", record_idempotency_key).strip("-")[:48] or str(len(records))
     record_id = f"{normalized_target}:{normalized_task}:{normalized_scope}:{today}:{record_suffix}"
@@ -52968,7 +53028,7 @@ def _record_delegation_outcome(
                 and existing.task_class == normalized_task
                 and existing.scope_class == normalized_scope
                 and (
-                    _identity(existing, index) == normalized_predecessor
+                    _delegation_outcome_identity(existing, index) == normalized_predecessor
                     or existing.admission_state in {"superseded", "disputed", "compacted-raw"}
                 )
             )
@@ -52987,7 +53047,7 @@ def _record_delegation_outcome(
     ]
     evicted_lineage = [
         {
-            "record_id": _identity(pending_records[index], index),
+            "record_id": _delegation_outcome_identity(pending_records[index], index),
             "recorded_at": pending_records[index].recorded_at,
             "operation": pending_records[index].operation,
             "authority": pending_records[index].authority,
