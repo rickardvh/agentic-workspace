@@ -3,9 +3,9 @@
   "id": "issue-2464-replayable-missing-current-slice",
   "title": "Make missing-current-slice repairs exactly replayable",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "shaping",
-  "revision": 3,
+  "lifecycle": "closed",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Missing current-slice findings and guarded reconciliation share one explicit absent-subject identity, and every emitted repair command is directly replayable.",
     "non_goals": [
@@ -82,5 +82,59 @@
       "target": "planning://delegation/keep-local",
       "revision": 1
     }
-  ]
+  ],
+  "active_milestone": {
+    "status": "completed",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "what happened": "Made missing lane.current_slice reconciliation deterministic and replayable with an explicit absent subject and guarded transaction.",
+    "scope touched": "Planning lane reconciliation, warning projection, CLI replay, and idempotence proof.",
+    "changed surfaces": "Planning installer, lane reconciliation tests, generated fingerprint, and release note.",
+    "validations run": "uv run pytest packages/planning/tests/test_lane_current_slice.py -q; uv run python scripts/check/check_generated_command_packages.py",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "The code satisfies #2464 with exact preview/apply replay and unchanged revision guards.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Missing current-slice warnings now emit a command that repairs the state deterministically when one executable slice is derivable.",
+    "validation confirmed": "uv run pytest packages/planning/tests/test_lane_current_slice.py -q; uv run python scripts/check/check_generated_command_packages.py",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "uv run pytest packages/planning/tests/test_lane_current_slice.py -q; uv run python scripts/check/check_generated_command_packages.py",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest packages/planning/tests/test_lane_current_slice.py -q; uv run python scripts/check/check_generated_command_packages.py",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run pytest packages/planning/tests/test_lane_current_slice.py -q; uv run python scripts/check/check_generated_command_packages.py"
+  }
 }
