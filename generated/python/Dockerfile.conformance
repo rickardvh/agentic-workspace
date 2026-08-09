@@ -12,8 +12,11 @@ COPY .github/release-ownership.json ./.github/release-ownership.json
 COPY .agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json ./.agentic-workspace/planning/decompositions/python-generated-cli.decomposition.json
 COPY tests/test_workspace_packaging.py ./tests/test_workspace_packaging.py
 COPY tests/test_external_consumer_profile.py ./tests/test_external_consumer_profile.py
+COPY tests/test_external_consumer_readiness.py ./tests/test_external_consumer_readiness.py
 COPY tests/fixtures/external_consumer/consumer.py ./tests/fixtures/external_consumer/consumer.py
+COPY tests/fixtures/external_consumer/consumer.mjs ./tests/fixtures/external_consumer/consumer.mjs
 COPY pyproject.toml ./pyproject.toml
+COPY uv.lock ./uv.lock
 
 ENV PYTHONPATH=/work:/work/src:/work/packages/planning/src:/work/packages/memory/src
 ENV AGENTIC_GENERATED_CONFORMANCE_CONTAINER=python

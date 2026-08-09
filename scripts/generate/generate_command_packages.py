@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -64,7 +65,15 @@ def _source_cli_fingerprint_manifest_is_current() -> bool:
         actual = json.loads(launcher.SOURCE_MANIFEST_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return False
-    return actual == launcher.source_cli_fingerprint_manifest(repo_root=REPO_ROOT)
+    expected = launcher.source_cli_fingerprint_manifest(repo_root=REPO_ROOT)
+    if actual == expected:
+        return True
+    if os.environ.get("AGENTIC_GENERATED_CONFORMANCE_CONTAINER") and expected.get("git_index_entries") is None:
+        ignored = {"git_index_entries", "git_index_identity"}
+        return {key: value for key, value in actual.items() if key not in ignored} == {
+            key: value for key, value in expected.items() if key not in ignored
+        }
+    return False
 
 
 def main(argv: list[str] | None = None) -> int:

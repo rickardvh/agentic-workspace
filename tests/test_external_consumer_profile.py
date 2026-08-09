@@ -191,12 +191,22 @@ def test_built_wheel_resolves_profile_outside_checkout(tmp_path: Path) -> None:
     site = tmp_path / "site"
     with zipfile.ZipFile(next(dist.glob("*.whl"))) as wheel:
         wheel.extractall(site)
-    code = "from importlib.resources import files; import json; print(json.loads(files('agentic_workspace._generated_cli_package_impl').joinpath('external_consumer_profile.json').read_text())['schema_version'])"
+    code = (
+        "from agentic_workspace import external_operation_conformance_receipts; "
+        "from importlib.resources import files; import json; "
+        "profile = json.loads(files('agentic_workspace._generated_cli_package_impl').joinpath('external_consumer_profile.json').read_text()); "
+        "receipts = external_operation_conformance_receipts(); "
+        "print(json.dumps([profile['schema_version'], receipts['kind'], len(receipts['receipts'])]))"
+    )
     loaded = subprocess.run(
         [sys.executable, "-I", "-c", f"import sys; sys.path.insert(0, {str(site)!r}); {code}"], cwd=tmp_path, text=True, capture_output=True
     )
     assert loaded.returncode == 0, loaded.stderr
-    assert loaded.stdout.strip() == "agentic-workspace/external-consumer-profile/v1"
+    assert json.loads(loaded.stdout) == [
+        "agentic-workspace/external-consumer-profile/v1",
+        "agentic-workspace/external-operation-conformance-receipt-store/v1",
+        2,
+    ]
 
 
 def test_usable_generation_with_unusable_maturity_fails_closed() -> None:
