@@ -1,0 +1,79 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2456-strict-health-policy",
+  "title": "Make strict health fail on broken current state",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "shaping",
+  "revision": 1,
+  "intent": {
+    "outcome": "Give strict health a versioned current-state policy, compact failure receipt, deterministic non-zero exit, and Make/CI enforcement without treating archive history as current failure.",
+    "non_goals": [
+      "Do not make every warning fatal.",
+      "Do not suppress or delete historical evidence.",
+      "Do not duplicate module validation rules in Make."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2456",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Classify report findings into current executable, current installed/config, maintenance debt, and historical/informational classes.",
+      "Add report --fail-on strict-current with a versioned policy fingerprint, subject identity, compact receipt, and exit 1 on blockers.",
+      "Make strict targets consume the failing policy.",
+      "Prove broken live Planning, invalid Memory fixture, unregistered execplan, archive-only health, and compact output fixtures."
+    ],
+    "effects": [
+      "Report command contracts and generated adapters gain --fail-on strict-current.",
+      "workspace_runtime_core owns classification, assertion, and receipt semantics.",
+      "Makefile strict health target becomes consequential."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2456",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2456",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Implement and prove strict-current report health assertion semantics.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Make strict health fail on broken current state is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run pytest tests/test_workspace_cli.py -k strict_health -q",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "make typecheck"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": []
+}

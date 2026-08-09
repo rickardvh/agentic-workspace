@@ -1,0 +1,3 @@
+kind = "patch"
+summary = "Make strict health fail on broken current state while keeping archive history non-blocking."
+issue = 2456

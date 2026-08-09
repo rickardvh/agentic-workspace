@@ -10933,6 +10933,169 @@ def _selected_module_reports(*, target_root: Path, selected_modules: list[str]) 
     return reports
 
 
+_STRICT_CURRENT_BLOCKING_CLASSES = ("current-executable-state", "current-installed-config-state")
+_STRICT_CURRENT_NON_BLOCKING_CLASSES = ("actionable-maintenance-debt", "historical-informational-state")
+_STRICT_CURRENT_SAMPLE_LIMIT = 8
+_STRICT_CURRENT_HEALTH_POLICY = {
+    "kind": "agentic-workspace/health-policy/v1",
+    "id": "strict-current",
+    "version": 1,
+    "blocking_classes": list(_STRICT_CURRENT_BLOCKING_CLASSES),
+    "non_blocking_classes": list(_STRICT_CURRENT_NON_BLOCKING_CLASSES),
+    "sample_limit": _STRICT_CURRENT_SAMPLE_LIMIT,
+    "feature_integration_rule": "A matching pending feature-branch integration proposal is non-blocking on its admitted feature branch only; default-branch health still requires applied integration truth.",
+    "rule": "Fail only on current executable or installed/configured state; maintenance debt and archive history remain visible but non-blocking.",
+}
+
+
+def _strict_health_policy_fingerprint() -> str:
+    encoded = json.dumps(_STRICT_CURRENT_HEALTH_POLICY, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _health_finding_class(finding: dict[str, Any]) -> str:
+    module = str(finding.get("module", "workspace")).lower()
+    severity = str(finding.get("severity", "info")).lower()
+    path = str(finding.get("path", "")).replace("\\", "/").lower()
+    message = str(finding.get("message", "")).lower()
+    if "/archive/" in path or "archived closeout" in message or severity == "info":
+        return "historical-informational-state"
+    if module == "planning" and "/planning/execplans/" in path:
+        if (
+            "live execplan" in message
+            or "completed execplan remains in the live" in message
+            or "not registered in planning state" in message
+            or "broken live" in message
+            or "relation is invalid" in message
+        ):
+            return "current-executable-state"
+    if severity in {"error", "fatal"}:
+        return "current-executable-state"
+    if module == "memory" and "fixture '" in message and "fails;" in message:
+        return "current-installed-config-state"
+    if module == "workspace" and any(marker in message for marker in ("required config", "invalid config", "missing canonical workflow")):
+        return "current-installed-config-state"
+    return "actionable-maintenance-debt"
+
+
+def _health_finding_action(*, finding: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
+    module = str(finding.get("module", "workspace"))
+    if module == "planning":
+        command = "agentic-workspace summary --target . --verbose --format json"
+    elif module == "memory":
+        command = "agentic-workspace memory report --target . --format json"
+    else:
+        command = "agentic-workspace doctor --target . --verbose --format json"
+    return {
+        "owner": module,
+        "command": _command_with_cli_invoke(command=command, cli_invoke=cli_invoke),
+        "finding_detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target . --section findings --format json", cli_invoke=cli_invoke
+        ),
+    }
+
+
+def _pending_feature_integration_refs(*, target_root: Path) -> set[str]:
+    branch = _current_git_branch(target_root)
+    if not branch or branch in {"main", "master"}:
+        return set()
+    proposal_root = target_root / ".agentic-workspace" / "planning" / "integration-proposals"
+    refs: set[str] = set()
+    for path in sorted(proposal_root.glob("*.integration-proposal.json")) if proposal_root.is_dir() else []:
+        try:
+            proposal = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(proposal, dict) or proposal.get("status") != "pending":
+            continue
+        branch_admission = proposal.get("authority_boundary", {}).get("branch_admission", {})
+        owner = proposal.get("owner", {})
+        if not isinstance(branch_admission, dict) or not isinstance(owner, dict):
+            continue
+        if branch_admission.get("phase") == "feature" and branch_admission.get("branch") == branch and owner.get("ref"):
+            refs.add(str(owner["ref"]).replace("\\", "/"))
+    return refs
+
+
+def _strict_health_assertion_payload(
+    *, target_root: Path, selected_modules: list[str], findings: list[dict[str, Any]], cli_invoke: str
+) -> dict[str, Any]:
+    policy_fingerprint = _strict_health_policy_fingerprint()
+    classified: list[dict[str, Any]] = []
+    pending_integration_refs = _pending_feature_integration_refs(target_root=target_root)
+    counts = {class_name: 0 for class_name in [*_STRICT_CURRENT_BLOCKING_CLASSES, *_STRICT_CURRENT_NON_BLOCKING_CLASSES]}
+    for finding in findings:
+        health_class = _health_finding_class(finding)
+        finding_path = str(finding.get("path", "")).replace("\\", "/")
+        integration_pending = health_class == "current-executable-state" and finding_path in pending_integration_refs
+        if integration_pending:
+            health_class = "actionable-maintenance-debt"
+        counts[health_class] += 1
+        classified.append(
+            {
+                "health_class": health_class,
+                "owner": str(finding.get("module", "workspace")),
+                "severity": str(finding.get("severity", "info")),
+                "message": str(finding.get("message", "")),
+                **({"path": str(finding["path"])} if finding.get("path") else {}),
+                **({"integration_pending": True} if integration_pending else {}),
+                "action": _health_finding_action(finding=finding, cli_invoke=cli_invoke),
+            }
+        )
+    blocking_classes = set(_STRICT_CURRENT_BLOCKING_CLASSES)
+    blockers = [finding for finding in classified if finding["health_class"] in blocking_classes]
+    subject_basis = {
+        "target": ".",
+        "selected_modules": selected_modules,
+        "current_findings": [
+            {key: finding.get(key) for key in ("health_class", "owner", "severity", "path", "message") if finding.get(key)}
+            for finding in classified
+            if finding["health_class"] != "historical-informational-state"
+        ],
+    }
+    subject_fingerprint = hashlib.sha256(json.dumps(subject_basis, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    status = "failed" if blockers else "passed"
+    sample_limit = _STRICT_CURRENT_SAMPLE_LIMIT
+    assertion = {
+        "kind": "agentic-workspace/health-assertion/v1",
+        "status": status,
+        "exit_code": 1 if blockers else 0,
+        "policy": {
+            "id": _STRICT_CURRENT_HEALTH_POLICY["id"],
+            "version": _STRICT_CURRENT_HEALTH_POLICY["version"],
+            "fingerprint": policy_fingerprint,
+            "blocking_classes": list(_STRICT_CURRENT_BLOCKING_CLASSES),
+            "rule": _STRICT_CURRENT_HEALTH_POLICY["rule"],
+        },
+        "subject": {
+            "kind": "agentic-workspace/health-subject/v1",
+            "target": ".",
+            "selected_modules": selected_modules,
+            "fingerprint": subject_fingerprint,
+        },
+        "counts_by_class": counts,
+        "blocking_count": len(blockers),
+        "blockers": blockers[:sample_limit],
+        "omitted_blocker_count": max(0, len(blockers) - sample_limit),
+        "historical_count": counts["historical-informational-state"],
+        "maintenance_debt_count": counts["actionable-maintenance-debt"],
+        "detail": {
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace report --target . --section findings --format json", cli_invoke=cli_invoke
+            ),
+            "historical_expansion": "explicit-only",
+        },
+    }
+    assertion["proof_receipt"] = {
+        "kind": "agentic-workspace/health-policy-proof-receipt/v1",
+        "outcome": status,
+        "policy_fingerprint": policy_fingerprint,
+        "subject_fingerprint": subject_fingerprint,
+        "blocking_count": len(blockers),
+    }
+    return assertion
+
+
 def _run_report_command(
     *,
     target_root: Path,
@@ -46800,6 +46963,27 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     select = getattr(args, "select", None)
     task_text = getattr(args, "task", None)
     changed_paths = _normalize_changed_paths(getattr(args, "changed", []) or [])
+    fail_on = getattr(args, "fail_on", None)
+    if fail_on:
+        if any((getattr(args, "startup", False), getattr(args, "verbose", False), section, select)):
+            raise WorkspaceUsageError("report --fail-on cannot be combined with --startup, --verbose, --section, or --select.")
+        report_payload = _run_report_command(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            config=config,
+            task_text=task_text,
+            changed_paths=changed_paths,
+        )
+        assertion = _strict_health_assertion_payload(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            findings=[item for item in report_payload.get("findings", []) if isinstance(item, dict)],
+            cli_invoke=config.cli_invoke,
+        )
+        _emit_payload(payload=assertion, format_name=args.format)
+        return int(assertion["exit_code"])
     if section in {"external_work_reconciliation", "external_work_delta"}:
         _ensure_external_intent_cache_if_available(target_root=target_root)
     if profile == "router" and section is None:
@@ -54768,6 +54952,22 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
         re_enable = payload.get("re_enable", {})
         if isinstance(re_enable, dict) and re_enable.get("verify_command"):
             print(f"Inspect: {re_enable['verify_command']}")
+        return
+    if payload.get("kind") == "agentic-workspace/health-assertion/v1":
+        print(f"Strict health: {payload.get('status', 'unknown')}")
+        policy = payload.get("policy", {})
+        subject = payload.get("subject", {})
+        print(f"Policy: {policy.get('id', 'unknown')} v{policy.get('version', '?')} ({policy.get('fingerprint', '')[:12]})")
+        print(f"Subject: {subject.get('fingerprint', '')[:12]}")
+        print(f"Blocking findings: {payload.get('blocking_count', 0)}")
+        for blocker in payload.get("blockers", []):
+            print(f"- [{blocker.get('health_class')}] {blocker.get('owner')}: {blocker.get('message')}")
+            action = blocker.get("action", {})
+            if isinstance(action, dict) and action.get("command"):
+                print(f"  next: {action['command']}")
+        detail = payload.get("detail", {})
+        if isinstance(detail, dict) and detail.get("command"):
+            print(f"Detail: {detail['command']}")
         return
     if payload.get("command") == "prompt":
         _emit_prompt_text(payload)

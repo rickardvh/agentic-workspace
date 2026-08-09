@@ -302,7 +302,7 @@ memory-freshness:
 	@$(COMPACT_RUN) --label "memory doctor" -- uv run agentic-workspace doctor --target . --format json
 
 memory-freshness-strict:
-	@$(COMPACT_RUN) --label "memory report" -- uv run agentic-workspace report --target . --format json
+	@$(COMPACT_RUN) --label "memory report" -- uv run agentic-workspace report --target . --fail-on strict-current --format json
 
 recurring-friction-ledger:
 	@$(COMPACT_RUN) --label "recurring friction ledger" -- uv run agentic-workspace report --target . --format json

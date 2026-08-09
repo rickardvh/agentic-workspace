@@ -91,6 +91,15 @@ runtime budget evidence, and the composed-operation duplicate-proof disposition.
 This is not a proof-selection authority; it verifies what happens after a route
 or explicit broad command has already been selected.
 
+`make memory-freshness-strict` is a consequential current-state assertion, not
+a report-rendering smoke test. It runs `report --fail-on strict-current`, whose
+versioned policy fails current executable and installed/configuration defects
+while keeping maintenance debt and archive history non-blocking. The compact
+result records the policy fingerprint, subject fingerprint, blocking owners,
+and progress-making drill-down commands. A feature-branch Planning integration
+proposal is non-blocking only on the branch it admits; default-branch health
+still requires the integration transition to be applied.
+
 Use `make check-bounded-parallel` for explicit full broad validation when the
 runtime budget matters. It runs the same broad constituents as `check-nosync`
 after one sync, but uses a named bounded resource posture: the long workspace

@@ -53,6 +53,11 @@
       "required": false
     },
     {
+      "name": "fail_on",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false
@@ -142,14 +147,16 @@
     "Operational-compression measures must remain descriptive and advisory, not a score, dashboard, workflow engine, or host-specific tracker policy.",
     "Unknown sections should be treated as usage errors.",
     "Optional task text and changed paths may refine task-scoped section payloads, but must not change default repo-wide closeout trust semantics.",
-    "Exact field selectors must operate on the selected report payload and must not force a lazy section to build the full report."
+    "Exact field selectors must operate on the selected report payload and must not force a lazy section to build the full report.",
+    "The strict-current failure policy blocks only current executable and installed/configured state; archive history and maintenance debt remain non-blocking."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
     "report command tests remain compatible",
     "task-scoped closeout trust distinguishes bounded task-switch residue from repo-wide active-plan closure blockers",
     "operational-compression section selector returns compact advisory measures",
-    "sectioned exact field selection returns selected-output JSON without full-report assembly"
+    "sectioned exact field selection returns selected-output JSON without full-report assembly",
+    "strict-current negative fixtures prove deterministic non-zero exit semantics and archive-only success"
   ],
   "migration_status": "draft-contract-only"
 }

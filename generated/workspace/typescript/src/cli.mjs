@@ -5396,6 +5396,16 @@ const commandDefinitions = [
           ],
           "help": "Comma-separated JSON fields to return from the selected report payload, such as answer.closeout_protocol.",
           "name": "select"
+        },
+        {
+          "choices": [
+            "strict-current"
+          ],
+          "flags": [
+            "--fail-on"
+          ],
+          "help": "Assert the named versioned health policy and exit non-zero when current state violates it.",
+          "name": "fail_on"
         }
       ]
     },
