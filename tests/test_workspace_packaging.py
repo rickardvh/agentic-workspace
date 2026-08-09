@@ -411,7 +411,10 @@ def _assert_workspace_stack_runs_fresh_repo_cli_sequence(*, workspace_exe: Path,
     )
 
     assert init_payload["command"] == "init"
-    assert init_payload["preset"] is None
+    assert init_payload["kind"] == "agentic-workspace/lifecycle-decision-envelope/v1"
+    assert init_payload["profile"] == "decision-envelope/v1"
+    assert init_payload["decision"]["mutation"] == "applied"
+    assert init_payload["modules"] == ["planning", "memory"]
     assert start_payload["kind"] == "agentic-workspace/selected-output/v1"
     assert start_payload["values"]["invoked_cli_identity"]["source_class"] == "installed-package"
     assert summary_payload["kind"] == "planning-summary/v1"

@@ -9178,6 +9178,7 @@ def _run_init(
     config: WorkspaceConfig,
     footprint_profile: str | None = None,
     mirror_payload: bool = False,
+    include_output_detail: bool = True,
 ) -> dict[str, Any]:
     resolved_footprint_profile = _resolve_bootstrap_footprint_profile(
         target_root=target_root, requested_profile=footprint_profile, mirror_payload=mirror_payload
@@ -9269,29 +9270,35 @@ def _run_init(
         "dry_run": dry_run,
         "non_interactive": non_interactive,
         "module_reports": reports,
-        "bootstrap_footprint": _bootstrap_footprint_payload(
+        "config": {
+            "workspace": {
+                "agent_instructions_file": effective_config.agent_instructions_file,
+            }
+        },
+    }
+    if include_output_detail:
+        payload["bootstrap_footprint"] = _bootstrap_footprint_payload(
             target_root=target_root,
             profile=resolved_footprint_profile,
             reports=reports,
             prompt_path=prompt_path,
             handoff_record_path=handoff_record_path,
-        ),
-        "config": _config_payload(config=effective_config),
-        "proof_route_hints": {
+        )
+        payload["config"] = _config_payload(config=effective_config)
+        payload["proof_route_hints"] = {
             "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
             "hint_count": len(proof_route_hints["hints"]),
             "written": not dry_run and should_write_proof_route_hints,
             "rule": proof_route_hints["rule"],
             "learning_policy": proof_route_hints["learning_policy"],
-        },
-    }
+        }
     should_include_prompt = print_prompt or prompt_path is not None or summary["prompt_requirement"] != "none"
-    if should_include_prompt:
+    if should_include_prompt and include_output_detail:
         payload["handoff_prompt"] = prompt_text
-    if prompt_path is not None:
+    if prompt_path is not None and include_output_detail:
         payload["handoff_prompt_path"] = prompt_path.as_posix()
         payload["next_steps"].append(f"Review the written handoff prompt at {prompt_path.as_posix()}.")
-    if handoff_record is not None and handoff_record_path is not None:
+    if handoff_record is not None and handoff_record_path is not None and include_output_detail:
         payload["handoff_record"] = handoff_record
         payload["handoff_record_path"] = handoff_record_path.as_posix()
         payload["next_steps"].append(f"Review the structured handoff record at {handoff_record_path.as_posix()}.")
@@ -17288,6 +17295,15 @@ def _operational_compression_payload(
 def _ordinary_output_shape_inventory() -> dict[str, Any]:
     outputs = [
         {
+            "surface": "init",
+            "status": "budget-proven",
+            "primary_decision": "whether bootstrap mutation is planned, applied, or needs review",
+            "primary_decision_object": "decision",
+            "ordinary_default_shape": "lifecycle decision envelope with bounded review evidence",
+            "detail_route": "init --verbose --format json",
+            "budget_evidence": "tests/test_workspace_cli.py checks cold and warm default init output against the decision-envelope budget.",
+        },
+        {
             "surface": "start",
             "status": "budget-proven",
             "primary_decision": "next_safe_action",
@@ -17307,7 +17323,7 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
         },
         {
             "surface": "summary",
-            "status": "retained-with-evidence",
+            "status": "budget-proven",
             "primary_decision": "current planning state and recommended next action",
             "primary_decision_object": "continuation_view",
             "ordinary_default_shape": "active-state router with lossy continuation projection and selectors for raw planning detail",
@@ -17324,8 +17340,17 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
             "retention_evidence": "Preflight is not ordinary startup; it remains a routed recovery surface with gate-first output.",
         },
         {
+            "surface": "doctor",
+            "status": "budget-proven",
+            "primary_decision": "whether workspace health requires repair or manual review",
+            "primary_decision_object": "scoped_health",
+            "ordinary_default_shape": "compact health and repair router with verbose diagnostic drill-down",
+            "detail_route": "doctor --verbose --format json",
+            "budget_evidence": "tests/test_workspace_cli.py checks ordinary doctor output against the decision-envelope budget.",
+        },
+        {
             "surface": "report",
-            "status": "retained-with-evidence",
+            "status": "budget-proven",
             "primary_decision": "report next_action or maintenance-pressure router",
             "primary_decision_object": "next_action",
             "ordinary_default_shape": "router profile with decision-grade fields and high-volume sections behind --section/--verbose",
@@ -17334,7 +17359,7 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
         },
         {
             "surface": "proof",
-            "status": "retained-with-evidence",
+            "status": "budget-proven",
             "primary_decision": "selected proof command or proof blocker",
             "primary_decision_object": "next",
             "ordinary_default_shape": "next proof action with required_commands and manual verification only when needed",
@@ -17361,40 +17386,94 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
         },
     ]
     budget_contract = {
-        "kind": "workspace-ordinary-default-output-budget/v1",
+        "kind": "workspace-ordinary-default-output-budget/v2",
+        "schema_version": "workspace-output-profile-budgets/v2",
         "status": "checked",
         "advisory_only": False,
-        "rule": "Representative ordinary defaults must stay selector-first; growth needs replacement, relocation, compression, or an explicit waiver.",
+        "measurement": {
+            "json_bytes": "UTF-8 bytes of compact JSON",
+            "field_count": "recursive object-key count",
+            "estimated_tokens": "ceiling(json_bytes / 4); a stable regression estimate, not tokenizer billing",
+            "human_lines": "non-empty lines from the ordinary text renderer",
+        },
+        "rule": "Representative ordinary defaults must satisfy every declared dimension; growth needs replacement, relocation, compression, or an explicit reviewed contract change.",
         "representative_surfaces": [
             {
-                "surface": "start",
+                "surface": "init",
+                "profile": "decision-envelope/v1",
                 "status": "budget-proven",
                 "max_json_bytes": 10000,
-                "proof": "test_start_default_stays_under_tiny_output_budget_for_docs_task",
+                "max_field_count": 140,
+                "max_estimated_tokens": 2500,
+                "max_human_lines": 80,
+                "expansion_trigger": "--verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
+            },
+            {
+                "surface": "start",
+                "profile": "startup-context/v1",
+                "status": "budget-proven",
+                "max_json_bytes": 10000,
+                "max_field_count": 300,
+                "max_estimated_tokens": 2500,
+                "max_human_lines": 80,
+                "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "implement",
+                "profile": "implementer-context-tiny/v1",
                 "status": "budget-proven",
-                "max_json_bytes": 13000,
-                "proof": "test_implement_default_stays_under_tiny_output_budget_for_docs_task",
+                "max_json_bytes": 15000,
+                "max_field_count": 400,
+                "max_estimated_tokens": 3750,
+                "max_human_lines": 100,
+                "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "summary",
-                "status": "retained-with-evidence",
-                "max_json_bytes": 12000,
-                "proof": "summary default remains selector-first through continuation_view tests",
+                "profile": "planning-summary-tiny/v1",
+                "status": "budget-proven",
+                "max_json_bytes": 20000,
+                "max_field_count": 500,
+                "max_estimated_tokens": 5000,
+                "max_human_lines": 100,
+                "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "report",
-                "status": "retained-with-evidence",
+                "profile": "report-router/v1",
+                "status": "budget-proven",
                 "max_json_bytes": 16000,
-                "proof": "report defaults route high-volume sections behind --section and operational_compression records this budget state",
+                "max_field_count": 400,
+                "max_estimated_tokens": 4000,
+                "max_human_lines": 80,
+                "expansion_trigger": "--section or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "proof",
-                "status": "retained-with-evidence",
+                "profile": "proof-decision-envelope/v1",
+                "status": "budget-proven",
                 "max_json_bytes": 12000,
-                "proof": "proof defaults expose next proof action while detailed proof context stays behind selectors",
+                "max_field_count": 320,
+                "max_estimated_tokens": 3000,
+                "max_human_lines": 80,
+                "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
+            },
+            {
+                "surface": "doctor",
+                "profile": "lifecycle-health-compact/v1",
+                "status": "budget-proven",
+                "max_json_bytes": 14000,
+                "max_field_count": 360,
+                "max_estimated_tokens": 3500,
+                "max_human_lines": 80,
+                "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
         ],
         "selector_relocations": [
@@ -47323,6 +47402,77 @@ def _load_lifecycle_mutation_context(
     return (target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config)
 
 
+def _compact_init_decision_envelope(payload: dict[str, Any], *, cli_invoke: str) -> dict[str, Any]:
+    needs_review = [str(item) for item in payload.get("needs_review", [])]
+    placeholders = [str(item) for item in payload.get("placeholders", [])]
+    lifecycle_plan = payload.get("lifecycle_plan", {})
+    if not isinstance(lifecycle_plan, dict):
+        lifecycle_plan = {}
+    plan_summary = lifecycle_plan.get("summary", {})
+    if not isinstance(plan_summary, dict):
+        plan_summary = {}
+    dry_run = bool(payload.get("dry_run"))
+    review_required = bool(needs_review or placeholders or payload.get("prompt_requirement") == "required")
+    modules = [str(item) for item in payload.get("modules", [])]
+    command_parts = ["agentic-workspace", "init", "--target", str(payload.get("target", "."))]
+    if modules:
+        command_parts.extend(["--modules", ",".join(modules)])
+    if dry_run:
+        command_parts.append("--dry-run")
+    command_parts.extend(["--verbose", "--format", "json"])
+    detail_command = _command_with_cli_invoke(command=" ".join(command_parts), cli_invoke=cli_invoke)
+    next_steps = [str(item) for item in payload.get("next_steps", [])]
+    primary_next_action = next_steps[0] if next_steps else "No follow-up action is required."
+    review_items = [*needs_review, *[item for item in placeholders if item not in needs_review]]
+    review_limit = 8
+    return {
+        "kind": "agentic-workspace/lifecycle-decision-envelope/v1",
+        "profile": "decision-envelope/v1",
+        "surface": "init",
+        "command": "init",
+        "target": payload.get("target"),
+        "dry_run": dry_run,
+        "modules": modules,
+        "footprint_profile": payload.get("footprint_profile"),
+        "payload_mirror": bool(payload.get("payload_mirror")),
+        "decision": {
+            "status": "review-required" if review_required else "ready",
+            "next_action": primary_next_action,
+            "mutation": "planned-only" if dry_run else "applied",
+        },
+        "workspace": {
+            "repo_state": payload.get("repo_state"),
+            "mode": payload.get("mode"),
+            "modules": modules,
+            "footprint_profile": payload.get("footprint_profile"),
+            "prompt_requirement": payload.get("prompt_requirement"),
+        },
+        "changes": {
+            "create_count": int(plan_summary.get("create_count", len(payload.get("created", []))) or 0),
+            "update_count": int(plan_summary.get("update_count", len(payload.get("updated_managed", []))) or 0),
+            "preserve_count": int(plan_summary.get("preserve_count", len(payload.get("preserved_existing", []))) or 0),
+            "review_required_count": int(plan_summary.get("review_required_count", len(review_items)) or 0),
+            "warning_count": int(plan_summary.get("warning_count", 0) or 0),
+        },
+        "review": {
+            "required": review_required,
+            "item_count": len(review_items),
+            "items": review_items[:review_limit],
+            "omitted_item_count": max(0, len(review_items) - review_limit),
+        },
+        "claim_boundary": {
+            "workspace_initialized": not dry_run and not review_required,
+            "mutation_applied": not dry_run,
+            "rule": "A compact envelope proves only the reported lifecycle outcome; use the verbose route before broader configuration or provenance claims.",
+        },
+        "detail": {
+            "status": "hidden-behind-explicit-expansion",
+            "verbose_command": detail_command,
+            "omitted": ["module_reports", "config", "effect_inventory", "provenance", "full_lifecycle_plan"],
+        },
+    }
+
+
 def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
     command_name = str(args.command)
     target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config = _load_lifecycle_mutation_context(
@@ -47342,6 +47492,9 @@ def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
         config=config,
         footprint_profile=getattr(args, "footprint_profile", None),
         mirror_payload=bool(getattr(args, "mirror_payload", False)),
+        include_output_detail=(
+            command_name != "init" or bool(getattr(args, "verbose", False)) or bool(getattr(args, "mirror_payload", False))
+        ),
     )
     payload["command"] = command_name
     payload["lifecycle_plan"] = _lifecycle_plan_payload(
@@ -47353,6 +47506,8 @@ def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
         local_only=bool(getattr(args, "local_only", False)),
         cli_invoke=_lifecycle_cli_invoke(config=config),
     )
+    if command_name == "init" and not bool(getattr(args, "verbose", False)) and not bool(getattr(args, "mirror_payload", False)):
+        payload = _compact_init_decision_envelope(payload, cli_invoke=_lifecycle_cli_invoke(config=config))
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 
@@ -54944,6 +55099,25 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
         re_enable = payload.get("re_enable", {})
         if isinstance(re_enable, dict) and re_enable.get("verify_command"):
             print(f"Inspect: {re_enable['verify_command']}")
+        return
+    if payload.get("kind") == "startup-context/v1":
+        print(f"Target: {payload.get('target', '.')}")
+        print("Command: start")
+        next_action = payload.get("next_safe_action", {})
+        if isinstance(next_action, dict):
+            print(f"Next action: {next_action.get('next_safe_action', 'unknown')}")
+            if next_action.get("why"):
+                print(f"Why: {next_action['why']}")
+        action_signals = payload.get("action_signals", {})
+        if isinstance(action_signals, dict):
+            blockers = action_signals.get("hard_blockers", [])
+            if blockers:
+                print(f"Blockers: {len(blockers)}; inspect JSON detail before mutation")
+        decision_packet = payload.get("decision_packet", {})
+        if isinstance(decision_packet, dict):
+            detail_routes = decision_packet.get("detail_routes", {})
+            if isinstance(detail_routes, dict) and detail_routes.get("why_blocked"):
+                print(f"Detail: {detail_routes['why_blocked']}")
         return
     if payload.get("command") == "prompt":
         _emit_prompt_text(payload)
