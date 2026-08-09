@@ -1,0 +1,3 @@
+kind = "changed"
+summary = "Protect support-bearing releases with exact-commit server checks and a composed promotion receipt."
+bump = "minor"

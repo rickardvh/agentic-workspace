@@ -1,0 +1,18 @@
+{
+  "kind": "agentic-workspace/support-bearing-promotion-policy/v1",
+  "required_check": "Support-bearing promotion",
+  "protected_branch": "master",
+  "live_ruleset_id": 20615912,
+  "live_ruleset_recheck": "gh api repos/rickardvh/agentic-workspace/rulesets/20615912",
+  "runtime_matrix": [
+    {"os": "ubuntu-latest", "python": "3.13", "node": "20"},
+    {"os": "windows-latest", "python": "3.14", "node": "24"}
+  ],
+  "semantic_node_majors": [20, 24, 25],
+  "receipts": {
+    "install": "distribution-install-readiness.json",
+    "redistribution": "redistributable-package-readiness.json",
+    "security": "security-supply-chain-readiness.json",
+    "promotion": "support-bearing-promotion.json"
+  }
+}

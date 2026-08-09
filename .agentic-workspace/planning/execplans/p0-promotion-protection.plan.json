@@ -1,0 +1,104 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "p0-promotion-protection",
+  "title": "P0 promotion protection and support-bearing decision",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Make protected master and the release workflows fail closed on one exact-commit, exact-artifact support-bearing promotion result.",
+    "non_goals": [
+      "Do not create a generic hosted release service or duplicate domain checkers.",
+      "Do not claim #2448 closed until every release-critical child and a public rehearsal are complete.",
+      "Do not make canary or local development artifacts subject to the support-bearing gate."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Implements #2454 and contributes the server-side/check-matrix domain to parent #2448.",
+    "closure_boundary": "Close #2454 only after workflow logic and live GitHub ruleset compose; keep #2448 open for remaining child/public-release evidence."
+  },
+  "scope": {
+    "owned": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/release-from-semver-label.yml",
+      ".github/workflows/release.yml",
+      ".github/support-bearing-promotion.json",
+      "scripts/release/support_bearing_promotion.py",
+      "tests/test_support_bearing_promotion.py",
+      "tests/test_release_workflows.py",
+      "GitHub repository ruleset for master"
+    ],
+    "effects": [
+      "Required PR/push CI covers the declared Python/Node and Windows/Linux boundary.",
+      "Release jobs obtain write authority only after a server-observed exact-commit check receipt.",
+      "Publication consumes a typed promotion result over existing artifact, semantic, security, package, license, runtime, and server receipts."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": [
+        "GitHub issue #2454 acceptance criteria",
+        "GitHub issue #2448 promotion composition criteria"
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": [
+        "GitHub rulesets API",
+        "GitHub Checks API"
+      ]
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "This session explicitly prohibits spawning sub-agents unless the user requests delegation; the user requested cohesive PR lanes, not sub-agent work."
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub issues #2454 and #2448",
+      "label": "GitHub issues #2454 and #2448",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Implement the promotion contract/checker, workflow matrix and exact-commit admission, then configure and verify the live master ruleset.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Direct updates and force pushes to master are blocked by an active server-side ruleset requiring PR integration and the aggregate support-bearing check.",
+      "Release preparation and publishing reject a commit whose exact server check receipt is missing, stale, mismatched, or failed before write authority is available.",
+      "The composed promotion result binds exact release artifacts and every release-critical typed receipt without duplicating domain logic.",
+      "Required CI and release matrices cover Python 3.13/3.14, Windows/Linux, Node 20/24/25 as declared, frozen lock verification, full root inventory, timeouts, and least privilege."
+    ],
+    "requirements": [
+      "uv run pytest tests/test_support_bearing_promotion.py tests/test_release_workflows.py -q",
+      "uv run python scripts/check/check_package_identity.py --format json",
+      "uv lock --check",
+      "Inspect live GitHub ruleset and required-check state after applying it.",
+      "Run workflow syntax/action policy checks selected by Agentic Workspace."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "GitHub issue #2448",
+    "residual_intent": "Public protected-commit release rehearsal and any release-critical children outside #2454 remain parent-owned."
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ]
+}
