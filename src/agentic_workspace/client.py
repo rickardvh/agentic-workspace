@@ -25,6 +25,12 @@ FAILURE_KINDS = {
     "invocation-unavailable",
 }
 READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
+READINESS_EXECUTORS = {
+    "cli-json": "direct-cli-json",
+    "python": "generated-python-client",
+    "typescript": "generated-typescript-client",
+    "vendor-neutral": "packed-typescript-client",
+}
 READINESS_CASES = (
     "absent",
     "disabled",
@@ -186,6 +192,17 @@ def _external_conformance_readiness(
         for transport in READINESS_TRANSPORTS:
             if not isinstance(transports.get(transport), Mapping) or transports[transport].get("status") != "passed":
                 missing.append(f"transport-{transport}")
+    executors = evidence.get("executors")
+    if not isinstance(executors, Mapping):
+        missing.extend(f"executor-{transport}" for transport in READINESS_TRANSPORTS)
+    else:
+        for transport in READINESS_TRANSPORTS:
+            if (
+                not isinstance(executors.get(transport), Mapping)
+                or executors[transport].get("status") != "passed"
+                or executors[transport].get("executor_id") != READINESS_EXECUTORS[transport]
+            ):
+                missing.append(f"executor-{transport}")
     cases = evidence.get("cases")
     if not isinstance(cases, Mapping):
         missing.extend(f"case-{case}" for case in READINESS_CASES)
@@ -227,6 +244,7 @@ def _external_conformance_readiness(
         "client_semantics_revision": result_identity.get("client_semantics_revision", ""),
         "runtime_exception_revision": runtime_revision or "",
         "transports": transports if isinstance(transports, Mapping) else {},
+        "executors": executors if isinstance(executors, Mapping) else {},
         "cases": cases if isinstance(cases, Mapping) else {},
         "case_transport_matrix": matrix if isinstance(matrix, Mapping) else {},
         "footprints": footprints if isinstance(footprints, Mapping) else {},

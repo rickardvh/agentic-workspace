@@ -322,6 +322,12 @@ def _readiness_conformance_evidence(profile: dict, operation: dict, *, status: s
             "typescript": {"status": "passed"},
             "vendor-neutral": {"status": "passed"},
         },
+        "executors": {
+            "cli-json": {"status": "passed", "executor_id": "direct-cli-json"},
+            "python": {"status": "passed", "executor_id": "generated-python-client"},
+            "typescript": {"status": "passed", "executor_id": "generated-typescript-client"},
+            "vendor-neutral": {"status": "passed", "executor_id": "packed-typescript-client"},
+        },
         "cases": {
             "absent": {"status": "passed"},
             "disabled": {"status": "passed"},
@@ -549,6 +555,12 @@ def test_packaged_conformance_receipt_store_publishes_executed_external_evidence
     config_receipt = receipts["config.report"]
     assert config_receipt["status"] == "passed"
     assert {item["status"] for item in config_receipt["transports"].values()} == {"passed"}
+    assert {transport: item["executor_id"] for transport, item in config_receipt["executors"].items()} == {
+        "cli-json": "direct-cli-json",
+        "python": "generated-python-client",
+        "typescript": "generated-typescript-client",
+        "vendor-neutral": "packed-typescript-client",
+    }
     assert {item["status"] for item in config_receipt["cases"].values()} == {"passed"}
     assert config_receipt["freshness"]["strategy"] == "runner-client-operation-profile-revision-bound"
     delegation_receipt = receipts["delegation-outcome.append"]
@@ -1252,6 +1264,12 @@ def test_external_contract_bundle_exposes_ir_owned_conformance_profile() -> None
     assert conformance["kind"] == "agentic-workspace/packaged-external-conformance-profile/v1"
     assert conformance["source"] == "operation_conformance_test_ir.json#external_readiness"
     assert conformance["transport_matrix"] == ["cli-json", "python", "typescript", "vendor-neutral"]
+    assert conformance["executor_matrix"] == {
+        "cli-json": "direct-cli-json",
+        "python": "generated-python-client",
+        "typescript": "generated-typescript-client",
+        "vendor-neutral": "packed-typescript-client",
+    }
     assert {entry["operation_id"] for entry in conformance["operations"]} == {
         "config.report",
         "delegation-outcome.append",

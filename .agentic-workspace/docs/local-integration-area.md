@@ -88,13 +88,16 @@ maintainers publish the canonical executed receipts with:
 
 `uv run --active python scripts/check/run_operation_conformance_tests.py --target all --require-node`
 
-That command packages the public TypeScript client into an isolated temporary
-consumer, exercises the IR-owned absent, disabled, incompatible, malformed,
-retryable, additive-field, and applicable mutation vectors, and publishes
-revision-bound receipts only when the full selected matrix passes. Final clean
-installation, necessary/full footprint parity, consumer removal, and no-residue
-proof remain the independent-consumer closure gate rather than being inferred
-from these receipts.
+That command executes four distinct boundaries: ordinary direct CLI JSON, the
+generated Python client, the generated TypeScript client, and a public
+TypeScript client packed into an isolated temporary consumer. It exercises the
+IR-owned absent, disabled, incompatible, malformed, retryable, additive-field,
+and applicable mutation vectors and publishes revision-bound receipts only
+when every case records the expected executor provenance. #2198 owns semantic
+parity between necessary-surface and full-mirror installations for this bounded
+ready subset. #2200 retains the broader independent clean-install, consumer
+removal, no-residue, and general adapter-readiness closure proof; it does not
+substitute for the #2198 footprint matrix.
 
 ## Scratch Space
 

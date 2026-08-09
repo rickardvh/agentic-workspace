@@ -2,14 +2,14 @@
   "kind": "agentic-workspace/verification-proof-decision/v1",
   "proof_decision": {
     "selected_decision": "convert-to-conformance",
-    "trust_question": "Do external Python, TypeScript, CLI JSON, and packaged-consumer transports preserve the same fail-closed operation contract and mutation outcomes?",
+    "trust_question": "Do direct CLI JSON, generated Python, generated TypeScript, and packaged-consumer executors independently preserve the same fail-closed operation contract, footprint parity, and mutation outcomes?",
     "host_strategy_source": "docs/maintainer/testing-strategy.md#contract-owned-cases",
     "proof_owner": "conformance-contract",
     "proof_intent": "target-parity",
     "evidence_durability": "permanent",
-    "narrowest_evidence": "IR-owned external readiness scenarios executed by scripts/check/run_operation_conformance_tests.py, plus one runner bridge test and one public package API test.",
-    "prune_or_replacement_condition": "Replace only when a narrower generated conformance protocol proves the same four transports, negative cases, additive-field preservation, and applicable mutation outcomes.",
+    "narrowest_evidence": "IR-owned external readiness scenarios executed by scripts/check/run_operation_conformance_tests.py, provenance-failure scenario tests for the direct CLI and generated Python executors, and one public package API receipt test.",
+    "prune_or_replacement_condition": "Replace only when a narrower generated conformance protocol proves the same four distinct executor identities, negative cases, additive-field preservation, footprint parity, and applicable mutation outcomes.",
     "confidence": "high",
-    "residual_risk": "Final clean installation, necessary/full footprint parity, and consumer removal remain owned by issue #2200 rather than this conformance receipt."
+    "residual_risk": "Issue #2200 still owns broader independent clean-install, consumer-removal, no-residue, and general adapter-readiness proof; bounded necessary/full footprint parity is proven here for #2198."
   }
 }

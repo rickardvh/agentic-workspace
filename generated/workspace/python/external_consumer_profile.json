@@ -3,20 +3,26 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:3f15158221e8602d9fcc5fb8993c9de57cb03fd11d95b09c8a1e8b9cfb8be385",
+    "fingerprint": "sha256:f24d0120627edd2773361f7c97212cffda1cdce813cc6c92796fc91b8d251f42",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
   "readiness_authority": {
     "kind": "agentic-workspace/external-readiness-authority/v1",
     "status": "current",
-    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:fa08828c8b4d93fb6acd9abcb08267c51fe98ff6b63bcf78cd6fb0f12df35aee",
-    "client_semantics_revision": "sha256:61ccf63a1abd6fe648f8c1eccb0d326bdbbbe05fca8330fe6f649c326f353607",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:84ad2cf426b0ab3a295c6260f78e3b7449604b3e29dcb2b9e1fc2cfb63eab3de",
+    "client_semantics_revision": "sha256:228e0ba3e4120bacba5754dfd7875f85d8b0b5d139b9a0311806bf0e6b2909f8",
     "client_artifact_revisions": {
-      "public_python_client": "src/agentic_workspace/client.py@sha256:f32fefc81308897e439c27b605d8d2bec89bbf2938c4c82d46ee2a5ae8fa713e",
-      "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:085244f6d88bffb5949bba9f076eabdd14d3d71b9e10f12eebf2b5e32a86c34d",
-      "typescript_client_template": "scripts/generate/templates/external_client.mjs@sha256:ef515605548ff955e1a88528329150a88878c60f162a5ca6551afd3c23420874"
+      "public_python_client": "src/agentic_workspace/client.py@sha256:238b2d123fc8dbde0a8b7d25e9efb4a204bd8a87558892490014e529b4c50751",
+      "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:9430af57a3d1f11fd18e4714306619cccf56c438dd811ea0201b705df3ba3a89",
+      "typescript_client_template": "scripts/generate/templates/external_client.mjs@sha256:9269b2250a4b9e2b84bc348469e0138b4ae3b48c6b94ac3b1f309fab7b3f726a"
     }
+  },
+  "readiness_executors": {
+    "cli-json": "direct-cli-json",
+    "python": "generated-python-client",
+    "typescript": "generated-typescript-client",
+    "vendor-neutral": "packed-typescript-client"
   },
   "operations": [
     {
