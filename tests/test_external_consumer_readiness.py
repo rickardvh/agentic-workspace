@@ -19,11 +19,13 @@ def _module():
 def test_consumers_use_only_public_package_entrypoints() -> None:
     python = (FIXTURES / "consumer.py").read_text(encoding="utf-8")
     typescript = (FIXTURES / "consumer.mjs").read_text(encoding="utf-8")
+    private_generated_package = "_generated" + "_cli_package_impl"
     assert "from agentic_workspace import" in python
     assert "@agentic-workspace/workspace-cli" in typescript
     for source in (python, typescript):
         assert "sys.path" not in source
         assert "generated/workspace" not in source
+        assert private_generated_package not in source
         assert "scripts/run_agentic_workspace" not in source
         assert "tests/fixtures" not in source
 

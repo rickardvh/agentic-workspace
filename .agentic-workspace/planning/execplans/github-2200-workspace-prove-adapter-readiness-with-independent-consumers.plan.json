@@ -3,9 +3,9 @@
   "id": "github-2200-workspace-prove-adapter-readiness-with-independe",
   "title": "[Workspace]: Prove adapter readiness with independent external consumers",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "validation",
-  "revision": 4,
+  "lifecycle": "closed",
+  "phase": "complete",
+  "revision": 5,
   "intent": {
     "outcome": "Complete GitHub #2200 with clean-environment Python and TypeScript consumers that install only public package artifacts, execute the supported readiness matrix outside the source checkout, and prove removal/no-residue and reverse-dependency boundaries.",
     "non_goals": [
@@ -104,5 +104,68 @@
       "target": "planning://lane/github-2200-workspace-prove-adapter-readiness-with-independe",
       "revision": 1
     }
-  ]
+  ],
+  "active_milestone": {
+    "status": "completed",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "what happened": "Established independent Python and TypeScript consumer proof using public package boundaries, full workspace-state detection, and self-contained conformance accounting.",
+    "scope touched": "Public clients, packaged external consumer fixtures, readiness runner, generated TypeScript client, packaging and conformance proof.",
+    "changed surfaces": "Python and TypeScript public clients, external consumer runner/fixtures/tests, generated resources, release note, and Planning evidence.",
+    "validations run": "uv run python scripts/check/run_external_consumer_readiness.py --require-node",
+    "result for continuation": "continue from issue-2194-external-consumer-lane",
+    "next step": "promote the next bounded slice from issue-2194-external-consumer-lane"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "The repaired implementation removes private consumer knowledge and makes state/readiness exclusions inspectable from the maintained report.",
+    "proof status": "passed",
+    "intent served": "yes for slice; parent remains open via issue-2194-external-consumer-lane",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "issue-2194-external-consumer-lane"
+  },
+  "execution_summary": {
+    "outcome delivered": "Independent installed consumers now prove public-only provenance, absent/enabled/disabled/incompatible states, supported receipt evidence, and bounded non-advertised operation accounting.",
+    "validation confirmed": "uv run python scripts/check/run_external_consumer_readiness.py --require-node",
+    "follow-on routed to": "issue-2194-external-consumer-lane",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "issue-2194-external-consumer-lane"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "uv run python scripts/check/run_external_consumer_readiness.py --require-node",
+    "reopen trigger": "Reopen when issue-2194-external-consumer-lane activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to issue-2194-external-consumer-lane.",
+    "motivation worth preserving": "Future agents should continue from issue-2194-external-consumer-lane rather than rediscover this closeout residue.",
+    "canonical owner now": "issue-2194-external-consumer-lane",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "proof_report": {
+    "validation proof": "uv run python scripts/check/run_external_consumer_readiness.py --require-node",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run python scripts/check/run_external_consumer_readiness.py --require-node"
+  },
+  "intent_continuity": {
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "issue-2194-external-consumer-lane"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "issue-2194-external-consumer-lane",
+    "activation trigger": "when the continuation owner promotes the next slice"
+  }
 }

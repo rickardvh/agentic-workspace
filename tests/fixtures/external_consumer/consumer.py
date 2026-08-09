@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import sys
-from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -21,9 +20,10 @@ def _execute(request: dict[str, Any]) -> Any:
     action = str(request["action"])
     target = Path(str(request.get("target") or ".")).resolve()
     if action == "provenance":
+        public_module = Path(agentic_workspace.__file__).resolve()
         return {
-            "module": Path(agentic_workspace.__file__).resolve().as_posix(),
-            "resources": Path(str(files("agentic_workspace._generated_cli_package_impl"))).resolve().as_posix(),
+            "module": public_module.as_posix(),
+            "package_root": public_module.parent.as_posix(),
         }
     if action == "detect":
         return detect_workspace(target)

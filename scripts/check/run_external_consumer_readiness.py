@@ -350,15 +350,23 @@ def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str
         optional_present = targets / "optional-present"
         absent = targets / "absent"
         disabled = targets / "disabled"
+        incompatible = targets / "incompatible"
         _prepare_target(host_cli, necessary)
         _prepare_target(host_cli, mirrored, mirror_payload=True)
         _prepare_target(host_cli, optional_absent, modules="planning")
         _prepare_target(host_cli, optional_present, modules="planning,memory,verification")
         _init_repo(absent)
         _init_repo(disabled)
+        _init_repo(incompatible)
         (disabled / ".agentic-workspace").mkdir()
         (disabled / ".agentic-workspace/config.toml").write_text(
             "schema_version = 1\n[workspace]\nenabled = false\n", encoding="utf-8", newline="\n"
+        )
+        (incompatible / ".agentic-workspace").mkdir()
+        (incompatible / ".agentic-workspace/config.toml").write_text(
+            'schema_version = 1\n[workspace]\nenabled = true\n\n[cli_compatibility]\nexact_version = "999.0.0"\n',
+            encoding="utf-8",
+            newline="\n",
         )
 
         def request_for(language: str, request: Mapping[str, Any]) -> dict[str, Any]:
@@ -395,6 +403,13 @@ def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str
             )
             if readiness.get("status") != "ready" or set(readiness.get("supported_operations", [])) != set(REQUIRED_OPERATIONS):
                 raise ReadinessCheckError(f"{language} readiness was not complete: {json.dumps(readiness, sort_keys=True)}")
+            supported_evidence = readiness.get("supported_operation_evidence", [])
+            if (
+                {str(item.get("id")) for item in supported_evidence if isinstance(item, Mapping)} != set(REQUIRED_OPERATIONS)
+                or any(not str(item.get("receipt_ref") or "") for item in supported_evidence if isinstance(item, Mapping))
+                or int((readiness.get("operation_accounting") or {}).get("not_advertised_count") or 0) <= 0
+            ):
+                raise ReadinessCheckError(f"{language} readiness evidence/accounting was incomplete")
             receipts = _ok(call({"action": "receipts"}), f"{language} receipts")
             _assert_receipts(receipts)
             negotiated = _ok(
@@ -407,7 +422,7 @@ def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str
                 ),
                 f"{language} negotiation",
             )
-            incompatible = _ok(
+            incompatible_negotiation = _ok(
                 call(
                     {
                         "action": "negotiate",
@@ -417,12 +432,19 @@ def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str
                 ),
                 f"{language} incompatibility",
             )
-            if not negotiated.get("compatible") or incompatible.get("compatible"):
+            if not negotiated.get("compatible") or incompatible_negotiation.get("compatible"):
                 raise ReadinessCheckError(f"{language} compatibility negotiation was not fail-closed")
-            for target, expected in ((absent, "absent"), (disabled, "disabled")):
+            for target, expected in (
+                (absent, "absent"),
+                (disabled, "disabled"),
+                (necessary, "enabled"),
+                (incompatible, "incompatible"),
+            ):
                 detected = _ok(call({"action": "detect", "target": str(target)}), f"{language} detect {expected}")
                 if detected.get("status") != expected:
                     raise ReadinessCheckError(f"{language} detection expected {expected}: {detected}")
+                if expected == "enabled":
+                    continue
                 _error(
                     call(
                         {
@@ -510,6 +532,7 @@ def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str
             language_results[language] = {
                 "provenance": "installed-artifact",
                 "readiness": readiness.get("status"),
+                "readiness_report": readiness,
                 "negotiation": "compatible-and-fail-closed",
                 "scenarios": {
                     "absent": "passed",
@@ -552,6 +575,8 @@ def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str
                 "ordinary_aw_after_removal": "passed",
             },
             "supported_operations": list(REQUIRED_OPERATIONS),
+            "supported_operation_evidence": language_results["python"]["readiness_report"]["supported_operation_evidence"],
+            "operation_accounting": language_results["python"]["readiness_report"]["operation_accounting"],
         }
 
 
