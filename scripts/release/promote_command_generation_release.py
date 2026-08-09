@@ -69,6 +69,21 @@ def _require_security_readiness_promotion_input(
     return decision
 
 
+def _require_strict_health_promotion_input(
+    *, receipt: dict[str, Any] | None, expected_subject_fingerprint: str
+) -> dict[str, Any]:
+    from agentic_workspace import workspace_runtime_core
+
+    decision = workspace_runtime_core._strict_health_promotion_input(
+        receipt=receipt,
+        expected_policy_fingerprint=workspace_runtime_core._strict_health_policy_fingerprint(),
+        expected_subject_fingerprint=expected_subject_fingerprint,
+    )
+    if decision["status"] != "accepted":
+        raise ReleasePromotionBlocked(decision)
+    return decision
+
+
 def _fetch_json(url: str) -> dict[str, Any]:
     request = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "agentic-workspace"})
     with urllib.request.urlopen(request, timeout=30) as response:
@@ -148,10 +163,16 @@ def promote_command_generation_release(
     refresh_lock: bool = True,
     security_readiness_receipt: dict[str, Any] | None = None,
     expected_security_subject_fingerprint: str = "",
+    strict_health_receipt: dict[str, Any] | None = None,
+    expected_strict_health_subject_fingerprint: str = "",
 ) -> PromotionResult:
     security_input = _require_security_readiness_promotion_input(
         receipt=security_readiness_receipt,
         expected_subject_fingerprint=expected_security_subject_fingerprint,
+    )
+    strict_health_input = _require_strict_health_promotion_input(
+        receipt=strict_health_receipt,
+        expected_subject_fingerprint=expected_strict_health_subject_fingerprint,
     )
     changed: list[str] = []
     stale: list[str] = []
@@ -190,7 +211,7 @@ def promote_command_generation_release(
         stale_paths=tuple(dict.fromkeys(stale)),
         dependency_spec=release.dependency_spec,
         lock_refreshed=lock_refreshed,
-        promotion_inputs=(security_input,),
+        promotion_inputs=(security_input, strict_health_input),
     )
 
 
@@ -217,6 +238,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--security-subject-fingerprint",
         required=True,
         help="Expected security readiness subject fingerprint for the exact release candidate.",
+    )
+    parser.add_argument(
+        "--strict-health-receipt",
+        type=Path,
+        required=True,
+        help="Exact strict-current proof receipt JSON produced for the release candidate.",
+    )
+    parser.add_argument(
+        "--strict-health-subject-fingerprint",
+        required=True,
+        help="Expected strict-current subject fingerprint for the exact release candidate.",
     )
     return parser.parse_args(argv)
 
@@ -260,6 +292,8 @@ def main(argv: list[str] | None = None) -> int:
         refresh_lock=not bool(args.no_lock),
         security_readiness_receipt=_load_json_object(args.security_readiness_receipt),
         expected_security_subject_fingerprint=str(args.security_subject_fingerprint),
+        strict_health_receipt=_load_json_object(args.strict_health_receipt),
+        expected_strict_health_subject_fingerprint=str(args.strict_health_subject_fingerprint),
     )
     payload = {
         "kind": "agentic-workspace/command-generation-release-promotion/v1",

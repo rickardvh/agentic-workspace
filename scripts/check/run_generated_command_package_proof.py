@@ -262,6 +262,7 @@ def _proof_steps(args: argparse.Namespace) -> list[ProofStep]:
     steps: list[ProofStep] = []
     if requested["static"]:
         steps.append(ProofStep("generated packages static", []))
+        steps.append(ProofStep("ordinary output profile budgets", []))
     if requested["python_conformance"]:
         steps.append(ProofStep("generated packages python conformance", ["--python-conformance"]))
     if requested["python_docker_conformance"]:
@@ -290,14 +291,10 @@ def _run_step(step: ProofStep, *, timeout_seconds: float | None, failure_tail_li
     ]
     if timeout_seconds is not None:
         command.extend(["--timeout-seconds", f"{timeout_seconds:g}"])
-    command.extend(
-        [
-            "--",
-            sys.executable,
-            str(GENERATED_PACKAGE_CHECK),
-            *step.args,
-        ]
-    )
+    if step.label == "ordinary output profile budgets":
+        command.extend(["--", sys.executable, "-m", "pytest", "tests/test_output_profile_budgets.py", "-q"])
+    else:
+        command.extend(["--", sys.executable, str(GENERATED_PACKAGE_CHECK), *step.args])
     return subprocess.run(command, cwd=REPO_ROOT, check=False).returncode
 
 

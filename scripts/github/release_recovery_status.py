@@ -10,6 +10,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+REPO_IMPORT_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_IMPORT_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_IMPORT_ROOT))
+
+from scripts.release.release_ownership import classify_changed_paths  # noqa: E402
+
 PACKET_KIND = "agentic-workspace/release-recovery-status/v1"
 DEFAULT_WORKFLOW = "Release"
 ERROR_MARKERS = ("error", "failed", "failure", "traceback", "exception", "assertionerror")
@@ -27,18 +33,10 @@ def _ownership_payload(repo_root: Path) -> dict[str, Any]:
     return _load_json(repo_root / ".github" / "release-ownership.json")
 
 
-def _path_matches(path: str, patterns: list[str]) -> bool:
-    normalized = path.replace("\\", "/")
-    for pattern in patterns:
-        candidate = pattern.replace("\\", "/")
-        if normalized == candidate or normalized.startswith(candidate):
-            return True
-    return False
-
-
 def semver_pr_status(*, labels: list[str], changed_files: list[str], ownership: dict[str, Any]) -> dict[str, Any]:
     semver_labels = [label for label in labels if label in set(ownership.get("semver_labels", []))]
-    package_affecting = any(_path_matches(path, list(ownership.get("package_affecting_paths", []))) for path in changed_files)
+    path_classification = classify_changed_paths(changed_files, ownership)
+    package_affecting = path_classification["package_affecting"]
     changeset_dir = str(ownership.get("changeset_dir", ".release/changes")).rstrip("/")
     changesets = [path for path in changed_files if path.startswith(f"{changeset_dir}/") and path.endswith(".toml")]
     if not package_affecting:
@@ -49,6 +47,7 @@ def semver_pr_status(*, labels: list[str], changed_files: list[str], ownership: 
             "will_publish_release": False,
             "will_prepare_release_pr": False,
             "package_affecting": False,
+            "path_classification": path_classification,
             "semver_labels": semver_labels,
             "changesets": changesets,
             "changed_file_count": len(changed_files),
@@ -65,6 +64,7 @@ def semver_pr_status(*, labels: list[str], changed_files: list[str], ownership: 
             "will_publish_release": False,
             "will_prepare_release_pr": False,
             "package_affecting": True,
+            "path_classification": path_classification,
             "semver_labels": semver_labels,
             "changesets": changesets,
             "changed_file_count": len(changed_files),
@@ -77,6 +77,7 @@ def semver_pr_status(*, labels: list[str], changed_files: list[str], ownership: 
             "will_publish_release": False,
             "will_prepare_release_pr": False,
             "package_affecting": True,
+            "path_classification": path_classification,
             "semver_labels": semver_labels,
             "changesets": changesets,
             "changed_file_count": len(changed_files),
@@ -88,6 +89,7 @@ def semver_pr_status(*, labels: list[str], changed_files: list[str], ownership: 
         "will_publish_release": False,
         "will_prepare_release_pr": True,
         "package_affecting": True,
+        "path_classification": path_classification,
         "semver_labels": semver_labels,
         "changesets": changesets,
         "changed_file_count": len(changed_files),

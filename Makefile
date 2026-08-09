@@ -101,7 +101,7 @@ WORKSPACE_TEST_INTEGRATION = \
 	format-check format-check-nosync format-check-workspace format-check-memory format-check-planning format-check-verification \
 	verify verify-nosync verify-workspace verify-memory verify-planning verify-verification composed-operation-scenarios \
 	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict validation-runtime-plan structured-file-inventory structured-file-inventory-changed security-supply-chain package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
-	generated-command-packages generated-command-packages-docker \
+	generated-command-packages generated-command-packages-docker output-profile-budgets external-consumer-readiness \
 	check check-nosync check-bounded-parallel check-memory check-memory-nosync check-planning check-planning-nosync check-verification check-verification-nosync check-all start-review-poller
 
 help:

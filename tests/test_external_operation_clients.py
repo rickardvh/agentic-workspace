@@ -437,6 +437,10 @@ def test_external_readiness_report_requires_current_executed_cross_transport_con
 
     assert report["status"] == "ready"
     assert report["supported_operations"] == ["assignment.export"]
+    assert report["supported_operation_evidence"][0]["id"] == "assignment.export"
+    assert report["supported_operation_evidence"][0]["receipt_ref"]
+    assert report["operation_accounting"]["profile_operation_count"] == len(profile["operations"])
+    assert report["operation_accounting"]["not_advertised_count"] > 0
     assert report["excluded_operations"] == []
 
     stale_profile = copy.deepcopy(profile)
@@ -852,6 +856,26 @@ def test_public_python_client_detects_and_resolves_workspace(tmp_path: Path) -> 
     config.write_text('[workspace]\ncli_invoke = "uv run agentic-workspace"\n', encoding="utf-8")
     assert detect_workspace(tmp_path)["status"] == "enabled"
     assert resolve_invocation(tmp_path) == ["uv", "run", "agentic-workspace"]
+
+
+def test_public_clients_detect_exact_version_incompatibility(tmp_path: Path) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text('[workspace]\nenabled = true\n\n[cli_compatibility]\nexact_version = "999.0.0"\n', encoding="utf-8")
+
+    python_state = detect_workspace(tmp_path)
+    assert python_state["status"] == "incompatible"
+    assert python_state["reason"] == "exact-client-version-mismatch"
+
+    script = f"""
+import {{ detectWorkspace }} from './generated/workspace/typescript/src/client.mjs';
+console.log(JSON.stringify(detectWorkspace({json.dumps(str(tmp_path))})));
+"""
+    completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
+    assert completed.returncode == 0, completed.stderr
+    typescript_state = json.loads(completed.stdout)
+    assert typescript_state["status"] == "incompatible"
+    assert typescript_state["reason"] == "exact-client-version-mismatch"
 
 
 def test_public_requirement_negotiation_rejects_unknown_status() -> None:

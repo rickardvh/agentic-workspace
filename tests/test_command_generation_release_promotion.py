@@ -61,6 +61,22 @@ def _security_readiness_receipt(*, subject: str = "sha256:candidate") -> dict[st
     }
 
 
+def _current_strict_health_policy_fingerprint() -> str:
+    from agentic_workspace import workspace_runtime_core
+
+    return workspace_runtime_core._strict_health_policy_fingerprint()
+
+
+def _strict_health_receipt(*, subject: str = "sha256:candidate") -> dict[str, object]:
+    return {
+        "kind": "agentic-workspace/health-policy-proof-receipt/v1",
+        "outcome": "passed",
+        "policy_fingerprint": _current_strict_health_policy_fingerprint(),
+        "subject_fingerprint": subject,
+        "blocking_count": 0,
+    }
+
+
 def test_promote_command_generation_release_updates_pyproject_and_dockerfiles(tmp_path: Path) -> None:
     module = _load_module()
     old_url = (
@@ -80,6 +96,8 @@ def test_promote_command_generation_release_updates_pyproject_and_dockerfiles(tm
         refresh_lock=False,
         security_readiness_receipt=_security_readiness_receipt(),
         expected_security_subject_fingerprint="sha256:candidate",
+        strict_health_receipt=_strict_health_receipt(),
+        expected_strict_health_subject_fingerprint="sha256:candidate",
     )
 
     assert result.changed_paths == (
@@ -90,6 +108,8 @@ def test_promote_command_generation_release_updates_pyproject_and_dockerfiles(tm
     )
     assert result.promotion_inputs[0]["status"] == "accepted"
     assert result.promotion_inputs[0]["input"] == "security-supply-chain-readiness"
+    assert result.promotion_inputs[1]["status"] == "accepted"
+    assert result.promotion_inputs[1]["input"] == "strict-current-health"
     assert release.dependency_spec in (tmp_path / "pyproject.toml").read_text(encoding="utf-8")
     for relative in module.DOCKERFILE_REFS:
         assert release.dependency_spec in (tmp_path / relative).read_text(encoding="utf-8")
@@ -114,6 +134,8 @@ def test_promote_command_generation_release_check_reports_stale_refs(tmp_path: P
         check=True,
         security_readiness_receipt=_security_readiness_receipt(),
         expected_security_subject_fingerprint="sha256:candidate",
+        strict_health_receipt=_strict_health_receipt(),
+        expected_strict_health_subject_fingerprint="sha256:candidate",
     )
 
     assert result.changed_paths == ()
@@ -152,6 +174,46 @@ def test_release_promotion_blocks_invalid_security_readiness_before_writes(
             refresh_lock=False,
             security_readiness_receipt=receipt,
             expected_security_subject_fingerprint="sha256:candidate",
+        )
+
+    assert exc_info.value.decision["reason"] == reason
+    assert old_url in (tmp_path / "pyproject.toml").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("receipt_mutation", "reason"),
+    [
+        (None, "missing-strict-health-receipt"),
+        ({"subject_fingerprint": "sha256:stale"}, "stale-strict-health-subject"),
+        ({"policy_fingerprint": "sha256:stale"}, "stale-strict-health-policy"),
+        ({"outcome": "failed", "blocking_count": 1}, "strict-health-failed"),
+    ],
+)
+def test_release_promotion_blocks_invalid_strict_health_before_writes(
+    tmp_path: Path, receipt_mutation: dict[str, object] | None, reason: str
+) -> None:
+    module = _load_module()
+    old_url = (
+        "https://github.com/rickardvh/command-generation/releases/download/v1.0.0/"
+        "command_generation-1.0.0-py3-none-any.whl#sha256=" + "0" * 64
+    )
+    release = module.CommandGenerationRelease(
+        version="1.2.3",
+        wheel_url="https://github.com/rickardvh/command-generation/releases/download/v1.2.3/command_generation-1.2.3-py3-none-any.whl",
+        sha256="a" * 64,
+    )
+    _write_fixture_repo(tmp_path, dependency_url=old_url)
+    receipt = None if receipt_mutation is None else {**_strict_health_receipt(), **receipt_mutation}
+
+    with pytest.raises(module.ReleasePromotionBlocked) as exc_info:
+        module.promote_command_generation_release(
+            repo_root=tmp_path,
+            release=release,
+            refresh_lock=False,
+            security_readiness_receipt=_security_readiness_receipt(),
+            expected_security_subject_fingerprint="sha256:candidate",
+            strict_health_receipt=receipt,
+            expected_strict_health_subject_fingerprint="sha256:candidate",
         )
 
     assert exc_info.value.decision["reason"] == reason

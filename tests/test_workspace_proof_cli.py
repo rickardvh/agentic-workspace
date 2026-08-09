@@ -1381,7 +1381,6 @@ def test_proof_route_transition_gate_blocks_only_matching_scoped_findings(tmp_pa
             "affected_route": "domain:config",
             "scope": {
                 "changed_paths": ["src/agentic_workspace/config.py"],
-                "changed_paths_digest": "config-digest",
                 "scope_ref": "domain:config",
             },
         },
@@ -1403,6 +1402,14 @@ def test_proof_route_transition_gate_blocks_only_matching_scoped_findings(tmp_pa
     )
     assert matching["status"] == "blocked"
     assert matching["blocked_finding_ids"] == ["finding-config"]
+
+    expanded_scope = _proof_route_transition_gate_payload(
+        target_root=tmp_path,
+        transition="planning-handoff",
+        changed_paths=["src/agentic_workspace/config.py", "README.md"],
+    )
+    assert expanded_scope["status"] == "current"
+    assert expanded_scope["blocked_finding_ids"] == []
 
 
 def test_proof_route_transition_gate_uses_latest_finding_scope(tmp_path: Path) -> None:
@@ -2481,6 +2488,8 @@ review_aids = ["Record whether regulation P.3 remains satisfied."]
     assert obligation["claim_boundary"] == "completion-claims-qualified-until-manual-evidence-recorded-or-waived"
     assert answer["proof_route_maintenance"]["status"] == "attention"
     assert answer["proof_route_maintenance"]["manual_obligation_count"] == 1
+    route_health = answer["proof_route_maintenance"]["route_health"]
+    assert all(finding["finding_class"] != "insufficient_evidence" for finding in route_health["findings"])
 
 
 def test_proof_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> None:

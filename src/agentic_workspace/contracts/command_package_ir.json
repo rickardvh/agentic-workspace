@@ -1506,6 +1506,15 @@
                 "kind": "flag"
               },
               {
+                "option": "--compact-retained",
+                "attr": "compact_retained",
+                "kind": "flag"
+              },
+              {
+                "option": "--export-dir",
+                "attr": "export_dir"
+              },
+              {
                 "option": "--discard-archive",
                 "attr": "discard_archive",
                 "kind": "flag"
@@ -3296,6 +3305,21 @@
                     ],
                     "help": "Keep a completed execplan record under execplans/archive.",
                     "name": "retain_archive"
+                  },
+                  {
+                    "action": "store_true",
+                    "flags": [
+                      "--compact-retained"
+                    ],
+                    "help": "Replace retained full evidence with a compact receipt after reversible export; use --plan all-archived for incremental batch migration.",
+                    "name": "compact_retained"
+                  },
+                  {
+                    "flags": [
+                      "--export-dir"
+                    ],
+                    "help": "Export directory outside checked-in Planning state.",
+                    "name": "export_dir"
                   },
                   {
                     "flags": [
@@ -8358,6 +8382,16 @@
                 ],
                 "help": "Comma-separated JSON fields to return from the selected report payload, such as answer.closeout_protocol.",
                 "name": "select"
+              },
+              {
+                "choices": [
+                  "strict-current"
+                ],
+                "flags": [
+                  "--fail-on"
+                ],
+                "help": "Assert the named versioned health policy and exit non-zero when current state violates it.",
+                "name": "fail_on"
               }
             ]
           },
@@ -8895,6 +8929,14 @@
               {
                 "action": "store_true",
                 "flags": [
+                  "--verbose"
+                ],
+                "help": "Show the full lifecycle, module, configuration, and provenance payload instead of the ordinary decision envelope.",
+                "name": "verbose"
+              },
+              {
+                "action": "store_true",
+                "flags": [
                   "--dry-run"
                 ],
                 "help": "Show planned changes without mutating files.",
@@ -9071,6 +9113,14 @@
                 ],
                 "help": "Opt in to checking in the full generic package payload mirror instead of the ordinary necessary-surface footprint.",
                 "name": "mirror_payload"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--verbose"
+                ],
+                "help": "Show the full lifecycle, module, configuration, and provenance payload instead of the ordinary decision envelope.",
+                "name": "verbose"
               },
               {
                 "action": "store_true",
@@ -15564,6 +15614,15 @@
                 "option": "--retain-archive"
               },
               {
+                "attr": "compact_retained",
+                "kind": "flag",
+                "option": "--compact-retained"
+              },
+              {
+                "attr": "export_dir",
+                "option": "--export-dir"
+              },
+              {
                 "attr": "discard_archive",
                 "kind": "flag",
                 "option": "--discard-archive"
@@ -16189,6 +16248,21 @@
                 ],
                 "help": "Keep a completed execplan record under execplans/archive.",
                 "name": "retain_archive"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--compact-retained"
+                ],
+                "help": "Replace retained full evidence with a compact receipt after reversible export; use --plan all-archived for incremental batch migration.",
+                "name": "compact_retained"
+              },
+              {
+                "flags": [
+                  "--export-dir"
+                ],
+                "help": "Export directory outside checked-in Planning state.",
+                "name": "export_dir"
               },
               {
                 "flags": [
@@ -20897,6 +20971,16 @@
               "arg": "retain_archive",
               "default": false,
               "name": "retain_archive"
+            },
+            {
+              "arg": "compact_retained",
+              "default": false,
+              "name": "compact_retained"
+            },
+            {
+              "arg": "export_dir",
+              "default": null,
+              "name": "export_dir"
             },
             {
               "arg": "decision_point_carry_key",
