@@ -4,8 +4,8 @@
   "title": "[Workspace]: Prove adapter readiness with independent external consumers",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 2,
+  "phase": "validation",
+  "revision": 4,
   "intent": {
     "outcome": "Complete GitHub #2200 with clean-environment Python and TypeScript consumers that install only public package artifacts, execute the supported readiness matrix outside the source checkout, and prove removal/no-residue and reverse-dependency boundaries.",
     "non_goals": [
@@ -65,7 +65,7 @@
     "docs/package/installed-surfaces.md",
     ".agentic-workspace/docs/local-integration-area.md"
   ],
-  "next_action": "Implement the smallest maintained independent-consumer harness: build public Python and TypeScript artifacts, install and run them outside the checkout against the required scenario matrix, then extend it with removal/no-residue and reverse-dependency proof before closeout.",
+  "next_action": "Create the implementation PR, then require exact-head CI and semver-label success before moving the lane to review-ready or complete.",
   "blockers": [
     "None."
   ],
@@ -82,7 +82,17 @@
       "Inspect package/import/dependency scans and before/after tree/status evidence manually before claiming no residue or reverse dependency.",
       "Require exact-head CI and semver-label success before review readiness."
     ],
-    "refs": []
+    "refs": [
+      "scripts/check/run_external_consumer_readiness.py --require-node --format json: passed for installed Python and TypeScript consumers with exact rejected/rejected/failed mutation semantics",
+      "scripts/check/run_operation_conformance_tests.py --target all: 149 passed, 0 failed",
+      "tests/test_external_operation_clients.py tests/test_external_consumer_profile.py tests/test_external_consumer_readiness.py tests/test_workspace_packaging.py: 99 passed",
+      "tests/test_workspace_config_cli.py: 140 passed",
+      "make test-workspace: workspace CLI, proof, and session/review partitions passed; the only contract-partition finding was fixed and its validation-runtime/contract subset then passed 17 tests",
+      "make test-memory, make test-planning, make test-verification, and module/workspace lint plus Planning typecheck: passed",
+      "scripts/check/check_structured_file_inventory.py --quiet-success: passed",
+      "scripts/check/check_generated_command_packages.py --python-conformance: passed",
+      "scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker: passed after making the conformance fingerprint and Planning fixture deterministic without a Git index or platform-specific line endings"
+    ]
   },
   "continuation": {
     "owner": "issue-2194-external-consumer-lane",
