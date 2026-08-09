@@ -5931,6 +5931,15 @@ def test_strict_health_classifies_current_state_and_ignores_archive_history() ->
     assert archive_only["blocking_count"] == 0
     assert archive_only["historical_count"] == 1
 
+    untyped_warning = workspace_runtime_core._strict_health_assertion_payload(
+        target_root=Path("."),
+        selected_modules=["workspace"],
+        findings=[{"severity": "warning", "module": "workspace", "message": "legacy warning without a health class"}],
+        cli_invoke="agentic-workspace",
+    )
+    assert untyped_warning["status"] == "passed"
+    assert untyped_warning["maintenance_debt_count"] == 1
+
 
 def test_report_fail_on_strict_health_has_deterministic_exit_semantics(monkeypatch, tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)

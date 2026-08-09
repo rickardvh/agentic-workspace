@@ -10969,8 +10969,7 @@ def _health_finding_class(finding: dict[str, Any]) -> str:
     }
     if reason_code in reason_classes:
         return reason_classes[reason_code]
-    severity = str(finding.get("severity", "info")).lower()
-    return "actionable-maintenance-debt" if severity == "info" else "current-executable-state"
+    return "actionable-maintenance-debt"
 
 
 def _health_finding_action(*, finding: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
