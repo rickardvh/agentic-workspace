@@ -47316,7 +47316,9 @@ def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
         config=config,
         footprint_profile=getattr(args, "footprint_profile", None),
         mirror_payload=bool(getattr(args, "mirror_payload", False)),
-        include_output_detail=bool(getattr(args, "verbose", False)) or bool(getattr(args, "mirror_payload", False)),
+        include_output_detail=(
+            command_name != "init" or bool(getattr(args, "verbose", False)) or bool(getattr(args, "mirror_payload", False))
+        ),
     )
     payload["command"] = command_name
     payload["lifecycle_plan"] = _lifecycle_plan_payload(
