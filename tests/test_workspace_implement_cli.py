@@ -6415,8 +6415,10 @@ candidates = [
     payload = json.loads(capsys.readouterr().out)
     assert payload["next_safe_action"]["implementation_allowed"] is True
     assert payload["action_signals"]["allowed_next_action"] != "select-or-promote-candidate-lane"
-    assert payload["context"]["planning"]["workflow_sufficiency"]["sufficiency_result"] != "candidate-lane-promotion-required"
-    assert "planning_safety_gate" not in payload["context"]["planning"]
+    planning = payload["context"]["planning"]
+    assert planning["status"] != "candidate-lane-promotion-required"
+    assert planning["detail_selector"] == "planning_safety_gate"
+    assert "planning_safety_gate" not in planning
     assert "lane_shaping_gate" not in payload["context"]
 
 
@@ -10039,6 +10041,12 @@ routes_from = ["src/sample_app/*.py"]
     reuse_pressure = json.loads(capsys.readouterr().out)["values"]["reuse_pressure"]
     assert reuse_pressure["memory_signals"]["status"] == "none"
     assert reuse_pressure["memory_signals"]["matches"] == []
+    primitive_signals = workspace_runtime_primitives._reuse_pressure_memory_signals(
+        target_root=tmp_path,
+        changed_paths=["src/sample_app/text.py"],
+    )
+    assert primitive_signals["status"] == "none"
+    assert primitive_signals["matches"] == []
 
 
 def test_implement_reuse_pressure_keeps_small_direct_task_unblocked(tmp_path: Path, capsys) -> None:

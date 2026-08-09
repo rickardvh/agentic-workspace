@@ -10895,6 +10895,10 @@ function parseInvocation(definition, tokens, path) {
     const subcommand = interfaceSubcommands(iface).find((candidate) => candidate.name === token);
     if (subcommand) {
       const nested = parseInvocation({ interface: subcommand, operation_ref: subcommand.operation_ref ?? definition.operation_ref }, tokens.slice(index + 1), [...path, token]);
+      const parentDefaults = initialValues(iface);
+      for (const [name, value] of Object.entries(values)) {
+        if (JSON.stringify(value) !== JSON.stringify(parentDefaults[name])) nested.values[name] = value;
+      }
       if (iface.subcommand_dest) nested.values[iface.subcommand_dest] = token;
       return nested;
     }

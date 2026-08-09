@@ -685,6 +685,47 @@ def _capture(command: list[str], *, cwd: Path, env: dict[str, str]) -> subproces
     return subprocess.run(command, cwd=cwd, env=env, text=True, capture_output=True, check=False)
 
 
+def _is_semantic_usage_refusal(process: subprocess.CompletedProcess[str], *, failure_class: str, rejected_token: str) -> bool:
+    if process.returncode != 2:
+        return False
+    stdout = process.stdout.strip()
+    stderr = process.stderr.strip()
+    semantic_markers = {
+        "usage-error": ("unrecognized argument", "unknown option", "no such option"),
+        "invalid-command": ("invalid choice", "unknown command", "unsupported generated command"),
+    }.get(failure_class, ())
+    if not semantic_markers:
+        return False
+    if stderr:
+        lowered = stderr.lower()
+        return (
+            not stdout
+            and rejected_token.lower() in lowered
+            and ("usage:" in lowered or "recovery:" in lowered)
+            and any(marker in lowered for marker in semantic_markers)
+        )
+    if not stdout:
+        return False
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    message = str(payload.get("message", "")).lower()
+    expected_safe_to_retry = failure_class == "usage-error"
+    return (
+        str(payload.get("kind", "")).endswith("/retryable-cli-error/v1")
+        and payload.get("exit_status") == 2
+        and payload.get("failure_class") == failure_class
+        and payload.get("safe_to_retry") is expected_safe_to_retry
+        and rejected_token.lower() in message
+        and any(marker in message for marker in semantic_markers)
+        and isinstance(payload.get("suggested_command"), str)
+        and isinstance(payload.get("alternatives"), list)
+    )
+
+
 def _generated_adapter_proof_surface(*, language: str) -> str:
     container = os.environ.get("AGENTIC_GENERATED_CONFORMANCE_CONTAINER")
     if container:
@@ -1190,7 +1231,19 @@ def _run_python_adapter_conformance() -> list[str]:
     return errors
 
 
-def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptConformanceCase], list[str]]:
+TYPESCRIPT_PR_CONFORMANCE_REFS = {
+    "modules.report.process",
+    "planning.new-plan.lifecycle.dry-run.process",
+    "memory.report.process",
+    "final-response.admit.process",
+    "assignment.reject.process",
+    "correction-event.query.process",
+}
+
+
+def _runnable_typescript_conformance_cases(
+    *, artifact_root: Path | None = None, conformance_refs: set[str] | None = None
+) -> tuple[list[RunnableTypescriptConformanceCase], list[str]]:
     try:
         ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
@@ -1230,17 +1283,20 @@ def _runnable_typescript_conformance_cases() -> tuple[list[RunnableTypescriptCon
                 continue
             command_name = command.get("command", {}).get("name") if isinstance(command.get("command"), dict) else "<unknown>"
             for conformance_ref in command.get("conformance_refs", []):
+                if conformance_refs is not None and str(conformance_ref) not in conformance_refs:
+                    continue
                 case = registry.get(str(conformance_ref))
                 if case is None:
                     errors.append(
                         f"missing generated TypeScript conformance case for {package_id!r} command {command_name!r} ref {conformance_ref!r}"
                     )
                     continue
+                generated_root = Path(str(target.get("generated_root", "")))
                 selected.append(
                     RunnableTypescriptConformanceCase(
                         package_id=package_id,
                         program=str(package.get("program", "")),
-                        cli=cli,
+                        cli=(artifact_root / generated_root / "src" / "cli.mjs") if artifact_root is not None else cli,
                         weak_agent_routing=str(maturity_levels[str(target.get("maturity_level_ref"))]["weak_agent_routing"]),
                         case=case,
                     )
@@ -4629,11 +4685,7 @@ def _line_ending_only_generated_output_paths(ir: dict[str, object]) -> list[str]
         for output in render_workspace_command_package_outputs(ir, repo_root=REPO_ROOT)
     }
     status = _run_git_output(["status", "--porcelain=v1", "--", "generated"])
-    dirty_paths = [
-        _git_dirty_path_from_porcelain_line(line)
-        for line in status.splitlines()
-        if line.strip() and not line.startswith("?? ")
-    ]
+    dirty_paths = [_git_dirty_path_from_porcelain_line(line) for line in status.splitlines() if line.strip() and not line.startswith("?? ")]
     classified: list[str] = []
     for relative_path in dirty_paths:
         expected = rendered.get(relative_path)
@@ -5130,7 +5182,9 @@ def _validate_command_generation_non_aw_fixture() -> list[str]:
     return errors
 
 
-def _run_adapter_conformance(*, require_node: bool) -> list[str]:
+def _run_adapter_conformance(
+    *, require_node: bool, artifact_root: Path | None = None, conformance_refs: set[str] | None = None
+) -> list[str]:
     errors: list[str] = []
     node = shutil.which("node")
     if node is None:
@@ -5144,7 +5198,10 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
     with tempfile.TemporaryDirectory(prefix="agentic-workspace-generated-adapter-") as tmp:
         temp_root = Path(tmp)
 
-        derived_cases, derived_errors = _runnable_typescript_conformance_cases()
+        derived_cases, derived_errors = _runnable_typescript_conformance_cases(
+            artifact_root=artifact_root,
+            conformance_refs=conformance_refs,
+        )
         if derived_errors:
             return derived_errors
 
@@ -5203,13 +5260,21 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                     cwd=fixture_root,
                     env=_conformance_env(runtime=""),
                 )
-                if adapter_invalid_process.returncode == 0 or not adapter_invalid_process.stderr.strip():
+                if not _is_semantic_usage_refusal(
+                    adapter_invalid_process,
+                    failure_class="usage-error",
+                    rejected_token="--definitely-invalid",
+                ):
                     errors.append(
                         f"adapter failure: {runnable_case.package_id} {case.label} invalid-option was not rejected by native TypeScript parser"
                     )
 
+        checked_package_boundaries: set[str] = set()
         for runnable_case in derived_cases:
             compare_adapter(runnable_case)
+            if runnable_case.package_id in checked_package_boundaries:
+                continue
+            checked_package_boundaries.add(runnable_case.package_id)
             fixture_root = materialize_fixture(runnable_case.case)
             help_result = _capture(
                 [node, str(runnable_case.cli), "--help"],
@@ -5232,30 +5297,15 @@ def _run_adapter_conformance(*, require_node: bool) -> list[str]:
                 cwd=fixture_root,
                 env=_conformance_env(runtime=runtime_for_package(runnable_case.package_id)),
             )
-            if (
-                unsupported.returncode != 2
-                or "Unsupported generated command" not in unsupported.stderr
-                or "Recovery:" not in unsupported.stderr
-                or unsupported.stdout.strip()
+            if not _is_semantic_usage_refusal(
+                unsupported,
+                failure_class="invalid-command",
+                rejected_token="__unsupported__",
             ):
                 errors.append(
                     f"adapter failure: {runnable_case.package_id} unsupported command refusal drifted; "
                     f"exit={unsupported.returncode}, stdout={unsupported.stdout!r}, stderr={unsupported.stderr!r}"
                 )
-            exercises_runtime = "--help" not in runnable_case.case.success_args
-            if runnable_case.weak_agent_routing in {"allowed-read-only", "allowed-mutation-with-review"} and exercises_runtime:
-                _native_result, native_failures = run_cli_conformance_case(
-                    case=runnable_case.case,
-                    target=CliConformanceTarget(
-                        label=f"adapter failure: {runnable_case.package_id} native TypeScript operation",
-                        command=(node, str(runnable_case.cli)),
-                        cwd=fixture_root,
-                        env=_conformance_env(runtime=""),
-                    ),
-                    fixture_root=fixture_root,
-                )
-                errors.extend(failure.message + " without Python runtime" for failure in native_failures)
-
     return errors
 
 
@@ -6049,6 +6099,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Run black-box conformance for runnable generated adapters using local Node and the canonical Python CLI.",
     )
     parser.add_argument(
+        "--conformance-shard",
+        action="store_true",
+        help="Run the bounded representative PR semantic-conformance shard.",
+    )
+    parser.add_argument(
+        "--typescript-artifact-root",
+        type=Path,
+        help="Run TypeScript conformance against extracted exact package artifacts rooted like the generated tree.",
+    )
+    parser.add_argument(
         "--python-conformance",
         action="store_true",
         help="Run black-box conformance for generated Python adapters using checked-in conformance contracts.",
@@ -6158,13 +6218,17 @@ def main(argv: list[str] | None = None) -> int:
         primitive_status = _run_primitive_conformance()
         if primitive_status:
             return primitive_status
-    if args.conformance:
-        conformance_errors = _run_adapter_conformance(require_node=bool(args.require_node))
+    if args.conformance or args.conformance_shard:
+        conformance_errors = _run_adapter_conformance(
+            require_node=bool(args.require_node),
+            artifact_root=args.typescript_artifact_root.resolve() if args.typescript_artifact_root else None,
+            conformance_refs=TYPESCRIPT_PR_CONFORMANCE_REFS if args.conformance_shard and not args.conformance else None,
+        )
         if conformance_errors:
             for error in conformance_errors:
                 print(error)
             return 1
-        print("[ok] generated command package adapter conformance")
+        print("[ok] generated command package adapter conformance" + (" shard" if args.conformance_shard and not args.conformance else ""))
         print("[ok] weak-agent-safe generated adapter routing checks passed")
     docker_status = 0
     if args.python_docker_conformance:

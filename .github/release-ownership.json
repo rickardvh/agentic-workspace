@@ -10,6 +10,13 @@
     "trigger": "existing-tag-only",
     "tag_rule": "vMAJOR.MINOR.PATCH must point at a commit whose coordinated package manifests declare the same version"
   },
+  "semantic_conformance": {
+    "required_for_support_bearing_typescript_release": true,
+    "receipt_kind": "agentic-workspace/generated-command-semantic-conformance-receipt/v1",
+    "runtime_majors": [20, 24, 25],
+    "runner": "scripts/check/run_generated_command_package_proof.py --packed-conformance",
+    "failure_policy": "missing, stale, mismatched, failed, or unsupported receipts block publication"
+  },
   "semver_labels": [
     "semver:major",
     "semver:minor",

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -9,10 +11,21 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "release" / "promote_command_generation_release.py"
+SEMANTIC_PROOF_SCRIPT = REPO_ROOT / "scripts" / "check" / "run_generated_command_package_proof.py"
 
 
 def _load_module():
     spec = importlib.util.spec_from_file_location("promote_command_generation_release", SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_semantic_proof_module():
+    spec = importlib.util.spec_from_file_location("run_generated_command_package_proof_promotion_test", SEMANTIC_PROOF_SCRIPT)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -145,3 +158,89 @@ def test_explicit_wheel_url_can_trust_supplied_sha_for_offline_use(monkeypatch: 
     release = module._release_from_args(args)
 
     assert release.sha256 == "a" * 64
+
+
+def test_semantic_receipt_verification_fails_closed_for_stale_or_mismatched_subject(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _load_semantic_proof_module()
+    artifact = tmp_path / "workspace-cli.tgz"
+    artifact.write_bytes(b"exact-packed-artifact")
+    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    packages = [
+        {
+            "id": "root-workspace",
+            "name": "@agentic-workspace/workspace-cli",
+            "generated_root": "generated/workspace/typescript",
+            "runnable": True,
+        }
+    ]
+    monkeypatch.setattr(module, "_typescript_packages", lambda: packages)
+    monkeypatch.setattr(module, "_registry_fingerprint", lambda: "sha256:current")
+    subject = {
+        "artifacts": [
+            {
+                "package_id": "root-workspace",
+                "package_name": "@agentic-workspace/workspace-cli",
+                "asset": artifact.name,
+                "sha256": digest,
+                "runnable": True,
+                "conformance_status": "passed",
+            }
+        ],
+        "registry_fingerprint": "sha256:stale",
+        "node_version": "v24.0.0",
+    }
+    receipt = {
+        "kind": "agentic-workspace/generated-command-semantic-conformance-receipt/v1",
+        "status": "passed",
+        "receipt_id": "sha256:" + hashlib.sha256(json.dumps(subject, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
+        "subject": subject,
+    }
+    receipt_path = tmp_path / "receipt.json"
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24) == 1
+
+    receipt["subject"]["registry_fingerprint"] = "sha256:current"
+    receipt["receipt_id"] = (
+        "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24) == 0
+
+    receipt["subject"]["node_version"] = "v25.0.0"
+    receipt["receipt_id"] = (
+        "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=20) == 1
+
+    receipt["subject"]["node_version"] = "24"
+    receipt["receipt_id"] = (
+        "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24) == 1
+
+    receipt["subject"]["node_version"] = "v24.0.0"
+    receipt["receipt_id"] = (
+        "sha256:" + hashlib.sha256(json.dumps(receipt["subject"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    )
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+
+    artifact.write_bytes(b"drifted-artifact")
+    assert module._verify_receipt(receipt_path, artifact_dir=tmp_path, expected_node_major=24) == 1
+
+
+def test_release_workflow_requires_exact_artifact_semantic_receipts() -> None:
+    workflow = (REPO_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
+
+    assert ownership["semantic_conformance"]["required_for_support_bearing_typescript_release"] is True
+    assert ownership["semantic_conformance"]["runtime_majors"] == [20, 24, 25]
+    assert workflow.count("--packed-conformance --artifact-dir dist --receipt-out") == 3
+    assert '--verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major"' in workflow
+    assert 'runtime_match.group("major")' in workflow
+    assert '"semantic_conformance": {' in workflow
+    assert "dist/generated-command-conformance-node*.json" in workflow

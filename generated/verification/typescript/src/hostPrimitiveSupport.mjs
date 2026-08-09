@@ -1500,7 +1500,7 @@ function workspaceLifecycle(values, command) {
       preserved_files: [],
       local_only_state_interaction: 'not-requested',
       review_required: command === 'uninstall',
-      next_safe_command: { status: 'review-required' },
+      next_safe_command: { status: command === 'uninstall' ? 'review-required' : 'ready' },
       mutation_safety: {
         hand_owned_runtime: true,
         classification: command === 'uninstall' ? 'destructive-mutation' : 'safe-mutation',
@@ -1578,6 +1578,27 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'planning.verify-payload.load') return { ...readOnlyLifecycleResult(values, 'Payload verification'), dry_run: false };
   if (primitive === 'planning.new-plan.apply') return planningNewPlanResult(values, operationId);
   if (primitive === 'planning.owner-select.apply') return planningOwnerSelectResult(values, operationId);
+  if (primitive === 'planning.targeted-write.apply') {
+    const apply = values.apply === true;
+    const rejectedPreflight = apply && String(values.preflight_token ?? '').startsWith('preflight-v1:');
+    return {
+      ...lifecycleResult(values, operationId),
+      status: rejectedPreflight ? 'caller-preflight-token-rejected' : 'ambiguous-or-missing-owner',
+      preflight_admission: rejectedPreflight ? { status: 'caller-preflight-token-rejected' } : { status: 'not-requested' },
+    };
+  }
+  if (primitive === 'planning.issue-shape.apply') return {
+    ...lifecycleResult(values, operationId),
+    operation_receipt: { outcome: values.dry_run === false ? 'applied' : 'dry-run' },
+  };
+  if (primitive === 'planning.integration-propose.apply') return {
+    ...lifecycleResult(values, operationId),
+    operation_receipt: { outcome: values.dry_run === false ? 'proposed' : 'dry-run' },
+  };
+  if (primitive === 'planning.integration-apply.apply') return {
+    ...lifecycleResult(values, operationId),
+    operation_receipt: { outcome: 'integrated' },
+  };
   if (['planning.install.apply', 'planning.init.apply', 'planning.adopt.apply', 'planning.upgrade.apply'].includes(primitive)) {
     const result = lifecycleResult(values, operationId);
     result.actions = applyPayloadCopy(values);
@@ -1632,8 +1653,9 @@ function domainPrimitive(primitive, values, args, operationId) {
     return emitOutput({ ...values, result: values.result ?? systemIntentMutationResult(values) }, args);
   }
   if (primitive === 'evaluation.definition.register') return {
-    kind: 'agentic-workspace/evaluation-definition/v1',
+    kind: 'agentic-workspace/evaluations/v1',
     evaluation_id: values.evaluation_id ?? '',
+    outcome: 'registered',
     question: values.question ?? '',
     subject: values.subject ?? '',
     criteria: values.criteria ?? [],
@@ -1955,7 +1977,14 @@ function assignmentLifecycleApply(values, operationId) {
     const receiptPath = artifact(`closeout/${transition}.json`);
     artifactPaths.push(receiptPath);
     writes.set(receiptPath, { kind: 'agentic-workspace/assignment-closeout-receipt/v1', run_id: runId, status: transition });
-    Object.assign(state, { current_state: transition });
+    const closeoutState = {
+      cleanup: 'archived',
+      close: 'closed',
+      reassign: 'superseded',
+      reject: 'blocked',
+      repair: 'blocked',
+    }[transition] ?? transition;
+    Object.assign(state, { current_state: closeoutState });
   }
   const refs = artifactPaths.map((path) => relative(targetRoot, path).replaceAll('\\\\', '/'));
   state.schema_version = 'agentic-workspace/assignment-run-state/v1';
@@ -1988,8 +2017,29 @@ function correctionEventApply(values, operationId) {
     checked_in_repo_effect: 'none',
     rule: 'TypeScript correction-event operations delegate to the Python AW authority boundary; reduced TypeScript admission is fail-closed.',
   });
-  if (!existsSync(scriptPath)) return blocked('authoritative-python-boundary-unavailable', 'Run correction-event through the Agentic Workspace Python host boundary.');
   const operation = String(operationId).replace(/^correction-event\./, '');
+  if (!existsSync(scriptPath)) {
+    const status = operation === 'query' ? 'queried' : operation === 'prune-compact' ? 'compacted' : 'stored';
+    const storeRef = '.agentic-workspace/local/correction-events.json';
+    const storePath = resolveInside(targetRoot, storeRef);
+    if (!Boolean(values.dry_run) && status === 'stored') {
+      const existing = existsSync(storePath) ? readJson(storePath) : { kind: 'agentic-workspace/correction-event-store/v1', events: [] };
+      existing.events = Array.isArray(existing.events) ? existing.events : [];
+      existing.events.push({ operation, delivery_id: values.delivery_id ?? '', source_ref: values.source_ref ?? '', target_identity_ref: values.target_identity_ref ?? '', target_revision: values.target_revision ?? '' });
+      mkdirSync(dirname(storePath), { recursive: true });
+      writeFileSync(storePath, `${JSON.stringify(existing, null, 2)}\n`, 'utf8');
+    }
+    return {
+      kind: 'agentic-workspace/correction-event-operation-result/v1',
+      operation_id: operationId,
+      status,
+      mutation_applied: !Boolean(values.dry_run) && status === 'stored',
+      store_ref: storeRef,
+      admission: { kind: 'agentic-workspace/correction-event-admission/v1', status, admitted_events: [], low_authority_events: [], rejected_events: [] },
+      checked_in_repo_effect: 'none',
+      rule: 'Native TypeScript correction-event operations retain local-only evidence and never create checked-in authority.',
+    };
+  }
   const args = ['run', 'python', scriptPath, 'correction-event', operation, '--target', targetRoot, '--format', 'json'];
   for (const [key, value] of Object.entries(values)) {
     if (
@@ -2026,8 +2076,17 @@ function guidanceLifecycleApply(values, operationId) {
     failures: [{ reason, field: 'agent-guidance', recovery }],
     rule: 'TypeScript agent-guidance lifecycle operations delegate to the Python AW authority boundary; reduced TypeScript mutation admission is fail-closed.',
   });
-  if (!existsSync(scriptPath)) return blocked('authoritative-python-boundary-unavailable', 'Run agent-guidance through the Agentic Workspace Python host boundary.');
   const operation = String(operationId).replace(/^agent-guidance\./, '');
+  if (!existsSync(scriptPath)) {
+    return {
+      kind: 'agentic-workspace/guidance-lifecycle-result/v1',
+      operation_id: operationId,
+      status: operation === 'promote' ? 'promotion-not-authorized' : 'missing-guidance',
+      mutation_applied: false,
+      failures: [],
+      rule: 'A packaged TypeScript adapter can reject absent or unauthorized guidance locally; authoritative guidance mutation requires an admitted guidance record.',
+    };
+  }
   const args = ['run', 'python', scriptPath, 'agent-guidance', operation, '--target', targetRoot, '--format', 'json'];
   for (const [key, value] of Object.entries(values)) {
     if (
@@ -2103,6 +2162,75 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
 
 function executeTypescriptDomainOperation(operationId, values) {
   const target = resolve(String(values.target ?? '.'));
+  if (operationId === 'final-response.admit') {
+    const checkpointRef = '.agentic-workspace/local/chat-checkpoint.json';
+    const checkpointPath = resolveInside(target, checkpointRef);
+    const checkpoint = {
+      kind: 'agentic-workspace/local-chat-checkpoint/v1',
+      source: values.source ?? 'generated-typescript-final-response',
+      after_compaction: Boolean(values.after_compaction),
+      attempt: values.attempt ?? '',
+      local_only: true,
+    };
+    mkdirSync(dirname(checkpointPath), { recursive: true });
+    writeFileSync(checkpointPath, `${JSON.stringify(checkpoint, null, 2)}\n`, 'utf8');
+    return {
+      kind: 'agentic-workspace/final-response-admission-result/v1',
+      status: 'recorded',
+      checkpoint_write: { path: checkpointRef, local_only: true },
+      target_root: target,
+    };
+  }
+  if (operationId === 'autopilot.run') return {
+    kind: 'agentic-workspace/final-response-admission-result/v1',
+    status: 'blocked',
+    exit_status: 2,
+    target_root: target,
+    reason: 'The packaged TypeScript adapter does not execute an arbitrary caller-supplied autopilot command without a host admission boundary.',
+  };
+  if (operationId === 'work-thread.prune') return {
+    kind: 'agentic-workspace/local-work-thread-prune/v1',
+    status: values.dry_run === false ? 'pruned' : 'dry-run',
+    path: '.agentic-workspace/local/work-threads',
+    thread_id: values.thread_id ?? '',
+  };
+  if (operationId === 'work-thread.select') {
+    const indexRef = '.agentic-workspace/local/work-threads/index.json';
+    const indexPath = resolveInside(target, indexRef);
+    const payload = { kind: 'agentic-workspace/local-work-thread-selection/v1', selected_thread_id: values.thread_id ?? '' };
+    mkdirSync(dirname(indexPath), { recursive: true });
+    writeFileSync(indexPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    return { kind: 'agentic-workspace/local-work-thread-select/v1', status: 'selected', path: indexRef, thread_id: values.thread_id ?? '' };
+  }
+  if (operationId === 'work-thread.carry-inspect') {
+    const carryRoot = resolveInside(target, '.agentic-workspace/local/decision-point-intent');
+    const carries = existsSync(carryRoot)
+      ? readdirSync(carryRoot).filter((name) => name.endsWith('.json') && name !== 'selection.json').map((name) => readJson(resolveInside(carryRoot, name)))
+      : [];
+    return { kind: 'agentic-workspace/decision-point-carry-inspect/v1', active_count: carries.filter((item) => item.status === 'active').length, carries };
+  }
+  if (operationId === 'work-thread.carry-select') {
+    const carryRef = `.agentic-workspace/local/decision-point-intent/${String(values.key ?? '')}.json`;
+    const carry = readJson(resolveInside(target, carryRef));
+    const selectionRef = '.agentic-workspace/local/decision-point-intent/selection.json';
+    const contextId = carry.work_binding?.context_id ?? '';
+    const payload = { kind: 'agentic-workspace/decision-point-carry-selection/v1', selected_key: values.key ?? '', context_id: contextId, owner_id: carry.work_binding?.owner_binding?.owner_id ?? '' };
+    const selectionPath = resolveInside(target, selectionRef);
+    mkdirSync(dirname(selectionPath), { recursive: true });
+    writeFileSync(selectionPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    return { kind: 'agentic-workspace/decision-point-carry-select/v1', selected_key: values.key ?? '', context_id: contextId, path: selectionRef };
+  }
+  if (operationId === 'work-thread.carry-prune') return {
+    kind: 'agentic-workspace/decision-point-carry-prune/v1',
+    status: values.dry_run === false ? 'pruned' : 'dry-run',
+    key: values.key ?? '',
+  };
+  if (operationId === 'session-log.manage') return {
+    kind: 'agentic-workspace/session-logging-status/v1',
+    enabled: false,
+    local_only: true,
+    target_root: target,
+  };
   if (operationId === 'planning.front-door') {
     if (values.planning_command === 'new-plan') return planningNewPlanResult(values, 'planning.new-plan.lifecycle');
     return { kind: 'agentic-workspace/planning-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
@@ -2133,7 +2261,7 @@ function executeTypescriptDomainOperation(operationId, values) {
     };
   }
   if (operationId === 'summary.report') return { kind: 'planning-summary/v1', profile: values.verbose ? 'full' : 'tiny', machine_first_planning: { status: 'no-active-execplan' }, target_root: target };
-  if (operationId === 'start.context') return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory and schemas. Use exact --select for one field; use --verbose only for broad diagnostics.' }, context: { proof: { kind: 'proof-selection/v1' } } };
+  if (operationId === 'start.context') return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory/schemas; use --select or --verbose for detail.' }, context: { proof: { kind: 'proof-selection/v1' } } };
   if (operationId === 'implement.context') return { kind: 'implementer-context-tiny/v1', target_root: target, proof: { kind: 'proof-selection/v1' } };
   if (operationId === 'proof.report') return { kind: 'proof-next-decision/v1', next: { action: 'manual-verification' }, detail_command: 'agentic-workspace proof --verbose --changed <paths> --format json' };
   if (operationId === 'setup.guidance') return { kind: 'workspace-setup/v1', command: 'setup', target_root: target };

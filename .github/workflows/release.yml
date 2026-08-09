@@ -95,6 +95,32 @@ jobs:
       - name: Run built package smoke tests
         run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
 
+      - name: Prove exact npm artifacts on Node 24
+        run: uv run python scripts/check/run_generated_command_package_proof.py --packed-conformance --artifact-dir dist --receipt-out dist/generated-command-conformance-node24.json
+
+      - name: Set up minimum Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "20"
+
+      - name: Prove exact npm artifacts on Node 20
+        run: uv run python scripts/check/run_generated_command_package_proof.py --packed-conformance --artifact-dir dist --receipt-out dist/generated-command-conformance-node20.json
+
+      - name: Set up current Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "25"
+
+      - name: Prove exact npm artifacts on Node 25
+        run: uv run python scripts/check/run_generated_command_package_proof.py --packed-conformance --artifact-dir dist --receipt-out dist/generated-command-conformance-node25.json
+
+      - name: Verify semantic-conformance promotion receipts
+        run: |
+          for runtime_major in 20 24 25; do
+            receipt="dist/generated-command-conformance-node${runtime_major}.json"
+            uv run python scripts/check/run_generated_command_package_proof.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major"
+          done
+
       - name: Generate checksums and release manifest
         run: |
           python - <<'PY'
@@ -174,6 +200,36 @@ jobs:
                   }
               )
 
+          conformance_receipts = []
+          expected_runtime_majors = ownership["semantic_conformance"]["runtime_majors"]
+          for runtime_major in expected_runtime_majors:
+              receipt_path = dist / f"generated-command-conformance-node{runtime_major}.json"
+              if not receipt_path.is_file():
+                  raise SystemExit(f"Missing semantic-conformance receipt for Node {runtime_major}")
+              receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+              if receipt.get("kind") != ownership["semantic_conformance"]["receipt_kind"] or receipt.get("status") != "passed":
+                  raise SystemExit(f"Failed or unsupported semantic-conformance receipt: {receipt_path}")
+              node_version = str(receipt.get("subject", {}).get("node_version", ""))
+              runtime_match = re.fullmatch(r"v(?P<major>[1-9][0-9]*)\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?", node_version)
+              if runtime_match is None or int(runtime_match.group("major")) != runtime_major:
+                  raise SystemExit(
+                      f"Semantic-conformance receipt runtime mismatch: {receipt_path} proves {node_version!r}, expected Node {runtime_major}"
+                  )
+              receipt_assets = {item["asset"] for item in receipt["subject"]["artifacts"]}
+              expected_assets = {entry["tarball"]["asset"] for entry in package_entries if entry["ecosystem"] == "npm"}
+              if receipt_assets != expected_assets:
+                  raise SystemExit(f"Semantic-conformance receipt artifact set mismatch: {receipt_path}")
+              checksum_lines.append(f"{sha256(receipt_path)}  {receipt_path.name}")
+              conformance_receipts.append(
+                  {
+                      "asset": receipt_path.name,
+                      "receipt_id": receipt["receipt_id"],
+                      "registry_fingerprint": receipt["subject"]["registry_fingerprint"],
+                      "node_version": receipt["subject"]["node_version"],
+                      "artifacts": receipt["subject"]["artifacts"],
+                  }
+              )
+
           manifest = {
               "kind": "agentic-workspace/coordinated-release-manifest/v1",
               "release_model": ownership["release_model"],
@@ -195,6 +251,11 @@ jobs:
               "release_ownership": {
                   "path": ".github/release-ownership.json",
                   "schema_version": ownership["schema_version"],
+              },
+              "semantic_conformance": {
+                  "required": True,
+                  "receipt_kind": ownership["semantic_conformance"]["receipt_kind"],
+                  "receipts": conformance_receipts,
               },
           }
           manifest_path = dist / "agentic-workspace-release-manifest.json"
@@ -233,6 +294,10 @@ jobs:
               digest, asset = line.split("  ", 1)
               checksums[asset] = digest
           required_assets = {"agentic-workspace-release-manifest.json"}
+          semantic = manifest.get("semantic_conformance", {})
+          if semantic.get("required") is not True or len(semantic.get("receipts", [])) != len(ownership["semantic_conformance"]["runtime_majors"]):
+              raise SystemExit("Release manifest is missing required semantic-conformance receipts")
+          required_assets.update(receipt["asset"] for receipt in semantic["receipts"])
           for package in manifest["packages"]:
               if package.get("ecosystem") == "npm":
                   required_assets.add(package["tarball"]["asset"])
@@ -257,6 +322,7 @@ jobs:
             dist/*.whl
             dist/*.tar.gz
             dist/*.tgz
+            dist/generated-command-conformance-node*.json
             dist/SHA256SUMS
             dist/agentic-workspace-release-manifest.json
           fail_on_unmatched_files: true

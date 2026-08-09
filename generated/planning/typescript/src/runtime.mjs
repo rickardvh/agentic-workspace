@@ -115,6 +115,29 @@ function resolveTemplate(template, values) {
   const keys = Object.keys(template);
   if (keys.length === 1 && keys[0] === '$value') return values[String(template.$value)];
   if (keys.length === 1 && keys[0] === '$count') return Array.isArray(values[String(template.$count)]) ? values[String(template.$count)].length : 0;
+  if (Object.prototype.hasOwnProperty.call(template, '$field')) {
+    const spec = template.$field;
+    const parts = Array.isArray(spec.path) ? spec.path.map(String) : String(spec.path ?? '').split('.').filter(Boolean);
+    let value = values[String(spec.value ?? '')];
+    for (const part of parts) {
+      if (!isObject(value) || !Object.prototype.hasOwnProperty.call(value, part)) throw new RuntimeError(`template $field cannot resolve ${spec.value}.${parts.join('.')}`);
+      value = value[part];
+    }
+    return value;
+  }
+  if (Object.prototype.hasOwnProperty.call(template, '$exists_status')) {
+    const spec = template.$exists_status;
+    return Boolean(values[String(spec.value ?? '')]) ? spec.present : spec.missing;
+  }
+  if (Object.prototype.hasOwnProperty.call(template, '$count_status')) {
+    const spec = template.$count_status;
+    const counted = values[String(spec.value ?? '')];
+    return Array.isArray(counted) && counted.length ? spec.present : spec.missing;
+  }
+  if (Object.prototype.hasOwnProperty.call(template, '$join_path')) {
+    const spec = template.$join_path;
+    return join(String(values[String(spec.base ?? '')] ?? ''), String(spec.path ?? '')).replace(/\\/g, '/');
+  }
   if (keys.length === 1 && keys[0] === '$select_by_value') {
     const spec = template.$select_by_value;
     if (!isObject(spec) || !isObject(spec.choices)) throw new RuntimeError('template $select_by_value choices must be an object');
@@ -925,6 +948,7 @@ function runSteps(operation, values) {
     if (!conditionMatches(step.when, values)) continue;
     const result = executePrimitive(String(step.uses ?? ''), values, isObject(step.arguments) ? step.arguments : {}, String(operation.id ?? ''));
     storeStepResult(values, step.outputs ?? [], result);
+    if ((!Array.isArray(step.outputs) || step.outputs.length === 0) && String(step.uses ?? '') !== 'output.emit') values.result = result;
   }
   return values;
 }
@@ -949,5 +973,6 @@ export function runGeneratedOperation({ operationId, operationPath, values }) {
   if (typeof output !== 'string') output = `${JSON.stringify(output, null, 2)}
 `;
   writeSync(1, output);
-  return 0;
+  const exitStatus = finalValues.exit_status ?? finalValues.result?.exit_status;
+  return Number.isInteger(exitStatus) ? exitStatus : 0;
 }
