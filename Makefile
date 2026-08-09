@@ -99,7 +99,7 @@ WORKSPACE_TEST_INTEGRATION = \
 	format-check format-check-nosync format-check-workspace format-check-memory format-check-planning format-check-verification \
 	verify verify-nosync verify-workspace verify-memory verify-planning verify-verification composed-operation-scenarios \
 	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict validation-runtime-plan structured-file-inventory structured-file-inventory-changed package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
-	generated-command-packages generated-command-packages-docker \
+	generated-command-packages generated-command-packages-docker output-profile-budgets \
 	check check-nosync check-bounded-parallel check-memory check-memory-nosync check-planning check-planning-nosync check-verification check-verification-nosync check-all start-review-poller
 
 help:
@@ -360,6 +360,9 @@ composed-operation-scenarios:
 
 generated-command-packages:
 	@uv run python scripts/check/run_generated_command_package_proof.py --all
+
+output-profile-budgets:
+	@$(COMPACT_RUN) --label "ordinary output profile budgets" -- uv run pytest tests/test_output_profile_budgets.py -q
 
 generated-command-packages-docker:
 	@uv run python scripts/check/run_generated_command_package_proof.py

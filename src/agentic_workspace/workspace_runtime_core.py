@@ -17231,7 +17231,7 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "max_estimated_tokens": 2500,
                 "max_human_lines": 80,
                 "expansion_trigger": "--verbose",
-                "proof": "test_lifecycle_defaults_obey_versioned_output_budgets",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "start",
@@ -17242,7 +17242,7 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "max_estimated_tokens": 2500,
                 "max_human_lines": 80,
                 "expansion_trigger": "--select or --verbose",
-                "proof": "test_start_default_stays_under_tiny_output_budget_for_docs_task",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "implement",
@@ -17253,7 +17253,7 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "max_estimated_tokens": 3750,
                 "max_human_lines": 100,
                 "expansion_trigger": "--select or --verbose",
-                "proof": "test_implement_default_stays_under_tiny_output_budget_for_docs_task",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "summary",
@@ -17264,7 +17264,7 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "max_estimated_tokens": 5000,
                 "max_human_lines": 100,
                 "expansion_trigger": "--select or --verbose",
-                "proof": "test_chat_agent_defaults_remain_decision_first_and_selector_addressable",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "report",
@@ -17275,7 +17275,7 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "max_estimated_tokens": 4000,
                 "max_human_lines": 80,
                 "expansion_trigger": "--section or --verbose",
-                "proof": "test_chat_agent_defaults_remain_decision_first_and_selector_addressable",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "proof",
@@ -17286,7 +17286,7 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "max_estimated_tokens": 3000,
                 "max_human_lines": 80,
                 "expansion_trigger": "--select or --verbose",
-                "proof": "test_chat_agent_defaults_remain_decision_first_and_selector_addressable",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "doctor",
@@ -17297,7 +17297,7 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "max_estimated_tokens": 3500,
                 "max_human_lines": 80,
                 "expansion_trigger": "--select or --verbose",
-                "proof": "test_lifecycle_defaults_obey_versioned_output_budgets",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
         ],
         "selector_relocations": [
