@@ -51953,3 +51953,4 @@ _run_legacy_scratch_cleanup: Any = _workspace_runtime_core._run_legacy_scratch_c
 _run_lazy_report_section_command: Any = _workspace_runtime_core._run_lazy_report_section_command
 _run_report_command: Any = _workspace_runtime_core._run_report_command
 _run_report_router_command: Any = _workspace_runtime_core._run_report_router_command
+_run_report_combined_adapter: Any = _workspace_runtime_core._run_report_combined_adapter

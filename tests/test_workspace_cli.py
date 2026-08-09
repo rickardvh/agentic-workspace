@@ -6061,6 +6061,216 @@ def test_operational_compression_surfaces_checked_default_output_budget(tmp_path
     assert budget["selector_relocations"][0]["default_state"] == "selector-routed"
 
 
+def test_strict_health_classifies_current_state_and_ignores_archive_history() -> None:
+    findings = [
+        {
+            "reason_code": "planning.live-owner-invalid",
+            "severity": "warning",
+            "module": "planning",
+            "path": ".agentic-workspace/planning/execplans/live.plan.json",
+            "message": "Live execplan file is not registered in planning state or TODO linkage.",
+        },
+        {
+            "reason_code": "memory.fixture-failed",
+            "severity": "warning",
+            "module": "memory",
+            "path": "tests/fixtures/routing/required.json",
+            "message": "fixture 'required memory route' fails; missing expected: memory.md",
+        },
+        {
+            "reason_code": "planning.live-owner-invalid",
+            "severity": "warning",
+            "module": "planning",
+            "path": ".agentic-workspace/planning/execplans/broken-relation.plan.json",
+            "message": "Live Planning relation is invalid for the selected owner.",
+        },
+        {
+            "reason_code": "planning.archive-history",
+            "severity": "warning",
+            "module": "planning",
+            "path": ".agentic-workspace/planning/execplans/archive/closed.plan.json",
+            "message": "Archived closeout left larger intent open.",
+        },
+        {
+            "reason_code": "maintenance.debt",
+            "severity": "warning",
+            "module": "workspace",
+            "path": ".agentic-workspace",
+            "message": "legacy checked-in payload can be reduced",
+        },
+    ]
+
+    assertion = workspace_runtime_core._strict_health_assertion_payload(
+        target_root=Path("."), selected_modules=["planning", "memory"], findings=findings, cli_invoke="agentic-workspace"
+    )
+
+    assert assertion["status"] == "failed"
+    assert assertion["exit_code"] == 1
+    assert assertion["blocking_count"] == 3
+    assert assertion["counts_by_class"] == {
+        "current-executable-state": 2,
+        "current-installed-config-state": 1,
+        "actionable-maintenance-debt": 1,
+        "historical-informational-state": 1,
+    }
+    assert {item["owner"] for item in assertion["blockers"]} == {"planning", "memory"}
+    assert all(item["action"]["command"] for item in assertion["blockers"])
+    assert assertion["proof_receipt"]["policy_fingerprint"] == assertion["policy"]["fingerprint"]
+    assert assertion["proof_receipt"]["subject_fingerprint"] == assertion["subject"]["fingerprint"]
+    _assert_json_payload_under(assertion, 8_000, label="strict health failure receipt", sort_keys=False)
+
+    archive_only = workspace_runtime_core._strict_health_assertion_payload(
+        target_root=Path("."), selected_modules=["planning"], findings=[findings[3]], cli_invoke="agentic-workspace"
+    )
+    assert archive_only["status"] == "passed"
+    assert archive_only["exit_code"] == 0
+    assert archive_only["blocking_count"] == 0
+    assert archive_only["historical_count"] == 1
+
+    untyped_warning = workspace_runtime_core._strict_health_assertion_payload(
+        target_root=Path("."),
+        selected_modules=["workspace"],
+        findings=[{"severity": "warning", "module": "workspace", "message": "legacy warning without a health class"}],
+        cli_invoke="agentic-workspace",
+    )
+    assert untyped_warning["status"] == "passed"
+    assert untyped_warning["maintenance_debt_count"] == 1
+
+
+def test_report_fail_on_strict_health_has_deterministic_exit_semantics(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    findings = [
+        {
+            "reason_code": "planning.live-owner-invalid",
+            "severity": "warning",
+            "module": "planning",
+            "path": ".agentic-workspace/planning/execplans/unregistered.plan.json",
+            "message": "Live execplan file is not registered in planning state or TODO linkage.",
+        }
+    ]
+
+    monkeypatch.setattr(workspace_runtime_core, "_run_report_command", lambda **_kwargs: {"findings": findings})
+    assert cli.main(["report", "--target", str(tmp_path), "--fail-on", "strict-current", "--format", "json"]) == 1
+    failed = json.loads(capsys.readouterr().out)
+    assert failed["status"] == "failed"
+    assert failed["blocking_count"] == 1
+
+    findings[0] = {
+        "reason_code": "planning.archive-history",
+        "severity": "info",
+        "module": "planning",
+        "path": ".agentic-workspace/planning/execplans/archive/closed.plan.json",
+        "message": "Archived closeout remains queryable.",
+    }
+    assert cli.main(["report", "--target", str(tmp_path), "--fail-on", "strict-current", "--format", "json"]) == 0
+    passed = json.loads(capsys.readouterr().out)
+    assert passed["status"] == "passed"
+    assert passed["historical_count"] == 1
+
+
+def test_release_promotion_requires_exact_current_passing_strict_health_receipt() -> None:
+    receipt = {
+        "kind": "agentic-workspace/health-policy-proof-receipt/v1",
+        "outcome": "passed",
+        "policy_fingerprint": "policy-current",
+        "subject_fingerprint": "subject-current",
+        "blocking_count": 0,
+    }
+    accepted = workspace_runtime_core._strict_health_promotion_input(
+        receipt=receipt,
+        expected_policy_fingerprint="policy-current",
+        expected_subject_fingerprint="subject-current",
+    )
+    assert accepted["status"] == "accepted"
+    assert accepted["receipt"] is receipt
+
+    cases = (
+        (None, "missing-strict-health-receipt"),
+        ({**receipt, "policy_fingerprint": "stale"}, "stale-strict-health-policy"),
+        ({**receipt, "subject_fingerprint": "stale"}, "stale-strict-health-subject"),
+        ({**receipt, "outcome": "failed", "blocking_count": 1}, "strict-health-failed"),
+    )
+    for candidate, reason in cases:
+        blocked = workspace_runtime_core._strict_health_promotion_input(
+            receipt=candidate,
+            expected_policy_fingerprint="policy-current",
+            expected_subject_fingerprint="subject-current",
+        )
+        assert blocked["status"] == "blocked"
+        assert blocked["reason"] == reason
+        assert blocked["receipt"] is None
+
+
+def test_strict_health_accepts_only_branch_admitted_pending_integration(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    _set_git_branch(tmp_path, current="feature/health", default="master")
+    owner_ref = ".agentic-workspace/planning/execplans/completed.plan.json"
+    proposal = {
+        "kind": "planning-integration-proposal/v1",
+        "status": "pending",
+        "phase": "integration-pending",
+        "requested_transition": "mark-integrated",
+        "id": "completed-mark-integrated",
+        "expected_subject_revision": "subject-current",
+        "expected_planning_revision": "planning-current",
+        "owner": {"id": "completed", "ref": owner_ref},
+        "authority_boundary": {"branch_admission": {"phase": "feature", "branch": "feature/health"}},
+    }
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "integration-proposals" / "completed.integration-proposal.json",
+        json.dumps(proposal),
+    )
+    finding = {
+        "reason_code": "planning.integration-pending",
+        "integration_proposal_id": "completed-mark-integrated",
+        "expected_subject_revision": "subject-current",
+        "expected_planning_revision": "planning-current",
+        "severity": "warning",
+        "module": "planning",
+        "path": owner_ref,
+        "message": "Completed execplan remains in the live execplans directory.",
+    }
+
+    feature_assertion = workspace_runtime_core._strict_health_assertion_payload(
+        target_root=tmp_path, selected_modules=["planning"], findings=[finding], cli_invoke="agentic-workspace"
+    )
+    assert feature_assertion["status"] == "passed"
+    assert feature_assertion["maintenance_debt_count"] == 1
+
+    for field, bad_value in (
+        ("integration_proposal_id", "wrong"),
+        ("expected_subject_revision", "stale"),
+        ("expected_planning_revision", "stale"),
+        ("reason_code", "planning.live-owner-invalid"),
+    ):
+        malformed = {**finding, field: bad_value}
+        rejected = workspace_runtime_core._strict_health_assertion_payload(
+            target_root=tmp_path, selected_modules=["planning"], findings=[malformed], cli_invoke="agentic-workspace"
+        )
+        assert rejected["status"] == "failed"
+
+    proposal_path = tmp_path / ".agentic-workspace" / "planning" / "integration-proposals" / "completed.integration-proposal.json"
+    for field, bad_value in (
+        ("requested_transition", "unrelated-transition"),
+        ("expected_subject_revision", ""),
+        ("expected_planning_revision", ""),
+    ):
+        malformed_proposal = {**proposal, field: bad_value}
+        _write(proposal_path, json.dumps(malformed_proposal))
+        rejected = workspace_runtime_core._strict_health_assertion_payload(
+            target_root=tmp_path, selected_modules=["planning"], findings=[finding], cli_invoke="agentic-workspace"
+        )
+        assert rejected["status"] == "failed"
+    _write(proposal_path, json.dumps(proposal))
+
+    _set_git_branch(tmp_path, current="master", default="master")
+    default_assertion = workspace_runtime_core._strict_health_assertion_payload(
+        target_root=tmp_path, selected_modules=["planning"], findings=[finding], cli_invoke="agentic-workspace"
+    )
+    assert default_assertion["status"] == "failed"
+    assert default_assertion["blocking_count"] == 1
+
+
 def test_start_routes_high_assurance_milestone_to_planning_before_implementation(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
