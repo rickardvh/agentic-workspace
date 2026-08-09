@@ -12,20 +12,24 @@ POLICY_PATH = Path("src/agentic_workspace/contracts/runtime_implementation_owner
 
 
 def _definitions(tree: ast.Module) -> dict[str, ast.AST]:
-    return {
-        node.name: node
-        for node in tree.body
-        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef)
-    }
+    return {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef)}
 
 
-def _metrics(node: ast.AST) -> tuple[int, int]:
-    lines = int(getattr(node, "end_lineno", node.lineno)) - int(node.lineno) + 1
+def _metrics(node: ast.AST) -> tuple[int, int, int, int]:
+    start_line = int(getattr(node, "lineno", 0))
+    lines = int(getattr(node, "end_lineno", start_line)) - start_line + 1
     branches = sum(
         isinstance(child, ast.If | ast.For | ast.AsyncFor | ast.While | ast.Try | ast.Match | ast.BoolOp | ast.IfExp)
         for child in ast.walk(node)
     )
-    return lines, branches
+    body = getattr(node, "body", [])
+    segments = [
+        int(getattr(child, "end_lineno", child.lineno)) - int(child.lineno) + 1
+        for child in body
+        if not isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef)
+    ]
+    fan_out = len({child.func.id for child in ast.walk(node) if isinstance(child, ast.Call) and isinstance(child.func, ast.Name)})
+    return lines, branches, max(segments, default=lines), fan_out
 
 
 def ownership_report(root: Path = REPO_ROOT, *, today: date | None = None) -> dict[str, Any]:
@@ -52,17 +56,29 @@ def ownership_report(root: Path = REPO_ROOT, *, today: date | None = None) -> di
         findings.append({"control": "duplicate-definitions", "detail": f"shared definitions: {', '.join(shared[:5])}"})
 
     review = policy["review_scale"]
+    lifecycle = review.get("exception_lifecycle", {})
+    if lifecycle.get("supersedes_tracking_issue") != "#2455" or lifecycle.get("removal_owner") != "#2480" or not lifecycle.get("reason"):
+        findings.append({"control": "review-scale", "detail": "review-scale exceptions lack a durable post-#2455 removal owner and reason"})
     exception_map = {(item["path"], item["symbol"]): item for item in review["exceptions"]}
     metric_records: list[dict[str, Any]] = []
     current_day = today or date.today()
     for relative_path in review["paths"]:
         tree = ast.parse((root / relative_path).read_text(encoding="utf-8"))
         for symbol, node in _definitions(tree).items():
-            lines, branches = _metrics(node)
+            lines, branches, segment_lines, fan_out = _metrics(node)
             if lines <= int(review["default_max_function_lines"]) and branches <= int(review["default_max_branch_nodes"]):
                 continue
             exception = exception_map.get((relative_path, symbol))
-            metric_records.append({"path": relative_path, "symbol": symbol, "lines": lines, "branch_nodes": branches})
+            metric_records.append(
+                {
+                    "path": relative_path,
+                    "symbol": symbol,
+                    "lines": lines,
+                    "branch_nodes": branches,
+                    "largest_policy_effect_segment_lines": segment_lines,
+                    "direct_fan_out": fan_out,
+                }
+            )
             if exception is None:
                 findings.append({"control": "review-scale", "detail": f"{relative_path}:{symbol} exceeds the default budget"})
                 continue
@@ -70,6 +86,10 @@ def ownership_report(root: Path = REPO_ROOT, *, today: date | None = None) -> di
                 findings.append({"control": "review-scale", "detail": f"{relative_path}:{symbol} exception expired"})
             if not str(exception.get("tracking_issue") or "").strip():
                 findings.append({"control": "review-scale", "detail": f"{relative_path}:{symbol} exception lacks an owner"})
+            if segment_lines > int(review["max_policy_effect_segment_lines"]):
+                findings.append(
+                    {"control": "review-scale", "detail": f"{relative_path}:{symbol} has a policy/effect segment of {segment_lines} lines"}
+                )
             if lines > int(exception["max_lines"]) or branches > int(exception["max_branch_nodes"]):
                 findings.append({"control": "review-scale", "detail": f"{relative_path}:{symbol} grew beyond its ratchet"})
 
@@ -86,6 +106,17 @@ def ownership_report(root: Path = REPO_ROOT, *, today: date | None = None) -> di
                 "canonical_top_level_definitions": len(core_defs),
             },
             "review_scale_exceptions": metric_records,
+            "representative_working_set": {
+                "before": review["representative_working_set"]["before"],
+                "after": {
+                    "runtime_owner_files": 1,
+                    "shared_symbols": len(shared),
+                    "largest_audited_segment_lines": max(
+                        (item["largest_policy_effect_segment_lines"] for item in metric_records), default=0
+                    ),
+                    "max_direct_fan_out": max((item["direct_fan_out"] for item in metric_records), default=0),
+                },
+            },
         },
         "findings": findings,
     }

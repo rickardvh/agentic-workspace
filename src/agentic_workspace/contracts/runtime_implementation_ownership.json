@@ -17,6 +17,16 @@
   "review_scale": {
     "default_max_function_lines": 300,
     "default_max_branch_nodes": 100,
+    "max_policy_effect_segment_lines": 320,
+    "exception_lifecycle": {
+      "supersedes_tracking_issue": "#2455",
+      "removal_owner": "#2480",
+      "reason": "Legacy procedures require bounded behavior-preserving policy/effect extraction; no exception may grow while that continuation remains open."
+    },
+    "representative_working_set": {
+      "before": {"runtime_owner_files": 2, "shared_symbols": 1046, "largest_audited_segment_lines": 998},
+      "expected_after": {"runtime_owner_files": 1, "shared_symbols": 0, "max_policy_effect_segment_lines": 320}
+    },
     "paths": [
       "src/agentic_workspace/workspace_runtime_core.py",
       "packages/planning/src/repo_planning_bootstrap/installer.py"

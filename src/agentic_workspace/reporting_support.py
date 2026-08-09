@@ -3445,6 +3445,25 @@ def _runtime_implementation_owner_friction_metrics(target_root: Path) -> dict[st
     definition_types = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
     core_names = {node.name for node in core_tree.body if isinstance(node, definition_types)}
     facade_names = {node.name for node in facade_tree.body if isinstance(node, definition_types)}
+    audited_segments: list[int] = []
+    audited_fan_out: list[int] = []
+    for relative in policy.get("review_scale", {}).get("paths", []):
+        try:
+            tree = ast.parse((target_root / str(relative)).read_text(encoding="utf-8"))
+        except (OSError, SyntaxError, UnicodeDecodeError):
+            continue
+        for node in tree.body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            segments = [
+                int(getattr(child, "end_lineno", child.lineno)) - int(child.lineno) + 1
+                for child in node.body
+                if not isinstance(child, definition_types)
+            ]
+            audited_segments.append(max(segments, default=0))
+            audited_fan_out.append(
+                len({child.func.id for child in ast.walk(node) if isinstance(child, ast.Call) and isinstance(child.func, ast.Name)})
+            )
     return {
         "status": "measured",
         "canonical_owner": policy["canonical_owner"],
@@ -3453,7 +3472,11 @@ def _runtime_implementation_owner_friction_metrics(target_root: Path) -> dict[st
         "after": {
             "shared_top_level_definitions": len(core_names & facade_names),
             "compatibility_facade_lines": len(facade_source.splitlines()),
+            "largest_audited_policy_effect_segment_lines": max(audited_segments, default=0),
+            "max_direct_fan_out": max(audited_fan_out, default=0),
         },
+        "representative_working_set": policy.get("review_scale", {}).get("representative_working_set", {}),
+        "exception_lifecycle": policy.get("review_scale", {}).get("exception_lifecycle", {}),
         "enforcement_owner": "scripts/check/check_runtime_implementation_ownership.py",
         "rule": "Repo-friction reports metrics; the runtime ownership checker owns enforcement.",
     }

@@ -38,6 +38,10 @@ def test_current_runtime_has_one_implementation_owner() -> None:
     assert report["metrics"]["before"]["ast_identical_shared_bodies"] == 967
     assert report["metrics"]["after"]["shared_top_level_definitions"] == 0
     assert report["metrics"]["after"]["primitive_module_lines"] <= 80
+    working_set = report["metrics"]["representative_working_set"]
+    assert working_set["after"]["runtime_owner_files"] < working_set["before"]["runtime_owner_files"]
+    assert working_set["after"]["shared_symbols"] < working_set["before"]["shared_symbols"]
+    assert working_set["after"]["largest_audited_segment_lines"] <= 320
 
 
 def test_facade_definition_is_rejected(tmp_path: Path) -> None:
@@ -71,3 +75,16 @@ def test_review_scale_exceptions_expire(tmp_path: Path) -> None:
 
     assert report["status"] == "blocked"
     assert any("exception expired" in item["detail"] for item in report["findings"])
+
+
+def test_review_scale_exceptions_require_durable_continuation_owner(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    policy_path = root / "src/agentic_workspace/contracts/runtime_implementation_ownership.json"
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    policy["review_scale"]["exception_lifecycle"]["removal_owner"] = "#2455"
+    policy_path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
+
+    report = _checker().ownership_report(root)
+
+    assert report["status"] == "blocked"
+    assert any("durable post-#2455 removal owner" in item["detail"] for item in report["findings"])
