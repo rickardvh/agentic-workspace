@@ -1,0 +1,86 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2461-supply-chain-security",
+  "title": "Establish a threat model and supply-chain baseline for mutation-capable releases",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "shaping",
+  "revision": 2,
+  "intent": {
+    "outcome": "Mutation-capable releases state and enforce their trust boundary, use immutable least-privilege CI, block on security scans, and publish SBOM/provenance bound to exact artifacts.",
+    "non_goals": [
+      "Claim AW is a sandbox for arbitrary untrusted repositories.",
+      "Take ownership of branch/ruleset enforcement from #2454.",
+      "Store credentials in repository-managed state."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2461",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "SECURITY.md and docs/security/threat-model.md",
+      "trusted shell admission and adversarial tests",
+      "GitHub workflows, scanner configuration, action pinning, SBOM and provenance",
+      "machine-readable security readiness policy and check"
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "User requested continuous implementation without authorizing subagents; security policy, CI controls, and readiness proof must remain one reviewable trust boundary."
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2461",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2461",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Implement and prove the security/supply-chain baseline and exact release-readiness receipt.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Establish a threat model and supply-chain baseline for mutation-capable releases is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run python scripts/check/check_security_supply_chain.py --format json",
+      "uv run pytest tests/test_trusted_execution.py tests/test_security_supply_chain.py -q",
+      "make typecheck",
+      "uv run ruff check src scripts tests"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ]
+}

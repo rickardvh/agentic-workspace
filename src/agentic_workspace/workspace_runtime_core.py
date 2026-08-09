@@ -12099,6 +12099,44 @@ def _automation_readiness_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> di
     }
 
 
+def _security_supply_chain_readiness_payload(*, target_root: Path) -> dict[str, Any]:
+    checker = target_root / "scripts/check/check_security_supply_chain.py"
+    if not checker.is_file():
+        return {
+            "kind": "agentic-workspace/security-supply-chain-readiness/v1",
+            "status": "unavailable",
+            "release_promotion_allowed": False,
+            "failures": [{"control": "readiness-check", "detail": "security supply-chain check is not installed"}],
+            "trust_boundary": "trusted-repository-required; lifecycle dry-run is not a sandbox",
+        }
+    completed = subprocess.run(
+        [sys.executable, str(checker), "--format", "json"],
+        cwd=target_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        payload = {
+            "kind": "agentic-workspace/security-supply-chain-readiness/v1",
+            "status": "unavailable",
+            "release_promotion_allowed": False,
+            "failures": [{"control": "readiness-check", "detail": "security readiness check returned invalid JSON"}],
+            "trust_boundary": "trusted-repository-required; lifecycle dry-run is not a sandbox",
+        }
+    if completed.returncode and isinstance(payload, dict) and payload.get("status") == "ready":
+        payload["status"] = "blocked"
+        payload["release_promotion_allowed"] = False
+        failures = payload.get("failures")
+        if not isinstance(failures, list):
+            failures = []
+            payload["failures"] = failures
+        failures.append({"control": "readiness-check", "detail": f"checker exited {completed.returncode}"})
+    return payload if isinstance(payload, dict) else {}
+
+
 def _release_recovery_payload(
     *,
     target_root: Path,
@@ -12538,6 +12576,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/release-recovery/v1",
         "purpose": "source-checkout release recovery posture for semver PR action, failed release summaries, and payload drift repair",
         "when_to_use": "during coordinated release, changeset recovery, payload drift, or failed release CI diagnosis",
+    },
+    {
+        "section": "security_supply_chain",
+        "kind": "agentic-workspace/security-supply-chain-readiness/v1",
+        "purpose": "exact trusted-execution, scanner, immutable workflow, lock, SBOM, and provenance readiness",
+        "when_to_use": "before support-bearing promotion or when repository trust and release provenance need an exact decision",
     },
 )
 
@@ -15624,6 +15668,10 @@ def _run_lazy_report_section_command(
             selected_modules=selected_modules,
             cli_invoke=config.cli_invoke,
         )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "security_supply_chain":
+        payload["security_supply_chain"] = _security_supply_chain_readiness_payload(target_root=target_root)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "pr_comment_attention":

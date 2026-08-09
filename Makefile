@@ -57,7 +57,9 @@ WORKSPACE_TEST_CONTRACTS = \
 	tests/test_package_artifact_duplicates.py \
 	tests/test_prompt_semantic_markers.py \
 	tests/test_schema_reference_docs.py \
+	tests/test_security_supply_chain.py \
 	tests/test_structured_file_inventory.py \
+	tests/test_trusted_execution.py \
 	tests/test_validation_runtime_plan.py \
 	tests/test_workspace_makefile_targets.py
 
@@ -98,7 +100,7 @@ WORKSPACE_TEST_INTEGRATION = \
 	format format-nosync format-workspace format-memory format-planning format-verification \
 	format-check format-check-nosync format-check-workspace format-check-memory format-check-planning format-check-verification \
 	verify verify-nosync verify-workspace verify-memory verify-planning verify-verification composed-operation-scenarios \
-	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict validation-runtime-plan structured-file-inventory structured-file-inventory-changed package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
+	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict validation-runtime-plan structured-file-inventory structured-file-inventory-changed security-supply-chain package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
 	generated-command-packages generated-command-packages-docker \
 	check check-nosync check-bounded-parallel check-memory check-memory-nosync check-planning check-planning-nosync check-verification check-verification-nosync check-all start-review-poller
 
@@ -137,6 +139,7 @@ help:
 	@echo "  validation-runtime-plan  Check validation graph, evidence, CI/local parity, and duplicate-execution policy."
 	@echo "  structured-file-inventory  Check tracked JSON/TOML/YAML/YML files against the inventory."
 	@echo "  structured-file-inventory-changed  Check CHANGED_PATHS with full escalation on inventory authority changes."
+	@echo "  security-supply-chain  Verify immutable CI, scanners, trusted-shell admission, and release provenance."
 	@echo "  package-artifact-duplicates  Check built package artifacts for duplicate archive members."
 	@echo "  agent-aids           Check checked-in agent aid manifests and coverage."
 	@echo "  source-payload-operational-install  Run source/payload/root-install boundary checks."
@@ -322,6 +325,9 @@ structured-file-inventory:
 structured-file-inventory-changed:
 	@$(COMPACT_RUN) --label "structured file inventory changed" -- uv run python scripts/check/check_structured_file_inventory.py --changed $(CHANGED_PATHS)
 
+security-supply-chain:
+	@uv run python scripts/check/check_security_supply_chain.py --format json
+
 package-artifact-duplicates:
 	@$(COMPACT_RUN) --label "package artifact duplicates" -- uv run python scripts/check/check_package_artifact_duplicates.py
 
@@ -377,7 +383,7 @@ check-verification-nosync: test-verification lint-verification typecheck-verific
 
 check-verification: sync-all check-verification-nosync
 
-check-nosync: test-nosync lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios
+check-nosync: test-nosync lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory security-supply-chain package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios
 
 check: sync-all check-nosync
 

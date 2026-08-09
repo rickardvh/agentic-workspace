@@ -1855,6 +1855,18 @@
       "storage_class": "platform-tooling"
     },
     {
+      "checked_in_justification": "Host repository dependency update policy consumed by the external platform.",
+      "editable_by_agents": true,
+      "format": "yml",
+      "generated": false,
+      "notes": "Dependabot policy is reviewed GitHub platform configuration and participates in supply-chain readiness checks.",
+      "owner": "github-integration",
+      "pattern": ".github/dependabot.yml",
+      "schema_or_validator": "GitHub Dependabot configuration syntax and scripts/check/check_security_supply_chain.py",
+      "status": "source-checkout-diagnostic",
+      "storage_class": "platform-tooling"
+    },
+    {
       "checked_in_justification": "Host repository tooling metadata consumed by the Codex runtime.",
       "editable_by_agents": true,
       "format": "json",
