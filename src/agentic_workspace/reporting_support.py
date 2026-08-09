@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import copy
 import json
 import os
@@ -1339,6 +1340,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                 "large_file_hotspots": compact_collection(answer.get("large_file_hotspots")),
                 "concept_surface_hotspots": compact_collection(answer.get("concept_surface_hotspots")),
                 "regenerable_cache_hotspots": compact_collection(answer.get("regenerable_cache_hotspots")),
+                "runtime_implementation_ownership": answer.get("runtime_implementation_ownership", {}),
                 "external_evidence_count": len(_support_list_payload(answer.get("external_evidence"))),
                 "capture_shortcut": answer.get("capture_shortcut", {}),
                 "detail_command": _command_with_cli_invoke(
@@ -3430,6 +3432,33 @@ def _enforceable_workflow_effective_item(*, target_root: Path) -> dict[str, Any]
     }
 
 
+def _runtime_implementation_owner_friction_metrics(target_root: Path) -> dict[str, Any]:
+    policy_path = target_root / "src/agentic_workspace/contracts/runtime_implementation_ownership.json"
+    try:
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        core_source = (target_root / str(policy["canonical_owner"])).read_text(encoding="utf-8")
+        facade_source = (target_root / str(policy["compatibility_facade"])).read_text(encoding="utf-8")
+        core_tree = ast.parse(core_source)
+        facade_tree = ast.parse(facade_source)
+    except (OSError, SyntaxError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError):
+        return {"status": "unavailable"}
+    definition_types = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+    core_names = {node.name for node in core_tree.body if isinstance(node, definition_types)}
+    facade_names = {node.name for node in facade_tree.body if isinstance(node, definition_types)}
+    return {
+        "status": "measured",
+        "canonical_owner": policy["canonical_owner"],
+        "compatibility_facade": policy["compatibility_facade"],
+        "before": policy.get("migration_baseline", {}),
+        "after": {
+            "shared_top_level_definitions": len(core_names & facade_names),
+            "compatibility_facade_lines": len(facade_source.splitlines()),
+        },
+        "enforcement_owner": "scripts/check/check_runtime_implementation_ownership.py",
+        "rule": "Repo-friction reports metrics; the runtime ownership checker owns enforcement.",
+    }
+
+
 def repo_friction_payload(
     *,
     target_root: Path,
@@ -3479,6 +3508,7 @@ def repo_friction_payload(
             "status": "allowed-with-bounds",
             "bounded_by": ["correctness", "ownership", "proof", "portability"],
         },
+        "runtime_implementation_ownership": _runtime_implementation_owner_friction_metrics(target_root),
         "friction_response_order": [
             {
                 "step": 1,

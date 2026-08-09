@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "issue-2448-release-promotion",
   "title": "Issue 2448 support-bearing release promotion",
-  "status": "ready",
+  "status": "active",
   "parent_decomposition_ref": "",
   "lane_outcome": "Make support-bearing releases depend on one compact promotion decision over exact current release evidence.",
   "purpose_for_parent": "Coordinate Phase 0 and Phase 1 release-critical child issues from repository-health audit PR #2447 without absorbing their domain ownership.",
@@ -63,8 +63,8 @@
     {
       "id": "issue-2455-runtime-owner",
       "title": "Issue 2455 runtime owner and complexity ratchet",
-      "status": "planned",
-      "execplan_ref": "",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2455-runtime-owner.plan.json",
       "depends_on": [],
       "purpose_for_lane": "Collapse the workspace runtime mirror to one owner and ratchet review-scale complexity."
     },
@@ -125,7 +125,7 @@
       "purpose_for_lane": "Bind read-only invocation to the target checkout and forbid cross-worktree environment retargeting."
     }
   ],
-  "current_slice": "",
+  "current_slice": "issue-2455-runtime-owner",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Aggregate exact-artifact child receipts for semantic conformance, identity/freshness, clean install, runtime matrix, package/license metadata, server-side provenance, and security posture; finish with a protected clean release rehearsal.",
   "proof_aggregation": {

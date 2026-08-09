@@ -12,7 +12,7 @@ from agentic_workspace.contract_tooling import (
 def check_contract_integrity() -> list[str]:
     """Check for drift between code constants and JSON contract schemas."""
     errors: list[str] = []
-    from agentic_workspace import workspace_runtime_primitives as runtime_primitives
+    from agentic_workspace import workspace_runtime_core as runtime_primitives
 
     try:
         from jsonschema import Draft202012Validator

@@ -25,12 +25,11 @@ from agentic_workspace.result_adapter import adapt_action, adapt_module_result, 
 
 _generated_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 _RUNTIME_HELPER_MODULES = (
-    workspace_runtime_core,
     workspace_runtime_startup,
     workspace_runtime_implement,
     workspace_runtime_planning,
     workspace_runtime_proof,
-    workspace_runtime_primitives,
+    workspace_runtime_core,
 )
 
 
@@ -38,7 +37,10 @@ class _WorkspaceCliTestProxy:
     def __getattr__(self, name: str):
         if hasattr(_generated_cli, name):
             return getattr(_generated_cli, name)
-        return getattr(workspace_runtime_primitives, name)
+        for module in _RUNTIME_HELPER_MODULES:
+            if hasattr(module, name):
+                return getattr(module, name)
+        return getattr(workspace_runtime_core, name)
 
     def __setattr__(self, name: str, value: object) -> None:
         patched = False

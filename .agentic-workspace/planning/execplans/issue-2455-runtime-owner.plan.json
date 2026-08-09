@@ -1,0 +1,92 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2455-runtime-owner",
+  "title": "Collapse workspace runtime mirror to one owner and ratchet review-scale complexity",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 3,
+  "intent": {
+    "outcome": "Make workspace_runtime_core.py the sole hand-maintained runtime behavior owner, reduce workspace_runtime_primitives.py to a mechanically checkable compatibility facade, and enforce duplicate/review-scale ratchets.",
+    "non_goals": [
+      "Do not change public CLI behavior or add a new installed package surface.",
+      "Do not mechanically split unrelated large procedures without a narrower policy/effect boundary.",
+      "Do not retain copied behavior behind an allowlist at final completion."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2448-release-promotion",
+    "contribution": "Final P1 architectural consolidation slice, GitHub #2455.",
+    "closure_boundary": "runtime implementation ownership and review-scale enforcement only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "runtime ownership and review-scale contracts/checkers",
+      "focused compatibility and enforcement tests"
+    ],
+    "effects": [
+      "All existing imports of workspace_runtime_primitives continue to resolve to core-owned behavior.",
+      "New duplicate runtime bodies and unbounded touched safety-critical procedures fail repository checks.",
+      "Repo-friction diagnostics expose runtime owner and working-set metrics without owning enforcement."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected",
+      "owner": "issue-2448-release-promotion"
+    },
+    "proof_posture": {
+      "state": "required",
+      "refs": [
+        "focused runtime ownership tests",
+        "make test-workspace",
+        "make lint-workspace",
+        "make typecheck",
+        "generated command package and operation conformance checks"
+      ]
+    },
+    "external_posture": {
+      "state": "observed",
+      "refs": [
+        "GitHub issue #2455 is open and priority:P1"
+      ]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #2455",
+      "label": "GitHub #2455",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Publish the validated implementation as a draft pull request and close GitHub #2455 through review.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Collapse workspace runtime mirror to one owner and ratchet review-scale complexity is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Prove zero hand-maintained duplicate runtime bodies and a mechanically discoverable canonical owner.",
+      "Prove compatibility imports preserve current CLI/report behavior.",
+      "Prove touched-code budgets reject unapproved growth while allowing ratcheting improvements.",
+      "Run full workspace, generated package, and operation conformance proof before closeout."
+    ],
+    "refs": [
+      "make test-workspace: passed all six partitions in 1077.9s",
+      "tests/test_workspace_cli.py plus tests/test_workspace_implement_cli.py: 510 passed",
+      "runtime implementation ownership: ready, 1046 shared definitions reduced to 0 and facade reduced to 61 lines",
+      "make typecheck: passed all packages"
+    ]
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": []
+}

@@ -1157,10 +1157,10 @@ def test_planning_task_switch_compatibility_packet_has_no_decision_authority() -
             legacy_decision_field
             not in core_source.split("compact_switch = {", 1)[1].split('compact["task_switch_reconciliation"] = compact_switch', 1)[0]
         )
-        assert (
-            legacy_decision_field
-            not in primitives_source.split('compact["task_switch_reconciliation"] = {', 1)[1].split("custody_planning = gate.get", 1)[0]
-        )
+        assert "sys.modules[__name__] = _canonical_runtime" in primitives_source
+        assert not [
+            node for node in ast.parse(primitives_source).body if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef)
+        ]
         assert legacy_decision_field not in reporting_source.split('"task_switch_reconciliation": {', 1)[1].split('"rule": scope.get', 1)[0]
 
     forbidden_get_fields = {
@@ -3997,176 +3997,10 @@ def _replace_text(path: Path, old: str, new: str) -> None:
     path.write_text(path.read_text(encoding="utf-8").replace(old, new), encoding="utf-8")
 
 
-def test_implement_surfaces_runtime_mirror_warning_for_primitives_payload_helper_change(tmp_path: Path, capsys) -> None:
-    _seed_runtime_mirror_contract_repo(tmp_path)
-    _replace_text(
-        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py",
-        '    return {"kind": "external-issue-grouping-hints/v1", "status": "present"}',
-        '    return {"kind": "external-issue-grouping-hints/v1", "status": "present", "child_slice_count": 0}',
-    )
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/workspace_runtime_primitives.py",
-                "--task",
-                "Fix an existing primitive bug under the generated CLI boundary.",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    review = payload["proof"]["runtime_source_edit_review"]
-    assert review["status"] == "mirror-drift-warning"
-    mirror_review = review["mirror_drift_review"]
-    assert mirror_review["status"] == "warning"
-    mirror_record = mirror_review["records"][0]
-    assert mirror_record["status"] == "warning-asymmetric-mirror-change"
-    assert mirror_record["changed_paths"] == ["src/agentic_workspace/workspace_runtime_primitives.py"]
-    assert mirror_record["likely_paired_file"] == "src/agentic_workspace/workspace_runtime_core.py"
-    assert mirror_record["paired_file_changed"] is False
-    assert mirror_record["region_id"] == "external-issue-intake-helper-region"
-    assert (
-        "declared_region:src/agentic_workspace/workspace_runtime_primitives.py:external-issue-intake-helper-region"
-        in mirror_record["trigger_evidence"]
-    )
-    assert mirror_record["changed_regions"][0]["kind"] == "declared-region"
-    assert mirror_record["paired_regions"][0]["path"] == "src/agentic_workspace/workspace_runtime_core.py"
-    assert "external_intent_refresh_applies_stale_candidate_reconciliation" in mirror_record["smallest_parity_proof_command"]
-    assert "--aw-primitive-ownership" in mirror_record["maintainer_check_command"]
-    assert "#1802-style" in mirror_record["represented_regression"]
-
-
-def test_implement_surfaces_runtime_mirror_warning_for_core_only_payload_helper_change(tmp_path: Path, capsys) -> None:
-    _seed_runtime_mirror_contract_repo(tmp_path)
-    _replace_text(
-        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py",
-        '    return {"planning_candidate_grouping": planning_candidate_grouping}',
-        '    return {"planning_candidate_grouping": planning_candidate_grouping, "source": "refresh"}',
-    )
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/workspace_runtime_core.py",
-                "--task",
-                "Terse runtime refactor.",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    review = payload["proof"]["runtime_source_edit_review"]
-    assert review["status"] == "mirror-drift-warning"
-    assert review["changed_paths"] == ["src/agentic_workspace/workspace_runtime_core.py"]
-    assert "review_items" not in review
-    mirror_review = review["mirror_drift_review"]
-    assert mirror_review["kind"] == "agentic-workspace/runtime-mirror-drift-review/v1"
-    assert mirror_review["status"] == "warning"
-    record = mirror_review["records"][0]
-    assert record["mirror_pair_id"] == "workspace-runtime-core-primitives-payload-helpers"
-    assert record["region_id"] == "external-intent-refresh-payload"
-    assert record["likely_paired_file"] == "src/agentic_workspace/workspace_runtime_primitives.py"
-    assert record["paired_paths"] == ["src/agentic_workspace/workspace_runtime_primitives.py"]
-    assert record["changed_regions"][0]["symbol"] == "_refresh_github_external_intent_evidence"
-    assert "mirror the payload/helper change" in record["expected_action"]
-    assert "external_intent_refresh_applies_stale_candidate_reconciliation" in record["smallest_parity_proof_command"]
-
-
-def test_implement_runtime_mirror_review_accepts_paired_core_and_primitives_changes(tmp_path: Path, capsys) -> None:
-    _seed_runtime_mirror_contract_repo(tmp_path)
-    for runtime_path in (
-        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py",
-        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py",
-    ):
-        _replace_text(
-            runtime_path,
-            '    return {"grouping_hints": grouping}',
-            '    return {"grouping_hints": grouping, "source": "intake"}',
-        )
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/workspace_runtime_core.py",
-                "--changed",
-                "src/agentic_workspace/workspace_runtime_primitives.py",
-                "--task",
-                "Terse runtime refactor.",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    review = payload["proof"]["runtime_source_edit_review"]
-    assert review["status"] == "classification-required"
-    assert review["changed_paths"] == [
-        "src/agentic_workspace/workspace_runtime_primitives.py",
-        "src/agentic_workspace/workspace_runtime_core.py",
-    ]
-    record = review["mirror_drift_review"]["records"][0]
-    assert record["status"] == "paired-change-requires-parity-proof"
-    assert record["region_id"] == "open-issue-intake-payload"
-    assert record["paired_file_changed"] is True
-    assert record["likely_paired_file"] == ""
-    assert "--aw-primitive-ownership" in record["maintainer_check_command"]
-
-
-def test_implement_runtime_mirror_review_stays_off_for_unrelated_core_file_changes(tmp_path: Path, capsys) -> None:
-    _seed_runtime_mirror_contract_repo(tmp_path)
-    _replace_text(
-        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py",
-        '    return "old"',
-        '    return "new"',
-    )
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/workspace_runtime_core.py",
-                "--task",
-                "Terse runtime refactor.",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    assert "runtime_source_edit_review" not in payload["proof"]
-    assert "proof.runtime_source_edit_review" not in payload["drill_down"]["available_selectors"]
-
-
 def test_implement_surfaces_runtime_symbol_working_set_for_large_runtime_change(tmp_path: Path, capsys) -> None:
     _write_empty_planning_state(tmp_path)
     _write(
-        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py",
+        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py",
         """
 def _run_external_intent_refresh_github_adapter(args):
     return {"status": "old"}
@@ -4182,7 +4016,7 @@ def _unrelated_runtime_helper():
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
     subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
     _replace_text(
-        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py",
+        tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py",
         '    return {"status": "old"}',
         '    return {"status": "new"}',
     )
@@ -4194,7 +4028,7 @@ def _unrelated_runtime_helper():
                 "--target",
                 str(tmp_path),
                 "--changed",
-                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "src/agentic_workspace/workspace_runtime_core.py",
                 "--task",
                 "Fix external intent refresh behavior.",
                 "--format",
@@ -4208,11 +4042,10 @@ def _unrelated_runtime_helper():
     working_set = payload["proof"]["runtime_symbol_working_set"]
     assert working_set["kind"] == "agentic-workspace/runtime-symbol-working-set/v1"
     assert working_set["status"] == "present"
-    assert working_set["files"][0]["path"] == "src/agentic_workspace/workspace_runtime_primitives.py"
+    assert working_set["files"][0]["path"] == "src/agentic_workspace/workspace_runtime_core.py"
     symbol = working_set["files"][0]["symbols"][0]
     assert symbol["name"] == "_run_external_intent_refresh_github_adapter"
-    assert symbol["inventory_status"] == "inventory-backed"
-    assert symbol["runtime_boundary_class"] == "provider-integration"
+    assert symbol["inventory_status"] == "not-in-runtime-inventory"
     assert "external_intent_refresh_applies_stale_candidate_reconciliation" in symbol["smallest_focused_proof"]
     assert "proof.runtime_symbol_working_set" in payload["drill_down"]["available_selectors"]
     assert any("runtime_symbol_working_set=1" == signal for signal in payload["action_signals"]["changed_signals"])
