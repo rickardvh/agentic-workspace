@@ -150,6 +150,7 @@ from agentic_workspace.result_adapter import adapt_module_result, serialise_valu
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.runtime_symbol_working_set import tiny_runtime_symbol_working_set_payload
 from agentic_workspace.target_evidence import assignment_decision_from_policy, target_evidence_posture
+from agentic_workspace.trusted_execution import run_trusted_shell
 from agentic_workspace.workspace_output import (
     _display_path,
     _emit_init_text,
@@ -11815,6 +11816,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "purpose": "source-checkout release recovery posture for semver PR action, failed release summaries, and payload drift repair",
         "when_to_use": "during coordinated release, changeset recovery, payload drift, or failed release CI diagnosis",
     },
+    {
+        "section": "security_supply_chain",
+        "kind": "agentic-workspace/security-supply-chain-readiness/v1",
+        "purpose": "exact trusted-execution, scanner, immutable workflow, lock, SBOM, and provenance readiness",
+        "when_to_use": "before support-bearing promotion or when repository trust and release provenance need an exact decision",
+    },
 )
 
 
@@ -14250,6 +14257,10 @@ def _run_lazy_report_section_command(
             selected_modules=selected_modules,
             cli_invoke=config.cli_invoke,
         )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "security_supply_chain":
+        payload["security_supply_chain"] = _workspace_runtime_core._security_supply_chain_readiness_payload(target_root=target_root)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "pr_comment_attention":
@@ -32369,14 +32380,12 @@ def _run_final_response_executor_loop(
         started_at = datetime.now(timezone.utc).isoformat()
         completed_at = started_at
         try:
-            result = subprocess.run(
+            result = run_trusted_shell(
                 executor_command,
-                shell=True,
+                trust_source="explicit-user-executor-command",
+                admitted=True,
                 cwd=str(target_root),
                 env=env,
-                text=True,
-                capture_output=True,
-                check=False,
             )
             completed_at = datetime.now(timezone.utc).isoformat()
         except OSError as exc:

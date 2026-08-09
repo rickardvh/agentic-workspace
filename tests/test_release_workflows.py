@@ -189,7 +189,7 @@ def test_master_release_workflow_prepares_release_pr_and_only_tags_verified_rele
     assert "coordinated_release.py verify" in workflow
     assert "coordinated_release.py tag-plan" in workflow
     assert "uv lock" in workflow
-    assert "peter-evans/create-pull-request@v7" in workflow
+    assert "peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7" in workflow
     assert "automation/coordinated-release" in workflow
     assert "Resolve pending release tag" in workflow
     assert "git tag -a" in workflow
@@ -255,7 +255,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in workflow
     assert "scripts/release/patch_workspace_release_wheel.py" in workflow
     assert "release-asset-base-url" in workflow
-    assert "actions/setup-node@v6.4.0" in workflow
+    assert "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0" in workflow
     assert 'node-version: "24"' in workflow
     assert "npm test && npm pack --pack-destination" in workflow
     assert "typescript_packages" in workflow
@@ -265,7 +265,12 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "generate_release_notes: true" not in workflow
     assert "SHA256SUMS" in workflow
     assert "Missing checksums for release assets" in workflow
-    assert "softprops/action-gh-release@v3.0.0" in workflow
+    assert "softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0" in workflow
+    assert "uv sync --locked" in workflow
+    assert "security-supply-chain-readiness.json" in workflow
+    assert "agentic-workspace.spdx.json" in workflow
+    assert "anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610" in workflow
+    assert "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8" in workflow
     assert "fail_on_unmatched_files: true" in workflow
 
 
@@ -283,6 +288,8 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
             "dist/agentic_memory-0.4.0.tar.gz",
             "dist/agentic-workspace-workspace-cli-0.4.0.tgz",
             "dist/agentic-workspace-release-manifest.json",
+            "dist/security-supply-chain-readiness.json",
+            "dist/agentic-workspace.spdx.json",
             "dist/SHA256SUMS",
             "dist/.gitignore",
             "dist/default.gitignore",
@@ -295,6 +302,8 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
         "dist/agentic_memory-0.4.0.tar.gz",
         "dist/agentic-workspace-workspace-cli-0.4.0.tgz",
         "dist/agentic-workspace-release-manifest.json",
+        "dist/security-supply-chain-readiness.json",
+        "dist/agentic-workspace.spdx.json",
         "dist/SHA256SUMS",
     ]
 
