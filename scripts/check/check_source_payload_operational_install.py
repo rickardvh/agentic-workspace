@@ -26,6 +26,18 @@ WARNING_PAYLOAD_INVENTORY_DRIFT = "payload_inventory_drift"
 WARNING_PACKAGING_MANIFEST_DRIFT = "packaging_manifest_drift"
 WARNING_DUPLICATE_PLANNING_CHECKER_DRIFT = "duplicate_planning_checker_drift"
 WARNING_EXECUTABLE_PAYLOAD_DRIFT = "executable_payload_drift"
+WARNING_REFERENCE_CLOSURE_DRIFT = "reference_closure_drift"
+
+SUPPORTED_MODULE_COMBINATIONS = (
+    (),
+    ("memory",),
+    ("planning",),
+    ("verification",),
+    ("memory", "planning"),
+    ("memory", "verification"),
+    ("planning", "verification"),
+    ("memory", "planning", "verification"),
+)
 
 EXECUTABLE_PAYLOAD_SUFFIXES = {
     ".bat",
@@ -340,6 +352,71 @@ def _planning_checker_duplicate_warnings(*, repo_root: Path) -> list[BoundaryWar
     return warnings
 
 
+def gather_installed_reference_closure(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
+    """Validate the canonical installed-reference graph for every footprint/module cell."""
+
+    manifest_path = repo_root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "kind": "agentic-workspace/installed-reference-closure/v1",
+            "status": "invalid-manifest",
+            "manifest": _render_path(manifest_path),
+            "errors": [str(exc)],
+            "matrix": [],
+        }
+    payload_files = {str(path) for path in manifest.get("payload_files", [])}
+    necessary_files = {str(path) for path in manifest.get("necessary_surface_files", [])}
+    references = manifest.get("required_references", [])
+    repo_owned = {"AGENTS.md", ".agentic-workspace/config.toml", ".agentic-workspace/OWNERSHIP.toml"}
+    errors: list[str] = []
+    if not necessary_files.issubset(payload_files):
+        errors.append("necessary_surface_files must be a subset of payload_files")
+    payload_root = repo_root / "src" / "agentic_workspace" / "_payload"
+    for relative in sorted(payload_files):
+        if not (payload_root / relative).is_file():
+            errors.append(f"payload source is missing: {relative}")
+    matrix: list[dict[str, object]] = []
+    for profile in ("necessary-surfaces", "full-mirror"):
+        available = (necessary_files if profile == "necessary-surfaces" else payload_files) | repo_owned
+        cell_gaps: list[dict[str, str]] = []
+        for reference in references if isinstance(references, list) else []:
+            if not isinstance(reference, dict) or profile not in reference.get("profiles", []):
+                continue
+            source = str(reference.get("source", ""))
+            target = str(reference.get("target", ""))
+            kind = str(reference.get("kind", ""))
+            if source not in available:
+                cell_gaps.append({"source": source, "target": target, "reason": "source-absent"})
+            if kind == "installed-local" and target not in available:
+                cell_gaps.append({"source": source, "target": target, "reason": "target-absent"})
+            elif kind == "package-resource" and not target.startswith("package://agentic-workspace/"):
+                cell_gaps.append({"source": source, "target": target, "reason": "invalid-package-resource"})
+            elif kind == "optional" and not str(reference.get("degraded_behavior", "")).strip():
+                cell_gaps.append({"source": source, "target": target, "reason": "missing-degraded-behavior"})
+        for modules in SUPPORTED_MODULE_COMBINATIONS:
+            matrix.append(
+                {
+                    "profile": profile,
+                    "modules": list(modules),
+                    "status": "passed" if not cell_gaps else "failed",
+                    "gaps": list(cell_gaps),
+                    "no_cli_fallback": "preserved" if not cell_gaps else "blocked",
+                }
+            )
+    if any(cell["status"] != "passed" for cell in matrix):
+        errors.append("one or more installed footprint/module cells contain unresolved required references")
+    return {
+        "kind": "agentic-workspace/installed-reference-closure/v1",
+        "status": "passed" if not errors else "failed",
+        "manifest": _render_path(manifest_path),
+        "errors": errors,
+        "matrix": matrix,
+        "rule": "Every surviving required reference resolves locally or through an explicit package-resource/optional contract.",
+    }
+
+
 def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWarning]:
     warnings: list[BoundaryWarning] = []
 
@@ -402,6 +479,16 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
     warnings.extend(_payload_inventory_warnings(repo_root=repo_root, package_name="memory", expected=memory_expected))
     warnings.extend(_packaging_manifest_warnings(repo_root=repo_root, package_name="planning", expected=planning_expected))
     warnings.extend(_packaging_manifest_warnings(repo_root=repo_root, package_name="memory", expected=memory_expected))
+    closure_manifest = repo_root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json"
+    closure = gather_installed_reference_closure(repo_root=repo_root) if closure_manifest.is_file() else None
+    if closure is not None and closure["status"] != "passed":
+        warnings.append(
+            BoundaryWarning(
+                WARNING_REFERENCE_CLOSURE_DRIFT,
+                str(closure["manifest"]),
+                "Installed reference closure failed: " + "; ".join(str(error) for error in closure["errors"]),
+            )
+        )
 
     required_root_surfaces = {
         repo_root / ".agentic-workspace" / "memory" / "repo" / "index.md": (
@@ -672,10 +759,12 @@ def gather_sync_proof(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
             ],
         ),
     ]
+    closure = gather_installed_reference_closure(repo_root=repo_root)
     return {
         "kind": "source-payload-root-sync-proof/v1",
         "status": "current" if all(item["status"] == "current" for item in proof) else "warning",
         "packages": proof,
+        "installed_reference_closure": closure,
         "intentional_difference_rule": "Intentional root dogfooding state is classified here and should not be reported as payload drift unless a managed payload file changed without refresh.",
         "operator_commands": [
             "uv run python scripts/check/check_source_payload_operational_install.py --format json --strict",
@@ -716,6 +805,7 @@ def main(argv: list[str] | None = None) -> int:
         "warnings": [warning._asdict() for warning in warnings],
         "boundary": gather_boundary_summary(repo_root=REPO_ROOT),
         "sync_proof": gather_sync_proof(repo_root=REPO_ROOT),
+        "installed_reference_closure": gather_installed_reference_closure(repo_root=REPO_ROOT),
     }
 
     if args.format == "json":

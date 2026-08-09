@@ -41,7 +41,7 @@ Use instead:
 
 ## SkillSpec Pilot
 
-This skill is the hand-authored startup pilot for the `startup-router` SkillSpec contract in `src/agentic_workspace/contracts/skill_specs.json`.
+This skill is the hand-authored startup pilot for the installed package's `startup-router` SkillSpec contract. Source-tree layout is not required for fallback operation.
 
 - Preferred route: configured AW invocation with `start --target . --task "<task>" --format json`.
 - Interpreted fields: `workflow_participation`, `immediate_next_allowed_action`, `next_safe_action`, `planning_safety_gate`, `skill_routing.preferred_routes`, and `detail_commands`.

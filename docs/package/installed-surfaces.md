@@ -17,7 +17,9 @@ An installed host repository gets a small set of checked-in surfaces. Their purp
 
 The package keeps `AGENTS.md` thin. Durable rules and structured state live under `.agentic-workspace/` or in repo-owned docs, not in a growing startup manual.
 
-Bootstrap uses the necessary-surface footprint by default. It creates shared config/startup, a compact adoption receipt, and selected module state anchors while preserving durable pre-existing local-mode Planning, Memory, and Verification state. Generic package payload remains package-owned and is read from the installed package, dev dependency, editable install, or source checkout at runtime. `--mirror-payload` is the explicit opt-in for checking in bundled docs, templates, schemas, skills, payload provenance, and upgrade-source provenance.
+Bootstrap uses the necessary-surface footprint by default. It creates shared config/startup, a compact adoption receipt, selected module state anchors, the routed skills, and the four self-contained fallback documents those skills require (`module-map`, `workspace-config-contract`, `jumpstart-contract`, and `setup-findings-contract`). It preserves durable pre-existing local-mode Planning, Memory, and Verification state. Other generic package payload remains package-owned and is read from the installed package, dev dependency, editable install, or source checkout at runtime. `--mirror-payload` is the explicit opt-in for checking in the complete bundled docs, templates, schemas, payload provenance, and upgrade-source provenance.
+
+`src/agentic_workspace/contracts/workspace_surfaces.json` is the canonical installed-surface and required-reference graph. The source/payload checker evaluates both footprint profiles across every supported module combination; a surviving required reference must resolve locally, use a stable package-resource identifier, or declare a complete optional degraded behavior.
 
 ## External Integration Boundary
 

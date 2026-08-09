@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +23,49 @@ def _load_module(path: Path, module_name: str):
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text.strip() + "\n", encoding="utf-8")
+
+
+def _write_workspace_surface_manifest(root: Path, *, include_target: bool = True) -> None:
+    payload_files = [
+        ".agentic-workspace/skills/workspace-startup/SKILL.md",
+        *([".agentic-workspace/docs/module-map.md"] if include_target else []),
+    ]
+    manifest = {
+        "payload_files": payload_files,
+        "necessary_surface_files": payload_files,
+        "required_references": [
+            {
+                "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+                "target": ".agentic-workspace/docs/module-map.md",
+                "kind": "installed-local",
+                "profiles": ["necessary-surfaces", "full-mirror"],
+            }
+        ],
+    }
+    _write(root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json", json.dumps(manifest))
+    for relative in payload_files:
+        _write(root / "src" / "agentic_workspace" / "_payload" / relative, "fixture")
+
+
+def test_installed_reference_closure_covers_every_footprint_module_cell(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_reference_closure")
+    _write_workspace_surface_manifest(tmp_path)
+
+    closure = mod.gather_installed_reference_closure(repo_root=tmp_path)
+
+    assert closure["status"] == "passed"
+    assert len(closure["matrix"]) == 16
+    assert {cell["no_cli_fallback"] for cell in closure["matrix"]} == {"preserved"}
+
+
+def test_installed_reference_closure_fails_when_required_target_is_missing(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_reference_closure_missing")
+    _write_workspace_surface_manifest(tmp_path, include_target=False)
+
+    closure = mod.gather_installed_reference_closure(repo_root=tmp_path)
+
+    assert closure["status"] == "failed"
+    assert {gap["reason"] for cell in closure["matrix"] for gap in cell["gaps"]} == {"target-absent"}
 
 
 def _write_root_surfaces(tmp_path: Path) -> None:

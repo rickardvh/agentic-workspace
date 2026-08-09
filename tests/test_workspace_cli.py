@@ -5357,6 +5357,8 @@ def test_upgrade_to_necessary_surfaces_preserves_durable_state_and_uses_package_
     applied = json.loads(capsys.readouterr().out)["migration"]
     assert applied["status"] == "applied"
     assert (workspace / "skills" / "workspace-operating-loop" / "SKILL.md").exists()
+    assert (workspace / "docs" / "module-map.md").exists()
+    assert (workspace / "docs" / "workspace-config-contract.md").exists()
     assert (workspace / "planning" / "skills" / "planning-reporting" / "SKILL.md").exists()
     assert (workspace / "memory" / "skills" / "memory-router" / "SKILL.md").exists()
     assert not (workspace / "payload-provenance.json").exists()
