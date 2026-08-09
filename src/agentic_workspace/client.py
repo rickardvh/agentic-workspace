@@ -7,6 +7,7 @@ import subprocess
 import tomllib
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from importlib.metadata import PackageNotFoundError, version
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Mapping, Sequence, cast
@@ -265,6 +266,7 @@ def external_readiness_report(required_operations: Sequence[str], *, allow_runti
     receipt_store = external_operation_conformance_receipts()
     entries = {str(entry.get("id")): entry for entry in profile.get("operations", []) if isinstance(entry, dict)}
     supported: list[str] = []
+    supported_evidence: list[dict[str, Any]] = []
     excluded: list[dict[str, Any]] = []
     for operation_id in required_operations:
         entry = entries.get(str(operation_id))
@@ -303,6 +305,16 @@ def external_readiness_report(required_operations: Sequence[str], *, allow_runti
         allowed_statuses = {"supported"} | ({"runtime-backed"} if allow_runtime_backed else set())
         if status in allowed_statuses and not missing_evidence:
             supported.append(str(operation_id))
+            supported_evidence.append(
+                {
+                    "id": str(operation_id),
+                    "status": "ready",
+                    "support_status": status,
+                    "conformance_refs": evidence["conformance_refs"],
+                    "conformance_result": conformance_result,
+                    "receipt_ref": str(conformance_result.get("receipt_ref") or ""),
+                }
+            )
         else:
             excluded.append(
                 {
@@ -313,11 +325,32 @@ def external_readiness_report(required_operations: Sequence[str], *, allow_runti
                     "recovery": "negotiate a supported subset; do not reconstruct AW semantics",
                 }
             )
+    not_advertised = [
+        {
+            "id": operation_id,
+            "status": str((entry.get("external_consumption") or {}).get("status") or "unavailable"),
+            "reason": "runtime-backed opt-in required"
+            if str((entry.get("external_consumption") or {}).get("status") or "") == "runtime-backed"
+            else "operation is not declared externally supported",
+        }
+        for operation_id, entry in sorted(entries.items())
+        if str((entry.get("external_consumption") or {}).get("status") or "unavailable") != "supported"
+    ]
     return {
         "kind": "agentic-workspace/external-readiness-report/v1",
         "status": "ready" if not excluded else "subset-only" if supported else "not-ready",
         "supported_operations": supported,
+        "supported_operation_evidence": supported_evidence,
         "excluded_operations": excluded,
+        "operation_accounting": {
+            "profile_operation_count": len(entries),
+            "requested_operation_count": len(required_operations),
+            "ready_requested_count": len(supported),
+            "excluded_requested_count": len(excluded),
+            "not_advertised_count": len(not_advertised),
+            "not_advertised_sample": not_advertised[:32],
+            "sample_limit": 32,
+        },
         "rule": "Ready requires declared support plus released Python/TypeScript resources, schemas, current runner/client-bound executed cross-transport conformance evidence, and any runtime-exception disposition.",
     }
 
@@ -447,6 +480,20 @@ def detect_workspace(target: str | Path) -> dict[str, Any]:
     workspace = payload.get("workspace", {})
     if workspace.get("enabled") is False:
         return {"status": "disabled", "target": root.as_posix()}
+    expectation = payload.get("cli_compatibility", {})
+    exact_version = str(expectation.get("exact_version") or "").strip() if isinstance(expectation, dict) else ""
+    try:
+        installed_version = version("agentic-workspace")
+    except PackageNotFoundError:
+        installed_version = "0.0.0"
+    if exact_version and exact_version != installed_version:
+        return {
+            "status": "incompatible",
+            "target": root.as_posix(),
+            "reason": "exact-client-version-mismatch",
+            "expected_version": exact_version,
+            "client_version": installed_version,
+        }
     return {"status": "enabled", "target": root.as_posix()}
 
 

@@ -98,6 +98,7 @@ def test_unexpected_json_runtime_exception_has_structured_recovery(monkeypatch, 
     assert source_cli.main(["summary", "--format", "json"]) == 1
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/runtime-error/v1"
+    assert payload["message"] == "representative package failure"
     assert payload["exception_class"] == "RuntimeError"
     assert payload["failure_class"] == "unexpected-runtime-exception"
     assert payload["safe_to_retry"] is False
