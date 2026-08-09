@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_ROOT = ROOT / ".github" / "workflows"
 OWNERSHIP_PATH = ROOT / ".github" / "release-ownership.json"
 GENERATOR_PATH = ROOT / "scripts" / "generate" / "workspace_command_generation.py"
+RELEASE_OWNERSHIP_CLASSIFIER_PATH = ROOT / "scripts" / "release" / "release_ownership.py"
 
 
 def _ownership() -> dict[str, object]:
@@ -48,6 +49,16 @@ def _step_run_block(workflow: str, step_name: str) -> str:
 
 def _load_workspace_command_generation():
     spec = importlib.util.spec_from_file_location("workspace_command_generation_under_test", GENERATOR_PATH)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_release_ownership_classifier():
+    spec = importlib.util.spec_from_file_location("release_ownership_under_test", RELEASE_OWNERSHIP_CLASSIFIER_PATH)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -120,6 +131,28 @@ def test_package_affecting_scope_is_manifest_owned_and_covers_release_surfaces()
     assert "tests/test_release_workflows.py" in paths
     assert "uv.lock" in paths
 
+    metadata = _ownership()["non_semver_generated_metadata"]
+    assert metadata == [
+        {
+            "path": "generated/.agentic-workspace-cli-fingerprint.json",
+            "role": "generated-command-freshness-integrity",
+            "freshness_owner": "scripts/check/check_generated_command_packages.py",
+        }
+    ]
+
+
+def test_release_path_classification_exempts_only_exact_integrity_metadata() -> None:
+    classify = _load_release_ownership_classifier().classify_changed_paths
+    ownership = _ownership()
+    fingerprint = "generated/.agentic-workspace-cli-fingerprint.json"
+
+    assert classify([fingerprint, "docs/maintenance.md"], ownership)["package_affecting"] is False
+    assert classify([fingerprint, "src/agentic_workspace/__init__.py"], ownership)["package_affecting"] is True
+    assert classify([fingerprint, "generated/workspace/typescript/cli.mjs"], ownership)["package_affecting"] is True
+    arbitrary = classify(["generated/not-an-exempt-projection.json"], ownership)
+    assert arbitrary["package_affecting"] is True
+    assert arbitrary["package_affecting_paths"] == ["generated/not-an-exempt-projection.json"]
+
 
 def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
     workflow = (WORKFLOW_ROOT / "pr-semver-label.yml").read_text(encoding="utf-8")
@@ -128,7 +161,7 @@ def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
     assert "labeled" in workflow
     assert "unlabeled" in workflow
     assert ".github/release-ownership.json" in workflow
-    assert 'ownership["package_affecting_paths"]' in workflow
+    assert "classify_changed_paths(changed, ownership)" in workflow
     assert 'ownership["semver_labels"]' in workflow
     assert "must have exactly one semver label" in workflow
     assert 'ownership["changeset_dir"]' in workflow

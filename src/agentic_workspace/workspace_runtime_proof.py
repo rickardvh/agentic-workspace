@@ -4817,7 +4817,9 @@ def _proof_route_health_payload(
         )
 
     # Manual obligations are completion evidence requirements, not proof-route
-    # authority defects. They remain visible through completion gates.
+    # authority defects. They remain visible through manual_proof_obligations and
+    # completion gates; treating them as route-health findings creates a cycle in
+    # which closeout cannot record the review evidence until the route is mutated.
 
     repair_packets = [
         {

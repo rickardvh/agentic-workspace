@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import ast
 import copy
 import json
 import os
+import re
+import subprocess
+import time
 from collections.abc import Callable
 from difflib import get_close_matches
 from pathlib import Path
@@ -26,6 +30,7 @@ REPO_FRICTION_SCAN_SUFFIXES = {
     ".txt",
 }
 REPO_FRICTION_REGENERABLE_CACHE_PREFIXES = (".agentic-workspace/local/cache/", "scratch/")
+REPO_FRICTION_PRIMARY_EXCLUDED_ROOTS = ("generated/", "vendor/", "third_party/", ".agentic-workspace/local/")
 
 STANDING_INTENT_CANONICAL_DOC = ".agentic-workspace/docs/standing-intent-contract.md"
 REASONING_ECONOMY_EVIDENCE_LEDGER_PATH = ".agentic-workspace/verification/reasoning-economy-evidence.json"
@@ -1251,10 +1256,14 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "kind",
                     "candidate_kind",
                     "source",
+                    "symptom",
+                    "suspected_owner",
                     "summary",
                     "recommended_destination",
                     "recommended_action",
                     "routing_decision",
+                    "evidence_fingerprint",
+                    "equivalent_evidence_count",
                 )
                 if isinstance(item, dict) and key in item
             }
@@ -1277,6 +1286,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                 "audience_boundary": answer.get("audience_boundary", {}),
                 "candidate_count": answer.get("candidate_count", len(candidates)),
                 "candidate_sample": candidates,
+                "session_admission": answer.get("session_admission", {}),
                 "repo_wide_existing_candidates": {
                     key: repo_existing.get(key)
                     for key in ("status", "included_by_default", "candidate_count", "command", "full_scan_command")
@@ -1287,6 +1297,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     for key in ("status", "candidate_count", "promotable_count", "dismissed_count", "command")
                     if key in setup_findings
                 },
+                "candidate_decisions": answer.get("candidate_decisions", []),
+                "non_candidate_decisions": answer.get("non_candidate_decisions", []),
                 "detail_command": _command_with_cli_invoke(
                     "agentic-workspace report --target ./repo --verbose --format json",
                     cli_invoke=cli_invoke,
@@ -1313,6 +1325,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                         "line_count",
                         "summary",
                         "surface_role",
+                        "source_domain",
+                        "source_metrics",
                         "recommended_action",
                         "route",
                     )
@@ -1336,10 +1350,12 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                 "policy": {
                     key: policy.get(key) for key in ("status", "mode", "max_candidate_count", "candidate_limit", "rule") if key in policy
                 },
+                "scan_budget": answer.get("scan_budget", {}),
                 "large_file_hotspots": compact_collection(answer.get("large_file_hotspots")),
                 "concept_surface_hotspots": compact_collection(answer.get("concept_surface_hotspots")),
                 "regenerable_cache_hotspots": compact_collection(answer.get("regenerable_cache_hotspots")),
                 "external_evidence_count": len(_support_list_payload(answer.get("external_evidence"))),
+                "proof_route_completeness": answer.get("proof_route_completeness", {}),
                 "capture_shortcut": answer.get("capture_shortcut", {}),
                 "detail_command": _command_with_cli_invoke(
                     "agentic-workspace report --target ./repo --verbose --format json",
@@ -3442,14 +3458,18 @@ def repo_friction_payload(
     validation_friction_policy: dict[str, Any] | None = None,
     cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
+    scan_started = time.perf_counter()
     hotspots = _repo_friction_hotspots(target_root=target_root, cli_invoke=cli_invoke)
     regenerable_cache_hotspots = _repo_friction_regenerable_cache_hotspots(target_root=target_root, cli_invoke=cli_invoke)
-    large_file_hotspots = [item.copy() for item in hotspots if int(item["line_count"]) >= REPO_FRICTION_LARGE_FILE_THRESHOLD][
-        :REPO_FRICTION_MAX_HOTSPOTS
-    ]
-    concept_hotspots = [item.copy() for item in hotspots if item["kind"] in {"docs", "config"}][:REPO_FRICTION_MAX_HOTSPOTS]
+    large_file_hotspots = [
+        item.copy()
+        for item in hotspots
+        if item.get("source_domain") == "tracked-source" and int(item["line_count"]) >= REPO_FRICTION_LARGE_FILE_THRESHOLD
+    ][:REPO_FRICTION_MAX_HOTSPOTS]
+    concept_hotspots = _repo_friction_concept_hotspots(target_root=target_root, cli_invoke=cli_invoke)
     external_evidence: list[dict[str, Any]] = []
     external_codebase_map = _repo_friction_external_codebase_map_payload(target_root=target_root)
+    proof_route_completeness = _repo_friction_proof_route_completeness(target_root=target_root)
     if external_codebase_map is not None:
         external_evidence.append(external_codebase_map)
     if external_setup_findings_payload is not None:
@@ -3470,6 +3490,11 @@ def repo_friction_payload(
             "status": "bounded",
             "max_files": REPO_FRICTION_MAX_SCAN_FILES,
             "sample_rule": "Repo-friction report samples are capped for ordinary chat-agent inspection; use focused path-specific tools for deeper review.",
+            "primary_domain": "git-tracked-source",
+            "excluded_primary_domains": ["generated-output", "local-cache", "archive-history", "vendored"],
+            "elapsed_ms": round((time.perf_counter() - scan_started) * 1000, 2),
+            "default_elapsed_budget_ms": 10_000,
+            "history_strategy": "one bulk git history query after bounded hotspot selection",
         },
         "policy_target_rule": (
             "The improvement-latitude mode governs repo-directed initiative; bounded workspace-self-adaptation "
@@ -3584,6 +3609,12 @@ def repo_friction_payload(
             "count": len(concept_hotspots),
             "items": concept_hotspots,
         },
+        "regenerable_cache_hotspots": {
+            "status": "excluded-from-primary-ranking",
+            "count": len(regenerable_cache_hotspots),
+            "items": regenerable_cache_hotspots,
+            "rule": "Local projection and validation caches never compete with Git-tracked source in the primary hotspot ranking.",
+        },
         "planning_friction": {
             "status": "explicit-contract",
             "rule": (
@@ -3671,6 +3702,7 @@ def repo_friction_payload(
             ],
         },
         "external_evidence": external_evidence,
+        "proof_route_completeness": proof_route_completeness,
     }
 
 
@@ -3702,6 +3734,67 @@ def _repo_friction_surface_role(relative_path: str) -> str:
     if relative_path.startswith(".agentic-workspace/"):
         return "managed-surface"
     return "repo-surface"
+
+
+def _repo_friction_source_domain(relative_path: str) -> str:
+    if _repo_friction_is_regenerable_cache(relative_path) or relative_path.startswith(".agentic-workspace/local/"):
+        return "local-cache"
+    if relative_path.startswith("generated/"):
+        return "generated-output"
+    if relative_path.startswith(("vendor/", "third_party/")):
+        return "vendored"
+    if "/archive/" in relative_path or relative_path.startswith(".agentic-workspace/planning/execplans/archive/"):
+        return "archive-history"
+    if relative_path.startswith(".agentic-workspace/"):
+        return "current-managed-state"
+    if relative_path.endswith((".py", ".js", ".mjs", ".ts", ".tsx", ".rs", ".go", ".java")):
+        return "tracked-source"
+    return "tracked-support"
+
+
+def _repo_friction_recent_commit_counts(*, target_root: Path, relative_paths: set[str]) -> dict[str, int | None]:
+    counts: dict[str, int | None] = {relative: 0 for relative in relative_paths}
+    if not relative_paths:
+        return counts
+    try:
+        history = subprocess.run(
+            ["git", "-C", str(target_root), "log", "-n", "100", "--format=", "--name-only", "--", *sorted(relative_paths)],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=8,
+        )
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return {relative: None for relative in relative_paths}
+    if history.returncode != 0:
+        return {relative: None for relative in relative_paths}
+    for line in history.stdout.splitlines():
+        relative = line.strip().replace("\\", "/")
+        if relative in counts:
+            counts[relative] = int(counts[relative] or 0) + 1
+    return counts
+
+
+def _repo_friction_source_metrics(*, path: Path, relative_path: str, recent_commit_count: int | None = None) -> dict[str, Any]:
+    metrics: dict[str, Any] = {"measurement": "git-tracked-source"}
+    if _repo_friction_source_domain(relative_path) != "tracked-source":
+        return metrics
+    if path.suffix.lower() == ".py":
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            metrics["top_level_symbol_count"] = sum(
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) for node in tree.body
+            )
+        except (OSError, UnicodeDecodeError, SyntaxError):
+            metrics["top_level_symbol_count"] = None
+    metrics["recent_commit_count"] = recent_commit_count
+    if relative_path in {
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+    }:
+        metrics["duplication_cluster"] = "workspace-runtime-mirror"
+        metrics["duplication_owner"] = "issue #2455"
+    return metrics
 
 
 def _repo_friction_is_regenerable_cache(relative_path: str) -> bool:
@@ -3801,7 +3894,12 @@ def _repo_friction_context_strategy(*, relative_path: str, kind: str, surface_ro
 
 
 def _repo_friction_hotspot_payload(
-    *, path: Path, target_root: Path, line_count: int, cli_invoke: str = DEFAULT_CLI_INVOKE
+    *,
+    path: Path,
+    target_root: Path,
+    line_count: int,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+    recent_commit_count: int | None = None,
 ) -> dict[str, Any]:
     relative = path.relative_to(target_root).as_posix()
     kind = _repo_friction_kind_for_path(path)
@@ -3826,17 +3924,21 @@ def _repo_friction_hotspot_payload(
         "line_count": line_count,
         "kind": kind,
         "surface_role": surface_role,
+        "source_domain": _repo_friction_source_domain(relative),
+        "source_metrics": _repo_friction_source_metrics(path=path, relative_path=relative, recent_commit_count=recent_commit_count),
         **strategy,
         "primary_next_action": primary_action,
     }
 
 
 def _repo_friction_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> list[dict[str, Any]]:
-    hotspots: list[dict[str, Any]] = []
+    selected: list[tuple[Path, int]] = []
     for path in repository_scan_files(
         target_root,
-        include_untracked=True,
-        include_managed_workspace=True,
+        relative_roots=("src", "packages", "scripts", "tests"),
+        exclude_relative_roots=REPO_FRICTION_PRIMARY_EXCLUDED_ROOTS,
+        include_untracked=False,
+        include_managed_workspace=False,
         suffixes=REPO_FRICTION_SCAN_SUFFIXES,
         max_files=REPO_FRICTION_MAX_SCAN_FILES,
     ):
@@ -3849,9 +3951,93 @@ def _repo_friction_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_
         relative = path.relative_to(target_root).as_posix()
         if _repo_friction_is_regenerable_cache(relative):
             continue
-        hotspots.append(_repo_friction_hotspot_payload(path=path, target_root=target_root, line_count=line_count, cli_invoke=cli_invoke))
+        selected.append((path, line_count))
+    selected.sort(key=lambda item: (-item[1], item[0].relative_to(target_root).as_posix()))
+    selected = selected[:REPO_FRICTION_MAX_HOTSPOTS]
+    commit_counts = _repo_friction_recent_commit_counts(
+        target_root=target_root,
+        relative_paths={path.relative_to(target_root).as_posix() for path, _ in selected},
+    )
+    hotspots = [
+        _repo_friction_hotspot_payload(
+            path=path,
+            target_root=target_root,
+            line_count=line_count,
+            cli_invoke=cli_invoke,
+            recent_commit_count=commit_counts.get(path.relative_to(target_root).as_posix()),
+        )
+        for path, line_count in selected
+    ]
     hotspots.sort(key=lambda item: (-int(item["line_count"]), str(item["path"])))
     return hotspots
+
+
+def _repo_friction_concept_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> list[dict[str, Any]]:
+    hotspots: list[dict[str, Any]] = []
+    for path in repository_scan_files(
+        target_root,
+        relative_roots=("docs", ".agentic-workspace"),
+        exclude_relative_roots=REPO_FRICTION_PRIMARY_EXCLUDED_ROOTS,
+        include_untracked=False,
+        include_managed_workspace=False,
+        suffixes=REPO_FRICTION_SCAN_SUFFIXES,
+        max_files=REPO_FRICTION_MAX_SCAN_FILES,
+    ):
+        try:
+            line_count = sum(1 for _ in path.open("r", encoding="utf-8"))
+        except (UnicodeDecodeError, OSError):
+            continue
+        if line_count < REPO_FRICTION_CONCEPT_SURFACE_THRESHOLD:
+            continue
+        hotspots.append(_repo_friction_hotspot_payload(path=path, target_root=target_root, line_count=line_count, cli_invoke=cli_invoke))
+    hotspots.sort(key=lambda item: (-int(item["line_count"]), str(item["path"])))
+    return hotspots[:REPO_FRICTION_MAX_HOTSPOTS]
+
+
+def _repo_friction_proof_route_completeness(*, target_root: Path) -> dict[str, Any]:
+    authority = target_root / "Makefile"
+    try:
+        lines = authority.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return {
+            "status": "incomplete",
+            "classification": "heuristic-only",
+            "reason": "maintained validation target authority is unavailable",
+            "authority": authority.relative_to(target_root).as_posix(),
+        }
+    dependencies: dict[str, list[str]] = {}
+    for line in lines:
+        if line[:1].isspace() or ":" not in line or line.lstrip().startswith("#"):
+            continue
+        targets, raw_dependencies = line.split(":", 1)
+        dependency_names = [item for item in raw_dependencies.split() if "$" not in item and "=" not in item]
+        for target in targets.split():
+            if re.fullmatch(r"[A-Za-z0-9_.-]+", target):
+                dependencies[target] = dependency_names
+
+    def closure(target: str, seen: set[str] | None = None) -> set[str]:
+        if seen is None:
+            seen = set()
+        if target in seen:
+            return seen
+        seen.add(target)
+        for dependency in dependencies.get(target, []):
+            if dependency in dependencies:
+                closure(dependency, seen)
+        return seen
+
+    candidates = [(target, closure(target)) for target in dependencies if target.startswith("check")]
+    full_target, declared_closure = max(candidates, key=lambda item: (len(item[1]), item[0]), default=("", set()))
+    missing = sorted(item for item in dependencies.get(full_target, []) if item not in dependencies)
+    return {
+        "status": "complete" if full_target and len(declared_closure) > 1 and not missing else "incomplete",
+        "classification": "declared-dependency-closure" if full_target else "heuristic-only",
+        "authority": authority.relative_to(target_root).as_posix(),
+        "full_command": f"make {full_target}" if full_target else "",
+        "constituent_count": max(0, len(declared_closure) - 1),
+        "missing_constituent_ids": missing,
+        "rule": "A full proof suggestion is complete only when its maintained target resolves through the declared Makefile dependency graph.",
+    }
 
 
 def _repo_friction_regenerable_cache_hotspots(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> list[dict[str, Any]]:
