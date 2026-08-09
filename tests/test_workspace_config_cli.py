@@ -3738,9 +3738,13 @@ def test_note_delegation_outcome_rejects_duplicate_without_lifecycle_transition(
     ]
 
     assert cli.main(command) == 0
-    with pytest.raises(SystemExit):
-        cli.main(command)
-    assert "duplicate evidence for target/task/scope/provenance" in capsys.readouterr().err
+    capsys.readouterr()
+    assert cli.main(command) == 2
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "rejected"
+    assert payload["failure_class"] == "duplicate-mutation"
+    assert payload["completion_boundary"] == "mutation-not-applied"
+    assert "duplicate evidence for target/task/scope/provenance" in payload["message"]
 
 
 def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, capsys) -> None:
@@ -5228,7 +5232,7 @@ def test_note_delegation_outcome_rejects_cross_context_transition(tmp_path: Path
     )
     first = json.loads(capsys.readouterr().out)["recorded"]["record_id"]
 
-    with pytest.raises(SystemExit):
+    assert (
         cli.main(
             [
                 "note-delegation-outcome",
@@ -5250,7 +5254,12 @@ def test_note_delegation_outcome_rejects_cross_context_transition(tmp_path: Path
                 "json",
             ]
         )
-    assert "predecessor must match target/task/scope" in capsys.readouterr().err
+        == 2
+    )
+    rejected = json.loads(capsys.readouterr().out)
+    assert rejected["failure_class"] == "invalid-lifecycle-transition"
+    assert rejected["completion_boundary"] == "mutation-not-applied"
+    assert "predecessor must match target/task/scope" in rejected["message"]
 
 
 def test_repo_config_cli_invoke_sets_repo_owned_invocation_policy(tmp_path: Path, capsys) -> None:
