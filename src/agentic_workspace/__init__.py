@@ -10,6 +10,7 @@ except PackageNotFoundError:
 from .client import (
     AWClientError,
     detect_workspace,
+    external_conformance_profile,
     external_consumer_profile,
     external_contract_bundle,
     external_readiness_report,
@@ -23,6 +24,7 @@ from .client import (
 __all__ = [
     "AWClientError",
     "detect_workspace",
+    "external_conformance_profile",
     "external_consumer_profile",
     "external_contract_bundle",
     "external_readiness_report",

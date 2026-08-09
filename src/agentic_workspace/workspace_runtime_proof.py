@@ -3919,17 +3919,16 @@ def _proof_route_transition_gate_payload(
     except ConsequenceStoreUnavailable:
         records = []
         store_unavailable = True
-    class_by_id = {
-        str(record.get("finding_id") or ""): str(record.get("finding_class") or "")
-        for record in records
-        if str(record.get("event") or "") == "observed" and str(record.get("finding_id") or "")
-    }
+    latest_observation_by_id: dict[str, dict[str, Any]] = {}
+    for record in records:
+        finding_id = str(record.get("finding_id") or "")
+        if str(record.get("event") or "") == "observed" and finding_id:
+            latest_observation_by_id[finding_id] = record
+    class_by_id = {finding_id: str(record.get("finding_class") or "") for finding_id, record in latest_observation_by_id.items()}
     scoped_ids = {
         str(record.get("finding_id") or "")
-        for record in records
-        if str(record.get("event") or "") == "observed"
-        and str(record.get("finding_id") or "")
-        and _proof_route_transition_record_matches_scope(
+        for record in latest_observation_by_id.values()
+        if _proof_route_transition_record_matches_scope(
             record=record,
             changed_paths=transition_changed_paths,
             scope=scope,

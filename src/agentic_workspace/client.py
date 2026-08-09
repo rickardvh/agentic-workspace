@@ -13,7 +13,17 @@ from typing import Any, Mapping, Sequence, cast
 
 from jsonschema import Draft202012Validator
 
-FAILURE_KINDS = {"absent", "disabled", "incompatible", "unsupported", "rejected", "failed", "malformed", "invocation-unavailable"}
+FAILURE_KINDS = {
+    "absent",
+    "disabled",
+    "incompatible",
+    "unsupported",
+    "rejected",
+    "failed",
+    "retryable",
+    "malformed",
+    "invocation-unavailable",
+}
 READINESS_TRANSPORTS = ("cli-json", "python", "typescript", "vendor-neutral")
 READINESS_CASES = (
     "absent",
@@ -272,6 +282,16 @@ def external_readiness_report(required_operations: Sequence[str], *, allow_runti
 
 def external_contract_bundle() -> dict[str, Any]:
     return json.loads(_resource("external_contract_bundle.json").read_text(encoding="utf-8"))
+
+
+def external_conformance_profile(operation_ids: Sequence[str] | None = None) -> dict[str, Any]:
+    profile = dict(external_contract_bundle().get("external_conformance", {}))
+    operations = [dict(item) for item in profile.get("operations", []) if isinstance(item, Mapping)]
+    if operation_ids is not None:
+        requested = {str(operation_id) for operation_id in operation_ids}
+        operations = [item for item in operations if str(item.get("operation_id") or "") in requested]
+    profile["operations"] = operations
+    return profile
 
 
 def operation_compatibility_fingerprint(contract: Mapping[str, Any]) -> str:

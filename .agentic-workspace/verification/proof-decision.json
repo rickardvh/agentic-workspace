@@ -1,14 +1,15 @@
 {
+  "kind": "agentic-workspace/verification-proof-decision/v1",
   "proof_decision": {
-    "selected_decision": "add",
-    "trust_question": "Can evaluation routing admit provider identity and lifecycle evidence only through the host-owned trust boundary while preserving quiet non-match and selective due-action behavior?",
-    "host_strategy_source": "docs/maintainer/testing-strategy.md",
-    "proof_owner": "evaluation-operating-loop",
-    "proof_intent": "negative-authority-boundary",
+    "selected_decision": "convert-to-conformance",
+    "trust_question": "Do external Python, TypeScript, CLI JSON, and packaged-consumer transports preserve the same fail-closed operation contract and mutation outcomes?",
+    "host_strategy_source": "docs/maintainer/testing-strategy.md#contract-owned-cases",
+    "proof_owner": "conformance-contract",
+    "proof_intent": "target-parity",
     "evidence_durability": "permanent",
-    "narrowest_evidence": "Focused evaluation matching, quiet non-match, due-action projection, host-owned provider admission, forged-provider rejection, report compilation, and specialist-authority fixtures.",
-    "prune_or_replacement_condition": "Replace only when the evaluation registry generates equivalent provider-trust, lifecycle, matching, and reporting conformance cases.",
+    "narrowest_evidence": "IR-owned external readiness scenarios executed by scripts/check/run_operation_conformance_tests.py, plus one runner bridge test and one public package API test.",
+    "prune_or_replacement_condition": "Replace only when a narrower generated conformance protocol proves the same four transports, negative cases, additive-field preservation, and applicable mutation outcomes.",
     "confidence": "high",
-    "residual_risk": "Compiled due reports remain local evidence; external delivery sinks, receipts, retries, and migrations are not implied by report compilation."
+    "residual_risk": "Final clean installation, necessary/full footprint parity, and consumer removal remain owned by issue #2200 rather than this conformance receipt."
   }
 }

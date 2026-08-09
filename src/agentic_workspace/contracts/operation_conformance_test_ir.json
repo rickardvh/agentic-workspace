@@ -145,6 +145,34 @@
     ],
     "routing_rule": "Changed operation contract, schema, conformance, implementation artifact, adapter, or generated target paths should route to scripts/check/run_operation_conformance_tests.py before closeout when they touch migrated operation behavior; wrapper-shaped cases remain wrapper-smoke proof and must not be presented as default semantic operation proof."
   },
+  "external_readiness": {
+    "operations": [
+      {
+        "operation_id": "config.report",
+        "valid_input": {},
+        "runtime_exception_revision": "github-2044-closure:config.report@pr-2256",
+        "case_exceptions": {}
+      },
+      {
+        "operation_id": "delegation-outcome.append",
+        "valid_input": {
+          "delegation_target": "external-conformance",
+          "task_class": "bounded-conformance",
+          "scope_class": "bounded-conformance",
+          "source_type": "proof-receipt",
+          "source_ref": "external-conformance/delegation-outcome.append",
+          "idempotency_key": "external-conformance-delegation-outcome-append",
+          "outcome": "success"
+        },
+        "runtime_exception_revision": "github-2044-closure:delegation-outcome.append@pr-2256",
+        "mutation_path": ".agentic-workspace/delegation-outcomes.json",
+        "case_exceptions": {
+          "mutation-noop": "delegation-outcome.append is intentionally non-idempotent; duplicate evidence is rejected rather than reported as a successful no-op"
+        }
+      }
+    ],
+    "rule": "The operation conformance runner derives external-client scenarios from this existing authority, executes the packaged public client, and treats only explicit operation-specific non-applicable mutation vectors as satisfied exceptions."
+  },
   "initial_cases": [
     {
       "id": "defaults.selected-output.success",

@@ -1,27 +1,27 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:a9d79f7085e012eaccce910e3dd33146bdec218263fbb561d7fd9501c91e520f",
+  "profile_fingerprint": "sha256:0fafa42d64844a83f306cc69bab0c229551e1f306122fe13cd239e2a05f28f60",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.36.2",
+    "client_package": "0.37.0",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.36.2"
+      "version": "0.37.0"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.36.2"
+      "version": "0.37.0"
     }
   },
   "operations": {
     "agent-guidance.delete": {
       "identity": "agent-guidance.delete",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:72d08d1bf10095632440dc55c71ee2bc1f28c225add74fb7c8f3568150fb3616",
-      "compatibility_fingerprint": "sha256:b4f09b9e934c462a47c5fd815585c60cb95b14ceeb8b4e757af6f70af93658ae",
+      "fingerprint": "sha256:e601de8facc0995893161f0ff01c57b57e89d4dadc0797b6c6bae50aa87b8970",
+      "compatibility_fingerprint": "sha256:1c2ddc5ed7760dd19dd87cfd12b07329eaceae1db09c48c98ed0c3869d03c61a",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -594,7 +594,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -617,8 +618,8 @@
     "agent-guidance.edit": {
       "identity": "agent-guidance.edit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:1bf8bf97f93d6232471c053c513c03a5c3fa8930e4c47753731c02563fc53859",
-      "compatibility_fingerprint": "sha256:6734eda16717b7640d69c4e48247efe832967ff5c6df5e6e9379403ac6863b8e",
+      "fingerprint": "sha256:6d519df7e16c36cd9235b503e7ded8a9b1d5cb98724ce4ff88700a32f3f0767c",
+      "compatibility_fingerprint": "sha256:5824b15b1829cbe105a853cc410d4e9340910277d337f7bd22d74ab062e36da8",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -1193,7 +1194,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -1216,8 +1218,8 @@
     "agent-guidance.merge": {
       "identity": "agent-guidance.merge",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3454924d4ad4aab8710a00b96e974418f9440fe77caa6c09494d891f1e8845e2",
-      "compatibility_fingerprint": "sha256:6e9baa8ed85df6d273beb15e28556ebef9188a9ea7b9dc79374ecfccce461612",
+      "fingerprint": "sha256:a83cbb73cedd99eb0e55e286868db9ab3a3e353bb276852bcfc978f5e8c49086",
+      "compatibility_fingerprint": "sha256:b3c2f12bf925c80934f267d96827b3df376848fe5ed7b705d2a29e1a3b54aee1",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -1792,7 +1794,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -1815,8 +1818,8 @@
     "agent-guidance.promote": {
       "identity": "agent-guidance.promote",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:946b21aba3e2b9d05b9e58f87309c2a872e3a9679b3b4e3474354cc3a8deabd4",
-      "compatibility_fingerprint": "sha256:2eb280a967005ea6542d0d6a97f2d4b5f552714ea7436971ef5b68f34df8d20a",
+      "fingerprint": "sha256:20c7ca9b7496178fd9f251ca4efb3b770beae3d3a79f0468112c1cce04efa81e",
+      "compatibility_fingerprint": "sha256:fae32d22ddce6b33a056c89efb6c23e1122e24c8a9828487a6b7f7b1ee8160f6",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -2389,7 +2392,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -2412,8 +2416,8 @@
     "agent-guidance.retire": {
       "identity": "agent-guidance.retire",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:71b6b66a7b52d8a4fcdd787b13415486625fafecb80cec63ecfc66517b14ff73",
-      "compatibility_fingerprint": "sha256:f13861c1a6d0070560a5f53caaacd5549aae06a2e7db73493f2da0d0335769a7",
+      "fingerprint": "sha256:3d95a8246a41fbbcdab1a54cf2fba6e6b09dcc55b0c2b7515ad295e4e0ea8428",
+      "compatibility_fingerprint": "sha256:f1581c9a791a42c38fc170711edca0f30d6aa7a4079059fb243a5a4904a71884",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -2986,7 +2990,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -3009,8 +3014,8 @@
     "agent-guidance.revalidate": {
       "identity": "agent-guidance.revalidate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:4333fca58ac4e179f8fbc8ad7201cd5bc9b662f66fec0dcf77283a421190291f",
-      "compatibility_fingerprint": "sha256:cbab443fb6945b9446e76ff0c6f11e7bfe1a81db89ac2d04a5862f17f9e3f60a",
+      "fingerprint": "sha256:26f4d5de58e3f4e08479b4d889565224058b7b2dca669bedd20657a70368095d",
+      "compatibility_fingerprint": "sha256:e367aeb7b9fe4f82b0dbb859adb98161d9460ef66ec21f304d68c0d022808b1b",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -3583,7 +3588,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -3606,8 +3612,8 @@
     "agent-guidance.split": {
       "identity": "agent-guidance.split",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:0d75a3c0beded81fdb2acddaf4170ebe2dbc6f4543564f198cd9617f7c28393c",
-      "compatibility_fingerprint": "sha256:018989d3448c6d4065d1e891f9266be3124accabed3948ffa3733b8c9b930523",
+      "fingerprint": "sha256:82b226a6c1bbbe58e32cdc8ffc178fe980d1160055352582d4ccfd78c12c43c7",
+      "compatibility_fingerprint": "sha256:063e828e8378ff26627fc50ab2fefe9167cb21d1e698eefe7e23ac018bca4964",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -4182,7 +4188,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -4205,8 +4212,8 @@
     "agent-guidance.supersede": {
       "identity": "agent-guidance.supersede",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:67aadfd93c0d7e3431185ffb144faf2f138229f6b8130fdbf9a271a560d5b801",
-      "compatibility_fingerprint": "sha256:b1a4428baceed14528875b4843b50e518e5b2aea378a93ffc0b3c53a3f5b54c6",
+      "fingerprint": "sha256:b62d639f91a0a3870fe627d613a7cb2f38a2dfbcede13cad2d35354a4bfe55e7",
+      "compatibility_fingerprint": "sha256:14199f223fe128ec3815e39b328617ed27f43d11f5762d2e69aece06c231a5d5",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -4781,7 +4788,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -4804,8 +4812,8 @@
     "agent-guidance.suppress": {
       "identity": "agent-guidance.suppress",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:c92c753fcb15717ba351e29ce57f1d784dfbc97eb01a59648158e0b70425f136",
-      "compatibility_fingerprint": "sha256:dc93b6769a2e99e92e83c105fd060daf7ccda36d1dda15f12b43e67a34dbde96",
+      "fingerprint": "sha256:8a173a9c2a7b07549bbe2f759ee72c707a8e65015ed91dcdcbbe32c2c13157a1",
+      "compatibility_fingerprint": "sha256:a925b0b8a985c9c99ca20dbf5393012c127298aeb05e2254959dce4964b88da4",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5378,7 +5386,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -5401,8 +5410,8 @@
     "agent-guidance.weaken": {
       "identity": "agent-guidance.weaken",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b621581d56b3aaf00a82b532fb5dda77db2c67655bf8ef64403c3d47f526c0e9",
-      "compatibility_fingerprint": "sha256:2a380b6f50be9ec0ac9d6c2c0fe3bc85ea14c781d340d3e8f562431c245ccc01",
+      "fingerprint": "sha256:1371529ddbff45ff595bbe6be57ec34e2ce400242c254787ba42b91b14edd84a",
+      "compatibility_fingerprint": "sha256:70839847c941c6a0bd4cfdc69cdbce714577cd184c7800455ec1e2a491d03e52",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5975,7 +5984,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -5998,8 +6008,8 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3a3063d766303814301e280c59ce50d212e1a7033bfce3775144709372b16056",
-      "compatibility_fingerprint": "sha256:1be2ec32fbf4b71aae526be3665c02ff10d66bb698c88bc57c3093d07607e61a",
+      "fingerprint": "sha256:9948f22b100c61f9c1b1e0d40c2017fcfbf0a0783072963c2e10893277ef1b06",
+      "compatibility_fingerprint": "sha256:d6bd4450571837f81301cb32ee120de89b8bd94e6f56f269c11f5e16c80bfbb9",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -6665,7 +6675,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -6688,8 +6699,8 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:9294c1e52779df88d666bf819b2ef3e286782ef4fa757fdeb0d644519198d7b9",
-      "compatibility_fingerprint": "sha256:4d1f945a405d1cf0f2cd53878d0c2d5cd3c931bf9edd8a1414e0b8521d0f6a13",
+      "fingerprint": "sha256:1abb9fdb91ad91539b791efe2b0870908a05fa7a2df90e4a4b31a13a044c55d0",
+      "compatibility_fingerprint": "sha256:479d569da5002587dd405cc84a2021e524eb09f66e49fb2c1f7b1b1e0e20497e",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -7297,7 +7308,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -7320,8 +7332,8 @@
     "assignment.close": {
       "identity": "assignment.close",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ec5d49ad8b0674af1d53741d1d022fe2492fa46436ca8f5a26b9ae09be2af61d",
-      "compatibility_fingerprint": "sha256:f0b1c9df719a9875408ed38fd1c4ebc53663120fd1e270ddf0d3f4193a4191ff",
+      "fingerprint": "sha256:f87ddb22f51d2ed7cfe32667ebad23e5faa564c2711082ae4b17d303680b5344",
+      "compatibility_fingerprint": "sha256:06748a242e6be1a16702e2b4fa7c7ed464a506c112d8685d2383eb14449b14d6",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -7929,7 +7941,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -7952,8 +7965,8 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:94146784138bb5cdf7eb9a44032391ca3d60f6498fb471a964988cc020a6b820",
-      "compatibility_fingerprint": "sha256:6ed866d41808c9fb224cd092bc4ddbd7c36afd12312184882e07f51361822038",
+      "fingerprint": "sha256:e8061311439663333aa3890ee497f671d02ae9ea840d2b415f4889c9f9d95f76",
+      "compatibility_fingerprint": "sha256:135171ad72f5f7d568a5ebb143fa3cdf0958fd15af0a31c833984a823e6920bc",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -8561,7 +8574,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -8584,8 +8598,8 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:cb9a4708cf2907aa376f36e2592fe1be14380a1c167a82e89d0743b4b0256860",
-      "compatibility_fingerprint": "sha256:a69ae6eeb78d3cb7938d78e5ccdc6b17ab46d046364bc39a6ee0ef08de6a5c35",
+      "fingerprint": "sha256:d43be9fac0349e9ca0e40b79324f4fb23b0ee4c57189187049268752ee885c91",
+      "compatibility_fingerprint": "sha256:54baa4af8719f08a046a214feda6bfc5bf2dc03ec29f9e4a571bd1170e051631",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -9193,7 +9207,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -9216,8 +9231,8 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:17d14cb89a4f8f802a5ccbaabefefda6b7fdb7a104a27280a50db66d26503f3a",
-      "compatibility_fingerprint": "sha256:cb13ecaded5484bd6f6fcb6021d6af07f485e73df012ca925278ff31001a83b2",
+      "fingerprint": "sha256:9a75ecdb0630511d11a7bb1fd7652c1d3e01efe6f0fb85c0a377537d2fbea649",
+      "compatibility_fingerprint": "sha256:65f9b5cc258f69af9e3efaaf594d7648e3a28835576e5f9009baeaf9395905f9",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -9825,7 +9840,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -9848,8 +9864,8 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b290954b3458d18244ee11e24f7ea9f5449da7ee6e8f9c80974801069f71f552",
-      "compatibility_fingerprint": "sha256:2d460376f088efdca056a471bd1c954fa8734455dda69434b56ea54a4f36615e",
+      "fingerprint": "sha256:d8b60c1fa490ab2c61561437dead477407b09fd27cb931672d4a6c496049fc06",
+      "compatibility_fingerprint": "sha256:46109161b1faeb3863c9251a19c2f23e5363f57790bb2dcc9d3344bd9958e788",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -10457,7 +10473,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -10480,8 +10497,8 @@
     "assignment.reassign": {
       "identity": "assignment.reassign",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:5e1b994e92527dd3dabdf3104d65e7f776cb427c89e7a18df9df334a4fd61e7c",
-      "compatibility_fingerprint": "sha256:90373e70f7ba6190b8cf9fa861c7a5c1fd9010fbbf17c9fca57774c160e9196d",
+      "fingerprint": "sha256:c81646758b369cf43b944f15bfd537eeb41e6d2adf5f695cbb9c0e981665b966",
+      "compatibility_fingerprint": "sha256:036997e20081daf52bf9f0b30c965f0cc0617bb9ad5cfb751a0b3f92da8ef649",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -11089,7 +11106,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -11112,8 +11130,8 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:d9d90a7b4e82d51be1c29d44583042521b57929d7d950d9d1b09ea9eeee6f78a",
-      "compatibility_fingerprint": "sha256:5393f592de95281cbd5076bca2fb3a606a2c84231f9ac9cfa13ee1bae209067b",
+      "fingerprint": "sha256:dacba226eee4efe9aff523a60e757aab4f4a9568c4be3059221d09db1820f78f",
+      "compatibility_fingerprint": "sha256:2cfdf4b8cbc9c2f4479ca0d9b1ad137f632ce755e0962fc7656768330b3d1021",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -11721,7 +11739,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -11744,8 +11763,8 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6f8ce6d7a61af65067d1db9fdf515a4154de88b610e5ff694a57fba91895ca00",
-      "compatibility_fingerprint": "sha256:779ec57e0237331bfd46bf79076fb4726b5144bcfc6c08f82102fa569129b76e",
+      "fingerprint": "sha256:bef43cf64cbfb120cd0c49dc5c8538f348226f6a65c2fb0bf48359bbdba0dbcc",
+      "compatibility_fingerprint": "sha256:15838fff4323822a0596ef39ee1c84cd47ff051c81944ec5228dfe9cca35e254",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -12353,7 +12372,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -12376,8 +12396,8 @@
     "config.report": {
       "identity": "config.report",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:98751cf0f0da600504e9e504adb0f36dede9d4043393173f0eebdb65d42c678b",
-      "compatibility_fingerprint": "sha256:8cb4d804dd32bdd6cb940e96426f6d18fe830e7aa054d45dbec471a3607649d1",
+      "fingerprint": "sha256:b112d7164082b00aa713cedc47ff2a1a1c991cbbc5a5e511bd52f06b870b7df8",
+      "compatibility_fingerprint": "sha256:eaabae61a4c3fab20ce111cb3c311830bce39f00e28311abb3a1d4e97667f8fa",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "config.report",
@@ -12909,7 +12929,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -12932,8 +12953,8 @@
     "correction-event.correct-dispute": {
       "identity": "correction-event.correct-dispute",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:75bff391d0149b273069b87342acdd5b1c0c70686771f2537db5b20230baed6b",
-      "compatibility_fingerprint": "sha256:5216c44492b5378c3760c17e038e3c1d8fec5878df6f62b84b677bd91ae502d5",
+      "fingerprint": "sha256:ee1356ce35f5876bc0dc0384952ec922968148069494866e9218b9434d1eedc1",
+      "compatibility_fingerprint": "sha256:adb537abe46d197eba478185d456733cfc7624973283827d16cb94240743c5f0",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -13563,7 +13584,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -13586,8 +13608,8 @@
     "correction-event.prune-compact": {
       "identity": "correction-event.prune-compact",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:4e2d762234c3212fbc05d66d4d07c2f1b5a2183cd179baa7c165788120c93059",
-      "compatibility_fingerprint": "sha256:303c56fa4f01484b3e1ce7ad06ec653282e79ca5a2fedde8ab4e54fa9e6bdc0a",
+      "fingerprint": "sha256:ccbdfdc41a2599ac2136f7f6e984caf7e05aad6bbe8514743603254df67814e8",
+      "compatibility_fingerprint": "sha256:8b932c348c48c94a3f430923823de4329634c82588210a01f21931842b65cf6b",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -14217,7 +14239,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -14240,8 +14263,8 @@
     "correction-event.query": {
       "identity": "correction-event.query",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f7be441144dd68495cb5619f4735c47ecf06864c5503de5d7999721eda2cd1eb",
-      "compatibility_fingerprint": "sha256:3ad1280b6f154db1063e863c33ada38662e22f8dccfc746b85a2ee1a3584eb75",
+      "fingerprint": "sha256:131e522eebcd9cd9a62c1a328a6b22e2bef5b6f95cfa46af1ff1c7e52053873e",
+      "compatibility_fingerprint": "sha256:2d7341d94e2a9137c1528aad8ceed1ebde78252506ad4abdf9d82e9512a0e149",
       "contract": {
         "classification": "read-only-report",
         "command_surface": {
@@ -14871,7 +14894,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -14894,8 +14918,8 @@
     "correction-event.submit": {
       "identity": "correction-event.submit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:dd41fa14fbe53acb86e3e7e5073cfde7bba6cda82a729d6db6558aabc66b8455",
-      "compatibility_fingerprint": "sha256:b283bc4999a125a9f50d8335dd4ddf81842d3884710f31edfca1f0111bcd2366",
+      "fingerprint": "sha256:ca492ef1ac0a617993dcf3bcc167222631f409bfe78036d4f24e6e2f276f3d66",
+      "compatibility_fingerprint": "sha256:ddd71afaa564d94397329f9969767760fa6b7743c5e2441b729f247368bc8627",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -15525,7 +15549,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -15548,8 +15573,8 @@
     "correction-event.withdraw-supersede": {
       "identity": "correction-event.withdraw-supersede",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:7949ecd43266b673db5bd3715ef6fa69cef0a094e80a9a97e7f6b98216fc6306",
-      "compatibility_fingerprint": "sha256:430fa04c46ef95d6f84ed9661883413d088a438e6417fecef7906b0b40217d69",
+      "fingerprint": "sha256:1e03640959f1f3626df5ce7e6322a60c1d960953081e2fce6aa0b8d9165ae480",
+      "compatibility_fingerprint": "sha256:e2b3e8f9a6cbbf3f312a0c8fe53b176f90560959782cf914f81f1d9ad753c69a",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -16179,7 +16204,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -16202,8 +16228,8 @@
     "delegation-outcome.append": {
       "identity": "delegation-outcome.append",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:43ddaa2ab593ca4bb5e3281710ad633c8b259a7b2967472aa00d55ab8afd95ca",
-      "compatibility_fingerprint": "sha256:3826f5082433729bfbb924ae7e7fbb280ef7846391162c7e390831965d51857f",
+      "fingerprint": "sha256:4fbf0d6e4552aa718abf46b8ff3b8111b3d24f63aad6f86d36c9f7980137d032",
+      "compatibility_fingerprint": "sha256:0189933116401dd52b6174a81c7a0afa142c66b66bc8b015db27c0b74813d3f2",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "delegation-outcome.append",
@@ -16886,7 +16912,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -16909,8 +16936,8 @@
     "evaluation.delivery-status": {
       "identity": "evaluation.delivery-status",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:31a12290ca6c0ff0a60d912af2561cc11f063d1727b6c1a51a5a35bf0f4d0e8f",
-      "compatibility_fingerprint": "sha256:2da90e18c06890b8d5e35ad90c605b09e8cd6c06d7ed399ae3f8fa0cfdefe9fb",
+      "fingerprint": "sha256:f133931aefe361f1f0c6ca00107e369cc26768b67b88c5092b8a054c92be42f4",
+      "compatibility_fingerprint": "sha256:3a9833144d38989ed074339f77040144c79be3462db11cafb211aac08c970427",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.delivery-status",
@@ -17170,7 +17197,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -17193,8 +17221,8 @@
     "evaluation.external-adapter-receipt": {
       "identity": "evaluation.external-adapter-receipt",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f402fde771b9177bb0ce410baf53997d8fbb4b8ffd3164a8f946bdfe0675a90f",
-      "compatibility_fingerprint": "sha256:f69ae2d5d2f42c4cd39fb35ed896fe41fa1f2e5350510505dc795a4d4bb5dc05",
+      "fingerprint": "sha256:0ac4d45e8b97affb3943db032eb0ef370e1ae20c7ee0955048ae09e852fd5869",
+      "compatibility_fingerprint": "sha256:4e2e602f8cd88c8bbfdd82bdbf1d0ad41a85314d709ed5813c0be84eab48c791",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.external-adapter-receipt",
@@ -17561,7 +17589,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -17584,8 +17613,8 @@
     "evaluation.external-delivery": {
       "identity": "evaluation.external-delivery",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:dbf29426ab3c56905962d0f3ad177cd6eb5a89a7d7f750762a7160d1df81d08f",
-      "compatibility_fingerprint": "sha256:074fda166175f21c8497ef61111e7a5770b87d54b4cc61ff2cb86703de6c2290",
+      "fingerprint": "sha256:9c227488a1aa61e7e74e6fe6072d3634a9e423f4308692d05cbedb8bc6a64e75",
+      "compatibility_fingerprint": "sha256:594703befea0ca856b7ab6f2ff5c4c1fb8e1c1f3a966e2e57d5afb46deca6ef1",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.external-delivery",
@@ -17862,7 +17891,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -17885,8 +17915,8 @@
     "evaluation.external-host-result-import": {
       "identity": "evaluation.external-host-result-import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:4b4872cde889d0beb2745398faebdeb34645d90bd1362b8b57cf2ed517b2e681",
-      "compatibility_fingerprint": "sha256:cb6c8569048803c5a9d07550d4c15a7b6a20174051bc7ef645da00f7193106c1",
+      "fingerprint": "sha256:f8625d86de7fc31a68d5764b5e91f0d31eeb7032127dce85bb59e241cdfa555f",
+      "compatibility_fingerprint": "sha256:fba257a87171bfac7fb71471fc4ab4ea35c7e1bd46eb5e97b75568502aa441e0",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.external-host-result-import",
@@ -18192,7 +18222,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -18215,8 +18246,8 @@
     "evaluation.external-request": {
       "identity": "evaluation.external-request",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:8ed87608024cd5a00eaf7208ad1aeec0729cbee3d32784c07184a55b88102809",
-      "compatibility_fingerprint": "sha256:332130e4c180fc670136e82bfdc8b1ee826d43de8b8bb739035eb8aecc20da6b",
+      "fingerprint": "sha256:1cde3cfac055af5f35056585cd65f64aa12bc5a042767433b0744e714f5afa50",
+      "compatibility_fingerprint": "sha256:0cd5f058a339a067790fd89df91cf862654490d44ddf8d88cf34a7089af99237",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.external-request",
@@ -18472,7 +18503,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -18495,8 +18527,8 @@
     "evaluation.local-delivery": {
       "identity": "evaluation.local-delivery",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:eff60e0af852f47682732eba349732c4431effbad940ba59d05f48c1cf20e496",
-      "compatibility_fingerprint": "sha256:b9ee313b26455eb6a1f3a32dfda7a95ab34f213b6e7e6bd8b3fc078aab3d8e64",
+      "fingerprint": "sha256:1df01375c62bbf5d8b0d56cc5db963fdb2710db9fbcb8adf341f25e6cc8d917c",
+      "compatibility_fingerprint": "sha256:14e1f4d5d33701508d6dc6e4b35d2be45c0b7cd4b8d203a635c17dce8385da30",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.local-delivery",
@@ -18757,7 +18789,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -18780,8 +18813,8 @@
     "evaluation.observe": {
       "identity": "evaluation.observe",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:9635d90397b25ffc92523f478e4e385cc008b44ba1cfd817ead15329f10ef278",
-      "compatibility_fingerprint": "sha256:3ad95af3342ef798ec156b1d874e555f734ccd0d8d475b6acc25bf7f46b4b3a7",
+      "fingerprint": "sha256:681326cc8aa88bdd086e780bd8c6cd054844f3a8c693691dfaf6d4eab9c6db6d",
+      "compatibility_fingerprint": "sha256:bbb855cd3f8e352c3583156848ecbeb77db79937b78edc5f99cf38704dd0c71f",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.observe",
@@ -19293,7 +19326,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -19316,8 +19350,8 @@
     "evaluation.report-preview": {
       "identity": "evaluation.report-preview",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ce6dd64d556f72373f124ff5432d59276cadd597e4dcb7ce54a3af51fc5b3340",
-      "compatibility_fingerprint": "sha256:5702c0f5a774b17b006b89815981052f3ae43eb61f92c5c308c1e8e2484e74fc",
+      "fingerprint": "sha256:5098e2fd328cf47c37fd259b69233aea20c4cd878928fbb25e684f17e9717f07",
+      "compatibility_fingerprint": "sha256:b65429e21d50aa7f73d5861660699041113a163c2ebf21cde166e1cf0e0fcb91",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.report-preview",
@@ -19577,7 +19611,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -19600,8 +19635,8 @@
     "evaluation.retry": {
       "identity": "evaluation.retry",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:96945f01955dc0d11a465ca00351ebd69fe9fefdea50e55e8d86f4619c0b5240",
-      "compatibility_fingerprint": "sha256:bdd3dc69f9d7f35217cadd9052c4ed760727c0542c1366688e4b12fcc02168d4",
+      "fingerprint": "sha256:b53bc43779e85b8a2f6965ec58bb5c1df7f151a68376a4026fefd7b751ee5f27",
+      "compatibility_fingerprint": "sha256:d32cbc87fd6d701abbc58ac46e6d8a9e87cfd09afd274ebc92f67b4c1da4b88c",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.retry",
@@ -19857,7 +19892,8 @@
                   "type": "string",
                   "enum": [
                     "rejected",
-                    "failed"
+                    "failed",
+                    "retryable"
                   ]
                 },
                 "message": {
@@ -20961,7 +20997,8 @@
             "type": "string",
             "enum": [
               "rejected",
-              "failed"
+              "failed",
+              "retryable"
             ],
             "description": "Stable external failure classification."
           },
@@ -20982,6 +21019,54 @@
         "additionalProperties": true
       }
     }
+  },
+  "external_conformance": {
+    "kind": "agentic-workspace/packaged-external-conformance-profile/v1",
+    "source": "operation_conformance_test_ir.json#external_readiness",
+    "readiness_cases": [
+      "absent",
+      "disabled",
+      "incompatible",
+      "malformed",
+      "retryable",
+      "additive-field",
+      "mutation-applied",
+      "mutation-noop",
+      "mutation-rejected",
+      "mutation-failed"
+    ],
+    "transport_matrix": [
+      "cli-json",
+      "python",
+      "typescript",
+      "vendor-neutral"
+    ],
+    "operations": [
+      {
+        "operation_id": "config.report",
+        "valid_input": {},
+        "runtime_exception_revision": "github-2044-closure:config.report@pr-2256",
+        "case_exceptions": {}
+      },
+      {
+        "operation_id": "delegation-outcome.append",
+        "valid_input": {
+          "delegation_target": "external-conformance",
+          "task_class": "bounded-conformance",
+          "scope_class": "bounded-conformance",
+          "source_type": "proof-receipt",
+          "source_ref": "external-conformance/delegation-outcome.append",
+          "idempotency_key": "external-conformance-delegation-outcome-append",
+          "outcome": "success"
+        },
+        "runtime_exception_revision": "github-2044-closure:delegation-outcome.append@pr-2256",
+        "mutation_path": ".agentic-workspace/delegation-outcomes.json",
+        "case_exceptions": {
+          "mutation-noop": "delegation-outcome.append is intentionally non-idempotent; duplicate evidence is rejected rather than reported as a successful no-op"
+        }
+      }
+    ],
+    "rule": "The operation conformance runner derives external-client scenarios from this existing authority, executes the packaged public client, and treats only explicit operation-specific non-applicable mutation vectors as satisfied exceptions."
   },
   "requirement_states": [
     "compatible",

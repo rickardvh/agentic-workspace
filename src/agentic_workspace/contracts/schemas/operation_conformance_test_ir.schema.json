@@ -234,6 +234,35 @@
       "additionalProperties": false,
       "description": "Compact proof shape expected from the future operation conformance runner."
     },
+    "external_readiness": {
+      "type": "object",
+      "required": ["operations", "rule"],
+      "properties": {
+        "operations": {
+          "type": "array",
+          "description": "Bounded externally consumable operations whose packaged client readiness is executed by the conformance runner.",
+          "items": {
+            "type": "object",
+            "required": ["operation_id", "valid_input", "runtime_exception_revision", "case_exceptions"],
+            "properties": {
+              "operation_id": {"type": "string", "minLength": 1},
+              "valid_input": {"type": "object"},
+              "runtime_exception_revision": {"type": "string", "minLength": 1},
+              "mutation_path": {"type": "string", "minLength": 1},
+              "case_exceptions": {
+                "type": "object",
+                "propertyNames": {"enum": ["mutation-applied", "mutation-noop", "mutation-rejected", "mutation-failed"]},
+                "additionalProperties": {"type": "string", "minLength": 1}
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "rule": {"type": "string", "minLength": 1, "description": "Authority and fail-closed interpretation rule for the packaged external conformance profile."}
+      },
+      "additionalProperties": false,
+      "description": "Operation-specific inputs and explicit non-applicable mutation vectors used by the existing conformance runner to produce packaged external-client readiness evidence."
+    },
     "initial_cases": {
       "type": "array",
       "minItems": 3,

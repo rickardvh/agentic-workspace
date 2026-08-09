@@ -671,6 +671,36 @@ def test_vendor_neutral_non_operation_cases_are_unavailable_not_skipped(monkeypa
     assert "selected/text wrapper projection" in selected_text["message"]
 
 
+def test_vendor_neutral_packaged_client_executes_ir_owned_readiness_matrix() -> None:
+    runner = _load_test_ir_runner()
+    if runner.shutil.which("node") is None or (runner.shutil.which("npm") is None and runner.shutil.which("npm.cmd") is None):
+        pytest.skip("Node and npm are required for packaged external-client conformance")
+
+    payload = runner.run_ir_cases(target_selection="vendor-neutral", case_filter=set(), require_node=True)
+
+    readiness = [case for case in payload["cases"] if case.get("readiness_case")]
+    by_operation = {
+        operation_id: {case["readiness_case"]: case for case in readiness if case["operation_id"] == operation_id}
+        for operation_id in ("config.report", "delegation-outcome.append")
+    }
+    assert payload["summary"]["fail_count"] == 0
+    assert set(by_operation["config.report"]) == {"absent", "disabled", "incompatible", "malformed", "retryable", "additive-field"}
+    assert set(by_operation["delegation-outcome.append"]) == {
+        "absent",
+        "disabled",
+        "incompatible",
+        "malformed",
+        "retryable",
+        "additive-field",
+        "mutation-applied",
+        "mutation-rejected",
+        "mutation-failed",
+    }
+    assert all(case["state"] == "pass" for case in readiness)
+    assert payload["readiness_case_exceptions"]["delegation-outcome.append"]["mutation-noop"]
+    assert payload["runtime_exception_revisions"]["config.report"].endswith("@pr-2256")
+
+
 def test_operation_conformance_runner_compares_parity(monkeypatch) -> None:
     runner = _load_test_ir_runner()
 

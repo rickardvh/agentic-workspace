@@ -14,6 +14,7 @@ if str(REPO_ROOT) not in sys.path:
 from scripts.check.run_operation_conformance_tests import build_external_operation_conformance_receipts  # noqa: E402
 
 IR_PATH = REPO_ROOT / "src/agentic_workspace/contracts/command_package_ir.json"
+OPERATION_CONFORMANCE_IR_PATH = REPO_ROOT / "src/agentic_workspace/contracts/operation_conformance_test_ir.json"
 OUTPUTS = (
     REPO_ROOT / "src/agentic_workspace/contracts/external_consumer_profile.json",
     REPO_ROOT / "generated/workspace/python/external_consumer_profile.json",
@@ -548,6 +549,7 @@ def render_bundle(profile: dict[str, object]) -> str:
         operation["compatibility_fingerprint"] = (
             "sha256:" + hashlib.sha256(json.dumps(compatible, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         )
+    conformance_ir = json.loads(OPERATION_CONFORMANCE_IR_PATH.read_text(encoding="utf-8"))
     payload = {
         "schema_version": "agentic-workspace/external-contract-bundle/v1",
         "protocol": profile["compatibility"]["protocol"],
@@ -568,6 +570,14 @@ def render_bundle(profile: dict[str, object]) -> str:
         },
         "operations": operations,
         "schemas": dict(sorted(schemas.items())),
+        "external_conformance": {
+            "kind": "agentic-workspace/packaged-external-conformance-profile/v1",
+            "source": "operation_conformance_test_ir.json#external_readiness",
+            "readiness_cases": list(READINESS_CASES),
+            "transport_matrix": list(READINESS_TRANSPORTS),
+            "operations": conformance_ir.get("external_readiness", {}).get("operations", []),
+            "rule": conformance_ir.get("external_readiness", {}).get("rule", ""),
+        },
         "requirement_states": ["compatible", "incompatible", "missing", "runtime-backed", "unsupported"],
         "compatibility_rule": "Protocol major versions must match; fingerprint changes require requirement negotiation.",
     }

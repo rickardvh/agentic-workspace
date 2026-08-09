@@ -70,6 +70,32 @@ proof, and closeout. Unknown additive result fields must be preserved, and an
 incompatible profile or missing operation must fail closed rather than causing
 an adapter to reconstruct lifecycle semantics.
 
+## External conformance
+
+Released clients expose the generated external conformance profile from the
+same operation-test authority used by AW. Python consumers call
+`external_conformance_profile([...])`; TypeScript consumers call
+`externalConformanceProfile([...])`. The returned package data names the
+transport matrix, readiness cases, operation-specific valid input, current
+runtime-exception revision, and any explicit non-applicable mutation vector.
+
+An integration should execute the selected cases through its own transport and
+preserve AW's structured result or error unchanged. Missing cases, unavailable
+targets, and failed vectors are not passing evidence. A process exit of zero is
+not enough for mutation conformance: the integration must retain the applied,
+rejected, failed, or explicitly excluded outcome named by the profile. AW
+maintainers publish the canonical executed receipts with:
+
+`uv run --active python scripts/check/run_operation_conformance_tests.py --target all --require-node`
+
+That command packages the public TypeScript client into an isolated temporary
+consumer, exercises the IR-owned absent, disabled, incompatible, malformed,
+retryable, additive-field, and applicable mutation vectors, and publishes
+revision-bound receipts only when the full selected matrix passes. Final clean
+installation, necessary/full footprint parity, consumer removal, and no-residue
+proof remain the independent-consumer closure gate rather than being inferred
+from these receipts.
+
 ## Scratch Space
 
 Use `.agentic-workspace/local/scratch/` freely for temporary agent working files. It is git-ignored local space and is there so agents do not need to invent a repo-specific scratch convention.

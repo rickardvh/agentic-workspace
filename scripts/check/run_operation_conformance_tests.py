@@ -266,8 +266,14 @@ def _readiness_transport_statuses(operation_results: list[dict[str, object]]) ->
     return transports
 
 
-def _readiness_case_statuses(entry: Mapping[str, object], operation_results: list[dict[str, object]]) -> dict[str, dict[str, object]]:
+def _readiness_case_statuses(
+    entry: Mapping[str, object],
+    operation_results: list[dict[str, object]],
+    *,
+    case_exceptions: Mapping[str, object] | None = None,
+) -> dict[str, dict[str, object]]:
     is_mutation_operation, mutation_reason = _is_mutation_operation(entry)
+    exceptions = case_exceptions or {}
 
     def _results_for(case_name: str) -> list[dict[str, object]]:
         if case_name.startswith("mutation-"):
@@ -281,6 +287,12 @@ def _readiness_case_statuses(entry: Mapping[str, object], operation_results: lis
                 "passed",
                 reason=f"not applicable: {mutation_reason}",
                 evidence=[str(entry.get("operation_contract") or entry.get("id") or "operation-contract")],
+            )
+        if case_name in exceptions:
+            return _status(
+                "passed",
+                reason=f"explicit non-applicable operation vector: {exceptions[case_name]}",
+                evidence=[f"operation_conformance_test_ir.json#external_readiness:{entry.get('id')}:{case_name}"],
             )
         if not results:
             return _status("not-run", reason=f"no {case_name} result was produced by this invocation")
@@ -380,7 +392,13 @@ def build_external_operation_conformance_receipts(
             operation_results=operation_results,
         )
         transports = _readiness_transport_statuses(operation_results)
-        cases = _readiness_case_statuses(entry, operation_results)
+        exception_sets = conformance_result.get("readiness_case_exceptions", {})
+        operation_exceptions = exception_sets.get(operation_id, {}) if isinstance(exception_sets, Mapping) else {}
+        cases = _readiness_case_statuses(
+            entry,
+            operation_results,
+            case_exceptions=operation_exceptions if isinstance(operation_exceptions, Mapping) else {},
+        )
         receipt_status = (
             "passed"
             if all(item["status"] == "passed" for item in [*transports.values(), *cases.values()])
@@ -731,6 +749,174 @@ def _write_local_invoke_config(fixture_root: Path) -> None:
         config.write_text('schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8", newline="\n")
 
 
+def _external_readiness_results(
+    *,
+    manifest: Mapping[str, object],
+    temp_root: Path,
+    client_path: Path | None,
+    client_status: str,
+    require_node: bool,
+) -> tuple[list[dict[str, object]], dict[str, str], dict[str, dict[str, str]]]:
+    readiness = manifest.get("external_readiness", {})
+    specs = readiness.get("operations", []) if isinstance(readiness, Mapping) else []
+    runtime_revisions: dict[str, str] = {}
+    case_exceptions: dict[str, dict[str, str]] = {}
+    if not isinstance(specs, list):
+        return [], runtime_revisions, case_exceptions
+    node = shutil.which("node")
+    if node is None or client_path is None:
+        state = "fail" if require_node else "unavailable"
+        return [
+            {
+                "case_id": "external-readiness.packaged-client",
+                "behavioral_class": "boundary",
+                "readiness_case": "",
+                "operation_id": str(spec.get("operation_id") or ""),
+                "artifact_id": "packed:@agentic-workspace/workspace-cli",
+                "adapter_id": "vendor-neutral.packaged-consumer",
+                "conformance_ref": "external-readiness",
+                "target": "vendor-neutral",
+                "state": state,
+                "message": client_status,
+            }
+            for spec in specs
+            if isinstance(spec, Mapping)
+        ], runtime_revisions, case_exceptions
+
+    results: list[dict[str, object]] = []
+    for raw_spec in specs:
+        if not isinstance(raw_spec, Mapping):
+            continue
+        operation_id = str(raw_spec.get("operation_id") or "")
+        runtime_revisions[operation_id] = str(raw_spec.get("runtime_exception_revision") or "")
+        raw_exceptions = raw_spec.get("case_exceptions", {})
+        case_exceptions[operation_id] = (
+            {str(key): str(value) for key, value in raw_exceptions.items()} if isinstance(raw_exceptions, Mapping) else {}
+        )
+        operation_root = temp_root / "external-readiness" / operation_id.replace(".", "-")
+        base_root = operation_root / "enabled"
+        absent_root = operation_root / "absent"
+        disabled_root = operation_root / "disabled"
+        stub_root = operation_root / "stub"
+        for root in (base_root, absent_root, disabled_root, stub_root):
+            root.mkdir(parents=True, exist_ok=True)
+            (root / ".git").mkdir(exist_ok=True)
+            (root / ".git" / ".keep").write_text("", encoding="utf-8")
+        _write_local_invoke_config(base_root)
+        (disabled_root / ".agentic-workspace").mkdir(parents=True, exist_ok=True)
+        (disabled_root / ".agentic-workspace" / "config.toml").write_text(
+            'schema_version = 1\n[workspace]\nenabled = false\ncli_invoke = "agentic-workspace"\n',
+            encoding="utf-8",
+            newline="\n",
+        )
+        (stub_root / ".agentic-workspace").mkdir(parents=True, exist_ok=True)
+        (stub_root / ".agentic-workspace" / "config.toml").write_text(
+            'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+            encoding="utf-8",
+            newline="\n",
+        )
+        response_path = operation_root / "success-result.json"
+        stub_path = operation_root / "transport_stub.py"
+        stub_path.write_text(
+            "import json, pathlib, sys\n"
+            "mode = sys.argv[1]\n"
+            "response_path = pathlib.Path(sys.argv[2])\n"
+            "if mode == 'retryable':\n"
+            "    print(json.dumps({'kind': 'agentic-workspace/retryable-operation-error/v1', 'status': 'retryable', 'message': 'retry after refreshing runtime state'}))\n"
+            "    raise SystemExit(3)\n"
+            "if mode == 'failed':\n"
+            "    print(json.dumps({'kind': 'agentic-workspace/operation-error/v1', 'status': 'failed', 'message': 'simulated downstream failure'}))\n"
+            "    raise SystemExit(1)\n"
+            "if mode == 'rejected':\n"
+            "    print(json.dumps({'kind': 'agentic-workspace/operation-error/v1', 'status': 'rejected', 'message': 'simulated safety rejection'}))\n"
+            "    raise SystemExit(2)\n"
+            "payload = json.loads(response_path.read_text(encoding='utf-8'))\n"
+            "payload['future_additive_field'] = {'preserved': True}\n"
+            "print(json.dumps(payload))\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        valid_input = dict(raw_spec.get("valid_input", {})) if isinstance(raw_spec.get("valid_input"), Mapping) else {}
+        script = f"""
+import {{ AWClientError, invokeOperation, negotiateRequirements }} from {json.dumps(client_path.as_uri())};
+import {{ existsSync, writeFileSync }} from 'node:fs';
+const operationId = {json.dumps(operation_id)};
+const values = {json.dumps(valid_input, sort_keys=True)};
+const enabledTarget = {json.dumps(str(base_root))};
+const absentTarget = {json.dumps(str(absent_root))};
+const disabledTarget = {json.dumps(str(disabled_root))};
+const stubTarget = {json.dumps(str(stub_root))};
+const stub = {json.dumps(str(stub_path))};
+const responsePath = {json.dumps(str(response_path))};
+const python = {json.dumps(sys.executable)};
+const mutationPath = {json.dumps(str(raw_spec.get('mutation_path') or ''))};
+const outcomes = [];
+function pass(name, detail = {{}}) {{ outcomes.push({{ name, state: 'pass', detail }}); }}
+function fail(name, error) {{ outcomes.push({{ name, state: 'fail', detail: {{ message: String(error?.message ?? error), kind: error?.kind ?? '' }} }}); }}
+function expectError(name, expectedKind, fn) {{
+  try {{ fn(); fail(name, new Error(`expected ${{expectedKind}} error`)); }}
+  catch (error) {{ if ((error instanceof AWClientError || error?.kind) && error.kind === expectedKind) pass(name, {{ kind: error.kind }}); else fail(name, error); }}
+}}
+let successPayload;
+try {{ successPayload = invokeOperation(operationId, values, {{ target: enabledTarget, allowRuntimeBacked: true }}); }}
+catch (error) {{ fail('baseline', error); }}
+expectError('absent', 'absent', () => invokeOperation(operationId, values, {{ target: absentTarget, allowRuntimeBacked: true }}));
+expectError('disabled', 'disabled', () => invokeOperation(operationId, values, {{ target: disabledTarget, allowRuntimeBacked: true }}));
+try {{
+  const negotiated = negotiateRequirements({{ [operationId]: 'sha256:external-conformance-intentional-mismatch' }}, {{ allowRuntimeBacked: true }});
+  const item = negotiated.requirements?.[0] ?? {{}};
+  if (!negotiated.compatible && item.status === 'incompatible') pass('incompatible', item); else fail('incompatible', new Error(JSON.stringify(negotiated)));
+}} catch (error) {{ fail('incompatible', error); }}
+expectError('malformed', 'malformed', () => invokeOperation(operationId, {{ ...values, unexpected_external_field: true }}, {{ target: enabledTarget, allowRuntimeBacked: true }}));
+expectError('retryable', 'retryable', () => invokeOperation(operationId, values, {{ target: stubTarget, invocation: [python, stub, 'retryable', responsePath], allowRuntimeBacked: true }}));
+if (successPayload) {{
+  writeFileSync(responsePath, JSON.stringify(successPayload));
+  try {{
+    const additive = invokeOperation(operationId, values, {{ target: stubTarget, invocation: [python, stub, 'additive', responsePath], allowRuntimeBacked: true }});
+    if (additive.future_additive_field?.preserved === true) pass('additive-field'); else fail('additive-field', new Error('additive field was not preserved'));
+  }} catch (error) {{ fail('additive-field', error); }}
+}}
+if (mutationPath) {{
+  if (successPayload && existsSync(`${{enabledTarget}}/${{mutationPath}}`)) pass('mutation-applied'); else fail('mutation-applied', new Error('declared mutation path was not written'));
+  expectError('mutation-rejected', 'rejected', () => invokeOperation(operationId, values, {{ target: stubTarget, invocation: [python, stub, 'rejected', responsePath], allowRuntimeBacked: true }}));
+  expectError('mutation-failed', 'failed', () => invokeOperation(operationId, values, {{ target: stubTarget, invocation: [python, stub, 'failed', responsePath], allowRuntimeBacked: true }}));
+}}
+console.log(JSON.stringify(outcomes));
+"""
+        completed = subprocess.run([node, "--input-type=module", "--eval", script], text=True, capture_output=True, check=False)
+        if completed.returncode != 0:
+            outcomes: list[object] = [
+                {"name": "packaged-client", "state": "fail", "detail": {"message": completed.stderr.strip()}}
+            ]
+        else:
+            try:
+                loaded = json.loads(completed.stdout)
+                outcomes = loaded if isinstance(loaded, list) else []
+            except json.JSONDecodeError as exc:
+                outcomes = [{"name": "packaged-client", "state": "fail", "detail": {"message": str(exc)}}]
+        for outcome in outcomes:
+            if not isinstance(outcome, Mapping):
+                continue
+            case_name = str(outcome.get("name") or "")
+            detail = outcome.get("detail", {})
+            results.append(
+                {
+                    "case_id": f"{operation_id}.external-readiness.{case_name}",
+                    "behavioral_class": case_name,
+                    "readiness_case": case_name if case_name in READINESS_CASES else "",
+                    "operation_id": operation_id,
+                    "artifact_id": "packed:@agentic-workspace/workspace-cli",
+                    "adapter_id": "vendor-neutral.packaged-consumer",
+                    "conformance_ref": "external-readiness",
+                    "target": "vendor-neutral",
+                    "state": str(outcome.get("state") or "fail"),
+                    "message": str(detail.get("message") or "") if isinstance(detail, Mapping) else str(detail),
+                    "selected_fields": dict(detail) if isinstance(detail, Mapping) else {},
+                }
+            )
+    return results, runtime_revisions, case_exceptions
+
+
 def _external_consumption_status(operation_id: str) -> str:
     try:
         profile = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/external_consumer_profile.json").read_text(encoding="utf-8"))
@@ -780,15 +966,6 @@ def _run_vendor_neutral_consumer_case(
     expected = case.get("expected", {})
     expected_mapping = expected if isinstance(expected, Mapping) else {}
     expected_error = expected_mapping.get("error") if isinstance(expected_mapping.get("error"), Mapping) else None
-    artifacts = [item for item in case.get("artifacts", []) if isinstance(item, Mapping)]
-    if expected_error is None and artifacts and all(str(item.get("adapter_id") or "") == "cli.process" for item in artifacts):
-        return _result(
-            case=case,
-            artifact_registry={},
-            target_kind="vendor-neutral",
-            state="unavailable",
-            message="case is wrapper-only and has no operation-shaped generic client artifact",
-        )
     if expected_error is None and (json_values.get("format") not in {None, "json"} or json_values.get("select")):
         return _result(
             case=case,
@@ -797,6 +974,9 @@ def _run_vendor_neutral_consumer_case(
             state="unavailable",
             message="case exercises selected/text wrapper projection rather than generic operation JSON",
         )
+    if expected_error is None:
+        json_values.pop("format", None)
+        json_values.pop("target", None)
     process_case = _case_process_fixture(case)
     fixture_root = materialize_case_fixture(
         case=process_case,
@@ -1276,6 +1456,8 @@ def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: 
     cases = [case for case in manifest["initial_cases"] if not case_filter or str(case["id"]) in case_filter]
     artifact_registry = _artifact_by_id(registry)
     results: list[dict[str, object]] = []
+    runtime_exception_revisions: dict[str, str] = {}
+    readiness_case_exceptions: dict[str, dict[str, str]] = {}
     with tempfile.TemporaryDirectory(prefix="agentic-workspace-operation-conformance-test-ir-") as tmp:
         temp_root = Path(tmp)
         vendor_neutral_status, vendor_neutral_client = (
@@ -1309,6 +1491,15 @@ def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: 
                     )
                 )
             _append_parity_results(results, case, selected_targets, artifact_registry)
+        if not case_filter and target_selection in {"all", "vendor-neutral"}:
+            readiness_results, runtime_exception_revisions, readiness_case_exceptions = _external_readiness_results(
+                manifest=manifest,
+                temp_root=temp_root,
+                client_path=vendor_neutral_client,
+                client_status=vendor_neutral_status,
+                require_node=require_node,
+            )
+            results.extend(readiness_results)
     fail_count = sum(1 for result in results if result.get("state") == "fail")
     unavailable_count = sum(1 for result in results if result.get("state") == "unavailable")
     skipped_count = sum(1 for result in results if result.get("state") == "skipped")
@@ -1325,6 +1516,8 @@ def run_ir_cases(*, target_selection: str, case_filter: set[str], require_node: 
             "skipped_count": skipped_count,
         },
         "cases": results,
+        "runtime_exception_revisions": runtime_exception_revisions,
+        "readiness_case_exceptions": readiness_case_exceptions,
     }
 
 

@@ -86,6 +86,12 @@ export function externalReadinessReport(operationIds, { allowRuntimeBacked = fal
   return {kind: 'agentic-workspace/external-readiness-report/v1', status: !excluded.length ? 'ready' : supported.length ? 'subset-only' : 'not-ready', supported_operations: supported, excluded_operations: excluded};
 }
 export function externalContractBundle() { return JSON.parse(readFileSync(bundleUrl, 'utf8')); }
+export function externalConformanceProfile(operationIds = null) {
+  const profile = { ...(externalContractBundle().external_conformance ?? {}) };
+  const requested = operationIds === null ? null : new Set(operationIds.map(String));
+  profile.operations = (profile.operations ?? []).filter((item) => requested === null || requested.has(String(item.operation_id)));
+  return profile;
+}
 export function operationCompatibilityFingerprint(contract) {
   const normalized = Object.fromEntries(['schema_version', 'id', 'classification', 'inputs', 'output', 'effects', 'guards'].map((key) => [key, contract[key] ?? null]));
   const bundle = externalContractBundle(); const operation = bundle.operations[String(contract.id)] ?? {};

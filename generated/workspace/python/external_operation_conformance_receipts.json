@@ -1,14 +1,14 @@
 {
-  "executed_at": "2026-08-08T14:07:06Z",
+  "executed_at": "2026-08-09T07:00:01Z",
   "freshness": {
-    "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
+    "client_semantics_revision": "sha256:57afd020225924d8f4106cabdfd71318e1c65d2004dcf96adcdfc7d4ed2bd676",
     "rule": "Publication currentness is tied to runner/client-semantics and profile/operation revisions plus explicit stale/revoked/superseded markers.",
-    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:06b4086318819877f9b279b981ff66459cddb5e6ef850829e82e034b95beb717",
     "strategy": "runner-client-operation-profile-revision-bound"
   },
   "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
   "mirror_publication": {
-    "generation_id": "external-conformance-publication:579ae562469358f8a7fcacfd",
+    "generation_id": "external-conformance-publication:a03bc819f1bbd6bb6c2c1fde",
     "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
     "path_count": 3,
     "paths": [
@@ -16,9 +16,9 @@
       "generated/workspace/python/external_operation_conformance_receipts.json",
       "generated/workspace/typescript/external_operation_conformance_receipts.json"
     ],
-    "payload_digest": "sha256:579ae562469358f8a7fcacfde9712e009f0e8586226e814ad15c185fd8145553",
-    "previous_digest": "7b482a6c070afe4e211438ddbefcefaa9218d9822a6d7726249f29413c7b9eab",
-    "publisher_pid": 65796,
+    "payload_digest": "sha256:a03bc819f1bbd6bb6c2c1fde98f3b1d7c046153c1e8fbc78c55f787bc8778fe0",
+    "previous_digest": "f17746e1b9846c9ec2062d3c9b400ddd901aa498fa2f81dc0de984ddd7f7e9da",
+    "publisher_pid": 7904,
     "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
     "status": "published"
   },
@@ -27,26 +27,35 @@
     {
       "cases": {
         "absent": {
-          "reason": "no absent result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "config.report:config.report.external-readiness.absent:vendor-neutral:vendor-neutral.packaged-consumer@sha256:51f15060963ee572"
+          ],
+          "status": "passed"
         },
         "additive-field": {
-          "reason": "no additive-field result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "config.report:config.report.external-readiness.additive-field:vendor-neutral:vendor-neutral.packaged-consumer@sha256:1ccd48168785dfba"
+          ],
+          "status": "passed"
         },
         "disabled": {
-          "reason": "no disabled result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "config.report:config.report.external-readiness.disabled:vendor-neutral:vendor-neutral.packaged-consumer@sha256:7349cc3c84e20831"
+          ],
+          "status": "passed"
         },
         "incompatible": {
-          "reason": "no incompatible result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "config.report:config.report.external-readiness.incompatible:vendor-neutral:vendor-neutral.packaged-consumer@sha256:34e25e7168fddd61"
+          ],
+          "status": "passed"
         },
         "malformed": {
           "evidence": [
             "config.report:config.invalid-format.error:python:cli.process@sha256:69d5a4dcadabf6eb",
             "config.report:config.invalid-format.error:typescript:cli.process@sha256:9e4976a01f59fca0",
-            "config.report:config.invalid-format.error:vendor-neutral:vendor-neutral.packaged-consumer@sha256:89c6300c99ef26cc"
+            "config.report:config.invalid-format.error:vendor-neutral:vendor-neutral.packaged-consumer@sha256:89c6300c99ef26cc",
+            "config.report:config.report.external-readiness.malformed:vendor-neutral:vendor-neutral.packaged-consumer@sha256:bfba448d919b3665"
           ],
           "status": "passed"
         },
@@ -79,15 +88,17 @@
           "status": "passed"
         },
         "retryable": {
-          "reason": "no retryable result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "config.report:config.report.external-readiness.retryable:vendor-neutral:vendor-neutral.packaged-consumer@sha256:155b308928ec99ad"
+          ],
+          "status": "passed"
         }
       },
       "conformance_refs": [
         "config.report.process",
         "config.selected-text.process"
       ],
-      "conformance_result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
+      "conformance_result_digest": "b6de3d6a369f67caf1890d746cada54e7c8d5f1bd1cc792cdbe5c4331c181e43",
       "custody": {
         "operation_id": "external-operation-conformance.run",
         "producer": "agentic-workspace.operation-conformance-runner",
@@ -95,11 +106,11 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-08T14:07:06Z",
+      "executed_at": "2026-08-09T07:00:01Z",
       "freshness": {
-        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
+        "client_semantics_revision": "sha256:57afd020225924d8f4106cabdfd71318e1c65d2004dcf96adcdfc7d4ed2bd676",
         "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:06b4086318819877f9b279b981ff66459cddb5e6ef850829e82e034b95beb717",
         "strategy": "runner-client-operation-profile-revision-bound"
       },
       "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
@@ -111,26 +122,33 @@
         "config.report:config.invalid-format.error:vendor-neutral:vendor-neutral.packaged-consumer@sha256:89c6300c99ef26cc",
         "config.report:config.selected-output.success:python:python.function@sha256:ee8d2ae121b6f5aa",
         "config.report:config.selected-output.success:typescript:typescript.function@sha256:5e7d326f7bd694b7",
-        "config.report:config.selected-output.success:vendor-neutral:@sha256:7ca9472b6b8ef20e"
+        "config.report:config.selected-output.success:vendor-neutral:@sha256:7ca9472b6b8ef20e",
+        "config.report:config.report.external-readiness.absent:vendor-neutral:vendor-neutral.packaged-consumer@sha256:51f15060963ee572",
+        "config.report:config.report.external-readiness.disabled:vendor-neutral:vendor-neutral.packaged-consumer@sha256:7349cc3c84e20831",
+        "config.report:config.report.external-readiness.incompatible:vendor-neutral:vendor-neutral.packaged-consumer@sha256:34e25e7168fddd61",
+        "config.report:config.report.external-readiness.malformed:vendor-neutral:vendor-neutral.packaged-consumer@sha256:bfba448d919b3665",
+        "config.report:config.report.external-readiness.retryable:vendor-neutral:vendor-neutral.packaged-consumer@sha256:155b308928ec99ad",
+        "config.report:config.report.external-readiness.additive-field:vendor-neutral:vendor-neutral.packaged-consumer@sha256:1ccd48168785dfba"
       ],
-      "profile_fingerprint": "sha256:a9d79f7085e012eaccce910e3dd33146bdec218263fbb561d7fd9501c91e520f",
-      "receipt_ref": "external-conformance:config.report:dc19ae1ef8776aee25ffa3e9",
+      "profile_fingerprint": "sha256:0fafa42d64844a83f306cc69bab0c229551e1f306122fe13cd239e2a05f28f60",
+      "receipt_ref": "external-conformance:config.report:e1deabdd41657986cf4b0d6f",
       "result_identity": {
-        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
-        "executed_at": "2026-08-08T14:07:06Z",
-        "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
+        "client_semantics_revision": "sha256:57afd020225924d8f4106cabdfd71318e1c65d2004dcf96adcdfc7d4ed2bd676",
+        "executed_at": "2026-08-09T07:00:01Z",
+        "invocation_id": "operation-conformance:scripts/chec:b6de3d6a369f67caf1890d74:2026-08-09T07:00:01Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
-        "result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+        "result_digest": "b6de3d6a369f67caf1890d746cada54e7c8d5f1bd1cc792cdbe5c4331c181e43",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:06b4086318819877f9b279b981ff66459cddb5e6ef850829e82e034b95beb717",
         "status": "current"
       },
       "runtime_exception_admission": {
-        "reason": "missing-operation-specific-runtime-exception-revision",
-        "rule": "Runtime exceptions must be admitted per operation/profile by an authority outside the conformance result.",
-        "status": "rejected"
+        "operation_id": "config.report",
+        "revision": "github-2044-closure:config.report@pr-2256",
+        "rule": "Runtime exception evidence is operation-specific and supplied by a separate authoritative owner.",
+        "status": "admitted"
       },
-      "runtime_exception_revision": "",
-      "status": "failed",
+      "runtime_exception_revision": "github-2044-closure:config.report@pr-2256",
+      "status": "passed",
       "transports": {
         "cli-json": {
           "evidence": [
@@ -155,7 +173,13 @@
         },
         "vendor-neutral": {
           "evidence": [
-            "config.report:config.invalid-format.error:vendor-neutral:vendor-neutral.packaged-consumer@sha256:89c6300c99ef26cc"
+            "config.report:config.invalid-format.error:vendor-neutral:vendor-neutral.packaged-consumer@sha256:89c6300c99ef26cc",
+            "config.report:config.report.external-readiness.absent:vendor-neutral:vendor-neutral.packaged-consumer@sha256:51f15060963ee572",
+            "config.report:config.report.external-readiness.additive-field:vendor-neutral:vendor-neutral.packaged-consumer@sha256:1ccd48168785dfba",
+            "config.report:config.report.external-readiness.disabled:vendor-neutral:vendor-neutral.packaged-consumer@sha256:7349cc3c84e20831",
+            "config.report:config.report.external-readiness.incompatible:vendor-neutral:vendor-neutral.packaged-consumer@sha256:34e25e7168fddd61",
+            "config.report:config.report.external-readiness.malformed:vendor-neutral:vendor-neutral.packaged-consumer@sha256:bfba448d919b3665",
+            "config.report:config.report.external-readiness.retryable:vendor-neutral:vendor-neutral.packaged-consumer@sha256:155b308928ec99ad"
           ],
           "status": "passed"
         }
@@ -164,51 +188,72 @@
     {
       "cases": {
         "absent": {
-          "reason": "no absent result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.absent:vendor-neutral:vendor-neutral.packaged-consumer@sha256:87ab6cd5e05f7d39"
+          ],
+          "status": "passed"
         },
         "additive-field": {
-          "reason": "no additive-field result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.additive-field:vendor-neutral:vendor-neutral.packaged-consumer@sha256:aacaa0d9e10b1faf"
+          ],
+          "status": "passed"
         },
         "disabled": {
-          "reason": "no disabled result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.disabled:vendor-neutral:vendor-neutral.packaged-consumer@sha256:3b157af4a1434c44"
+          ],
+          "status": "passed"
         },
         "incompatible": {
-          "reason": "no incompatible result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.incompatible:vendor-neutral:vendor-neutral.packaged-consumer@sha256:0a9f5101eb8a1ca9"
+          ],
+          "status": "passed"
         },
         "malformed": {
-          "reason": "no malformed result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.malformed:vendor-neutral:vendor-neutral.packaged-consumer@sha256:e25b79abe27b3811"
+          ],
+          "status": "passed"
         },
         "mutation-applied": {
-          "reason": "no mutation-applied result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.mutation-applied:vendor-neutral:vendor-neutral.packaged-consumer@sha256:a1446a337c7620c0"
+          ],
+          "status": "passed"
         },
         "mutation-failed": {
-          "reason": "no mutation-failed result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.mutation-failed:vendor-neutral:vendor-neutral.packaged-consumer@sha256:fdc04999659e1337"
+          ],
+          "status": "passed"
         },
         "mutation-noop": {
-          "reason": "no mutation-noop result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "operation_conformance_test_ir.json#external_readiness:delegation-outcome.append:mutation-noop"
+          ],
+          "reason": "explicit non-applicable operation vector: delegation-outcome.append is intentionally non-idempotent; duplicate evidence is rejected rather than reported as a successful no-op",
+          "status": "passed"
         },
         "mutation-rejected": {
-          "reason": "no mutation-rejected result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.mutation-rejected:vendor-neutral:vendor-neutral.packaged-consumer@sha256:f1e35ab8d3d65556"
+          ],
+          "status": "passed"
         },
         "retryable": {
-          "reason": "no retryable result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.retryable:vendor-neutral:vendor-neutral.packaged-consumer@sha256:04757397df2f4255"
+          ],
+          "status": "passed"
         }
       },
       "conformance_refs": [
         "delegation-outcome.append.process",
         "delegation-outcome.append-text.process"
       ],
-      "conformance_result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
+      "conformance_result_digest": "b6de3d6a369f67caf1890d746cada54e7c8d5f1bd1cc792cdbe5c4331c181e43",
       "custody": {
         "operation_id": "external-operation-conformance.run",
         "producer": "agentic-workspace.operation-conformance-runner",
@@ -216,11 +261,11 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-08T14:07:06Z",
+      "executed_at": "2026-08-09T07:00:01Z",
       "freshness": {
-        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
+        "client_semantics_revision": "sha256:57afd020225924d8f4106cabdfd71318e1c65d2004dcf96adcdfc7d4ed2bd676",
         "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:06b4086318819877f9b279b981ff66459cddb5e6ef850829e82e034b95beb717",
         "strategy": "runner-client-operation-profile-revision-bound"
       },
       "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
@@ -231,26 +276,36 @@
         "delegation-outcome.append:delegation-outcome.append-text.boundary:typescript:cli.process@sha256:07d425e097089c69",
         "delegation-outcome.append:delegation-outcome.append-text.boundary:vendor-neutral:@sha256:92c734b851195332",
         "delegation-outcome.append:delegation-outcome.append-write.boundary:python:cli.process@sha256:3fd7c63647106d7c",
-        "delegation-outcome.append:delegation-outcome.append-write.boundary:vendor-neutral:@sha256:7d94d37a097921f0"
+        "delegation-outcome.append:delegation-outcome.append-write.boundary:vendor-neutral:vendor-neutral.packaged-consumer@sha256:f2b9eda1da633862",
+        "delegation-outcome.append:delegation-outcome.append.external-readiness.absent:vendor-neutral:vendor-neutral.packaged-consumer@sha256:87ab6cd5e05f7d39",
+        "delegation-outcome.append:delegation-outcome.append.external-readiness.disabled:vendor-neutral:vendor-neutral.packaged-consumer@sha256:3b157af4a1434c44",
+        "delegation-outcome.append:delegation-outcome.append.external-readiness.incompatible:vendor-neutral:vendor-neutral.packaged-consumer@sha256:0a9f5101eb8a1ca9",
+        "delegation-outcome.append:delegation-outcome.append.external-readiness.malformed:vendor-neutral:vendor-neutral.packaged-consumer@sha256:e25b79abe27b3811",
+        "delegation-outcome.append:delegation-outcome.append.external-readiness.retryable:vendor-neutral:vendor-neutral.packaged-consumer@sha256:04757397df2f4255",
+        "delegation-outcome.append:delegation-outcome.append.external-readiness.additive-field:vendor-neutral:vendor-neutral.packaged-consumer@sha256:aacaa0d9e10b1faf",
+        "delegation-outcome.append:delegation-outcome.append.external-readiness.mutation-applied:vendor-neutral:vendor-neutral.packaged-consumer@sha256:a1446a337c7620c0",
+        "delegation-outcome.append:delegation-outcome.append.external-readiness.mutation-rejected:vendor-neutral:vendor-neutral.packaged-consumer@sha256:f1e35ab8d3d65556",
+        "delegation-outcome.append:delegation-outcome.append.external-readiness.mutation-failed:vendor-neutral:vendor-neutral.packaged-consumer@sha256:fdc04999659e1337"
       ],
-      "profile_fingerprint": "sha256:a9d79f7085e012eaccce910e3dd33146bdec218263fbb561d7fd9501c91e520f",
-      "receipt_ref": "external-conformance:delegation-outcome.append:f13651a8d1138c1819fcc362",
+      "profile_fingerprint": "sha256:0fafa42d64844a83f306cc69bab0c229551e1f306122fe13cd239e2a05f28f60",
+      "receipt_ref": "external-conformance:delegation-outcome.append:c6bf0fc793b16cfa790403d6",
       "result_identity": {
-        "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
-        "executed_at": "2026-08-08T14:07:06Z",
-        "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
+        "client_semantics_revision": "sha256:57afd020225924d8f4106cabdfd71318e1c65d2004dcf96adcdfc7d4ed2bd676",
+        "executed_at": "2026-08-09T07:00:01Z",
+        "invocation_id": "operation-conformance:scripts/chec:b6de3d6a369f67caf1890d74:2026-08-09T07:00:01Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
-        "result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+        "result_digest": "b6de3d6a369f67caf1890d746cada54e7c8d5f1bd1cc792cdbe5c4331c181e43",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:06b4086318819877f9b279b981ff66459cddb5e6ef850829e82e034b95beb717",
         "status": "current"
       },
       "runtime_exception_admission": {
-        "reason": "missing-operation-specific-runtime-exception-revision",
-        "rule": "Runtime exceptions must be admitted per operation/profile by an authority outside the conformance result.",
-        "status": "rejected"
+        "operation_id": "delegation-outcome.append",
+        "revision": "github-2044-closure:delegation-outcome.append@pr-2256",
+        "rule": "Runtime exception evidence is operation-specific and supplied by a separate authoritative owner.",
+        "status": "admitted"
       },
-      "runtime_exception_revision": "",
-      "status": "failed",
+      "runtime_exception_revision": "github-2044-closure:delegation-outcome.append@pr-2256",
+      "status": "passed",
       "transports": {
         "cli-json": {
           "evidence": [
@@ -274,19 +329,30 @@
           "status": "passed"
         },
         "vendor-neutral": {
-          "reason": "no independently packaged vendor-neutral consumer result was produced by this invocation",
-          "status": "not-run"
+          "evidence": [
+            "delegation-outcome.append:delegation-outcome.append-write.boundary:vendor-neutral:vendor-neutral.packaged-consumer@sha256:f2b9eda1da633862",
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.absent:vendor-neutral:vendor-neutral.packaged-consumer@sha256:87ab6cd5e05f7d39",
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.additive-field:vendor-neutral:vendor-neutral.packaged-consumer@sha256:aacaa0d9e10b1faf",
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.disabled:vendor-neutral:vendor-neutral.packaged-consumer@sha256:3b157af4a1434c44",
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.incompatible:vendor-neutral:vendor-neutral.packaged-consumer@sha256:0a9f5101eb8a1ca9",
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.malformed:vendor-neutral:vendor-neutral.packaged-consumer@sha256:e25b79abe27b3811",
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.mutation-applied:vendor-neutral:vendor-neutral.packaged-consumer@sha256:a1446a337c7620c0",
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.mutation-failed:vendor-neutral:vendor-neutral.packaged-consumer@sha256:fdc04999659e1337",
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.mutation-rejected:vendor-neutral:vendor-neutral.packaged-consumer@sha256:f1e35ab8d3d65556",
+            "delegation-outcome.append:delegation-outcome.append.external-readiness.retryable:vendor-neutral:vendor-neutral.packaged-consumer@sha256:04757397df2f4255"
+          ],
+          "status": "passed"
         }
       }
     }
   ],
   "result_identity": {
-    "client_semantics_revision": "sha256:9cff5927e2c81db8f7e1f27d1d1b19b55862a19878a5906c74017365c43fbea7",
-    "executed_at": "2026-08-08T14:07:06Z",
-    "invocation_id": "operation-conformance:scripts/chec:59b6581856df34e7b022bfa8:2026-08-08T14:07:06Z",
+    "client_semantics_revision": "sha256:57afd020225924d8f4106cabdfd71318e1c65d2004dcf96adcdfc7d4ed2bd676",
+    "executed_at": "2026-08-09T07:00:01Z",
+    "invocation_id": "operation-conformance:scripts/chec:b6de3d6a369f67caf1890d74:2026-08-09T07:00:01Z",
     "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
-    "result_digest": "59b6581856df34e7b022bfa841788077186d9375cab6b05aa1f74523707d2586",
-    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:aab4388400611315ef30a1669c5c2f14ca576bc40065daa183cac30b944ae4ca",
+    "result_digest": "b6de3d6a369f67caf1890d746cada54e7c8d5f1bd1cc792cdbe5c4331c181e43",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:06b4086318819877f9b279b981ff66459cddb5e6ef850829e82e034b95beb717",
     "status": "current"
   },
   "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored.",

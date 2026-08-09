@@ -12,7 +12,7 @@ Structured failure envelope returned by an external operation invocation.
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Structured failure envelope returned by an external operation invocation. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `kind` | string | no |  | Optional versioned runtime error kind. |  |  |
-| `status` | enum `"rejected"`, `"failed"` | yes |  | Stable external failure classification. |  |  |
+| `status` | enum `"rejected"`, `"failed"`, `"retryable"` | yes |  | Stable external failure classification. |  |  |
 | `message` | string | no |  | Human-readable failure summary when supplied. |  |  |
 | `command` | string | no |  | Command surface that failed when supplied. |  |  |
 | `exit_status` | integer | no |  | Positive process exit status when supplied. |  |  |
