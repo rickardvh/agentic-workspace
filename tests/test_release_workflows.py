@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_ROOT = ROOT / ".github" / "workflows"
 OWNERSHIP_PATH = ROOT / ".github" / "release-ownership.json"
 GENERATOR_PATH = ROOT / "scripts" / "generate" / "workspace_command_generation.py"
+RELEASE_OWNERSHIP_CLASSIFIER_PATH = ROOT / "scripts" / "release" / "release_ownership.py"
 
 
 def _ownership() -> dict[str, object]:
@@ -48,6 +49,16 @@ def _step_run_block(workflow: str, step_name: str) -> str:
 
 def _load_workspace_command_generation():
     spec = importlib.util.spec_from_file_location("workspace_command_generation_under_test", GENERATOR_PATH)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_release_ownership_classifier():
+    spec = importlib.util.spec_from_file_location("release_ownership_under_test", RELEASE_OWNERSHIP_CLASSIFIER_PATH)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -120,6 +131,28 @@ def test_package_affecting_scope_is_manifest_owned_and_covers_release_surfaces()
     assert "tests/test_release_workflows.py" in paths
     assert "uv.lock" in paths
 
+    metadata = _ownership()["non_semver_generated_metadata"]
+    assert metadata == [
+        {
+            "path": "generated/.agentic-workspace-cli-fingerprint.json",
+            "role": "generated-command-freshness-integrity",
+            "freshness_owner": "scripts/check/check_generated_command_packages.py",
+        }
+    ]
+
+
+def test_release_path_classification_exempts_only_exact_integrity_metadata() -> None:
+    classify = _load_release_ownership_classifier().classify_changed_paths
+    ownership = _ownership()
+    fingerprint = "generated/.agentic-workspace-cli-fingerprint.json"
+
+    assert classify([fingerprint, "docs/maintenance.md"], ownership)["package_affecting"] is False
+    assert classify([fingerprint, "src/agentic_workspace/__init__.py"], ownership)["package_affecting"] is True
+    assert classify([fingerprint, "generated/workspace/typescript/cli.mjs"], ownership)["package_affecting"] is True
+    arbitrary = classify(["generated/not-an-exempt-projection.json"], ownership)
+    assert arbitrary["package_affecting"] is True
+    assert arbitrary["package_affecting_paths"] == ["generated/not-an-exempt-projection.json"]
+
 
 def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
     workflow = (WORKFLOW_ROOT / "pr-semver-label.yml").read_text(encoding="utf-8")
@@ -128,7 +161,7 @@ def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:
     assert "labeled" in workflow
     assert "unlabeled" in workflow
     assert ".github/release-ownership.json" in workflow
-    assert 'ownership["package_affecting_paths"]' in workflow
+    assert "classify_changed_paths(changed, ownership)" in workflow
     assert 'ownership["semver_labels"]' in workflow
     assert "must have exactly one semver label" in workflow
     assert 'ownership["changeset_dir"]' in workflow
@@ -156,7 +189,7 @@ def test_master_release_workflow_prepares_release_pr_and_only_tags_verified_rele
     assert "coordinated_release.py verify" in workflow
     assert "coordinated_release.py tag-plan" in workflow
     assert "uv lock" in workflow
-    assert "peter-evans/create-pull-request@v7" in workflow
+    assert "peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7" in workflow
     assert "automation/coordinated-release" in workflow
     assert "Resolve pending release tag" in workflow
     assert "git tag -a" in workflow
@@ -222,7 +255,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in workflow
     assert "scripts/release/patch_workspace_release_wheel.py" in workflow
     assert "release-asset-base-url" in workflow
-    assert "actions/setup-node@v6.4.0" in workflow
+    assert "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0" in workflow
     assert 'node-version: "24"' in workflow
     assert "npm test && npm pack --pack-destination" in workflow
     assert "typescript_packages" in workflow
@@ -232,7 +265,12 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "generate_release_notes: true" not in workflow
     assert "SHA256SUMS" in workflow
     assert "Missing checksums for release assets" in workflow
-    assert "softprops/action-gh-release@v3.0.0" in workflow
+    assert "softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0" in workflow
+    assert "uv sync --locked" in workflow
+    assert "security-supply-chain-readiness.json" in workflow
+    assert "agentic-workspace.spdx.json" in workflow
+    assert "anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610" in workflow
+    assert "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8" in workflow
     assert "fail_on_unmatched_files: true" in workflow
 
 
@@ -250,6 +288,8 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
             "dist/agentic_memory-0.4.0.tar.gz",
             "dist/agentic-workspace-workspace-cli-0.4.0.tgz",
             "dist/agentic-workspace-release-manifest.json",
+            "dist/security-supply-chain-readiness.json",
+            "dist/agentic-workspace.spdx.json",
             "dist/SHA256SUMS",
             "dist/.gitignore",
             "dist/default.gitignore",
@@ -262,6 +302,8 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
         "dist/agentic_memory-0.4.0.tar.gz",
         "dist/agentic-workspace-workspace-cli-0.4.0.tgz",
         "dist/agentic-workspace-release-manifest.json",
+        "dist/security-supply-chain-readiness.json",
+        "dist/agentic-workspace.spdx.json",
         "dist/SHA256SUMS",
     ]
 

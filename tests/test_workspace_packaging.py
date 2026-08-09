@@ -165,7 +165,7 @@ def test_ci_builds_and_uploads_root_package_artifacts() -> None:
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in ci_text
     assert "test_installed_workspace_stack_runs_fresh_repo_cli_sequence" in ci_text
     assert "test_release_root_wheel_installs_workspace_stack_from_same_release_assets" in ci_text
-    assert "actions/upload-artifact@v7.0.1" in ci_text
+    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1" in ci_text
 
 
 def test_ci_runs_release_proof_typecheck_before_generated_verification() -> None:
@@ -201,7 +201,7 @@ def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
     assert "source_commit" in release_text
     assert "body_path: .release/releases/${{ env.RELEASE_TAG }}.md" in release_text
     assert "SHA256SUMS" in release_text
-    assert "softprops/action-gh-release@v3.0.0" in release_text
+    assert "softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0" in release_text
 
 
 def test_workspace_surface_manifest_payload_entries_exist_in_source_payload() -> None:
@@ -239,6 +239,7 @@ def test_root_wheel_ships_generated_cli_package_import_dependency(workspace_whee
     assert "agentic_workspace/_generated_cli_package_impl/command_package.json" in inventory
     assert "agentic_workspace/_generated_cli_package_impl/adapter_commands.json" in inventory
     assert "agentic_workspace/_generated_cli_package_impl/external_consumer_profile.json" in inventory
+    assert "agentic_workspace/_generated_cli_package_impl/external_operation_conformance_receipts.json" in inventory
     assert "agentic_workspace/client.py" in inventory
 
 
@@ -410,7 +411,10 @@ def _assert_workspace_stack_runs_fresh_repo_cli_sequence(*, workspace_exe: Path,
     )
 
     assert init_payload["command"] == "init"
-    assert init_payload["preset"] is None
+    assert init_payload["kind"] == "agentic-workspace/lifecycle-decision-envelope/v1"
+    assert init_payload["profile"] == "decision-envelope/v1"
+    assert init_payload["decision"]["mutation"] == "applied"
+    assert init_payload["modules"] == ["planning", "memory"]
     assert start_payload["kind"] == "agentic-workspace/selected-output/v1"
     assert start_payload["values"]["invoked_cli_identity"]["source_class"] == "installed-package"
     assert summary_payload["kind"] == "planning-summary/v1"

@@ -35,6 +35,7 @@ def _run_cli(argv: list[str] | None = None) -> int:
             payload = {
                 "kind": "agentic-workspace/runtime-error/v1",
                 "status": "failed",
+                "message": str(exc),
                 "command": command,
                 "exit_status": 1,
                 "exception_class": type(exc).__name__,

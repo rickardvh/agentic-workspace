@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Enforce lifecycle output budgets and report bounded progress for long-running validation commands."
+issue = 2457

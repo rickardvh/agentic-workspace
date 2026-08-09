@@ -160,6 +160,7 @@ from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.target_evidence import assignment_decision_from_policy, target_evidence_posture
+from agentic_workspace.trusted_execution import run_trusted_shell
 from agentic_workspace.workspace_output import (
     _display_path,
     _emit_init_text,
@@ -5585,8 +5586,8 @@ def _improvement_signal_candidate(
     immediate_action: str,
     retention: str,
     source: str,
-) -> dict[str, str]:
-    return {
+) -> dict[str, Any]:
+    candidate: dict[str, Any] = {
         "candidate_kind": str(_IMPROVEMENT_SIGNAL_CONTRACT["candidate_kind"]),
         "kind": kind,
         "observed_during": observed_during,
@@ -5600,6 +5601,74 @@ def _improvement_signal_candidate(
         "retention": retention,
         "source": source,
     }
+    candidate["evidence_fingerprint"] = _improvement_evidence_fingerprint(candidate)
+    candidate["routing_decision"] = {
+        "status": "candidate",
+        "reason": "current evidence has a concrete owner, remediation route, and confidence",
+        "owner": suspected_owner,
+        "confidence": confidence,
+    }
+    return candidate
+
+
+def _normalized_evidence_text(value: Any) -> str:
+    text = re.sub(r"https?://\S+", "<url>", str(value or "").strip().lower())
+    text = re.sub(r"#[0-9]+", "#<issue>", text)
+    text = re.sub(r"\b[0-9a-f]{8,}\b", "<identity>", text)
+    text = re.sub(r"\b\d+\b", "<n>", text)
+    return " ".join(text.split())
+
+
+def _improvement_evidence_fingerprint(candidate: dict[str, Any]) -> str:
+    identity = {
+        "kind": str(candidate.get("kind") or ""),
+        "source": str(candidate.get("source") or ""),
+        "owner": _normalized_evidence_text(candidate.get("suspected_owner")),
+        "symptom": _normalized_evidence_text(candidate.get("symptom")),
+    }
+    return hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+
+
+def _dedupe_improvement_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for candidate in candidates:
+        fingerprint = str(candidate.get("evidence_fingerprint") or _improvement_evidence_fingerprint(candidate))
+        candidate["evidence_fingerprint"] = fingerprint
+        grouped.setdefault(fingerprint, []).append(candidate)
+    deduped: list[dict[str, Any]] = []
+    for fingerprint, records in grouped.items():
+        candidate = copy.deepcopy(records[0])
+        issue_refs = sorted(
+            {
+                ref
+                for record in records
+                for ref in [
+                    str(record.get("issue_ref") or "").strip(),
+                    *[str(item).strip() for item in _list_payload(_as_dict(record.get("routing_decision")).get("equivalent_issue_refs"))],
+                ]
+                if ref
+            }
+        )
+        candidate["equivalent_evidence_count"] = sum(max(1, int(record.get("equivalent_evidence_count") or 1)) for record in records)
+        candidate["evidence_exemplars"] = [str(record.get("symptom") or "") for record in records[:3]]
+        if issue_refs:
+            candidate["issue_ref"] = issue_refs[0]
+            candidate["routing_decision"] = {
+                "status": "existing-owner",
+                "reason": "equivalent evidence already has an issue owner; do not create a duplicate candidate",
+                "owner": issue_refs[0],
+                "confidence": str(candidate.get("confidence") or "medium"),
+                "equivalent_issue_refs": issue_refs,
+            }
+        elif len(records) > 1:
+            candidate["routing_decision"] = {
+                "status": "deduplicated-candidate",
+                "reason": f"{len(records)} equivalent evidence records converge on one candidate identity",
+                "owner": str(candidate.get("suspected_owner") or "unknown"),
+                "confidence": str(candidate.get("confidence") or "medium"),
+            }
+        deduped.append(candidate)
+    return sorted(deduped, key=lambda item: str(item.get("evidence_fingerprint") or ""))
 
 
 def _confidence_label(confidence: Any) -> str:
@@ -5617,7 +5686,7 @@ def _confidence_label(confidence: Any) -> str:
 def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, Any] | None) -> list[dict[str, Any]]:
     if not isinstance(repo_friction, dict):
         return []
-    candidates: list[dict[str, str]] = []
+    candidates: list[dict[str, Any]] = []
     for item in _list_payload(
         repo_friction.get("large_file_hotspots", {}).get("items") if isinstance(repo_friction.get("large_file_hotspots"), dict) else []
     ):
@@ -5662,7 +5731,7 @@ def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, A
         if not isinstance(item, dict):
             continue
         path = str(item.get("path", "")).strip()
-        if not path:
+        if not path or str(item.get("source_domain") or "") != "tracked-support":
             continue
         candidates.append(
             _improvement_signal_candidate(
@@ -5724,7 +5793,53 @@ def _improvement_signal_candidates_from_repo_friction(repo_friction: dict[str, A
                 if optional_field in item:
                     candidate[optional_field] = copy.deepcopy(item[optional_field])
             candidates.append(candidate)
-    return candidates[:5]
+    return _dedupe_improvement_candidates(candidates)[:5]
+
+
+def _improvement_signal_candidates_from_session_intake(
+    *, target_root: Path | None, config: WorkspaceConfig | None
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if target_root is None or config is None:
+        return [], {"status": "not-evaluated", "reason": "workspace context unavailable"}
+    session_intake = _session_improvement_intake_payload(target_root=target_root, config=config, cli_invoke=config.cli_invoke)
+    status = str(session_intake.get("status") or "unknown")
+    candidates: list[dict[str, Any]] = []
+    active_outcomes = {"unresolved", "recorded_chat_only", "recorded_session_only", "routed_to_issue"}
+    destinations = [
+        str(item)
+        for decision in _list_payload(session_intake.get("routing_decisions"))
+        if isinstance(decision, dict)
+        for item in _list_payload(decision.get("destinations"))
+        if str(item).strip()
+    ]
+    issue_ref = next((item for item in destinations if re.fullmatch(r"#\d+", item)), "")
+    for signal in _list_payload(session_intake.get("session_observed_signals")):
+        if not isinstance(signal, dict) or str(signal.get("outcome") or "") not in active_outcomes:
+            continue
+        candidate = _improvement_signal_candidate(
+            kind="workflow_cost",
+            observed_during="current agent session",
+            symptom=str(signal.get("signal") or "session friction needs an explicit intake decision"),
+            cost="Current-session friction can repeat or disappear unless it enters the durable intake route.",
+            suspected_owner="workspace",
+            likely_remediation="agent_aid",
+            confidence="high" if "minute" in str(signal.get("signal") or "").lower() else "medium",
+            recurrence="repeated" if "repeat" in str(signal.get("signal") or "").lower() else "first_seen",
+            immediate_action="route",
+            retention="shrink_after_fix",
+            source="session_improvement_intake.session_observed_signals",
+        )
+        if issue_ref:
+            candidate["issue_ref"] = issue_ref
+        candidates.append(candidate)
+    return candidates, {
+        "status": status,
+        "candidate_count": len(candidates),
+        "missing_cache": status == "unavailable",
+        "decision": (
+            "not-a-candidate-until-session-evidence-is-captured" if status == "unavailable" else "normalized-through-shared-intake"
+        ),
+    }
 
 
 def _improvement_pressure_state(candidate: dict[str, Any]) -> str:
@@ -5977,7 +6092,9 @@ def _improvement_intake_payload(
 ) -> dict[str, Any]:
     setup_findings = _setup_findings_input_payload(target_root=target_root) if target_root is not None else None
     review_enabled = bool(config and "review_artifacts" in config.advanced_features)
-    signal_candidates = _improvement_signal_candidates_from_repo_friction(repo_friction)
+    repo_candidates = _improvement_signal_candidates_from_repo_friction(repo_friction)
+    session_candidates, session_admission = _improvement_signal_candidates_from_session_intake(target_root=target_root, config=config)
+    signal_candidates = _dedupe_improvement_candidates([*repo_candidates, *session_candidates])[:5]
     source_checkout = _is_agentic_workspace_source_checkout(target_root)
     subtypes: list[dict[str, Any]] = [
         {
@@ -6062,7 +6179,7 @@ def _improvement_intake_payload(
             "status": "explicit_repo_wide_requested" if isinstance(repo_friction, dict) else "session_scoped_default",
             "session_section": "session_improvement_intake",
             "repo_wide_section": "improvement_intake",
-            "rule": "Fresh session signals stay in session_improvement_intake; repo-wide diagnostics are available when this section is requested explicitly.",
+            "rule": "Fresh admitted session signals and repo-wide findings share one normalization, fingerprint, deduplication, and candidacy path; the session section remains the capture surface.",
         },
         "audience_boundary": {
             "status": "source-checkout" if source_checkout else "target-repo",
@@ -6113,7 +6230,26 @@ def _improvement_intake_payload(
             "Preserve provenance and confidence when a signal is routed.",
         ],
         "improvement_signal_candidates": signal_candidates,
-        "repo_wide_existing_candidates": signal_candidates,
+        "session_admission": session_admission,
+        "candidate_decisions": [copy.deepcopy(item.get("routing_decision", {})) for item in signal_candidates],
+        "non_candidate_decisions": []
+        if signal_candidates
+        else [
+            {
+                "status": "not-a-candidate",
+                "reason": "no current tracked-source or routed external evidence crossed the bounded candidacy threshold",
+                "owner": "workspace improvement intake",
+                "confidence": "high",
+            }
+        ],
+        "repo_wide_existing_candidates": {
+            "status": "bounded-index-available",
+            "included_by_default": True,
+            "candidate_count": len(signal_candidates),
+            "evidence_records": signal_candidates,
+            "command": "agentic-workspace defaults --section improvement_intake --format json",
+            "full_scan_command": "agentic-workspace report --target ./repo --section improvement_intake --verbose --format json",
+        },
         "session_observed_signals": [],
         "candidate_count": len(signal_candidates),
         "setup_findings": {
@@ -9059,6 +9195,7 @@ def _run_init(
     config: WorkspaceConfig,
     footprint_profile: str | None = None,
     mirror_payload: bool = False,
+    include_output_detail: bool = True,
 ) -> dict[str, Any]:
     resolved_footprint_profile = _resolve_bootstrap_footprint_profile(
         target_root=target_root, requested_profile=footprint_profile, mirror_payload=mirror_payload
@@ -9150,29 +9287,35 @@ def _run_init(
         "dry_run": dry_run,
         "non_interactive": non_interactive,
         "module_reports": reports,
-        "bootstrap_footprint": _bootstrap_footprint_payload(
+        "config": {
+            "workspace": {
+                "agent_instructions_file": effective_config.agent_instructions_file,
+            }
+        },
+    }
+    if include_output_detail:
+        payload["bootstrap_footprint"] = _bootstrap_footprint_payload(
             target_root=target_root,
             profile=resolved_footprint_profile,
             reports=reports,
             prompt_path=prompt_path,
             handoff_record_path=handoff_record_path,
-        ),
-        "config": _config_payload(config=effective_config),
-        "proof_route_hints": {
+        )
+        payload["config"] = _config_payload(config=effective_config)
+        payload["proof_route_hints"] = {
             "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
             "hint_count": len(proof_route_hints["hints"]),
             "written": not dry_run and should_write_proof_route_hints,
             "rule": proof_route_hints["rule"],
             "learning_policy": proof_route_hints["learning_policy"],
-        },
-    }
+        }
     should_include_prompt = print_prompt or prompt_path is not None or summary["prompt_requirement"] != "none"
-    if should_include_prompt:
+    if should_include_prompt and include_output_detail:
         payload["handoff_prompt"] = prompt_text
-    if prompt_path is not None:
+    if prompt_path is not None and include_output_detail:
         payload["handoff_prompt_path"] = prompt_path.as_posix()
         payload["next_steps"].append(f"Review the written handoff prompt at {prompt_path.as_posix()}.")
-    if handoff_record is not None and handoff_record_path is not None:
+    if handoff_record is not None and handoff_record_path is not None and include_output_detail:
         payload["handoff_record"] = handoff_record
         payload["handoff_record_path"] = handoff_record_path.as_posix()
         payload["next_steps"].append(f"Review the structured handoff record at {handoff_record_path.as_posix()}.")
@@ -11052,6 +11195,209 @@ def _selected_module_reports(*, target_root: Path, selected_modules: list[str]) 
     return reports
 
 
+_STRICT_CURRENT_BLOCKING_CLASSES = ("current-executable-state", "current-installed-config-state")
+_STRICT_CURRENT_NON_BLOCKING_CLASSES = ("actionable-maintenance-debt", "historical-informational-state")
+_STRICT_CURRENT_SAMPLE_LIMIT = 8
+_STRICT_CURRENT_HEALTH_POLICY = {
+    "kind": "agentic-workspace/health-policy/v1",
+    "id": "strict-current",
+    "version": 1,
+    "blocking_classes": list(_STRICT_CURRENT_BLOCKING_CLASSES),
+    "non_blocking_classes": list(_STRICT_CURRENT_NON_BLOCKING_CLASSES),
+    "sample_limit": _STRICT_CURRENT_SAMPLE_LIMIT,
+    "feature_integration_rule": "A matching pending feature-branch integration proposal is non-blocking on its admitted feature branch only; default-branch health still requires applied integration truth.",
+    "rule": "Fail only on current executable or installed/configured state; maintenance debt and archive history remain visible but non-blocking.",
+}
+
+
+def _strict_health_policy_fingerprint() -> str:
+    encoded = json.dumps(_STRICT_CURRENT_HEALTH_POLICY, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _health_finding_class(finding: dict[str, Any]) -> str:
+    explicit = str(finding.get("health_class") or "")
+    if explicit in {*_STRICT_CURRENT_BLOCKING_CLASSES, *_STRICT_CURRENT_NON_BLOCKING_CLASSES}:
+        return explicit
+    reason_code = str(finding.get("reason_code") or finding.get("category") or "").strip()
+    reason_classes = {
+        "planning.live-owner-invalid": "current-executable-state",
+        "planning.integration-pending": "current-executable-state",
+        "memory.fixture-failed": "current-installed-config-state",
+        "workspace.config-invalid": "current-installed-config-state",
+        "workspace.install-drift": "current-installed-config-state",
+        "planning.archive-history": "historical-informational-state",
+        "maintenance.debt": "actionable-maintenance-debt",
+    }
+    if reason_code in reason_classes:
+        return reason_classes[reason_code]
+    return "actionable-maintenance-debt"
+
+
+def _health_finding_action(*, finding: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
+    module = str(finding.get("module", "workspace"))
+    if module == "planning":
+        command = "agentic-workspace summary --target . --verbose --format json"
+    elif module == "memory":
+        command = "agentic-workspace memory report --target . --format json"
+    else:
+        command = "agentic-workspace doctor --target . --verbose --format json"
+    return {
+        "owner": module,
+        "command": _command_with_cli_invoke(command=command, cli_invoke=cli_invoke),
+        "finding_detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target . --section findings --format json", cli_invoke=cli_invoke
+        ),
+    }
+
+
+def _pending_feature_integrations(*, target_root: Path) -> dict[str, dict[str, str]]:
+    branch = _current_git_branch(target_root)
+    if not branch or branch in {"main", "master"}:
+        return {}
+    proposal_root = target_root / ".agentic-workspace" / "planning" / "integration-proposals"
+    refs: dict[str, dict[str, str]] = {}
+    for path in sorted(proposal_root.glob("*.integration-proposal.json")) if proposal_root.is_dir() else []:
+        try:
+            proposal = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(proposal, dict) or proposal.get("status") != "pending":
+            continue
+        branch_admission = proposal.get("authority_boundary", {}).get("branch_admission", {})
+        owner = proposal.get("owner", {})
+        if not isinstance(branch_admission, dict) or not isinstance(owner, dict):
+            continue
+        if (
+            proposal.get("requested_transition") in {"mark-integrated", "archive-owner"}
+            and proposal.get("phase") == "integration-pending"
+            and proposal.get("expected_subject_revision")
+            and proposal.get("expected_planning_revision")
+            and branch_admission.get("phase") == "feature"
+            and branch_admission.get("branch") == branch
+            and owner.get("ref")
+        ):
+            refs[str(owner["ref"]).replace("\\", "/")] = {
+                "proposal_id": str(proposal.get("id") or ""),
+                "expected_subject_revision": str(proposal["expected_subject_revision"]),
+                "expected_planning_revision": str(proposal["expected_planning_revision"]),
+            }
+    return refs
+
+
+def _strict_health_assertion_payload(
+    *, target_root: Path, selected_modules: list[str], findings: list[dict[str, Any]], cli_invoke: str
+) -> dict[str, Any]:
+    policy_fingerprint = _strict_health_policy_fingerprint()
+    classified: list[dict[str, Any]] = []
+    pending_integrations = _pending_feature_integrations(target_root=target_root)
+    counts = {class_name: 0 for class_name in [*_STRICT_CURRENT_BLOCKING_CLASSES, *_STRICT_CURRENT_NON_BLOCKING_CLASSES]}
+    for finding in findings:
+        health_class = _health_finding_class(finding)
+        finding_path = str(finding.get("path", "")).replace("\\", "/")
+        proposal = pending_integrations.get(finding_path, {})
+        integration_pending = (
+            health_class == "current-executable-state"
+            and str(finding.get("reason_code") or "") == "planning.integration-pending"
+            and str(finding.get("integration_proposal_id") or "") == proposal.get("proposal_id")
+            and str(finding.get("expected_subject_revision") or "") == proposal.get("expected_subject_revision")
+            and str(finding.get("expected_planning_revision") or "") == proposal.get("expected_planning_revision")
+        )
+        if integration_pending:
+            health_class = "actionable-maintenance-debt"
+        counts[health_class] += 1
+        classified.append(
+            {
+                "health_class": health_class,
+                "owner": str(finding.get("module", "workspace")),
+                "severity": str(finding.get("severity", "info")),
+                "message": str(finding.get("message", "")),
+                **({"path": str(finding["path"])} if finding.get("path") else {}),
+                **({"integration_pending": True} if integration_pending else {}),
+                "action": _health_finding_action(finding=finding, cli_invoke=cli_invoke),
+            }
+        )
+    blocking_classes = set(_STRICT_CURRENT_BLOCKING_CLASSES)
+    blockers = [finding for finding in classified if finding["health_class"] in blocking_classes]
+    subject_basis = {
+        "target": ".",
+        "selected_modules": selected_modules,
+        "current_findings": [
+            {key: finding.get(key) for key in ("health_class", "owner", "severity", "path", "message") if finding.get(key)}
+            for finding in classified
+            if finding["health_class"] != "historical-informational-state"
+        ],
+    }
+    subject_fingerprint = hashlib.sha256(json.dumps(subject_basis, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    status = "failed" if blockers else "passed"
+    sample_limit = _STRICT_CURRENT_SAMPLE_LIMIT
+    assertion = {
+        "kind": "agentic-workspace/health-assertion/v1",
+        "status": status,
+        "exit_code": 1 if blockers else 0,
+        "policy": {
+            "id": _STRICT_CURRENT_HEALTH_POLICY["id"],
+            "version": _STRICT_CURRENT_HEALTH_POLICY["version"],
+            "fingerprint": policy_fingerprint,
+            "blocking_classes": list(_STRICT_CURRENT_BLOCKING_CLASSES),
+            "rule": _STRICT_CURRENT_HEALTH_POLICY["rule"],
+        },
+        "subject": {
+            "kind": "agentic-workspace/health-subject/v1",
+            "target": ".",
+            "selected_modules": selected_modules,
+            "fingerprint": subject_fingerprint,
+        },
+        "counts_by_class": counts,
+        "blocking_count": len(blockers),
+        "blockers": blockers[:sample_limit],
+        "omitted_blocker_count": max(0, len(blockers) - sample_limit),
+        "historical_count": counts["historical-informational-state"],
+        "maintenance_debt_count": counts["actionable-maintenance-debt"],
+        "detail": {
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace report --target . --section findings --format json", cli_invoke=cli_invoke
+            ),
+            "historical_expansion": "explicit-only",
+        },
+    }
+    assertion["proof_receipt"] = {
+        "kind": "agentic-workspace/health-policy-proof-receipt/v1",
+        "outcome": status,
+        "policy_fingerprint": policy_fingerprint,
+        "subject_fingerprint": subject_fingerprint,
+        "blocking_count": len(blockers),
+    }
+    return assertion
+
+
+def _strict_health_promotion_input(
+    *, receipt: dict[str, Any] | None, expected_policy_fingerprint: str, expected_subject_fingerprint: str
+) -> dict[str, Any]:
+    """Validate the exact strict-current receipt consumed by release promotion."""
+    reason = "accepted-current-strict-health-receipt"
+    if not isinstance(receipt, dict):
+        reason = "missing-strict-health-receipt"
+    elif receipt.get("kind") != "agentic-workspace/health-policy-proof-receipt/v1":
+        reason = "invalid-strict-health-receipt"
+    elif receipt.get("policy_fingerprint") != expected_policy_fingerprint:
+        reason = "stale-strict-health-policy"
+    elif receipt.get("subject_fingerprint") != expected_subject_fingerprint:
+        reason = "stale-strict-health-subject"
+    elif receipt.get("outcome") != "passed" or receipt.get("blocking_count") != 0:
+        reason = "strict-health-failed"
+    accepted = reason == "accepted-current-strict-health-receipt"
+    return {
+        "kind": "agentic-workspace/release-promotion-input/v1",
+        "input": "strict-current-health",
+        "status": "accepted" if accepted else "blocked",
+        "reason": reason,
+        "policy_fingerprint": expected_policy_fingerprint,
+        "subject_fingerprint": expected_subject_fingerprint,
+        "receipt": receipt if accepted else None,
+    }
+
+
 def _run_report_command(
     *,
     target_root: Path,
@@ -11997,6 +12343,26 @@ def _structured_findings_payload(
             proposed_owner="planning",
             disposition="reconcile-before-closeout",
         )
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for entry in entries:
+        fingerprint_input = {
+            "kind": str(entry.get("kind") or ""),
+            "owner": str(entry.get("proposed_owner") or ""),
+            "severity": str(entry.get("severity") or ""),
+            "disposition": str(entry.get("disposition") or ""),
+            "evidence": [_normalized_evidence_text(item) for item in _list_payload(entry.get("evidence"))],
+        }
+        fingerprint = hashlib.sha256(json.dumps(fingerprint_input, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+        grouped.setdefault(fingerprint, []).append(entry)
+    aggregated_entries: list[dict[str, Any]] = []
+    for fingerprint, records in sorted(grouped.items()):
+        aggregate = copy.deepcopy(records[0])
+        aggregate["id"] = f"finding-{fingerprint}"
+        aggregate["fingerprint"] = fingerprint
+        aggregate["record_count"] = len(records)
+        aggregate["record_ids"] = [str(record.get("id") or "") for record in records]
+        aggregate["exemplars"] = [str(evidence) for record in records[:3] for evidence in _list_payload(record.get("evidence"))[:1]]
+        aggregated_entries.append(aggregate)
     return {
         "kind": "agentic-workspace/structured-findings/v1",
         "status": "present" if entries else "shape-only",
@@ -12004,8 +12370,16 @@ def _structured_findings_payload(
             "required_fields": ["id", "kind", "path_refs", "evidence", "severity", "confidence", "proposed_owner", "disposition"],
             "routing_rule": "A finding should have one primary home: Planning, Memory, Verification, canonical docs, tests, or an external issue.",
         },
-        "entries": entries,
-        "entry_count": len(entries),
+        "entries": aggregated_entries,
+        "entry_count": len(aggregated_entries),
+        "underlying_record_count": len(entries),
+        "underlying_records": entries,
+        "aggregation": {
+            "status": "aggregated" if len(aggregated_entries) < len(entries) else "identity",
+            "fingerprint_fields": ["kind", "proposed_owner", "severity", "disposition", "normalized evidence"],
+            "default_exemplar_limit": 3,
+            "full_records_selector": "structured_findings.underlying_records",
+        },
         "promotion_guidance": [
             "promote only durable, evidenced findings with a bounded owner and next action",
             "dismiss speculative prose residue instead of preserving it beside structured state",
@@ -12215,6 +12589,66 @@ def _automation_readiness_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> di
                 cli_invoke=cli_invoke,
             ),
         ],
+    }
+
+
+def _security_supply_chain_readiness_payload(*, target_root: Path) -> dict[str, Any]:
+    checker = target_root / "scripts/check/check_security_supply_chain.py"
+    if not checker.is_file():
+        return {
+            "kind": "agentic-workspace/security-supply-chain-readiness/v1",
+            "status": "unavailable",
+            "release_promotion_allowed": False,
+            "failures": [{"control": "readiness-check", "detail": "security supply-chain check is not installed"}],
+            "trust_boundary": "trusted-repository-required; lifecycle dry-run is not a sandbox",
+        }
+    completed = subprocess.run(
+        [sys.executable, str(checker), "--format", "json"],
+        cwd=target_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        payload = {
+            "kind": "agentic-workspace/security-supply-chain-readiness/v1",
+            "status": "unavailable",
+            "release_promotion_allowed": False,
+            "failures": [{"control": "readiness-check", "detail": "security readiness check returned invalid JSON"}],
+            "trust_boundary": "trusted-repository-required; lifecycle dry-run is not a sandbox",
+        }
+    if completed.returncode and isinstance(payload, dict) and payload.get("status") == "ready":
+        payload["status"] = "blocked"
+        payload["release_promotion_allowed"] = False
+        failures = payload.get("failures")
+        if not isinstance(failures, list):
+            failures = []
+            payload["failures"] = failures
+        failures.append({"control": "readiness-check", "detail": f"checker exited {completed.returncode}"})
+    return payload if isinstance(payload, dict) else {}
+
+
+def _security_readiness_promotion_input(*, receipt: dict[str, Any] | None, expected_subject_fingerprint: str) -> dict[str, Any]:
+    reason = "accepted-current-security-readiness"
+    if not isinstance(receipt, dict):
+        reason = "missing-security-readiness"
+    elif receipt.get("kind") != "agentic-workspace/security-supply-chain-readiness/v1":
+        reason = "unsupported-security-readiness"
+    elif receipt.get("subject_fingerprint") != expected_subject_fingerprint:
+        reason = "stale-or-mismatched-security-readiness"
+    elif receipt.get("status") != "ready" or receipt.get("release_promotion_allowed") is not True:
+        reason = "failed-security-readiness"
+    accepted = reason == "accepted-current-security-readiness"
+    return {
+        "kind": "agentic-workspace/release-promotion-input/v1",
+        "input": "security-supply-chain-readiness",
+        "status": "accepted" if accepted else "blocked",
+        "reason": reason,
+        "owner": "security-supply-chain",
+        "subject_fingerprint": expected_subject_fingerprint,
+        "receipt": receipt if accepted else None,
     }
 
 
@@ -12657,6 +13091,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/release-recovery/v1",
         "purpose": "source-checkout release recovery posture for semver PR action, failed release summaries, and payload drift repair",
         "when_to_use": "during coordinated release, changeset recovery, payload drift, or failed release CI diagnosis",
+    },
+    {
+        "section": "security_supply_chain",
+        "kind": "agentic-workspace/security-supply-chain-readiness/v1",
+        "purpose": "exact trusted-execution, scanner, immutable workflow, lock, SBOM, and provenance readiness",
+        "when_to_use": "before support-bearing promotion or when repository trust and release provenance need an exact decision",
     },
 )
 
@@ -15745,6 +16185,10 @@ def _run_lazy_report_section_command(
         )
         return _select_report_payload(payload, profile="router", section=normalized)
 
+    if normalized == "security_supply_chain":
+        payload["security_supply_chain"] = _security_supply_chain_readiness_payload(target_root=target_root)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
     if normalized == "pr_comment_attention":
         payload["pr_comment_attention"] = _pr_comment_attention_payload(
             target_root=target_root,
@@ -15783,7 +16227,20 @@ def _run_lazy_report_section_command(
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "improvement_intake":
-        payload["improvement_intake"] = _improvement_intake_payload(target_root=target_root, config=config, repo_friction={})
+        explicit_repo_friction = repo_friction_payload(
+            target_root=target_root,
+            improvement_latitude=config.improvement_latitude,
+            improvement_latitude_source=config.improvement_latitude_source,
+            policy_payload=_improvement_latitude_payload(config.improvement_latitude),
+            boundary_test_payload=_improvement_boundary_test_payload(),
+            external_setup_findings_payload=_repo_friction_external_setup_findings_payload(target_root=target_root),
+            incidental_finding_policy=copy.deepcopy(_IMPROVEMENT_LATITUDE_POLICY["incidental_finding_policy"]),
+            validation_friction_policy=_validation_friction_payload(),
+            cli_invoke=config.cli_invoke,
+        )
+        payload["improvement_intake"] = _improvement_intake_payload(
+            target_root=target_root, config=config, repo_friction=explicit_repo_friction
+        )
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "repo_friction":
@@ -17231,6 +17688,15 @@ def _operational_compression_payload(
 def _ordinary_output_shape_inventory() -> dict[str, Any]:
     outputs = [
         {
+            "surface": "init",
+            "status": "budget-proven",
+            "primary_decision": "whether bootstrap mutation is planned, applied, or needs review",
+            "primary_decision_object": "decision",
+            "ordinary_default_shape": "lifecycle decision envelope with bounded review evidence",
+            "detail_route": "init --verbose --format json",
+            "budget_evidence": "tests/test_workspace_cli.py checks cold and warm default init output against the decision-envelope budget.",
+        },
+        {
             "surface": "start",
             "status": "budget-proven",
             "primary_decision": "next_safe_action",
@@ -17250,7 +17716,7 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
         },
         {
             "surface": "summary",
-            "status": "retained-with-evidence",
+            "status": "budget-proven",
             "primary_decision": "current planning state and recommended next action",
             "primary_decision_object": "continuation_view",
             "ordinary_default_shape": "active-state router with lossy continuation projection and selectors for raw planning detail",
@@ -17267,8 +17733,17 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
             "retention_evidence": "Preflight is not ordinary startup; it remains a routed recovery surface with gate-first output.",
         },
         {
+            "surface": "doctor",
+            "status": "budget-proven",
+            "primary_decision": "whether workspace health requires repair or manual review",
+            "primary_decision_object": "scoped_health",
+            "ordinary_default_shape": "compact health and repair router with verbose diagnostic drill-down",
+            "detail_route": "doctor --verbose --format json",
+            "budget_evidence": "tests/test_workspace_cli.py checks ordinary doctor output against the decision-envelope budget.",
+        },
+        {
             "surface": "report",
-            "status": "retained-with-evidence",
+            "status": "budget-proven",
             "primary_decision": "report next_action or maintenance-pressure router",
             "primary_decision_object": "next_action",
             "ordinary_default_shape": "router profile with decision-grade fields and high-volume sections behind --section/--verbose",
@@ -17277,7 +17752,7 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
         },
         {
             "surface": "proof",
-            "status": "retained-with-evidence",
+            "status": "budget-proven",
             "primary_decision": "selected proof command or proof blocker",
             "primary_decision_object": "next",
             "ordinary_default_shape": "next proof action with required_commands and manual verification only when needed",
@@ -17304,40 +17779,94 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
         },
     ]
     budget_contract = {
-        "kind": "workspace-ordinary-default-output-budget/v1",
+        "kind": "workspace-ordinary-default-output-budget/v2",
+        "schema_version": "workspace-output-profile-budgets/v2",
         "status": "checked",
         "advisory_only": False,
-        "rule": "Representative ordinary defaults must stay selector-first; growth needs replacement, relocation, compression, or an explicit waiver.",
+        "measurement": {
+            "json_bytes": "UTF-8 bytes of compact JSON",
+            "field_count": "recursive object-key count",
+            "estimated_tokens": "ceiling(json_bytes / 4); a stable regression estimate, not tokenizer billing",
+            "human_lines": "non-empty lines from the ordinary text renderer",
+        },
+        "rule": "Representative ordinary defaults must satisfy every declared dimension; growth needs replacement, relocation, compression, or an explicit reviewed contract change.",
         "representative_surfaces": [
             {
-                "surface": "start",
+                "surface": "init",
+                "profile": "decision-envelope/v1",
                 "status": "budget-proven",
                 "max_json_bytes": 10000,
-                "proof": "test_start_default_stays_under_tiny_output_budget_for_docs_task",
+                "max_field_count": 140,
+                "max_estimated_tokens": 2500,
+                "max_human_lines": 80,
+                "expansion_trigger": "--verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
+            },
+            {
+                "surface": "start",
+                "profile": "startup-context/v1",
+                "status": "budget-proven",
+                "max_json_bytes": 10000,
+                "max_field_count": 300,
+                "max_estimated_tokens": 2500,
+                "max_human_lines": 80,
+                "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "implement",
+                "profile": "implementer-context-tiny/v1",
                 "status": "budget-proven",
-                "max_json_bytes": 13000,
-                "proof": "test_implement_default_stays_under_tiny_output_budget_for_docs_task",
+                "max_json_bytes": 15000,
+                "max_field_count": 400,
+                "max_estimated_tokens": 3750,
+                "max_human_lines": 100,
+                "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "summary",
-                "status": "retained-with-evidence",
-                "max_json_bytes": 12000,
-                "proof": "summary default remains selector-first through continuation_view tests",
+                "profile": "planning-summary-tiny/v1",
+                "status": "budget-proven",
+                "max_json_bytes": 20000,
+                "max_field_count": 500,
+                "max_estimated_tokens": 5000,
+                "max_human_lines": 100,
+                "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "report",
-                "status": "retained-with-evidence",
+                "profile": "report-router/v1",
+                "status": "budget-proven",
                 "max_json_bytes": 16000,
-                "proof": "report defaults route high-volume sections behind --section and operational_compression records this budget state",
+                "max_field_count": 400,
+                "max_estimated_tokens": 4000,
+                "max_human_lines": 80,
+                "expansion_trigger": "--section or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
                 "surface": "proof",
-                "status": "retained-with-evidence",
+                "profile": "proof-decision-envelope/v1",
+                "status": "budget-proven",
                 "max_json_bytes": 12000,
-                "proof": "proof defaults expose next proof action while detailed proof context stays behind selectors",
+                "max_field_count": 320,
+                "max_estimated_tokens": 3000,
+                "max_human_lines": 80,
+                "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
+            },
+            {
+                "surface": "doctor",
+                "profile": "lifecycle-health-compact/v1",
+                "status": "budget-proven",
+                "max_json_bytes": 14000,
+                "max_field_count": 360,
+                "max_estimated_tokens": 3500,
+                "max_human_lines": 80,
+                "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
         ],
         "selector_relocations": [
@@ -18495,6 +19024,9 @@ def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
             "distillation_contract_anchor": "",
             "sample_missing_distillation": [],
             "sample_post_contract_missing_distillation": [],
+            "archived_plan_bytes": 0,
+            "compact_receipt_count": 0,
+            "compact_receipt_bytes": 0,
         }
     archive_dir = Path(target_text) / ".agentic-workspace" / "planning" / "execplans" / "archive"
     if not archive_dir.exists():
@@ -18507,8 +19039,15 @@ def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
             "distillation_contract_anchor": "",
             "sample_missing_distillation": [],
             "sample_post_contract_missing_distillation": [],
+            "archived_plan_bytes": 0,
+            "compact_receipt_count": 0,
+            "compact_receipt_bytes": 0,
         }
     archived_plans = [path for path in sorted(archive_dir.glob("*.plan.json")) if path.is_file()]
+    archived_plan_bytes = sum(path.stat().st_size for path in archived_plans)
+    receipt_dir = archive_dir.parent.parent / "closeout-evidence"
+    compact_receipts = [path for path in sorted(receipt_dir.glob("*.closeout.json")) if path.is_file()] if receipt_dir.exists() else []
+    compact_receipt_bytes = sum(path.stat().st_size for path in compact_receipts)
     missing: list[str] = []
     missing_with_mtime: list[tuple[str, float]] = []
     distillation_anchors: list[tuple[str, float]] = []
@@ -18542,6 +19081,9 @@ def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
         "distillation_contract_anchor": anchor_name,
         "sample_missing_distillation": missing[:5],
         "sample_post_contract_missing_distillation": post_contract_missing[:5],
+        "archived_plan_bytes": archived_plan_bytes,
+        "compact_receipt_count": len(compact_receipts),
+        "compact_receipt_bytes": compact_receipt_bytes,
     }
 
 
@@ -18549,6 +19091,12 @@ def _archive_retention_policy(*, archived_distillation: dict[str, Any], artifact
     archived_count = _as_int(archived_distillation.get("archived_plan_count"))
     legacy_missing = _as_int(archived_distillation.get("legacy_missing_distillation_count"))
     post_contract_missing = _as_int(archived_distillation.get("post_contract_missing_distillation_count"))
+    archived_bytes = _as_int(archived_distillation.get("archived_plan_bytes"))
+    receipt_count = _as_int(archived_distillation.get("compact_receipt_count"))
+    receipt_bytes = _as_int(archived_distillation.get("compact_receipt_bytes"))
+    file_budget = 100
+    byte_budget = 2 * 1024 * 1024
+    receipt_byte_budget = 2 * 1024 * 1024
     footprint_classes = _list_payload(artifact_footprint.get("classes"))
     archived_footprint = next((item for item in footprint_classes if isinstance(item, dict) and item.get("id") == "archived_execplans"), {})
     footprint_pressure = str(archived_footprint.get("pressure", "quiet")) if isinstance(archived_footprint, dict) else "quiet"
@@ -18585,21 +19133,74 @@ def _archive_retention_policy(*, archived_distillation: dict[str, Any], artifact
                 "why": "Archive count is high enough to merit selector-driven review before adding more residue.",
             }
         )
+    budget_exceeded = archived_count > file_budget or archived_bytes > byte_budget or receipt_bytes > receipt_byte_budget
+    if budget_exceeded:
+        candidates.append(
+            {
+                "signal": "host-retention-budget-exceeded",
+                "count": archived_count,
+                "recommended_outcome": "export-and-compact",
+                "candidate_paths": _list_payload(archived_footprint.get("sample"))[:5] if isinstance(archived_footprint, dict) else [],
+                "why": "Full retained Planning history exceeds its checked-in file or byte budget; inspect exact loss accounting before incremental compaction.",
+            }
+        )
     return {
-        "kind": "workspace-archive-retention-policy/v1",
+        "kind": "workspace-archive-retention-policy/v2",
+        "policy_version": "planning-archive-retention/v2",
         "status": "attention" if candidates else "quiet",
-        "advisory_only": True,
+        "advisory_only": False,
         "applies_to": ".agentic-workspace/planning/execplans/archive/*.plan.json",
-        "outcomes": ["retain", "shrink", "stub", "delete", "promote-summary-elsewhere"],
-        "default_outcome": "retain",
+        "lifecycle_classes": [
+            "live-owner",
+            "recently-closed-evidence",
+            "compact-durable-receipt",
+            "distilled-conclusion",
+            "optional-exported-full-evidence",
+            "removable-after-export",
+        ],
+        "outcomes": ["retain-recently", "export-and-compact", "promote-summary-elsewhere"],
+        "default_outcome": "compact-receipt",
+        "budgets": {
+            "full_archive_file_count": {
+                "actual": archived_count,
+                "maximum": file_budget,
+                "status": "exceeded" if archived_count > file_budget else "within",
+            },
+            "full_archive_bytes": {
+                "actual": archived_bytes,
+                "maximum": byte_budget,
+                "status": "exceeded" if archived_bytes > byte_budget else "within",
+            },
+            "compact_receipt_bytes": {
+                "actual": receipt_bytes,
+                "maximum": receipt_byte_budget,
+                "status": "exceeded" if receipt_bytes > receipt_byte_budget else "within",
+            },
+        },
+        "trend": {
+            "full_archive_records": archived_count,
+            "compact_receipts": receipt_count,
+            "full_archive_bytes": archived_bytes,
+            "compact_receipt_bytes": receipt_bytes,
+            "migration_completion_ratio": round(receipt_count / max(1, receipt_count + archived_count), 4),
+        },
+        "budget_status": "exceeded" if budget_exceeded else "within",
         "candidate_count": len(candidates),
         "candidates": candidates,
+        "dry_run_command": "agentic-workspace planning archive-plan --plan all-archived --compact-retained --dry-run --format json",
+        "apply_command": "agentic-workspace planning archive-plan --plan all-archived --compact-retained --apply-cleanup --format json",
+        "ordinary_route_exclusion": {
+            "startup": "excluded",
+            "routing": "excluded",
+            "findings": "excluded unless explicitly referenced or operational_compression is selected",
+            "historical_lookup": "planning summary --select finished_work_inspection_contract",
+        },
         "before_shrink_or_delete": [
             "promote durable learning to Memory, docs, contracts, checks, or issues",
             "preserve enough evidence for restart, review, trust, and continuation",
             "keep ordinary startup and active planning out of archive history",
         ],
-        "rule": "Retention pressure is advisory and selector-driven; it recommends review outcomes but never deletes archived evidence automatically.",
+        "rule": "Retention is explicit and reversible: mutation requires --apply-cleanup, exports full evidence first, writes a compact Git receipt, and reports exact loss/retrievability before removing an archive.",
     }
 
 
@@ -47099,6 +47700,27 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     select = getattr(args, "select", None)
     task_text = getattr(args, "task", None)
     changed_paths = _normalize_changed_paths(getattr(args, "changed", []) or [])
+    fail_on = getattr(args, "fail_on", None)
+    if fail_on:
+        if any((getattr(args, "startup", False), getattr(args, "verbose", False), section, select)):
+            raise WorkspaceUsageError("report --fail-on cannot be combined with --startup, --verbose, --section, or --select.")
+        report_payload = _run_report_command(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            config=config,
+            task_text=task_text,
+            changed_paths=changed_paths,
+        )
+        assertion = _strict_health_assertion_payload(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            findings=[item for item in report_payload.get("findings", []) if isinstance(item, dict)],
+            cli_invoke=config.cli_invoke,
+        )
+        _emit_payload(payload=assertion, format_name=args.format)
+        return int(assertion["exit_code"])
     if section in {"external_work_reconciliation", "external_work_delta"}:
         _ensure_external_intent_cache_if_available(target_root=target_root)
     if profile == "router" and section is None:
@@ -47503,6 +48125,77 @@ def _load_lifecycle_mutation_context(
     return (target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config)
 
 
+def _compact_init_decision_envelope(payload: dict[str, Any], *, cli_invoke: str) -> dict[str, Any]:
+    needs_review = [str(item) for item in payload.get("needs_review", [])]
+    placeholders = [str(item) for item in payload.get("placeholders", [])]
+    lifecycle_plan = payload.get("lifecycle_plan", {})
+    if not isinstance(lifecycle_plan, dict):
+        lifecycle_plan = {}
+    plan_summary = lifecycle_plan.get("summary", {})
+    if not isinstance(plan_summary, dict):
+        plan_summary = {}
+    dry_run = bool(payload.get("dry_run"))
+    review_required = bool(needs_review or placeholders or payload.get("prompt_requirement") == "required")
+    modules = [str(item) for item in payload.get("modules", [])]
+    command_parts = ["agentic-workspace", "init", "--target", str(payload.get("target", "."))]
+    if modules:
+        command_parts.extend(["--modules", ",".join(modules)])
+    if dry_run:
+        command_parts.append("--dry-run")
+    command_parts.extend(["--verbose", "--format", "json"])
+    detail_command = _command_with_cli_invoke(command=" ".join(command_parts), cli_invoke=cli_invoke)
+    next_steps = [str(item) for item in payload.get("next_steps", [])]
+    primary_next_action = next_steps[0] if next_steps else "No follow-up action is required."
+    review_items = [*needs_review, *[item for item in placeholders if item not in needs_review]]
+    review_limit = 8
+    return {
+        "kind": "agentic-workspace/lifecycle-decision-envelope/v1",
+        "profile": "decision-envelope/v1",
+        "surface": "init",
+        "command": "init",
+        "target": payload.get("target"),
+        "dry_run": dry_run,
+        "modules": modules,
+        "footprint_profile": payload.get("footprint_profile"),
+        "payload_mirror": bool(payload.get("payload_mirror")),
+        "decision": {
+            "status": "review-required" if review_required else "ready",
+            "next_action": primary_next_action,
+            "mutation": "planned-only" if dry_run else "applied",
+        },
+        "workspace": {
+            "repo_state": payload.get("repo_state"),
+            "mode": payload.get("mode"),
+            "modules": modules,
+            "footprint_profile": payload.get("footprint_profile"),
+            "prompt_requirement": payload.get("prompt_requirement"),
+        },
+        "changes": {
+            "create_count": int(plan_summary.get("create_count", len(payload.get("created", []))) or 0),
+            "update_count": int(plan_summary.get("update_count", len(payload.get("updated_managed", []))) or 0),
+            "preserve_count": int(plan_summary.get("preserve_count", len(payload.get("preserved_existing", []))) or 0),
+            "review_required_count": int(plan_summary.get("review_required_count", len(review_items)) or 0),
+            "warning_count": int(plan_summary.get("warning_count", 0) or 0),
+        },
+        "review": {
+            "required": review_required,
+            "item_count": len(review_items),
+            "items": review_items[:review_limit],
+            "omitted_item_count": max(0, len(review_items) - review_limit),
+        },
+        "claim_boundary": {
+            "workspace_initialized": not dry_run and not review_required,
+            "mutation_applied": not dry_run,
+            "rule": "A compact envelope proves only the reported lifecycle outcome; use the verbose route before broader configuration or provenance claims.",
+        },
+        "detail": {
+            "status": "hidden-behind-explicit-expansion",
+            "verbose_command": detail_command,
+            "omitted": ["module_reports", "config", "effect_inventory", "provenance", "full_lifecycle_plan"],
+        },
+    }
+
+
 def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
     command_name = str(args.command)
     target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config = _load_lifecycle_mutation_context(
@@ -47522,6 +48215,9 @@ def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
         config=config,
         footprint_profile=getattr(args, "footprint_profile", None),
         mirror_payload=bool(getattr(args, "mirror_payload", False)),
+        include_output_detail=(
+            command_name != "init" or bool(getattr(args, "verbose", False)) or bool(getattr(args, "mirror_payload", False))
+        ),
     )
     payload["command"] = command_name
     payload["lifecycle_plan"] = _lifecycle_plan_payload(
@@ -47533,6 +48229,8 @@ def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
         local_only=bool(getattr(args, "local_only", False)),
         cli_invoke=_lifecycle_cli_invoke(config=config),
     )
+    if command_name == "init" and not bool(getattr(args, "verbose", False)) and not bool(getattr(args, "mirror_payload", False)):
+        payload = _compact_init_decision_envelope(payload, cli_invoke=_lifecycle_cli_invoke(config=config))
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 
@@ -55127,6 +55825,41 @@ def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
         if isinstance(re_enable, dict) and re_enable.get("verify_command"):
             print(f"Inspect: {re_enable['verify_command']}")
         return
+    if payload.get("kind") == "agentic-workspace/health-assertion/v1":
+        print(f"Strict health: {payload.get('status', 'unknown')}")
+        policy = payload.get("policy", {})
+        subject = payload.get("subject", {})
+        print(f"Policy: {policy.get('id', 'unknown')} v{policy.get('version', '?')} ({policy.get('fingerprint', '')[:12]})")
+        print(f"Subject: {subject.get('fingerprint', '')[:12]}")
+        print(f"Blocking findings: {payload.get('blocking_count', 0)}")
+        for blocker in payload.get("blockers", []):
+            print(f"- [{blocker.get('health_class')}] {blocker.get('owner')}: {blocker.get('message')}")
+            action = blocker.get("action", {})
+            if isinstance(action, dict) and action.get("command"):
+                print(f"  next: {action['command']}")
+        detail = payload.get("detail", {})
+        if isinstance(detail, dict) and detail.get("command"):
+            print(f"Detail: {detail['command']}")
+        return
+    if payload.get("kind") == "startup-context/v1":
+        print(f"Target: {payload.get('target', '.')}")
+        print("Command: start")
+        next_action = payload.get("next_safe_action", {})
+        if isinstance(next_action, dict):
+            print(f"Next action: {next_action.get('next_safe_action', 'unknown')}")
+            if next_action.get("why"):
+                print(f"Why: {next_action['why']}")
+        action_signals = payload.get("action_signals", {})
+        if isinstance(action_signals, dict):
+            blockers = action_signals.get("hard_blockers", [])
+            if blockers:
+                print(f"Blockers: {len(blockers)}; inspect JSON detail before mutation")
+        decision_packet = payload.get("decision_packet", {})
+        if isinstance(decision_packet, dict):
+            detail_routes = decision_packet.get("detail_routes", {})
+            if isinstance(detail_routes, dict) and detail_routes.get("why_blocked"):
+                print(f"Detail: {detail_routes['why_blocked']}")
+        return
     if payload.get("command") == "prompt":
         _emit_prompt_text(payload)
         return
@@ -56782,14 +57515,12 @@ def _run_final_response_executor_loop(
         started_at = datetime.now(timezone.utc).isoformat()
         completed_at = started_at
         try:
-            result = subprocess.run(
+            result = run_trusted_shell(
                 executor_command,
-                shell=True,
+                trust_source="explicit-user-executor-command",
+                admitted=True,
                 cwd=str(target_root),
                 env=env,
-                text=True,
-                capture_output=True,
-                check=False,
             )
             completed_at = datetime.now(timezone.utc).isoformat()
         except OSError as exc:

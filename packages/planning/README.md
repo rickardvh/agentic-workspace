@@ -390,6 +390,8 @@ This module can work alongside Agentic Memory, but does not require Memory: Plan
 
 `archive-plan` is the compatibility command name for plan closeout. The normal path distills closeout, routes future-relevant residue to its real owner, and removes the completed execplan from Planning. Use `--retain-archive` only for legacy audit/compatibility cases. `archive-plan --apply-cleanup` is intentionally narrow: it may remove completed active-queue items that still point at the closed plan and compress stale roadmap residue tied to that same thread, but it does not invent hidden state or perform broad automatic rewrites.
 
+Retained legacy archives have an incremental, reversible lifecycle. Inspect one archive with `archive-plan --plan <id> --compact-retained --dry-run`; inspect the complete backlog with `--plan all-archived`. The receipt reports the source hash and bytes, compact-receipt bytes, every dropped top-level field, and the export path. Mutation additionally requires `--apply-cleanup`: Planning copies full evidence to `--export-dir` (or the ignored local export area), writes a compact checked-in closeout receipt, then removes the bulky archive. Exports may not live under checked-in `.agentic-workspace/planning` state.
+
 `upgrade` is intentionally conservative: it refreshes package-managed helper surfaces, re-renders generated planning docs, removes stale generated queue views from older installs, and leaves repo-owned surfaces like `AGENTS.md` unchanged when they already exist.
 When older active execplans were written against a previous template, the upgrade path is to reconcile those plans to the current contract shape, not to expect `upgrade` to rewrite them automatically.
 

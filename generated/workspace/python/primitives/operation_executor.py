@@ -125,7 +125,10 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
     emitted = values.get('emitted')
     if isinstance(emitted, str):
         print(emitted, end='')
-    return 0
+    exit_status = values.get('exit_status')
+    if not isinstance(exit_status, int) and isinstance(values.get('result'), Mapping):
+        exit_status = values['result'].get('exit_status')
+    return exit_status if isinstance(exit_status, int) else 0
 
 
 def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any]) -> object:

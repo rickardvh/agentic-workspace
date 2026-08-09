@@ -52,6 +52,7 @@ from agentic_workspace.runtime_source_review import (
     runtime_source_edit_review_for_changed_paths,
 )
 from agentic_workspace.runtime_symbol_working_set import LARGE_RUNTIME_PATHS, runtime_symbol_working_set_for_changed_paths
+from agentic_workspace.trusted_execution import run_trusted_shell
 from agentic_workspace.workspace_runtime_core import (
     _PROOF_EXECUTION_STATUSES,
     _PROOF_SELECTION_RULES,
@@ -3500,15 +3501,12 @@ def _proof_route_run_validation_commands(*, target_root: Path, commands: list[st
         if not normalized:
             continue
         try:
-            completed = subprocess.run(
+            completed = run_trusted_shell(
                 normalized,
+                trust_source="checked-repository-proof-route",
+                admitted=True,
                 cwd=target_root,
-                shell=True,
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
                 timeout=timeout_seconds,
-                check=False,
             )
         except subprocess.TimeoutExpired as exc:
             results.append(
@@ -4817,7 +4815,9 @@ def _proof_route_health_payload(
         )
 
     # Manual obligations are completion evidence requirements, not proof-route
-    # authority defects. They remain visible through completion gates.
+    # authority defects. They remain visible through manual_proof_obligations and
+    # completion gates; treating them as route-health findings creates a cycle in
+    # which closeout cannot record the review evidence until the route is mutated.
 
     repair_packets = [
         {

@@ -112,6 +112,14 @@
           "help": "Opt in to checking in the full generic package payload mirror instead of the ordinary necessary-surface footprint."
         },
         {
+          "name": "verbose",
+          "flags": [
+            "--verbose"
+          ],
+          "action": "store_true",
+          "help": "Show the full lifecycle, module, configuration, and provenance payload instead of the ordinary decision envelope."
+        },
+        {
           "name": "dry_run",
           "flags": [
             "--dry-run"

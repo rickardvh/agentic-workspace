@@ -822,6 +822,21 @@
               "name": "retain_archive"
             },
             {
+              "action": "store_true",
+              "flags": [
+                "--compact-retained"
+              ],
+              "help": "Replace an already-retained archive (or --plan all-archived) with a compact Git receipt after reversible export; requires --apply-cleanup to mutate.",
+              "name": "compact_retained"
+            },
+            {
+              "flags": [
+                "--export-dir"
+              ],
+              "help": "Export directory for full retained evidence; defaults to ignored local Planning exports and must be outside checked-in Planning state.",
+              "name": "export_dir"
+            },
+            {
               "flags": [
                 "--parent-lane-closeout"
               ],
@@ -4050,6 +4065,16 @@
           ],
           "help": "Comma-separated JSON fields to return from the selected report payload, such as answer.closeout_protocol.",
           "name": "select"
+        },
+        {
+          "choices": [
+            "strict-current"
+          ],
+          "flags": [
+            "--fail-on"
+          ],
+          "help": "Assert the named versioned health policy and exit non-zero when current state violates it.",
+          "name": "fail_on"
         }
       ],
       "role": "core_context_router",

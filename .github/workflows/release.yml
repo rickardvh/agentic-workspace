@@ -17,6 +17,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   agentic-workspace-package:
@@ -26,26 +28,26 @@ jobs:
       EXPECTED_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_commit || '' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
 
       - name: Set up Python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.13"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v8.2.0
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24"
 
       - name: Sync workspace dependencies
-        run: make sync-all
+        run: uv sync --locked --all-groups
 
       - name: Verify tag targets coordinated release commit
         run: |
@@ -95,11 +97,19 @@ jobs:
       - name: Run built package smoke tests
         run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
 
+      - name: Generate release SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: dist
+          format: spdx-json
+          output-file: dist/agentic-workspace.spdx.json
+          upload-artifact: false
+
       - name: Prove exact npm artifacts on Node 24
         run: uv run python scripts/check/run_generated_command_package_proof.py --packed-conformance --artifact-dir dist --receipt-out dist/generated-command-conformance-node24.json
 
       - name: Set up minimum Node.js
-        uses: actions/setup-node@v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "20"
 
@@ -107,7 +117,7 @@ jobs:
         run: uv run python scripts/check/run_generated_command_package_proof.py --packed-conformance --artifact-dir dist --receipt-out dist/generated-command-conformance-node20.json
 
       - name: Set up current Node.js
-        uses: actions/setup-node@v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "25"
 
@@ -122,7 +132,10 @@ jobs:
           done
 
       - name: Generate checksums and release manifest
+        env:
+          SECURITY_READINESS_COMMAND: uv run python scripts/check/check_security_supply_chain.py --format json --source-identity ${{ github.sha }} --artifact-dir dist --output dist/security-supply-chain-readiness.json
         run: |
+          $SECURITY_READINESS_COMMAND
           python - <<'PY'
           import hashlib
           import json
@@ -257,9 +270,20 @@ jobs:
                   "receipt_kind": ownership["semantic_conformance"]["receipt_kind"],
                   "receipts": conformance_receipts,
               },
+              "security_supply_chain": {
+                  "required": True,
+                  "readiness_receipt": "security-supply-chain-readiness.json",
+                  "sbom": "agentic-workspace.spdx.json",
+                  "provenance": "GitHub artifact attestation over dist/*",
+              },
           }
           manifest_path = dist / "agentic-workspace-release-manifest.json"
           manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          for required_security_asset in ("security-supply-chain-readiness.json", "agentic-workspace.spdx.json"):
+              security_path = dist / required_security_asset
+              if not security_path.is_file():
+                  raise SystemExit(f"Missing required security supply-chain asset: {required_security_asset}")
+              checksum_lines.append(f"{sha256(security_path)}  {security_path.name}")
           checksum_lines.append(f"{sha256(manifest_path)}  {manifest_path.name}")
           (dist / "SHA256SUMS").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
           PY
@@ -293,7 +317,14 @@ jobs:
           for line in (dist / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
               digest, asset = line.split("  ", 1)
               checksums[asset] = digest
-          required_assets = {"agentic-workspace-release-manifest.json"}
+          required_assets = {
+              "agentic-workspace-release-manifest.json",
+              "security-supply-chain-readiness.json",
+              "agentic-workspace.spdx.json",
+          }
+          security = manifest.get("security_supply_chain", {})
+          if security.get("required") is not True:
+              raise SystemExit("Release manifest is missing required security supply-chain readiness")
           semantic = manifest.get("semantic_conformance", {})
           if semantic.get("required") is not True or len(semantic.get("receipts", [])) != len(ownership["semantic_conformance"]["runtime_majors"]):
               raise SystemExit("Release manifest is missing required semantic-conformance receipts")
@@ -313,8 +344,13 @@ jobs:
                   raise SystemExit(f"Checksum mismatch for {asset}")
           PY
 
+      - name: Attest exact release subjects
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+
       - name: Publish GitHub release assets
-        uses: softprops/action-gh-release@v3.0.0
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           body_path: .release/releases/${{ env.RELEASE_TAG }}.md
@@ -325,4 +361,6 @@ jobs:
             dist/generated-command-conformance-node*.json
             dist/SHA256SUMS
             dist/agentic-workspace-release-manifest.json
+            dist/security-supply-chain-readiness.json
+            dist/agentic-workspace.spdx.json
           fail_on_unmatched_files: true

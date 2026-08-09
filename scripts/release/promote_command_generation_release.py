@@ -46,6 +46,42 @@ class PromotionResult:
     stale_paths: tuple[str, ...]
     dependency_spec: str
     lock_refreshed: bool
+    promotion_inputs: tuple[dict[str, Any], ...]
+
+
+class ReleasePromotionBlocked(RuntimeError):
+    def __init__(self, decision: dict[str, Any]) -> None:
+        self.decision = decision
+        super().__init__(f"release promotion blocked: {decision.get('reason', 'unknown')}")
+
+
+def _require_security_readiness_promotion_input(
+    *, receipt: dict[str, Any] | None, expected_subject_fingerprint: str
+) -> dict[str, Any]:
+    from agentic_workspace import workspace_runtime_core
+
+    decision = workspace_runtime_core._security_readiness_promotion_input(
+        receipt=receipt,
+        expected_subject_fingerprint=expected_subject_fingerprint,
+    )
+    if decision["status"] != "accepted":
+        raise ReleasePromotionBlocked(decision)
+    return decision
+
+
+def _require_strict_health_promotion_input(
+    *, receipt: dict[str, Any] | None, expected_subject_fingerprint: str
+) -> dict[str, Any]:
+    from agentic_workspace import workspace_runtime_core
+
+    decision = workspace_runtime_core._strict_health_promotion_input(
+        receipt=receipt,
+        expected_policy_fingerprint=workspace_runtime_core._strict_health_policy_fingerprint(),
+        expected_subject_fingerprint=expected_subject_fingerprint,
+    )
+    if decision["status"] != "accepted":
+        raise ReleasePromotionBlocked(decision)
+    return decision
 
 
 def _fetch_json(url: str) -> dict[str, Any]:
@@ -125,7 +161,19 @@ def promote_command_generation_release(
     release: CommandGenerationRelease,
     check: bool = False,
     refresh_lock: bool = True,
+    security_readiness_receipt: dict[str, Any] | None = None,
+    expected_security_subject_fingerprint: str = "",
+    strict_health_receipt: dict[str, Any] | None = None,
+    expected_strict_health_subject_fingerprint: str = "",
 ) -> PromotionResult:
+    security_input = _require_security_readiness_promotion_input(
+        receipt=security_readiness_receipt,
+        expected_subject_fingerprint=expected_security_subject_fingerprint,
+    )
+    strict_health_input = _require_strict_health_promotion_input(
+        receipt=strict_health_receipt,
+        expected_subject_fingerprint=expected_strict_health_subject_fingerprint,
+    )
     changed: list[str] = []
     stale: list[str] = []
 
@@ -163,6 +211,7 @@ def promote_command_generation_release(
         stale_paths=tuple(dict.fromkeys(stale)),
         dependency_spec=release.dependency_spec,
         lock_refreshed=lock_refreshed,
+        promotion_inputs=(security_input, strict_health_input),
     )
 
 
@@ -179,7 +228,36 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--check", action="store_true", help="Fail if pyproject or generated Dockerfile refs do not match the release.")
     parser.add_argument("--no-lock", action="store_true", help="Do not run uv lock after updating pyproject.toml.")
     parser.add_argument("--format", choices=["text", "json"], default="text")
+    parser.add_argument(
+        "--security-readiness-receipt",
+        type=Path,
+        required=True,
+        help="Exact security readiness receipt JSON produced for the release candidate.",
+    )
+    parser.add_argument(
+        "--security-subject-fingerprint",
+        required=True,
+        help="Expected security readiness subject fingerprint for the exact release candidate.",
+    )
+    parser.add_argument(
+        "--strict-health-receipt",
+        type=Path,
+        required=True,
+        help="Exact strict-current proof receipt JSON produced for the release candidate.",
+    )
+    parser.add_argument(
+        "--strict-health-subject-fingerprint",
+        required=True,
+        help="Expected strict-current subject fingerprint for the exact release candidate.",
+    )
     return parser.parse_args(argv)
+
+
+def _load_json_object(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    return payload
 
 
 def _release_from_args(args: argparse.Namespace) -> CommandGenerationRelease:
@@ -212,6 +290,10 @@ def main(argv: list[str] | None = None) -> int:
         release=release,
         check=bool(args.check),
         refresh_lock=not bool(args.no_lock),
+        security_readiness_receipt=_load_json_object(args.security_readiness_receipt),
+        expected_security_subject_fingerprint=str(args.security_subject_fingerprint),
+        strict_health_receipt=_load_json_object(args.strict_health_receipt),
+        expected_strict_health_subject_fingerprint=str(args.strict_health_subject_fingerprint),
     )
     payload = {
         "kind": "agentic-workspace/command-generation-release-promotion/v1",
@@ -220,6 +302,7 @@ def main(argv: list[str] | None = None) -> int:
         "changed_paths": list(result.changed_paths),
         "stale_paths": list(result.stale_paths),
         "lock_refreshed": result.lock_refreshed,
+        "promotion_inputs": list(result.promotion_inputs),
         "status": "stale" if args.check and result.stale_paths else "updated" if result.changed_paths else "current",
     }
     if args.format == "json":

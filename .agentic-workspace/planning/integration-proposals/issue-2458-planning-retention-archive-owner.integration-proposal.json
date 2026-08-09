@@ -1,0 +1,44 @@
+{
+  "kind": "planning-integration-proposal/v1",
+  "id": "issue-2458-planning-retention-archive-owner",
+  "status": "pending",
+  "phase": "integration-pending",
+  "requested_transition": "archive-owner",
+  "owner": {
+    "id": "issue-2458-planning-retention",
+    "ref": ".agentic-workspace/planning/execplans/issue-2458-planning-retention.plan.json"
+  },
+  "external_ref": "2458",
+  "proof_refs": [
+    "planning-retention-tests",
+    "ordinary-route-proof",
+    "typecheck",
+    "ruff"
+  ],
+  "parent_boundary": "Issue 2448 remains open until all release inputs are composed.",
+  "preserved_invariants": [
+    "unresolved-intent-fails-closed",
+    "ordinary-route-bounded",
+    "compact-receipt-queryable"
+  ],
+  "expected_subject_revision": "f9c992d09d233a03",
+  "expected_planning_revision": "94ec282b91e7411a",
+  "created_at": "2026-08-09T18:01:19.063601Z",
+  "updated_at": "2026-08-09T18:01:19.063601Z",
+  "authority_boundary": {
+    "proposal": "feature-branch declaration",
+    "integrated_truth": "integration receipt after apply",
+    "non_authority": [
+      "current selection",
+      "aggregate indexes",
+      "unrelated owners",
+      "terminal parent truth"
+    ],
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "codex/issue-2458-planning-retention",
+      "phase": "feature"
+    }
+  },
+  "proposal_revision": "ae5cb2918c5061cc"
+}

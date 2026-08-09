@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Prove independent Python and TypeScript consumers against built artifacts, including exact mutation failure semantics and clean removal."

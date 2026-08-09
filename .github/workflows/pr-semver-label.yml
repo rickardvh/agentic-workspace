@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
 
@@ -39,8 +39,9 @@ jobs:
           import tomllib
           from pathlib import Path
 
+          from scripts.release.release_ownership import classify_changed_paths
+
           ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
-          watched_paths = tuple(ownership["package_affecting_paths"])
           semver_labels = set(ownership["semver_labels"])
           changeset_dir = ownership["changeset_dir"].rstrip("/")
           release_pr_branch = ownership["release_pr_branch"]
@@ -66,11 +67,8 @@ jobs:
               capture_output=True,
               text=True,
           ).stdout.splitlines()
-          package_changed = any(
-              path == watched or path.startswith(watched)
-              for path in changed
-              for watched in watched_paths
-          )
+          path_classification = classify_changed_paths(changed, ownership)
+          package_changed = path_classification["package_affecting"]
 
           if not package_changed:
               print("No package-affecting changes detected; semver label not required.")
@@ -94,9 +92,8 @@ jobs:
               )
               print(f"Current semver labels: {selected or 'none'}", file=sys.stderr)
               print("Changed package paths:", file=sys.stderr)
-              for path in changed:
-                  if any(path == watched or path.startswith(watched) for watched in watched_paths):
-                      print(f"  {path}", file=sys.stderr)
+              for path in path_classification["package_affecting_paths"]:
+                  print(f"  {path}", file=sys.stderr)
               raise SystemExit(1)
 
           changesets = [
