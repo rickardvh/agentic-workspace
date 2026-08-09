@@ -27,6 +27,22 @@ Consumers detect the workspace through the documented root/config contract and c
 
 Optional repository-coupled scratch state belongs under `.agentic-workspace/local/integrations/<adapter-id>/`. It is ignored, non-authoritative, safe to delete, and cannot establish planning, proof, completion, configuration, or workflow state. Durable results enter shared state only through the existing owning AW operations or repo-native surfaces. Removing a consumer must leave checked-in AW state meaningful and ordinarily usable.
 
+The maintained closure proof is:
+
+```text
+uv run python scripts/check/run_external_consumer_readiness.py --require-node
+```
+
+It builds the released Python wheels and TypeScript package, installs two minimal
+consumers outside the source checkout, and requires both public clients to
+consume the current compatibility profile and provenance-bound conformance
+receipts. The proof covers absent, disabled, incompatible, malformed,
+retryable, additive-field, optional-module, necessary/full-mirror, and real
+mutation applied/duplicate/rejected/write-failure scenarios. It then removes
+the consumers, re-runs ordinary AW status through a separate installed host,
+checks that target repositories have no checked-in residue, and scans Python
+and Node package manifests for reverse dependencies on consumer fixtures.
+
 ## Participation Boundary
 
 Installed surfaces should expose the operating loop, not every implementation
