@@ -16,6 +16,8 @@ Use `docs/intent-contract.md` and `docs/resumable-execution-contract.md` for the
 Use `docs/execution-summary-contract.md` for the compact outcome shape that completed slices should leave behind before archive.
 Use `archive-plan --apply-cleanup` only when you want the helper to also remove completed active-item references and compress matching roadmap residue for the same archived thread.
 
+For legacy retained archives, use `archive-plan --plan <id> --compact-retained --dry-run` (or `--plan all-archived`) to inspect exact loss accounting. Applying the reviewed migration also requires `--apply-cleanup`; full evidence is exported before a compact checked-in receipt replaces it. The export must remain outside checked-in Planning state.
+
 This planning system is for execution. It is not intended to become a generic tracker, backlog database, or Jira replacement.
 
 ## Layout
@@ -314,4 +316,3 @@ Prefer refining the existing contract over inventing a second schema. If a propo
 Default to one active milestone at a time.
 Prefer updating an existing active plan over creating overlapping plan files for the same feature.
 Close and remove completed plans once they no longer affect future execution; retain archives only when audit or compatibility needs are explicit.
-

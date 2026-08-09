@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import sys as _sys
 import time
 
@@ -58,6 +59,128 @@ def test_archive_size_guardrail_warns_before_oversized_archive_write(tmp_path: P
     assert warning["warning_class"] == "archive_size_guardrail_blocked"
     assert warning["path"] == ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json"
     assert "max_bytes=10" in warning["message"]
+
+
+def _retained_archive_record(plan_id: str, *, padding: int = 0) -> dict[str, object]:
+    return {
+        "kind": "planning-execplan/v1",
+        "id": plan_id,
+        "title": f"Retained {plan_id}",
+        "owner_level": "slice",
+        "revision": 1,
+        "active_milestone": {"status": "completed"},
+        "execution_summary": {
+            "outcome delivered": f"Delivered {plan_id}",
+            "follow-on routed to": "none",
+        },
+        "proof_report": {"validation proof": "pytest"},
+        "intent_satisfaction": {
+            "was original intent fully satisfied?": "yes",
+            "unsolved intent passed to": "none",
+        },
+        "closure_check": {
+            "closeout scope": "slice",
+            "larger-intent status": "closed",
+            "closure decision": "archive-and-close",
+            "reopen trigger": "new contradictory evidence",
+        },
+        "large_historical_evidence": "x" * padding,
+    }
+
+
+def test_compact_retained_archive_reports_loss_and_exports_before_removal(tmp_path: Path) -> None:
+    archive = tmp_path / ".agentic-workspace/planning/execplans/archive/old.plan.json"
+    archive.parent.mkdir(parents=True)
+    archive.write_text(json.dumps(_retained_archive_record("old", padding=20_000), indent=2) + "\n", encoding="utf-8")
+
+    preview = installer_mod.archive_execplan(
+        "old",
+        target=tmp_path,
+        compact_retained=True,
+        dry_run=True,
+    )
+
+    assert archive.exists()
+    assert preview.operation_receipt["retrievable"] is True
+    assert preview.operation_receipt["source_bytes"] > preview.operation_receipt["receipt_bytes"]
+    assert "large_historical_evidence" in preview.operation_receipt["dropped_top_level_fields"]
+    assert any(action.kind == "would export" for action in preview.actions)
+    assert any(action.kind == "would remove" for action in preview.actions)
+
+    applied = installer_mod.archive_execplan(
+        "old",
+        target=tmp_path,
+        compact_retained=True,
+        apply_cleanup=True,
+    )
+
+    receipt = tmp_path / ".agentic-workspace/planning/closeout-evidence/old.closeout.json"
+    exported = tmp_path / ".agentic-workspace/local/planning-archive-exports/old.plan.json"
+    assert applied.reason_code == "retention-applied"
+    assert not archive.exists()
+    assert receipt.exists()
+    assert exported.exists()
+    receipt_payload = json.loads(receipt.read_text(encoding="utf-8"))
+    assert receipt_payload["retention"]["source_sha256"] == hashlib.sha256(exported.read_bytes()).hexdigest()
+    assert receipt_payload["outcome"] == "Delivered old"
+
+
+def test_compact_retained_archive_is_available_through_public_cli(tmp_path: Path, capsys) -> None:
+    archive = tmp_path / ".agentic-workspace/planning/execplans/archive/cli.plan.json"
+    archive.parent.mkdir(parents=True)
+    archive.write_text(json.dumps(_retained_archive_record("cli", padding=1_000), indent=2) + "\n", encoding="utf-8")
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "cli",
+                "--target",
+                str(tmp_path),
+                "--compact-retained",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["operation_receipt"]["kind"] == "planning-archive-retention-loss-accounting/v1"
+    assert payload["mutation_applied"] is False
+    assert archive.exists()
+
+
+def test_retention_batch_keeps_hundreds_of_closeouts_within_checked_in_budget(tmp_path: Path) -> None:
+    archive_root = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    archive_root.mkdir(parents=True)
+    for index in range(200):
+        path = archive_root / f"history-{index:03d}.plan.json"
+        path.write_text(
+            json.dumps(_retained_archive_record(f"history-{index:03d}", padding=4_000), indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+    preview = installer_mod.archive_execplan(
+        "all-archived",
+        target=tmp_path,
+        compact_retained=True,
+        dry_run=True,
+    )
+    assert preview.operation_receipt["candidate_count"] == 200
+    assert preview.operation_receipt["receipt_bytes"] < preview.operation_receipt["source_bytes"] / 2
+
+    applied = installer_mod.archive_execplan(
+        "all-archived",
+        target=tmp_path,
+        compact_retained=True,
+        apply_cleanup=True,
+    )
+    receipts = list((tmp_path / ".agentic-workspace/planning/closeout-evidence").glob("*.closeout.json"))
+    assert applied.operation_receipt["candidate_count"] == 200
+    assert not list(archive_root.glob("*.plan.json"))
+    assert len(receipts) == 200
+    assert sum(path.stat().st_size for path in receipts) < 2 * 1024 * 1024
 
 
 def test_archive_execplan_removes_completed_plan_after_distillation(tmp_path: Path) -> None:

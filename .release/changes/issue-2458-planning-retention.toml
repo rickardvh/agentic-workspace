@@ -1,0 +1,2 @@
+type = "minor"
+description = "Add reversible Planning archive compaction with compact receipts, loss accounting, and host retention budgets."

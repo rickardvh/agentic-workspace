@@ -1376,6 +1376,21 @@
                 "name": "retain_archive"
               },
               {
+                "action": "store_true",
+                "flags": [
+                  "--compact-retained"
+                ],
+                "help": "Replace retained full evidence with a compact receipt after reversible export; use --plan all-archived for incremental batch migration.",
+                "name": "compact_retained"
+              },
+              {
+                "flags": [
+                  "--export-dir"
+                ],
+                "help": "Export directory outside checked-in Planning state.",
+                "name": "export_dir"
+              },
+              {
                 "flags": [
                   "--parent-lane-closeout"
                 ],
@@ -13655,6 +13670,15 @@
             "attr": "retain_archive",
             "kind": "flag",
             "option": "--retain-archive"
+          },
+          {
+            "attr": "compact_retained",
+            "kind": "flag",
+            "option": "--compact-retained"
+          },
+          {
+            "attr": "export_dir",
+            "option": "--export-dir"
           },
           {
             "attr": "discard_archive",

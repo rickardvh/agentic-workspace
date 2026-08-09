@@ -44394,6 +44394,8 @@ def _run_planning_closeout_adapter(args: argparse.Namespace) -> int:
         ("--render-markdown", "render_markdown", "flag"),
         ("--apply-cleanup", "apply_cleanup", "flag"),
         ("--retain-archive", "retain_archive", "flag"),
+        ("--compact-retained", "compact_retained", "flag"),
+        ("--export-dir", "export_dir", "value"),
         ("--discard-archive", "discard_archive", "flag"),
         ("--verbose", "verbose", "flag"),
         ("--format", "format", "value"),

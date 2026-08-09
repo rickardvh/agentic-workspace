@@ -72,6 +72,38 @@ def test_json_payload_budget_failure_reports_largest_contributors() -> None:
     assert "context.large" in message
 
 
+def test_archive_retention_policy_reports_versioned_host_budgets_and_migration_route(tmp_path: Path) -> None:
+    archive_root = tmp_path / ".agentic-workspace/planning/execplans/archive"
+    receipt_root = tmp_path / ".agentic-workspace/planning/closeout-evidence"
+    archive_root.mkdir(parents=True)
+    receipt_root.mkdir(parents=True)
+    for index in range(101):
+        _write(archive_root / f"plan-{index:03d}.plan.json", json.dumps({"title": str(index), "closeout_distillation": {}}))
+    _write(receipt_root / "prior.closeout.json", json.dumps({"kind": "planning-closeout-evidence/v1"}))
+
+    measure = workspace_runtime_core._archived_plan_distillation_measure(target=tmp_path)
+    policy = workspace_runtime_core._archive_retention_policy(
+        archived_distillation=measure,
+        artifact_footprint={
+            "classes": [
+                {
+                    "id": "archived_execplans",
+                    "pressure": "attention",
+                    "sample": [".agentic-workspace/planning/execplans/archive/plan-000.plan.json"],
+                }
+            ]
+        },
+    )
+
+    assert policy["kind"] == "workspace-archive-retention-policy/v2"
+    assert policy["policy_version"] == "planning-archive-retention/v2"
+    assert policy["budget_status"] == "exceeded"
+    assert policy["budgets"]["full_archive_file_count"] == {"actual": 101, "maximum": 100, "status": "exceeded"}
+    assert policy["trend"]["compact_receipts"] == 1
+    assert "--compact-retained --dry-run" in policy["dry_run_command"]
+    assert policy["ordinary_route_exclusion"]["startup"] == "excluded"
+
+
 def test_selector_validation_error_does_not_project_valid_values_or_build_full_inventory(monkeypatch) -> None:
     class ExplodingCopy:
         def __deepcopy__(self, memo: dict[int, object]) -> object:

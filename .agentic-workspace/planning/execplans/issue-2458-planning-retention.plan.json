@@ -1,0 +1,87 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2458-planning-retention",
+  "title": "Bound Planning archive growth through retention, distillation, and compact receipts",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "shaping",
+  "revision": 2,
+  "intent": {
+    "outcome": "Planning closes work into compact, queryable Git receipts and can incrementally export and remove bulky retained archives with exact loss accounting, while enforcing host growth budgets.",
+    "non_goals": [
+      "Delete the repository's existing archive in this feature branch.",
+      "Move full archive history into another checked-in directory.",
+      "Treat dry-run as a sandbox or silently discard unresolved intent."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2458",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "packages/planning archive lifecycle and public command projection",
+      "workspace retention reporting and budgets",
+      "Planning retention schemas, docs, fixtures, and generated command surfaces"
+    ],
+    "effects": [
+      "A caller may explicitly export and replace retained full archives with compact receipts; dry-run remains the default inspection path."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "User requested continuous implementation without authorizing subagents; archive lifecycle, command projection, and proof are one tightly coupled slice."
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2458",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2458",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Implement branch-safe archive compaction, exact dry-run loss accounting, compact receipt lookup, and bounded-growth proof.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Bound Planning archive growth through retention, distillation, and compact receipts is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run pytest packages/planning/tests/test_archive.py tests/test_workspace_cli.py -q",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ]
+}

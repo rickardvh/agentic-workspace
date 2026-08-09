@@ -149,6 +149,8 @@ def test_archive_plan_operation_declares_execplan_mapping_when_no_parent_lane(mo
             "discard_summary": None,
             "continuation_summary": None,
             "retain_archive": True,
+            "compact_retained": False,
+            "export_dir": None,
             "expected_planning_revision": "",
             "decision_point_carry_key": "",
             "prune_decision_point_carry_key": "",

@@ -1506,6 +1506,15 @@
                 "kind": "flag"
               },
               {
+                "option": "--compact-retained",
+                "attr": "compact_retained",
+                "kind": "flag"
+              },
+              {
+                "option": "--export-dir",
+                "attr": "export_dir"
+              },
+              {
                 "option": "--discard-archive",
                 "attr": "discard_archive",
                 "kind": "flag"
@@ -3296,6 +3305,21 @@
                     ],
                     "help": "Keep a completed execplan record under execplans/archive.",
                     "name": "retain_archive"
+                  },
+                  {
+                    "action": "store_true",
+                    "flags": [
+                      "--compact-retained"
+                    ],
+                    "help": "Replace retained full evidence with a compact receipt after reversible export; use --plan all-archived for incremental batch migration.",
+                    "name": "compact_retained"
+                  },
+                  {
+                    "flags": [
+                      "--export-dir"
+                    ],
+                    "help": "Export directory outside checked-in Planning state.",
+                    "name": "export_dir"
                   },
                   {
                     "flags": [
@@ -15564,6 +15588,15 @@
                 "option": "--retain-archive"
               },
               {
+                "attr": "compact_retained",
+                "kind": "flag",
+                "option": "--compact-retained"
+              },
+              {
+                "attr": "export_dir",
+                "option": "--export-dir"
+              },
+              {
                 "attr": "discard_archive",
                 "kind": "flag",
                 "option": "--discard-archive"
@@ -16189,6 +16222,21 @@
                 ],
                 "help": "Keep a completed execplan record under execplans/archive.",
                 "name": "retain_archive"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--compact-retained"
+                ],
+                "help": "Replace retained full evidence with a compact receipt after reversible export; use --plan all-archived for incremental batch migration.",
+                "name": "compact_retained"
+              },
+              {
+                "flags": [
+                  "--export-dir"
+                ],
+                "help": "Export directory outside checked-in Planning state.",
+                "name": "export_dir"
               },
               {
                 "flags": [
@@ -20897,6 +20945,16 @@
               "arg": "retain_archive",
               "default": false,
               "name": "retain_archive"
+            },
+            {
+              "arg": "compact_retained",
+              "default": false,
+              "name": "compact_retained"
+            },
+            {
+              "arg": "export_dir",
+              "default": null,
+              "name": "export_dir"
             },
             {
               "arg": "decision_point_carry_key",

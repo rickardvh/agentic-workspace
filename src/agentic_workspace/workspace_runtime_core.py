@@ -18376,6 +18376,9 @@ def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
             "distillation_contract_anchor": "",
             "sample_missing_distillation": [],
             "sample_post_contract_missing_distillation": [],
+            "archived_plan_bytes": 0,
+            "compact_receipt_count": 0,
+            "compact_receipt_bytes": 0,
         }
     archive_dir = Path(target_text) / ".agentic-workspace" / "planning" / "execplans" / "archive"
     if not archive_dir.exists():
@@ -18388,8 +18391,15 @@ def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
             "distillation_contract_anchor": "",
             "sample_missing_distillation": [],
             "sample_post_contract_missing_distillation": [],
+            "archived_plan_bytes": 0,
+            "compact_receipt_count": 0,
+            "compact_receipt_bytes": 0,
         }
     archived_plans = [path for path in sorted(archive_dir.glob("*.plan.json")) if path.is_file()]
+    archived_plan_bytes = sum(path.stat().st_size for path in archived_plans)
+    receipt_dir = archive_dir.parent.parent / "closeout-evidence"
+    compact_receipts = [path for path in sorted(receipt_dir.glob("*.closeout.json")) if path.is_file()] if receipt_dir.exists() else []
+    compact_receipt_bytes = sum(path.stat().st_size for path in compact_receipts)
     missing: list[str] = []
     missing_with_mtime: list[tuple[str, float]] = []
     distillation_anchors: list[tuple[str, float]] = []
@@ -18423,6 +18433,9 @@ def _archived_plan_distillation_measure(*, target: Any) -> dict[str, Any]:
         "distillation_contract_anchor": anchor_name,
         "sample_missing_distillation": missing[:5],
         "sample_post_contract_missing_distillation": post_contract_missing[:5],
+        "archived_plan_bytes": archived_plan_bytes,
+        "compact_receipt_count": len(compact_receipts),
+        "compact_receipt_bytes": compact_receipt_bytes,
     }
 
 
@@ -18430,6 +18443,12 @@ def _archive_retention_policy(*, archived_distillation: dict[str, Any], artifact
     archived_count = _as_int(archived_distillation.get("archived_plan_count"))
     legacy_missing = _as_int(archived_distillation.get("legacy_missing_distillation_count"))
     post_contract_missing = _as_int(archived_distillation.get("post_contract_missing_distillation_count"))
+    archived_bytes = _as_int(archived_distillation.get("archived_plan_bytes"))
+    receipt_count = _as_int(archived_distillation.get("compact_receipt_count"))
+    receipt_bytes = _as_int(archived_distillation.get("compact_receipt_bytes"))
+    file_budget = 100
+    byte_budget = 2 * 1024 * 1024
+    receipt_byte_budget = 2 * 1024 * 1024
     footprint_classes = _list_payload(artifact_footprint.get("classes"))
     archived_footprint = next((item for item in footprint_classes if isinstance(item, dict) and item.get("id") == "archived_execplans"), {})
     footprint_pressure = str(archived_footprint.get("pressure", "quiet")) if isinstance(archived_footprint, dict) else "quiet"
@@ -18466,21 +18485,74 @@ def _archive_retention_policy(*, archived_distillation: dict[str, Any], artifact
                 "why": "Archive count is high enough to merit selector-driven review before adding more residue.",
             }
         )
+    budget_exceeded = archived_count > file_budget or archived_bytes > byte_budget or receipt_bytes > receipt_byte_budget
+    if budget_exceeded:
+        candidates.append(
+            {
+                "signal": "host-retention-budget-exceeded",
+                "count": archived_count,
+                "recommended_outcome": "export-and-compact",
+                "candidate_paths": _list_payload(archived_footprint.get("sample"))[:5] if isinstance(archived_footprint, dict) else [],
+                "why": "Full retained Planning history exceeds its checked-in file or byte budget; inspect exact loss accounting before incremental compaction.",
+            }
+        )
     return {
-        "kind": "workspace-archive-retention-policy/v1",
+        "kind": "workspace-archive-retention-policy/v2",
+        "policy_version": "planning-archive-retention/v2",
         "status": "attention" if candidates else "quiet",
-        "advisory_only": True,
+        "advisory_only": False,
         "applies_to": ".agentic-workspace/planning/execplans/archive/*.plan.json",
-        "outcomes": ["retain", "shrink", "stub", "delete", "promote-summary-elsewhere"],
-        "default_outcome": "retain",
+        "lifecycle_classes": [
+            "live-owner",
+            "recently-closed-evidence",
+            "compact-durable-receipt",
+            "distilled-conclusion",
+            "optional-exported-full-evidence",
+            "removable-after-export",
+        ],
+        "outcomes": ["retain-recently", "export-and-compact", "promote-summary-elsewhere"],
+        "default_outcome": "compact-receipt",
+        "budgets": {
+            "full_archive_file_count": {
+                "actual": archived_count,
+                "maximum": file_budget,
+                "status": "exceeded" if archived_count > file_budget else "within",
+            },
+            "full_archive_bytes": {
+                "actual": archived_bytes,
+                "maximum": byte_budget,
+                "status": "exceeded" if archived_bytes > byte_budget else "within",
+            },
+            "compact_receipt_bytes": {
+                "actual": receipt_bytes,
+                "maximum": receipt_byte_budget,
+                "status": "exceeded" if receipt_bytes > receipt_byte_budget else "within",
+            },
+        },
+        "trend": {
+            "full_archive_records": archived_count,
+            "compact_receipts": receipt_count,
+            "full_archive_bytes": archived_bytes,
+            "compact_receipt_bytes": receipt_bytes,
+            "migration_completion_ratio": round(receipt_count / max(1, receipt_count + archived_count), 4),
+        },
+        "budget_status": "exceeded" if budget_exceeded else "within",
         "candidate_count": len(candidates),
         "candidates": candidates,
+        "dry_run_command": "agentic-workspace planning archive-plan --plan all-archived --compact-retained --dry-run --format json",
+        "apply_command": "agentic-workspace planning archive-plan --plan all-archived --compact-retained --apply-cleanup --format json",
+        "ordinary_route_exclusion": {
+            "startup": "excluded",
+            "routing": "excluded",
+            "findings": "excluded unless explicitly referenced or operational_compression is selected",
+            "historical_lookup": "planning summary --select finished_work_inspection_contract",
+        },
         "before_shrink_or_delete": [
             "promote durable learning to Memory, docs, contracts, checks, or issues",
             "preserve enough evidence for restart, review, trust, and continuation",
             "keep ordinary startup and active planning out of archive history",
         ],
-        "rule": "Retention pressure is advisory and selector-driven; it recommends review outcomes but never deletes archived evidence automatically.",
+        "rule": "Retention is explicit and reversible: mutation requires --apply-cleanup, exports full evidence first, writes a compact Git receipt, and reports exact loss/retrievability before removing an archive.",
     }
 
 
