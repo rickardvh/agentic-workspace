@@ -3884,9 +3884,9 @@ def _proof_route_transition_record_matches_scope(
     )
     requested_paths = _proof_route_normalize_paths(changed_paths)
     if requested_paths:
-        return bool(set(requested_paths).intersection(record_paths)) or (
-            str(record_scope.get("changed_paths_digest") or "") == _proof_route_scope_digest(requested_paths)
-        )
+        requested_digest = _proof_route_scope_digest(requested_paths)
+        recorded_digest = str(record_scope.get("changed_paths_digest") or "")
+        return (recorded_digest == requested_digest) if recorded_digest else set(requested_paths) == set(record_paths)
     normalized_scope = str(scope or "").strip()
     if normalized_scope:
         return normalized_scope in {
@@ -4816,17 +4816,8 @@ def _proof_route_health_payload(
             ],
         )
 
-    for obligation in manual_missing:
-        add_finding(
-            finding_class="insufficient_evidence",
-            affected_route=str(obligation.get("id") or obligation.get("protocol_id") or "manual-proof-obligation"),
-            evidence=[str(item) for item in _list_payload(obligation.get("missing_evidence"))],
-            consequence="block-or-record-evidence",
-            owner=str(obligation.get("review_owner") or "maintainer"),
-            canonical_edit_surface=".agentic-workspace/verification/manifest.toml",
-            proposed_delta="Record the required evidence, waive with an explicit reason, or narrow the claim boundary.",
-            validation_commands=["uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json"],
-        )
+    # Manual obligations are completion evidence requirements, not proof-route
+    # authority defects. They remain visible through completion gates.
 
     repair_packets = [
         {

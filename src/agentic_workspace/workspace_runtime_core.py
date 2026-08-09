@@ -10954,28 +10954,23 @@ def _strict_health_policy_fingerprint() -> str:
 
 
 def _health_finding_class(finding: dict[str, Any]) -> str:
-    module = str(finding.get("module", "workspace")).lower()
+    explicit = str(finding.get("health_class") or "")
+    if explicit in {*_STRICT_CURRENT_BLOCKING_CLASSES, *_STRICT_CURRENT_NON_BLOCKING_CLASSES}:
+        return explicit
+    reason_code = str(finding.get("reason_code") or finding.get("category") or "").strip()
+    reason_classes = {
+        "planning.live-owner-invalid": "current-executable-state",
+        "planning.integration-pending": "current-executable-state",
+        "memory.fixture-failed": "current-installed-config-state",
+        "workspace.config-invalid": "current-installed-config-state",
+        "workspace.install-drift": "current-installed-config-state",
+        "planning.archive-history": "historical-informational-state",
+        "maintenance.debt": "actionable-maintenance-debt",
+    }
+    if reason_code in reason_classes:
+        return reason_classes[reason_code]
     severity = str(finding.get("severity", "info")).lower()
-    path = str(finding.get("path", "")).replace("\\", "/").lower()
-    message = str(finding.get("message", "")).lower()
-    if "/archive/" in path or "archived closeout" in message or severity == "info":
-        return "historical-informational-state"
-    if module == "planning" and "/planning/execplans/" in path:
-        if (
-            "live execplan" in message
-            or "completed execplan remains in the live" in message
-            or "not registered in planning state" in message
-            or "broken live" in message
-            or "relation is invalid" in message
-        ):
-            return "current-executable-state"
-    if severity in {"error", "fatal"}:
-        return "current-executable-state"
-    if module == "memory" and "fixture '" in message and "fails;" in message:
-        return "current-installed-config-state"
-    if module == "workspace" and any(marker in message for marker in ("required config", "invalid config", "missing canonical workflow")):
-        return "current-installed-config-state"
-    return "actionable-maintenance-debt"
+    return "actionable-maintenance-debt" if severity == "info" else "current-executable-state"
 
 
 def _health_finding_action(*, finding: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
@@ -10995,12 +10990,12 @@ def _health_finding_action(*, finding: dict[str, Any], cli_invoke: str) -> dict[
     }
 
 
-def _pending_feature_integration_refs(*, target_root: Path) -> set[str]:
+def _pending_feature_integrations(*, target_root: Path) -> dict[str, dict[str, str]]:
     branch = _current_git_branch(target_root)
     if not branch or branch in {"main", "master"}:
-        return set()
+        return {}
     proposal_root = target_root / ".agentic-workspace" / "planning" / "integration-proposals"
-    refs: set[str] = set()
+    refs: dict[str, dict[str, str]] = {}
     for path in sorted(proposal_root.glob("*.integration-proposal.json")) if proposal_root.is_dir() else []:
         try:
             proposal = json.loads(path.read_text(encoding="utf-8"))
@@ -11012,8 +11007,20 @@ def _pending_feature_integration_refs(*, target_root: Path) -> set[str]:
         owner = proposal.get("owner", {})
         if not isinstance(branch_admission, dict) or not isinstance(owner, dict):
             continue
-        if branch_admission.get("phase") == "feature" and branch_admission.get("branch") == branch and owner.get("ref"):
-            refs.add(str(owner["ref"]).replace("\\", "/"))
+        if (
+            proposal.get("requested_transition") in {"mark-integrated", "archive-owner"}
+            and proposal.get("phase") == "integration-pending"
+            and proposal.get("expected_subject_revision")
+            and proposal.get("expected_planning_revision")
+            and branch_admission.get("phase") == "feature"
+            and branch_admission.get("branch") == branch
+            and owner.get("ref")
+        ):
+            refs[str(owner["ref"]).replace("\\", "/")] = {
+                "proposal_id": str(proposal.get("id") or ""),
+                "expected_subject_revision": str(proposal["expected_subject_revision"]),
+                "expected_planning_revision": str(proposal["expected_planning_revision"]),
+            }
     return refs
 
 
@@ -11022,12 +11029,19 @@ def _strict_health_assertion_payload(
 ) -> dict[str, Any]:
     policy_fingerprint = _strict_health_policy_fingerprint()
     classified: list[dict[str, Any]] = []
-    pending_integration_refs = _pending_feature_integration_refs(target_root=target_root)
+    pending_integrations = _pending_feature_integrations(target_root=target_root)
     counts = {class_name: 0 for class_name in [*_STRICT_CURRENT_BLOCKING_CLASSES, *_STRICT_CURRENT_NON_BLOCKING_CLASSES]}
     for finding in findings:
         health_class = _health_finding_class(finding)
         finding_path = str(finding.get("path", "")).replace("\\", "/")
-        integration_pending = health_class == "current-executable-state" and finding_path in pending_integration_refs
+        proposal = pending_integrations.get(finding_path, {})
+        integration_pending = (
+            health_class == "current-executable-state"
+            and str(finding.get("reason_code") or "") == "planning.integration-pending"
+            and str(finding.get("integration_proposal_id") or "") == proposal.get("proposal_id")
+            and str(finding.get("expected_subject_revision") or "") == proposal.get("expected_subject_revision")
+            and str(finding.get("expected_planning_revision") or "") == proposal.get("expected_planning_revision")
+        )
         if integration_pending:
             health_class = "actionable-maintenance-debt"
         counts[health_class] += 1
@@ -11094,6 +11108,33 @@ def _strict_health_assertion_payload(
         "blocking_count": len(blockers),
     }
     return assertion
+
+
+def _strict_health_promotion_input(
+    *, receipt: dict[str, Any] | None, expected_policy_fingerprint: str, expected_subject_fingerprint: str
+) -> dict[str, Any]:
+    """Validate the exact strict-current receipt consumed by release promotion."""
+    reason = "accepted-current-strict-health-receipt"
+    if not isinstance(receipt, dict):
+        reason = "missing-strict-health-receipt"
+    elif receipt.get("kind") != "agentic-workspace/health-policy-proof-receipt/v1":
+        reason = "invalid-strict-health-receipt"
+    elif receipt.get("policy_fingerprint") != expected_policy_fingerprint:
+        reason = "stale-strict-health-policy"
+    elif receipt.get("subject_fingerprint") != expected_subject_fingerprint:
+        reason = "stale-strict-health-subject"
+    elif receipt.get("outcome") != "passed" or receipt.get("blocking_count") != 0:
+        reason = "strict-health-failed"
+    accepted = reason == "accepted-current-strict-health-receipt"
+    return {
+        "kind": "agentic-workspace/release-promotion-input/v1",
+        "input": "strict-current-health",
+        "status": "accepted" if accepted else "blocked",
+        "reason": reason,
+        "policy_fingerprint": expected_policy_fingerprint,
+        "subject_fingerprint": expected_subject_fingerprint,
+        "receipt": receipt if accepted else None,
+    }
 
 
 def _run_report_command(
