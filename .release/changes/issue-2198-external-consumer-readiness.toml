@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Require complete cross-transport and installed-footprint conformance evidence before external clients report readiness."
