@@ -43,6 +43,16 @@ def test_current_runtime_has_one_implementation_owner() -> None:
     assert working_set["after"]["shared_symbols"] < working_set["before"]["shared_symbols"]
     assert working_set["after"]["largest_audited_segment_lines"] <= 320
 
+    policy = json.loads((ROOT / "src/agentic_workspace/contracts/runtime_implementation_ownership.json").read_text(encoding="utf-8"))
+    decompositions = policy["review_scale"]["representative_decompositions"]
+    by_symbol = {item["symbol"]: item for item in decompositions}
+    assert by_symbol["_report_closeout_trust_payload"]["after"]["lines"] < by_symbol["_report_closeout_trust_payload"]["before"]["lines"]
+    assert (
+        by_symbol["archive_execplan"]["after"]["largest_policy_effect_segment_lines"]
+        < by_symbol["archive_execplan"]["before"]["largest_policy_effect_segment_lines"]
+    )
+    assert {item["continuation_owner"] for item in decompositions} == {"#2480"}
+
 
 def test_facade_definition_is_rejected(tmp_path: Path) -> None:
     root = _fixture(tmp_path)

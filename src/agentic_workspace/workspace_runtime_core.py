@@ -21929,6 +21929,82 @@ def _fast_closeout_claim_boundary_payload(
     return closeout_claim_boundary_payload(source_payload, cli_invoke=cli_invoke, target_arg="./repo")
 
 
+def _closeout_trust_strict_gate(
+    *, strict_closeout: bool, trust: str, reason: str = "", active_planning_record: bool = False
+) -> dict[str, Any]:
+    if not strict_closeout:
+        status = "disabled"
+        blocking = False
+        summary = "Strict closeout is disabled in assurance config."
+    elif not active_planning_record and trust == "normal":
+        status = "not-applicable"
+        blocking = False
+        summary = "Strict closeout has no active planning record to gate; use normal direct-work proof and issue checks."
+    elif trust == "normal":
+        status = "allowed"
+        blocking = False
+        summary = "Strict closeout is satisfied by the available planning and closeout-trust evidence."
+    elif trust == "lower-trust":
+        status = "blocked"
+        blocking = True
+        summary = "Strict closeout blocks closure until lower-trust planning residue or package evidence is resolved."
+    else:
+        status = "requires-review"
+        blocking = True
+        summary = "Strict closeout requires review because closeout evidence is unavailable or incomplete."
+    return {
+        "status": status,
+        "strict_closeout": strict_closeout,
+        "blocking": blocking,
+        "reason": reason,
+        "summary": summary,
+        "source": "assurance.strict_closeout",
+    }
+
+
+def _closeout_trust_terminal_action(*, trust: str, recommended_next_action: str, cli_invoke: str) -> dict[str, Any]:
+    blocking = trust != "normal"
+    return {
+        "next_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
+        )
+        if blocking
+        else "none",
+        "why": "Lower-trust closeout signals need routed residue before closure is reliable."
+        if trust == "lower-trust"
+        else "Closeout trust is unavailable; recover planning output before claiming closure."
+        if blocking
+        else "No closeout trust blocker is visible; use normal proof and issue-state checks.",
+        "blocking": blocking,
+        "recommended_next_action": recommended_next_action,
+        "changes_closure": "Route missing planning residue, rerun summary/reconcile, then close only when lower_trust_closeout_count is 0."
+        if trust == "lower-trust"
+        else "Recover planning closeout evidence; closure is blocked until closeout_trust is present."
+        if blocking
+        else "None for closeout trust; closure changes only if proof, intent satisfaction, issue state, or new residue changes.",
+    }
+
+
+def _closeout_trust_durable_residue_action(*, trust: str, cli_invoke: str) -> dict[str, Any]:
+    action = {
+        "action": "route-durable-residue",
+        "visible_states": ["none-found", "capture", "route-to-owner", "dismissed"],
+        "summary": "Review lower-trust closeout signals and route missing residue to planning, Memory, docs, checks, or issue follow-up."
+        if trust == "lower-trust"
+        else "If closeout produced reusable learning, route it to the narrowest durable owner; otherwise record no durable residue.",
+        "command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
+        ),
+        "risk": "read-only routing; mutations happen only through the selected owner surface",
+        "required_inputs": ["validation result", "issue or lane scope", "future relevance of any learning"],
+        "destinations": ["none", "planning", "Memory", "docs", "contracts/checks", "issue follow-up", "review/archive evidence"],
+        "destination_rule": "future work goes to planning; reusable non-canonical knowledge goes to Memory; stable rules go to docs/contracts/checks; evidence-only stays in review/archive; otherwise choose none",
+        "next_proof": "rerun summary/reconcile after routing residue before closing the issue or lane",
+    }
+    action["run"] = action["command"]
+    return action
+
+
 def _report_closeout_trust_payload(
     *,
     module_reports: list[dict[str, Any]],
@@ -21948,77 +22024,6 @@ def _report_closeout_trust_payload(
         cli_invoke=cli_invoke,
         compact=True,
     )
-
-    def strict_gate(*, trust: str, reason: str = "", active_planning_record: bool = False) -> dict[str, Any]:
-        if not strict_closeout:
-            status = "disabled"
-            blocking = False
-            summary = "Strict closeout is disabled in assurance config."
-        elif not active_planning_record and trust == "normal":
-            status = "not-applicable"
-            blocking = False
-            summary = "Strict closeout has no active planning record to gate; use normal direct-work proof and issue checks."
-        elif trust == "normal":
-            status = "allowed"
-            blocking = False
-            summary = "Strict closeout is satisfied by the available planning and closeout-trust evidence."
-        elif trust == "lower-trust":
-            status = "blocked"
-            blocking = True
-            summary = "Strict closeout blocks closure until lower-trust planning residue or package evidence is resolved."
-        else:
-            status = "requires-review"
-            blocking = True
-            summary = "Strict closeout requires review because closeout evidence is unavailable or incomplete."
-        return {
-            "status": status,
-            "strict_closeout": strict_closeout,
-            "blocking": blocking,
-            "reason": reason,
-            "summary": summary,
-            "source": "assurance.strict_closeout",
-        }
-
-    def terminal_action(*, trust: str, recommended_next_action: str) -> dict[str, Any]:
-        blocking = trust != "normal"
-        return {
-            "next_command": _command_with_cli_invoke(
-                command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
-            )
-            if blocking
-            else "none",
-            "why": "Lower-trust closeout signals need routed residue before closure is reliable."
-            if trust == "lower-trust"
-            else "Closeout trust is unavailable; recover planning output before claiming closure."
-            if blocking
-            else "No closeout trust blocker is visible; use normal proof and issue-state checks.",
-            "blocking": blocking,
-            "recommended_next_action": recommended_next_action,
-            "changes_closure": "Route missing planning residue, rerun summary/reconcile, then close only when lower_trust_closeout_count is 0."
-            if trust == "lower-trust"
-            else "Recover planning closeout evidence; closure is blocked until closeout_trust is present."
-            if blocking
-            else "None for closeout trust; closure changes only if proof, intent satisfaction, issue state, or new residue changes.",
-        }
-
-    def durable_residue_action(*, trust: str) -> dict[str, Any]:
-        action = {
-            "action": "route-durable-residue",
-            "visible_states": ["none-found", "capture", "route-to-owner", "dismissed"],
-            "summary": "Review lower-trust closeout signals and route missing residue to planning, Memory, docs, checks, or issue follow-up."
-            if trust == "lower-trust"
-            else "If closeout produced reusable learning, route it to the narrowest durable owner; otherwise record no durable residue.",
-            "command": _command_with_cli_invoke(
-                command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
-            ),
-            "risk": "read-only routing; mutations happen only through the selected owner surface",
-            "required_inputs": ["validation result", "issue or lane scope", "future relevance of any learning"],
-            "destinations": ["none", "planning", "Memory", "docs", "contracts/checks", "issue follow-up", "review/archive evidence"],
-            "destination_rule": "future work goes to planning; reusable non-canonical knowledge goes to Memory; stable rules go to docs/contracts/checks; evidence-only stays in review/archive; otherwise choose none",
-            "next_proof": "rerun summary/reconcile after routing residue before closing the issue or lane",
-        }
-        action["run"] = action["command"]
-        return action
 
     def current_task_switch_scope() -> dict[str, Any]:
         if target_root is None or config is None or not normalized_changed_paths or not str(task_text or "").strip():
@@ -22342,7 +22347,12 @@ def _report_closeout_trust_payload(
     )
     planning_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"), None)
     if not isinstance(planning_report, dict):
-        gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
+        gate = _closeout_trust_strict_gate(
+            strict_closeout=strict_closeout,
+            trust="unavailable",
+            reason="planning module is not installed",
+            active_planning_record=False,
+        )
         intent_check = _intent_satisfaction_check_payload(planning_report={}, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report={})
         active_intent_contract = _active_intent_contract_payload(task_text=None, acceptance={}, active_planning_record={})
@@ -22361,7 +22371,7 @@ def _report_closeout_trust_payload(
             assurance_requirements=assurance_requirements,
         )
         assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
-        residue_action = durable_residue_action(trust="unavailable")
+        residue_action = _closeout_trust_durable_residue_action(trust="unavailable", cli_invoke=cli_invoke)
         completion_gate = _completion_gate_payload(
             active_planning_record={},
             intent_check=intent_check,
@@ -22405,8 +22415,10 @@ def _report_closeout_trust_payload(
                 planning_report={}, intent_validation={}, target_root=target_root
             ),
             "durable_residue_action": residue_action,
-            "terminal_action": terminal_action(
-                trust="unavailable", recommended_next_action="Install or run planning report before trusting closeout state."
+            "terminal_action": _closeout_trust_terminal_action(
+                trust="unavailable",
+                recommended_next_action="Install or run planning report before trusting closeout state.",
+                cli_invoke=cli_invoke,
             ),
             "completion_options": completion_options,
             "closeout_protocol": _closeout_protocol_payload(
@@ -22425,7 +22437,12 @@ def _report_closeout_trust_payload(
         }
     intent_validation = planning_report.get("intent_validation", {})
     if not isinstance(intent_validation, dict):
-        gate = strict_gate(trust="unavailable", reason="planning intent validation is unavailable", active_planning_record=False)
+        gate = _closeout_trust_strict_gate(
+            strict_closeout=strict_closeout,
+            trust="unavailable",
+            reason="planning intent validation is unavailable",
+            active_planning_record=False,
+        )
         intent_check = _intent_satisfaction_check_payload(planning_report=planning_report, target_root=target_root)
         acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
         active_intent_contract = _active_intent_contract_payload(task_text=None, acceptance={}, active_planning_record={})
@@ -22446,7 +22463,7 @@ def _report_closeout_trust_payload(
             assurance_requirements=assurance_requirements,
         )
         assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
-        residue_action = durable_residue_action(trust="unavailable")
+        residue_action = _closeout_trust_durable_residue_action(trust="unavailable", cli_invoke=cli_invoke)
         completion_gate = _completion_gate_payload(
             active_planning_record={},
             intent_check=intent_check,
@@ -22490,8 +22507,10 @@ def _report_closeout_trust_payload(
                 planning_report=planning_report, intent_validation={}, target_root=target_root
             ),
             "durable_residue_action": residue_action,
-            "terminal_action": terminal_action(
-                trust="unavailable", recommended_next_action="Inspect planning report before trusting closeout state."
+            "terminal_action": _closeout_trust_terminal_action(
+                trust="unavailable",
+                recommended_next_action="Inspect planning report before trusting closeout state.",
+                cli_invoke=cli_invoke,
             ),
             "completion_options": completion_options,
             "closeout_protocol": _closeout_protocol_payload(
@@ -22659,12 +22678,13 @@ def _report_closeout_trust_payload(
             recommended_next_action = str(
                 slice_closeout_evidence.get("recovery_command") or "Select relevant closeout evidence explicitly."
             )
-    gate = strict_gate(
+    gate = _closeout_trust_strict_gate(
+        strict_closeout=strict_closeout,
         trust=trust,
         reason="active planning record present" if active_planning_record else "no active planning record",
         active_planning_record=active_planning_record,
     )
-    residue_action = durable_residue_action(trust=trust)
+    residue_action = _closeout_trust_durable_residue_action(trust=trust, cli_invoke=cli_invoke)
     completion_gate = _completion_gate_payload(
         active_planning_record=raw_active_planning_record,
         intent_check=intent_satisfaction_check,
@@ -22907,7 +22927,9 @@ def _report_closeout_trust_payload(
             planning_report=planning_report, intent_validation=intent_validation, target_root=target_root
         ),
         "durable_residue_action": residue_action,
-        "terminal_action": terminal_action(trust=trust, recommended_next_action=recommended_next_action),
+        "terminal_action": _closeout_trust_terminal_action(
+            trust=trust, recommended_next_action=recommended_next_action, cli_invoke=cli_invoke
+        ),
         "completion_options": completion_options,
         "terminal_outcome_contract": terminal_outcome_contract,
         "final_response_rendering": final_response_rendering,
