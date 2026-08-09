@@ -31,6 +31,29 @@ def bounded_selector_inventory(
 
 
 def _emit_init_text(payload: dict[str, Any]) -> None:
+    if payload.get("kind") == "agentic-workspace/lifecycle-decision-envelope/v1":
+        decision = payload.get("decision", {})
+        workspace = payload.get("workspace", {})
+        changes = payload.get("changes", {})
+        review = payload.get("review", {})
+        detail = payload.get("detail", {})
+        print(f"Target: {payload['target']}")
+        print(f"Command: init{' (dry-run)' if payload.get('dry_run') else ''}")
+        print(f"Decision: {decision.get('status', 'unknown')} ({decision.get('mutation', 'unknown')})")
+        print(f"Modules: {', '.join(workspace.get('modules', []))}")
+        print(f"Mode: {workspace.get('mode', 'unknown')}")
+        print(
+            "Changes: "
+            f"create={changes.get('create_count', 0)}, update={changes.get('update_count', 0)}, "
+            f"preserve={changes.get('preserve_count', 0)}, review={changes.get('review_required_count', 0)}"
+        )
+        for item in review.get("items", []):
+            print(f"Review: {item}")
+        if review.get("omitted_item_count"):
+            print(f"Review: {review['omitted_item_count']} additional item(s) behind verbose detail")
+        print(f"Next action: {decision.get('next_action', 'No follow-up action is required.')}")
+        print(f"Detail: {detail.get('verbose_command', 'init --verbose --format json')}")
+        return
     print(f"Target: {payload['target']}")
     print(f"Command: init{' (dry-run)' if payload.get('dry_run') else ''}")
     print(f"Modules: {', '.join(payload['modules'])}")

@@ -45199,37 +45199,53 @@ def _render_workspace_operation_prompt(values: dict[str, Any], _arguments: dict[
 
 
 def _append_workspace_operation_delegation_outcome(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
-    return _record_delegation_outcome(
-        target_root=values["target_root"],
-        delegation_target=str(values.get("delegation_target") or ""),
-        task_class=str(values.get("task_class") or ""),
-        scope_class=str(values.get("scope_class") or ""),
-        outcome=str(values.get("outcome") or ""),
-        handoff_sufficiency=str(values.get("handoff_sufficiency") or ""),
-        review_burden=str(values.get("review_burden") or ""),
-        escalation_required=bool(values.get("escalation_required", False)),
-        operation=str(values.get("operation") or "submit"),
-        predecessor_id=str(values.get("predecessor_id") or ""),
-        authority=str(values.get("authority") or "local-outcome-ledger"),
-        confidence=str(values.get("confidence") or "medium"),
-        source_type=str(values.get("source_type") or ""),
-        source_ref=str(values.get("source_ref") or ""),
-        producer_class=str(values.get("producer_class") or ""),
-        route_outcome=str(values.get("route_outcome") or ""),
-        assignment_route=str(values.get("assignment_route") or ""),
-        proof_observation=str(values.get("proof_observation") or ""),
-        review_observation=str(values.get("review_observation") or ""),
-        handoff_burden=str(values.get("handoff_burden") or ""),
-        repair_burden=str(values.get("repair_burden") or ""),
-        retry_burden=str(values.get("retry_burden") or ""),
-        restart_burden=str(values.get("restart_burden") or ""),
-        expected_burden=str(values.get("expected_burden") or ""),
-        observed_burden=str(values.get("observed_burden") or ""),
-        scope_drift=str(values.get("scope_drift") or "none"),
-        contradiction_state=str(values.get("contradiction_state") or "none"),
-        uncertainty_state=str(values.get("uncertainty_state") or ""),
-        idempotency_key=str(values.get("idempotency_key") or ""),
-    )
+    try:
+        return _record_delegation_outcome(
+            target_root=values["target_root"],
+            delegation_target=str(values.get("delegation_target") or ""),
+            task_class=str(values.get("task_class") or ""),
+            scope_class=str(values.get("scope_class") or ""),
+            outcome=str(values.get("outcome") or ""),
+            handoff_sufficiency=str(values.get("handoff_sufficiency") or ""),
+            review_burden=str(values.get("review_burden") or ""),
+            escalation_required=bool(values.get("escalation_required", False)),
+            operation=str(values.get("operation") or "submit"),
+            predecessor_id=str(values.get("predecessor_id") or ""),
+            authority=str(values.get("authority") or "local-outcome-ledger"),
+            confidence=str(values.get("confidence") or "medium"),
+            source_type=str(values.get("source_type") or ""),
+            source_ref=str(values.get("source_ref") or ""),
+            producer_class=str(values.get("producer_class") or ""),
+            route_outcome=str(values.get("route_outcome") or ""),
+            assignment_route=str(values.get("assignment_route") or ""),
+            proof_observation=str(values.get("proof_observation") or ""),
+            review_observation=str(values.get("review_observation") or ""),
+            handoff_burden=str(values.get("handoff_burden") or ""),
+            repair_burden=str(values.get("repair_burden") or ""),
+            retry_burden=str(values.get("retry_burden") or ""),
+            restart_burden=str(values.get("restart_burden") or ""),
+            expected_burden=str(values.get("expected_burden") or ""),
+            observed_burden=str(values.get("observed_burden") or ""),
+            scope_drift=str(values.get("scope_drift") or "none"),
+            contradiction_state=str(values.get("contradiction_state") or "none"),
+            uncertainty_state=str(values.get("uncertainty_state") or ""),
+            idempotency_key=str(values.get("idempotency_key") or ""),
+        )
+    except WorkspaceUsageError as exc:
+        if str(values.get("format") or "text") != "json":
+            raise
+        message = str(exc)
+        return {
+            "kind": "agentic-workspace/operation-failure/v1",
+            "status": "rejected",
+            "message": message,
+            "command": "note-delegation-outcome",
+            "exit_status": 2,
+            "failure_class": str(getattr(exc, "failure_class", "invalid-delegation-outcome")),
+            "safe_to_retry": True,
+            "safe_recovery": str(getattr(exc, "safe_recovery", "Correct the rejected delegation outcome before retrying.")),
+            "completion_boundary": "mutation-not-applied",
+        }
 
 
 def _load_workspace_operation_system_intent_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> WorkspaceConfig:
@@ -49125,6 +49141,13 @@ def _capability_resolution_for_profile(*, profile: DelegationTargetProfile, capa
     }
 
 
+class DelegationOutcomeRejection(WorkspaceUsageError):
+    def __init__(self, message: str, *, failure_class: str, safe_recovery: str) -> None:
+        super().__init__(message)
+        self.failure_class = failure_class
+        self.safe_recovery = safe_recovery
+
+
 def _record_delegation_outcome(
     *,
     target_root: Path,
@@ -49274,7 +49297,11 @@ def _record_delegation_outcome(
     }
     predecessor: DelegationOutcomeRecord | None = None
     if normalized_operation != "submit" and normalized_predecessor not in by_id:
-        raise WorkspaceUsageError("note-delegation-outcome transition operations require --predecessor-id for an existing record.")
+        raise DelegationOutcomeRejection(
+            "note-delegation-outcome transition operations require --predecessor-id for an existing record.",
+            failure_class="invalid-lifecycle-transition",
+            safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+        )
     if normalized_operation != "submit":
         predecessor = by_id[normalized_predecessor][1]
         if (
@@ -49282,11 +49309,23 @@ def _record_delegation_outcome(
             predecessor.task_class,
             predecessor.scope_class,
         ) != (normalized_target, normalized_task, normalized_scope):
-            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must match target/task/scope.")
+            raise DelegationOutcomeRejection(
+                "note-delegation-outcome transition predecessor must match target/task/scope.",
+                failure_class="invalid-lifecycle-transition",
+                safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+            )
         if predecessor.admission_state not in {"accepted", "accepted-normalized", "recovered", "compacted-summary"}:
-            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must be current admitted evidence.")
+            raise DelegationOutcomeRejection(
+                "note-delegation-outcome transition predecessor must be current admitted evidence.",
+                failure_class="invalid-lifecycle-transition",
+                safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+            )
         if normalized_predecessor in transitioned_predecessors:
-            raise WorkspaceUsageError("note-delegation-outcome transition predecessor is already superseded, disputed, or compacted.")
+            raise DelegationOutcomeRejection(
+                "note-delegation-outcome transition predecessor is already superseded, disputed, or compacted.",
+                failure_class="invalid-lifecycle-transition",
+                safe_recovery="Retry with an existing current predecessor in the same target, task, and scope.",
+            )
     today = date.today().isoformat()
     generated_idempotency_key = (
         f"{normalized_operation}:{normalized_target}:{normalized_task}:{normalized_scope}:"
@@ -49312,8 +49351,10 @@ def _record_delegation_outcome(
                 existing.source_ref or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
                 existing.idempotency_key,
             ) == duplicate_key and existing.admission_state in {"accepted", "accepted-normalized", "recovered"}:
-                raise WorkspaceUsageError(
-                    "note-delegation-outcome duplicate evidence for target/task/scope/provenance must use a lifecycle transition."
+                raise DelegationOutcomeRejection(
+                    "note-delegation-outcome duplicate evidence for target/task/scope/provenance must use a lifecycle transition.",
+                    failure_class="duplicate-mutation",
+                    safe_recovery="Use an explicit lifecycle transition that references the current record.",
                 )
     record_suffix = re.sub(r"[^A-Za-z0-9_.-]+", "-", record_idempotency_key).strip("-")[:48] or str(len(records))
     record_id = f"{normalized_target}:{normalized_task}:{normalized_scope}:{today}:{record_suffix}"
@@ -51907,6 +51948,7 @@ _cleanup_legacy_local_scratch: Any = _workspace_runtime_core._cleanup_legacy_loc
 _workspace_status_report: Any = _workspace_runtime_core._workspace_status_report
 _workspace_init_or_upgrade_report: Any = _workspace_runtime_core._workspace_init_or_upgrade_report
 _run_init: Any = _workspace_runtime_core._run_init
+_run_init_lifecycle_adapter: Any = _workspace_runtime_core._run_init_lifecycle_adapter
 _run_legacy_scratch_cleanup: Any = _workspace_runtime_core._run_legacy_scratch_cleanup
 _run_lazy_report_section_command: Any = _workspace_runtime_core._run_lazy_report_section_command
 _run_report_command: Any = _workspace_runtime_core._run_report_command
