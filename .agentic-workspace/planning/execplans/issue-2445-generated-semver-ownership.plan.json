@@ -1,0 +1,89 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2445-generated-semver-ownership",
+  "title": "Separate generated freshness metadata from semver-bearing package changes",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "shaping",
+  "revision": 3,
+  "intent": {
+    "outcome": "Release ownership distinguishes exact integrity-only generated metadata from semver-bearing generated output, and every semver consumer applies the same strongest-change classification.",
+    "non_goals": [
+      "Do not exempt the generated tree as a whole.",
+      "Do not weaken generated-command freshness checks.",
+      "Do not change artifact identity or focused proof selection owned by adjacent issues."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2445",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      ".github/release-ownership.json",
+      ".github/workflows/pr-semver-label.yml",
+      "scripts/release/release_ownership.py",
+      "scripts/github/release_recovery_status.py",
+      "tests/test_release_workflows.py",
+      "tests/test_release_recovery_status.py"
+    ],
+    "effects": [
+      "Change PR semver gating for the exact generated freshness fingerprint.",
+      "Keep semver requirements for package source and generated package output."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "The user requested implementation in this task, and multi-agent delegation is not authorized for this turn."
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2445",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2445",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Implement the manifest-owned classifier, consume it in workflow and recovery reporting, then run focused release-policy and freshness tests.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Separate generated freshness metadata from semver-bearing package changes is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run pytest tests/test_release_workflows.py tests/test_release_recovery_status.py",
+      "uv run python scripts/check/check_generated_command_packages.py --check"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ]
+}
