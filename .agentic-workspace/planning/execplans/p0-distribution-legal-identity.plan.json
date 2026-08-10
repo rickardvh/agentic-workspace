@@ -3,9 +3,9 @@
   "id": "p0-distribution-legal-identity",
   "title": "P0 distribution and legal identity",
   "owner_level": "slice",
-  "lifecycle": "closed",
-  "phase": "complete",
-  "revision": 4,
+  "lifecycle": "live",
+  "phase": "integration-pending",
+  "revision": 5,
   "intent": {
     "outcome": "Close #2452 and #2453 with an exact verified GitHub-release distribution path, unambiguous coordinated Python identities, and owner-approved MIT metadata in every artifact family.",
     "non_goals": [
@@ -32,19 +32,17 @@
       "owner": "user request and priority:P0 labels"
     },
     "proof_posture": {
-      "state": "pending",
+      "state": "accepted",
       "refs": [
-        "clean-resolution",
-        "artifact-metadata",
-        "second-process-start"
+        "uv run pytest tests/test_package_identity.py -q",
+        "uv run ruff check scripts/check/check_package_identity.py tests/test_package_identity.py",
+        "uv run python scripts/check/check_package_identity.py"
       ]
     },
     "external_posture": {
-      "state": "observed",
+      "state": "deferred",
       "refs": [
-        "GitHub #2452",
-        "GitHub #2453",
-        "MIT owner decision"
+        "GitHub #2452 public release receipt after merge"
       ]
     },
     "delegation": {
@@ -90,9 +88,9 @@
       "dogfooding-closeout"
     ]
   },
-  "next_action": "Implement the canonical identity authority and its checked package/release projections.",
+  "next_action": "Apply the archive-owner integration proposal on an admitted target branch after merge.",
   "blockers": [
-    "None; MIT was explicitly selected by the owner."
+    "Target-branch authority is required to remove this owner from checked-in active Planning state."
   ],
   "proof": {
     "claims": [

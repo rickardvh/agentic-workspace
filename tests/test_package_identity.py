@@ -105,6 +105,11 @@ def coordinated_artifacts(tmp_path_factory: pytest.TempPathFactory) -> tuple[Pat
             'Issues = "https://example.invalid/issues"',
             "project.urls.Issues",
         ),
+        (
+            'Support = "https://github.com/rickardvh/agentic-workspace/issues"',
+            'Support = "https://example.invalid/support"',
+            "project.urls.Support",
+        ),
         ('name = "agentic-workspace"', 'name = "unrelated-workspace"', "project.name"),
     ],
 )
@@ -120,6 +125,29 @@ def test_source_package_identity_rejects_unexpected_owner_url_or_distribution(tm
 def test_built_artifacts_carry_exact_identity(coordinated_artifacts: tuple[Path, Path]) -> None:
     _, release_dist = coordinated_artifacts
     assert CHECKER.artifact_identity_errors(ROOT, release_dist, require_exact_urls=True) == []
+
+
+def test_redistributable_receipt_binds_exact_artifact_names_and_hashes(
+    coordinated_artifacts: tuple[Path, Path],
+) -> None:
+    _, release_dist = coordinated_artifacts
+    CHECKER.write_readiness_receipts(ROOT, release_dist)
+    assert CHECKER.redistributable_receipt_errors(ROOT, release_dist) == []
+    receipt_path = release_dist / "redistributable-package-readiness.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert receipt["artifact_count"] == len(receipt["artifacts"]) == 12
+    assert receipt["artifacts"] == sorted(receipt["artifacts"], key=lambda item: item["name"])
+    assert all(set(artifact) == {"name", "sha256"} and len(artifact["sha256"]) == 64 for artifact in receipt["artifacts"])
+
+    first_artifact = release_dist / receipt["artifacts"][0]["name"]
+    original = first_artifact.read_bytes()
+    try:
+        first_artifact.write_bytes(original + b"tampered")
+        assert CHECKER.redistributable_receipt_errors(ROOT, release_dist) == [
+            "redistributable-package-readiness.json does not bind the exact artifact names and sha256 digests"
+        ]
+    finally:
+        first_artifact.write_bytes(original)
 
 
 def test_install_survives_into_fresh_second_process(coordinated_artifacts: tuple[Path, Path], tmp_path: Path) -> None:

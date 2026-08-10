@@ -33,6 +33,7 @@ dependencies = ["jsonschema>=4.0"]
 Homepage = "https://github.com/rickardvh/agentic-workspace"
 Repository = "https://github.com/rickardvh/agentic-workspace"
 Issues = "https://github.com/rickardvh/agentic-workspace/issues"
+Support = "https://github.com/rickardvh/agentic-workspace/issues"
 Documentation = "https://github.com/rickardvh/agentic-workspace/blob/master/packages/planning/README.md"
 
 [project.scripts]
