@@ -19216,6 +19216,133 @@ def _rollback_rejected_closeout_archive(
         result.add("rolled back", record_path, "restored pre-closeout owner state after archive admission rejected the transaction")
 
 
+def _atomic_planning_closeout(operation: Callable[..., InstallResult]) -> Callable[..., InstallResult]:
+    """Make closeout one transaction, including its pre-archive owner write."""
+
+    @wraps(operation)
+    def wrapped(plan: str, *, target: str | Path | None = None, **kwargs: Any) -> InstallResult:
+        target_root = resolve_target_root(target)
+        if bool(kwargs.get("dry_run")):
+            return operation(plan, target=target_root, **kwargs)
+        snapshot = _planning_archive_transaction_snapshot(target_root)
+        try:
+            result = operation(plan, target=target_root, **kwargs)
+        except Exception:
+            _restore_planning_archive_transaction(target_root, snapshot)
+            raise
+        blocking_warning = any(
+            str(warning.get("warning_class", "")) not in _NONBLOCKING_CLOSEOUT_RETENTION_WARNINGS for warning in result.warnings
+        )
+        if blocking_warning or any(action.kind == "manual review" for action in result.actions):
+            _restore_planning_archive_transaction(target_root, snapshot)
+        return result
+
+    return wrapped
+
+
+def _closeout_revision_boundary(*, target_root: Path, record_path: Path, record: Mapping[str, Any]) -> dict[str, str]:
+    plan_id = str(record.get("id") or record_path.stem.removesuffix(".plan"))
+    lane_matches: list[tuple[Path, dict[str, Any]]] = []
+    for lane_path in sorted((target_root / PLANNING_MANAGED_ROOT / "lanes").glob("*.lane.json")):
+        lane_record = _load_lane_record(lane_path)
+        if isinstance(lane_record, dict) and str(lane_record.get("current_slice") or "") == plan_id:
+            lane_matches.append((lane_path, lane_record))
+    if len(lane_matches) > 1:
+        lane_ref, lane_revision = "ambiguous", "ambiguous"
+    elif lane_matches:
+        lane_ref = _planning_surface_relative(target_root, lane_matches[0][0])
+        lane_revision = _record_revision(lane_matches[0][1])
+    else:
+        lane_ref, lane_revision = "", ""
+    owner_ref = _planning_surface_relative(target_root, record_path)
+    return {
+        "planning_revision": str(planning_revision(target_root).get("revision_id") or ""),
+        "owner_revision": _record_revision(dict(record)),
+        "lane_ref": lane_ref,
+        "lane_revision": lane_revision,
+        "integration_revision": _integration_subject_revision(target_root=target_root, owner_ref=owner_ref),
+    }
+
+
+def _guard_closeout_revision_boundary(
+    result: InstallResult,
+    *,
+    boundary: Mapping[str, str],
+    expected_owner_revision: str,
+    expected_lane_revision: str,
+    expected_integration_revision: str,
+    record_path: Path,
+) -> bool:
+    if boundary.get("lane_ref") == "ambiguous":
+        result.add("manual review", record_path, "closeout owner is current slice for multiple lane records")
+        result.reason_code = "ambiguous-closeout-lane-relation"
+        return False
+    checks = (
+        ("owner", expected_owner_revision, "owner_revision"),
+        ("lane", expected_lane_revision, "lane_revision"),
+        ("integration", expected_integration_revision, "integration_revision"),
+    )
+    for label, expected, key in checks:
+        requested = str(expected or "").strip()
+        current = str(boundary.get(key) or "")
+        if requested and requested != current:
+            result.warnings.append(
+                {
+                    "warning_class": f"closeout_{label}_revision_mismatch",
+                    "path": _planning_surface_relative(result.target_root, record_path),
+                    f"expected_{label}_revision": requested,
+                    f"current_{label}_revision": current,
+                    "message": f"Expected closeout {label} revision {requested}, but current revision is {current}.",
+                    "suggested_fix": "Refresh Planning context and retry closeout with the current revision boundary.",
+                }
+            )
+            result.add("manual review", record_path, f"{label} revision changed before closeout mutation")
+            result.reason_code = f"stale-closeout-{label}-revision"
+            return False
+    return True
+
+
+def _closeout_request_fingerprint(request: Mapping[str, Any]) -> str:
+    material = json.dumps(dict(request), sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(material).hexdigest()
+
+
+def _closeout_replay_result(*, target_root: Path, plan: str, request: Mapping[str, Any]) -> InstallResult | None:
+    context_path = target_root / ".agentic-workspace" / "local" / "planning-last-closeout.json"
+    if not plan.strip() or not context_path.is_file():
+        return None
+    try:
+        context = json.loads(context_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if context.get("request_fingerprint") != _closeout_request_fingerprint(request):
+        return None
+    source_path = target_root / str(context.get("source_plan") or "")
+    evidence_path = target_root / str(context.get("evidence_path") or "")
+    if source_path.exists() or not evidence_path.is_file():
+        return None
+    result = InstallResult(target_root=target_root, message=f"Close out execplan '{plan}'", dry_run=False)
+    result.reason_code = "idempotent-replay"
+    result.operation_receipt = dict(context.get("operation_receipt") or {})
+    result.add("already closed", evidence_path, "exact closeout retry matched the durable operation receipt")
+    return result
+
+
+def _record_closeout_operation_receipt(*, target_root: Path, request: Mapping[str, Any], boundary: Mapping[str, str]) -> None:
+    context_path = target_root / ".agentic-workspace" / "local" / "planning-last-closeout.json"
+    context = json.loads(context_path.read_text(encoding="utf-8"))
+    receipt = {
+        "kind": "agentic-planning/closeout-operation-receipt/v1",
+        "request_fingerprint": _closeout_request_fingerprint(request),
+        "revision_boundary_before": dict(boundary),
+        "planning_revision_after": str(planning_revision(target_root).get("revision_id") or ""),
+    }
+    context["request_fingerprint"] = receipt["request_fingerprint"]
+    context["operation_receipt"] = receipt
+    context_path.write_text(json.dumps(context, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+
+@_atomic_planning_closeout
 def closeout_execplan(
     plan: str,
     *,
@@ -19234,9 +19361,35 @@ def closeout_execplan(
     review_summary: str | None = None,
     outcome_summary: str | None = None,
     expected_planning_revision: str = "",
+    expected_owner_revision: str = "",
+    expected_lane_revision: str = "",
+    expected_integration_revision: str = "",
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Close out execplan '{plan}'", dry_run=dry_run)
+    closeout_request = {
+        "plan": plan.strip(),
+        "claim_level": claim_level,
+        "intent_status": intent_status,
+        "residue": residue,
+        "proof_from": proof_from,
+        "proof_file": proof_file or "",
+        "residue_owner": residue_owner or "",
+        "retain_archive": retain_archive,
+        "what_happened": what_happened or "",
+        "scope_touched": scope_touched or "",
+        "changed_surfaces": changed_surfaces or "",
+        "review_summary": review_summary or "",
+        "outcome_summary": outcome_summary or "",
+        "expected_planning_revision": expected_planning_revision,
+        "expected_owner_revision": expected_owner_revision,
+        "expected_lane_revision": expected_lane_revision,
+        "expected_integration_revision": expected_integration_revision,
+    }
+    if not dry_run:
+        replay = _closeout_replay_result(target_root=target_root, plan=plan, request=closeout_request)
+        if replay is not None:
+            return replay
     if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
         return result
     normalized_claim = claim_level.strip().lower()
@@ -19270,6 +19423,16 @@ def closeout_execplan(
     record = _load_execplan_record(plan_path)
     if record is None:
         result.add("manual review", record_path, "planning closeout requires a canonical .plan.json record")
+        return result
+    revision_boundary = _closeout_revision_boundary(target_root=target_root, record_path=record_path, record=record)
+    if not _guard_closeout_revision_boundary(
+        result,
+        boundary=revision_boundary,
+        expected_owner_revision=expected_owner_revision,
+        expected_lane_revision=expected_lane_revision,
+        expected_integration_revision=expected_integration_revision,
+        record_path=record_path,
+    ):
         return result
     original_record_bytes = _closeout_owner_snapshot(
         result=result, target_root=target_root, record_path=record_path, record=record, plan=plan
@@ -19684,6 +19847,16 @@ def closeout_execplan(
             if existing_activation_trigger in {"", "none", "n/a"}:
                 required_continuation["activation trigger"] = "when the continuation owner promotes the next slice"
             record["required_continuation"] = required_continuation
+        current_record = _load_execplan_record(record_path) or {}
+        current_boundary = _closeout_revision_boundary(
+            target_root=target_root,
+            record_path=record_path,
+            record=current_record,
+        )
+        if current_boundary != revision_boundary:
+            result.add("manual review", record_path, "closeout revision boundary changed during preflight; no state was mutated")
+            result.reason_code = "stale-closeout-transaction-boundary"
+            return result
         _write_execplan_record(record_path=record_path, record=record, render_markdown=plan_path != record_path)
         result.add("updated", record_path, "recorded closeout residue and proof inputs")
 
@@ -19792,6 +19965,8 @@ def closeout_execplan(
     if blocked:
         result.add("next safe action", record_path, "resolve the reported closeout blocker, then rerun planning closeout")
     else:
+        if not dry_run:
+            _record_closeout_operation_receipt(target_root=target_root, request=closeout_request, boundary=revision_boundary)
         result.add("next safe action", target_root / PLANNING_STATE_PATH, "agentic-planning summary --target . --format json")
         result.add(
             "dogfooding reflection",
@@ -20908,6 +21083,8 @@ def _planning_archive_transaction_snapshot(target_root: Path) -> dict[Path, byte
     watched_roots = [
         target_root / ".agentic-workspace" / "planning",
         target_root / ".agentic-workspace" / "local" / "planning",
+        target_root / ".agentic-workspace" / "local" / "decision-point-intent",
+        target_root / ".agentic-workspace" / "local" / "planning-archive-exports",
     ]
     snapshot = {
         path: path.read_bytes()
@@ -20929,6 +21106,8 @@ def _restore_planning_archive_transaction(target_root: Path, snapshot: dict[Path
     watched_roots = [
         target_root / ".agentic-workspace" / "planning",
         target_root / ".agentic-workspace" / "local" / "planning",
+        target_root / ".agentic-workspace" / "local" / "decision-point-intent",
+        target_root / ".agentic-workspace" / "local" / "planning-archive-exports",
     ]
     current_files = {path for watched_root in watched_roots if watched_root.exists() for path in watched_root.rglob("*") if path.is_file()}
     roadmap_path = target_root / "ROADMAP.md"

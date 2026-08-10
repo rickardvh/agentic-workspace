@@ -28,6 +28,11 @@ def _state_bytes(root: Path) -> bytes:
 
 def _planning_persistent_snapshot(root: Path) -> dict[str, bytes]:
     paths = [path for path in (root / ".agentic-workspace/planning").rglob("*") if path.is_file()]
+    for local_root in ("planning", "decision-point-intent", "planning-archive-exports"):
+        paths.extend(path for path in (root / ".agentic-workspace/local" / local_root).rglob("*") if path.is_file())
+    roadmap = root / "ROADMAP.md"
+    if roadmap.is_file():
+        paths.append(roadmap)
     last_closeout = root / ".agentic-workspace/local/planning-last-closeout.json"
     if last_closeout.is_file():
         paths.append(last_closeout)
