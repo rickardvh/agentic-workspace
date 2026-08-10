@@ -1109,6 +1109,72 @@ def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
     missing_generated = sorted(generated_adapter_ids - seen_adapter_ids)
     if missing_generated:
         errors.append("command_package_ir.json missing generated adapter(s): " + ", ".join(missing_generated))
+    errors.extend(_validate_planning_integration_propose_front_door_parity(payload))
+    return errors
+
+
+def _validate_planning_integration_propose_front_door_parity(payload: dict[str, object]) -> list[str]:
+    """Keep the Workspace adapter aligned with Planning's canonical operation inputs."""
+    packages = payload.get("packages", [])
+    root_package = next(
+        (package for package in packages if isinstance(package, dict) and package.get("id") == "root-workspace"),
+        None,
+    )
+    if not isinstance(root_package, dict):
+        return ["command_package_ir.json is missing the root-workspace package used by Planning front-door parity"]
+    planning_command = next(
+        (
+            command
+            for command in root_package.get("commands", [])
+            if isinstance(command, dict) and command.get("adapter_id") == "planning.front-door.cli"
+        ),
+        None,
+    )
+    integration_interface = next(
+        (
+            command
+            for command in planning_command.get("interface", {}).get("subcommands", [])
+            if isinstance(command, dict) and command.get("name") == "integration-propose"
+        ),
+        None,
+    ) if isinstance(planning_command, dict) else None
+    runtime_binding = root_package.get("python_runtime_binding", {})
+    front_door_handler = next(
+        (
+            handler
+            for handler in runtime_binding.get("runtime_module_handlers", [])
+            if isinstance(handler, dict) and handler.get("operation_id") == "planning.front-door"
+        ),
+        None,
+    ) if isinstance(runtime_binding, dict) else None
+    if not isinstance(integration_interface, dict) or not isinstance(front_door_handler, dict):
+        return ["Planning integration-propose parity cannot find its declared interface and front-door runtime mapping"]
+
+    canonical_operation = operation_manifest("operations/planning.integration-propose.lifecycle.json")
+    canonical_inputs = {
+        str(item.get("name", ""))
+        for item in canonical_operation.get("inputs", [])
+        if isinstance(item, dict) and item.get("source") == "cli-option"
+    }
+    interface_inputs = {
+        str(item.get("name", "")) for item in integration_interface.get("options", []) if isinstance(item, dict)
+    }
+    forwarded_inputs = {
+        str(item.get("attr", "")) for item in front_door_handler.get("option_specs", []) if isinstance(item, dict)
+    }
+    errors: list[str] = []
+    missing_interface = sorted(canonical_inputs - interface_inputs)
+    if missing_interface:
+        errors.append(
+            "planning.integration-propose.lifecycle inputs missing from the Workspace Planning interface: "
+            + ", ".join(missing_interface)
+        )
+    unforwarded = sorted(canonical_inputs - forwarded_inputs)
+    if unforwarded:
+        errors.append(
+            "planning.integration-propose.lifecycle inputs are not forwarded by planning.front-door: "
+            + ", ".join(unforwarded)
+        )
     return errors
 
 
@@ -2732,6 +2798,18 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
         if generated_authority.get("source", {}).get("freshness_enforcement", {}).get("status") != "active":
             errors.append("generated-references must carry active freshness enforcement")
 
+    nongenerated = resolve_context_authority_projection(
+        consumer="contract-checks",
+        task="fix hand-owned client behavior",
+        changed_paths=["src/agentic_workspace/client.py"],
+        target_root=REPO_ROOT,
+    )
+    if any(
+        isinstance(authority, dict) and authority.get("surface") == "generated-references"
+        for authority in nongenerated.get("authorities", [])
+    ):
+        errors.append("context_authority_registry generated-references scope must reject hand-owned changed paths")
+
     direct = resolve_context_authority_projection(
         consumer="start",
         task="fix typo",
@@ -2784,6 +2862,16 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
                 errors.append(f"{consumer} authority {authority.get('surface')} must carry a current owner result")
         if any(isinstance(authority, dict) and authority.get("surface") == "memory" for authority in projection.get("authorities", [])):
             errors.append(f"{consumer} unrelated direct work must not admit Memory context")
+        overreaching = {
+            str(authority.get("surface"))
+            for authority in projection.get("authorities", [])
+            if isinstance(authority, dict) and authority.get("surface") in {"planning", "evaluation"}
+        }
+        if overreaching:
+            errors.append(
+                f"{consumer} compact unrelated direct work must not gain owner mutation/claim authority: "
+                + ", ".join(sorted(overreaching))
+            )
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         target = Path(tmp_dir)

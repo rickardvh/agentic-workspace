@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import sys
@@ -88,6 +89,28 @@ def test_command_surface_refresh_guidance_names_single_ordered_ladder() -> None:
     assert "refresh_command_surfaces.py" in guidance
     assert guidance.count("generate_command_packages.py") == 2
     assert "generate_command_adapters.py" in guidance
+
+
+def test_planning_front_door_parity_rejects_unforwarded_integration_input() -> None:
+    module = _load_module()
+    payload = copy.deepcopy(module.command_package_ir_manifest())
+    root_package = next(package for package in payload["packages"] if package["id"] == "root-workspace")
+    handler = next(
+        handler
+        for handler in root_package["python_runtime_binding"]["runtime_module_handlers"]
+        if handler.get("operation_id") == "planning.front-door"
+    )
+    handler["option_specs"] = [item for item in handler["option_specs"] if item.get("attr") != "requested_transition"]
+
+    errors = module._validate_planning_integration_propose_front_door_parity(payload)
+
+    assert errors == ["planning.integration-propose.lifecycle inputs are not forwarded by planning.front-door: requested_transition"]
+
+
+def test_planning_front_door_parity_accepts_canonical_integration_inputs() -> None:
+    module = _load_module()
+
+    assert module._validate_planning_integration_propose_front_door_parity(module.command_package_ir_manifest()) == []
 
 
 def test_non_enum_keyword_routing_audit_rejects_unclassified_candidate(tmp_path: Path) -> None:
