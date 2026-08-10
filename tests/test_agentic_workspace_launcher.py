@@ -34,10 +34,13 @@ def _minimal_repo(root: Path) -> None:
 
 def _source_manifest(module, root: Path, *, paths: list[str] | None = None, identity: str = "current-index") -> dict[str, object]:
     paths = paths or [module._repo_relative(path, repo_root=root) for path in module._fingerprint_files(repo_root=root)]
+    content_identity = module.compute_generated_cli_fingerprint(repo_root=root)
     return {
         "schema": module.CACHE_SCHEMA,
         "kind": "generated-cli-source-manifest/v1",
         "file_paths": paths,
+        "algorithm": "sha256",
+        "fingerprint": content_identity["fingerprint"],
         "git_index_entries": {path: "100644 current" for path in paths},
         "git_index_identity": identity,
     }
@@ -172,6 +175,7 @@ def test_launcher_hashes_when_a_manifest_input_is_dirty(tmp_path: Path, monkeypa
     source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
     manifest = _source_manifest(module, tmp_path)
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(module, "_git_index_entries", lambda **_: manifest["git_index_entries"])
     monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: False)
     calls: list[Path] = []
     original = module.compute_generated_cli_fingerprint
@@ -202,6 +206,22 @@ def test_source_manifest_ignores_unrelated_dirtiness_but_rejects_input_changes(t
     source_manifest.write_text(json.dumps(module.source_cli_fingerprint_manifest(repo_root=tmp_path)), encoding="utf-8")
 
     _write(tmp_path / "README.md", "unrelated local note\n")
+    assert module._source_manifest_is_trustworthy(repo_root=tmp_path)
+
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 2\n")
+    assert not module._source_manifest_is_trustworthy(repo_root=tmp_path)
+
+
+def test_source_manifest_uses_same_semantic_identity_without_git(tmp_path: Path) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    manifest = module.source_cli_fingerprint_manifest(repo_root=tmp_path)
+    assert manifest["git_index_entries"] is None
+    assert manifest["git_index_identity"] is None
+    assert manifest["identity_role"] == "canonical-semantic-content"
+    source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+
     assert module._source_manifest_is_trustworthy(repo_root=tmp_path)
 
     _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 2\n")

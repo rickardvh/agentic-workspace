@@ -935,8 +935,9 @@ NECESSARY_SURFACE_DURABLE_PREFIXES = (
     ".agentic-workspace/verification/",
 )
 
-NECESSARY_SURFACE_REQUIRED_SKILL_PREFIXES = (
-    ".agentic-workspace/skills",
+NECESSARY_SURFACE_REQUIRED_PAYLOAD_PREFIXES = (
+    *(str(path) for path in _WORKSPACE_SURFACES_MANIFEST["necessary_surface_roots"]),
+    *(str(path) for path in _WORKSPACE_SURFACES_MANIFEST["necessary_surface_files"]),
     ".agentic-workspace/planning/skills",
     ".agentic-workspace/memory/skills",
 )
@@ -995,17 +996,17 @@ def _path_is_under_or_equal(path: str, parent: str) -> bool:
     return path == parent or path.startswith(parent.rstrip("/") + "/")
 
 
-def _is_necessary_skill_surface_path(path: str) -> bool:
+def _is_necessary_payload_surface_path(path: str) -> bool:
     normalized = path.replace("\\", "/")
-    return any(_path_is_under_or_equal(normalized, candidate) for candidate in NECESSARY_SURFACE_REQUIRED_SKILL_PREFIXES)
+    return any(_path_is_under_or_equal(normalized, candidate) for candidate in NECESSARY_SURFACE_REQUIRED_PAYLOAD_PREFIXES)
 
 
 def _necessary_surface_path_class(path: str) -> str:
     normalized = path.replace("\\", "/")
     if any(_path_is_under_or_equal(normalized, candidate) for candidate in NECESSARY_SURFACE_REPO_OWNED_PATHS):
         return "necessary-repo-owned-state"
-    if _is_necessary_skill_surface_path(normalized):
-        return "required-skill-surface"
+    if _is_necessary_payload_surface_path(normalized):
+        return "required-skill-surface" if "/skills" in normalized else "required-reference-surface"
     if normalized in {WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(), *[p.as_posix() for p in MODULE_UPGRADE_SOURCE_PATHS.values()]}:
         return "local-environment-provenance"
     if normalized in NECESSARY_SURFACE_TRANSIENT_PATHS:
@@ -1048,7 +1049,7 @@ def _necessary_surface_preserve_candidates(target_root: Path) -> list[str]:
         ".agentic-workspace/memory/repo",
         ".agentic-workspace/verification",
         WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
-        *NECESSARY_SURFACE_REQUIRED_SKILL_PREFIXES,
+        *NECESSARY_SURFACE_REQUIRED_PAYLOAD_PREFIXES,
     ):
         path = target_root / relative
         if path.exists():
@@ -8520,7 +8521,7 @@ def _workspace_init_or_upgrade_report(
             config_modules = [module_name for module_name in ordered_names if module_name in requested]
         actions.append(_set_enabled_modules_action(target_root=target_root, enabled_modules=config_modules, dry_run=dry_run))
     if minimal_footprint:
-        actions.extend(_workspace_required_skill_actions(target_root=target_root, dry_run=dry_run))
+        actions.extend(_workspace_required_payload_actions(target_root=target_root, dry_run=dry_run))
         actions.append(
             {
                 "kind": "omitted",
@@ -8843,10 +8844,10 @@ def _sync_tree_surface_actions(
     return actions
 
 
-def _workspace_required_skill_actions(*, target_root: Path, dry_run: bool) -> list[dict[str, str]]:
+def _workspace_required_payload_actions(*, target_root: Path, dry_run: bool) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
     for relative in sorted(
-        (relative for relative in WORKSPACE_PAYLOAD_FILES if _is_necessary_skill_surface_path(relative.as_posix())),
+        (relative for relative in WORKSPACE_PAYLOAD_FILES if _is_necessary_payload_surface_path(relative.as_posix())),
         key=lambda path: path.as_posix(),
     ):
         source = _workspace_payload_source(relative)
@@ -8855,7 +8856,7 @@ def _workspace_required_skill_actions(*, target_root: Path, dry_run: bool) -> li
                 {
                     "kind": "manual review",
                     "path": relative.as_posix(),
-                    "detail": "required workspace skill payload source is missing",
+                    "detail": "required workspace reference payload source is missing",
                 }
             )
             continue
@@ -8865,7 +8866,7 @@ def _workspace_required_skill_actions(*, target_root: Path, dry_run: bool) -> li
                 relative=relative,
                 source_bytes=source.read_bytes(),
                 dry_run=dry_run,
-                detail="sync required workspace skill surface for routed agent workflows",
+                detail="sync required workspace reference surface for routed agent workflows",
             )
         )
     return actions
@@ -8896,7 +8897,7 @@ def _module_required_skill_actions(*, module_name: str, target_root: Path, dry_r
 
 
 def _required_skill_surface_actions(*, target_root: Path, selected_modules: list[str], dry_run: bool) -> list[dict[str, str]]:
-    actions = _workspace_required_skill_actions(target_root=target_root, dry_run=dry_run)
+    actions = _workspace_required_payload_actions(target_root=target_root, dry_run=dry_run)
     for module_name in selected_modules:
         actions.extend(_module_required_skill_actions(module_name=module_name, target_root=target_root, dry_run=dry_run))
     return actions
@@ -45516,7 +45517,7 @@ def _bootstrap_footprint_payload(
                 _add("adopted_local_state", path)
             if path == WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix() or path.endswith("/UPGRADE-SOURCE.toml"):
                 _add("local_environment_provenance", path)
-            if _is_necessary_skill_surface_path(path):
+            if _is_necessary_payload_surface_path(path):
                 _add("required_skill_surfaces", path)
                 continue
             if kind == "omitted" and (

@@ -9,8 +9,12 @@ dogfooded memory/planning systems.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import importlib
 import json
+import os
+import re
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -26,6 +30,20 @@ WARNING_PAYLOAD_INVENTORY_DRIFT = "payload_inventory_drift"
 WARNING_PACKAGING_MANIFEST_DRIFT = "packaging_manifest_drift"
 WARNING_DUPLICATE_PLANNING_CHECKER_DRIFT = "duplicate_planning_checker_drift"
 WARNING_EXECUTABLE_PAYLOAD_DRIFT = "executable_payload_drift"
+WARNING_REFERENCE_CLOSURE_DRIFT = "reference_closure_drift"
+
+SUPPORTED_MODULE_COMBINATIONS = (
+    (),
+    ("memory",),
+    ("planning",),
+    ("verification",),
+    ("memory", "planning"),
+    ("memory", "verification"),
+    ("planning", "verification"),
+    ("memory", "planning", "verification"),
+)
+
+INSTALLED_REFERENCE_PATTERN = re.compile(r"\.agentic-workspace/[A-Za-z0-9_./*-]+\.(?:json|md|py|toml)")
 
 EXECUTABLE_PAYLOAD_SUFFIXES = {
     ".bat",
@@ -340,6 +358,216 @@ def _planning_checker_duplicate_warnings(*, repo_root: Path) -> list[BoundaryWar
     return warnings
 
 
+def _module_surface_files(manifest: dict[str, object], modules: tuple[str, ...]) -> set[str]:
+    configured = manifest.get("module_surface_files", {})
+    if not isinstance(configured, dict):
+        return set()
+    selected: set[str] = set()
+    for module in modules:
+        values = configured.get(module, [])
+        if isinstance(values, list):
+            selected.update(str(value) for value in values)
+    return selected
+
+
+def _reference_applies(reference: dict[str, object], *, profile: str, modules: tuple[str, ...]) -> bool:
+    profiles = reference.get("profiles", [])
+    required_modules = reference.get("modules", [])
+    return (
+        isinstance(profiles, list)
+        and profile in profiles
+        and isinstance(required_modules, list)
+        and set(str(module) for module in required_modules).issubset(modules)
+    )
+
+
+def _installed_target_available(target: str, available: set[str]) -> bool:
+    if "*" not in target:
+        return target in available
+    return any(fnmatch.fnmatch(candidate, target) for candidate in available)
+
+
+def _discover_operational_references(
+    *, manifest: dict[str, object], repo_root: Path, installed_sources: set[str]
+) -> set[tuple[str, str]]:
+    discovery = manifest.get("reference_discovery", {})
+    if not isinstance(discovery, dict):
+        return set()
+    globs = discovery.get("source_globs", [])
+    discovered: set[tuple[str, str]] = set()
+    source_roots = discovery.get("installed_source_roots", [])
+    for root_spec in source_roots if isinstance(source_roots, list) else []:
+        if not isinstance(root_spec, dict):
+            continue
+        source_root = repo_root / str(root_spec.get("repo_path", ""))
+        prefix = str(root_spec.get("installed_prefix", "")).strip("/")
+        for pattern in globs if isinstance(globs, list) else []:
+            for source_path in sorted(source_root.glob(str(pattern))):
+                if not source_path.is_file():
+                    continue
+                relative = source_path.relative_to(source_root).as_posix()
+                source = f"{prefix}/{relative}" if prefix else relative
+                if source not in installed_sources:
+                    continue
+                try:
+                    text = source_path.read_text(encoding="utf-8")
+                except OSError:
+                    continue
+                for match in INSTALLED_REFERENCE_PATTERN.findall(text):
+                    discovered.add((source, match))
+    authorities = discovery.get("generated_source_authorities", [])
+    for authority in authorities if isinstance(authorities, list) else []:
+        if not isinstance(authority, dict):
+            continue
+        source = str(authority.get("installed_source", ""))
+        authority_path = repo_root / str(authority.get("repo_path", ""))
+        targets = {str(value) for value in authority.get("targets", [])}
+        try:
+            text = authority_path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for match in INSTALLED_REFERENCE_PATTERN.findall(text):
+            if not targets or match in targets:
+                discovered.add((source, match))
+    return discovered
+
+
+def evaluate_no_cli_fallback(
+    *, host_root: Path, modules: tuple[str, ...], manifest: dict[str, object], cli_available: bool
+) -> dict[str, object]:
+    """Exercise the installed startup fallback using host files only."""
+
+    contract = manifest.get("no_cli_fallback", {})
+    if not isinstance(contract, dict):
+        return {"status": "failed", "errors": ["no_cli_fallback contract is missing"]}
+    if cli_available:
+        return {"status": "not-exercised", "errors": ["CLI must be unavailable for fallback proof"]}
+    entrypoint = host_root / str(contract.get("entrypoint", ""))
+    environment = dict(os.environ)
+    environment["PATH"] = str(host_root / "bin")
+    environment["AGENTIC_WORKSPACE_CONFIGURED_INVOCATION"] = "agentic-workspace"
+    completed = subprocess.run(
+        [sys.executable, str(entrypoint)],
+        cwd=host_root,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    try:
+        result = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        return {"status": "failed", "errors": [completed.stderr or completed.stdout or "fallback emitted no JSON"]}
+    if not isinstance(result, dict):
+        return {"status": "failed", "errors": ["fallback emitted a non-object result"]}
+    errors: list[str] = []
+    expected_modules = sorted(modules)
+    if completed.returncode != 0 or result.get("status") != "fallback":
+        errors.extend(str(value) for value in result.get("errors", []))
+    if sorted(str(value) for value in result.get("selected_modules", [])) != expected_modules:
+        errors.append("fallback selected modules do not match installed module surfaces")
+    if result.get("implementation_allowed") is not False or result.get("completion_claim_allowed") is not False:
+        errors.append("fallback did not preserve forbidden implementation/completion boundaries")
+    if result.get("forbidden_actions") != contract.get("forbidden_actions"):
+        errors.append("fallback forbidden actions drifted from the canonical contract")
+    if result.get("next_safe_action") != contract.get("next_safe_action"):
+        errors.append("fallback next safe action drifted from the canonical contract")
+    return {**result, "status": "passed" if not errors else "failed", "errors": errors}
+
+
+def gather_installed_reference_closure(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
+    """Validate the canonical installed-reference graph for every footprint/module cell."""
+
+    manifest_path = repo_root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "kind": "agentic-workspace/installed-reference-closure/v1",
+            "status": "invalid-manifest",
+            "manifest": _render_path(manifest_path),
+            "errors": [str(exc)],
+            "matrix": [],
+        }
+    payload_files = {str(path) for path in manifest.get("payload_files", [])}
+    necessary_files = {str(path) for path in manifest.get("necessary_surface_files", [])}
+    references = manifest.get("required_references", [])
+    repo_owned = {"AGENTS.md", ".agentic-workspace/config.toml", ".agentic-workspace/OWNERSHIP.toml"}
+    errors: list[str] = []
+    if not necessary_files.issubset(payload_files):
+        errors.append("necessary_surface_files must be a subset of payload_files")
+    payload_root = repo_root / "src" / "agentic_workspace" / "_payload"
+    for relative in sorted(payload_files):
+        if not (payload_root / relative).is_file():
+            errors.append(f"payload source is missing: {relative}")
+    installed_sources = payload_files | repo_owned
+    configured_module_files = manifest.get("module_surface_files", {})
+    if isinstance(configured_module_files, dict):
+        for values in configured_module_files.values():
+            if isinstance(values, list):
+                installed_sources.update(str(value) for value in values)
+    discovered = _discover_operational_references(
+        manifest=manifest,
+        repo_root=repo_root,
+        installed_sources=installed_sources,
+    )
+    declared = {
+        (str(reference.get("source", "")), str(reference.get("target", "")))
+        for reference in references
+        if isinstance(reference, dict)
+    }
+    for source, target in sorted(discovered - declared):
+        errors.append(f"discovered installed reference is missing from required_references: {source} -> {target}")
+    matrix: list[dict[str, object]] = []
+    for profile in ("necessary-surfaces", "full-mirror"):
+        for modules in SUPPORTED_MODULE_COMBINATIONS:
+            available = (
+                (necessary_files if profile == "necessary-surfaces" else payload_files)
+                | repo_owned
+                | _module_surface_files(manifest, modules)
+            )
+            cell_gaps: list[dict[str, str]] = []
+            applied_references: list[dict[str, object]] = []
+            for reference in references if isinstance(references, list) else []:
+                if not isinstance(reference, dict) or not _reference_applies(reference, profile=profile, modules=modules):
+                    continue
+                source = str(reference.get("source", ""))
+                target = str(reference.get("target", ""))
+                kind = str(reference.get("kind", ""))
+                applied_references.append({"source": source, "target": target, "kind": kind})
+                if source not in available:
+                    cell_gaps.append({"source": source, "target": target, "reason": "source-absent"})
+                if kind == "installed-local" and not _installed_target_available(target, available):
+                    cell_gaps.append({"source": source, "target": target, "reason": "target-absent"})
+                elif kind == "package-resource" and not target.startswith("package://agentic-workspace/"):
+                    cell_gaps.append({"source": source, "target": target, "reason": "invalid-package-resource"})
+                elif kind == "optional" and not str(reference.get("degraded_behavior", "")).strip():
+                    cell_gaps.append({"source": source, "target": target, "reason": "missing-degraded-behavior"})
+            matrix.append(
+                {
+                    "profile": profile,
+                    "modules": list(modules),
+                    "status": "passed" if not cell_gaps else "failed",
+                    "gaps": list(cell_gaps),
+                    "installed_sources": sorted(available),
+                    "applied_references": applied_references,
+                    "no_cli_fallback": "preserved" if not cell_gaps else "blocked",
+                }
+            )
+    if any(cell["status"] != "passed" for cell in matrix):
+        errors.append("one or more installed footprint/module cells contain unresolved required references")
+    return {
+        "kind": "agentic-workspace/installed-reference-closure/v1",
+        "status": "passed" if not errors else "failed",
+        "manifest": _render_path(manifest_path),
+        "errors": errors,
+        "matrix": matrix,
+        "discovered_reference_count": len(discovered),
+        "declared_reference_count": len(declared),
+        "rule": "Every discovered surviving operational reference is declared and resolves separately in each profile/module cell.",
+    }
+
+
 def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWarning]:
     warnings: list[BoundaryWarning] = []
 
@@ -402,6 +630,16 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
     warnings.extend(_payload_inventory_warnings(repo_root=repo_root, package_name="memory", expected=memory_expected))
     warnings.extend(_packaging_manifest_warnings(repo_root=repo_root, package_name="planning", expected=planning_expected))
     warnings.extend(_packaging_manifest_warnings(repo_root=repo_root, package_name="memory", expected=memory_expected))
+    closure_manifest = repo_root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json"
+    closure = gather_installed_reference_closure(repo_root=repo_root) if closure_manifest.is_file() else None
+    if closure is not None and closure["status"] != "passed":
+        warnings.append(
+            BoundaryWarning(
+                WARNING_REFERENCE_CLOSURE_DRIFT,
+                str(closure["manifest"]),
+                "Installed reference closure failed: " + "; ".join(str(error) for error in closure["errors"]),
+            )
+        )
 
     required_root_surfaces = {
         repo_root / ".agentic-workspace" / "memory" / "repo" / "index.md": (
@@ -672,10 +910,12 @@ def gather_sync_proof(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
             ],
         ),
     ]
+    closure = gather_installed_reference_closure(repo_root=repo_root)
     return {
         "kind": "source-payload-root-sync-proof/v1",
         "status": "current" if all(item["status"] == "current" for item in proof) else "warning",
         "packages": proof,
+        "installed_reference_closure": closure,
         "intentional_difference_rule": "Intentional root dogfooding state is classified here and should not be reported as payload drift unless a managed payload file changed without refresh.",
         "operator_commands": [
             "uv run python scripts/check/check_source_payload_operational_install.py --format json --strict",
@@ -716,6 +956,7 @@ def main(argv: list[str] | None = None) -> int:
         "warnings": [warning._asdict() for warning in warnings],
         "boundary": gather_boundary_summary(repo_root=REPO_ROOT),
         "sync_proof": gather_sync_proof(repo_root=REPO_ROOT),
+        "installed_reference_closure": gather_installed_reference_closure(repo_root=REPO_ROOT),
     }
 
     if args.format == "json":

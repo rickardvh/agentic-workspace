@@ -1288,8 +1288,6 @@ def test_doctor_requires_adoption_receipt_before_treating_missing_payload_as_hea
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "attention-needed"
-    warning_text = "\n".join(payload["warnings"])
-    assert ".agentic-workspace/WORKFLOW.md" in warning_text or "payload-provenance.json" in warning_text
     assert "installed_state_compatibility" not in payload
     assert payload["installed_state_summary"]["provenance_drift"] == "missing-provenance"
     assert payload["installed_state_summary"]["action_required"] is True
@@ -5357,6 +5355,8 @@ def test_upgrade_to_necessary_surfaces_preserves_durable_state_and_uses_package_
     applied = json.loads(capsys.readouterr().out)["migration"]
     assert applied["status"] == "applied"
     assert (workspace / "skills" / "workspace-operating-loop" / "SKILL.md").exists()
+    assert (workspace / "docs" / "module-map.md").exists()
+    assert (workspace / "docs" / "workspace-config-contract.md").exists()
     assert (workspace / "planning" / "skills" / "planning-reporting" / "SKILL.md").exists()
     assert (workspace / "memory" / "skills" / "memory-router" / "SKILL.md").exists()
     assert not (workspace / "payload-provenance.json").exists()

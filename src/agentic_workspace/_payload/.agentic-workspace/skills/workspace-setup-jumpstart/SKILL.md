@@ -18,7 +18,7 @@ This subskill assumes the main AW operating skill or compact router has already 
    - bounded follow-up to Planning;
    - evidence-backed friction to repo-friction or improvement intake;
    - low-confidence or generic findings to transient report only.
-5. Before writing seed surfaces, check promotion criteria in `docs/setup-findings-contract.md` and the durable candidate rule in `docs/jumpstart-contract.md`.
+5. Before writing seed surfaces, check promotion criteria in `.agentic-workspace/docs/setup-findings-contract.md` and the durable candidate rule in `.agentic-workspace/docs/jumpstart-contract.md`.
 
 ## Required Seed Surfaces
 
