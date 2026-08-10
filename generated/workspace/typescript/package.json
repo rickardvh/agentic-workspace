@@ -61,10 +61,10 @@
   "files": [
     "src",
     "resources",
-    "LICENSE",
     "external_consumer_profile.json",
     "external_contract_bundle.json",
-    "external_operation_conformance_receipts.json"
+    "external_operation_conformance_receipts.json",
+    "LICENSE"
   ],
   "homepage": "https://github.com/rickardvh/agentic-workspace",
   "license": "MIT",
