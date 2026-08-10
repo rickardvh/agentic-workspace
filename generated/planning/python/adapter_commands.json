@@ -362,6 +362,30 @@
           "name": "expect_planning_revision"
         },
         {
+          "default": "",
+          "flags": [
+            "--expect-owner-revision"
+          ],
+          "help": "Optimistic owner revision; stop if the execplan changed before closeout.",
+          "name": "expect_owner_revision"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-lane-revision"
+          ],
+          "help": "Optimistic parent lane revision; stop if its current-slice relation changed.",
+          "name": "expect_lane_revision"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-integration-revision"
+          ],
+          "help": "Optimistic integration subject revision; stop if proposals or receipts changed.",
+          "name": "expect_integration_revision"
+        },
+        {
           "action": "store_true",
           "flags": [
             "--dry-run"

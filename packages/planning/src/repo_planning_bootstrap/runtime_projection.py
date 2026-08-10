@@ -428,6 +428,9 @@ def apply_planning_closeout_operation(values: dict, _arguments: dict, _context):
             ("review_summary", "review_summary", "raw", None),
             ("outcome_summary", "outcome_summary", "raw", None),
             ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("expected_owner_revision", "expect_owner_revision", "str", ""),
+            ("expected_lane_revision", "expect_lane_revision", "str", ""),
+            ("expected_integration_revision", "expect_integration_revision", "str", ""),
         ),
     )
 

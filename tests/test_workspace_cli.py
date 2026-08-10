@@ -4233,6 +4233,127 @@ def test_planning_front_door_preserves_integration_propose_contract(monkeypatch,
     assert forwarded == [actual]
 
 
+def test_planning_front_door_matches_direct_integration_propose_semantics(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    workspace_target = tmp_path / "workspace-front-door"
+    direct_target = tmp_path / "direct-planning"
+    workspace_target.mkdir()
+    direct_target.mkdir()
+
+    def invoke(program: str, argv: list[str]) -> dict[str, Any]:
+        executable = shutil.which(program)
+        assert executable is not None
+        completed = subprocess.run(
+            [executable, *argv],
+            cwd=repo_root,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert completed.returncode == 0, completed.stderr
+        return json.loads(completed.stdout)
+
+    def integration_args(*, target: Path, planning_revision: str | None = None) -> list[str]:
+        argv = [
+            "integration-propose",
+            "--proposal-id",
+            "archive-owner-2479",
+            "--owner",
+            "owner-2479",
+            "--owner-ref",
+            ".agentic-workspace/planning/execplans/owner-2479.plan.json",
+            "--issue",
+            "#2479",
+            "--external-ref",
+            "github:#2479",
+            "--requested-transition",
+            "archive-owner",
+            "--proof",
+            "checks:passing,review:approved",
+            "--parent-boundary",
+            "lane remains independently open",
+            "--invariant",
+            "parent-current-slice,issue-relation",
+            "--expect-subject-revision",
+            "subject-revision",
+            "--expect-target-revision",
+            "target-revision",
+            "--target",
+            str(target),
+        ]
+        if planning_revision:
+            argv.extend(["--expect-planning-revision", planning_revision])
+        return [*argv, "--format", "json"]
+
+    workspace_default = invoke(
+        "agentic-workspace",
+        ["planning", "integration-propose", "--owner", "default-owner", "--target", str(workspace_target), "--dry-run", "--format", "json"],
+    )
+    direct_default = invoke(
+        "agentic-planning",
+        ["integration-propose", "--owner", "default-owner", "--target", str(direct_target), "--dry-run", "--format", "json"],
+    )
+
+    for payload in (workspace_default, direct_default):
+        receipt = payload["operation_receipt"]
+        assert payload["message"] == "Propose Planning integration transition 'default-owner-mark-integrated'"
+        assert receipt["proposal_id"] == "default-owner-mark-integrated"
+        assert receipt["preserved_invariants"] == [
+            "feature branch does not select current work",
+            "feature branch does not rewrite aggregate Planning indexes",
+            "feature branch does not close parent/lane lifecycle truth",
+            "integration apply is target-branch authoritative",
+        ]
+    assert workspace_default["operation_receipt"] == direct_default["operation_receipt"]
+    assert workspace_default["planning_revision"] == direct_default["planning_revision"]
+
+    planning_revision = workspace_default["planning_revision"]["revision_id"]
+    workspace_result = invoke(
+        "agentic-workspace",
+        ["planning", *integration_args(target=workspace_target, planning_revision=planning_revision)],
+    )
+    direct_result = invoke(
+        "agentic-planning",
+        integration_args(target=direct_target, planning_revision=planning_revision),
+    )
+
+    assert workspace_result["outcome"] == direct_result["outcome"] == "applied"
+    proposal_relative = Path(".agentic-workspace/planning/integration-proposals/archive-owner-2479.integration-proposal.json")
+    workspace_proposal = json.loads((workspace_target / proposal_relative).read_text(encoding="utf-8"))
+    direct_proposal = json.loads((direct_target / proposal_relative).read_text(encoding="utf-8"))
+    semantic_fields = (
+        "id",
+        "status",
+        "phase",
+        "requested_transition",
+        "owner",
+        "external_ref",
+        "proof_refs",
+        "parent_boundary",
+        "preserved_invariants",
+        "expected_subject_revision",
+        "expected_planning_revision",
+    )
+    workspace_semantics = {field: workspace_proposal[field] for field in semantic_fields}
+    direct_semantics = {field: direct_proposal[field] for field in semantic_fields}
+
+    assert workspace_semantics == direct_semantics
+    assert workspace_semantics == {
+        "id": "archive-owner-2479",
+        "status": "pending",
+        "phase": "integration-pending",
+        "requested_transition": "archive-owner",
+        "owner": {"id": "owner-2479", "ref": ".agentic-workspace/planning/execplans/owner-2479.plan.json"},
+        "external_ref": "github:#2479",
+        "proof_refs": ["checks:passing", "review:approved"],
+        "parent_boundary": "lane remains independently open",
+        "preserved_invariants": ["parent-current-slice", "issue-relation"],
+        "expected_subject_revision": "subject-revision",
+        "expected_planning_revision": planning_revision,
+    }
+
+
 def test_planning_front_door_forwards_lane_lifecycle_positionals(monkeypatch, tmp_path: Path, capsys) -> None:
     forwarded: list[list[str]] = []
 
