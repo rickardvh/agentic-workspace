@@ -158,6 +158,8 @@ INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
 IndependentReviewHostResultResolver = Callable[[str], dict[str, Any]]
+PROOF_TINY_SEMANTIC_BUDGET_BYTES = 4500
+_PROOF_COMMAND_VALUE_KEYS = frozenset({"command", "run", "template", "detail_command"})
 
 
 def _proof_lifecycle_command(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -203,6 +205,40 @@ def _compact_tiny_intent_proof(intent_proof: Any) -> dict[str, Any]:
         if compact.get(key) == []:
             compact.pop(key, None)
     return compact
+
+
+def _canonical_proof_command_identity(command: str) -> str:
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        tokens = command.split()
+    for marker in ("scripts/run_agentic_workspace.py", "agentic-workspace"):
+        if marker in tokens:
+            tokens = ["agentic-workspace", *tokens[tokens.index(marker) + 1 :]]
+            break
+    if "--target" in tokens and tokens.index("--target") + 1 < len(tokens):
+        tokens[tokens.index("--target") + 1] = "<target>"
+    canonical = json.dumps(tokens, separators=(",", ":"), ensure_ascii=True)
+    return f"command:{hashlib.sha256(canonical.encode('utf-8')).hexdigest()[:16]}"
+
+
+def _proof_tiny_semantic_budget_projection(payload: Any, *, field_name: str = "") -> Any:
+    """Replace rendered command/target spelling with fixed semantic identities."""
+
+    if isinstance(payload, dict):
+        return {key: _proof_tiny_semantic_budget_projection(value, field_name=key) for key, value in payload.items()}
+    if isinstance(payload, list):
+        return [_proof_tiny_semantic_budget_projection(value, field_name=field_name) for value in payload]
+    if field_name == "target" and isinstance(payload, str):
+        return "<target>"
+    if isinstance(payload, str) and (field_name in _PROOF_COMMAND_VALUE_KEYS or field_name == "required_commands"):
+        return _canonical_proof_command_identity(payload)
+    return payload
+
+
+def _proof_tiny_semantic_budget_bytes(payload: dict[str, Any]) -> int:
+    projection = _proof_tiny_semantic_budget_projection(payload)
+    return len(json.dumps(projection))
 
 
 def _compact_tiny_proof_narrowness(value: Any) -> dict[str, Any]:
