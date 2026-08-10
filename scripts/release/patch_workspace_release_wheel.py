@@ -12,9 +12,9 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 
 DEPENDENCY_PACKAGES = {
-    "agentic-memory": "agentic_memory",
-    "agentic-planning": "agentic_planning",
-    "agentic-verification": "agentic_verification",
+    "agentic-workspace-memory": "agentic_workspace_memory",
+    "agentic-workspace-planning": "agentic_workspace_planning",
+    "agentic-workspace-verification": "agentic_workspace_verification",
 }
 
 

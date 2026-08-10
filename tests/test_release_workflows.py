@@ -84,9 +84,9 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
     package_names = [package["name"] for package in ownership["packages"]]
     assert package_names == [
         "agentic-workspace",
-        "agentic-memory",
-        "agentic-planning",
-        "agentic-verification",
+        "agentic-workspace-memory",
+        "agentic-workspace-planning",
+        "agentic-workspace-verification",
     ]
     for package in ownership["packages"]:
         assert package["pyproject"]
@@ -106,11 +106,14 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
     for package in ownership["typescript_packages"]:
         package_json = json.loads((ROOT / package["package_json"]).read_text(encoding="utf-8"))
         assert package_json["name"] == package["name"]
-        assert package_json["private"] is False
-        assert package_json["publishConfig"]["access"] == "public"
+        assert package_json["private"] is True
+        assert "publishConfig" not in package_json
+        assert package_json["license"] == "MIT"
+        assert "LICENSE" in package_json["files"]
         assert package_json["engines"]["node"] == ">=20"
         assert package["runtime_requirement"] == "node>=20"
-        assert package["release_policy"] == "pack-and-publishable"
+        assert package["release_policy"] == "release-asset-only"
+        assert package["registry_status"] == "unpublished"
         assert package["generated_command_contract"] == "agentic-workspace/command-package-ir/v1"
 
 
@@ -232,8 +235,9 @@ def test_releaseable_typescript_package_generation_preserves_release_owned_versi
         current = json.loads((ROOT / package_json_path).read_text(encoding="utf-8"))
         rendered = rendered_by_path[package_json_path]
         assert rendered["version"] == current["version"]
-        assert rendered["private"] is False
-        assert rendered["publishConfig"]["access"] == "public"
+        assert rendered["private"] is True
+        assert "publishConfig" not in rendered
+        assert rendered["license"] == "MIT"
 
 
 def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> None:
@@ -268,6 +272,11 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0" in workflow
     assert "uv sync --locked" in workflow
     assert "security-supply-chain-readiness.json" in workflow
+    assert "distribution-install-readiness.json" in workflow
+    assert "redistributable-package-readiness.json" in workflow
+    assert "scripts/check/check_package_identity.py" in workflow
+    assert "--require-exact-urls" in workflow
+    assert "--write-receipts" in workflow
     assert "agentic-workspace.spdx.json" in workflow
     assert "anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610" in workflow
     assert "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8" in workflow
@@ -284,10 +293,12 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
         [
             "dist/agentic_workspace-0.4.0-py3-none-any.whl",
             "dist/agentic_workspace-0.4.0.tar.gz",
-            "dist/agentic_memory-0.4.0-py3-none-any.whl",
-            "dist/agentic_memory-0.4.0.tar.gz",
+            "dist/agentic_workspace_memory-0.4.0-py3-none-any.whl",
+            "dist/agentic_workspace_memory-0.4.0.tar.gz",
             "dist/agentic-workspace-workspace-cli-0.4.0.tgz",
             "dist/agentic-workspace-release-manifest.json",
+            "dist/distribution-install-readiness.json",
+            "dist/redistributable-package-readiness.json",
             "dist/security-supply-chain-readiness.json",
             "dist/agentic-workspace.spdx.json",
             "dist/SHA256SUMS",
@@ -298,10 +309,12 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
     ) == [
         "dist/agentic_workspace-0.4.0-py3-none-any.whl",
         "dist/agentic_workspace-0.4.0.tar.gz",
-        "dist/agentic_memory-0.4.0-py3-none-any.whl",
-        "dist/agentic_memory-0.4.0.tar.gz",
+        "dist/agentic_workspace_memory-0.4.0-py3-none-any.whl",
+        "dist/agentic_workspace_memory-0.4.0.tar.gz",
         "dist/agentic-workspace-workspace-cli-0.4.0.tgz",
         "dist/agentic-workspace-release-manifest.json",
+        "dist/distribution-install-readiness.json",
+        "dist/redistributable-package-readiness.json",
         "dist/security-supply-chain-readiness.json",
         "dist/agentic-workspace.spdx.json",
         "dist/SHA256SUMS",
@@ -383,11 +396,11 @@ def test_release_model_ignores_tags_from_other_package_domains(monkeypatch) -> N
                 return subprocess.CompletedProcess(args, 0, stdout='{"version": "0.36.1"}', stderr="")
             package_name = "agentic-workspace"
             if "packages/memory" in args[2]:
-                package_name = "agentic-memory"
+                package_name = "agentic-workspace-memory"
             elif "packages/planning" in args[2]:
-                package_name = "agentic-planning"
+                package_name = "agentic-workspace-planning"
             elif "packages/verification" in args[2]:
-                package_name = "agentic-verification"
+                package_name = "agentic-workspace-verification"
             return subprocess.CompletedProcess(
                 args,
                 0,

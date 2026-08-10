@@ -1063,7 +1063,12 @@ def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_sources
     module = _load_harness_module()
     source = tmp_path / "source-wheelhouse"
     source.mkdir()
-    for wheel_prefix in ("agentic_workspace", "agentic_memory", "agentic_planning", "agentic_verification"):
+    for wheel_prefix in (
+        "agentic_workspace",
+        "agentic_workspace_memory",
+        "agentic_workspace_planning",
+        "agentic_workspace_verification",
+    ):
         (source / f"{wheel_prefix}-1.2.3-py3-none-any.whl").write_text("wheel", encoding="utf-8")
 
     monkeypatch.setattr(module.os, "name", "nt")
@@ -1075,35 +1080,40 @@ def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_sources
         adapter={"sandbox": {"backend": "docker-sandbox"}},
     )
 
-    assert dependencies == ["agentic-workspace", "agentic-memory", "agentic-planning", "agentic-verification"]
+    assert dependencies == [
+        "agentic-workspace",
+        "agentic-workspace-memory",
+        "agentic-workspace-planning",
+        "agentic-workspace-verification",
+    ]
     assert uv_sources == {
-        "agentic-memory": [
+        "agentic-workspace-memory": [
             {
-                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/host/agentic_memory-1.2.3-py3-none-any.whl",
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/host/agentic_workspace_memory-1.2.3-py3-none-any.whl",
                 "marker": "sys_platform == 'win32'",
             },
             {
-                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/agentic_memory-1.2.3-py3-none-any.whl",
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/agentic_workspace_memory-1.2.3-py3-none-any.whl",
                 "marker": "sys_platform != 'win32'",
             },
         ],
-        "agentic-planning": [
+        "agentic-workspace-planning": [
             {
-                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/host/agentic_planning-1.2.3-py3-none-any.whl",
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/host/agentic_workspace_planning-1.2.3-py3-none-any.whl",
                 "marker": "sys_platform == 'win32'",
             },
             {
-                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/agentic_planning-1.2.3-py3-none-any.whl",
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/agentic_workspace_planning-1.2.3-py3-none-any.whl",
                 "marker": "sys_platform != 'win32'",
             },
         ],
-        "agentic-verification": [
+        "agentic-workspace-verification": [
             {
-                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/host/agentic_verification-1.2.3-py3-none-any.whl",
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/host/agentic_workspace_verification-1.2.3-py3-none-any.whl",
                 "marker": "sys_platform == 'win32'",
             },
             {
-                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/agentic_verification-1.2.3-py3-none-any.whl",
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/agentic_workspace_verification-1.2.3-py3-none-any.whl",
                 "marker": "sys_platform != 'win32'",
             },
         ],
@@ -1144,9 +1154,9 @@ def test_model_cli_harness_local_wheelhouse_windows_docker_fixture_runs_host_val
     pyproject = tomllib.loads((paths.repo_path / "pyproject.toml").read_text(encoding="utf-8"))
     assert pyproject["project"]["dependencies"] == [
         "agentic-workspace",
-        "agentic-memory",
-        "agentic-planning",
-        "agentic-verification",
+        "agentic-workspace-memory",
+        "agentic-workspace-planning",
+        "agentic-workspace-verification",
     ]
     sources = pyproject["tool"]["uv"]["sources"]["agentic-workspace"]
     assert [source["marker"] for source in sources] == ["sys_platform == 'win32'", "sys_platform != 'win32'"]

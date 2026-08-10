@@ -331,9 +331,9 @@ def test_release_root_wheel_installs_workspace_stack_from_same_release_assets(wo
         release_asset_base_url=release_dist.resolve().as_uri(),
     )
     workspace_exe = _install_workspace_root_release_venv(root_wheel=patched_root, tmpdir_path=tmp_path)
-    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_memory")
-    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_planning")
-    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_verification")
+    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_workspace_memory")
+    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_workspace_planning")
+    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_workspace_verification")
     _assert_workspace_stack_runs_fresh_repo_cli_sequence(workspace_exe=workspace_exe, tmp_path=tmp_path)
 
 
@@ -429,9 +429,9 @@ def _build_workspace_wheelhouse(tmpdir: str, *, root_wheel: Path) -> list[Path]:
     wheel_paths.extend(_build_artifact_from(package_dir, tmpdir, "wheel") for package_dir in MODULE_PACKAGE_DIRS)
     names = {path.name for path in wheel_paths}
     assert any(name.startswith("agentic_workspace-") for name in names)
-    assert any(name.startswith("agentic_memory-") for name in names)
-    assert any(name.startswith("agentic_planning-") for name in names)
-    assert any(name.startswith("agentic_verification-") for name in names)
+    assert any(name.startswith("agentic_workspace_memory-") for name in names)
+    assert any(name.startswith("agentic_workspace_planning-") for name in names)
+    assert any(name.startswith("agentic_workspace_verification-") for name in names)
     return wheel_paths
 
 

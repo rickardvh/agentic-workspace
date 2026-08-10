@@ -47,19 +47,27 @@ def _assert_no_adapter_managed_residue(path: Path) -> None:
 
 
 def _run_external_consumer(target: Path, python: Path) -> dict[str, object]:
-    completed = subprocess.run(
-        [
-            str(python),
-            str(ROOT / "tests/fixtures/external_consumer/consumer.py"),
-            str(target),
-        ],
-        cwd=target,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    request_path = target.parent / f"{target.name}-external-consumer-request.json"
+    request_path.write_text(json.dumps({"action": "detect", "target": str(target)}), encoding="utf-8")
+    try:
+        completed = subprocess.run(
+            [
+                str(python),
+                str(ROOT / "tests/fixtures/external_consumer/consumer.py"),
+                str(request_path),
+            ],
+            cwd=target,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    finally:
+        request_path.unlink(missing_ok=True)
     assert completed.returncode == 0, completed.stderr or completed.stdout
-    return json.loads(completed.stdout)
+    payload = json.loads(completed.stdout)
+    if isinstance(payload.get("result"), dict):
+        payload["result"].pop("target", None)
+    return payload
 
 
 def test_lifecycle_profiles_preserve_zero_adapter_footprint_and_equivalent_consumption(tmp_path: Path, capsys) -> None:
@@ -71,7 +79,7 @@ def test_lifecycle_profiles_preserve_zero_adapter_footprint_and_equivalent_consu
     _init_repo(mirrored)
     dist = tmp_path / "dist"
     subprocess.run([shutil.which("uv") or "uv", "build", "--wheel", "--out-dir", str(dist)], cwd=ROOT, check=True)
-    for package in ("agentic-memory", "agentic-planning", "agentic-verification"):
+    for package in ("agentic-workspace-memory", "agentic-workspace-planning", "agentic-workspace-verification"):
         subprocess.run([shutil.which("uv") or "uv", "build", "--wheel", "--package", package, "--out-dir", str(dist)], cwd=ROOT, check=True)
     consumer_env = tmp_path / "consumer-env"
     subprocess.run([shutil.which("uv") or "uv", "venv", str(consumer_env)], check=True)
@@ -128,7 +136,12 @@ def test_lifecycle_profiles_preserve_zero_adapter_footprint_and_equivalent_consu
 
 def test_runtime_and_payload_have_no_external_adapter_reverse_dependency() -> None:
     manifests = [ROOT / "pyproject.toml", *(ROOT / "packages").glob("*/pyproject.toml")]
-    allowed_workspace_dependencies = {"agentic-workspace", "agentic-memory", "agentic-planning", "agentic-verification"}
+    allowed_workspace_dependencies = {
+        "agentic-workspace",
+        "agentic-workspace-memory",
+        "agentic-workspace-planning",
+        "agentic-workspace-verification",
+    }
     for manifest in manifests:
         project = tomllib.loads(manifest.read_text(encoding="utf-8"))["project"]
         for dependency in project.get("dependencies", []):

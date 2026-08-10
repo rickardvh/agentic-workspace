@@ -2,6 +2,29 @@
   "schema_version": "agentic-workspace/release-ownership/v1",
   "release_model": "coordinated-workspace",
   "canonical_version_source": "pyproject.toml",
+  "project_identity": {
+    "name": "Agentic Workspace",
+    "author": "Rickard von Haugwitz",
+    "maintainer": "Rickard von Haugwitz",
+    "license_spdx": "MIT",
+    "license_file": "LICENSE",
+    "homepage": "https://github.com/rickardvh/agentic-workspace",
+    "repository": "https://github.com/rickardvh/agentic-workspace",
+    "issues": "https://github.com/rickardvh/agentic-workspace/issues",
+    "support": "https://github.com/rickardvh/agentic-workspace/issues",
+    "maturity_classifier": "Development Status :: 3 - Alpha"
+  },
+  "distribution_identity": {
+    "strategy": "exact-github-release-assets",
+    "release_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/v{version}",
+    "canonical_root_distribution": "agentic-workspace",
+    "canonical_install_receipt": "distribution-install-readiness.json",
+    "redistributable_receipt": "redistributable-package-readiness.json",
+    "digest_algorithm": "sha256",
+    "mutable_branch_install_supported": false,
+    "registry_resolution_supported": false,
+    "rule": "Support-bearing installs use the exact root wheel URL and digest recorded in the release receipt; coordinated module dependencies use same-release wheel URLs and digests."
+  },
   "changeset_dir": ".release/changes",
   "release_notes_dir": ".release/releases",
   "release_pr_branch": "automation/coordinated-release",
@@ -70,28 +93,28 @@
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     },
     {
-      "name": "agentic-memory",
+      "name": "agentic-workspace-memory",
       "pyproject": "packages/memory/pyproject.toml",
-      "wheel_prefix": "agentic_memory",
-      "sdist_prefix": "agentic_memory",
+      "wheel_prefix": "agentic_workspace_memory",
+      "sdist_prefix": "agentic_workspace_memory",
       "payload_schema": "agentic-memory/payload/v1",
       "payload_provenance": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     },
     {
-      "name": "agentic-planning",
+      "name": "agentic-workspace-planning",
       "pyproject": "packages/planning/pyproject.toml",
-      "wheel_prefix": "agentic_planning",
-      "sdist_prefix": "agentic_planning",
+      "wheel_prefix": "agentic_workspace_planning",
+      "sdist_prefix": "agentic_workspace_planning",
       "payload_schema": "agentic-planning/payload/v1",
       "payload_provenance": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     },
     {
-      "name": "agentic-verification",
+      "name": "agentic-workspace-verification",
       "pyproject": "packages/verification/pyproject.toml",
-      "wheel_prefix": "agentic_verification",
-      "sdist_prefix": "agentic_verification",
+      "wheel_prefix": "agentic_workspace_verification",
+      "sdist_prefix": "agentic_workspace_verification",
       "payload_schema": "agentic-workspace/verification-manifest/v1",
       "payload_provenance": ".agentic-workspace/verification/manifest.toml",
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
@@ -109,7 +132,8 @@
       "python_package": "agentic-workspace",
       "runtime": "node",
       "runtime_requirement": "node>=20",
-      "release_policy": "pack-and-publishable",
+      "release_policy": "release-asset-only",
+      "registry_status": "unpublished",
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     },
     {
@@ -120,10 +144,11 @@
       "entrypoints": [
         "agentic-memory"
       ],
-      "python_package": "agentic-memory",
+      "python_package": "agentic-workspace-memory",
       "runtime": "node",
       "runtime_requirement": "node>=20",
-      "release_policy": "pack-and-publishable",
+      "release_policy": "release-asset-only",
+      "registry_status": "unpublished",
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     },
     {
@@ -134,10 +159,11 @@
       "entrypoints": [
         "agentic-planning"
       ],
-      "python_package": "agentic-planning",
+      "python_package": "agentic-workspace-planning",
       "runtime": "node",
       "runtime_requirement": "node>=20",
-      "release_policy": "pack-and-publishable",
+      "release_policy": "release-asset-only",
+      "registry_status": "unpublished",
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     },
     {
@@ -148,10 +174,11 @@
       "entrypoints": [
         "agentic-verification"
       ],
-      "python_package": "agentic-verification",
+      "python_package": "agentic-workspace-verification",
       "runtime": "node",
       "runtime_requirement": "node>=20",
-      "release_policy": "pack-and-publishable",
+      "release_policy": "release-asset-only",
+      "registry_status": "unpublished",
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     }
   ],

@@ -3,11 +3,13 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentic-planning"
+name = "agentic-workspace-planning"
 version = "0.38.0"
 description = "Install a checked-in planning bootstrap for execution into an existing repository."
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["agents", "bootstrap", "execution-steering", "planning", "repository", "workflow"]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -16,17 +18,23 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Software Development :: Build Tools",
 ]
 authors = [
   { name = "Rickard von Haugwitz" },
 ]
+maintainers = [
+  { name = "Rickard von Haugwitz" },
+]
 dependencies = ["jsonschema>=4.0"]
 
 [project.urls]
-Homepage = "https://github.com/rickardvh/agentic-workspace/tree/master/packages/planning"
+Homepage = "https://github.com/rickardvh/agentic-workspace"
 Repository = "https://github.com/rickardvh/agentic-workspace"
 Issues = "https://github.com/rickardvh/agentic-workspace/issues"
+Support = "https://github.com/rickardvh/agentic-workspace/issues"
+Documentation = "https://github.com/rickardvh/agentic-workspace/blob/master/packages/planning/README.md"
 
 [project.scripts]
 agentic-planning = "repo_planning_bootstrap.cli:main"

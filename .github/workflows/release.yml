@@ -74,8 +74,8 @@ jobs:
           ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
           for package in ownership["typescript_packages"]:
               payload = json.loads(Path(package["package_json"]).read_text(encoding="utf-8"))
-              if payload.get("private") is not False:
-                  raise SystemExit(f"{package['package_json']} must be publishable for coordinated release")
+              if payload.get("private") is not True or package.get("release_policy") != "release-asset-only":
+                  raise SystemExit(f"{package['package_json']} must be explicitly unpublished and release-asset-only")
           PY
 
       - name: Build Agentic Workspace package artifacts
@@ -93,6 +93,10 @@ jobs:
           for package in generated/*/typescript; do
             (cd "$package" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
           done
+          uv run python scripts/check/check_package_identity.py \
+            --artifact-dir dist \
+            --require-exact-urls \
+            --write-receipts
 
       - name: Run built package smoke tests
         run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
@@ -183,6 +187,7 @@ jobs:
                       "payload_schema": package["payload_schema"],
                       "payload_provenance": package["payload_provenance"],
                       "generated_command_contract": package["generated_command_contract"],
+                      "license_spdx": ownership["project_identity"]["license_spdx"],
                   }
               )
           for package in ownership["typescript_packages"]:
@@ -190,8 +195,8 @@ jobs:
               declared = package_json["version"]
               if declared != version:
                   raise SystemExit(f"{package['package_json']} has version {declared}, expected {version}")
-              if package_json.get("private") is not False:
-                  raise SystemExit(f"{package['package_json']} must be publishable for coordinated release")
+              if package_json.get("private") is not True or package.get("release_policy") != "release-asset-only":
+                  raise SystemExit(f"{package['package_json']} must be explicitly unpublished and release-asset-only")
               tarball = next(dist.glob(f"{package['tarball_prefix']}-{version}.tgz"), None)
               if tarball is None:
                   raise SystemExit(f"Missing npm tarball for {package['name']} {version}")
@@ -209,7 +214,9 @@ jobs:
                       "runtime": package["runtime"],
                       "runtime_requirement": package["runtime_requirement"],
                       "release_policy": package["release_policy"],
+                      "registry_status": package["registry_status"],
                       "generated_command_contract": package["generated_command_contract"],
+                      "license_spdx": ownership["project_identity"]["license_spdx"],
                   }
               )
 
@@ -255,6 +262,8 @@ jobs:
                   text=True,
               ).stdout.strip(),
               "all_or_nothing": True,
+              "project_identity": ownership["project_identity"],
+              "distribution_identity": ownership["distribution_identity"],
               "packages": package_entries,
               "command_generation": {
                   "dependency": command_generation_dependency,
@@ -265,6 +274,8 @@ jobs:
                   "path": ".github/release-ownership.json",
                   "schema_version": ownership["schema_version"],
               },
+              "distribution_install_readiness": ownership["distribution_identity"]["canonical_install_receipt"],
+              "redistributable_package_readiness": ownership["distribution_identity"]["redistributable_receipt"],
               "semantic_conformance": {
                   "required": True,
                   "receipt_kind": ownership["semantic_conformance"]["receipt_kind"],
@@ -284,6 +295,14 @@ jobs:
               if not security_path.is_file():
                   raise SystemExit(f"Missing required security supply-chain asset: {required_security_asset}")
               checksum_lines.append(f"{sha256(security_path)}  {security_path.name}")
+          for readiness_asset in (
+              ownership["distribution_identity"]["canonical_install_receipt"],
+              ownership["distribution_identity"]["redistributable_receipt"],
+          ):
+              readiness_path = dist / readiness_asset
+              if not readiness_path.is_file():
+                  raise SystemExit(f"Missing package readiness asset: {readiness_asset}")
+              checksum_lines.append(f"{sha256(readiness_path)}  {readiness_path.name}")
           checksum_lines.append(f"{sha256(manifest_path)}  {manifest_path.name}")
           (dist / "SHA256SUMS").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
           PY
@@ -321,10 +340,18 @@ jobs:
               "agentic-workspace-release-manifest.json",
               "security-supply-chain-readiness.json",
               "agentic-workspace.spdx.json",
+              ownership["distribution_identity"]["canonical_install_receipt"],
+              ownership["distribution_identity"]["redistributable_receipt"],
           }
           security = manifest.get("security_supply_chain", {})
           if security.get("required") is not True:
               raise SystemExit("Release manifest is missing required security supply-chain readiness")
+          for readiness_key in ("distribution_install_readiness", "redistributable_package_readiness"):
+              readiness_asset = manifest.get(readiness_key, "")
+              readiness_path = dist / readiness_asset
+              readiness = json.loads(readiness_path.read_text(encoding="utf-8")) if readiness_path.is_file() else {}
+              if readiness.get("status") != "passed" or readiness.get("version") != manifest["version"]:
+                  raise SystemExit(f"Release manifest has invalid {readiness_key}: {readiness_asset}")
           semantic = manifest.get("semantic_conformance", {})
           if semantic.get("required") is not True or len(semantic.get("receipts", [])) != len(ownership["semantic_conformance"]["runtime_majors"]):
               raise SystemExit("Release manifest is missing required semantic-conformance receipts")
@@ -361,6 +388,8 @@ jobs:
             dist/generated-command-conformance-node*.json
             dist/SHA256SUMS
             dist/agentic-workspace-release-manifest.json
+            dist/distribution-install-readiness.json
+            dist/redistributable-package-readiness.json
             dist/security-supply-chain-readiness.json
             dist/agentic-workspace.spdx.json
           fail_on_unmatched_files: true

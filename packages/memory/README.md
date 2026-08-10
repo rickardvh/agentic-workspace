@@ -2,6 +2,11 @@
 
 Agentic Memory is a checked-in repo-memory contract for anti-rediscovery knowledge: durable, shared technical context that is expensive to reconstruct across agents, contributors, sessions, and branches. It is distributed as the Memory module of Agentic Workspace. Use the root `agentic-workspace` CLI for normal host-repo lifecycle, startup, reporting, and module orchestration. The `agentic-memory` CLI remains the module-level interface for package-local maintenance, advanced debugging, and explicit Memory-only lifecycle control.
 
+Support-bearing installs use the exact root-wheel command in a release's
+`distribution-install-readiness.json`. The source commands below are module-level
+debugging templates only: replace `vMAJOR.MINOR.PATCH` with an exact release tag;
+mutable branches such as `master` are not supported install identities.
+
 ## At A Glance
 
 Choose this package when you want a repository to keep durable, shared repo knowledge that survives across sessions, contributors, branches, and agent tools.
@@ -59,10 +64,10 @@ Advanced module-only no-install path:
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory prompt install --target ./repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory agentic-memory prompt install --target ./repo
 
 # Alternative when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory prompt install --target ./repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory agentic-memory prompt install --target ./repo
 ```
 
 Prefer the root Workspace command for host repos. Use these module-only commands when you are maintaining Memory itself, debugging the module boundary, or performing a narrow package-level operation after Workspace has established repo context. Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
@@ -230,7 +235,7 @@ In this monorepo checkout, the active operational memory install lives at the re
 Normal public lifecycle path:
 
 ```bash
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target ./repo --modules memory
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH agentic-workspace prompt init --target ./repo --modules memory
 ```
 
 ### Agent workflow for install
@@ -239,16 +244,16 @@ If you want an agent to perform the setup and do not want to install the CLI loc
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory prompt install --target ./repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory agentic-memory prompt install --target ./repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory prompt install --target ./repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory agentic-memory prompt install --target ./repo
 
 # Conservative adoption into an existing repo
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory prompt adopt --target ./repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory agentic-memory prompt adopt --target ./repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory prompt adopt --target ./repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory agentic-memory prompt adopt --target ./repo
 ```
 
 Use `prompt install` for clean bootstrap cases and `prompt adopt` for conservative existing-repo adoption. The printed prompt is designed for an agent to execute the bootstrap flow without asking you to install or clone this repo first. Install and adopt may still use the temporary bootstrap path for lifecycle completion, but normal upgrades should route through the checked-in `memory-upgrade` skill under `.agentic-workspace/memory/skills/`, which runs the packaged upgrade flow using `.agentic-workspace/memory/UPGRADE-SOURCE.toml`. Treat that file as the source of truth for remote runner specs instead of scattering raw Git URLs through local workflow docs.
@@ -269,13 +274,13 @@ If you want a local CLI installation instead, install the tool with one of these
 
 ```bash
 # Choose one
-uv tool install --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory
+uv tool install --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory agentic-memory
 
 # Or
-pipx install git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory
+pipx install git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory
 
 # Or
-python -m pip install git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory
+python -m pip install git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory
 ```
 
 Then run:
@@ -300,10 +305,10 @@ If you want an agent to perform the upgrade without a local CLI install, print a
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory prompt upgrade --target ./repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory agentic-memory prompt upgrade --target ./repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory prompt upgrade --target ./repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory agentic-memory prompt upgrade --target ./repo
 ```
 
 This is the preferred upgrade path for the primary agent-first workflow. The prompt tells the agent to use the checked-in `memory-upgrade` skill as the single repo-local upgrade entrypoint; the skill then runs the packaged upgrade flow using `.agentic-workspace/memory/UPGRADE-SOURCE.toml`.
@@ -326,10 +331,10 @@ If you want an agent to perform the uninstall without a local CLI install, print
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory prompt uninstall --target ./repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory agentic-memory prompt uninstall --target ./repo
 
 # Fallback when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory agentic-memory prompt uninstall --target ./repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/memory agentic-memory prompt uninstall --target ./repo
 ```
 
 This runs the uninstall flow conservatively and points the agent to the bundled `bootstrap-uninstall` skill when manual-review items remain.

@@ -21209,7 +21209,7 @@
           "generation_status": "mutation-capable-adapter",
           "kind": "python",
           "maturity_level_ref": "mutation-capable-adapter",
-          "package_name": "agentic-planning",
+          "package_name": "agentic-workspace-planning",
           "test_environment": "python-dev"
         },
         {
@@ -21225,7 +21225,7 @@
         }
       ],
       "version_metadata": {
-        "distribution": "agentic-planning",
+        "distribution": "agentic-workspace-planning",
         "fallback_version": "0.1.2",
         "source": "python-package-metadata"
       }
@@ -24620,7 +24620,7 @@
           "generation_status": "mutation-capable-adapter",
           "kind": "python",
           "maturity_level_ref": "mutation-capable-adapter",
-          "package_name": "agentic-memory",
+          "package_name": "agentic-workspace-memory",
           "test_environment": "python-dev"
         },
         {
@@ -24636,7 +24636,7 @@
         }
       ],
       "version_metadata": {
-        "distribution": "agentic-memory",
+        "distribution": "agentic-workspace-memory",
         "fallback_version": "0.3.11",
         "source": "python-package-metadata"
       }
@@ -24835,7 +24835,7 @@
           "generation_status": "runtime-backed-read-only-adapter",
           "kind": "python",
           "maturity_level_ref": "runtime-backed-read-only-adapter",
-          "package_name": "agentic-verification",
+          "package_name": "agentic-workspace-verification",
           "test_environment": "python-dev"
         },
         {
@@ -24851,7 +24851,7 @@
         }
       ],
       "version_metadata": {
-        "distribution": "agentic-verification",
+        "distribution": "agentic-workspace-verification",
         "fallback_version": "0.1.0",
         "source": "python-package-metadata"
       }

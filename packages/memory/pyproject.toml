@@ -3,31 +3,39 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentic-memory"
+name = "agentic-workspace-memory"
 version = "0.38.0"
 description = "Install the agentic memory bootstrap into an existing repository."
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = ["agents", "bootstrap", "developer-tools", "memory", "repository"]
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Software Development :: Build Tools",
   "Topic :: Software Development :: Quality Assurance",
 ]
 authors = [
   { name = "Rickard von Haugwitz" },
 ]
+maintainers = [
+  { name = "Rickard von Haugwitz" },
+]
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/rickardvh/agentic-workspace/tree/master/packages/memory"
+Homepage = "https://github.com/rickardvh/agentic-workspace"
 Repository = "https://github.com/rickardvh/agentic-workspace"
 Issues = "https://github.com/rickardvh/agentic-workspace/issues"
+Support = "https://github.com/rickardvh/agentic-workspace/issues"
+Documentation = "https://github.com/rickardvh/agentic-workspace/blob/master/packages/memory/README.md"
 
 [project.scripts]
 agentic-memory = "repo_memory_bootstrap.cli:main"

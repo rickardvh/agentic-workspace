@@ -4234,7 +4234,7 @@
     }
   ],
   "version_metadata": {
-    "distribution": "agentic-planning",
+    "distribution": "agentic-workspace-planning",
     "fallback_version": "0.1.2",
     "source": "python-package-metadata"
   }

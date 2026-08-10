@@ -14,6 +14,19 @@ Run lifecycle commands from that target repo, or pass it explicitly with `--targ
 
 Use an installed `agentic-workspace` CLI from the target repo's environment when available.
 
+For a support-bearing public install, choose a versioned GitHub release and download its
+`distribution-install-readiness.json`. The receipt contains the canonical copyable
+`uv tool install` command for the exact `agentic-workspace` wheel URL and SHA-256 digest.
+Run that command unchanged; it resolves the three coordinated module wheels from the
+same release with hashes embedded in root-wheel metadata. Registry resolution and
+mutable branch URLs are not supported installation channels.
+
+The same release includes `redistributable-package-readiness.json`, which proves that
+the coordinated wheels, sdists, and npm tarballs carry the owner-approved MIT and
+project metadata. The npm tarballs are exact GitHub release assets; the
+`@agentic-workspace/*-cli` names are intentionally unpublished and must not be used in
+an `npm install` registry command.
+
 ```bash
 agentic-workspace defaults --section module_selection --format json
 agentic-workspace init --target . --modules memory
@@ -30,7 +43,8 @@ Choose the smallest module set that fits:
 
 ## If The CLI Is Missing
 
-Install `agentic-workspace` into the target repo or its tool environment, then rerun the same lifecycle command.
+Install `agentic-workspace` with the exact command in the selected release's
+`distribution-install-readiness.json`, then rerun the same lifecycle command.
 
 Prefer the target repo's dependency/tooling convention. For example, a repo may use a dev dependency, a project tool environment, or a user-local tool install.
 

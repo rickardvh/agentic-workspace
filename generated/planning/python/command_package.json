@@ -4207,7 +4207,7 @@
     "target": {
       "kind": "python",
       "layout_version": "command-generation/python-target-layout/v1",
-      "package_name": "agentic-planning"
+      "package_name": "agentic-workspace-planning"
     }
   },
   "id": "planning-bootstrap",
@@ -5194,7 +5194,7 @@
       "generation_status": "mutation-capable-adapter",
       "kind": "python",
       "maturity_level_ref": "mutation-capable-adapter",
-      "package_name": "agentic-planning",
+      "package_name": "agentic-workspace-planning",
       "test_environment": "python-dev"
     },
     {
@@ -5210,7 +5210,7 @@
     }
   ],
   "version_metadata": {
-    "distribution": "agentic-planning",
+    "distribution": "agentic-workspace-planning",
     "fallback_version": "0.1.2",
     "source": "python-package-metadata"
   }

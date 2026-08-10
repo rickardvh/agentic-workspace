@@ -2,6 +2,11 @@
 
 Agentic Planning is a checked-in planning-for-execution contract, distributed as the Planning module of Agentic Workspace. Use the root `agentic-workspace` CLI for normal host-repo lifecycle, startup, reporting, and module orchestration. The `agentic-planning` CLI remains the module-level interface for package-local maintenance, advanced debugging, and explicit Planning-only lifecycle control.
 
+Support-bearing installs use the exact root-wheel command in a release's
+`distribution-install-readiness.json`. The source commands below are module-level
+debugging templates only: replace `vMAJOR.MINOR.PATCH` with an exact release tag;
+mutable branches such as `master` are not supported install identities.
+
 ## Why
 
 Active agent work often needs more than a TODO line but less than a project-management system. Planning gives the repo a small checked-in place for current intent, bounded execution scope, validation expectations, and honest closeout so another session can resume without reconstructing the task from chat.
@@ -106,10 +111,10 @@ Advanced module-only no-install path:
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning prompt install --target ./repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/planning agentic-planning prompt install --target ./repo
 
 # Alternative when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning prompt install --target ./repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/planning agentic-planning prompt install --target ./repo
 ```
 
 Prefer the root Workspace command for host repos. Use these module-only commands when you are maintaining Planning itself, debugging the module boundary, or performing a narrow package-level operation after Workspace has established repo context. Prefer `uvx` when `uv` is already available. Support `pipx` as the equivalent no-install path when it is the runner a repo already uses.
@@ -122,7 +127,7 @@ After workspace bootstrap, `docs/agentic-workspace-install.md` is the canonical 
 Normal public lifecycle path:
 
 ```bash
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master agentic-workspace prompt init --target ./repo --modules planning
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH agentic-workspace prompt init --target ./repo --modules planning
 ```
 
 If you want an agent to perform lifecycle work without a local CLI install, use the paired remote prompt commands below.
@@ -131,36 +136,36 @@ If you want an agent to perform lifecycle work without a local CLI install, use 
 
 ```bash
 # Preferred when uvx is available: clean bootstrap
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning prompt install --target ./repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/planning agentic-planning prompt install --target ./repo
 
 # Alternative when pipx is available instead: clean bootstrap
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning prompt install --target ./repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/planning agentic-planning prompt install --target ./repo
 
 # Preferred when uvx is available: conservative adoption
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning prompt adopt --target ./repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/planning agentic-planning prompt adopt --target ./repo
 
 # Alternative when pipx is available instead: conservative adoption
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning prompt adopt --target ./repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/planning agentic-planning prompt adopt --target ./repo
 ```
 
 ### Upgrade
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning prompt upgrade --target ./repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/planning agentic-planning prompt upgrade --target ./repo
 
 # Alternative when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning prompt upgrade --target ./repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/planning agentic-planning prompt upgrade --target ./repo
 ```
 
 ### Uninstall
 
 ```bash
 # Preferred when uvx is available
-uvx --from git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning prompt uninstall --target ./repo
+uvx --from git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/planning agentic-planning prompt uninstall --target ./repo
 
 # Alternative when pipx is available instead
-pipx run --spec git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning agentic-planning prompt uninstall --target ./repo
+pipx run --spec git+https://github.com/rickardvh/agentic-workspace@vMAJOR.MINOR.PATCH#subdirectory=packages/planning agentic-planning prompt uninstall --target ./repo
 ```
 
 ## Deep Contract Details

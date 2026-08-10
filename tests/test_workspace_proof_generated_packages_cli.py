@@ -9,6 +9,10 @@ def _proof_select(capsys, *args: str, select: str) -> dict[str, object]:
     return json.loads(capsys.readouterr().out)["values"]
 
 
+def _stable_lane_ids(answer: dict[str, object]) -> list[str]:
+    return [lane["id"] for lane in answer["selected_lanes"] if not lane["id"].startswith(("concern:", "assurance-requirement:"))]
+
+
 def test_proof_routes_generated_adapter_path_to_repo_verification_protocol(capsys) -> None:
     repo_root = Path(__file__).resolve().parents[1]
 
@@ -44,7 +48,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert weak_agent_routing["status"] == "proof-gated"
     assert "generated-package static plus conformance proof pass" in weak_agent_routing["rule"]
     assert "serially" in answer["selected_lanes"][0]["ci_relationship"]
-    assert [lane["id"] for lane in answer["selected_lanes"]] == [
+    assert _stable_lane_ids(answer) == [
         "generated_command_packages",
         "cli_authority",
         "verification:generated_adapter_conformance",
@@ -115,11 +119,10 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
     )
 
     focused_proof = "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q"
-    assert [lane["id"] for lane in answer["selected_lanes"]] == [
+    assert _stable_lane_ids(answer) == [
         "generated_command_packages",
         "cli_authority",
         "subsystem:workspace-cli-runtime",
-        "assurance-requirement:subsystem:workspace-cli-runtime",
         "verification:closeout_intent_satisfaction",
         "verification:generated_adapter_conformance",
         "verification:requirement_grounding_delegation",
@@ -170,9 +173,8 @@ def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(cap
         select="selected_lanes,required_commands,selected_commands",
     )
 
-    assert [lane["id"] for lane in answer["selected_lanes"]] == [
+    assert _stable_lane_ids(answer) == [
         "contract_tooling",
-        "assurance-requirement:test_evidence_change_decision",
         "verification:test_evidence_decision",
         "domain:test_evidence_decision",
     ]

@@ -4,41 +4,20 @@ requires-python = ">=3.11"
 
 [manifest]
 members = [
-    "agentic-memory",
-    "agentic-planning",
-    "agentic-verification",
     "agentic-workspace",
+    "agentic-workspace-memory",
+    "agentic-workspace-planning",
+    "agentic-workspace-verification",
 ]
-
-[[package]]
-name = "agentic-memory"
-version = "0.38.0"
-source = { editable = "packages/memory" }
-
-[[package]]
-name = "agentic-planning"
-version = "0.38.0"
-source = { editable = "packages/planning" }
-dependencies = [
-    { name = "jsonschema" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "jsonschema", specifier = ">=4.0" }]
-
-[[package]]
-name = "agentic-verification"
-version = "0.38.0"
-source = { editable = "packages/verification" }
 
 [[package]]
 name = "agentic-workspace"
 version = "0.38.0"
 source = { editable = "." }
 dependencies = [
-    { name = "agentic-memory" },
-    { name = "agentic-planning" },
-    { name = "agentic-verification" },
+    { name = "agentic-workspace-memory" },
+    { name = "agentic-workspace-planning" },
+    { name = "agentic-workspace-verification" },
     { name = "jsonschema" },
 ]
 
@@ -57,9 +36,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agentic-memory", editable = "packages/memory" },
-    { name = "agentic-planning", editable = "packages/planning" },
-    { name = "agentic-verification", editable = "packages/verification" },
+    { name = "agentic-workspace-memory", editable = "packages/memory" },
+    { name = "agentic-workspace-planning", editable = "packages/planning" },
+    { name = "agentic-workspace-verification", editable = "packages/verification" },
     { name = "jsonschema", specifier = ">=4.23" },
 ]
 
@@ -75,6 +54,27 @@ dev = [
     { name = "ruff" },
     { name = "ty" },
 ]
+
+[[package]]
+name = "agentic-workspace-memory"
+version = "0.38.0"
+source = { editable = "packages/memory" }
+
+[[package]]
+name = "agentic-workspace-planning"
+version = "0.38.0"
+source = { editable = "packages/planning" }
+dependencies = [
+    { name = "jsonschema" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "jsonschema", specifier = ">=4.0" }]
+
+[[package]]
+name = "agentic-workspace-verification"
+version = "0.38.0"
+source = { editable = "packages/verification" }
 
 [[package]]
 name = "application-file-scanner"

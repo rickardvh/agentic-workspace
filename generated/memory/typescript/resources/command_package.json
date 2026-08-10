@@ -2683,7 +2683,7 @@
     }
   ],
   "version_metadata": {
-    "distribution": "agentic-memory",
+    "distribution": "agentic-workspace-memory",
     "fallback_version": "0.3.11",
     "source": "python-package-metadata"
   }
