@@ -57,7 +57,10 @@ def compute_generated_cli_fingerprint(*, repo_root: Path = REPO_ROOT) -> dict[st
         relative_paths.append(relative)
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
-        digest.update(path.read_bytes())
+        # Every fingerprint input is a Git-tracked text surface with eol=lf.
+        # Normalize an older Windows worktree so the witness identifies Git
+        # content rather than the checkout platform's historical line endings.
+        digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
         digest.update(b"\0")
     return {
         "schema": CACHE_SCHEMA,
