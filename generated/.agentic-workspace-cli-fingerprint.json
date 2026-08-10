@@ -2326,12 +2326,12 @@
     "src/agentic_workspace/workspace_runtime_planning.py": "603594dca61649fc65069d4a5f4bca7b9bdc80ff",
     "src/agentic_workspace/workspace_runtime_primitives.py": "e1ed284f2ca68bb2ad80524e88b7436a5a582593",
     "src/agentic_workspace/workspace_runtime_projection.py": "8db623c90efe888f5a6bba8a75bb96d253d1f707",
-    "src/agentic_workspace/workspace_runtime_proof.py": "b29029fa5317747f5223211e13848a54c8c99121",
+    "src/agentic_workspace/workspace_runtime_proof.py": "0ec79ee7b96c75ff824f182c728f8369911e67ef",
     "src/agentic_workspace/workspace_runtime_startup.py": "e1b4f5702d898468b55f1b6b44261473fdc3f9ed",
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "0f45174a190b1087a7107a5f07f71ec04a4eb2ac"
   },
-  "git_index_identity": "f113a1ee50ece0fe99577fe3ff1b50e5e0fef8270b90a62a6daf94e91ca6d48c",
+  "git_index_identity": "3081315e0db8c9e4e39cf6746ea61a8ef4a4ab97c6d48728e66ae949c29d89d7",
   "identity_role": "canonical-semantic-content",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
