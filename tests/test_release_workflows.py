@@ -187,10 +187,19 @@ def test_master_release_workflow_prepares_release_pr_and_only_tags_verified_rele
     assert "coordinated_release.py plan" in workflow
     assert "coordinated_release.py prepare" in workflow
     assert "coordinated_release.py verify" in workflow
+    assert "scripts/generate/generate_command_packages.py" in workflow
+    assert workflow.index("coordinated_release.py prepare") < workflow.index("scripts/generate/generate_command_packages.py")
+    assert workflow.index("scripts/generate/generate_command_packages.py") < workflow.index("coordinated_release.py verify")
     assert "coordinated_release.py tag-plan" in workflow
     assert "uv lock" in workflow
     assert "peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1" in workflow
     assert "automation/coordinated-release" in workflow
+    assert "id: release-pr" in workflow
+    assert "steps.release-pr.outputs.pull-request-operation == 'created'" in workflow
+    assert "steps.release-pr.outputs.pull-request-operation == 'updated'" in workflow
+    assert "gh workflow run ci.yml" in workflow
+    assert '--ref "${RELEASE_PR_BRANCH}"' in workflow
+    assert '-f expected_head_sha="${RELEASE_PR_HEAD_SHA}"' in workflow
     assert "Resolve pending release tag" in workflow
     assert "git tag -a" in workflow
     assert '"${{ steps.release-commit.outputs.release_commit }}"' in workflow
@@ -350,6 +359,17 @@ def test_ci_required_aggregate_covers_declared_support_and_full_inventory() -> N
     assert 'node: "20"' in workflow
     assert 'node: "24"' in workflow
     assert workflow.count("timeout-minutes:") == 5
+
+
+def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
+    workflow = (WORKFLOW_ROOT / "ci.yml").read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in workflow
+    assert "expected_head_sha:" in workflow
+    assert "Verify dispatched release head" in workflow
+    assert "${{ inputs.expected_head_sha }}" in workflow
+    assert '"${GITHUB_SHA}" != "${EXPECTED_HEAD_SHA}"' in workflow
+    assert workflow.count("github.event_name != 'pull_request' || github.event.pull_request.draft == false") == 5
 
 
 def test_release_notes_classify_compatibility_significant_changes() -> None:

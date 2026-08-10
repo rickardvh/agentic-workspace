@@ -157,7 +157,7 @@ def test_ci_builds_and_uploads_root_package_artifacts() -> None:
     ci_text = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
     assert "ready_for_review" in ci_text
-    assert ci_text.count("if: ${{ github.event.pull_request.draft == false }}") == 3
+    assert ci_text.count("if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}") == 4
     assert "workspace-package-artifacts:" in ci_text
     assert "uv build --wheel --sdist --out-dir dist" in ci_text
     assert "uv build --wheel --sdist --out-dir dist packages/memory" in ci_text
