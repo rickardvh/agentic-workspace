@@ -1,0 +1,3 @@
+[change]
+type = "patch"
+summary = "Route generated CLI fingerprint changes through generated-package proof."
