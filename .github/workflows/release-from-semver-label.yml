@@ -74,9 +74,11 @@ jobs:
         run: |
           python scripts/release/coordinated_release.py prepare
           uv lock
+          uv run python scripts/generate/generate_command_packages.py
           python scripts/release/coordinated_release.py verify
 
       - name: Open or update coordinated release PR
+        id: release-pr
         if: steps.release-plan.outputs.release_required == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
@@ -88,6 +90,19 @@ jobs:
             Prepare coordinated workspace release v${{ steps.release-plan.outputs.version }}.
 
             This PR was generated from source-controlled release changesets. It updates every coordinated package version mirror, refreshes `uv.lock`, commits `.release/releases/v${{ steps.release-plan.outputs.version }}.md`, and consumes the pending changesets. Merge this PR before tagging or publishing the release.
+
+      - name: Dispatch validation for the generated release head
+        if: >-
+          steps.release-pr.outputs.pull-request-operation == 'created' ||
+          steps.release-pr.outputs.pull-request-operation == 'updated'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PR_BRANCH: ${{ steps.release-pr.outputs.pull-request-branch }}
+          RELEASE_PR_HEAD_SHA: ${{ steps.release-pr.outputs.pull-request-head-sha }}
+        run: |
+          gh workflow run ci.yml \
+            --ref "${RELEASE_PR_BRANCH}" \
+            -f expected_head_sha="${RELEASE_PR_HEAD_SHA}"
 
       - name: Resolve pending release tag
         id: release-commit
