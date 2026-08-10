@@ -207,7 +207,7 @@ def _compact_tiny_intent_proof(intent_proof: Any) -> dict[str, Any]:
     return compact
 
 
-def _canonical_proof_command_identity(command: str) -> str:
+def _canonical_proof_command_semantics(command: str) -> str:
     try:
         tokens = shlex.split(command)
     except ValueError:
@@ -216,14 +216,28 @@ def _canonical_proof_command_identity(command: str) -> str:
         if marker in tokens:
             tokens = ["agentic-workspace", *tokens[tokens.index(marker) + 1 :]]
             break
+    else:
+        if tokens[:2] == ["uv", "run"]:
+            tokens = tokens[2:]
+        if len(tokens) >= 2 and tokens[0] in {"python", "python3"} and tokens[1].endswith(".py"):
+            tokens = tokens[1:]
+        if tokens and tokens[0].startswith("scripts/") and tokens[0].endswith(".py"):
+            tokens[0] = Path(tokens[0]).stem
     if "--target" in tokens and tokens.index("--target") + 1 < len(tokens):
         tokens[tokens.index("--target") + 1] = "<target>"
-    canonical = json.dumps(tokens, separators=(",", ":"), ensure_ascii=True)
-    return f"command:{hashlib.sha256(canonical.encode('utf-8')).hexdigest()[:16]}"
+    if not tokens:
+        return ""
+    if tokens[0] == "agentic-workspace" and len(tokens) > 1:
+        operation = f"aw:{tokens[1]}"
+        semantic_arguments = tokens[2:]
+    else:
+        operation = hashlib.sha256(tokens[0].encode("utf-8")).hexdigest()[:6]
+        semantic_arguments = tokens[1:]
+    return "\x1f".join((operation, *semantic_arguments))
 
 
 def _proof_tiny_semantic_budget_projection(payload: Any, *, field_name: str = "") -> Any:
-    """Replace rendered command/target spelling with fixed semantic identities."""
+    """Normalize transport spelling while retaining decision-bearing command arguments."""
 
     if isinstance(payload, dict):
         return {key: _proof_tiny_semantic_budget_projection(value, field_name=key) for key, value in payload.items()}
@@ -232,7 +246,7 @@ def _proof_tiny_semantic_budget_projection(payload: Any, *, field_name: str = ""
     if field_name == "target" and isinstance(payload, str):
         return "<target>"
     if isinstance(payload, str) and (field_name in _PROOF_COMMAND_VALUE_KEYS or field_name == "required_commands"):
-        return _canonical_proof_command_identity(payload)
+        return _canonical_proof_command_semantics(payload)
     return payload
 
 

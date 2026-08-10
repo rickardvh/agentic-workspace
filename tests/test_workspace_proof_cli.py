@@ -2592,7 +2592,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert _proof_tiny_semantic_budget_bytes(payload) < PROOF_TINY_SEMANTIC_BUDGET_BYTES
 
 
-def test_proof_tiny_semantic_budget_is_invocation_independent_and_fails_on_semantic_growth(capsys) -> None:
+def test_proof_tiny_semantic_budget_is_invocation_independent_and_fails_on_command_growth(capsys) -> None:
     from agentic_workspace.workspace_runtime_proof import (
         PROOF_TINY_SEMANTIC_BUDGET_BYTES,
         _proof_tiny_semantic_budget_bytes,
@@ -2613,8 +2613,11 @@ def test_proof_tiny_semantic_budget_is_invocation_independent_and_fails_on_seman
     assert str(Path.cwd()) not in json.dumps(normalized)
 
     grown = copy.deepcopy(payload)
-    grown["semantic_growth"] = "x" * 600
-    assert _proof_tiny_semantic_budget_bytes(grown) >= PROOF_TINY_SEMANTIC_BUDGET_BYTES
+    baseline_size = _proof_tiny_semantic_budget_bytes(grown)
+    grown["detail_command"] += "".join(f" --changed semantic/path-{index}.py" for index in range(40))
+    grown_size = _proof_tiny_semantic_budget_bytes(grown)
+    assert grown_size > baseline_size
+    assert grown_size >= PROOF_TINY_SEMANTIC_BUDGET_BYTES
 
 
 def test_proof_route_escalation_gate_blocks_generic_broad_fallback(tmp_path: Path, capsys) -> None:
