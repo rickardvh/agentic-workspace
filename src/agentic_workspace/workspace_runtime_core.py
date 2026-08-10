@@ -46612,17 +46612,7 @@ def _compact_tiny_required_proof_commands(commands: Any) -> list[str]:
 
 
 def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
-    required_commands = _compact_tiny_required_proof_commands(answer.get("required_commands"))
-    verification_commands = {
-        str(command)
-        for lane in _list_payload(answer.get("selected_lanes"))
-        if isinstance(lane, dict) and str(lane.get("id", "")).startswith("verification:")
-        for command in _list_payload(lane.get("required_commands"))
-    }
-    if not verification_commands:
-        return required_commands
-    non_verification_commands = [command for command in required_commands if command not in verification_commands]
-    return _compact_tiny_required_proof_commands(non_verification_commands or required_commands)
+    return _compact_tiny_required_proof_commands(answer.get("required_commands"))
 
 
 PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"

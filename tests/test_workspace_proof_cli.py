@@ -271,6 +271,9 @@ typecheck:
 typecheck-planning:
 \tpython -m compileall packages/planning/src
 
+lint-planning:
+\tpython -m compileall packages/planning/src
+
 check-planning:
 \tpython -c "print('planning checks')"
 
@@ -282,8 +285,10 @@ test-planning:
 """,
     )
     _write(target / "scripts" / "check" / "check_agent_aids.py", "print('agent aids ok')\n")
+    _write(target / "scripts" / "check" / "check_contract_tooling_surfaces.py", "print('contract tooling ok')\n")
     _write(target / "scripts" / "check" / "check_generated_command_packages.py", "print('generated packages ok')\n")
     _write(target / "scripts" / "generate" / "generate_command_packages.py", "print('generate packages ok')\n")
+    _write(target / "scripts" / "run_agentic_workspace.py", "print('workspace report ok')\n")
     _write(target / "README.md", "# Fixture\n")
     _write(target / "docs" / ".keep", "")
     _write(target / ".agentic-workspace" / "docs" / "agent-installation.md", "# Install\n")
@@ -6169,6 +6174,85 @@ def test_proof_changed_selector_includes_planning_schema_reference_wrapper(tmp_p
     assert "make check-planning" in answer["required_commands"]
 
 
+def test_planning_changed_test_owners_keep_proof_and_implement_narrow_and_in_sync(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    config = tmp_path / ".agentic-workspace" / "config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.planning_package_behavior]
+purpose = "Focused Planning package behavior."
+applies_to_paths = ["packages/planning/src/**", "packages/planning/tests/**"]
+commands = ["make test-planning"]
+owner = "planning"
+route_role = "behavior"
+precedence = "50"
+
+[assurance.domain_proof_lanes.test_evidence_decision]
+purpose = "Focused test-evidence change review."
+applies_to_paths = ["packages/**/tests/**"]
+commands = ["uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json"]
+owner = "verification"
+route_role = "evidence"
+precedence = "70"
+
+""",
+        encoding="utf-8",
+    )
+    changed_paths = [
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
+        "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.closeout.lifecycle.json",
+        "packages/planning/tests/test_archive.py",
+        "packages/planning/tests/test_branch_safe_planning.py",
+    ]
+    for path in changed_paths:
+        _write(tmp_path / path, "{}\n" if path.endswith(".json") else "# fixture\n")
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", *changed_paths, "--format", "json"]) == 0
+    compact_proof = json.loads(capsys.readouterr().out)
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                *changed_paths,
+                "--task",
+                "Keep Planning proof proportional after pruning",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compact_implement_proof = json.loads(capsys.readouterr().out)["proof"]
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", *changed_paths, "--format", "json"]) == 0
+    proof = json.loads(capsys.readouterr().out)["answer"]
+
+    owner_command = "uv run pytest packages/planning/tests/test_archive.py packages/planning/tests/test_branch_safe_planning.py -q"
+    expected = {
+        owner_command,
+        "make lint-planning",
+        "make typecheck-planning",
+        "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+        "uv run python scripts/check/check_generated_command_packages.py",
+        f"{REPO_LOCAL_CLI_INVOKE} report --target . --section verification --format json",
+    }
+    assert expected.issubset(compact_proof["required_commands"])
+    assert "make test-planning" not in compact_proof["required_commands"]
+    assert compact_implement_proof["required_commands"] == compact_proof["required_commands"]
+    assert compact_proof["proof_narrowness"]["status"] == "narrow_required"
+    assert compact_implement_proof["proof_narrowness"]["status"] == "narrow_required"
+    domain_lane = next(lane for lane in proof["selected_lanes"] if lane["id"] == "domain:planning_package_behavior")
+    assert domain_lane["changed_test_owner_route"]["status"] == "focused-owner-selected"
+    assert domain_lane["changed_test_owner_route"]["owner_paths"] == changed_paths[-2:]
+    assert proof["proof_route_maintenance"]["fallback_selected_count"] == 0
+    assert all(item.get("command") != "make test-planning" for item in proof["proof_route_maintenance"]["suggested_updates"])
+
+
 def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 
@@ -6193,6 +6277,9 @@ def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(tmp
     assert "planning_package" in lane_ids
     assert "planning_source_typecheck_ci_parity" in lane_ids
     assert "make typecheck-planning" in answer["required_commands"]
+    planning_lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "planning_package")
+    assert planning_lane["changed_test_owner_route"]["status"] == "full-package-fallback"
+    assert "make test-planning" in answer["required_commands"]
     obligations = answer["proof_obligations"]
     assert obligations["required_proof"]["commands"] == answer["required_commands"]
     assert obligations["required_proof"]["status"] == "required"
