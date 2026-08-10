@@ -12,6 +12,14 @@ _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from planning_test_support import *
 
 
+def _closeout_persistent_snapshot(root: Path) -> dict[str, bytes]:
+    paths = [path for path in (root / ".agentic-workspace/planning").rglob("*") if path.is_file()]
+    last_closeout = root / ".agentic-workspace/local/planning-last-closeout.json"
+    if last_closeout.is_file():
+        paths.append(last_closeout)
+    return {path.relative_to(root).as_posix(): path.read_bytes() for path in sorted(paths)}
+
+
 def test_archive_execplan_rejects_schema_invalid_json_record(tmp_path: Path) -> None:
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
     _write_execplan_record(record_path, status="completed")
@@ -1982,7 +1990,7 @@ candidates = []
     assert not any("rerun planning closeout" in action["detail"] for action in payload["actions"])
 
 
-def test_planning_closeout_skips_oversized_retained_evidence(tmp_path: Path, capsys) -> None:
+def test_planning_closeout_blocks_before_discarding_oversized_required_evidence(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace/local/planning-last-closeout.json",
         json.dumps(
@@ -2050,17 +2058,49 @@ def test_planning_closeout_skips_oversized_retained_evidence(tmp_path: Path, cap
     closeout_evidence_path = tmp_path / ".agentic-workspace" / "planning" / "closeout-evidence" / "plan-alpha.closeout.json"
     options = {option["id"]: option for option in payload["completion_options"]}
 
-    assert any(warning["warning_class"] == "closeout_evidence_retention_skipped_by_size_guardrail" for warning in payload["warnings"])
-    assert any(action["kind"] == "retained closeout evidence skipped" for action in payload["actions"])
+    assert any(warning["warning_class"] == "closeout_evidence_retention_blocked_by_size_guardrail" for warning in payload["warnings"])
+    assert any(action["kind"] == "rolled back" for action in payload["actions"])
+    assert any(action["kind"] == "manual review" and "closeout was not applied" in action["detail"] for action in payload["actions"])
     assert not closeout_evidence_path.exists()
-    assert not record_path.exists()
+    assert record_path.exists()
+    retained_owner = json.loads(record_path.read_text(encoding="utf-8"))
+    assert retained_owner["active_milestone"]["status"] == "active"
     last_closeout = json.loads((tmp_path / ".agentic-workspace/local/planning-last-closeout.json").read_text(encoding="utf-8"))
-    assert last_closeout["status"] == "no-retained-evidence"
-    assert last_closeout["plan_id"] == "plan-alpha"
-    assert last_closeout["evidence_path"] == ""
-    assert options["resolve-closeout-blocker"]["allowed"] is False
-    assert options["claim-slice-complete"]["allowed"] is True
-    assert not any("rerun planning closeout" in action["detail"] for action in payload["actions"])
+    assert last_closeout["status"] == "evidence-retained"
+    assert last_closeout["plan_id"] == "older-plan"
+    assert options["resolve-closeout-blocker"]["allowed"] is True
+    assert options["claim-slice-complete"]["allowed"] is False
+    assert any("rerun planning closeout" in action["detail"] for action in payload["actions"])
+
+
+def test_planning_closeout_rolls_back_all_persistent_state_when_retention_write_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+    before = _closeout_persistent_snapshot(tmp_path)
+    original_write = installer_mod._write_closeout_evidence_record
+
+    def fail_after_write(*, record_path: Path, record: dict[str, object]) -> None:
+        original_write(record_path=record_path, record=record)
+        raise OSError("injected closeout evidence write failure")
+
+    monkeypatch.setattr(installer_mod, "_write_closeout_evidence_record", fail_after_write)
+
+    with pytest.raises(OSError, match="injected closeout evidence write failure"):
+        installer_mod.closeout_execplan(
+            "plan-alpha",
+            target=tmp_path,
+            proof_from="uv run pytest packages/planning/tests/test_archive.py -q",
+            what_happened="proved transaction rollback for closeout retention failure.",
+            scope_touched="packages/planning closeout transaction",
+            changed_surfaces="packages/planning/src/repo_planning_bootstrap/installer.py",
+            review_summary="yes; injected failure must preserve every Planning-owned surface.",
+            outcome_summary="closeout remains live when retained evidence cannot be written.",
+        )
+
+    assert _closeout_persistent_snapshot(tmp_path) == before
 
 
 def test_planning_closeout_blocks_last_proof_without_existing_proof(tmp_path: Path, capsys) -> None:

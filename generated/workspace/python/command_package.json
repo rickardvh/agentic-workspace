@@ -13559,6 +13559,34 @@
             "option": "--issue"
           },
           {
+            "attr": "proposal_id",
+            "option": "--proposal-id"
+          },
+          {
+            "attr": "external_ref",
+            "option": "--external-ref"
+          },
+          {
+            "attr": "requested_transition",
+            "option": "--requested-transition"
+          },
+          {
+            "attr": "parent_boundary",
+            "option": "--parent-boundary"
+          },
+          {
+            "attr": "invariant",
+            "option": "--invariant"
+          },
+          {
+            "attr": "expect_subject_revision",
+            "option": "--expect-subject-revision"
+          },
+          {
+            "attr": "expect_target_revision",
+            "option": "--expect-target-revision"
+          },
+          {
             "attr": "parent_lane_closeout",
             "option": "--parent-lane-closeout"
           },
