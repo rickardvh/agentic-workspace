@@ -819,6 +819,8 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
     _write((tmp_path / ".agentic-workspace" / "docs" / "module-map.md"), "# Installed Module Map\n")
     _write((tmp_path / ".agentic-workspace" / "docs" / "setup-findings-contract.md"), "# Setup Findings Contract\n")
     _write((tmp_path / ".agentic-workspace" / "docs" / "workspace-config-contract.md"), "# Workspace Config Contract\n")
+    _write((tmp_path / ".agentic-workspace" / "fallback" / "no-cli-policy.json"), "{}\n")
+    _write((tmp_path / ".agentic-workspace" / "fallback" / "no_cli_startup.py"), "# No-CLI fallback\n")
     _write(
         (tmp_path / ".agentic-workspace" / "skills" / "REGISTRY.json"),
         '{"schema_version":"skill-registry.v1","owner":"agentic-workspace","source_kind":"installed-workspace-skills","skills":[]}\n',
