@@ -71,6 +71,18 @@ def test_launcher_skips_generation_when_fingerprint_cache_matches(tmp_path: Path
     assert refreshed is False
 
 
+def test_generated_cli_fingerprint_is_stable_across_text_line_endings(tmp_path: Path) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    source = tmp_path / "src" / "agentic_workspace" / "runtime.py"
+    source.write_bytes(b"VALUE = 1\n")
+    unix_fingerprint = module.compute_generated_cli_fingerprint(repo_root=tmp_path)["fingerprint"]
+
+    source.write_bytes(b"VALUE = 1\r\n")
+
+    assert module.compute_generated_cli_fingerprint(repo_root=tmp_path)["fingerprint"] == unix_fingerprint
+
+
 def test_launcher_does_not_refresh_generated_cli_for_start(monkeypatch) -> None:
     module = _load_module()
 
