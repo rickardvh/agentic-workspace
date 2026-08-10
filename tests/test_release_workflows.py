@@ -121,7 +121,6 @@ def test_package_affecting_scope_excludes_github_automation() -> None:
     ownership = _ownership()
     paths = set(ownership["package_affecting_paths"])
 
-    assert ownership["non_semver_paths"] == [".github/"]
     assert not any(path.startswith(".github/") for path in paths)
     assert ".release/changes/" in paths
     assert ".release/releases/" in paths
@@ -130,7 +129,6 @@ def test_package_affecting_scope_excludes_github_automation() -> None:
     assert "packages/" in paths
     assert "scripts/release/" in paths
     assert "src/" in paths
-    assert "tests/test_release_workflows.py" in paths
     assert "uv.lock" in paths
 
     metadata = _ownership()["non_semver_generated_metadata"]
@@ -154,25 +152,6 @@ def test_release_path_classification_exempts_only_exact_integrity_metadata() -> 
     arbitrary = classify(["generated/not-an-exempt-projection.json"], ownership)
     assert arbitrary["package_affecting"] is True
     assert arbitrary["package_affecting_paths"] == ["generated/not-an-exempt-projection.json"]
-
-
-def test_release_path_classification_never_treats_github_automation_as_semver() -> None:
-    classify = _load_release_ownership_classifier().classify_changed_paths
-    ownership = _ownership()
-    github_paths = [
-        ".github/release-ownership.json",
-        ".github/rulesets/master.json",
-        ".github/workflows/ci.yml",
-        ".github/workflows/release.yml",
-    ]
-
-    automation_only = classify(github_paths, ownership)
-    assert automation_only["package_affecting"] is False
-    assert automation_only["non_semver_paths"] == github_paths
-
-    mixed = classify([*github_paths, "src/agentic_workspace/__init__.py"], ownership)
-    assert mixed["package_affecting"] is True
-    assert mixed["package_affecting_paths"] == ["src/agentic_workspace/__init__.py"]
 
 
 def test_pr_semver_label_workflow_uses_release_ownership_manifest() -> None:

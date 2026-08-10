@@ -65,9 +65,6 @@
     ".release/releases/",
     "uv.lock"
   ],
-  "non_semver_paths": [
-    ".github/"
-  ],
   "package_affecting_paths": [
     ".release/changes/",
     ".release/releases/",
@@ -77,7 +74,6 @@
     "pyproject.toml",
     "scripts/release/",
     "src/",
-    "tests/test_release_workflows.py",
     "uv.lock"
   ],
   "non_semver_generated_metadata": [

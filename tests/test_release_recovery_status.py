@@ -66,7 +66,7 @@ def test_github_automation_only_pr_does_not_require_semver_release() -> None:
 
     assert packet["status"] == "no-release-needed"
     assert packet["package_affecting"] is False
-    assert packet["path_classification"]["non_semver_paths"] == changed_files
+    assert packet["path_classification"]["unclassified_paths"] == changed_files
 
 
 def test_fingerprint_cannot_lower_a_generated_package_change() -> None:
