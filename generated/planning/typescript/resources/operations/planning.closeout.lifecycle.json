@@ -7,7 +7,7 @@
   },
   "effects": {
     "destructive": false,
-    "idempotent": false,
+    "idempotent": true,
     "read_only": false,
     "requires_preflight_gate": false,
     "writes_repo_state": true
@@ -15,6 +15,9 @@
   "guards": [
     "Respect dry-run mode by avoiding writes.",
     "Use planning closeout as the primary closeout writer instead of hand-editing closeout fields.",
+    "Compare Planning, owner, lane, and integration revisions before the first mutation.",
+    "Rollback every Planning-owned closeout surface when any transaction write fails.",
+    "Replay an exact committed request from its durable receipt without applying a second delta.",
     "Lane or epic closeout must preserve unresolved parent intent as an explicit continuation."
   ],
   "id": "planning.closeout.lifecycle",
@@ -86,6 +89,21 @@
     },
     {
       "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_owner_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_lane_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_integration_revision",
       "required": false,
       "source": "cli-option"
     },
@@ -169,6 +187,11 @@
       "required": false,
       "surface": ".agentic-workspace/planning/",
       "when": "not a dry run"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/planning-last-closeout.json",
+      "when": "a closeout is committed"
     }
   ]
 }

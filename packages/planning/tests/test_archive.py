@@ -14,6 +14,11 @@ from planning_test_support import *
 
 def _closeout_persistent_snapshot(root: Path) -> dict[str, bytes]:
     paths = [path for path in (root / ".agentic-workspace/planning").rglob("*") if path.is_file()]
+    for local_root in ("planning", "decision-point-intent", "planning-archive-exports"):
+        paths.extend(path for path in (root / ".agentic-workspace/local" / local_root).rglob("*") if path.is_file())
+    roadmap = root / "ROADMAP.md"
+    if roadmap.is_file():
+        paths.append(roadmap)
     last_closeout = root / ".agentic-workspace/local/planning-last-closeout.json"
     if last_closeout.is_file():
         paths.append(last_closeout)
@@ -2077,6 +2082,10 @@ def test_planning_closeout_rolls_back_all_persistent_state_when_retention_write_
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    _write(tmp_path / "ROADMAP.md", "# Roadmap\n")
+    _write(tmp_path / ".agentic-workspace/local/planning/cursor.json", '{"cursor":"before"}\n')
+    _write(tmp_path / ".agentic-workspace/local/decision-point-intent/carry.json", '{"state":"active"}\n')
+    _write(tmp_path / ".agentic-workspace/local/planning-archive-exports/existing.json", '{"retained":true}\n')
     record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
     _write_execplan_record(record_path, status="active")
     before = _closeout_persistent_snapshot(tmp_path)
@@ -2101,6 +2110,55 @@ def test_planning_closeout_rolls_back_all_persistent_state_when_retention_write_
         )
 
     assert _closeout_persistent_snapshot(tmp_path) == before
+
+
+@pytest.mark.parametrize(
+    ("revision_kwargs", "reason_code"),
+    [
+        ({"expected_planning_revision": "stale"}, ""),
+        ({"expected_owner_revision": "stale"}, "stale-closeout-owner-revision"),
+        ({"expected_lane_revision": "stale"}, "stale-closeout-lane-revision"),
+        ({"expected_integration_revision": "stale"}, "stale-closeout-integration-revision"),
+    ],
+)
+def test_planning_closeout_rejects_every_stale_revision_before_mutation(
+    tmp_path: Path, revision_kwargs: dict[str, str], reason_code: str
+) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+    before = _closeout_persistent_snapshot(tmp_path)
+
+    blocked = installer_mod.closeout_execplan("plan-alpha", target=tmp_path, **revision_kwargs)
+
+    if reason_code:
+        assert blocked.reason_code == reason_code
+    else:
+        assert any(warning["warning_class"] == "planning_revision_mismatch" for warning in blocked.warnings)
+    assert _closeout_persistent_snapshot(tmp_path) == before
+
+
+def test_planning_closeout_exact_retry_applies_one_delta(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+    kwargs = {
+        "proof_from": "uv run pytest packages/planning/tests/test_archive.py -q",
+        "what_happened": "proved exact-once closeout replay.",
+        "scope_touched": "packages/planning closeout transaction",
+        "changed_surfaces": "canonical closeout surfaces",
+        "review_summary": "yes; replay must not mutate state.",
+        "outcome_summary": "closeout committed once.",
+    }
+
+    committed = installer_mod.closeout_execplan("plan-alpha", target=tmp_path, **kwargs)
+    after_commit = _closeout_persistent_snapshot(tmp_path)
+    replayed = installer_mod.closeout_execplan("plan-alpha", target=tmp_path, **kwargs)
+
+    assert committed.reason_code == ""
+    assert replayed.reason_code == "idempotent-replay"
+    assert replayed.operation_receipt["kind"] == "agentic-planning/closeout-operation-receipt/v1"
+    assert _closeout_persistent_snapshot(tmp_path) == after_commit
 
 
 def test_planning_closeout_blocks_last_proof_without_existing_proof(tmp_path: Path, capsys) -> None:
