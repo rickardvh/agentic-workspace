@@ -18,22 +18,20 @@ Manifest of workspace-owned surfaces, generated artifacts, and ownership roles.
 | `module_surface_files` | object | yes |  | Installed host paths contributed by each selected module and added independently to closure cells. |  |  |
 | `module_surface_files.memory` | ref `#/$defs/surfacePaths` | yes |  | Installed host paths contributed by the memory module. |  |  |
 | `module_surface_files.planning` | ref `#/$defs/surfacePaths` | yes |  | Installed host paths contributed by the planning module. |  |  |
-| `module_surface_files.verification` | ref `#/$defs/surfacePaths` | yes |  | Installed host paths contributed by the verification module. |  |  |
+| `module_surface_files.verification` | array of string | yes |  | Installed host paths contributed by Verification; empty when its selected boundary remains repo-owned and explicitly optional. |  |  |
 | `required_references` | array of object | yes |  | Required references that must resolve in every selected installed footprint. |  |  |
 | `reference_discovery` | object | yes |  | Installed operational text surfaces scanned mechanically for file-like Agentic Workspace references. |  |  |
 | `reference_discovery.source_globs` | array of string | yes |  | Payload-relative globs whose matching text files are scanned for operational references. |  |  |
+| `reference_discovery.installed_source_roots` | array of object | yes |  | Canonical source roots mapped onto installed paths before reference discovery. |  |  |
+| `reference_discovery.generated_source_authorities` | array of object | yes |  | Runtime/code-generation authorities projected to installed sources whose references are not stored in payload files. |  |  |
 | `reference_resolution` | object | yes |  | Canonical interpretation of installed reference kinds. |  |  |
 | `reference_resolution.installed-local` | string | yes |  | Resolution rule for paths installed into the host repository. |  |  |
 | `reference_resolution.package-resource` | string | yes |  | Resolution rule for stable resources retained inside the installed package. |  |  |
 | `reference_resolution.optional` | string | yes |  | Resolution rule for optional references with a declared degraded behavior. |  |  |
 | `no_cli_fallback` | object | yes |  | Content-level fallback boundary exercised from installed files with the CLI unavailable. |  |  |
-| `no_cli_fallback.entrypoint` | string | yes |  | Installed startup skill used as the no-CLI fallback entrypoint. |  |  |
-| `no_cli_fallback.module_map` | string | yes |  | Installed module map used to route selected modules without the CLI. |  |  |
-| `no_cli_fallback.forbidden_action_markers` | array of string | yes |  | Markers whose presence proves the entrypoint forbids unsafe fallback execution. |  |  |
-| `no_cli_fallback.module_headings` | object | yes |  | Expected module-map heading for every selectable module. |  |  |
-| `no_cli_fallback.module_headings.memory` | string | yes |  | Heading that proves memory routing is installed. |  |  |
-| `no_cli_fallback.module_headings.planning` | string | yes |  | Heading that proves planning routing is installed. |  |  |
-| `no_cli_fallback.module_headings.verification` | string | yes |  | Heading that proves verification routing is installed. |  |  |
+| `no_cli_fallback.entrypoint` | string | yes |  | Installed executable used as the no-CLI fallback entrypoint. |  |  |
+| `no_cli_fallback.policy` | string | yes |  | Installed machine-readable authority consumed by the executable fallback. |  |  |
+| `no_cli_fallback.forbidden_actions` | array of string | yes |  | Canonical forbidden-action decisions that the executable fallback must return. |  |  |
 | `no_cli_fallback.next_safe_action` | string | yes |  | Stable action returned when the installed CLI is unavailable. |  |  |
 | `system_intent_mirror_kind` | string | yes |  | System intent mirror kind text value used by this contract. |  |  |
 | `subsystem_intent_kind` | string | yes |  | Subsystem intent set kind used by the editable scoped durable-intent store. |  |  |

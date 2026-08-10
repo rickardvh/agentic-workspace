@@ -1,0 +1,31 @@
+{
+  "kind": "agentic-workspace/no-cli-policy/v1",
+  "required_surfaces": [
+    ".agentic-workspace/config.toml",
+    ".agentic-workspace/skills/workspace-startup/SKILL.md",
+    ".agentic-workspace/docs/module-map.md"
+  ],
+  "forbidden_actions": [
+    "mutate-managed-state-by-hand",
+    "bypass-planning-safety-gate",
+    "claim-completion-without-proof"
+  ],
+  "next_safe_action": "continue-from-installed-startup-without-managed-state-mutation",
+  "module_boundaries": {
+    "memory": {
+      "surface": ".agentic-workspace/memory/repo/index.md",
+      "boundary": "durable-anti-rediscovery-knowledge",
+      "required_when_selected": true
+    },
+    "planning": {
+      "surface": ".agentic-workspace/planning/state.toml",
+      "boundary": "checked-in-execution-state-and-closeout",
+      "required_when_selected": true
+    },
+    "verification": {
+      "surface": ".agentic-workspace/verification/manifest.toml",
+      "boundary": "proof-selection-and-evidence",
+      "required_when_selected": false
+    }
+  }
+}

@@ -7,6 +7,8 @@
     ".agentic-workspace/docs/module-map.md",
     ".agentic-workspace/docs/setup-findings-contract.md",
     ".agentic-workspace/docs/workspace-config-contract.md",
+    ".agentic-workspace/fallback/no-cli-policy.json",
+    ".agentic-workspace/fallback/no_cli_startup.py",
     ".agentic-workspace/skills/REGISTRY.json",
     ".agentic-workspace/skills/workspace-startup/SKILL.md",
     ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
@@ -24,6 +26,8 @@
     ".agentic-workspace/docs/module-map.md",
     ".agentic-workspace/docs/setup-findings-contract.md",
     ".agentic-workspace/docs/workspace-config-contract.md",
+    ".agentic-workspace/fallback/no-cli-policy.json",
+    ".agentic-workspace/fallback/no_cli_startup.py",
     ".agentic-workspace/skills/REGISTRY.json",
     ".agentic-workspace/skills/workspace-startup/SKILL.md",
     ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
@@ -49,12 +53,117 @@
       ".agentic-workspace/planning/execplans/README.md",
       ".agentic-workspace/planning/execplans/TEMPLATE.plan.json"
     ],
-    "verification": [
-      ".agentic-workspace/verification/manifest.toml",
-      ".agentic-workspace/verification/proof-strategy.toml"
-    ]
+    "verification": []
   },
   "required_references": [
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/OWNERSHIP.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/WORKFLOW.md",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/config.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/planning/state.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["planning"]
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/verification/manifest.toml",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["verification"],
+      "degraded_behavior": "Treat Verification as selected but unconfigured until the repo supplies its manifest."
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/system-intent/WORKFLOW.md",
+      "kind": "installed-local",
+      "profiles": ["full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/system-intent/intent.toml",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "Keep system intent unavailable until an authoritative mirror is installed."
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "target": ".agentic-workspace/fallback/no_cli_startup.py",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/fallback/no_cli_startup.py",
+      "target": ".agentic-workspace/fallback/no-cli-policy.json",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/fallback/no-cli-policy.json",
+      "target": ".agentic-workspace/config.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/fallback/no-cli-policy.json",
+      "target": ".agentic-workspace/docs/module-map.md",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/fallback/no-cli-policy.json",
+      "target": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/fallback/no-cli-policy.json",
+      "target": ".agentic-workspace/memory/repo/index.md",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["memory"]
+    },
+    {
+      "source": ".agentic-workspace/fallback/no-cli-policy.json",
+      "target": ".agentic-workspace/planning/state.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["planning"]
+    },
+    {
+      "source": ".agentic-workspace/fallback/no-cli-policy.json",
+      "target": ".agentic-workspace/verification/manifest.toml",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["verification"],
+      "degraded_behavior": "Preserve the Verification boundary from config without inventing repo-owned proof policy."
+    },
     {
       "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
       "target": ".agentic-workspace/docs/module-map.md",
@@ -107,16 +216,18 @@
     {
       "source": ".agentic-workspace/docs/module-map.md",
       "target": ".agentic-workspace/verification/manifest.toml",
-      "kind": "installed-local",
+      "kind": "optional",
       "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": ["verification"]
+      "modules": ["verification"],
+      "degraded_behavior": "Report Verification as selected but unconfigured until the repo owns a manifest."
     },
     {
       "source": ".agentic-workspace/docs/module-map.md",
       "target": ".agentic-workspace/verification/proof-strategy.toml",
-      "kind": "installed-local",
+      "kind": "optional",
       "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": ["verification"]
+      "modules": ["verification"],
+      "degraded_behavior": "Use generic proof selection until the repo declares a Verification proof strategy."
     },
     {
       "source": ".agentic-workspace/docs/workspace-config-contract.md",
@@ -187,22 +298,51 @@
     {
       "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
       "target": ".agentic-workspace/verification/manifest.toml",
-      "kind": "installed-local",
+      "kind": "optional",
       "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": ["verification"]
+      "modules": ["verification"],
+      "degraded_behavior": "Do not seed Verification evidence until the repo supplies its manifest."
     },
     {
       "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
       "target": ".agentic-workspace/verification/proof-strategy.toml",
-      "kind": "installed-local",
+      "kind": "optional",
       "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": ["verification"]
+      "modules": ["verification"],
+      "degraded_behavior": "Do not seed repo proof policy until the repo supplies a Verification strategy."
     }
   ],
   "reference_discovery": {
     "source_globs": [
       ".agentic-workspace/docs/**/*.md",
-      ".agentic-workspace/skills/**/*.md"
+      ".agentic-workspace/fallback/**/*.json",
+      ".agentic-workspace/fallback/**/*.py",
+      ".agentic-workspace/skills/**/*.json",
+      ".agentic-workspace/skills/**/*.md",
+      ".agentic-workspace/**/*.toml"
+    ],
+    "installed_source_roots": [
+      {
+        "repo_path": "src/agentic_workspace/_payload",
+        "installed_prefix": ""
+      },
+      {
+        "repo_path": "packages/memory/bootstrap",
+        "installed_prefix": ""
+      },
+      {
+        "repo_path": "packages/planning/bootstrap",
+        "installed_prefix": ""
+      }
+    ],
+    "generated_source_authorities": [
+      {
+        "installed_source": ".agentic-workspace/config.toml",
+        "repo_path": "src/agentic_workspace/workspace_runtime_core.py",
+        "targets": [
+          ".agentic-workspace/docs/workspace-config-contract.md"
+        ]
+      }
     ]
   },
   "reference_resolution": {
@@ -211,17 +351,13 @@
     "optional": "Reference must name a complete degraded_behavior field."
   },
   "no_cli_fallback": {
-    "entrypoint": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-    "module_map": ".agentic-workspace/docs/module-map.md",
-    "forbidden_action_markers": [
-      "do not create Planning, Memory, review, or handoff artifacts just to show work",
-      "If `planning_safety_gate.implementation_allowed` is false, run the named planning command before implementation."
+    "entrypoint": ".agentic-workspace/fallback/no_cli_startup.py",
+    "policy": ".agentic-workspace/fallback/no-cli-policy.json",
+    "forbidden_actions": [
+      "mutate-managed-state-by-hand",
+      "bypass-planning-safety-gate",
+      "claim-completion-without-proof"
     ],
-    "module_headings": {
-      "memory": "## Memory",
-      "planning": "## Planning",
-      "verification": "## Verification"
-    },
     "next_safe_action": "continue-from-installed-startup-without-managed-state-mutation"
   },
   "system_intent_mirror_kind": "agentic-workspace/system-intent/v1",
