@@ -12,7 +12,9 @@ import argparse
 import fnmatch
 import importlib
 import json
+import os
 import re
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -41,7 +43,7 @@ SUPPORTED_MODULE_COMBINATIONS = (
     ("memory", "planning", "verification"),
 )
 
-INSTALLED_REFERENCE_PATTERN = re.compile(r"\.agentic-workspace/[A-Za-z0-9_./*-]+\.(?:json|md|toml)")
+INSTALLED_REFERENCE_PATTERN = re.compile(r"\.agentic-workspace/[A-Za-z0-9_./*-]+\.(?:json|md|py|toml)")
 
 EXECUTABLE_PAYLOAD_SUFFIXES = {
     ".bat",
@@ -386,23 +388,46 @@ def _installed_target_available(target: str, available: set[str]) -> bool:
 
 
 def _discover_operational_references(
-    *, manifest: dict[str, object], payload_root: Path
+    *, manifest: dict[str, object], repo_root: Path, installed_sources: set[str]
 ) -> set[tuple[str, str]]:
     discovery = manifest.get("reference_discovery", {})
     if not isinstance(discovery, dict):
         return set()
     globs = discovery.get("source_globs", [])
     discovered: set[tuple[str, str]] = set()
-    for pattern in globs if isinstance(globs, list) else []:
-        for source_path in sorted(payload_root.glob(str(pattern))):
-            if not source_path.is_file():
-                continue
-            try:
-                text = source_path.read_text(encoding="utf-8")
-            except OSError:
-                continue
-            source = source_path.relative_to(payload_root).as_posix()
-            for match in INSTALLED_REFERENCE_PATTERN.findall(text):
+    source_roots = discovery.get("installed_source_roots", [])
+    for root_spec in source_roots if isinstance(source_roots, list) else []:
+        if not isinstance(root_spec, dict):
+            continue
+        source_root = repo_root / str(root_spec.get("repo_path", ""))
+        prefix = str(root_spec.get("installed_prefix", "")).strip("/")
+        for pattern in globs if isinstance(globs, list) else []:
+            for source_path in sorted(source_root.glob(str(pattern))):
+                if not source_path.is_file():
+                    continue
+                relative = source_path.relative_to(source_root).as_posix()
+                source = f"{prefix}/{relative}" if prefix else relative
+                if source not in installed_sources:
+                    continue
+                try:
+                    text = source_path.read_text(encoding="utf-8")
+                except OSError:
+                    continue
+                for match in INSTALLED_REFERENCE_PATTERN.findall(text):
+                    discovered.add((source, match))
+    authorities = discovery.get("generated_source_authorities", [])
+    for authority in authorities if isinstance(authorities, list) else []:
+        if not isinstance(authority, dict):
+            continue
+        source = str(authority.get("installed_source", ""))
+        authority_path = repo_root / str(authority.get("repo_path", ""))
+        targets = {str(value) for value in authority.get("targets", [])}
+        try:
+            text = authority_path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for match in INSTALLED_REFERENCE_PATTERN.findall(text):
+            if not targets or match in targets:
                 discovered.add((source, match))
     return discovered
 
@@ -417,35 +442,37 @@ def evaluate_no_cli_fallback(
         return {"status": "failed", "errors": ["no_cli_fallback contract is missing"]}
     if cli_available:
         return {"status": "not-exercised", "errors": ["CLI must be unavailable for fallback proof"]}
-    entrypoint = str(contract.get("entrypoint", ""))
-    module_map = str(contract.get("module_map", ""))
-    errors: list[str] = []
+    entrypoint = host_root / str(contract.get("entrypoint", ""))
+    environment = dict(os.environ)
+    environment["PATH"] = str(host_root / "bin")
+    environment["AGENTIC_WORKSPACE_CONFIGURED_INVOCATION"] = "agentic-workspace"
+    completed = subprocess.run(
+        [sys.executable, str(entrypoint)],
+        cwd=host_root,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
     try:
-        startup_text = (host_root / entrypoint).read_text(encoding="utf-8")
-        module_map_text = (host_root / module_map).read_text(encoding="utf-8")
-    except OSError as exc:
-        return {"status": "failed", "errors": [str(exc)]}
-    markers = contract.get("forbidden_action_markers", [])
-    for marker in markers if isinstance(markers, list) else []:
-        if str(marker) not in startup_text:
-            errors.append(f"startup fallback is missing forbidden-action marker: {marker}")
-    module_headings = contract.get("module_headings", {})
-    if isinstance(module_headings, dict):
-        for module in modules:
-            heading = str(module_headings.get(module, ""))
-            if not heading or heading not in module_map_text:
-                errors.append(f"module map is missing selected module boundary: {module}")
-    next_safe_action = str(contract.get("next_safe_action", ""))
-    if not next_safe_action:
-        errors.append("no_cli_fallback.next_safe_action is missing")
-    return {
-        "status": "passed" if not errors else "failed",
-        "errors": errors,
-        "modules": list(modules),
-        "forbidden_actions": [str(marker) for marker in markers] if isinstance(markers, list) else [],
-        "next_safe_action": next_safe_action,
-        "network_access": "not-required",
-    }
+        result = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        return {"status": "failed", "errors": [completed.stderr or completed.stdout or "fallback emitted no JSON"]}
+    if not isinstance(result, dict):
+        return {"status": "failed", "errors": ["fallback emitted a non-object result"]}
+    errors: list[str] = []
+    expected_modules = sorted(modules)
+    if completed.returncode != 0 or result.get("status") != "fallback":
+        errors.extend(str(value) for value in result.get("errors", []))
+    if sorted(str(value) for value in result.get("selected_modules", [])) != expected_modules:
+        errors.append("fallback selected modules do not match installed module surfaces")
+    if result.get("implementation_allowed") is not False or result.get("completion_claim_allowed") is not False:
+        errors.append("fallback did not preserve forbidden implementation/completion boundaries")
+    if result.get("forbidden_actions") != contract.get("forbidden_actions"):
+        errors.append("fallback forbidden actions drifted from the canonical contract")
+    if result.get("next_safe_action") != contract.get("next_safe_action"):
+        errors.append("fallback next safe action drifted from the canonical contract")
+    return {**result, "status": "passed" if not errors else "failed", "errors": errors}
 
 
 def gather_installed_reference_closure(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
@@ -473,7 +500,17 @@ def gather_installed_reference_closure(*, repo_root: Path = REPO_ROOT) -> dict[s
     for relative in sorted(payload_files):
         if not (payload_root / relative).is_file():
             errors.append(f"payload source is missing: {relative}")
-    discovered = _discover_operational_references(manifest=manifest, payload_root=payload_root)
+    installed_sources = payload_files | repo_owned
+    configured_module_files = manifest.get("module_surface_files", {})
+    if isinstance(configured_module_files, dict):
+        for values in configured_module_files.values():
+            if isinstance(values, list):
+                installed_sources.update(str(value) for value in values)
+    discovered = _discover_operational_references(
+        manifest=manifest,
+        repo_root=repo_root,
+        installed_sources=installed_sources,
+    )
     declared = {
         (str(reference.get("source", "")), str(reference.get("target", "")))
         for reference in references

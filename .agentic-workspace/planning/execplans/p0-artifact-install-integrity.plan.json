@@ -3,15 +3,15 @@
   "id": "p0-artifact-install-integrity",
   "title": "P0 artifact and install integrity",
   "owner_level": "slice",
-  "lifecycle": "closed",
-  "phase": "complete",
-  "revision": 4,
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 5,
   "canonical_core": {
     "requested_outcome": "Close GitHub issues #2450 and #2451 with transportable generated-artifact identity and referentially closed necessary-surface installs.",
     "hard_constraints": "Do not require Git metadata for semantic freshness; do not restore full payload mirrors; preserve safe degraded no-CLI behavior.",
     "agent_may_decide": "Contract and checker placement, fixture structure, and the smallest generated projections needed for enforcement.",
     "escalate_when": "A supported footprint cannot be made referentially closed without changing its declared product boundary, or Docker is unavailable for required final proof.",
-    "next_action": "Implement canonical content identity, closure graph enforcement, and focused cross-context fixtures.",
+    "next_action": "Apply the archive-owner integration proposal on an admitted target branch after merge.",
     "proof_expectations": [
       "launcher content-identity tests",
       "source/payload operational-install closure tests",
@@ -75,11 +75,11 @@
       "owner": "user request and priority:P0 labels"
     },
     "proof_posture": {
-      "state": "pending",
+      "state": "accepted",
       "refs": [
-        "generated_command_packages",
-        "workspace_root_guidance",
-        "test_evidence_decision"
+        "uv run pytest tests/test_agentic_workspace_launcher.py tests/test_source_payload_operational_install.py -q",
+        "uv run python scripts/check/check_source_payload_operational_install.py",
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
       ]
     },
     "external_posture": {
@@ -126,9 +126,9 @@
       "dogfooding-closeout"
     ]
   },
-  "next_action": "Implement canonical content identity, closure graph enforcement, and focused cross-context fixtures.",
+  "next_action": "Apply the archive-owner integration proposal on an admitted target branch after merge.",
   "blockers": [
-    "None."
+    "Target-branch authority is required to remove this owner from checked-in active Planning state."
   ],
   "proof": {
     "claims": [
