@@ -1164,7 +1164,7 @@
     "src/agentic_workspace/workspace_selector_validation.py",
     "uv.lock"
   ],
-  "fingerprint": "f920e9619193dffdf939fe83aa86136f0a3066331f909318bc1fce4142a9c11a",
+  "fingerprint": "36cd82e051f1621701119d9846dea3c5f8227e194058861dc8625c868fb62b05",
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
   "git_identity_role": "optional-source-checkout-acceleration",
   "git_index_entries": {
