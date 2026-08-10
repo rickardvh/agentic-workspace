@@ -14,6 +14,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import tomllib
 from contextlib import contextmanager
@@ -158,6 +159,17 @@ INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
 IndependentReviewHostResultResolver = Callable[[str], dict[str, Any]]
+
+
+def _required_runtime_unavailability(command: str) -> dict[str, str] | None:
+    """Return a typed gap when a proof command explicitly requires a missing host runtime."""
+
+    if "--require-node" in command and shutil.which("node") is None:
+        return {
+            "reason": "selected proof command requires Node, which is unavailable in this environment",
+            "required_runtime": "node",
+        }
+    return None
 
 
 def _proof_lifecycle_command(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -5460,9 +5472,16 @@ def _focused_route_coverage_audit(
         if len([lane_id for lane_id in lane_ids if lane_id not in auxiliary_lane_ids]) > 1
     ]
     unavailable_domain_commands = [
-        item for item in unavailable_commands if isinstance(item, dict) and str(item.get("lane", "")).startswith("domain:")
+        item
+        for item in unavailable_commands
+        if isinstance(item, dict) and str(item.get("lane", "")).startswith("domain:") and not item.get("required_runtime")
     ]
-    if missing_paths or overlapping_paths or unavailable_domain_commands:
+    environment_unavailable_commands = [
+        item
+        for item in unavailable_commands
+        if isinstance(item, dict) and str(item.get("lane", "")).startswith("domain:") and item.get("required_runtime")
+    ]
+    if missing_paths or overlapping_paths or unavailable_domain_commands or environment_unavailable_commands:
         status = "attention"
     elif domain_lanes:
         status = "covered"
@@ -5477,6 +5496,7 @@ def _focused_route_coverage_audit(
         "missing_focused_route_paths": missing_paths,
         "overlapping_focused_route_paths": overlapping_paths,
         "non_executable_route_commands": unavailable_domain_commands,
+        "environment_unavailable_commands": environment_unavailable_commands,
         "coverage_evidence": {
             "status": "advisory-maintenance",
             "rule": (
@@ -8484,6 +8504,16 @@ def _proof_selection_for_changed_paths(
                     }
                 )
                 continue
+            runtime_unavailability = _required_runtime_unavailability(adapted_command)
+            if runtime_unavailability is not None:
+                unavailable_proof_commands.append(
+                    {
+                        "lane": str(lane.get("id", "")),
+                        "command": adapted_command,
+                        **runtime_unavailability,
+                    }
+                )
+                continue
             resolved_command = str(
                 _command_with_cli_invoke(
                     command=_proof_command_for_target(command=adapted_command, target_root=target_root), cli_invoke=cli_invoke
@@ -8575,6 +8605,7 @@ def _proof_selection_for_changed_paths(
             "reason": str(command.get("reason", "")),
             **({"replacement": command["replacement"]} if command.get("replacement") else {}),
             **({"missing_paths": str(command["missing_paths"])} if command.get("missing_paths") else {}),
+            **({"required_runtime": str(command["required_runtime"])} if command.get("required_runtime") else {}),
         }
         for command in unavailable_proof_commands
     ]
