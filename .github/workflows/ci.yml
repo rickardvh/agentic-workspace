@@ -122,8 +122,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            python: "3.13"
+            python: "3.11"
             node: "20"
+          - os: ubuntu-latest
+            python: "3.13"
+            node: "24"
           - os: windows-latest
             python: "3.14"
             node: "24"

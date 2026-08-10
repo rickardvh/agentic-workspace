@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -54,6 +55,20 @@ def test_checked_in_master_ruleset_requires_pr_and_support_bearing_check() -> No
     ruleset = json.loads((ROOT / ".github/rulesets/master-support-bearing.json").read_text(encoding="utf-8"))
     assert policy["live_ruleset_id"] == 20615912
     assert policy["required_check"] == "Support-bearing promotion"
+    assert policy["python_support"] == {
+        "declared": ["3.11", "3.12", "3.13", "3.14"],
+        "minimum": "3.11",
+        "primary": "3.13",
+        "newest": "3.14",
+        "intermediate_disposition": {
+            "3.12": "Declared compatible and bounded by the minimum and primary lanes; no independent promotion lane is required."
+        },
+    }
+    assert {item["role"]: item["python"] for item in policy["runtime_matrix"]} == {
+        "minimum": "3.11",
+        "primary": "3.13",
+        "newest": "3.14",
+    }
     assert ruleset["enforcement"] == "active"
     assert ruleset["bypass_actors"] == []
     assert ruleset["conditions"]["ref_name"]["include"] == ["refs/heads/master"]
@@ -79,9 +94,13 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
             "source_commit": commit,
         },
     )
-    for os_name, python, node in (("ubuntu-latest", "3.13", "20"), ("windows-latest", "3.14", "24")):
+    for os_name, python, node in (
+        ("ubuntu-latest", "3.11", "20"),
+        ("ubuntu-latest", "3.13", "24"),
+        ("windows-latest", "3.14", "24"),
+    ):
         _write(
-            runtime / f"{os_name}.json",
+            runtime / f"{os_name}-py{python}-node{node}.json",
             {
                 "kind": "agentic-workspace/runtime-support-receipt/v1",
                 "status": "passed",
@@ -117,6 +136,8 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
             "kind": "agentic-workspace/redistributable-package-readiness/v1",
             "status": "passed",
             "license_spdx": "MIT",
+            "artifact_count": 1,
+            "artifacts": [{"name": wheel.name, "sha256": wheel_digest}],
         },
     )
     _write(
@@ -155,7 +176,7 @@ def test_composed_promotion_passes_only_with_every_exact_receipt(tmp_path: Path)
 
 def test_composed_promotion_fails_closed_on_stale_or_missing_evidence(tmp_path: Path) -> None:
     args = _compose_fixture(tmp_path)
-    (tmp_path / "runtime/windows-latest.json").unlink()
+    (tmp_path / "runtime/windows-latest-py3.14-node24.json").unlink()
     security = tmp_path / "dist/security-supply-chain-readiness.json"
     payload = json.loads(security.read_text(encoding="utf-8"))
     payload["subject"]["source_identity"] = "stale"
@@ -165,3 +186,41 @@ def test_composed_promotion_fails_closed_on_stale_or_missing_evidence(tmp_path: 
     assert result["status"] == "blocked"
     assert any("runtime support receipt" in failure for failure in result["failures"])
     assert any("exact source commit" in failure for failure in result["failures"])
+
+
+def test_python_support_policy_rejects_package_minimum_below_policy(tmp_path: Path) -> None:
+    shutil.copytree(ROOT / ".github", tmp_path / ".github")
+    for relative in (
+        "pyproject.toml",
+        "packages/memory/pyproject.toml",
+        "packages/planning/pyproject.toml",
+        "packages/verification/pyproject.toml",
+    ):
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / relative, target)
+    root_pyproject = tmp_path / "pyproject.toml"
+    root_pyproject.write_text(
+        root_pyproject.read_text(encoding="utf-8").replace('requires-python = ">=3.11"', 'requires-python = ">=3.10"', 1), encoding="utf-8"
+    )
+    policy = json.loads((tmp_path / ".github/support-bearing-promotion.json").read_text(encoding="utf-8"))
+
+    assert PROMOTION.python_support_policy_failures(policy, tmp_path) == [
+        "pyproject.toml requires-python '>=3.10' does not match policy minimum 3.11"
+    ]
+
+
+def test_composed_promotion_rejects_missing_runtime_receipt(tmp_path: Path) -> None:
+    args = _compose_fixture(tmp_path)
+    (tmp_path / "runtime/ubuntu-latest-py3.11-node20.json").unlink()
+    assert PROMOTION.main(args) == 1
+    result = json.loads((tmp_path / "dist/support-bearing-promotion.json").read_text(encoding="utf-8"))
+    assert any("missing runtime support receipt" in failure for failure in result["failures"])
+
+
+def test_composed_promotion_rejects_redistribution_artifact_drift(tmp_path: Path) -> None:
+    args = _compose_fixture(tmp_path)
+    (tmp_path / "dist/agentic_workspace-1.0.0-py3-none-any.whl").write_bytes(b"tampered-wheel")
+    assert PROMOTION.main(args) == 1
+    result = json.loads((tmp_path / "dist/support-bearing-promotion.json").read_text(encoding="utf-8"))
+    assert "redistribution receipt does not bind the exact distributable artifact names and sha256 digests" in result["failures"]

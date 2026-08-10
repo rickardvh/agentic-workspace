@@ -291,6 +291,8 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "support_bearing_promotion.py compose" in workflow
     assert "needs: [promotion-admission, release-runtime-matrix]" in workflow
     assert 'python: "3.14"' in workflow
+    assert 'python: "3.11"' in workflow
+    assert 'python: "3.13"' in workflow
     assert "windows-latest" in workflow
     assert workflow.index("promotion-admission:") < workflow.index("contents: write")
 
@@ -346,6 +348,8 @@ def test_ci_required_aggregate_covers_declared_support_and_full_inventory() -> N
     assert "uv sync --locked" in workflow
     assert "windows-latest" in workflow
     assert 'python: "3.14"' in workflow
+    assert 'python: "3.11"' in workflow
+    assert 'python: "3.13"' in workflow
     assert 'node: "20"' in workflow
     assert 'node: "24"' in workflow
     assert workflow.count("timeout-minutes:") == 5

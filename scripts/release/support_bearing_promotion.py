@@ -4,7 +4,9 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import time
+import tomllib
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -27,6 +29,44 @@ def _write(path: Path, payload: dict[str, Any]) -> None:
 
 def _digest(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def python_support_policy_failures(policy: dict[str, Any], root: Path = ROOT) -> list[str]:
+    support = policy.get("python_support", {})
+    declared = [str(item) for item in support.get("declared", [])]
+    roles = {role: str(support.get(role) or "") for role in ("minimum", "primary", "newest")}
+    failures: list[str] = []
+    if not declared or any(not version for version in roles.values()):
+        return ["python support policy must declare minimum, primary, newest, and the supported versions"]
+    matrix_roles = {str(item.get("role")): str(item.get("python")) for item in policy.get("runtime_matrix", [])}
+    if matrix_roles != roles:
+        failures.append(f"runtime matrix roles {matrix_roles} do not match declared Python support roles {roles}")
+    intermediate = set(declared) - set(roles.values())
+    disposition = support.get("intermediate_disposition", {})
+    if (
+        not isinstance(disposition, dict)
+        or set(disposition) != intermediate
+        or any(not str(value).strip() for value in disposition.values())
+    ):
+        failures.append(f"intermediate Python versions {sorted(intermediate)} require an explicit disposition")
+
+    ownership = _load(root / ".github/release-ownership.json")
+    expected_classifier_versions = set(declared)
+    for package in ownership.get("packages", []):
+        relative = Path(str(package["pyproject"]))
+        project = tomllib.loads((root / relative).read_text(encoding="utf-8")).get("project", {})
+        requirement = str(project.get("requires-python") or "")
+        match = re.fullmatch(r">=(\d+\.\d+)", requirement)
+        if match is None or match.group(1) != roles["minimum"]:
+            failures.append(f"{relative.as_posix()} requires-python {requirement!r} does not match policy minimum {roles['minimum']}")
+        classifiers = {
+            str(item).removeprefix("Programming Language :: Python :: ")
+            for item in project.get("classifiers", [])
+            if str(item).startswith("Programming Language :: Python :: 3.")
+        }
+        if classifiers != expected_classifier_versions:
+            failures.append(f"{relative.as_posix()} Python classifiers {sorted(classifiers)} do not match declared support {declared}")
+    return failures
 
 
 def _github_check_runs(repository: str, commit: str, token: str) -> dict[str, Any]:
@@ -101,6 +141,7 @@ def _compose(args: argparse.Namespace) -> int:
     artifact_dir = args.artifact_dir.resolve()
     failures: list[str] = []
     inputs: list[Path] = []
+    failures.extend(python_support_policy_failures(policy))
 
     def require(path: Path, kind: str, status: str) -> dict[str, Any]:
         if not path.is_file():
@@ -150,6 +191,22 @@ def _compose(args: argparse.Namespace) -> int:
         failures.append("security receipt does not admit the exact source commit")
     if redistribution.get("license_spdx") != "MIT":
         failures.append("redistribution receipt does not prove MIT licensing")
+    declared_artifacts = redistribution.get("artifacts", [])
+    declared_artifact_map = {
+        str(item.get("name")): str(item.get("sha256")) for item in declared_artifacts if isinstance(item, dict) and item.get("name")
+    }
+    distributable_suffixes = (".whl", ".tar.gz", ".tgz")
+    actual_artifact_map = {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in artifact_dir.iterdir()
+        if path.is_file() and path.name.endswith(distributable_suffixes)
+    }
+    if (
+        len(declared_artifact_map) != len(declared_artifacts)
+        or redistribution.get("artifact_count") != len(declared_artifact_map)
+        or declared_artifact_map != actual_artifact_map
+    ):
+        failures.append("redistribution receipt does not bind the exact distributable artifact names and sha256 digests")
     artifact = install.get("artifact", {})
     artifact_path = artifact_dir / str(artifact.get("name") or "")
     if not artifact_path.is_file() or artifact.get("sha256") != hashlib.sha256(artifact_path.read_bytes()).hexdigest():

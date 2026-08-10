@@ -3,9 +3,9 @@
   "id": "p0-promotion-protection",
   "title": "P0 promotion protection and support-bearing decision",
   "owner_level": "slice",
-  "lifecycle": "closed",
-  "phase": "complete",
-  "revision": 4,
+  "lifecycle": "live",
+  "phase": "integration-pending",
+  "revision": 5,
   "intent": {
     "outcome": "Make protected master and the release workflows fail closed on one exact-commit, exact-artifact support-bearing promotion result.",
     "non_goals": [
@@ -38,18 +38,18 @@
   },
   "relationships": {
     "selection": {
-      "state": "unselected",
-      "owner": "current-work context"
+      "state": "selected",
+      "owner": "checked-in Planning state pending target-branch integration"
     },
     "proof_posture": {
-      "state": "pending",
+      "state": "accepted",
       "refs": [
-        "GitHub issue #2454 acceptance criteria",
-        "GitHub issue #2448 promotion composition criteria"
+        "uv run pytest tests/test_support_bearing_promotion.py tests/test_release_workflows.py -q",
+        "uv run ruff check scripts/release/support_bearing_promotion.py tests/test_support_bearing_promotion.py tests/test_release_workflows.py"
       ]
     },
     "external_posture": {
-      "state": "unobserved",
+      "state": "accepted",
       "refs": [
         "GitHub rulesets API",
         "GitHub Checks API"
@@ -70,9 +70,9 @@
       "locator": ""
     }
   ],
-  "next_action": "Implement the promotion contract/checker, workflow matrix and exact-commit admission, then configure and verify the live master ruleset.",
+  "next_action": "Apply the archive-owner integration proposal on an admitted target branch after merge.",
   "blockers": [
-    "None."
+    "Target-branch authority is required to remove this owner from checked-in active Planning state."
   ],
   "proof": {
     "claims": [
