@@ -1,0 +1,6 @@
+{
+  "kind": "agentic-workspace/repository-workflow-write-permissions/v1",
+  "allowed_write_permissions": {
+    ".github/workflows/exact-head-review.yml": ["checks"]
+  }
+}

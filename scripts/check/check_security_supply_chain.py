@@ -10,6 +10,7 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 POLICY_PATH = Path("src/agentic_workspace/contracts/security_supply_chain_policy.json")
+REPOSITORY_PERMISSION_POLICY_PATH = Path(".github/workflow-write-permissions.json")
 ACTION_REF = re.compile(r"^\s*uses:\s*(?P<action>[^\s#]+)(?:\s+#.*)?$", re.MULTILINE)
 PINNED_ACTION = re.compile(r"^(?:\./|docker://|[^@]+@[0-9a-f]{40}$)")
 
@@ -40,6 +41,17 @@ def evaluate_security_supply_chain(
             "controls": [],
         }
     policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    repository_permission_policy_path = root / REPOSITORY_PERMISSION_POLICY_PATH
+    repository_permission_policy: dict[str, Any] = {}
+    if repository_permission_policy_path.is_file():
+        repository_permission_policy = json.loads(repository_permission_policy_path.read_text(encoding="utf-8"))
+        if repository_permission_policy.get("kind") != "agentic-workspace/repository-workflow-write-permissions/v1":
+            failures.append(
+                {
+                    "control": "repository-workflow-permissions",
+                    "detail": f"invalid kind in {REPOSITORY_PERMISSION_POLICY_PATH.as_posix()}",
+                }
+            )
     controls: list[dict[str, Any]] = []
 
     missing_documents = [path for path in policy["required_documents"] if not (root / path).is_file()]
@@ -66,9 +78,12 @@ def evaluate_security_supply_chain(
             if not PINNED_ACTION.fullmatch(action):
                 unpinned.append(f"{relative}: {action}")
     overbroad_permissions: list[str] = []
+    admitted_writes = dict(policy.get("allowed_write_permissions", {}))
+    for relative, permissions in repository_permission_policy.get("allowed_write_permissions", {}).items():
+        admitted_writes[relative] = sorted(set(admitted_writes.get(relative, [])) | set(permissions))
     for relative, text in workflow_text.items():
         observed_writes = set(re.findall(r"(?m)^\s*([a-z-]+):\s*write(?:\s+#.*)?$", text))
-        allowed_writes = set(policy.get("allowed_write_permissions", {}).get(relative, []))
+        allowed_writes = set(admitted_writes.get(relative, []))
         unexpected = sorted(observed_writes - allowed_writes)
         if unexpected:
             overbroad_permissions.append(f"{relative}: {','.join(unexpected)}")
@@ -175,6 +190,7 @@ def evaluate_security_supply_chain(
 
     security_paths = [
         POLICY_PATH,
+        *([REPOSITORY_PERMISSION_POLICY_PATH] if repository_permission_policy_path.is_file() else []),
         Path("scripts/check/check_security_supply_chain.py"),
         Path("uv.lock"),
         *[Path(path) for path in policy["required_workflows"]],

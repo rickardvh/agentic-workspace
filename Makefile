@@ -46,6 +46,7 @@ WORKSPACE_TEST_SESSION_REVIEW = \
 	tests/test_codex_session_identity_agent_aid.py \
 	tests/test_github_check_inspection.py \
 	tests/test_pr_comment_delta.py \
+	tests/test_review_merge_gate.py \
 	tests/test_start_chatgpt_review_poller.py \
 	tests/test_workspace_session_logging.py
 

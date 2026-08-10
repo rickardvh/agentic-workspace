@@ -36,6 +36,10 @@ Use this repo-owned skill when reviewing an Agentic Workspace PR, checking a fix
    - comment with a blocker when the ordinary path would be wrong after merge;
    - comment with non-blocking suggestions only when they should not delay merge;
    - merge only when the user explicitly asks or the current instruction permits it.
+9. Treat the exact-head review check as the merge boundary:
+   - `merge-ready` for the current head admits the review side of merge;
+   - blocked, absent, malformed, untrusted, or prior-head markers keep `Exact-head review approval` failing;
+   - a new commit always requires a fresh exact-head decision, including generated release PRs.
 
 ## Recheck Focus
 

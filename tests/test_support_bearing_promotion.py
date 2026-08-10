@@ -75,7 +75,10 @@ def test_checked_in_master_ruleset_requires_pr_and_support_bearing_check() -> No
     rules = {rule["type"]: rule for rule in ruleset["rules"]}
     assert "non_fast_forward" in rules
     assert rules["pull_request"]["parameters"]["required_review_thread_resolution"] is True
-    assert rules["required_status_checks"]["parameters"]["required_status_checks"] == [{"context": "Support-bearing promotion"}]
+    assert rules["required_status_checks"]["parameters"]["required_status_checks"] == [
+        {"context": "Support-bearing promotion"},
+        {"context": "Exact-head review approval"},
+    ]
 
 
 def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str]:

@@ -1,7 +1,7 @@
 {
   "algorithm": "sha256",
   "context_rule": "Every listed input is required in source and conformance contexts; Git metadata is auxiliary only.",
-  "file_count": 1160,
+  "file_count": 1161,
   "file_paths": [
     "generated/memory/python/__init__.py",
     "generated/memory/python/_contracts/operations/memory.adopt.lifecycle.json",
@@ -725,6 +725,7 @@
     "scripts/github/inspect_pr_checks.py",
     "scripts/github/pr_comment_delta.py",
     "scripts/github/release_recovery_status.py",
+    "scripts/github/review_merge_gate.py",
     "scripts/install_git_hooks.py",
     "scripts/model_cli_harness/build_sbx_codex_template.py",
     "scripts/model_cli_harness/external_agent_evaluation_lane.py",
@@ -1164,7 +1165,7 @@
     "src/agentic_workspace/workspace_selector_validation.py",
     "uv.lock"
   ],
-  "fingerprint": "b6a67430bc74d89ebdaf11e501ca500612fb2e57eb7529749a74ddad025b11aa",
+  "fingerprint": "48193f4db193f8fd927bf416e81006c62dcca0ca082ab030daf4c24755882a8c",
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
   "git_identity_role": "optional-source-checkout-acceleration",
   "git_index_entries": {
@@ -1869,7 +1870,7 @@
     "scripts/check/check_prompt_semantic_markers.py": "89125fd44df78235f158234d2f7f8ce167c971f8",
     "scripts/check/check_recurring_friction_ledger.py": "1142a9a14f7c396bb900e518a12169874c02b995",
     "scripts/check/check_runtime_implementation_ownership.py": "85fe95d7b8876d6e9265770b8861b01a7486685a",
-    "scripts/check/check_security_supply_chain.py": "595e57ccb817c923cfa74168ba09793723455c0a",
+    "scripts/check/check_security_supply_chain.py": "58382bb518b4c133a1dc4c097ea3b43204bde163",
     "scripts/check/check_source_payload_operational_install.py": "798465d1f024bb7c81264171a5752fe1d298fa99",
     "scripts/check/check_structured_file_inventory.py": "3b1365b42f8bab14c695af18bb17f147825c37fd",
     "scripts/check/check_validation_runtime_plan.py": "3dbde6d63f0d619ba9b84bad6ca1c0dd77c98802",
@@ -1890,6 +1891,7 @@
     "scripts/github/inspect_pr_checks.py": "399bed4bb89a73221a34c8227a86f66a0f4f09cf",
     "scripts/github/pr_comment_delta.py": "3f214000cab964efef134601de46e66604d11cf9",
     "scripts/github/release_recovery_status.py": "e34513b44109bd62f621876d190891f4e40b88cb",
+    "scripts/github/review_merge_gate.py": "c5a7ab8153c734998dd3d97c89e1152b04b4fdb3",
     "scripts/install_git_hooks.py": "de89c873d801adfa6d84dd8606edaaf8ce6959ba",
     "scripts/model_cli_harness/build_sbx_codex_template.py": "fd91bf5996bc2a95aed30e2645f6ac4e38bb032b",
     "scripts/model_cli_harness/external_agent_evaluation_lane.py": "0b8243bac4a9950d29ae580765db09006a089c7b",
@@ -2288,7 +2290,7 @@
     "src/agentic_workspace/contracts/security_supply_chain_policy.json": "618fba3f2062f443bf940067033c8444ddf76cbc",
     "src/agentic_workspace/contracts/setup_findings_policy.json": "b7ea3382248db34f5f9571bb3ccf26e796cfe031",
     "src/agentic_workspace/contracts/skill_specs.json": "24a5e624d1e826914f56b418919a55a2958da899",
-    "src/agentic_workspace/contracts/structured_file_inventory.json": "4157f1f1685bff3f83b1cd63edd2e8ff6587f6b2",
+    "src/agentic_workspace/contracts/structured_file_inventory.json": "35bbd7f765ece12ad9d6ff7736ed88d75e4621ac",
     "src/agentic_workspace/contracts/target_support.json": "464d0f8f818c9e1d59b838b9d9b709048726d35f",
     "src/agentic_workspace/contracts/typescript_primitive_support.mjs": "1478de3af3686c4a588a372ea953dfeb16ced5a8",
     "src/agentic_workspace/contracts/view_specs/memory.report.tiny.json": "7f802fdd8e528c39fdb12b06e7ba05b87487816a",
@@ -2329,7 +2331,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "0af6fba795f0a01fffec4a0aef57f4c988e8ded2"
   },
-  "git_index_identity": "384a371cf3ff049491a35b3131cbddcde4a4fe95127e27f5681aeb2091d3dac0",
+  "git_index_identity": "48c3af7858df4628603e9bd3cd06ae932491b1876e5507aa21daa4e6203bdb00",
   "identity_role": "canonical-semantic-content",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
