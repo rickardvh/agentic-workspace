@@ -47,6 +47,8 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert [lane["id"] for lane in answer["selected_lanes"]] == [
         "generated_command_packages",
         "cli_authority",
+        "concern:workspace_behavior",
+        "concern:test_evidence_change",
         "verification:generated_adapter_conformance",
         "domain:generated_command_packages",
     ]
@@ -119,7 +121,8 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
         "generated_command_packages",
         "cli_authority",
         "subsystem:workspace-cli-runtime",
-        "assurance-requirement:subsystem:workspace-cli-runtime",
+        "concern:workspace_behavior",
+        "concern:test_evidence_change",
         "verification:closeout_intent_satisfaction",
         "verification:generated_adapter_conformance",
         "verification:requirement_grounding_delegation",
@@ -172,7 +175,8 @@ def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(cap
 
     assert [lane["id"] for lane in answer["selected_lanes"]] == [
         "contract_tooling",
-        "assurance-requirement:test_evidence_change_decision",
+        "concern:workspace_behavior",
+        "concern:test_evidence_change",
         "verification:test_evidence_decision",
         "domain:test_evidence_decision",
     ]
