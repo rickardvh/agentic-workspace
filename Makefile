@@ -36,6 +36,7 @@ WORKSPACE_TEST_CLI = \
 
 WORKSPACE_TEST_PROOF = \
 	tests/test_generated_command_package_proof_runner.py \
+	tests/test_output_profile_budgets.py \
 	tests/test_proof_subject.py \
 	tests/test_workspace_proof_cli.py \
 	tests/test_workspace_proof_generated_packages_cli.py
@@ -69,8 +70,10 @@ WORKSPACE_TEST_GENERATED_RELEASE = \
 	tests/test_command_generation_release_promotion.py \
 	tests/test_coordinated_release.py \
 	tests/test_generated_tool_conformance.py \
+	tests/test_package_identity.py \
 	tests/test_release_recovery_status.py \
 	tests/test_release_workflows.py \
+	tests/test_support_bearing_promotion.py \
 	tests/test_workspace_packaging.py
 
 WORKSPACE_TEST_INTEGRATION = \
@@ -81,8 +84,10 @@ WORKSPACE_TEST_INTEGRATION = \
 	tests/test_completion_cost_lane_evidence.py \
 	tests/test_completion_cost_live_behavior_proof.py \
 	tests/test_completion_cost_schema_analysis.py \
+	tests/test_cross_drive_target_paths.py \
 	tests/test_external_agent_evaluation_lane.py \
 	tests/test_external_consumer_profile.py \
+	tests/test_external_consumer_readiness.py \
 	tests/test_external_integration_boundary.py \
 	tests/test_external_operation_clients.py \
 	tests/test_git_hooks.py \
