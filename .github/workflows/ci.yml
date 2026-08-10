@@ -167,7 +167,7 @@ jobs:
       - name: Prove path, subprocess, install, and semantic behavior
         run: |
           uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
-          node --test generated/workspace/typescript/test/command-package.test.mjs
+          node --test --test-name-pattern="generated runnable adapter" generated/workspace/typescript/test/command-package.test.mjs
 
   support-bearing-promotion:
     name: Support-bearing promotion
