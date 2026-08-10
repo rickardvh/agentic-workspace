@@ -48,7 +48,7 @@ def test_unpinned_action_blocks_release_readiness(tmp_path: Path) -> None:
     _copy_security_surface(tmp_path)
     workflow = tmp_path / ".github/workflows/ci.yml"
     workflow.write_text(
-        workflow.read_text(encoding="utf-8").replace("actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10", "actions/checkout@v6"),
+        workflow.read_text(encoding="utf-8").replace("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", "actions/checkout@v7"),
         encoding="utf-8",
     )
 

@@ -189,7 +189,7 @@ def test_master_release_workflow_prepares_release_pr_and_only_tags_verified_rele
     assert "coordinated_release.py verify" in workflow
     assert "coordinated_release.py tag-plan" in workflow
     assert "uv lock" in workflow
-    assert "peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7" in workflow
+    assert "peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1" in workflow
     assert "automation/coordinated-release" in workflow
     assert "Resolve pending release tag" in workflow
     assert "git tag -a" in workflow
@@ -262,7 +262,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "uv build --wheel --sdist --out-dir dist packages/verification" in workflow
     assert "scripts/release/patch_workspace_release_wheel.py" in workflow
     assert "release-asset-base-url" in workflow
-    assert "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0" in workflow
+    assert "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0" in workflow
     assert 'node-version: "24"' in workflow
     assert "npm test && npm pack --pack-destination" in workflow
     assert "typescript_packages" in workflow
@@ -272,7 +272,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "generate_release_notes: true" not in workflow
     assert "SHA256SUMS" in workflow
     assert "Missing checksums for release assets" in workflow
-    assert "softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0" in workflow
+    assert "softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2" in workflow
     assert "uv sync --locked" in workflow
     assert "security-supply-chain-readiness.json" in workflow
     assert "distribution-install-readiness.json" in workflow
