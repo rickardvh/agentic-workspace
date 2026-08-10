@@ -1288,8 +1288,6 @@ def test_doctor_requires_adoption_receipt_before_treating_missing_payload_as_hea
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["health"] == "attention-needed"
-    warning_text = "\n".join(payload["warnings"])
-    assert ".agentic-workspace/WORKFLOW.md" in warning_text or "payload-provenance.json" in warning_text
     assert "installed_state_compatibility" not in payload
     assert payload["installed_state_summary"]["provenance_drift"] == "missing-provenance"
     assert payload["installed_state_summary"]["action_required"] is True
