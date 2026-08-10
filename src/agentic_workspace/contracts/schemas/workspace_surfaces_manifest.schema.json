@@ -57,7 +57,12 @@
       "properties": {
         "memory": {"$ref": "#/$defs/surfacePaths", "description": "Installed host paths contributed by the memory module."},
         "planning": {"$ref": "#/$defs/surfacePaths", "description": "Installed host paths contributed by the planning module."},
-        "verification": {"$ref": "#/$defs/surfacePaths", "description": "Installed host paths contributed by the verification module."}
+        "verification": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string"},
+          "description": "Installed host paths contributed by Verification; empty when its selected boundary remains repo-owned and explicitly optional."
+        }
       },
       "additionalProperties": false,
       "description": "Installed host paths contributed by each selected module and added independently to closure cells."
@@ -97,7 +102,7 @@
     },
     "reference_discovery": {
       "type": "object",
-      "required": ["source_globs"],
+      "required": ["source_globs", "installed_source_roots", "generated_source_authorities"],
       "properties": {
         "source_globs": {
           "type": "array",
@@ -105,6 +110,39 @@
           "uniqueItems": true,
           "items": {"type": "string"},
           "description": "Payload-relative globs whose matching text files are scanned for operational references."
+        },
+        "installed_source_roots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["repo_path", "installed_prefix"],
+            "properties": {
+              "repo_path": {"type": "string", "minLength": 1},
+              "installed_prefix": {"type": "string"}
+            },
+            "additionalProperties": false
+          },
+          "description": "Canonical source roots mapped onto installed paths before reference discovery."
+        },
+        "generated_source_authorities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["installed_source", "repo_path", "targets"],
+            "properties": {
+              "installed_source": {"type": "string", "minLength": 1},
+              "repo_path": {"type": "string", "minLength": 1},
+              "targets": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {"type": "string", "minLength": 1}
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Runtime/code-generation authorities projected to installed sources whose references are not stored in payload files."
         }
       },
       "additionalProperties": false,
@@ -123,27 +161,16 @@
     },
     "no_cli_fallback": {
       "type": "object",
-      "required": ["entrypoint", "module_map", "forbidden_action_markers", "module_headings", "next_safe_action"],
+      "required": ["entrypoint", "policy", "forbidden_actions", "next_safe_action"],
       "properties": {
-        "entrypoint": {"type": "string", "description": "Installed startup skill used as the no-CLI fallback entrypoint."},
-        "module_map": {"type": "string", "description": "Installed module map used to route selected modules without the CLI."},
-        "forbidden_action_markers": {
+        "entrypoint": {"type": "string", "description": "Installed executable used as the no-CLI fallback entrypoint."},
+        "policy": {"type": "string", "description": "Installed machine-readable authority consumed by the executable fallback."},
+        "forbidden_actions": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
           "items": {"type": "string", "minLength": 1},
-          "description": "Markers whose presence proves the entrypoint forbids unsafe fallback execution."
-        },
-        "module_headings": {
-          "type": "object",
-          "required": ["memory", "planning", "verification"],
-          "properties": {
-            "memory": {"type": "string", "minLength": 1, "description": "Heading that proves memory routing is installed."},
-            "planning": {"type": "string", "minLength": 1, "description": "Heading that proves planning routing is installed."},
-            "verification": {"type": "string", "minLength": 1, "description": "Heading that proves verification routing is installed."}
-          },
-          "additionalProperties": false,
-          "description": "Expected module-map heading for every selectable module."
+          "description": "Canonical forbidden-action decisions that the executable fallback must return."
         },
         "next_safe_action": {"type": "string", "minLength": 1, "description": "Stable action returned when the installed CLI is unavailable."}
       },

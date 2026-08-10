@@ -193,6 +193,18 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "The installed no-CLI fallback must retain an auditable fail-closed policy after source packaging and workspace installation.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The source/payload operational-install checker validates this policy against the workspace surface contract and executes the installed fallback in a CLI-free process.",
+      "owner": "workspace-payload",
+      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json",
+      "schema_or_validator": "scripts/check/check_source_payload_operational_install.py",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
       "checked_in_justification": "The repository-level hook contract is shared platform configuration required to record review handoffs consistently.",
       "editable_by_agents": true,
       "format": "json",

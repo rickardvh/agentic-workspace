@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -27,16 +29,19 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text.strip() + "\n", encoding="utf-8")
 
 
-def _write_workspace_surface_manifest(root: Path, *, include_target: bool = True) -> None:
+def _write_workspace_surface_manifest(root: Path, *, include_target: bool = True, include_undeclared_toml_reference: bool = False) -> None:
     payload_files = [
         ".agentic-workspace/skills/workspace-startup/SKILL.md",
+        ".agentic-workspace/fallback/no-cli-policy.json",
+        ".agentic-workspace/fallback/no_cli_startup.py",
+        *([".agentic-workspace/runtime.toml"] if include_undeclared_toml_reference else []),
         *([".agentic-workspace/docs/module-map.md"] if include_target else []),
     ]
     manifest = {
         "payload_files": payload_files,
         "necessary_surface_files": payload_files,
         "module_surface_files": {
-            "memory": [".agentic-workspace/memory/WORKFLOW.md"],
+            "memory": [".agentic-workspace/memory/repo/index.md"],
             "planning": [".agentic-workspace/planning/state.toml"],
             "verification": [".agentic-workspace/verification/manifest.toml"],
         },
@@ -47,22 +52,86 @@ def _write_workspace_surface_manifest(root: Path, *, include_target: bool = True
                 "kind": "installed-local",
                 "profiles": ["necessary-surfaces", "full-mirror"],
                 "modules": [],
-            }
+            },
+            {
+                "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+                "target": ".agentic-workspace/fallback/no_cli_startup.py",
+                "kind": "installed-local",
+                "profiles": ["necessary-surfaces", "full-mirror"],
+                "modules": [],
+            },
+            *[
+                {
+                    "source": ".agentic-workspace/fallback/no-cli-policy.json",
+                    "target": target,
+                    "kind": "installed-local",
+                    "profiles": ["necessary-surfaces", "full-mirror"],
+                    "modules": required_modules,
+                }
+                for target, required_modules in (
+                    (".agentic-workspace/config.toml", []),
+                    (".agentic-workspace/skills/workspace-startup/SKILL.md", []),
+                    (".agentic-workspace/docs/module-map.md", []),
+                    (".agentic-workspace/memory/repo/index.md", ["memory"]),
+                    (".agentic-workspace/planning/state.toml", ["planning"]),
+                    (".agentic-workspace/verification/manifest.toml", ["verification"]),
+                )
+            ],
         ],
-        "reference_discovery": {"source_globs": [".agentic-workspace/skills/**/*.md"]},
+        "reference_discovery": {
+            "source_globs": [
+                ".agentic-workspace/**/*.json",
+                ".agentic-workspace/**/*.md",
+                ".agentic-workspace/**/*.py",
+                ".agentic-workspace/**/*.toml",
+            ],
+            "installed_source_roots": [{"repo_path": "src/agentic_workspace/_payload", "installed_prefix": ""}],
+            "generated_source_authorities": [],
+        },
         "no_cli_fallback": {
-            "entrypoint": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-            "module_map": ".agentic-workspace/docs/module-map.md",
-            "forbidden_action_markers": ["do not mutate managed state by hand"],
-            "module_headings": {"memory": "## Memory", "planning": "## Planning", "verification": "## Verification"},
+            "entrypoint": ".agentic-workspace/fallback/no_cli_startup.py",
+            "policy": ".agentic-workspace/fallback/no-cli-policy.json",
+            "forbidden_actions": [
+                "mutate-managed-state-by-hand",
+                "bypass-planning-safety-gate",
+                "claim-completion-without-proof",
+            ],
             "next_safe_action": "continue-from-installed-startup-without-managed-state-mutation",
         },
     }
     _write(root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json", json.dumps(manifest))
     _write(
         root / "src" / "agentic_workspace" / "_payload" / ".agentic-workspace/skills/workspace-startup/SKILL.md",
-        "Use `.agentic-workspace/docs/module-map.md`; do not mutate managed state by hand.",
+        "Use `.agentic-workspace/docs/module-map.md`; if the CLI is absent run `.agentic-workspace/fallback/no_cli_startup.py`.",
     )
+    fallback_source = (WORKSPACE_ROOT / "src/agentic_workspace/_payload/.agentic-workspace/fallback/no_cli_startup.py").read_text(
+        encoding="utf-8"
+    )
+    _write(root / "src/agentic_workspace/_payload/.agentic-workspace/fallback/no_cli_startup.py", fallback_source)
+    policy = {
+        "kind": "agentic-workspace/no-cli-policy/v1",
+        "required_surfaces": [
+            ".agentic-workspace/config.toml",
+            ".agentic-workspace/skills/workspace-startup/SKILL.md",
+            ".agentic-workspace/docs/module-map.md",
+        ],
+        "forbidden_actions": manifest["no_cli_fallback"]["forbidden_actions"],
+        "next_safe_action": manifest["no_cli_fallback"]["next_safe_action"],
+        "module_boundaries": {
+            "memory": {"surface": ".agentic-workspace/memory/repo/index.md", "boundary": "memory"},
+            "planning": {"surface": ".agentic-workspace/planning/state.toml", "boundary": "planning"},
+            "verification": {"surface": ".agentic-workspace/verification/manifest.toml", "boundary": "verification"},
+        },
+    }
+    _write(
+        root / "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json",
+        json.dumps(policy),
+    )
+    if include_undeclared_toml_reference:
+        _write(
+            root / "src/agentic_workspace/_payload/.agentic-workspace/runtime.toml",
+            'reference = ".agentic-workspace/docs/undeclared-runtime.md"',
+        )
     if include_target:
         _write(
             root / "src" / "agentic_workspace" / "_payload" / ".agentic-workspace/docs/module-map.md",
@@ -86,7 +155,7 @@ def test_installed_reference_closure_covers_every_footprint_module_cell(tmp_path
         if cell["profile"] == "necessary-surfaces" and cell["modules"] == ["memory", "planning", "verification"]
     )
     assert set(all_cell["installed_sources"]) - set(empty_cell["installed_sources"]) == {
-        ".agentic-workspace/memory/WORKFLOW.md",
+        ".agentic-workspace/memory/repo/index.md",
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/verification/manifest.toml",
     }
@@ -100,6 +169,19 @@ def test_installed_reference_closure_fails_when_required_target_is_missing(tmp_p
 
     assert closure["status"] == "failed"
     assert {gap["reason"] for cell in closure["matrix"] for gap in cell["gaps"]} == {"target-absent"}
+
+
+def test_installed_reference_discovery_rejects_undeclared_toml_reference(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_reference_closure_toml")
+    _write_workspace_surface_manifest(tmp_path, include_undeclared_toml_reference=True)
+
+    closure = mod.gather_installed_reference_closure(repo_root=tmp_path)
+
+    assert closure["status"] == "failed"
+    assert closure["errors"] == [
+        "discovered installed reference is missing from required_references: "
+        ".agentic-workspace/runtime.toml -> .agentic-workspace/docs/undeclared-runtime.md"
+    ]
 
 
 @pytest.mark.parametrize(
@@ -119,16 +201,23 @@ def test_installed_reference_closure_fails_when_required_target_is_missing(tmp_p
 )
 def test_no_cli_black_box_preserves_boundaries_for_each_module_combination(tmp_path: Path, modules: tuple[str, ...]) -> None:
     mod = _load_module(_checker_script_path(), f"source_payload_no_cli_{'_'.join(modules) or 'none'}")
-    source_root = tmp_path / "source"
     host_root = tmp_path / "clean-host"
-    _write_workspace_surface_manifest(source_root)
-    manifest = json.loads((source_root / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
-    for relative in manifest["necessary_surface_files"]:
-        source = source_root / "src/agentic_workspace/_payload" / relative
-        _write(host_root / relative, source.read_text(encoding="utf-8"))
-    for module in modules:
-        for relative in manifest["module_surface_files"][module]:
-            _write(host_root / relative, f"installed {module} module surface")
+    host_root.mkdir()
+    subprocess.run(["git", "init", "--quiet"], cwd=host_root, check=True)
+    command = [
+        sys.executable,
+        str(WORKSPACE_ROOT / "scripts/run_agentic_workspace.py"),
+        "install",
+        "--target",
+        str(host_root),
+        "--non-interactive",
+        "--format",
+        "json",
+    ]
+    command.extend(["--modules", ",".join(modules) if modules else "none"])
+    completed = subprocess.run(command, cwd=WORKSPACE_ROOT, text=True, capture_output=True, check=False)
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    manifest = json.loads((WORKSPACE_ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
 
     cli_available = (host_root / "bin" / "agentic-workspace").exists()
     result = mod.evaluate_no_cli_fallback(
@@ -138,20 +227,45 @@ def test_no_cli_black_box_preserves_boundaries_for_each_module_combination(tmp_p
         cli_available=cli_available,
     )
 
-    assert result["status"] == "passed"
+    assert result["status"] == "passed", result
     assert result["network_access"] == "not-required"
-    assert result["forbidden_actions"] == ["do not mutate managed state by hand"]
+    assert result["implementation_allowed"] is False
+    assert result["completion_claim_allowed"] is False
+    assert set(result["selected_modules"]) == set(modules)
+    assert result["forbidden_actions"] == [
+        "mutate-managed-state-by-hand",
+        "bypass-planning-safety-gate",
+        "claim-completion-without-proof",
+    ]
     assert result["next_safe_action"] == "continue-from-installed-startup-without-managed-state-mutation"
 
 
 def test_no_cli_black_box_fails_when_required_fallback_target_is_removed(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "source_payload_no_cli_missing_target")
-    source_root = tmp_path / "source"
     host_root = tmp_path / "clean-host"
-    _write_workspace_surface_manifest(source_root)
-    manifest = json.loads((source_root / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
-    startup = source_root / "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md"
-    _write(host_root / ".agentic-workspace/skills/workspace-startup/SKILL.md", startup.read_text(encoding="utf-8"))
+    host_root.mkdir()
+    subprocess.run(["git", "init", "--quiet"], cwd=host_root, check=True)
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(WORKSPACE_ROOT / "scripts/run_agentic_workspace.py"),
+            "install",
+            "--target",
+            str(host_root),
+            "--non-interactive",
+            "--modules",
+            "memory",
+            "--format",
+            "json",
+        ],
+        cwd=WORKSPACE_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    manifest = json.loads((WORKSPACE_ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
+    (host_root / ".agentic-workspace/memory/repo/index.md").unlink()
 
     result = mod.evaluate_no_cli_fallback(
         host_root=host_root,
@@ -161,7 +275,7 @@ def test_no_cli_black_box_fails_when_required_fallback_target_is_removed(tmp_pat
     )
 
     assert result["status"] == "failed"
-    assert any("module-map.md" in error for error in result["errors"])
+    assert any("memory/repo/index.md" in error for error in result["errors"])
 
 
 def _write_root_surfaces(tmp_path: Path) -> None:
