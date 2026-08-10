@@ -1,0 +1,3 @@
+[change]
+type = "patch"
+summary = "Classify Planning integration receipts in the structured-file inventory."
