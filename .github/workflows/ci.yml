@@ -5,16 +5,31 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      expected_head_sha:
+        description: Exact generated release head that must receive validation.
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   workspace-checks:
-    if: ${{ github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Verify dispatched release head
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+        run: |
+          if [ "${GITHUB_SHA}" != "${EXPECTED_HEAD_SHA}" ]; then
+            echo "Dispatched CI resolved ${GITHUB_SHA}, expected ${EXPECTED_HEAD_SHA}" >&2
+            exit 1
+          fi
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -45,7 +60,7 @@ jobs:
         run: uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
 
   workspace-package-artifacts:
-    if: ${{ github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -83,7 +98,7 @@ jobs:
           if-no-files-found: error
 
   package-checks:
-    if: ${{ github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -113,7 +128,7 @@ jobs:
         run: make check-${{ matrix.package }}-nosync
 
   declared-runtime-matrix:
-    if: ${{ github.event_name == 'push' || github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     name: Runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -154,7 +169,7 @@ jobs:
 
   support-bearing-promotion:
     name: Support-bearing promotion
-    if: ${{ always() && (github.event_name == 'push' || github.event.pull_request.draft == false) }}
+    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     needs: [workspace-checks, workspace-package-artifacts, package-checks, declared-runtime-matrix]
     runs-on: ubuntu-latest
     timeout-minutes: 5
