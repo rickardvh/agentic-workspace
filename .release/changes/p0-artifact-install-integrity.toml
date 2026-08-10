@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Make generated artifact identity transportable outside Git and enforce referential closure for necessary-surface installs."

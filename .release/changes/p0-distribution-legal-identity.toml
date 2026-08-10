@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Adopt MIT licensing and exact GitHub release-asset identities for every coordinated Python and npm artifact."
