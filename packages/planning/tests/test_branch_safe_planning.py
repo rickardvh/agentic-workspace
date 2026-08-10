@@ -26,6 +26,14 @@ def _state_bytes(root: Path) -> bytes:
     return (root / ".agentic-workspace/planning/state.toml").read_bytes()
 
 
+def _planning_persistent_snapshot(root: Path) -> dict[str, bytes]:
+    paths = [path for path in (root / ".agentic-workspace/planning").rglob("*") if path.is_file()]
+    last_closeout = root / ".agentic-workspace/local/planning-last-closeout.json"
+    if last_closeout.is_file():
+        paths.append(last_closeout)
+    return {path.relative_to(root).as_posix(): path.read_bytes() for path in sorted(paths)}
+
+
 def _relation_record(root: Path, issue: str) -> dict:
     return json.loads((root / f".agentic-workspace/planning/issue-relations/{issue}.issue-relation.json").read_text(encoding="utf-8"))
 
@@ -454,6 +462,39 @@ def test_feature_branch_direct_terminal_writers_require_integration_proposal(tmp
     assert blocked_shared_selection.reason_code == "integration-proposal-required-on-feature-branch"
     assert json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))["lifecycle"] == "live"
     assert (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
+
+
+def test_feature_branch_closeout_rejection_is_non_mutating(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-2491")
+    _init_git(tmp_path)
+    _commit_all(tmp_path, "baseline owner")
+    _git(tmp_path, "checkout", "-b", "feature/rejected-closeout")
+    before = _planning_persistent_snapshot(tmp_path)
+
+    blocked = installer.closeout_execplan("issue-2491", target=tmp_path)
+
+    assert blocked.reason_code == "integration-proposal-required-on-feature-branch"
+    assert _planning_persistent_snapshot(tmp_path) == before
+    assert json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))["lifecycle"] == "live"
+
+
+def test_pending_integration_proposal_blocks_closeout_before_mutation(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-2491")
+    propose_integration_transition(
+        proposal_id="issue-2491-archive",
+        owner="issue-2491",
+        owner_ref=owner_ref,
+        requested_transition="archive-owner",
+        target=tmp_path,
+    )
+    before = _planning_persistent_snapshot(tmp_path)
+
+    blocked = installer.closeout_execplan("issue-2491", target=tmp_path)
+
+    assert blocked.reason_code == "pending-integration-proposal-required"
+    assert _planning_persistent_snapshot(tmp_path) == before
 
 
 def test_integration_apply_requires_target_branch_and_accepts_merge_queue_branch(tmp_path: Path) -> None:
