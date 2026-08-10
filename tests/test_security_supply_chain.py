@@ -19,6 +19,7 @@ def _copy_security_surface(target: Path) -> None:
         "src/agentic_workspace/trusted_execution.py",
         "src/agentic_workspace/contracts/security_supply_chain_policy.json",
         "scripts/check/check_security_supply_chain.py",
+        ".github/workflow-write-permissions.json",
     ]
     for relative in paths:
         destination = target / relative
@@ -107,6 +108,20 @@ def test_semantic_permission_scanner_and_locked_sync_fail_closed(tmp_path: Path)
         assert receipt["status"] == "blocked"
         assert any(failure["control"] == control for failure in receipt["failures"])
     security.write_text(original, encoding="utf-8")
+
+
+def test_repo_local_workflow_write_admission_is_required_and_fingerprinted(tmp_path: Path) -> None:
+    _copy_security_surface(tmp_path)
+    policy = tmp_path / ".github/workflow-write-permissions.json"
+    baseline = evaluate_security_supply_chain(tmp_path)
+    assert baseline["status"] == "ready"
+
+    policy.unlink()
+    blocked = evaluate_security_supply_chain(tmp_path)
+
+    assert blocked["status"] == "blocked"
+    assert blocked["subject_fingerprint"] != baseline["subject_fingerprint"]
+    assert any(failure["control"] == "immutable-least-privilege-actions" for failure in blocked["failures"])
 
 
 def test_release_promotion_requires_matching_current_security_receipt() -> None:

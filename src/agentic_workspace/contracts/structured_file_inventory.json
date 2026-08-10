@@ -290,6 +290,18 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "Repository workflow write permissions are security-sensitive policy and must remain reviewable, bounded, and reproducible.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The security supply-chain checker admits only explicitly listed workflow write scopes and rejects overbroad permissions.",
+      "owner": "github-integration",
+      "pattern": ".github/workflow-write-permissions.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_security_supply_chain.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "platform-tooling"
+    },
+    {
       "checked_in_justification": "A reviewable desired-state ruleset keeps live branch protection reproducible and auditable across repository administration changes.",
       "editable_by_agents": true,
       "format": "json",
