@@ -1810,6 +1810,50 @@ def test_planning_closeout_dry_run_previews_normalized_completed_state(tmp_path:
     assert not (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").exists()
 
 
+def test_planning_closeout_dry_run_rejects_schema_invalid_normalized_record(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    record = installer_mod._build_execplan_record_from_todo_item(
+        title="Plan Alpha",
+        item_id="plan-alpha",
+        status="active",
+        why_now="this item needs a bounded execution contract.",
+        next_action="add one checker.",
+        done_when="the bounded change is implemented and validated.",
+    )
+    record.pop("parent")
+    record_path.parent.mkdir(parents=True)
+    record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--proof-from",
+                "uv run pytest packages/planning/tests/test_archive.py::test_closeout_dry_run -q",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    warning = next(item for item in payload["warnings"] if item["warning_class"] == "closeout_dry_run_schema_validation_failed")
+    assert "planning-execplan.schema.json" in warning["message"]
+    assert "parent" in warning["message"]
+    assert any(action["kind"] == "manual review" for action in payload["actions"])
+    assert payload["lifecycle_plan"]["next_safe_guidance"] == (
+        "Resolve the reported closeout validation error, then rerun the same dry-run."
+    )
+    assert record_path.exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").exists()
+
+
 def test_planning_closeout_dry_run_does_not_infer_upgrade_from_plan_name(tmp_path: Path, capsys) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "payload-upgrade-jumpstart.plan.json"

@@ -1,0 +1,3 @@
+[change]
+type = "patch"
+summary = "Validate normalized Planning closeout records during dry-run."

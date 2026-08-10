@@ -19692,6 +19692,62 @@ def closeout_execplan(
         }
         if proof_source == "file":
             normalized_preview["proof_report"]["proof source"] = proof_file_ref
+        normalized_record = copy.deepcopy(record)
+        normalized_record["lifecycle"] = "closed"
+        normalized_record["phase"] = "complete"
+        if isinstance(normalized_record.get("revision"), int):
+            normalized_record["revision"] = int(normalized_record["revision"]) + 1
+        for section, values in normalized_preview.items():
+            current = _record_section_dict(normalized_record, section) or {}
+            current.update(values)
+            normalized_record[section] = current
+        schema_findings = _json_schema_findings(payload=normalized_record, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
+        if schema_findings:
+            compact_required = (
+                "id",
+                "owner_level",
+                "lifecycle",
+                "phase",
+                "revision",
+                "intent",
+                "parent",
+                "scope",
+                "relationships",
+                "next_action",
+                "proof",
+                "continuation",
+            )
+            missing_compact_fields = [field for field in compact_required if field not in normalized_record]
+            bounded_findings = (
+                [f"compact owner is missing required field(s): {', '.join(missing_compact_fields)}"]
+                if missing_compact_fields
+                else schema_findings[:3]
+            )
+            if not missing_compact_fields and len(schema_findings) > len(bounded_findings):
+                bounded_findings.append(f"{len(schema_findings) - len(bounded_findings)} additional finding(s) omitted")
+            result.warnings.append(
+                {
+                    "warning_class": "closeout_dry_run_schema_validation_failed",
+                    "path": record_path.relative_to(target_root).as_posix(),
+                    "message": (
+                        "normalized closeout record does not validate against planning-execplan.schema.json: " + "; ".join(bounded_findings)
+                    ),
+                    "suggested_fix": "Repair the reported execplan fields, then rerun the closeout dry-run.",
+                }
+            )
+            result.add(
+                "manual review",
+                record_path,
+                "closeout dry-run rejected the normalized record before mutation",
+            )
+            result.completion_options.append(
+                {
+                    "id": "closeout-dry-run-status",
+                    "allowed": False,
+                    "why": "normalized closeout record failed schema validation",
+                }
+            )
+            return result
         result.add("would update", record_path, f"normalized closeout state: {json.dumps(normalized_preview, sort_keys=True)}")
         result.add("would archive", record_path, "archive validation would run against the normalized closeout state")
         result.completion_options.extend(
@@ -21877,6 +21933,8 @@ def _lifecycle_next_safe_command(result: InstallResult) -> str | None:
 def _lifecycle_next_safe_guidance(result: InstallResult) -> str:
     operation = _lifecycle_operation_name(result.message)
     if operation == "closeout":
+        if result.warnings or any(action.kind == "manual review" for action in result.actions):
+            return "Resolve the reported closeout validation error, then rerun the same dry-run."
         return "Rerun the same closeout command without --dry-run only if the plan matches intent."
     return "Review actions and rerun the same command without --dry-run only if the plan matches intent."
 
