@@ -65,15 +65,10 @@
     ".release/releases/",
     "uv.lock"
   ],
+  "non_semver_paths": [
+    ".github/"
+  ],
   "package_affecting_paths": [
-    ".github/release-ownership.json",
-    ".github/rulesets/",
-    ".github/support-bearing-promotion.json",
-    ".github/release.yml",
-    ".github/workflows/ci.yml",
-    ".github/workflows/pr-semver-label.yml",
-    ".github/workflows/release-from-semver-label.yml",
-    ".github/workflows/release.yml",
     ".release/changes/",
     ".release/releases/",
     "docs/release-and-versioning.md",

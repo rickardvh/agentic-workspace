@@ -53,6 +53,22 @@ def test_fingerprint_only_pr_does_not_require_semver_release() -> None:
     assert packet["path_classification"]["integrity_metadata_paths"] == ["generated/.agentic-workspace-cli-fingerprint.json"]
 
 
+def test_github_automation_only_pr_does_not_require_semver_release() -> None:
+    module = _load_module()
+    ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
+
+    changed_files = [
+        ".github/workflows/ci.yml",
+        ".github/workflows/pr-semver-label.yml",
+        ".github/release-ownership.json",
+    ]
+    packet = module.semver_pr_status(labels=[], changed_files=changed_files, ownership=ownership)
+
+    assert packet["status"] == "no-release-needed"
+    assert packet["package_affecting"] is False
+    assert packet["path_classification"]["non_semver_paths"] == changed_files
+
+
 def test_fingerprint_cannot_lower_a_generated_package_change() -> None:
     module = _load_module()
     ownership = json.loads((REPO_ROOT / ".github" / "release-ownership.json").read_text(encoding="utf-8"))
