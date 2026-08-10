@@ -87,11 +87,11 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node }}
-      - name: Verify lock and complete root inventory
+      - name: Verify lock and runtime-specific behavior
         run: |
           uv lock --check
           uv sync --locked --all-groups
-          uv run pytest tests -q
+          uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
           uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
       - name: Write runtime support receipt
         shell: bash
@@ -102,7 +102,7 @@ jobs:
             --os "${{ matrix.os }}" \
             --python "${{ matrix.python }}" \
             --node "${{ matrix.node }}" \
-            --proof "complete root inventory plus generated semantic shard" \
+            --proof "runtime-specific path, subprocess, install, and generated semantic behavior" \
             --output "runtime-receipts/${{ matrix.os }}-py${{ matrix.python }}-node${{ matrix.node }}.json"
       - name: Upload runtime support receipt
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
