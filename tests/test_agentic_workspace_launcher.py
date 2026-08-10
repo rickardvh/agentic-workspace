@@ -6,13 +6,25 @@ import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "run_agentic_workspace.py"
+GENERATOR_PATH = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_packages.py"
 
 
 def _load_module():
     spec = importlib.util.spec_from_file_location("run_agentic_workspace", SCRIPT_PATH)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Unable to load launcher from {SCRIPT_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_generator_module():
+    spec = importlib.util.spec_from_file_location("generate_command_packages", GENERATOR_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Unable to load generator from {GENERATOR_PATH}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -30,6 +42,7 @@ def _minimal_repo(root: Path) -> None:
     _write(root / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
     _write(root / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json", "{}\n")
     _write(root / "generated" / "workspace" / "python" / "cli.py", "def main(argv=None):\n    return 0\n")
+    _write(root / "generated" / "workspace" / "typescript" / "package.json", '{"version":"0.39.2"}\n')
 
 
 def _source_manifest(module, root: Path, *, paths: list[str] | None = None, identity: str = "current-index") -> dict[str, object]:
@@ -141,7 +154,7 @@ def test_launcher_uses_source_owned_manifest_on_cold_clean_worktree(tmp_path: Pa
 
     monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: True)
     monkeypatch.setattr(module, "_git_index_entries", lambda **_: manifest["git_index_entries"])
-    monkeypatch.setattr(module, "_git_index_identity", lambda **_: "current-index")
+    monkeypatch.setattr(module, "_git_index_identity_from_entries", lambda **_: "current-index")
 
     def fail_content_hash(repo_root: Path) -> dict[str, object]:
         raise AssertionError(f"unexpected content hash for clean source manifest in {repo_root}")
@@ -165,7 +178,7 @@ def test_launcher_uses_source_manifest_with_unrelated_dirty_worktree(tmp_path: P
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
     monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: True)
     monkeypatch.setattr(module, "_git_index_entries", lambda **_: manifest["git_index_entries"])
-    monkeypatch.setattr(module, "_git_index_identity", lambda **_: "current-index")
+    monkeypatch.setattr(module, "_git_index_identity_from_entries", lambda **_: "current-index")
 
     def fail_content_hash(*, repo_root: Path) -> dict[str, object]:
         raise AssertionError(f"unrelated dirtiness must not hash inputs in {repo_root}")
@@ -181,7 +194,7 @@ def test_launcher_uses_source_manifest_with_unrelated_dirty_worktree(tmp_path: P
     assert refreshed is False
 
 
-def test_launcher_hashes_when_a_manifest_input_is_dirty(tmp_path: Path, monkeypatch) -> None:
+def test_launcher_accepts_semantically_current_manifest_when_input_witness_is_dirty(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
     source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
@@ -197,13 +210,13 @@ def test_launcher_hashes_when_a_manifest_input_is_dirty(tmp_path: Path, monkeypa
         return original(repo_root=repo_root)
 
     module.compute_generated_cli_fingerprint = count_content_hash
-    assert module.ensure_generated_cli_current(
+    assert not module.ensure_generated_cli_current(
         repo_root=tmp_path,
         cache_path=tmp_path / ".agentic-workspace" / "local" / "cache" / "missing.json",
         generator_script=tmp_path / "scripts" / "generate" / "generate_command_packages.py",
-        run_generator=lambda *_: None,
+        run_generator=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected regeneration")),
     )
-    assert calls == [tmp_path, tmp_path]
+    assert calls == [tmp_path]
 
 
 def test_source_manifest_ignores_unrelated_dirtiness_but_rejects_input_changes(tmp_path: Path) -> None:
@@ -270,7 +283,7 @@ def test_manifest_status_filter_fails_closed_when_git_fails(tmp_path: Path, monk
     assert not module._git_input_paths_are_unmodified(repo_root=tmp_path, paths=["src/example.py"])
 
 
-def test_launcher_rejects_clean_but_stale_source_manifest(tmp_path: Path, monkeypatch) -> None:
+def test_launcher_accepts_semantic_match_after_git_index_witness_changes(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
     source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
@@ -287,13 +300,83 @@ def test_launcher_rejects_clean_but_stale_source_manifest(tmp_path: Path, monkey
         return original(repo_root=repo_root)
 
     module.compute_generated_cli_fingerprint = count_content_hash
-    assert module.ensure_generated_cli_current(
+    assert not module.ensure_generated_cli_current(
         repo_root=tmp_path,
         cache_path=tmp_path / ".agentic-workspace" / "local" / "cache" / "missing.json",
         generator_script=tmp_path / "scripts" / "generate" / "generate_command_packages.py",
-        run_generator=lambda *_: None,
+        run_generator=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected regeneration")),
     )
-    assert calls == [tmp_path, tmp_path]
+    assert calls == [tmp_path]
+
+
+@pytest.mark.parametrize("publication_shape", ["ordinary-maintainer-2507", "coordinated-release-2501"])
+def test_source_manifest_publication_orders_converge_on_committed_head(tmp_path: Path, publication_shape: str) -> None:
+    module = _load_module()
+    generator = _load_generator_module()
+    fingerprints: dict[str, str] = {}
+
+    for publication_order in ("generate-before-stage", "stage-before-generation"):
+        repo = tmp_path / publication_order
+        _minimal_repo(repo)
+        _git(repo, "init")
+        _git(repo, "config", "user.email", "fixture@example.invalid")
+        _git(repo, "config", "user.name", "Fixture")
+        _git(repo, "add", ".")
+        _git(repo, "commit", "-m", "initial")
+
+        if publication_shape == "ordinary-maintainer-2507":
+            _write(repo / "src" / "agentic_workspace" / "runtime.py", "VALUE = 2\n")
+        else:
+            # Model coordinated_release.py prepare, its generated package
+            # version mutation, and the subsequent `uv lock` update.
+            _write(repo / "pyproject.toml", '[project]\nname = "fixture"\nversion = "0.39.3"\n')
+            _write(repo / "generated" / "workspace" / "typescript" / "package.json", '{"version":"0.39.3"}\n')
+            _write(repo / "uv.lock", "# coordinated release lock for 0.39.3\n")
+
+        if publication_order == "stage-before-generation":
+            _git(repo, "add", ".")
+        source_manifest = repo / "generated" / ".agentic-workspace-cli-fingerprint.json"
+        manifest = module.source_cli_fingerprint_manifest(repo_root=repo)
+        source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+        fingerprints[publication_order] = str(manifest["fingerprint"])
+
+        before_staging = module.source_cli_fingerprint_manifest_status(repo_root=repo)
+        assert before_staging["status"] == "current"
+        _git(repo, "add", ".")
+        after_staging = module.source_cli_fingerprint_manifest_status(repo_root=repo)
+        assert after_staging["status"] == "current"
+        _git(repo, "commit", "-m", f"publish {publication_shape}")
+
+        canonical_check = generator._source_cli_fingerprint_manifest_status(repo_root=repo, launcher=module)
+        if publication_order == "generate-before-stage":
+            assert canonical_check == {"status": "current", "reason": "semantic-fallback", "auxiliary_witness": "mismatch"}
+        else:
+            assert canonical_check == {"status": "current", "reason": "git-index-fast-path", "auxiliary_witness": "match"}
+        assert not module.ensure_generated_cli_current(
+            repo_root=repo,
+            cache_path=repo / ".agentic-workspace" / "local" / "cache" / "missing.json",
+            generator_script=repo / "scripts" / "generate" / "generate_command_packages.py",
+            run_generator=lambda *_: (_ for _ in ()).throw(AssertionError("committed publication head regenerated")),
+        )
+
+    assert fingerprints["generate-before-stage"] == fingerprints["stage-before-generation"]
+
+
+def test_source_manifest_rejects_semantic_drift_even_when_git_witness_matches(tmp_path: Path, monkeypatch) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    manifest = _source_manifest(module, tmp_path)
+    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 2\n")
+    monkeypatch.setattr(module, "_git_index_entries", lambda **_: manifest["git_index_entries"])
+    monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: False)
+
+    assert module.source_cli_fingerprint_manifest_status(repo_root=tmp_path) == {
+        "status": "stale",
+        "reason": "semantic-content-drift",
+        "auxiliary_witness": "dirty-inputs",
+    }
 
 
 def test_launcher_rejects_clean_source_manifest_missing_new_input(tmp_path: Path, monkeypatch) -> None:
