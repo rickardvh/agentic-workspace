@@ -4166,6 +4166,73 @@ def test_defaults_text_uses_tiny_router_payload(capsys) -> None:
     assert any(view["id"] == "defaults-router.text" for view in view_contract["views"])
 
 
+def test_planning_front_door_preserves_integration_propose_contract(monkeypatch, tmp_path: Path, capsys) -> None:
+    forwarded: list[list[str]] = []
+
+    def fake_planning_main(argv: list[str]) -> int:
+        forwarded.append(argv)
+        print(json.dumps({"argv": argv}))
+        return 0
+
+    monkeypatch.setattr("repo_planning_bootstrap.cli.main", fake_planning_main)
+    expected = [
+        "integration-propose",
+        "--proposal-id",
+        "archive-owner-2496",
+        "--owner",
+        "owner-2496",
+        "--owner-ref",
+        ".agentic-workspace/planning/execplans/owner-2496.plan.json",
+        "--issue",
+        "#2496",
+        "--external-ref",
+        "github:#2496",
+        "--requested-transition",
+        "archive-owner",
+        "--proof",
+        "checks:passing,review:approved",
+        "--parent-boundary",
+        "lane remains independently open",
+        "--invariant",
+        "parent-current-slice,issue-relation",
+        "--expect-subject-revision",
+        "subject-revision",
+        "--expect-target-revision",
+        "target-revision",
+        "--target",
+        str(tmp_path),
+        "--expect-planning-revision",
+        "planning-revision",
+        "--dry-run",
+        "--format",
+        "json",
+    ]
+
+    assert cli.main(["planning", *expected]) == 0
+
+    actual = json.loads(capsys.readouterr().out)["argv"]
+    assert actual[0] == "integration-propose"
+    for option in [
+        "--proposal-id",
+        "--owner",
+        "--owner-ref",
+        "--issue",
+        "--external-ref",
+        "--requested-transition",
+        "--proof",
+        "--parent-boundary",
+        "--invariant",
+        "--expect-subject-revision",
+        "--expect-target-revision",
+        "--target",
+        "--expect-planning-revision",
+        "--format",
+    ]:
+        assert actual[actual.index(option) + 1] == expected[expected.index(option) + 1]
+    assert "--dry-run" in actual
+    assert forwarded == [actual]
+
+
 def test_planning_front_door_forwards_lane_lifecycle_positionals(monkeypatch, tmp_path: Path, capsys) -> None:
     forwarded: list[list[str]] = []
 
