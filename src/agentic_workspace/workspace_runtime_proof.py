@@ -2989,11 +2989,19 @@ def _proof_route_maintenance_payload(
 ) -> dict[str, Any]:
     stale_hints = [hint for hint in _list_payload(learned_route_hints.get("stale")) if isinstance(hint, dict)]
     invalid_hints = [hint for hint in _list_payload(learned_route_hints.get("invalid")) if isinstance(hint, dict)]
+    confirmed_commands = {
+        str(command.get("command", ""))
+        for command in selected_commands
+        if isinstance(command, dict)
+        and str(command.get("fallback_status", ""))
+        in {"repo-confirmed", "repo-learned-confirmed", "confirmed-repo-knowledge", "local-only"}
+    }
     fallback_commands = [
         command
         for command in selected_commands
         if isinstance(command, dict)
         and str(command.get("fallback_status", "")) in {"seed-fallback", "fallback", "candidate-live-confirmed"}
+        and str(command.get("command", "")) not in confirmed_commands
     ]
     manual_missing = [item for item in manual_proof_obligations if isinstance(item, dict) and item.get("required")]
     suggestions: list[dict[str, Any]] = []
@@ -5178,14 +5186,14 @@ def _proof_narrowness_payload(
         expansion_triggers.append({"trigger": "escalate_when", "why": str(condition), "effect": "escalate proof or review before closeout"})
     broad_required = (
         any(item.get("proof_kind") == "full-test" for item in required)
-        or any(item.get("command_tier") in {"generated_contract", "environmental"} for item in required)
+        or any(item.get("command_tier") == "environmental" for item in required)
         or any(item.get("lane") in broad_acceptance_lanes for item in required)
     )
     broad_reason_candidates = [
         str(item.get("why_required", "")).strip()
         for item in required
         if item.get("proof_kind") == "full-test"
-        or item.get("command_tier") in {"generated_contract", "environmental"}
+        or item.get("command_tier") == "environmental"
         or item.get("lane") in broad_acceptance_lanes
     ]
     broad_reason_candidates.extend(
@@ -5258,6 +5266,54 @@ def _proof_narrowness_payload(
     }
 
 
+def _changed_test_owner_route(*, lane_id: str, commands: list[str], changed_paths: list[str]) -> tuple[list[str], dict[str, Any] | None]:
+    """Replace a package-wide Planning test with co-changed stable test owners."""
+
+    if lane_id not in {"planning_package", "planning_package_behavior"}:
+        return commands, None
+    planning_paths = [path for path in changed_paths if path.startswith("packages/planning/")]
+    if not planning_paths:
+        return commands, None
+    owner_paths = sorted(
+        path
+        for path in planning_paths
+        if path.startswith("packages/planning/tests/") and Path(path).name.startswith("test_") and path.endswith(".py")
+    )
+    if not owner_paths:
+        return commands, {
+            "kind": "changed-test-owner-route/v1",
+            "status": "full-package-fallback",
+            "owner_paths": [],
+            "fallback_command": "make test-planning",
+            "reason": "no stable changed Planning test owner was supplied for the changed package scope",
+        }
+
+    focused_test_command = f"uv run pytest {shlex.join(owner_paths)} -q"
+    narrowed_commands = [focused_test_command if command == "make test-planning" else command for command in commands]
+    narrowed_commands.extend(["make lint-planning", "make typecheck-planning"])
+    generated_contract_paths = [
+        path
+        for path in planning_paths
+        if path.startswith("packages/planning/src/repo_planning_bootstrap/contracts/operations/")
+        or path == "packages/planning/src/repo_planning_bootstrap/runtime_projection.py"
+    ]
+    if generated_contract_paths:
+        narrowed_commands.extend(
+            [
+                "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+                "uv run python scripts/check/check_generated_command_packages.py",
+            ]
+        )
+    return _dedupe(narrowed_commands), {
+        "kind": "changed-test-owner-route/v1",
+        "status": "focused-owner-selected",
+        "owner_paths": owner_paths,
+        "fallback_command": "make test-planning",
+        "generated_contract_paths": generated_contract_paths,
+        "reason": "co-changed Planning test files are the stable behavior evidence owners",
+    }
+
+
 def _host_domain_proof_lanes_for_changed_paths(
     *,
     config: WorkspaceConfig | None,
@@ -5278,13 +5334,18 @@ def _host_domain_proof_lanes_for_changed_paths(
         task_matches = [marker for marker in lane.applies_to_task_markers if marker.lower() in haystack]
         if not (path_matches or task_matches):
             continue
+        lane_commands, changed_test_owner_route = _changed_test_owner_route(
+            lane_id=lane.id,
+            commands=list(lane.commands),
+            changed_paths=changed_paths,
+        )
         path_match_values = [match["path"] for match in path_matches]
         matched_paths = _dedupe([*path_match_values, *changed_paths]) if task_matches else path_match_values
         lanes.append(
             {
                 "id": f"domain:{lane.id}",
                 "when": "matched host-declared domain proof lane",
-                "enough_proof": list(lane.commands),
+                "enough_proof": lane_commands,
                 "recovery_signal": (
                     "missing or failing host domain proof should block broad closeout until resolved, manually evidenced, or explicitly waived"
                 ),
@@ -5327,6 +5388,7 @@ def _host_domain_proof_lanes_for_changed_paths(
                 "route_role": _configured_domain_lane_route_role(lane),
                 "precedence": lane.precedence or "",
                 "allowed_composition": list(lane.allowed_composition),
+                **({"changed_test_owner_route": changed_test_owner_route} if changed_test_owner_route is not None else {}),
             }
         )
     return lanes
@@ -8022,6 +8084,15 @@ def _proof_selection_for_changed_paths(
                     "CI may repeat generated-package proof; local Python generated-package closeout should run static, local Python conformance, and Python Docker conformance serially."
                 )
                 break
+    for lane in selected_lanes:
+        narrowed_commands, changed_test_owner_route = _changed_test_owner_route(
+            lane_id=str(lane.get("id", "")),
+            commands=[str(command) for command in _list_payload(lane.get("enough_proof"))],
+            changed_paths=changed_paths,
+        )
+        if changed_test_owner_route is not None:
+            lane["enough_proof"] = narrowed_commands
+            lane["changed_test_owner_route"] = changed_test_owner_route
     subsystem_matches = _subsystem_matches_for_changed_paths(target_root=target_root, changed_paths=changed_paths)
     subsystem_lanes: list[dict[str, Any]] = []
     for subsystem in subsystem_matches["matched_subsystems"]:
@@ -9129,6 +9200,7 @@ def _proof_selection_for_changed_paths(
                 **({"matched_paths": lane["matched_paths"]} if lane.get("matched_paths") else {}),
                 **({"escalate_when": lane["escalate_when"]} if lane.get("escalate_when") else {}),
                 **({"coverage": lane["coverage"]} if lane.get("coverage") else {}),
+                **({"changed_test_owner_route": lane["changed_test_owner_route"]} if lane.get("changed_test_owner_route") else {}),
                 **({"focused_route_reduction": lane["focused_route_reduction"]} if lane.get("focused_route_reduction") else {}),
                 **({"subsystem": lane["subsystem"]} if lane.get("subsystem") else {}),
                 **({"weak_agent_safe_routing": lane["weak_agent_safe_routing"]} if lane.get("weak_agent_safe_routing") else {}),
