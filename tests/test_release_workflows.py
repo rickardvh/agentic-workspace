@@ -414,7 +414,15 @@ def test_release_model_uses_existing_tags_instead_of_stale_bootstrap_floor() -> 
     assert "floor = max([*package_versions, *tag_versions])" in helper
     assert "_tag_declares_coordinated_release_version" in helper
     assert "pending_tag_plan" in helper
+    assert '"git", "log", "--first-parent"' in helper
     assert "first_coordinated_release" not in helper
+
+
+def test_release_runtime_matrix_fetches_history_for_retained_evidence_ancestry() -> None:
+    workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
+    runtime = workflow.partition("release-runtime-matrix:")[2].partition("agentic-workspace-package:")[0]
+
+    assert "fetch-depth: 0" in runtime
 
 
 def test_release_model_ignores_tags_from_other_package_domains(monkeypatch) -> None:

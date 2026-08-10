@@ -293,7 +293,7 @@ def _version_text_from_commit(commit: str, path: Path) -> str:
 
 def _release_commit_for_version(ownership: dict[str, Any], version: str) -> str:
     relative_paths = [_repo_path(path) for path in version_file_paths(ownership)]
-    result = _run(["git", "log", "-n", "1", "--format=%H", "--", *relative_paths])
+    result = _run(["git", "log", "--first-parent", "-n", "1", "--format=%H", "--", *relative_paths])
     commit = result.stdout.strip()
     if not commit:
         raise SystemExit("Could not find a release commit that touched coordinated version files")
