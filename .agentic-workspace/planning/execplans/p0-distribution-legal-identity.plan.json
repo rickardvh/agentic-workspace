@@ -4,7 +4,7 @@
   "title": "P0 distribution and legal identity",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "integration-pending",
+  "phase": "closeout",
   "revision": 5,
   "intent": {
     "outcome": "Close #2452 and #2453 with an exact verified GitHub-release distribution path, unambiguous coordinated Python identities, and owner-approved MIT metadata in every artifact family.",

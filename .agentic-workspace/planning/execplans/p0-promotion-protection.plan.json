@@ -4,7 +4,7 @@
   "title": "P0 promotion protection and support-bearing decision",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "integration-pending",
+  "phase": "closeout",
   "revision": 5,
   "intent": {
     "outcome": "Make protected master and the release workflows fail closed on one exact-commit, exact-artifact support-bearing promotion result.",
