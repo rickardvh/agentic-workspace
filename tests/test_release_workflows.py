@@ -343,13 +343,15 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
     ]
 
 
-def test_ci_required_aggregate_covers_declared_support_and_full_inventory() -> None:
+def test_ci_required_aggregate_uses_routed_proof_and_declared_support() -> None:
     workflow = (WORKFLOW_ROOT / "ci.yml").read_text(encoding="utf-8")
 
     assert "push:\n    branches: [master]" in workflow
     assert "name: Support-bearing promotion" in workflow
     assert "needs: [workspace-checks, workspace-package-artifacts, package-checks, declared-runtime-matrix]" in workflow
-    assert "uv run pytest tests -q" in workflow
+    assert "uv run pytest tests -q" not in workflow
+    assert "tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py" in workflow
+    assert "test_generated_tool_process_conformance_contracts[modules.report.process]" in workflow
     assert "uv lock --check" in workflow
     assert "uv sync --locked" in workflow
     assert "windows-latest" in workflow
@@ -414,7 +416,6 @@ def test_release_model_uses_existing_tags_instead_of_stale_bootstrap_floor() -> 
     assert "floor = max([*package_versions, *tag_versions])" in helper
     assert "_tag_declares_coordinated_release_version" in helper
     assert "pending_tag_plan" in helper
-    assert '"git", "log", "--first-parent"' in helper
     assert "first_coordinated_release" not in helper
 
 
@@ -423,6 +424,9 @@ def test_release_runtime_matrix_fetches_history_for_retained_evidence_ancestry()
     runtime = workflow.partition("release-runtime-matrix:")[2].partition("agentic-workspace-package:")[0]
 
     assert "fetch-depth: 0" in runtime
+    assert "uv run pytest tests -q" not in runtime
+    assert "tests/test_external_integration_boundary.py" in runtime
+    assert "test_install_survives_into_fresh_second_process" in runtime
 
 
 def test_release_model_ignores_tags_from_other_package_domains(monkeypatch) -> None:

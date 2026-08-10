@@ -148,3 +148,49 @@ def test_tag_plan_targets_release_commit_after_unrelated_master_commit(tmp_path,
     assert retry_plan["reason"] == "tag-already-points-at-release-commit"
     assert retry_plan["tag"] == "v0.34.1"
     assert retry_plan["release_commit"] == release_commit
+
+
+def test_tag_plan_targets_protected_merge_commit_not_release_side_parent(tmp_path, monkeypatch) -> None:
+    module = _load_module()
+    root_pyproject = tmp_path / "pyproject.toml"
+    package_json = tmp_path / "generated/workspace/typescript/package.json"
+    release_note = tmp_path / ".release/releases/v0.34.1.md"
+    package_json.parent.mkdir(parents=True)
+    ownership = {
+        "changeset_dir": ".release/changes",
+        "release_notes_dir": ".release/releases",
+        "packages": [{"pyproject": "pyproject.toml"}],
+        "typescript_packages": [{"package_json": "generated/workspace/typescript/package.json"}],
+    }
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+
+    def git(*args: str) -> str:
+        return subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True, text=True).stdout.strip()
+
+    git("init", "-b", "master")
+    git("config", "user.name", "Test User")
+    git("config", "user.email", "test@example.com")
+    root_pyproject.write_text('[project]\nname = "root"\nversion = "0.34.0"\n', encoding="utf-8")
+    package_json.write_text('{"name":"pkg","version":"0.34.0","private":false}\n', encoding="utf-8")
+    git("add", ".")
+    git("commit", "-m", "Release v0.34.0")
+    git("tag", "v0.34.0")
+
+    git("switch", "-c", "automation/coordinated-release")
+    root_pyproject.write_text('[project]\nname = "root"\nversion = "0.34.1"\n', encoding="utf-8")
+    package_json.write_text('{"name":"pkg","version":"0.34.1","private":false}\n', encoding="utf-8")
+    release_note.parent.mkdir(parents=True)
+    release_note.write_text("# Release v0.34.1\n\n## Changes\n\n- Protected release\n", encoding="utf-8")
+    git("add", ".")
+    git("commit", "-m", "Prepare v0.34.1")
+    side_parent = git("rev-parse", "HEAD")
+
+    git("switch", "master")
+    git("merge", "--no-ff", "automation/coordinated-release", "-m", "Merge protected release PR")
+    protected_merge = git("rev-parse", "HEAD")
+    git("update-ref", "refs/remotes/origin/master", protected_merge)
+
+    plan = module.pending_tag_plan(ownership)
+
+    assert plan["release_commit"] == protected_merge
+    assert plan["release_commit"] != side_parent

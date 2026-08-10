@@ -287,9 +287,8 @@ def _normalize_releaseable_typescript_package_json(
     payload["repository"] = {"type": "git", "url": str(identity.get("repository", ""))}
     payload["bugs"] = {"url": str(identity.get("issues", ""))}
     payload["description"] = "Generated Agentic Workspace command adapter distributed as an exact GitHub release asset."
-    files = [str(item) for item in payload.get("files", [])]
-    if "LICENSE" not in files:
-        files.append("LICENSE")
+    files = [str(item) for item in payload.get("files", []) if str(item) != "LICENSE"]
+    files.append("LICENSE")
     payload["files"] = files
     return GeneratedOutput(output.path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
@@ -1034,13 +1033,14 @@ from ..cli import build_generated_parser
         "./profile": "./external_consumer_profile.json",
         "./conformance-receipts": "./external_operation_conformance_receipts.json",
     }
-    files = list(payload.get("files", []))
+    files = [str(item) for item in payload.get("files", []) if str(item) != "LICENSE"]
     if "external_consumer_profile.json" not in files:
         files.append("external_consumer_profile.json")
     if "external_contract_bundle.json" not in files:
         files.append("external_contract_bundle.json")
     if "external_operation_conformance_receipts.json" not in files:
         files.append("external_operation_conformance_receipts.json")
+    files.append("LICENSE")
     payload["files"] = files
     return GeneratedOutput(output.path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
