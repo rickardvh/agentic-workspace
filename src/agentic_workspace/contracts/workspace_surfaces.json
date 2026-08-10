@@ -18,6 +18,8 @@
     ".agentic-workspace/system-intent/WORKFLOW.md"
   ],
   "necessary_surface_files": [
+    ".agentic-workspace/WORKFLOW.md",
+    ".agentic-workspace/OWNERSHIP.toml",
     ".agentic-workspace/docs/jumpstart-contract.md",
     ".agentic-workspace/docs/module-map.md",
     ".agentic-workspace/docs/setup-findings-contract.md",
@@ -35,42 +37,192 @@
     ".agentic-workspace/docs",
     ".agentic-workspace/skills"
   ],
+  "module_surface_files": {
+    "memory": [
+      ".agentic-workspace/memory/WORKFLOW.md",
+      ".agentic-workspace/memory/SKILLS.md",
+      ".agentic-workspace/memory/repo/index.md"
+    ],
+    "planning": [
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/agent-manifest.json",
+      ".agentic-workspace/planning/execplans/README.md",
+      ".agentic-workspace/planning/execplans/TEMPLATE.plan.json"
+    ],
+    "verification": [
+      ".agentic-workspace/verification/manifest.toml",
+      ".agentic-workspace/verification/proof-strategy.toml"
+    ]
+  },
   "required_references": [
     {
       "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
       "target": ".agentic-workspace/docs/module-map.md",
       "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"]
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
     },
     {
       "source": ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
       "target": ".agentic-workspace/docs/module-map.md",
       "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"]
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
     },
     {
       "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
       "target": ".agentic-workspace/docs/setup-findings-contract.md",
       "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"]
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
     },
     {
       "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
       "target": ".agentic-workspace/docs/jumpstart-contract.md",
       "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"]
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
     },
     {
       "source": ".agentic-workspace/config.toml",
       "target": ".agentic-workspace/docs/workspace-config-contract.md",
       "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"]
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/docs/module-map.md",
+      "target": ".agentic-workspace/planning/state.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["planning"]
+    },
+    {
+      "source": ".agentic-workspace/docs/module-map.md",
+      "target": ".agentic-workspace/planning/execplans/*.plan.json",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["planning"]
+    },
+    {
+      "source": ".agentic-workspace/docs/module-map.md",
+      "target": ".agentic-workspace/verification/manifest.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["verification"]
+    },
+    {
+      "source": ".agentic-workspace/docs/module-map.md",
+      "target": ".agentic-workspace/verification/proof-strategy.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["verification"]
+    },
+    {
+      "source": ".agentic-workspace/docs/workspace-config-contract.md",
+      "target": ".agentic-workspace/config.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/docs/workspace-config-contract.md",
+      "target": ".agentic-workspace/config.local.toml",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "Use repo-owned config.toml when no machine-local override exists."
+    },
+    {
+      "source": ".agentic-workspace/docs/workspace-config-contract.md",
+      "target": ".agentic-workspace/OWNERSHIP.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+      "target": ".agentic-workspace/WORKFLOW.md",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
+      "target": ".agentic-workspace/WORKFLOW.md",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
+      "target": ".agentic-workspace/OWNERSHIP.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
+      "target": ".agentic-workspace/config.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
+      "target": ".agentic-workspace/system-intent/intent.toml",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "Run the configured system-intent sync before treating an interpreted mirror as available."
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
+      "target": ".agentic-workspace/system-intent/subsystems.toml",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "Leave scoped subsystem intent absent until declared subsystem ownership exists."
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
+      "target": ".agentic-workspace/verification/manifest.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["verification"]
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
+      "target": ".agentic-workspace/verification/proof-strategy.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["verification"]
     }
   ],
+  "reference_discovery": {
+    "source_globs": [
+      ".agentic-workspace/docs/**/*.md",
+      ".agentic-workspace/skills/**/*.md"
+    ]
+  },
   "reference_resolution": {
     "installed-local": "Target must be present in the selected installed footprint.",
     "package-resource": "Target must use the package://agentic-workspace/ prefix and resolve through importlib.resources.",
     "optional": "Reference must name a complete degraded_behavior field."
+  },
+  "no_cli_fallback": {
+    "entrypoint": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+    "module_map": ".agentic-workspace/docs/module-map.md",
+    "forbidden_action_markers": [
+      "do not create Planning, Memory, review, or handoff artifacts just to show work",
+      "If `planning_safety_gate.implementation_allowed` is false, run the named planning command before implementation."
+    ],
+    "module_headings": {
+      "memory": "## Memory",
+      "planning": "## Planning",
+      "verification": "## Verification"
+    },
+    "next_safe_action": "continue-from-installed-startup-without-managed-state-mutation"
   },
   "system_intent_mirror_kind": "agentic-workspace/system-intent/v1",
   "subsystem_intent_kind": "agentic-workspace/subsystem-intent-set/v1",
