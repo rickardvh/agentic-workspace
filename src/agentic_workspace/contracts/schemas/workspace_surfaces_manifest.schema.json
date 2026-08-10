@@ -9,8 +9,11 @@
     "payload_files",
     "necessary_surface_files",
     "necessary_surface_roots",
+    "module_surface_files",
     "required_references",
+    "reference_discovery",
     "reference_resolution",
+    "no_cli_fallback",
     "system_intent_mirror_kind",
     "subsystem_intent_kind",
     "default_agents_path",
@@ -48,11 +51,22 @@
       "items": {"type": "string"},
       "description": "Directory roots retained and synchronized as units in the necessary-surface profile."
     },
+    "module_surface_files": {
+      "type": "object",
+      "required": ["memory", "planning", "verification"],
+      "properties": {
+        "memory": {"$ref": "#/$defs/surfacePaths", "description": "Installed host paths contributed by the memory module."},
+        "planning": {"$ref": "#/$defs/surfacePaths", "description": "Installed host paths contributed by the planning module."},
+        "verification": {"$ref": "#/$defs/surfacePaths", "description": "Installed host paths contributed by the verification module."}
+      },
+      "additionalProperties": false,
+      "description": "Installed host paths contributed by each selected module and added independently to closure cells."
+    },
     "required_references": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["source", "target", "kind", "profiles"],
+        "required": ["source", "target", "kind", "profiles", "modules"],
         "properties": {
           "source": {"type": "string"},
           "target": {"type": "string"},
@@ -62,6 +76,12 @@
             "minItems": 1,
             "uniqueItems": true,
             "items": {"enum": ["necessary-surfaces", "full-mirror"]}
+          },
+          "modules": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"enum": ["memory", "planning", "verification"]},
+            "description": "All listed modules must be selected for this reference to apply; an empty list applies to every combination."
           },
           "degraded_behavior": {"type": "string", "minLength": 1}
         },
@@ -75,6 +95,21 @@
       },
       "description": "Required references that must resolve in every selected installed footprint."
     },
+    "reference_discovery": {
+      "type": "object",
+      "required": ["source_globs"],
+      "properties": {
+        "source_globs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string"},
+          "description": "Payload-relative globs whose matching text files are scanned for operational references."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Installed operational text surfaces scanned mechanically for file-like Agentic Workspace references."
+    },
     "reference_resolution": {
       "type": "object",
       "required": ["installed-local", "package-resource", "optional"],
@@ -85,6 +120,35 @@
       },
       "additionalProperties": false,
       "description": "Canonical interpretation of installed reference kinds."
+    },
+    "no_cli_fallback": {
+      "type": "object",
+      "required": ["entrypoint", "module_map", "forbidden_action_markers", "module_headings", "next_safe_action"],
+      "properties": {
+        "entrypoint": {"type": "string", "description": "Installed startup skill used as the no-CLI fallback entrypoint."},
+        "module_map": {"type": "string", "description": "Installed module map used to route selected modules without the CLI."},
+        "forbidden_action_markers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1},
+          "description": "Markers whose presence proves the entrypoint forbids unsafe fallback execution."
+        },
+        "module_headings": {
+          "type": "object",
+          "required": ["memory", "planning", "verification"],
+          "properties": {
+            "memory": {"type": "string", "minLength": 1, "description": "Heading that proves memory routing is installed."},
+            "planning": {"type": "string", "minLength": 1, "description": "Heading that proves planning routing is installed."},
+            "verification": {"type": "string", "minLength": 1, "description": "Heading that proves verification routing is installed."}
+          },
+          "additionalProperties": false,
+          "description": "Expected module-map heading for every selectable module."
+        },
+        "next_safe_action": {"type": "string", "minLength": 1, "description": "Stable action returned when the installed CLI is unavailable."}
+      },
+      "additionalProperties": false,
+      "description": "Content-level fallback boundary exercised from installed files with the CLI unavailable."
     },
     "system_intent_mirror_kind": {
       "type": "string",
@@ -145,6 +209,14 @@
         "description": "One entry in the mixed agent local override fields list."
       },
       "description": "Ordered mixed agent local override fields entries used by this contract."
+    }
+  },
+  "$defs": {
+    "surfacePaths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string"}
     }
   },
   "additionalProperties": false,

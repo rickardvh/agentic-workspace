@@ -66,6 +66,16 @@ Compatibility alias:
 agentic-memory report --target . --format json
 ```
 
+## Verification
+
+Verification owns durable proof strategy and evidence interpretation when that optional module is installed:
+
+- `.agentic-workspace/verification/manifest.toml`
+- `.agentic-workspace/verification/proof-strategy.toml`
+- scenario, protocol, proof-route, and evidence-bundle policy
+
+When the CLI is unavailable, inspect only those installed files needed by the current proof boundary and do not mutate managed state by hand.
+
 ## Generated References
 
 Generated reference docs explain exact fields and structured outputs. Use them after the conceptual owner is clear:

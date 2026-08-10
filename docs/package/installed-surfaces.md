@@ -19,7 +19,9 @@ The package keeps `AGENTS.md` thin. Durable rules and structured state live unde
 
 Bootstrap uses the necessary-surface footprint by default. It creates shared config/startup, a compact adoption receipt, selected module state anchors, the routed skills, and the four self-contained fallback documents those skills require (`module-map`, `workspace-config-contract`, `jumpstart-contract`, and `setup-findings-contract`). It preserves durable pre-existing local-mode Planning, Memory, and Verification state. Other generic package payload remains package-owned and is read from the installed package, dev dependency, editable install, or source checkout at runtime. `--mirror-payload` is the explicit opt-in for checking in the complete bundled docs, templates, schemas, payload provenance, and upgrade-source provenance.
 
-`src/agentic_workspace/contracts/workspace_surfaces.json` is the canonical installed-surface and required-reference graph. The source/payload checker evaluates both footprint profiles across every supported module combination; a surviving required reference must resolve locally, use a stable package-resource identifier, or declare a complete optional degraded behavior.
+`src/agentic_workspace/contracts/workspace_surfaces.json` is the canonical installed-surface and required-reference graph. Module-contributed host paths are first-class, so every profile/module cell receives its own installed source set rather than a copied profile-level result. The checker also scans installed operational skills and docs for file-like `.agentic-workspace` references and rejects any discovered edge missing from the graph. Human file references, stable package-resource identifiers, and optional degraded behavior remain distinct resolution classes.
+
+The no-CLI proof installs every supported module combination into a clean host with no executable entrypoint, reads only the installed startup skill and module map, and requires the same forbidden-action and next-safe-action boundary without network access. Removing the required fallback target makes the affected black-box case fail.
 
 ## External Integration Boundary
 
