@@ -19133,6 +19133,89 @@ def _closeout_continuation_conflict(
     }
 
 
+def _closeout_owner_snapshot(
+    *, result: InstallResult, target_root: Path, record_path: Path, record: Mapping[str, Any], plan: str
+) -> bytes | None:
+    owner_id = str(record.get("id", "")).strip() or plan
+    if not _guard_feature_branch_integration_mutation(
+        result,
+        target_root=target_root,
+        subject_path=record_path,
+        owner_id=owner_id,
+        owner_ref=record_path.relative_to(target_root).as_posix(),
+        operation="planning closeout",
+        requested_transition="archive-owner",
+    ):
+        return None
+    if not _guard_pending_integration_owner_mutation(
+        result,
+        target_root=target_root,
+        owner_path=record_path,
+        owner_id=owner_id,
+        operation="planning closeout",
+    ):
+        return None
+    return record_path.read_bytes()
+
+
+def _run_closeout_archive(
+    plan: str,
+    target_root: Path,
+    record_path: Path,
+    original_record_bytes: bytes,
+    *,
+    dry_run: bool,
+    closure_decision: str,
+    intent_satisfied: str | None,
+    continuation_owner: str,
+    proof: str,
+    normalized_claim: str,
+    normalized_intent: str,
+    retain_archive: bool,
+) -> InstallResult:
+    try:
+        return archive_execplan(
+            plan,
+            target=target_root,
+            dry_run=dry_run,
+            apply_cleanup=True,
+            prepare_closeout=True,
+            closure_decision=closure_decision,
+            intent_satisfied=intent_satisfied,
+            unsolved_intent=continuation_owner if closure_decision == "archive-but-keep-lane-open" else None,
+            intent_evidence=proof,
+            closure_reason=f"planning closeout accepted a {normalized_claim} claim with intent-status {normalized_intent}.",
+            closure_evidence=proof,
+            reopen_trigger=(
+                f"Reopen when {continuation_owner} activates a fresh bounded slice."
+                if closure_decision == "archive-but-keep-lane-open"
+                else "None unless new evidence shows the closeout was incomplete."
+            ),
+            retain_archive=retain_archive,
+        )
+    except Exception:
+        record_path.parent.mkdir(parents=True, exist_ok=True)
+        record_path.write_bytes(original_record_bytes)
+        raise
+
+
+_NONBLOCKING_CLOSEOUT_RETENTION_WARNINGS = frozenset(
+    {"archive_retention_skipped_by_size_guardrail", "closeout_evidence_retention_skipped_by_size_guardrail"}
+)
+
+
+def _rollback_rejected_closeout_archive(
+    result: InstallResult, archive_result: InstallResult, record_path: Path, original_record_bytes: bytes
+) -> None:
+    archive_blocked = any(
+        str(warning.get("warning_class", "")) not in _NONBLOCKING_CLOSEOUT_RETENTION_WARNINGS for warning in archive_result.warnings
+    ) or any(action.kind == "manual review" for action in archive_result.actions)
+    if archive_blocked:
+        record_path.parent.mkdir(parents=True, exist_ok=True)
+        record_path.write_bytes(original_record_bytes)
+        result.add("rolled back", record_path, "restored pre-closeout owner state after archive admission rejected the transaction")
+
+
 def closeout_execplan(
     plan: str,
     *,
@@ -19188,26 +19271,11 @@ def closeout_execplan(
     if record is None:
         result.add("manual review", record_path, "planning closeout requires a canonical .plan.json record")
         return result
-    owner_id = str(record.get("id", "")).strip() or plan
-    if not _guard_feature_branch_integration_mutation(
-        result,
-        target_root=target_root,
-        subject_path=record_path,
-        owner_id=owner_id,
-        owner_ref=record_path.relative_to(target_root).as_posix(),
-        operation="planning closeout",
-        requested_transition="archive-owner",
-    ):
+    original_record_bytes = _closeout_owner_snapshot(
+        result=result, target_root=target_root, record_path=record_path, record=record, plan=plan
+    )
+    if original_record_bytes is None:
         return result
-    if not _guard_pending_integration_owner_mutation(
-        result,
-        target_root=target_root,
-        owner_path=record_path,
-        owner_id=owner_id,
-        operation="planning closeout",
-    ):
-        return result
-    original_record_bytes = record_path.read_bytes()
 
     continuation_conflict = _closeout_continuation_conflict(
         record=record,
@@ -19619,46 +19687,28 @@ def closeout_execplan(
         _write_execplan_record(record_path=record_path, record=record, render_markdown=plan_path != record_path)
         result.add("updated", record_path, "recorded closeout residue and proof inputs")
 
-    try:
-        archive_result = archive_execplan(
-            plan,
-            target=target_root,
-            dry_run=dry_run,
-            apply_cleanup=True,
-            prepare_closeout=True,
-            closure_decision=closure_decision,
-            intent_satisfied=intent_satisfied,
-            unsolved_intent=continuation_owner if closure_decision == "archive-but-keep-lane-open" else None,
-            intent_evidence=proof,
-            closure_reason=f"planning closeout accepted a {normalized_claim} claim with intent-status {normalized_intent}.",
-            closure_evidence=proof,
-            reopen_trigger=(
-                f"Reopen when {continuation_owner} activates a fresh bounded slice."
-                if closure_decision == "archive-but-keep-lane-open"
-                else "None unless new evidence shows the closeout was incomplete."
-            ),
-            retain_archive=retain_archive,
-        )
-    except Exception:
-        record_path.parent.mkdir(parents=True, exist_ok=True)
-        record_path.write_bytes(original_record_bytes)
-        raise
-    retention_skip_warning_classes = {
-        "archive_retention_skipped_by_size_guardrail",
-        "closeout_evidence_retention_skipped_by_size_guardrail",
-    }
-    archive_blocked = any(
-        str(warning.get("warning_class", "")) not in retention_skip_warning_classes for warning in archive_result.warnings
-    ) or any(action.kind == "manual review" for action in archive_result.actions)
-    if archive_blocked:
-        record_path.parent.mkdir(parents=True, exist_ok=True)
-        record_path.write_bytes(original_record_bytes)
-        result.add("rolled back", record_path, "restored pre-closeout owner state after archive admission rejected the transaction")
+    archive_result = _run_closeout_archive(
+        plan,
+        target_root,
+        record_path,
+        original_record_bytes,
+        dry_run=dry_run,
+        closure_decision=closure_decision,
+        intent_satisfied=intent_satisfied,
+        continuation_owner=continuation_owner,
+        proof=proof,
+        normalized_claim=normalized_claim,
+        normalized_intent=normalized_intent,
+        retain_archive=retain_archive,
+    )
+    _rollback_rejected_closeout_archive(result, archive_result, record_path, original_record_bytes)
     result.actions.extend(archive_result.actions)
     result.warnings.extend(archive_result.warnings)
-    retention_skipped = any(str(warning.get("warning_class", "")) in retention_skip_warning_classes for warning in result.warnings)
+    retention_skipped = any(
+        str(warning.get("warning_class", "")) in _NONBLOCKING_CLOSEOUT_RETENTION_WARNINGS for warning in result.warnings
+    )
     blocking_warnings = [
-        warning for warning in result.warnings if str(warning.get("warning_class", "")) not in retention_skip_warning_classes
+        warning for warning in result.warnings if str(warning.get("warning_class", "")) not in _NONBLOCKING_CLOSEOUT_RETENTION_WARNINGS
     ]
     blocked = bool(blocking_warnings) or any(action.kind == "manual review" for action in result.actions)
     larger_intent_close_allowed = normalized_claim in {"lane", "epic"} and closure_decision == "archive-and-close" and not blocked
@@ -20045,7 +20095,57 @@ def _archive_closure_decision_is_valid(
     return True
 
 
-def _archive_execplan_impl(
+class _PlanningArchiveAdmissionRejected(Exception):
+    def __init__(self, result: InstallResult) -> None:
+        self.result = result
+        super().__init__(result.reason_code)
+
+
+def _require_closeout_evidence_retention(
+    *, target_root: Path, closeout_evidence_path: Path, closeout_evidence_record: dict[str, Any], result: InstallResult
+) -> None:
+    warning = _closeout_evidence_size_guardrail_warning(
+        target_root=target_root,
+        destination_record=closeout_evidence_path,
+        record_override=closeout_evidence_record,
+    )
+    if warning is None:
+        return
+    warning["warning_class"] = "closeout_evidence_retention_blocked_by_size_guardrail"
+    result.warnings.append(warning)
+    result.add(
+        "manual review",
+        closeout_evidence_path,
+        "required compact closeout evidence exceeds the structured-file inventory max_bytes guardrail; closeout was not applied",
+    )
+    result.reason_code = "closeout-evidence-retention-required"
+    raise _PlanningArchiveAdmissionRejected(result)
+
+
+def _atomic_planning_archive(operation: Callable[..., InstallResult]) -> Callable[..., InstallResult]:
+    @wraps(operation)
+    def wrapped(plan: str, *, target: str | Path | None = None, **kwargs: Any) -> InstallResult:
+        target_root = resolve_target_root(target)
+        if bool(kwargs.get("dry_run")):
+            try:
+                return operation(plan, target=target_root, **kwargs)
+            except _PlanningArchiveAdmissionRejected as rejected:
+                return rejected.result
+        snapshot = _planning_archive_transaction_snapshot(target_root)
+        try:
+            return operation(plan, target=target_root, **kwargs)
+        except _PlanningArchiveAdmissionRejected as rejected:
+            _restore_planning_archive_transaction(target_root, snapshot)
+            return rejected.result
+        except Exception:
+            _restore_planning_archive_transaction(target_root, snapshot)
+            raise
+
+    return wrapped
+
+
+@_atomic_planning_archive
+def archive_execplan(
     plan: str,
     *,
     target: str | Path | None = None,
@@ -20703,21 +20803,12 @@ def _archive_execplan_impl(
                 retention_state="archive-retention-skipped" if archive_retention_skipped else "cleanup-distilled-without-full-archive",
             )
         )
-        closeout_evidence_size_warning = _closeout_evidence_size_guardrail_warning(
+        _require_closeout_evidence_retention(
             target_root=target_root,
-            destination_record=closeout_evidence_path,
-            record_override=closeout_evidence_record,
+            closeout_evidence_path=closeout_evidence_path,
+            closeout_evidence_record=closeout_evidence_record,
+            result=result,
         )
-        if closeout_evidence_size_warning is not None:
-            closeout_evidence_size_warning["warning_class"] = "closeout_evidence_retention_blocked_by_size_guardrail"
-            result.warnings.append(closeout_evidence_size_warning)
-            result.add(
-                "manual review",
-                closeout_evidence_path,
-                "required compact closeout evidence exceeds the structured-file inventory max_bytes guardrail; closeout was not applied",
-            )
-            result.reason_code = "closeout-evidence-retention-required"
-            return result
 
     if dry_run:
         _add_closeout_distillation_actions(
@@ -20851,24 +20942,6 @@ def _restore_planning_archive_transaction(target_root: Path, snapshot: dict[Path
     for path, content in snapshot.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
-
-
-@wraps(_archive_execplan_impl)
-def archive_execplan(
-    plan: str,
-    *,
-    target: str | Path | None = None,
-    **kwargs: Any,
-) -> InstallResult:
-    target_root = resolve_target_root(target)
-    if bool(kwargs.get("dry_run")):
-        return _archive_execplan_impl(plan, target=target_root, **kwargs)
-    snapshot = _planning_archive_transaction_snapshot(target_root)
-    try:
-        return _archive_execplan_impl(plan, target=target_root, **kwargs)
-    except Exception:
-        _restore_planning_archive_transaction(target_root, snapshot)
-        raise
 
 
 def _planning_archive_export_root(*, target_root: Path, export_dir: str | Path | None) -> Path:

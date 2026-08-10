@@ -1164,7 +1164,7 @@
     "src/agentic_workspace/workspace_selector_validation.py",
     "uv.lock"
   ],
-  "fingerprint": "d5efb55c1db72b85b64efbcae318a3caa415e4a4cab75f1247caa92ab35070fc",
+  "fingerprint": "a098d93cba19b3fd9129bca98d8c7470703700b928bcf4b0a38dadd1dc6b5bbc",
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
   "git_identity_role": "optional-source-checkout-acceleration",
   "git_index_entries": {
@@ -1841,7 +1841,7 @@
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.uninstall.lifecycle.json": "00d4e498f21df04fb9c55cc783584d69de521046",
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.upgrade.lifecycle.json": "09d668919ea060f22d9d184d29e01a81eb172782",
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.verify-payload.report.json": "9275479126e9db2455273654a2918ca3957a8021",
-    "packages/planning/src/repo_planning_bootstrap/installer.py": "e3630522292d9eaaca86a54d8569b754bf7cec20",
+    "packages/planning/src/repo_planning_bootstrap/installer.py": "100504eeae17452b46395c84f4cd58da6d3ddcf0",
     "packages/planning/src/repo_planning_bootstrap/runtime_projection.py": "7939fb5465d90b4077fb8ee028b1907e9d1a6aa3",
     "packages/verification/src/repo_verification_bootstrap/__init__.py": "e3907ed2815e2d612a03c18d62f9327a10afc673",
     "packages/verification/src/repo_verification_bootstrap/cli.py": "c63348a6174dd9be97b2764c0b8d5d332c45f689",
@@ -2329,7 +2329,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "15eb4f1e9857441637d691bf91e2ab299e0675b0"
   },
-  "git_index_identity": "ec85af1afe2a648d75d437a7cfec57fdd9127e0d0a6aa7fbd4d46febe9c9476d",
+  "git_index_identity": "22b418420ae569ff0e7c9bc32fdea23040579da53463f7124f20fb6035782fa7",
   "identity_role": "canonical-semantic-content",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
