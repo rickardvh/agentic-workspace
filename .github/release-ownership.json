@@ -40,6 +40,14 @@
     "runner": "scripts/check/run_generated_command_package_proof.py --packed-conformance",
     "failure_policy": "missing, stale, mismatched, failed, or unsupported receipts block publication"
   },
+  "support_bearing_promotion": {
+    "policy": ".github/support-bearing-promotion.json",
+    "checker": "scripts/release/support_bearing_promotion.py",
+    "receipt_kind": "agentic-workspace/support-bearing-promotion/v1",
+    "receipt": "support-bearing-promotion.json",
+    "subject": "exact source commit and exact release artifact digests",
+    "failure_policy": "missing, stale, mismatched, failed, or unsupported domain evidence blocks tagging and publication"
+  },
   "semver_labels": [
     "semver:major",
     "semver:minor",
@@ -59,6 +67,8 @@
   ],
   "package_affecting_paths": [
     ".github/release-ownership.json",
+    ".github/rulesets/",
+    ".github/support-bearing-promotion.json",
     ".github/release.yml",
     ".github/workflows/ci.yml",
     ".github/workflows/pr-semver-label.yml",

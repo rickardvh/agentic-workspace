@@ -210,6 +210,12 @@ def test_master_release_workflow_prepares_release_pr_and_only_tags_verified_rele
     assert '-f tag="${{ steps.publisher.outputs.tag }}"' in workflow
     assert '-f source_commit="${{ steps.publisher.outputs.release_commit }}"' in workflow
     assert "softprops/action-gh-release" not in workflow
+    assert "promotion-admission:" in workflow
+    assert "needs: promotion-admission" in workflow
+    assert "support_bearing_promotion.py github-checks" in workflow
+    assert workflow.index("permissions:\n  contents: read") < workflow.index("release-state:")
+    assert workflow.index("promotion-admission:") < workflow.index("contents: write")
+    assert "uv lock --check" in workflow
 
 
 def test_release_publisher_dispatch_heredoc_terminates_at_shell_column_zero() -> None:
@@ -281,6 +287,14 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610" in workflow
     assert "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8" in workflow
     assert "fail_on_unmatched_files: true" in workflow
+    assert "support-bearing-promotion.json" in workflow
+    assert "support_bearing_promotion.py compose" in workflow
+    assert "needs: [promotion-admission, release-runtime-matrix]" in workflow
+    assert 'python: "3.14"' in workflow
+    assert 'python: "3.11"' in workflow
+    assert 'python: "3.13"' in workflow
+    assert "windows-latest" in workflow
+    assert workflow.index("promotion-admission:") < workflow.index("contents: write")
 
 
 def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
@@ -300,6 +314,7 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
             "dist/distribution-install-readiness.json",
             "dist/redistributable-package-readiness.json",
             "dist/security-supply-chain-readiness.json",
+            "dist/support-bearing-promotion.json",
             "dist/agentic-workspace.spdx.json",
             "dist/SHA256SUMS",
             "dist/.gitignore",
@@ -316,9 +331,28 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
         "dist/distribution-install-readiness.json",
         "dist/redistributable-package-readiness.json",
         "dist/security-supply-chain-readiness.json",
+        "dist/support-bearing-promotion.json",
         "dist/agentic-workspace.spdx.json",
         "dist/SHA256SUMS",
     ]
+
+
+def test_ci_required_aggregate_covers_declared_support_and_full_inventory() -> None:
+    workflow = (WORKFLOW_ROOT / "ci.yml").read_text(encoding="utf-8")
+
+    assert "push:\n    branches: [master]" in workflow
+    assert "name: Support-bearing promotion" in workflow
+    assert "needs: [workspace-checks, workspace-package-artifacts, package-checks, declared-runtime-matrix]" in workflow
+    assert "uv run pytest tests -q" in workflow
+    assert "uv lock --check" in workflow
+    assert "uv sync --locked" in workflow
+    assert "windows-latest" in workflow
+    assert 'python: "3.14"' in workflow
+    assert 'python: "3.11"' in workflow
+    assert 'python: "3.13"' in workflow
+    assert 'node: "20"' in workflow
+    assert 'node: "24"' in workflow
+    assert workflow.count("timeout-minutes:") == 5
 
 
 def test_release_notes_classify_compatibility_significant_changes() -> None:

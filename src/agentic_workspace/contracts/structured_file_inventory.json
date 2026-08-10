@@ -278,6 +278,30 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "Release workflows and server-side admission use this checked-in policy as the reviewable support-bearing promotion authority.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The promotion checker validates the required check, runtime matrix, receipt names, and live ruleset binding.",
+      "owner": "release",
+      "pattern": ".github/support-bearing-promotion.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_support_bearing_promotion.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "A reviewable desired-state ruleset keeps live branch protection reproducible and auditable across repository administration changes.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Ruleset fixtures are checked against the live GitHub ruleset shape by support-bearing promotion tests.",
+      "owner": "github-integration",
+      "pattern": ".github/rulesets/*.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_support_bearing_promotion.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "platform-tooling"
+    },
+    {
       "checked_in_justification": "Release automation uses checked-in changesets to derive version bumps, release notes, and pending release PR contents.",
       "editable_by_agents": true,
       "format": "toml",
@@ -625,6 +649,35 @@
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
       "status": "schema-backed",
       "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Branch-safe planning transitions must survive checkout until their requested integration is reviewed and applied.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Feature-branch lifecycle proposals are validated planning records, including proposals retained after integration for audit continuity.",
+      "owner": "planning",
+      "pattern": ".agentic-workspace/planning/integration-proposals/*.integration-proposal.json",
+      "schema_or_validator": ".agentic-workspace/planning/schemas/planning-integration-proposal.schema.json",
+      "status": "schema-backed",
+      "storage_class": "non-reconstructable-decision"
+    },
+    {
+      "checked_in_justification": "Trusted proof receipts bind reusable validation evidence to exact commands, paths, and repository state.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": false,
+      "guardrails": {
+        "max_items": 100,
+        "preferred_refs": ["command", "result", "recorded_at", "repository"],
+        "routed_to": "#2448"
+      },
+      "notes": "Content-addressed proof receipts are admitted by the proof receipt validator before reuse.",
+      "owner": "workspace-proof",
+      "pattern": ".agentic-workspace/proof/receipts/*.json",
+      "schema_or_validator": "validator: uv run python scripts/run_agentic_workspace.py proof --help",
+      "status": "typed-validator-backed",
+      "storage_class": "historical-audit-distillation"
     },
     {
       "checked_in_justification": "Historical proof or review residue retained as distilled audit evidence rather than ordinary startup input.",

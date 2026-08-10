@@ -584,6 +584,7 @@ def test_generated_command_package_proof_all_runs_every_step(monkeypatch, capsys
     assert status == 0
     assert calls == [
         ("generated packages static", [], 12.0, 7),
+        ("ordinary output profile budgets", [], 12.0, 7),
         ("generated packages python conformance", ["--python-conformance"], 12.0, 7),
         ("generated packages python docker conformance", ["--python-docker-conformance", "--require-docker"], 12.0, 7),
         ("generated packages primitive conformance", ["--primitive-conformance"], 12.0, 7),
@@ -592,7 +593,7 @@ def test_generated_command_package_proof_all_runs_every_step(monkeypatch, capsys
         ("generated packages docker", ["--docker", "--require-docker"], 12.0, 7),
         ("generated packages docker conformance", ["--docker-conformance", "--require-docker"], 12.0, 7),
     ]
-    assert "[ok] generated command package proof (8 steps," in capsys.readouterr().out
+    assert "[ok] generated command package proof (9 steps," in capsys.readouterr().out
 
 
 def test_operation_conformance_runner_executes_python_cases(capsys) -> None:

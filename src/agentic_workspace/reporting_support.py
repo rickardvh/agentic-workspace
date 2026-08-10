@@ -836,7 +836,7 @@ def _target_arg_from_payload(payload: dict[str, Any]) -> str:
         return "."
     try:
         relative = os.path.relpath(Path(target).resolve(), Path.cwd().resolve())
-    except OSError:
+    except (OSError, ValueError):
         relative = target
     if relative == ".":
         return "."

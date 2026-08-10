@@ -16,13 +16,108 @@ on:
         type: string
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+  contents: read
+  checks: read
 
 jobs:
-  agentic-workspace-package:
+  promotion-admission:
+    name: Verify exact protected commit
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+      EXPECTED_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_commit || '' }}
+    steps:
+      - name: Checkout exact release subject
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+      - name: Resolve and verify exact source commit checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE_COMMIT="$(git rev-parse HEAD)"
+          if [ -n "${EXPECTED_SOURCE_COMMIT}" ] && [ "${RELEASE_COMMIT}" != "${EXPECTED_SOURCE_COMMIT}" ]; then
+            echo "Release subject ${RELEASE_COMMIT} does not match ${EXPECTED_SOURCE_COMMIT}" >&2
+            exit 1
+          fi
+          python scripts/release/support_bearing_promotion.py github-checks \
+            --repository "${GITHUB_REPOSITORY}" \
+            --commit "${RELEASE_COMMIT}" \
+            --output server-promotion-receipt.json \
+            --wait-seconds 900
+      - name: Upload server promotion receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-server-promotion-receipt
+          path: server-promotion-receipt.json
+          if-no-files-found: error
+
+  release-runtime-matrix:
+    name: Release runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: "3.11"
+            node: "20"
+          - os: ubuntu-latest
+            python: "3.13"
+            node: "24"
+          - os: windows-latest
+            python: "3.14"
+            node: "24"
+    steps:
+      - name: Checkout exact release subject
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Verify lock and complete root inventory
+        run: |
+          uv lock --check
+          uv sync --locked --all-groups
+          uv run pytest tests -q
+          uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
+      - name: Write runtime support receipt
+        shell: bash
+        run: |
+          mkdir -p runtime-receipts
+          python scripts/release/support_bearing_promotion.py runtime-receipt \
+            --commit "$(git rev-parse HEAD)" \
+            --os "${{ matrix.os }}" \
+            --python "${{ matrix.python }}" \
+            --node "${{ matrix.node }}" \
+            --proof "complete root inventory plus generated semantic shard" \
+            --output "runtime-receipts/${{ matrix.os }}-py${{ matrix.python }}-node${{ matrix.node }}.json"
+      - name: Upload runtime support receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: runtime-${{ matrix.os }}-py${{ matrix.python }}-node${{ matrix.node }}
+          path: runtime-receipts/*.json
+          if-no-files-found: error
+
+  agentic-workspace-package:
+    needs: [promotion-admission, release-runtime-matrix]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
       EXPECTED_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_commit || '' }}
@@ -45,6 +140,19 @@ jobs:
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24"
+
+      - name: Download exact-commit promotion receipts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-server-promotion-receipt
+          path: promotion-inputs/server
+
+      - name: Download declared runtime receipts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: runtime-*
+          path: promotion-inputs/runtime
+          merge-multiple: true
 
       - name: Sync workspace dependencies
         run: uv sync --locked --all-groups
@@ -140,6 +248,15 @@ jobs:
           SECURITY_READINESS_COMMAND: uv run python scripts/check/check_security_supply_chain.py --format json --source-identity ${{ github.sha }} --artifact-dir dist --output dist/security-supply-chain-readiness.json
         run: |
           $SECURITY_READINESS_COMMAND
+          python scripts/release/support_bearing_promotion.py compose \
+            --commit "$(git rev-parse HEAD)" \
+            --artifact-dir dist \
+            --server-receipt promotion-inputs/server/server-promotion-receipt.json \
+            --runtime-receipt-dir promotion-inputs/runtime \
+            --semantic-receipt dist/generated-command-conformance-node20.json \
+            --semantic-receipt dist/generated-command-conformance-node24.json \
+            --semantic-receipt dist/generated-command-conformance-node25.json \
+            --output dist/support-bearing-promotion.json
           python - <<'PY'
           import hashlib
           import json
@@ -287,6 +404,13 @@ jobs:
                   "sbom": "agentic-workspace.spdx.json",
                   "provenance": "GitHub artifact attestation over dist/*",
               },
+              "support_bearing_promotion": {
+                  "required": True,
+                  "receipt": "support-bearing-promotion.json",
+                  "source_commit": subprocess.run(
+                      ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+                  ).stdout.strip(),
+              },
           }
           manifest_path = dist / "agentic-workspace-release-manifest.json"
           manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -303,6 +427,11 @@ jobs:
               if not readiness_path.is_file():
                   raise SystemExit(f"Missing package readiness asset: {readiness_asset}")
               checksum_lines.append(f"{sha256(readiness_path)}  {readiness_path.name}")
+          promotion_path = dist / "support-bearing-promotion.json"
+          promotion = json.loads(promotion_path.read_text(encoding="utf-8")) if promotion_path.is_file() else {}
+          if promotion.get("status") != "passed" or promotion.get("source_commit") != manifest["source_commit"]:
+              raise SystemExit("Missing or invalid exact-subject support-bearing promotion result")
+          checksum_lines.append(f"{sha256(promotion_path)}  {promotion_path.name}")
           checksum_lines.append(f"{sha256(manifest_path)}  {manifest_path.name}")
           (dist / "SHA256SUMS").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
           PY
@@ -342,6 +471,7 @@ jobs:
               "agentic-workspace.spdx.json",
               ownership["distribution_identity"]["canonical_install_receipt"],
               ownership["distribution_identity"]["redistributable_receipt"],
+              "support-bearing-promotion.json",
           }
           security = manifest.get("security_supply_chain", {})
           if security.get("required") is not True:
@@ -391,5 +521,6 @@ jobs:
             dist/distribution-install-readiness.json
             dist/redistributable-package-readiness.json
             dist/security-supply-chain-readiness.json
+            dist/support-bearing-promotion.json
             dist/agentic-workspace.spdx.json
           fail_on_unmatched_files: true

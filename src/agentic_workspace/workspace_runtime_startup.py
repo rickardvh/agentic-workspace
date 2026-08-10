@@ -158,7 +158,7 @@ def _startup_command_target_arg(target_root: Path | None) -> str:
         return "."
     try:
         relative = os.path.relpath(target_root.resolve(), Path.cwd().resolve())
-    except OSError:
+    except (OSError, ValueError):
         relative = target_root.as_posix()
     if relative == ".":
         return "."

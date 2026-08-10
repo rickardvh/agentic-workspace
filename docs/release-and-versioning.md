@@ -5,6 +5,14 @@ Agentic Workspace uses coordinated workspace releases. The root
 `agentic-workspace-verification` release together under one semver tag, with both Python
 and TypeScript CLI distributions treated as first-class release artifacts.
 
+## Support-bearing promotion boundary
+
+`master` is protected by a repository ruleset whose required status is the stable `Support-bearing promotion` aggregate from `.github/workflows/ci.yml`. CI also runs on pushes to `master`, so the exact integrated commit receives that server-observed check before release preparation can proceed.
+
+Both release workflows begin with read-only admission jobs. They query GitHub check runs for the exact source commit through `scripts/release/support_bearing_promotion.py`; only a downstream job receives tag, release, pull-request, or dispatch write permissions. Publication additionally composes `support-bearing-promotion.json` from exact-commit server and runtime receipts plus the existing packed-artifact semantic, install, distribution/license, and security receipts. Missing, stale, mismatched, failed, or unsupported evidence fails closed.
+
+The authoritative required check, runtime matrix, Node semantic majors, and receipt names live in `.github/support-bearing-promotion.json`. Domain checkers remain authoritative for their own evidence.
+
 ## Release Goal
 
 The ordinary downstream path should be:
