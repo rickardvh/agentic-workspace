@@ -1,15 +1,18 @@
 {
   "kind": "planning-integration-proposal/v1",
-  "id": "p0-distribution-legal-identity-mark-integrated",
+  "id": "p0-distribution-legal-identity-archive-owner",
   "status": "pending",
   "phase": "integration-pending",
-  "requested_transition": "mark-integrated",
+  "requested_transition": "archive-owner",
   "owner": {
     "id": "p0-distribution-legal-identity",
     "ref": ".agentic-workspace/planning/execplans/p0-distribution-legal-identity.plan.json"
   },
-  "external_ref": "",
-  "proof_refs": [],
+  "external_ref": "2452",
+  "proof_refs": [
+    "uv run pytest tests/test_package_identity.py -q",
+    "uv run ruff check scripts/check/check_package_identity.py tests/test_package_identity.py"
+  ],
   "parent_boundary": "parent and lane remain open unless an independent boundary is satisfied",
   "preserved_invariants": [
     "feature branch does not select current work",
@@ -17,10 +20,10 @@
     "feature branch does not close parent/lane lifecycle truth",
     "integration apply is target-branch authoritative"
   ],
-  "expected_subject_revision": "3cc0f8e8691528af",
-  "expected_planning_revision": "5a1e48fc1465b7d3",
-  "created_at": "2026-08-09T23:13:06.767715Z",
-  "updated_at": "2026-08-09T23:13:06.767715Z",
+  "expected_subject_revision": "9ff44aa131afaca4",
+  "expected_planning_revision": "9b44feca55b86de7",
+  "created_at": "2026-08-10T05:34:34.623653Z",
+  "updated_at": "2026-08-10T05:34:34.623653Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -36,5 +39,5 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "28e18fe8b363b964"
+  "proposal_revision": "e50cbf2f1c92f8c9"
 }

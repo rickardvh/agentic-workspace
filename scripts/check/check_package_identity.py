@@ -60,7 +60,12 @@ def source_identity_errors(root: Path = ROOT) -> list[str]:
         if project.get("license-files") != ["LICENSE"]:
             errors.append(f"{prefix} project.license-files must contain LICENSE")
         urls = project.get("urls", {})
-        for field, identity_field in (("Homepage", "homepage"), ("Repository", "repository"), ("Issues", "issues")):
+        for field, identity_field in (
+            ("Homepage", "homepage"),
+            ("Repository", "repository"),
+            ("Issues", "issues"),
+            ("Support", "support"),
+        ):
             if urls.get(field) != identity.get(identity_field):
                 errors.append(f"{prefix} project.urls.{field} does not match canonical identity")
         if identity.get("maturity_classifier") not in project.get("classifiers", []):
@@ -153,6 +158,7 @@ def artifact_identity_errors(root: Path, dist: Path, *, require_exact_urls: bool
                 f"Project-URL: Homepage, {identity['homepage']}",
                 f"Project-URL: Repository, {identity['repository']}",
                 f"Project-URL: Issues, {identity['issues']}",
+                f"Project-URL: Support, {identity['support']}",
             ):
                 if expected_line not in metadata:
                     errors.append(f"{wheel.name} is missing {expected_line}")
@@ -216,6 +222,20 @@ def write_readiness_receipts(root: Path, dist: Path) -> list[Path]:
         "registry_resolution_used": False,
         "identity": {"source": OWNERSHIP_PATH.as_posix(), "sha256": identity_digest},
     }
+    release_artifacts: list[Path] = []
+    for package in ownership["packages"]:
+        release_artifacts.extend(
+            (
+                _find_one(dist, f"{package['wheel_prefix']}-{version}-*.whl"),
+                _find_one(dist, f"{package['sdist_prefix']}-{version}.tar.gz"),
+            )
+        )
+    for package in ownership["typescript_packages"]:
+        release_artifacts.append(_find_one(dist, f"{package['tarball_prefix']}-{version}.tgz"))
+    artifacts = [
+        {"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()}
+        for artifact in sorted(release_artifacts, key=lambda item: item.name)
+    ]
     redistributable = {
         "kind": "agentic-workspace/redistributable-package-readiness/v1",
         "status": "passed",
@@ -223,12 +243,42 @@ def write_readiness_receipts(root: Path, dist: Path) -> list[Path]:
         "license_spdx": ownership["project_identity"]["license_spdx"],
         "identity_source": OWNERSHIP_PATH.as_posix(),
         "identity_sha256": identity_digest,
-        "artifact_count": len(ownership["packages"]) * 2 + len(ownership["typescript_packages"]),
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
     }
     paths = [dist / distribution["canonical_install_receipt"], dist / distribution["redistributable_receipt"]]
     for path, payload in zip(paths, (install, redistributable), strict=True):
         path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return paths
+
+
+def redistributable_receipt_errors(root: Path, dist: Path) -> list[str]:
+    ownership = _load_json(root / OWNERSHIP_PATH)
+    receipt_path = dist / ownership["distribution_identity"]["redistributable_receipt"]
+    if not receipt_path.is_file():
+        return [f"{receipt_path.name} is missing"]
+    receipt = _load_json(receipt_path)
+    version = _load_pyproject(root / "pyproject.toml")["project"]["version"]
+    expected: list[dict[str, str]] = []
+    try:
+        for package in ownership["packages"]:
+            for artifact in (
+                _find_one(dist, f"{package['wheel_prefix']}-{version}-*.whl"),
+                _find_one(dist, f"{package['sdist_prefix']}-{version}.tar.gz"),
+            ):
+                expected.append({"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()})
+        for package in ownership["typescript_packages"]:
+            artifact = _find_one(dist, f"{package['tarball_prefix']}-{version}.tgz")
+            expected.append({"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()})
+    except ValueError as exc:
+        return [str(exc)]
+    expected.sort(key=lambda item: item["name"])
+    errors: list[str] = []
+    if receipt.get("artifacts") != expected:
+        errors.append(f"{receipt_path.name} does not bind the exact artifact names and sha256 digests")
+    if receipt.get("artifact_count") != len(expected):
+        errors.append(f"{receipt_path.name} artifact_count does not match its exact artifact set")
+    return errors
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -247,6 +297,7 @@ def main(argv: list[str] | None = None) -> int:
         errors.extend(artifact_identity_errors(root, dist, require_exact_urls=args.require_exact_urls))
         if not errors and args.write_receipts:
             receipts = write_readiness_receipts(root, dist)
+            errors.extend(redistributable_receipt_errors(root, dist))
     payload = {
         "kind": "agentic-workspace/package-identity-readiness/v1",
         "status": "passed" if not errors else "failed",

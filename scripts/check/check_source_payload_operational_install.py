@@ -9,8 +9,10 @@ dogfooded memory/planning systems.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import importlib
 import json
+import re
 import sys
 import tomllib
 from pathlib import Path
@@ -38,6 +40,8 @@ SUPPORTED_MODULE_COMBINATIONS = (
     ("planning", "verification"),
     ("memory", "planning", "verification"),
 )
+
+INSTALLED_REFERENCE_PATTERN = re.compile(r"\.agentic-workspace/[A-Za-z0-9_./*-]+\.(?:json|md|toml)")
 
 EXECUTABLE_PAYLOAD_SUFFIXES = {
     ".bat",
@@ -352,6 +356,98 @@ def _planning_checker_duplicate_warnings(*, repo_root: Path) -> list[BoundaryWar
     return warnings
 
 
+def _module_surface_files(manifest: dict[str, object], modules: tuple[str, ...]) -> set[str]:
+    configured = manifest.get("module_surface_files", {})
+    if not isinstance(configured, dict):
+        return set()
+    selected: set[str] = set()
+    for module in modules:
+        values = configured.get(module, [])
+        if isinstance(values, list):
+            selected.update(str(value) for value in values)
+    return selected
+
+
+def _reference_applies(reference: dict[str, object], *, profile: str, modules: tuple[str, ...]) -> bool:
+    profiles = reference.get("profiles", [])
+    required_modules = reference.get("modules", [])
+    return (
+        isinstance(profiles, list)
+        and profile in profiles
+        and isinstance(required_modules, list)
+        and set(str(module) for module in required_modules).issubset(modules)
+    )
+
+
+def _installed_target_available(target: str, available: set[str]) -> bool:
+    if "*" not in target:
+        return target in available
+    return any(fnmatch.fnmatch(candidate, target) for candidate in available)
+
+
+def _discover_operational_references(
+    *, manifest: dict[str, object], payload_root: Path
+) -> set[tuple[str, str]]:
+    discovery = manifest.get("reference_discovery", {})
+    if not isinstance(discovery, dict):
+        return set()
+    globs = discovery.get("source_globs", [])
+    discovered: set[tuple[str, str]] = set()
+    for pattern in globs if isinstance(globs, list) else []:
+        for source_path in sorted(payload_root.glob(str(pattern))):
+            if not source_path.is_file():
+                continue
+            try:
+                text = source_path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            source = source_path.relative_to(payload_root).as_posix()
+            for match in INSTALLED_REFERENCE_PATTERN.findall(text):
+                discovered.add((source, match))
+    return discovered
+
+
+def evaluate_no_cli_fallback(
+    *, host_root: Path, modules: tuple[str, ...], manifest: dict[str, object], cli_available: bool
+) -> dict[str, object]:
+    """Exercise the installed startup fallback using host files only."""
+
+    contract = manifest.get("no_cli_fallback", {})
+    if not isinstance(contract, dict):
+        return {"status": "failed", "errors": ["no_cli_fallback contract is missing"]}
+    if cli_available:
+        return {"status": "not-exercised", "errors": ["CLI must be unavailable for fallback proof"]}
+    entrypoint = str(contract.get("entrypoint", ""))
+    module_map = str(contract.get("module_map", ""))
+    errors: list[str] = []
+    try:
+        startup_text = (host_root / entrypoint).read_text(encoding="utf-8")
+        module_map_text = (host_root / module_map).read_text(encoding="utf-8")
+    except OSError as exc:
+        return {"status": "failed", "errors": [str(exc)]}
+    markers = contract.get("forbidden_action_markers", [])
+    for marker in markers if isinstance(markers, list) else []:
+        if str(marker) not in startup_text:
+            errors.append(f"startup fallback is missing forbidden-action marker: {marker}")
+    module_headings = contract.get("module_headings", {})
+    if isinstance(module_headings, dict):
+        for module in modules:
+            heading = str(module_headings.get(module, ""))
+            if not heading or heading not in module_map_text:
+                errors.append(f"module map is missing selected module boundary: {module}")
+    next_safe_action = str(contract.get("next_safe_action", ""))
+    if not next_safe_action:
+        errors.append("no_cli_fallback.next_safe_action is missing")
+    return {
+        "status": "passed" if not errors else "failed",
+        "errors": errors,
+        "modules": list(modules),
+        "forbidden_actions": [str(marker) for marker in markers] if isinstance(markers, list) else [],
+        "next_safe_action": next_safe_action,
+        "network_access": "not-required",
+    }
+
+
 def gather_installed_reference_closure(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
     """Validate the canonical installed-reference graph for every footprint/module cell."""
 
@@ -377,31 +473,47 @@ def gather_installed_reference_closure(*, repo_root: Path = REPO_ROOT) -> dict[s
     for relative in sorted(payload_files):
         if not (payload_root / relative).is_file():
             errors.append(f"payload source is missing: {relative}")
+    discovered = _discover_operational_references(manifest=manifest, payload_root=payload_root)
+    declared = {
+        (str(reference.get("source", "")), str(reference.get("target", "")))
+        for reference in references
+        if isinstance(reference, dict)
+    }
+    for source, target in sorted(discovered - declared):
+        errors.append(f"discovered installed reference is missing from required_references: {source} -> {target}")
     matrix: list[dict[str, object]] = []
     for profile in ("necessary-surfaces", "full-mirror"):
-        available = (necessary_files if profile == "necessary-surfaces" else payload_files) | repo_owned
-        cell_gaps: list[dict[str, str]] = []
-        for reference in references if isinstance(references, list) else []:
-            if not isinstance(reference, dict) or profile not in reference.get("profiles", []):
-                continue
-            source = str(reference.get("source", ""))
-            target = str(reference.get("target", ""))
-            kind = str(reference.get("kind", ""))
-            if source not in available:
-                cell_gaps.append({"source": source, "target": target, "reason": "source-absent"})
-            if kind == "installed-local" and target not in available:
-                cell_gaps.append({"source": source, "target": target, "reason": "target-absent"})
-            elif kind == "package-resource" and not target.startswith("package://agentic-workspace/"):
-                cell_gaps.append({"source": source, "target": target, "reason": "invalid-package-resource"})
-            elif kind == "optional" and not str(reference.get("degraded_behavior", "")).strip():
-                cell_gaps.append({"source": source, "target": target, "reason": "missing-degraded-behavior"})
         for modules in SUPPORTED_MODULE_COMBINATIONS:
+            available = (
+                (necessary_files if profile == "necessary-surfaces" else payload_files)
+                | repo_owned
+                | _module_surface_files(manifest, modules)
+            )
+            cell_gaps: list[dict[str, str]] = []
+            applied_references: list[dict[str, object]] = []
+            for reference in references if isinstance(references, list) else []:
+                if not isinstance(reference, dict) or not _reference_applies(reference, profile=profile, modules=modules):
+                    continue
+                source = str(reference.get("source", ""))
+                target = str(reference.get("target", ""))
+                kind = str(reference.get("kind", ""))
+                applied_references.append({"source": source, "target": target, "kind": kind})
+                if source not in available:
+                    cell_gaps.append({"source": source, "target": target, "reason": "source-absent"})
+                if kind == "installed-local" and not _installed_target_available(target, available):
+                    cell_gaps.append({"source": source, "target": target, "reason": "target-absent"})
+                elif kind == "package-resource" and not target.startswith("package://agentic-workspace/"):
+                    cell_gaps.append({"source": source, "target": target, "reason": "invalid-package-resource"})
+                elif kind == "optional" and not str(reference.get("degraded_behavior", "")).strip():
+                    cell_gaps.append({"source": source, "target": target, "reason": "missing-degraded-behavior"})
             matrix.append(
                 {
                     "profile": profile,
                     "modules": list(modules),
                     "status": "passed" if not cell_gaps else "failed",
                     "gaps": list(cell_gaps),
+                    "installed_sources": sorted(available),
+                    "applied_references": applied_references,
                     "no_cli_fallback": "preserved" if not cell_gaps else "blocked",
                 }
             )
@@ -413,7 +525,9 @@ def gather_installed_reference_closure(*, repo_root: Path = REPO_ROOT) -> dict[s
         "manifest": _render_path(manifest_path),
         "errors": errors,
         "matrix": matrix,
-        "rule": "Every surviving required reference resolves locally or through an explicit package-resource/optional contract.",
+        "discovered_reference_count": len(discovered),
+        "declared_reference_count": len(declared),
+        "rule": "Every discovered surviving operational reference is declared and resolves separately in each profile/module cell.",
     }
 
 

@@ -4,6 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -33,18 +35,39 @@ def _write_workspace_surface_manifest(root: Path, *, include_target: bool = True
     manifest = {
         "payload_files": payload_files,
         "necessary_surface_files": payload_files,
+        "module_surface_files": {
+            "memory": [".agentic-workspace/memory/WORKFLOW.md"],
+            "planning": [".agentic-workspace/planning/state.toml"],
+            "verification": [".agentic-workspace/verification/manifest.toml"],
+        },
         "required_references": [
             {
                 "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
                 "target": ".agentic-workspace/docs/module-map.md",
                 "kind": "installed-local",
                 "profiles": ["necessary-surfaces", "full-mirror"],
+                "modules": [],
             }
         ],
+        "reference_discovery": {"source_globs": [".agentic-workspace/skills/**/*.md"]},
+        "no_cli_fallback": {
+            "entrypoint": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+            "module_map": ".agentic-workspace/docs/module-map.md",
+            "forbidden_action_markers": ["do not mutate managed state by hand"],
+            "module_headings": {"memory": "## Memory", "planning": "## Planning", "verification": "## Verification"},
+            "next_safe_action": "continue-from-installed-startup-without-managed-state-mutation",
+        },
     }
     _write(root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json", json.dumps(manifest))
-    for relative in payload_files:
-        _write(root / "src" / "agentic_workspace" / "_payload" / relative, "fixture")
+    _write(
+        root / "src" / "agentic_workspace" / "_payload" / ".agentic-workspace/skills/workspace-startup/SKILL.md",
+        "Use `.agentic-workspace/docs/module-map.md`; do not mutate managed state by hand.",
+    )
+    if include_target:
+        _write(
+            root / "src" / "agentic_workspace" / "_payload" / ".agentic-workspace/docs/module-map.md",
+            "## Memory\n## Planning\n## Verification",
+        )
 
 
 def test_installed_reference_closure_covers_every_footprint_module_cell(tmp_path: Path) -> None:
@@ -56,6 +79,17 @@ def test_installed_reference_closure_covers_every_footprint_module_cell(tmp_path
     assert closure["status"] == "passed"
     assert len(closure["matrix"]) == 16
     assert {cell["no_cli_fallback"] for cell in closure["matrix"]} == {"preserved"}
+    empty_cell = next(cell for cell in closure["matrix"] if cell["profile"] == "necessary-surfaces" and not cell["modules"])
+    all_cell = next(
+        cell
+        for cell in closure["matrix"]
+        if cell["profile"] == "necessary-surfaces" and cell["modules"] == ["memory", "planning", "verification"]
+    )
+    assert set(all_cell["installed_sources"]) - set(empty_cell["installed_sources"]) == {
+        ".agentic-workspace/memory/WORKFLOW.md",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/verification/manifest.toml",
+    }
 
 
 def test_installed_reference_closure_fails_when_required_target_is_missing(tmp_path: Path) -> None:
@@ -66,6 +100,68 @@ def test_installed_reference_closure_fails_when_required_target_is_missing(tmp_p
 
     assert closure["status"] == "failed"
     assert {gap["reason"] for cell in closure["matrix"] for gap in cell["gaps"]} == {"target-absent"}
+
+
+@pytest.mark.parametrize(
+    "modules",
+    list(
+        (
+            (),
+            ("memory",),
+            ("planning",),
+            ("verification",),
+            ("memory", "planning"),
+            ("memory", "verification"),
+            ("planning", "verification"),
+            ("memory", "planning", "verification"),
+        )
+    ),
+)
+def test_no_cli_black_box_preserves_boundaries_for_each_module_combination(tmp_path: Path, modules: tuple[str, ...]) -> None:
+    mod = _load_module(_checker_script_path(), f"source_payload_no_cli_{'_'.join(modules) or 'none'}")
+    source_root = tmp_path / "source"
+    host_root = tmp_path / "clean-host"
+    _write_workspace_surface_manifest(source_root)
+    manifest = json.loads((source_root / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
+    for relative in manifest["necessary_surface_files"]:
+        source = source_root / "src/agentic_workspace/_payload" / relative
+        _write(host_root / relative, source.read_text(encoding="utf-8"))
+    for module in modules:
+        for relative in manifest["module_surface_files"][module]:
+            _write(host_root / relative, f"installed {module} module surface")
+
+    cli_available = (host_root / "bin" / "agentic-workspace").exists()
+    result = mod.evaluate_no_cli_fallback(
+        host_root=host_root,
+        modules=modules,
+        manifest=manifest,
+        cli_available=cli_available,
+    )
+
+    assert result["status"] == "passed"
+    assert result["network_access"] == "not-required"
+    assert result["forbidden_actions"] == ["do not mutate managed state by hand"]
+    assert result["next_safe_action"] == "continue-from-installed-startup-without-managed-state-mutation"
+
+
+def test_no_cli_black_box_fails_when_required_fallback_target_is_removed(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_no_cli_missing_target")
+    source_root = tmp_path / "source"
+    host_root = tmp_path / "clean-host"
+    _write_workspace_surface_manifest(source_root)
+    manifest = json.loads((source_root / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
+    startup = source_root / "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md"
+    _write(host_root / ".agentic-workspace/skills/workspace-startup/SKILL.md", startup.read_text(encoding="utf-8"))
+
+    result = mod.evaluate_no_cli_fallback(
+        host_root=host_root,
+        modules=("memory",),
+        manifest=manifest,
+        cli_available=False,
+    )
+
+    assert result["status"] == "failed"
+    assert any("module-map.md" in error for error in result["errors"])
 
 
 def _write_root_surfaces(tmp_path: Path) -> None:
