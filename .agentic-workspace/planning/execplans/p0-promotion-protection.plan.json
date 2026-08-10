@@ -3,9 +3,9 @@
   "id": "p0-promotion-protection",
   "title": "P0 promotion protection and support-bearing decision",
   "owner_level": "slice",
-  "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 3,
+  "lifecycle": "closed",
+  "phase": "complete",
+  "revision": 4,
   "intent": {
     "outcome": "Make protected master and the release workflows fail closed on one exact-commit, exact-artifact support-bearing promotion result.",
     "non_goals": [
@@ -100,5 +100,68 @@
       "target": "planning://delegation/keep-local",
       "revision": 1
     }
-  ]
+  ],
+  "active_milestone": {
+    "status": "completed",
+    "ready": "ready",
+    "blocked": "none"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "what happened": "Implemented exact-commit server admission, exact-artifact typed promotion composition, support-bearing runtime matrices, protected release authority, and an active master ruleset requiring the aggregate check.",
+    "scope touched": "CI and release workflows, promotion policy/checker/tests, runtime path portability, release metadata, and live GitHub master protection.",
+    "changed surfaces": ".github workflows/policy/ruleset, scripts/release/support_bearing_promotion.py, promotion/release/cross-drive tests, runtime path handling, release docs/changeset, generated receipts.",
+    "validations run": "GitHub Actions run 31344453262 plus local focused, package, semantic, security, generated, conformance, lint, typecheck, lock, and live ruleset proofs",
+    "result for continuation": "continue from GitHub issue #2448 (public protected-commit release rehearsal and remaining release-critical children)",
+    "next step": "promote the next bounded slice from GitHub issue #2448 (public protected-commit release rehearsal and remaining release-critical children)"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Reviewed testing strategy, test inventory, verification manifest/runtime, and proof-route authority. Retained compact behavior-class tests for exact commit, server ruleset, receipt composition, and cross-drive behavior; no pruning was warranted.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=deferred-with-owner keeps continuation explicit.",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "GitHub issue #2448 (public protected-commit release rehearsal and remaining release-critical children)"
+  },
+  "execution_summary": {
+    "outcome delivered": "Issue #2454 is satisfied by green exact-commit CI and live ruleset proof. Parent #2448 remains explicitly owned for the public protected release rehearsal and remaining children.",
+    "validation confirmed": "GitHub Actions run 31344453262 plus local focused, package, semantic, security, generated, conformance, lint, typecheck, lock, and live ruleset proofs",
+    "follow-on routed to": "GitHub issue #2448 (public protected-commit release rehearsal and remaining release-critical children)",
+    "post-work posterity capture": "archive closeout distillation",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "GitHub issue #2448 (public protected-commit release rehearsal and remaining release-critical children)"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status deferred-with-owner.",
+    "evidence carried forward": "GitHub Actions run 31344453262 plus local focused, package, semantic, security, generated, conformance, lint, typecheck, lock, and live ruleset proofs",
+    "reopen trigger": "Reopen when GitHub issue #2448 (public protected-commit release rehearsal and remaining release-critical children) activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to GitHub issue #2448 (public protected-commit release rehearsal and remaining release-critical children).",
+    "motivation worth preserving": "Future agents should continue from GitHub issue #2448 (public protected-commit release rehearsal and remaining release-critical children) rather than rediscover this closeout residue.",
+    "canonical owner now": "GitHub issue #2448 (public protected-commit release rehearsal and remaining release-critical children)",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "proof_report": {
+    "validation proof": "GitHub Actions run 31344453262 plus local focused, package, semantic, security, generated, conformance, lint, typecheck, lock, and live ruleset proofs",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "GitHub Actions run 31344453262 plus local focused, package, semantic, security, generated, conformance, lint, typecheck, lock, and live ruleset proofs"
+  },
+  "intent_continuity": {
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "GitHub issue #2448 (public protected-commit release rehearsal and remaining release-critical children)"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "GitHub issue #2448 (public protected-commit release rehearsal and remaining release-critical children)",
+    "activation trigger": "when the continuation owner promotes the next slice"
+  }
 }

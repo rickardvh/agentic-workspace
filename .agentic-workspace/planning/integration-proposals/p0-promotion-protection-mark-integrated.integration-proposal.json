@@ -1,0 +1,40 @@
+{
+  "kind": "planning-integration-proposal/v1",
+  "id": "p0-promotion-protection-mark-integrated",
+  "status": "pending",
+  "phase": "integration-pending",
+  "requested_transition": "mark-integrated",
+  "owner": {
+    "id": "p0-promotion-protection",
+    "ref": ".agentic-workspace/planning/execplans/p0-promotion-protection.plan.json"
+  },
+  "external_ref": "",
+  "proof_refs": [],
+  "parent_boundary": "parent and lane remain open unless an independent boundary is satisfied",
+  "preserved_invariants": [
+    "feature branch does not select current work",
+    "feature branch does not rewrite aggregate Planning indexes",
+    "feature branch does not close parent/lane lifecycle truth",
+    "integration apply is target-branch authoritative"
+  ],
+  "expected_subject_revision": "29cf8c851c6d5256",
+  "expected_planning_revision": "9ed3c64c9bd929b5",
+  "created_at": "2026-08-10T00:35:30.600227Z",
+  "updated_at": "2026-08-10T00:35:30.600227Z",
+  "authority_boundary": {
+    "proposal": "feature-branch declaration",
+    "integrated_truth": "integration receipt after apply",
+    "non_authority": [
+      "current selection",
+      "aggregate indexes",
+      "unrelated owners",
+      "terminal parent truth"
+    ],
+    "branch_admission": {
+      "status": "inside-git",
+      "branch": "agent/p0-promotion-protection",
+      "phase": "feature"
+    }
+  },
+  "proposal_revision": "4fa6a234d8d3bc6a"
+}
