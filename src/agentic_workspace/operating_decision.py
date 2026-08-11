@@ -1066,6 +1066,66 @@ def derive_context_consequences(*, findings: list[dict[str, Any]], current_stage
     )
 
 
+def context_consequence_effects(consequences: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compile consequences into the ordinary action, proof, closeout, and lifecycle gates."""
+    active = [item for item in consequences if item.get("active") is True]
+    review = [item for item in active if item.get("consequence") == "require-review-now"]
+    narrowed = [item for item in active if item.get("consequence") == "narrow-current-action"]
+    closeout = [item for item in active if item.get("consequence") == "closeout-obligation"]
+    repairs = [item for item in active if item.get("consequence") == "safe-typed-repair"]
+    durable = [item for item in active if item.get("consequence") in {"route-durable-improvement", "defer-with-owner"}]
+    blocked_claims = [
+        *(("unreviewed-context-change",) if review else ()),
+        *(("claims-outside-context-boundary",) if narrowed else ()),
+        *(("full-intent-complete", "issue-closure") if closeout else ()),
+    ]
+    return {
+        "kind": "agentic-workspace/context-consequence-effects/v1",
+        "status": "action-changing" if active else "quiet",
+        "review_gate": {
+            "status": "blocked-pending-review" if review else "not-required",
+            "finding_refs": [str(item["finding_id"]) for item in review],
+        },
+        "action_narrowing": {
+            "status": "narrowed" if narrowed else "unchanged",
+            "finding_refs": [str(item["finding_id"]) for item in narrowed],
+            "rule": "The primary action remains usable only inside each finding's current_task_effect or narrow_claims boundary.",
+        },
+        "blocked_claim_classes": blocked_claims,
+        "closeout_obligations": [
+            {
+                "finding_ref": str(item["finding_id"]),
+                "owner": str(item["owner"]),
+                "required_disposition": "fixed, dismissed, accepted, closed, or resolved",
+            }
+            for item in closeout
+        ],
+        "typed_repairs": [
+            {
+                "finding_ref": str(item["finding_id"]),
+                "owner": str(item["owner"]),
+                "operation_invocation": item["safe_repair"],
+            }
+            for item in repairs
+        ],
+        "durable_dispositions": [
+            {
+                "finding_ref": str(item["finding_id"]),
+                "owner": str(item["owner"]),
+                "route": str(item.get("next_route") or ""),
+                "reentry_trigger": str(item.get("trigger") or ""),
+                "status": "deferred-with-owner" if item.get("consequence") == "defer-with-owner" else "routed",
+                "dedupe_key": str(item["dedupe_key"]),
+            }
+            for item in durable
+        ],
+        "convergence_rule": (
+            "Repeated findings reuse finding_id/dedupe_key; terminal lifecycle states remove gates, while routed or deferred "
+            "findings retain one owner and one re-entry trigger instead of creating duplicate residue."
+        ),
+    }
+
+
 def _specialist_blocker(authority: dict[str, Any], *, default_owner: str, default_repair: str = "") -> dict[str, str] | None:
     blocker = _as_dict(authority.get("operating_blocker") or authority.get("blocker"))
     reason_code = str(blocker.get("reason_code") or authority.get("reason_code") or "").strip()
@@ -1434,6 +1494,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         findings=context_findings,
         current_stage=str(inputs.get("stage") or inputs.get("consumer") or "implement"),
     )
+    context_effects = context_consequence_effects(context_consequences)
     for consequence in context_consequences:
         if consequence["consequence"] == "block-now":
             blockers.append(
@@ -1441,6 +1502,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
                     "reason_code": "context-coverage-gap",
                     "owner": consequence.get("owner", ""),
                     "repair": consequence.get("next_route", ""),
+                }
+            )
+        elif consequence["consequence"] == "require-review-now":
+            blockers.append(
+                {
+                    "reason_code": "conflicting-input",
+                    "owner": consequence.get("owner", ""),
+                    "repair": consequence.get("next_route", "") or "record the owner review disposition",
                 }
             )
     if (
@@ -1509,6 +1578,11 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         status = "actionable" if invocation else "terminal"
         primary_action = action if invocation else {}
         external_blocker = {}
+    if primary_action and context_effects["action_narrowing"]["status"] == "narrowed":
+        primary_action = {
+            **primary_action,
+            "context_constraint": context_effects["action_narrowing"],
+        }
     identity_input = {
         "revisions": revisions,
         "action": invocation,
@@ -1560,6 +1634,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "context_authority_coverage": coverage,
         "context_authority_projection": context_authority_projection,
         "context_consequences": context_consequences,
+        "context_effects": context_effects,
         "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),
@@ -1576,7 +1651,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         if invocation
         else {},
         "external_blocker": external_blocker,
-        "blocked_claim_classes": _as_list(inputs.get("blocked_claim_classes")),
+        "blocked_claim_classes": list(
+            dict.fromkeys(
+                [
+                    *[str(item) for item in _as_list(inputs.get("blocked_claim_classes"))],
+                    *[str(item) for item in context_effects["blocked_claim_classes"]],
+                ]
+            )
+        ),
         "provenance": _as_dict(inputs.get("provenance")),
         "replacement_map": {
             "next_action.command": "display rendering only; operation_invocation owns executable identity",

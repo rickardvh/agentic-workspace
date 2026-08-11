@@ -46,6 +46,23 @@
       }
     },
     "highest_impact_context_consequence": {"type": "object", "description": "The first active or terminal context consequence projected for ordinary consumers, or an empty object."},
+    "context_effects": {
+      "type": "object",
+      "description": "Enforced ordinary action, review, claim, closeout, repair, and durable-lifecycle effects compiled from context consequences.",
+      "required": ["kind", "status", "review_gate", "action_narrowing", "blocked_claim_classes", "closeout_obligations", "typed_repairs", "durable_dispositions", "convergence_rule"],
+      "properties": {
+        "kind": {"const": "agentic-workspace/context-consequence-effects/v1", "description": "Schema discriminator for enforced context effects."},
+        "status": {"enum": ["quiet", "action-changing"], "description": "Whether any active context finding changes ordinary work."},
+        "review_gate": {"type": "object", "description": "Owner-review gate and contributing finding identities."},
+        "action_narrowing": {"type": "object", "description": "Constraint applied to the current primary action and claims."},
+        "blocked_claim_classes": {"type": "array", "items": {"type": "string"}, "description": "Claims forbidden until the owning finding is disposed."},
+        "closeout_obligations": {"type": "array", "items": {"type": "object"}, "description": "Finding dispositions required before broad closeout."},
+        "typed_repairs": {"type": "array", "items": {"type": "object"}, "description": "Revision-bound repair operations supplied by specialist owners."},
+        "durable_dispositions": {"type": "array", "items": {"type": "object"}, "description": "Stable routed or deferred owner destinations and re-entry triggers."},
+        "convergence_rule": {"type": "string", "minLength": 1, "description": "Rule for deduplication, terminal lifecycle, and continuation convergence."}
+      },
+      "additionalProperties": false
+    },
     "current_work": {"type": "object", "description": "Current-work identity admitted into the composed decision."},
     "selected_owner": {"type": "object", "description": "Selected owner identity admitted into the composed decision."},
     "terminal_state": {"type": "string", "description": "Terminal outcome state used for continuation or finalization claims."},

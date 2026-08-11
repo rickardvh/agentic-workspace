@@ -17,6 +17,7 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
+from agentic_workspace.operating_decision import resolve_context_authority_projection
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -381,6 +382,23 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             else command_with_target("agentic-workspace modules --target ./repo --format json"),
         },
         "active_state_summary": payload["active_state_summary"],
+        **(
+            {
+                "context_authority_projection": {
+                    "kind": payload["context_authority_projection"].get("kind"),
+                    "status": payload["context_authority_projection"].get("status"),
+                    "consumer": payload["context_authority_projection"].get("consumer"),
+                    "registry_revision": payload["context_authority_projection"].get("registry_revision"),
+                    "changed_path_count": payload["context_authority_projection"].get("changed_path_count", 0),
+                    "authority_count": len(payload["context_authority_projection"].get("authorities", [])),
+                    "missing_required_surfaces": payload["context_authority_projection"].get("missing_required_surfaces", []),
+                    "repair_operation": payload["context_authority_projection"].get("repair_operation", {}),
+                    "rule": "Use the full selector only when a missing or stale canonical input changes the startup decision.",
+                }
+            }
+            if isinstance(payload.get("context_authority_projection"), dict)
+            else {}
+        ),
         "planning_revision": payload.get("planning_revision", {}),
         "active_plan_reliance": payload.get("active_plan_reliance", {}),
         **({"evaluation_actions": payload["evaluation_actions"]} if "evaluation_actions" in payload else {}),
@@ -730,6 +748,12 @@ def _start_payload(
             target_root=target_root, changed_paths=changed_paths, task_text=task_text, config=config, startup_template=startup_template
         )
         normalized_paths = _normalize_changed_paths(changed_paths)
+        payload["context_authority_projection"] = resolve_context_authority_projection(
+            consumer="start",
+            task=task_text or "",
+            changed_paths=normalized_paths,
+            target_root=target_root,
+        )
         work_threads_dir = target_root / ".agentic-workspace" / "local" / "work-threads"
         if work_threads_dir.is_dir():
             payload["work_threads"] = _local_work_threads_projection(
@@ -1483,6 +1507,12 @@ def _start_payload(
         payload["path_boundaries"] = [
             _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
         ]
+    payload["context_authority_projection"] = resolve_context_authority_projection(
+        consumer="start",
+        task=task_text or "",
+        changed_paths=normalized_paths,
+        target_root=target_root,
+    )
     improvement_pressure = _session_improvement_pressure_payload(
         target_root=target_root,
         config=config,
@@ -1962,6 +1992,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         if read_only_compact_default
         else payload.get("memory_consult", {}),
     }
+    if isinstance(payload.get("context_authority_projection"), dict):
+        context["context_authority_projection"] = payload["context_authority_projection"]
     # The compact default already exposes the complete next-action packet at
     # top level.  For ordinary low-risk work, keeping a second copy of that
     # action plus the full planning-sufficiency record in context spends the

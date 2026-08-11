@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys as _sys
+import tomllib
 
 # ruff: noqa: F403,F405
 from pathlib import Path as _Path
@@ -142,6 +143,26 @@ stale_when = ["src/api/**"]
     assert result.route_summary["routed_note_count"] == 0
     assert result.route_summary["baseline_note_count"] == 0
     assert result.route_summary["confidence"] == "high"
+
+
+def test_checked_in_memory_curation_has_bounded_routes_and_disposition_evidence() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    manifest = tomllib.loads((repo_root / ".agentic-workspace/memory/repo/manifest.toml").read_text(encoding="utf-8"))
+    notes = manifest["notes"]
+
+    assert len(notes) == 6
+    assert set(notes) == {
+        ".agentic-workspace/memory/repo/index.md",
+        ".agentic-workspace/memory/repo/domains/example-runtime-boundary.md",
+        ".agentic-workspace/memory/repo/domains/memory-package-context.md",
+        ".agentic-workspace/memory/repo/domains/planning-package-context.md",
+        ".agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md",
+        ".agentic-workspace/memory/repo/mistakes/recurring-failures.md",
+    }
+    evidence = (repo_root / "docs/maintainer/context-memory-curation.md").read_text(encoding="utf-8")
+    assert "Retained manifest routes | 6" in evidence
+    assert "Removed files | 19" in evidence
+    assert "Proof procedures and active work state are intentionally excluded" in evidence
 
 
 def test_route_memory_uses_stage_as_structured_signal_not_task_prose(tmp_path: Path) -> None:

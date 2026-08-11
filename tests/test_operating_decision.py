@@ -22,6 +22,7 @@ from agentic_workspace.operating_decision import (
     compile_operating_decision,
     context_authority_coverage,
     context_authority_declarations,
+    context_consequence_effects,
     context_surface_admission,
     derive_context_consequences,
     derive_context_gaps,
@@ -544,6 +545,102 @@ def test_context_findings_compile_to_one_stable_consequence_each() -> None:
     }
     assert all(item["dedupe_key"] for item in first)
     assert next(item for item in first if item["finding_id"] == "retired-gap")["active"] is False
+
+
+def test_context_consequences_enforce_review_narrowing_closeout_repair_and_durable_lifecycle() -> None:
+    findings = [
+        {
+            "id": "review-conflict",
+            "finding_class": "intent-conflict",
+            "severity": "material",
+            "owner": "maintainer",
+            "next_route": "review intent",
+        },
+        {
+            "id": "narrow-scope",
+            "severity": "material",
+            "owner": "planning",
+            "current_task_effect": "narrow to docs-only",
+        },
+        {"id": "closeout-gap", "severity": "material", "owner": "verification"},
+        {
+            "id": "repairable-skill",
+            "severity": "material",
+            "owner": "skill registry",
+            "safe_repair": {
+                "operation_id": "workspace.skills.resolve-dependencies",
+                "expected_input_revision": "sha256:current",
+                "idempotency_key": "skills:current",
+            },
+        },
+        {
+            "id": "dogfooding-signal-not-checked",
+            "severity": "material",
+            "owner": "improvement intake",
+            "next_route": "report --section dogfooding_signal_status",
+            "trigger": "before broad closeout",
+        },
+    ]
+    consequences = derive_context_consequences(findings=findings)
+    effects = context_consequence_effects(consequences)
+
+    assert effects["review_gate"] == {"status": "blocked-pending-review", "finding_refs": ["review-conflict"]}
+    assert effects["action_narrowing"]["finding_refs"] == ["narrow-scope"]
+    assert effects["blocked_claim_classes"] == [
+        "unreviewed-context-change",
+        "claims-outside-context-boundary",
+        "full-intent-complete",
+        "issue-closure",
+    ]
+    assert effects["closeout_obligations"][0]["finding_ref"] == "closeout-gap"
+    assert effects["typed_repairs"][0]["operation_invocation"]["operation_id"] == "workspace.skills.resolve-dependencies"
+    assert effects["durable_dispositions"] == [
+        {
+            "finding_ref": "dogfooding-signal-not-checked",
+            "owner": "improvement intake",
+            "route": "report --section dogfooding_signal_status",
+            "reentry_trigger": "before broad closeout",
+            "status": "deferred-with-owner",
+            "dedupe_key": "dogfooding-signal-not-checked:implement:defer-with-owner",
+        }
+    ]
+
+    repeated = context_consequence_effects(derive_context_consequences(findings=findings))
+    assert repeated == effects
+
+    terminal = context_consequence_effects(derive_context_consequences(findings=[{**findings[-1], "lifecycle": "resolved"}]))
+    assert terminal["status"] == "quiet"
+    assert terminal["durable_dispositions"] == []
+
+
+def test_operating_decision_applies_context_review_and_claim_gates() -> None:
+    decision = compile_operating_decision(
+        inputs={
+            "context_findings": [
+                {
+                    "id": "review-conflict",
+                    "finding_class": "intent-conflict",
+                    "severity": "material",
+                    "owner": "maintainer",
+                    "next_route": "review intent",
+                },
+                {"id": "closeout-gap", "severity": "material", "owner": "verification"},
+            ]
+        }
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["external_blocker"] == {
+        "kind": "agentic-workspace/operating-decision-blocker/v1",
+        "reason_code": "conflicting-input",
+        "owner": "maintainer",
+        "repair": "review intent",
+    }
+    assert decision["blocked_claim_classes"] == [
+        "unreviewed-context-change",
+        "full-intent-complete",
+        "issue-closure",
+    ]
 
 
 @pytest.mark.parametrize(
