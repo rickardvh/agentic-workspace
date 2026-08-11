@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import sys
 from contextlib import contextmanager
 
@@ -2535,6 +2536,8 @@ def test_proof_accumulates_repeated_changed_flags(tmp_path: Path, capsys) -> Non
 
 
 def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
+    from agentic_workspace.workspace_runtime_proof import PROOF_TINY_SEMANTIC_BUDGET_BYTES, _proof_tiny_semantic_budget_bytes
+
     assert (
         cli.main(
             [
@@ -2585,7 +2588,36 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert "validation_plan" not in encoded
     assert payload["detail_command_template"]["runnable"] is False
     assert payload["detail_command_template"]["placeholders"] == {"paths": ["generated/workspace/python/cli.py"]}
-    assert len(encoded) < 4500
+    assert len(encoded) > PROOF_TINY_SEMANTIC_BUDGET_BYTES
+    assert _proof_tiny_semantic_budget_bytes(payload) < PROOF_TINY_SEMANTIC_BUDGET_BYTES
+
+
+def test_proof_tiny_semantic_budget_is_invocation_independent_and_fails_on_command_growth(capsys) -> None:
+    from agentic_workspace.workspace_runtime_proof import (
+        PROOF_TINY_SEMANTIC_BUDGET_BYTES,
+        _proof_tiny_semantic_budget_bytes,
+        _proof_tiny_semantic_budget_projection,
+    )
+
+    assert cli.main(["proof", "--changed", "generated/workspace/python/cli.py", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    configured = "uv run --active python scripts/run_agentic_workspace.py"
+    sizes: set[int] = set()
+    for invocation in ("agentic-workspace", "uv run python scripts/run_agentic_workspace.py", configured):
+        rendered = json.loads(json.dumps(payload).replace(configured, invocation))
+        sizes.add(_proof_tiny_semantic_budget_bytes(rendered))
+        assert rendered["detail_command"].startswith(invocation)
+
+    assert len(sizes) == 1
+    normalized = _proof_tiny_semantic_budget_projection(payload)
+    assert str(Path.cwd()) not in json.dumps(normalized)
+
+    grown = copy.deepcopy(payload)
+    baseline_size = _proof_tiny_semantic_budget_bytes(grown)
+    grown["detail_command"] += "".join(f" --changed semantic/path-{index}.py" for index in range(40))
+    grown_size = _proof_tiny_semantic_budget_bytes(grown)
+    assert grown_size > baseline_size
+    assert grown_size >= PROOF_TINY_SEMANTIC_BUDGET_BYTES
 
 
 def test_proof_route_escalation_gate_blocks_generic_broad_fallback(tmp_path: Path, capsys) -> None:
