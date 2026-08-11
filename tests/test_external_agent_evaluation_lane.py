@@ -585,6 +585,11 @@ def test_model_cli_harness_codex_source_checkout_fixture_uses_current_checkout(t
     assert '"agentic-workspace",' in pyproject_text
     assert "[tool.uv.sources]" in pyproject_text
     assert f'agentic-workspace = {{ path = "{REPO_ROOT.as_posix()}", editable = true }}' in pyproject_text
+    projection = payload["shared_evaluation_observation"]
+    assert projection["domain"] == "dogfooding-feedback"
+    assert projection["producer"] == "model-cli-harness.run-suite"
+    assert projection["lifecycle_owner"] == "evaluation.observe"
+    assert projection["delivery_owner"] == "evaluation report/delivery operations"
 
 
 def test_model_cli_harness_includes_setup_jumpstart_discovery_scenario(tmp_path: Path) -> None:

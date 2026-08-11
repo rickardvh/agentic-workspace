@@ -73,21 +73,23 @@
   "acceptance_boundary": "The lane is complete only when the stacked branches/PRs together satisfy #1969 and all child issue acceptance criteria, with tests proving compact packets and skill discovery while preserving proof, residue, next action, and honest closure.",
   "proof_strategy": "Run changed-path AW proof selection, focused CLI tests for start/implement/report/skills packet exposure, summary/doctor planning checks, and a real CLI sample showing compact state-delta packets without broad always-on dumps.",
   "proof_aggregation": {
-    "status": "satisfied",
+    "status": "partial",
     "evidence": [
       "Child issues #1970-#1974 are completed and their PR stack #1976-#1980 is merged.",
-      "Issue #2273 migrated the remaining effectiveness questions to Evaluation and completed the bounded future-evidence audit."
+      "Issue #2273 registered the remaining effectiveness questions with Evaluation and audited current open issues."
     ],
-    "known_gaps": []
+    "known_gaps": [
+      "The #2166 dogfooding trace records present-tense successful-completion-cost gaps in generated actions, report reuse, route budgets, and composed closeout."
+    ]
   },
-  "residual_lane_work": "Longitudinal effectiveness collection continues in Evaluation and does not keep the implementation issue open.",
-  "lane_to_epic_contribution": "The state-delta implementation is complete and its remaining effectiveness questions have a durable Evaluation owner.",
-  "parent_close_permission": "may-close-parent",
+  "residual_lane_work": "Implement or supersede the bounded #2166 successful-completion-cost gaps; Evaluation continues collecting longitudinal effectiveness evidence independently.",
+  "lane_to_epic_contribution": "The initial state-delta mechanism and Evaluation owner exist, but current ordinary-loop cost evidence prevents parent closure.",
+  "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
-    "status": "closed",
-    "summary": "The implementation stack is complete and #2273 moved the only remaining longitudinal questions to the Evaluation lifecycle.",
-    "residual_work": "none for implementation; Evaluation owns later effectiveness observations",
-    "next_owner": "state-delta-operating-loop-1969 evaluation"
+    "status": "open",
+    "summary": "Evaluation owns longitudinal evidence, while #1969 remains open for the concrete #2166 successful-completion-cost gap.",
+    "residual_work": "Generated-action budgets, true decision projections, route-level cost regressions, evidence reuse, and composed closeout remain current implementation work.",
+    "next_owner": "issue-1969 implementation plus state-delta-operating-loop-1969 evaluation"
   },
   "references": [
     {

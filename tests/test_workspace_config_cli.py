@@ -3709,12 +3709,18 @@ def test_note_delegation_outcome_command_writes_local_artifact(tmp_path: Path, c
     payload = json.loads(capsys.readouterr().out)
     assert payload["path"] == ".agentic-workspace/delegation-outcomes.json"
     assert payload["record_count"] == 1
+    projection = payload["shared_evaluation_observation"]
+    assert projection["domain"] == "delegation-outcome"
+    assert projection["source_identity"] == payload["recorded"]["record_id"]
+    assert projection["lifecycle_owner"] == "evaluation.observe"
+    assert projection["delivery_owner"] == "evaluation report/delivery operations"
     artifact = json.loads((target / ".agentic-workspace/delegation-outcomes.json").read_text(encoding="utf-8"))
     assert artifact["kind"] == "agentic-workspace/delegation-outcomes/v1"
     assert artifact["records"][0]["delegation_target"] == "gpt_5_4_mini"
     assert artifact["records"][0]["scope_class"] == "docs-refresh"
     assert artifact["records"][0]["operation"] == "submit"
     assert artifact["records"][0]["record_id"]
+    assert "shared_evaluation_observation" not in artifact
 
 
 def test_note_delegation_outcome_rejects_duplicate_without_lifecycle_transition(tmp_path: Path, capsys) -> None:

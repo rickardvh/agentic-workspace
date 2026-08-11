@@ -139,6 +139,7 @@ from agentic_workspace.current_work_context import (
     startup_route_identity_check,
 )
 from agentic_workspace.evaluation import evaluation_summary
+from agentic_workspace.evaluation_projection import specialist_evaluation_projection
 from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
@@ -53060,17 +53061,24 @@ def _record_delegation_outcome(
         "records": [_record_payload(existing) for existing in retained_after_cap],
     }
     config_lib.write_delegation_outcomes(path=path, payload=updated_payload)
-    shared_observation = {
-        "kind": "agentic-workspace/evaluation-observation-projection/v1",
-        "status": "projection-only",
-        "subject": {"kind": "delegation-target", "id": normalized_target},
-        "criterion": "delegation-outcome",
-        "scope": {"task_class": normalized_task, "scope_class": normalized_scope},
-        "authority": normalized_authority,
-        "evidence_ref": normalized_source_ref,
-        "specialist_record_id": record_id,
-        "rule": "Delegation remains the owner of target-tuning fields; this projection exposes universal evaluation lifecycle facts without creating a second evidence store.",
-    }
+    shared_observation = specialist_evaluation_projection(
+        domain="delegation-outcome",
+        producer="delegation-outcome.append",
+        source_identity=record_id,
+        source_ref=normalized_source_ref,
+        criterion="delegation-outcome",
+        result="supports" if outcome == "success" else "mixed" if outcome == "partial" else "contradicts",
+        facts={
+            "delegation_target": normalized_target,
+            "task_class": normalized_task,
+            "scope_class": normalized_scope,
+            "outcome": outcome,
+            "handoff_sufficiency": handoff_sufficiency,
+            "review_burden": review_burden,
+            "escalation_required": escalation_required,
+            "authority": normalized_authority,
+        },
+    )
     return {
         "kind": DELEGATION_OUTCOMES_KIND,
         "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),

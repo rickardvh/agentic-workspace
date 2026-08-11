@@ -13,6 +13,7 @@ from typing import Any, Callable, Mapping
 
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, mutation_baseline_payload
 from agentic_workspace.config import WorkspaceUsageError
+from agentic_workspace.evaluation_projection import SPECIALIST_EVALUATION_PROJECTION_KIND
 
 EVALUATIONS_KIND = "agentic-workspace/evaluations/v1"
 EVALUATION_SUMMARY_KIND = "agentic-workspace/evaluation-summary/v1"
@@ -1906,6 +1907,44 @@ def append_observation_from_values(*, target_root: Path, values: dict[str, Any])
     )
 
 
+def append_specialist_projection(
+    *,
+    target_root: Path,
+    evaluation_id: str,
+    projection: Mapping[str, Any],
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    """Admit an ordinary specialist producer projection through Evaluation's canonical lifecycle."""
+    if projection.get("kind") != SPECIALIST_EVALUATION_PROJECTION_KIND:
+        raise WorkspaceUsageError("specialist projection kind is invalid.")
+    required = ("observation_id", "domain", "producer", "source_identity", "source_ref", "criterion", "result", "facts")
+    missing = [field for field in required if projection.get(field) in (None, "", {})]
+    if missing:
+        raise WorkspaceUsageError(f"specialist projection is missing required fields: {', '.join(missing)}.")
+    if projection.get("lifecycle_owner") != "evaluation.observe":
+        raise WorkspaceUsageError("specialist projection does not delegate lifecycle ownership to evaluation.observe.")
+    if projection.get("delivery_owner") != "evaluation report/delivery operations":
+        raise WorkspaceUsageError("specialist projection does not delegate delivery ownership to Evaluation.")
+    return append_observation(
+        target_root=target_root,
+        evaluation_id=evaluation_id,
+        criterion=str(projection["criterion"]),
+        result=str(projection["result"]),
+        evidence_refs=[str(projection["source_ref"]), f"specialist-observation:{projection['observation_id']}"],
+        finding=json.dumps(
+            {
+                "domain": projection["domain"],
+                "producer": projection["producer"],
+                "source_identity": projection["source_identity"],
+                "facts": projection["facts"],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+        context=context,
+    )
+
+
 def _pending_collection_identity(
     *,
     action: dict[str, Any],
@@ -2282,9 +2321,9 @@ def _evaluation_specialist_authority(definition: dict[str, Any]) -> dict[str, An
         specialist_domains.append(
             {
                 "domain": "dogfooding-feedback",
-                "authority": "evaluation.observe shared ingress with specialist evidence references",
-                "convergence_status": "shared-observation-ingress",
-                "allowed_role": "append admitted dogfooding observations while specialist taxonomy remains a derived view",
+                "authority": "model-cli-harness result projection admitted through evaluation.observe",
+                "convergence_status": "producer-projection",
+                "allowed_role": "emit canonical dogfooding facts through the shared specialist projection contract",
                 "not_authorized": "evidence-source metadata alone cannot bypass observation admission or own delivery",
             }
         )
@@ -2292,9 +2331,9 @@ def _evaluation_specialist_authority(definition: dict[str, Any]) -> dict[str, An
         specialist_domains.append(
             {
                 "domain": "long-horizon-evaluation",
-                "authority": "evaluation.observe shared ingress with specialist evidence references",
-                "convergence_status": "shared-observation-ingress",
-                "allowed_role": "append admitted long-horizon observations while scenario, rubric, and comparison stay derived views",
+                "authority": "long-horizon episode projection admitted through evaluation.observe",
+                "convergence_status": "producer-projection",
+                "allowed_role": "emit canonical episode and comparison facts through the shared specialist projection contract",
                 "not_authorized": "evidence-source metadata alone cannot bypass observation admission or own delivery",
             }
         )
@@ -2302,8 +2341,8 @@ def _evaluation_specialist_authority(definition: dict[str, Any]) -> dict[str, An
         specialist_domains.append(
             {
                 "domain": "delegation-outcome",
-                "authority": "delegation-outcome.append lossless projection plus evaluation.observe shared ingress",
-                "convergence_status": "lossless-derived-view",
+                "authority": "delegation-outcome.append shared projection admitted through evaluation.observe",
+                "convergence_status": "producer-projection",
                 "allowed_role": "retain target-tuning ownership while projecting universal lifecycle facts and admitting shared observations",
                 "not_authorized": "delegation outcome state cannot own evaluation delivery, conclusion, or completion permission",
             }
@@ -2327,9 +2366,9 @@ def _evaluation_specialist_authority(definition: dict[str, Any]) -> dict[str, An
         "decision_owner": definition.get("decision_owner", {}),
         "specialist_domains": specialist_domains,
         "convergence_rule": (
-            "Specialist domains use evaluation.observe as the admitted shared lifecycle ingress. Dogfooding and long-horizon "
-            "metadata remain derived views; delegation additionally emits a lossless projection from its canonical outcome store. "
-            "No specialist may own shared delivery, conclusion, or completion permission."
+            "Ordinary specialist producers emit the same deterministic projection contract; append_specialist_projection admits "
+            "that contract through evaluation.observe. The producer remains canonical for domain facts, while Evaluation alone "
+            "owns shared lifecycle, delivery, conclusion, and completion permission."
         ),
     }
 

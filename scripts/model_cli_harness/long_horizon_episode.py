@@ -12,6 +12,8 @@ from typing import Any
 
 import run_model_cli_harness as harness
 
+from agentic_workspace.evaluation_projection import specialist_evaluation_projection
+
 EPISODE_KIND = "agentic-workspace/long-horizon-episode/v1"
 EVALUATION_KIND = "agentic-workspace/long-horizon-evaluation/v1"
 EVALUATOR_TEXT_LIMIT = 12_000
@@ -1317,6 +1319,19 @@ def run_episode(
         "modes": mode_results,
         "comparison": _comparison_summary(mode_results, episode=episode),
     }
+    payload["shared_evaluation_observation"] = specialist_evaluation_projection(
+        domain="long-horizon-evaluation",
+        producer="model-cli-harness.run-long-horizon-episode",
+        source_identity=str(episode["id"]),
+        source_ref=f"long-horizon://{episode['id']}",
+        criterion="reconstruction-cost",
+        result=("unknown" if not execute else "supports" if payload["comparison"].get("status") == "complete" else "mixed"),
+        facts={
+            "execute": execute,
+            "mode_count": len(mode_results),
+            "comparison": payload["comparison"],
+        },
+    )
     output_root.mkdir(parents=True, exist_ok=True)
     harness._write_json(output_root / f"{episode['id']}-summary.json", payload)
     return payload

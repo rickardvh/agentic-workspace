@@ -1,7 +1,7 @@
 {
   "algorithm": "sha256",
   "context_rule": "Every listed input is required in source and conformance contexts; Git metadata is auxiliary only.",
-  "file_count": 1161,
+  "file_count": 1162,
   "file_paths": [
     "generated/memory/python/__init__.py",
     "generated/memory/python/_contracts/operations/memory.adopt.lifecycle.json",
@@ -1137,6 +1137,7 @@
     "src/agentic_workspace/current_work_context.py",
     "src/agentic_workspace/doctor.py",
     "src/agentic_workspace/evaluation.py",
+    "src/agentic_workspace/evaluation_projection.py",
     "src/agentic_workspace/generated_operations.py",
     "src/agentic_workspace/improvement_consequence.py",
     "src/agentic_workspace/operating_decision.py",
@@ -1165,7 +1166,7 @@
     "src/agentic_workspace/workspace_selector_validation.py",
     "uv.lock"
   ],
-  "fingerprint": "402d490f9fb8df45ed29665affcaebe6d78503fb9c989ba77f5cf1e3e2e1640f",
+  "fingerprint": "06784e29ad69281e9341f4b8921456d3d1611da6b04b5b8ef7849536ced69787",
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
   "git_identity_role": "optional-source-checkout-acceleration",
   "git_index_entries": {
@@ -1895,8 +1896,8 @@
     "scripts/install_git_hooks.py": "de89c873d801adfa6d84dd8606edaaf8ce6959ba",
     "scripts/model_cli_harness/build_sbx_codex_template.py": "fd91bf5996bc2a95aed30e2645f6ac4e38bb032b",
     "scripts/model_cli_harness/external_agent_evaluation_lane.py": "0b8243bac4a9950d29ae580765db09006a089c7b",
-    "scripts/model_cli_harness/long_horizon_episode.py": "370acd11daa2d3c7705ee1f7c37bfece687098e4",
-    "scripts/model_cli_harness/run_model_cli_harness.py": "e233b3907e33929d98e701ec2abe05147c3e54bd",
+    "scripts/model_cli_harness/long_horizon_episode.py": "58feb37106bf39934a50e7822bd23eb25786a31a",
+    "scripts/model_cli_harness/run_model_cli_harness.py": "4b8c44f6600a21fd58ac4544c9b5c178a422d3d1",
     "scripts/model_cli_harness/run_sbx_codex_adapter.py": "7a9cb0c7a09519d098c093bed72970a83ff24d71",
     "scripts/release/coordinated_release.py": "56cad5743f9d7c8023339932946bee92f01575b2",
     "scripts/release/patch_workspace_release_wheel.py": "45be0eaf32e552ab9d1f1a3f3789767e49e36446",
@@ -2302,7 +2303,8 @@
     "src/agentic_workspace/contracts/workspace_surfaces.json": "4b9e86c4ba8f5f5bc169c22d15b1792ac7eb60bb",
     "src/agentic_workspace/current_work_context.py": "ba75693e0258b9c2b85b2d70b152466247f25097",
     "src/agentic_workspace/doctor.py": "413f8f87c734cba16d858ad270c9102aa75e38f3",
-    "src/agentic_workspace/evaluation.py": "52130acf05be1ed3a3a4ea7510444c301b4dedbc",
+    "src/agentic_workspace/evaluation.py": "b89db87293da85c2cfb58aa7b5d5ee87af88c630",
+    "src/agentic_workspace/evaluation_projection.py": "437f431ba539b641f701ed6d5822b7025e73ea4a",
     "src/agentic_workspace/generated_operations.py": "0702eac0cd348a5e431ca198b45683de0bb6dc16",
     "src/agentic_workspace/improvement_consequence.py": "82693a891043a25a745ab711a8a87ea2251a6134",
     "src/agentic_workspace/operating_decision.py": "e1dabe4667b3196dae9fa5ed8dd418c1256c9c70",
@@ -2320,7 +2322,7 @@
     "src/agentic_workspace/target_evidence.py": "5b256ee0e635dbbd25d72596400ddd3d684ad0cc",
     "src/agentic_workspace/trusted_execution.py": "774c1de6d72f9a17ef05328b7731aff3b7fe99e0",
     "src/agentic_workspace/workspace_output.py": "a156e2513050ee3e2b5183084912a0cddcee43f1",
-    "src/agentic_workspace/workspace_runtime_core.py": "485c695a88631b60c37168b76761077ae7c7b92f",
+    "src/agentic_workspace/workspace_runtime_core.py": "5c7dcfdadb76a1c4066f5154ff6c2138126fb20d",
     "src/agentic_workspace/workspace_runtime_generated_surface.py": "82203eefe65eab1653eaa36ae574ac07a9f96864",
     "src/agentic_workspace/workspace_runtime_implement.py": "a88f729ee60ff05a1a51882b6d8251bf1012f493",
     "src/agentic_workspace/workspace_runtime_planning.py": "603594dca61649fc65069d4a5f4bca7b9bdc80ff",
@@ -2331,7 +2333,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "e6c134bac891622acae570f83dae865d71ff6bbd",
     "uv.lock": "630bbf372bc645b0dd0dac2dfa43e78e5a88c8a5"
   },
-  "git_index_identity": "32f6ccdf45818a86bc8533be317d0bfea91cf507af3120623b869b4dc70cee5f",
+  "git_index_identity": "bc75329a07060831e1caa650da8ec8390855da029d25052c8558b5d0a09de6ff",
   "identity_role": "canonical-semantic-content",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"

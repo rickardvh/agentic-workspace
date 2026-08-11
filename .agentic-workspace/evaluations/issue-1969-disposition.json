@@ -2,16 +2,21 @@
   "kind": "agentic-workspace/evaluation-issue-disposition/v1",
   "issue_ref": "#1969",
   "evaluation_id": "state-delta-operating-loop-1969",
-  "status": "implementation-closed-evaluation-open",
+  "status": "implementation-open-evaluation-open",
   "implementation_disposition": {
-    "present_tense_status": "implemented-in-archived-closeout",
+    "present_tense_status": "gap-remains",
     "evidence_ref": ".agentic-workspace/planning/execplans/archive/issue-1969-state-delta-operating-loop-closeout.plan.json",
-    "closure_boundary": "The implementation closeout is archived; ongoing effectiveness is evaluated longitudinally instead of treated as present-tense implementation proof."
+    "closure_boundary": "The archived child-slice closeout does not satisfy the parent's later successful-completion-cost evidence. #1969 remains open until the bounded #2166 trace gaps are implemented or explicitly superseded by current proof.",
+    "remaining_gap": "The #2166 trace records generated verbose rereads, repeated report scans, non-composed closeout, and missing route-level cost budgets in the ordinary operating loop.",
+    "evidence_refs": [
+      "#1969#issuecomment-4937313161",
+      "#2166"
+    ]
   },
   "evaluation_disposition": {
     "definition_ref": ".agentic-workspace/evaluations.json#state-delta-operating-loop-1969",
-    "current_admission_status": "collecting-after-implementation-closure",
-    "closure_authority": "implementation issue may close because only longitudinal effectiveness evidence remains; later negative conclusions reopen or create bounded work",
+    "current_admission_status": "collecting-with-present-implementation-gap",
+    "closure_authority": "absent-while-present-tense-gap-remains",
     "report_sinks": [
       "#1969",
       "#2273"
@@ -21,9 +26,13 @@
     "material_negative_followup": "create-or-reopen-bounded-follow-up"
   },
   "future_evidence_audit": {
-    "status": "complete",
+    "status": "complete-current-open-issue-snapshot",
     "audited_at": "2026-08-11",
-    "scope": "Open repository issues were inspected for implementation closure blocked only by future, longitudinal, or repeated-session evidence.",
+    "scope": "All 35 issues open at audit time were inspected; candidate language was treated only as a search aid and each issue retained an explicit disposition.",
+    "query": "gh issue list --state open --limit 1000 --json number,title,body,labels",
+    "current_open_issue_refs": [
+      "#2532", "#2481", "#2480", "#2462", "#2460", "#2452", "#2448", "#2443", "#2371", "#2365", "#2363", "#2310", "#2308", "#2307", "#2306", "#2305", "#2304", "#2302", "#2299", "#2296", "#2277", "#2275", "#2273", "#2271", "#2266", "#2263", "#2224", "#2223", "#2222", "#2221", "#2217", "#2216", "#2207", "#2194", "#1969"
+    ],
     "audited_refs": [
       "#1969",
       "#2273"
@@ -31,13 +40,17 @@
     "identified_issues": [
       {
         "issue_ref": "#1969",
-        "implementation_status": "complete",
+        "implementation_status": "gap-remains",
         "evaluation_status": "migrated-to-state-delta-operating-loop-1969",
-        "issue_disposition": "close-while-evaluation-continues"
+        "issue_disposition": "retain-open-with-bounded-implementation-gap"
       }
     ],
-    "other_issue_disposition": "No other open issue was found whose sole remaining acceptance gate was future evidence; issues with present-tense implementation gaps remain open under their existing owners.",
-    "remaining_gap": "none",
+    "non_matches": {
+      "implementation-work-open": ["#2532", "#2481", "#2480", "#2462", "#2460", "#2452", "#2448", "#2443", "#2371", "#2365", "#2363", "#2310", "#2308", "#2307", "#2306", "#2305", "#2304", "#2302", "#2299", "#2296", "#2277", "#2275", "#2271", "#2263", "#2224", "#2223", "#2222", "#2221", "#2217", "#2216", "#2207", "#2194"],
+      "evaluation-capability-or-audit-owner": ["#2273", "#2266"]
+    },
+    "other_issue_disposition": "No open issue has only a future-evidence gate. #1969 has a bounded present-tense implementation gap; all other issues retain implementation or capability owners.",
+    "remaining_gap": "#1969 successful-completion-cost implementation gap",
     "classification_rule": "Present implementation proof remains in closeout records; recurring or delayed effectiveness evidence is collected through the Evaluation lifecycle and later negative findings create or reopen bounded work."
   }
 }
