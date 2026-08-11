@@ -92,6 +92,7 @@ def test_compact_runner_success_writes_machine_readable_result(tmp_path, capsys)
     assert result["dependencies"] == ["sync.root"]
     assert result["proof_purpose"] == "workspace lint proof"
     assert result["log_path"] is None
+    assert "runtime" in result["repository"]
     manifest = json.loads((tmp_path / "scratch" / "validation-results" / "run-1" / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["kind"] == "agentic-workspace/validation-run-manifest/v1"
     assert manifest["result_count"] == 1
