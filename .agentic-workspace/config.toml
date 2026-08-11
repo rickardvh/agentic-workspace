@@ -18,7 +18,9 @@ advanced_features = ["review_artifacts", "external_adapters"]
 # Without --active, uv ignores VIRTUAL_ENV when the worktree has a different
 # project path, creates a second .venv, and buries the first AW decision behind
 # installation output.
-cli_invoke = "uv run --frozen --active python scripts/run_agentic_workspace.py"
+# --frozen/--no-sync prevents a mismatched active environment from being retargeted
+# before the launcher can verify its editable distribution origins.
+cli_invoke = "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py"
 
 [assurance]
 default_level = "medium"
