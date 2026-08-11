@@ -9,6 +9,7 @@ RUN apt-get update \
 
 COPY pyproject.toml ./pyproject.toml
 COPY uv.lock ./uv.lock
+COPY LICENSE ./LICENSE
 COPY tests/test_workspace_packaging.py ./tests/test_workspace_packaging.py
 COPY tests/test_external_consumer_profile.py ./tests/test_external_consumer_profile.py
 COPY tests/fixtures/external_consumer/consumer.py ./tests/fixtures/external_consumer/consumer.py
