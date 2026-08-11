@@ -365,8 +365,13 @@ def startup_route_identity(*, root: Path, task: str = "") -> dict[str, Any]:
     root = root.resolve()
     context = resolve_current_work_context(root=root, task=task)
     selected_id, selected_ref = _selected_planning_owner(root)
+    common_dir_value = _git(root, "rev-parse", "--git-common-dir")
+    common_dir = Path(common_dir_value) if common_dir_value else root / ".git"
+    if not common_dir.is_absolute():
+        common_dir = root / common_dir
     observed = {
         "target": root.as_posix(),
+        "repository": common_dir.resolve().as_posix(),
         "worktree": str(context.get("worktree") or "."),
         "branch": str(context.get("branch") or ""),
         "head": str(context.get("head") or ""),
@@ -378,7 +383,7 @@ def startup_route_identity(*, root: Path, task: str = "") -> dict[str, Any]:
         "kind": "agentic-workspace/startup-route-identity/v1",
         "fingerprint": fingerprint,
         "observed": observed,
-        "comparison_fields": ["target", "worktree", "branch", "head", "current_work", "selected_owner"],
+        "comparison_fields": ["target", "repository", "worktree", "branch", "head", "current_work", "selected_owner"],
         "rule": "A changed field rejects the forecast; re-resolve the authoritative route before adoption or Planning mutation.",
     }
 

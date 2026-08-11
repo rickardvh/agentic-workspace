@@ -8510,6 +8510,145 @@ def test_startup_route_identity_rejects_head_change_before_adoption(tmp_path: Pa
     assert check["changed_fields"] == ["head"]
 
 
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    [
+        ("branch", "feature/other"),
+        ("worktree", "../other-worktree"),
+        ("repository", "/repositories/other.git"),
+        ("target", "/targets/other"),
+        ("current_work", "other-current-work"),
+        ("selected_owner", {"id": "other-owner", "ref": "plans/other.json"}),
+    ],
+)
+def test_startup_route_identity_transition_matrix_rejects_and_leaves_no_residue(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, field: str, replacement: object
+) -> None:
+    from agentic_workspace import current_work_context
+
+    observed = {
+        "target": "/targets/current",
+        "repository": "/repositories/current.git",
+        "worktree": ".",
+        "branch": "main",
+        "head": "a" * 40,
+        "current_work": "current-work",
+        "selected_owner": {"id": "owner", "ref": "plans/owner.json"},
+    }
+    expected = {
+        "kind": "agentic-workspace/startup-route-identity/v1",
+        "fingerprint": "expected",
+        "observed": observed,
+    }
+    changed = {**observed, field: replacement}
+    monkeypatch.setattr(
+        current_work_context,
+        "startup_route_identity",
+        lambda **_kwargs: {
+            "kind": "agentic-workspace/startup-route-identity/v1",
+            "fingerprint": "actual",
+            "observed": changed,
+            "comparison_fields": list(observed),
+        },
+    )
+    before = list(tmp_path.rglob("*"))
+
+    check = current_work_context.startup_route_identity_check(expected=expected, root=tmp_path, task="continue")
+
+    assert check["status"] == "stale-projection-rejected"
+    assert check["changed_fields"] == [field]
+    assert check["action"] == "re-resolve-route"
+    assert list(tmp_path.rglob("*")) == before
+
+
+def test_ordinary_planning_consumers_project_one_route_authority_without_orientation_residue(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    planning_state = tmp_path / ".agentic-workspace" / "planning" / "state.toml"
+    state_before = planning_state.read_bytes()
+    task = "Inspect the current Planning route"
+    commands = [
+        ["start", "--select", "planning_route_decision"],
+        ["implement", "--select", "planning_route_decision"],
+        ["summary", "--select", "planning_route_decision"],
+        ["skills", "--select", "planning_route_decision"],
+    ]
+    routes = []
+    for command in commands:
+        assert cli.main([*command, "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
+        selected = json.loads(capsys.readouterr().out)
+        routes.append(selected["values"]["planning_route_decision"])
+
+    authoritative = [
+        (
+            route["task_relation"],
+            route["owner_posture"],
+            route["required_transition"],
+            route["implementation_allowed"],
+            route["mutation_authority"],
+            route["next_safe_action"]["action"],
+        )
+        for route in routes
+    ]
+    assert authoritative[0] == authoritative[1] == authoritative[2] == authoritative[3]
+    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in routes)
+    assert planning_state.read_bytes() == state_before
+    assert not (tmp_path / ".agentic-workspace" / "local" / "planning-carry.json").exists()
+
+
+def test_startup_profiles_and_skill_projection_share_current_planning_route(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "issue-2275", title = "Planning route parity", status = "active", surface = ".agentic-workspace/planning/execplans/issue-2275.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "issue-2275.plan.json",
+        json.dumps({"id": "issue-2275", "title": "Planning route parity", "refs": ["#2275"]}),
+    )
+    task = "Continue #2275"
+    invocations = [
+        ["start"],
+        ["start", "--verbose"],
+        ["start", "--select", "planning_safety_gate"],
+        ["start", "--select", "planning_route_decision"],
+        ["skills", "--select", "planning_route_decision"],
+    ]
+    routes = []
+    for invocation in invocations:
+        assert cli.main([*invocation, "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        if invocation[-1] == "planning_route_decision":
+            route = payload["values"]["planning_route_decision"]
+        elif invocation[-1] == "planning_safety_gate":
+            route = payload["values"]["planning_safety_gate"]["route_decision"]
+        else:
+            route = payload.get("route_decision") or payload.get("context", {}).get("route_decision")
+            assert route
+        routes.append(route)
+
+    dimensions = [(route["task_relation"], route["owner_posture"], route["required_transition"]) for route in routes]
+    assert len(set(dimensions)) == 1
+    assert dimensions[0] == ("continues-selected-owner", "current", "none")
+    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in routes)
+
+
 def test_decision_point_carry_rejects_stale_startup_route_before_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from agentic_workspace import current_work_context
     from agentic_workspace.workspace_runtime_core import _persist_decision_point_forecast

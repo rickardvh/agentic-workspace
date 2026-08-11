@@ -261,6 +261,8 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
             "proof_expectation",
             "state_update_policy",
             "action_identity",
+            "identity_effects",
+            "consumer_contract",
             "reconciliation_proposal",
             "next_safe_action",
             "binding",
@@ -1668,7 +1670,7 @@ def _hydrate_selected_start_advisory_payloads(
         )
     if _selector_requests(select, "repo_posture"):
         payload["repo_posture"] = _repo_posture_payload(config=config, surface="start", compact=False)
-    if _selector_requests(select, "planning_safety_gate"):
+    if _selector_requests(select, "planning_safety_gate") or _selector_requests(select, "planning_route_decision"):
         execution_posture = _execution_posture_payload(config=config, changed_paths=[], task_text=task_text, target_root=target_root)
         gate = _planning_safety_gate_payload(
             target_root=target_root,
@@ -1687,7 +1689,10 @@ def _hydrate_selected_start_advisory_payloads(
                 cli_invoke=config.cli_invoke,
             )
             gate["route_decision"] = route
-        payload["planning_safety_gate"] = gate
+        if _selector_requests(select, "planning_safety_gate"):
+            payload["planning_safety_gate"] = gate
+        if _selector_requests(select, "planning_route_decision"):
+            payload["planning_route_decision"] = _as_dict(gate.get("route_decision"))
     if _selector_requests(select, "issue_reference_intent"):
         gate = payload.get("planning_safety_gate")
         if not isinstance(gate, dict):

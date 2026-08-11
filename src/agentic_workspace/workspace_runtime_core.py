@@ -55183,6 +55183,7 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
         "agent_aids": payload.get("agent_aids", []),
         "agent_aid_recommendations": payload.get("agent_aid_recommendations", []),
         "agent_aid_source": payload.get("agent_aid_source", {}),
+        "planning_route_decision": payload.get("planning_route_decision", {}),
         "warnings": payload.get("warnings", []),
         "catalog_summary": _skill_catalog_summary_from_payload(payload),
         "inventory_detail": {
@@ -55249,6 +55250,17 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
         "warnings": warnings,
         "agent_aid_warnings": aid_warnings,
         "sources": sources,
+        **(
+            {
+                "planning_route_decision": _summary_planning_route_decision_payload(
+                    target_root=target_root,
+                    task_text=task_text,
+                    changed_paths=[],
+                )
+            }
+            if str(task_text or "").strip()
+            else {}
+        ),
     }
 
 
