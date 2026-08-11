@@ -710,6 +710,9 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         message_economy=projected["message_economy"],
         evidence_bundle=projected["evidence_bundle"],
     )
+    projected["visible_state_delta_response"].pop("expansion_triggers", None)
+    projected["visible_state_delta_response"].pop("omitted_details", None)
+    projected["visible_state_delta_response"]["detail_selector"] = "visible_state_delta_response"
     return projected
 
 
@@ -2567,6 +2570,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             message_economy=selected["message_economy"],
             evidence_bundle=selected["evidence_bundle"],
         )
+        selected["visible_state_delta_response"].pop("expansion_triggers", None)
+        selected["visible_state_delta_response"].pop("omitted_details", None)
+        selected["visible_state_delta_response"]["detail_selector"] = "visible_state_delta_response"
     if isinstance(payload.get("continuation_view"), dict) or isinstance(payload.get("continuation_reorientation"), dict):
         drill_down: dict[str, Any] = selected["drill_down"]
         omitted_detail = drill_down.get("omitted_detail")

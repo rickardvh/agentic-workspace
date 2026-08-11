@@ -12,6 +12,7 @@ import contextlib
 import copy
 import difflib
 import fnmatch
+import functools
 import hashlib
 import importlib
 import importlib.metadata
@@ -3755,38 +3756,7 @@ def _applicable_intent_source_projection_payload(
     external_work_reconciliation = _as_dict(external_work_reconciliation)
     memory_consult = _as_dict(memory_consult)
     sources: list[dict[str, Any]] = []
-
-    def add_source(
-        *,
-        source_id: str,
-        source_type: str,
-        owner_surface: str,
-        authority_class: str,
-        evidence_anchor: str,
-        match_evidence: list[str] | None = None,
-        freshness: str = "current",
-        trust: str = "unverified",
-        next_read: str = "",
-        owner: str = "agent",
-        status: str = "present",
-    ) -> None:
-        if not source_id or any(item.get("id") == source_id for item in sources):
-            return
-        sources.append(
-            {
-                "id": source_id,
-                "source_type": source_type,
-                "owner_surface": owner_surface,
-                "authority_class": authority_class,
-                "freshness": freshness,
-                "trust": trust,
-                "status": status,
-                "structural_match_evidence": _dedupe([str(item) for item in (match_evidence or []) if str(item).strip()]),
-                "evidence_anchor": evidence_anchor,
-                "next_read": next_read,
-                "resolution_owner": owner,
-            }
-        )
+    add_source = functools.partial(_append_applicable_intent_source, sources=sources)
 
     requested_outcome = str(
         active_planning_record.get("requested_outcome")
@@ -4057,6 +4027,42 @@ def _applicable_intent_source_projection_payload(
         ),
         "rule": "Use this projection for broad, architectural, compliance-relevant, or subsystem-affecting work; do not force it onto small direct work.",
     }
+
+
+def _append_applicable_intent_source(
+    *,
+    sources: list[dict[str, Any]],
+    source_id: str,
+    source_type: str,
+    owner_surface: str,
+    authority_class: str,
+    evidence_anchor: str,
+    match_evidence: list[str] | None = None,
+    freshness: str = "current",
+    trust: str = "unverified",
+    next_read: str = "",
+    owner: str = "agent",
+    status: str = "present",
+) -> None:
+    """Append one unique, structurally evidenced applicable-intent source."""
+
+    if not source_id or any(item.get("id") == source_id for item in sources):
+        return
+    sources.append(
+        {
+            "id": source_id,
+            "source_type": source_type,
+            "owner_surface": owner_surface,
+            "authority_class": authority_class,
+            "freshness": freshness,
+            "trust": trust,
+            "status": status,
+            "structural_match_evidence": _dedupe([str(item) for item in (match_evidence or []) if str(item).strip()]),
+            "evidence_anchor": evidence_anchor,
+            "next_read": next_read,
+            "resolution_owner": owner,
+        }
+    )
 
 
 def _assurance_requirements_with_verification(assurance_requirements: dict[str, Any], verification: dict[str, Any]) -> dict[str, Any]:
@@ -46958,12 +46964,7 @@ def _record_proof_receipt_payload(
     receipt_repair_idempotency_key: str = "",
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    command = str(command or "").strip()
-    result = str(result or "").strip()
-    if not command:
-        raise WorkspaceUsageError("--receipt-command is required with --record-receipt.")
-    if not result:
-        raise WorkspaceUsageError("--receipt-result is required with --record-receipt.")
+    command, result = _validated_proof_receipt_inputs(command=command, result=result)
     receipt_path = target_root / PROOF_RECEIPT_RELATIVE_PATH
     receipt: dict[str, Any] = {
         "kind": "agentic-workspace/proof-receipt/v1",
@@ -47227,6 +47228,31 @@ def _record_proof_receipt_payload(
         proof_receipt_result=result,
         dry_run=dry_run,
     )
+    return _proof_receipt_write_result(
+        dry_run=dry_run,
+        receipt=receipt,
+        producer_receipt_ref=producer_receipt_ref,
+        calibration_admission=calibration_admission,
+        proof_reuse_cache=proof_reuse_cache,
+        review_stack_transition=review_stack_transition,
+        repair_retry_ladder=repair_retry_ladder,
+        failure_summary=failure_summary,
+    )
+
+
+def _proof_receipt_write_result(
+    *,
+    dry_run: bool,
+    receipt: dict[str, Any],
+    producer_receipt_ref: str,
+    calibration_admission: dict[str, Any],
+    proof_reuse_cache: dict[str, Any],
+    review_stack_transition: dict[str, Any],
+    repair_retry_ladder: dict[str, Any] | None,
+    failure_summary: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Render the mutation result independently of receipt admission and persistence."""
+
     payload = {
         "kind": "agentic-workspace/proof-receipt-write/v1",
         "status": "dry-run" if dry_run else "written",
@@ -47245,6 +47271,16 @@ def _record_proof_receipt_payload(
     if failure_summary is not None:
         payload["failure_summary"] = failure_summary
     return payload
+
+
+def _validated_proof_receipt_inputs(*, command: str, result: str) -> tuple[str, str]:
+    command = str(command or "").strip()
+    result = str(result or "").strip()
+    if not command:
+        raise WorkspaceUsageError("--receipt-command is required with --record-receipt.")
+    if not result:
+        raise WorkspaceUsageError("--receipt-result is required with --record-receipt.")
+    return command, result
 
 
 def _emit_proof(
