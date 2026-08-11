@@ -138,6 +138,7 @@ from agentic_workspace.current_work_context import (
     startup_route_fingerprint_check,
     startup_route_identity,
     startup_route_identity_check,
+    task_pr_context_refs,
 )
 from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
@@ -33647,34 +33648,7 @@ def _open_issue_intake_payload(
 
 
 def _pr_context_refs_from_task(task_text: str | None) -> list[str]:
-    text = " ".join(str(task_text or "").lower().split())
-    if not text:
-        return []
-    refs = sorted(set(re.findall(r"#\d+\b", text)), key=lambda value: int(value.lstrip("#")))
-    if not refs:
-        return []
-    explicit_pr_refs = {f"#{match}" for match in re.findall(r"\b(?:pr|pull request)\s+#?(\d+)\b", text, flags=re.IGNORECASE)}
-    if explicit_pr_refs:
-        return sorted(explicit_pr_refs, key=lambda value: int(value.lstrip("#")))
-    pr_terms = (
-        " pr ",
-        " pull request",
-        "review",
-        "reviews",
-        "reviewed",
-        "merge conflict",
-        "merge conflicts",
-        "conflict in",
-        "conflicts in",
-        "update pr",
-        "address reviews",
-        "address the reviews",
-        "fix merge",
-    )
-    padded = f" {text} "
-    if any(term in padded for term in pr_terms):
-        return refs
-    return []
+    return task_pr_context_refs(str(task_text or ""))
 
 
 def _issue_reference_intent_payload(*, issue_scope_evidence: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
