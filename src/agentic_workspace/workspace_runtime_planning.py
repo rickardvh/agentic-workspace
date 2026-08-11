@@ -3043,7 +3043,10 @@ def _task_switch_mismatch_evidence(*, active_summary: dict[str, Any], task_text:
     task_terms = _task_switch_terms(task)
     active_terms = _task_switch_terms(active_text)
     task_refs = _task_switch_refs(task)
-    active_refs = _task_switch_refs(active_text)
+    active_refs = sorted(
+        set(_task_switch_refs(active_text))
+        | {str(ref) for ref in active_summary.get("active_owner_refs", []) if isinstance(active_summary.get("active_owner_refs"), list)}
+    )
     shared_terms = [term for term in task_terms if term in set(active_terms)]
     shared_refs = [ref for ref in task_refs if ref in set(active_refs)]
     overlap_signal = "possible-continuation" if shared_refs or len(shared_terms) >= 2 else "low-overlap-explicit-task"
@@ -3058,7 +3061,7 @@ def _task_switch_mismatch_evidence(*, active_summary: dict[str, Any], task_text:
         "active_plan_terms": active_terms[:8],
         "shared_terms": shared_terms[:8],
         "overlap_signal": overlap_signal,
-        "rule": "Overlap evidence is bounded routing support; it does not decide user intent or close active planning.",
+        "rule": "Structured refs from the current task and selected owner are bounded continuation evidence; they do not close active planning.",
     }
 
 

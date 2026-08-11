@@ -1133,6 +1133,91 @@ candidates = []
     assert "route_acknowledgement" not in gate["task_switch_reconciliation"]
 
 
+def test_implement_continues_selected_owner_from_refs_declared_inside_plan(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    plan_path = ".agentic-workspace/planning/execplans/p2-batch.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        f"""
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  {{ id = "p2-batch", title = "P2 batch", status = "active", surface = "{plan_path}" }},
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / plan_path,
+        {
+            "kind": "planning-execplan/v1",
+            "id": "p2-batch",
+            "title": "P2 batch",
+            "scope": {"owned": ["Evaluation issues #2271 and #2273"]},
+        },
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "evaluation.py", "VALUE = 1\n")
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/evaluation.py",
+                plan_path,
+                "--task",
+                "Complete evaluation issues #2271 and #2273",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    gate = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]
+    route = gate["route_decision"]
+    assert route["task_relation"] == "continues-selected-owner"
+    assert route["required_transition"] == "none"
+    assert route["implementation_allowed"] is True
+    assert route["mutation_authority"] == "selected-owner"
+    assert gate["implementation_allowed"] is True
+    assert gate["required_next_action"] == "continue-active-plan"
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/evaluation.py",
+                plan_path,
+                "--task",
+                "Complete evaluation issues #2271 and #2273",
+                "--select",
+                "planning_safety_gate,planning_route_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected = json.loads(capsys.readouterr().out)
+    assert selected.get("missing", []) == []
+    assert selected["values"]["planning_safety_gate"]["implementation_allowed"] is True
+    assert selected["values"]["planning_route_decision"]["task_relation"] == "continues-selected-owner"
+
+
 def test_planning_task_switch_compatibility_packet_has_no_decision_authority() -> None:
     import ast
 

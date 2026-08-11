@@ -252,6 +252,15 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload.setdefault("context", {})["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
         if test_strategy_check_selected:
             payload["test_strategy_check"] = full_payload["test_strategy_check"]
+        if _selector_requests(getattr(args, "select", None), "planning_safety_gate"):
+            full_context = _as_dict(full_payload.get("context"))
+            gate = _as_dict(full_payload.get("planning_safety_gate")) or _as_dict(full_context.get("planning_safety_gate"))
+            payload["planning_safety_gate"] = gate
+            payload.setdefault("context", {})["planning_safety_gate"] = gate
+        if _selector_requests(getattr(args, "select", None), "planning_route_decision"):
+            full_context = _as_dict(full_payload.get("context"))
+            gate = _as_dict(full_payload.get("planning_safety_gate")) or _as_dict(full_context.get("planning_safety_gate"))
+            payload["planning_route_decision"] = _as_dict(gate.get("route_decision"))
         if _selector_requests(getattr(args, "select", None), "proof_route_strategy_preservation"):
             payload["proof_route_strategy_preservation"] = full_payload.get("proof_route_strategy_preservation", {})
         if _selector_requests(getattr(args, "select", None), "proof_route_strategy_consumer_gate"):

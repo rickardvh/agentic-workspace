@@ -32688,6 +32688,17 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
         "active_execplan": active_execplan,
         "planning_status": "present" if active_execplan else "unavailable",
     }
+    if active_execplan:
+        try:
+            owner_path = (target_root / str(active_execplan)).resolve()
+            owner_path.relative_to(target_root.resolve())
+            owner_payload = json.loads(owner_path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError, json.JSONDecodeError):
+            owner_payload = {}
+        if isinstance(owner_payload, dict):
+            owner_text = json.dumps(owner_payload, sort_keys=True)
+            numeric_refs = sorted(set(re.findall(r"#(\d+)", owner_text)))
+            summary["active_owner_refs"] = [ref for number in numeric_refs for ref in (f"#{number}", f"issue-{number}")]
     selected_source = str(_as_dict(owner_admission.get("selected_owner")).get("source") or "") if isinstance(owner_admission, dict) else ""
     if isinstance(owner_admission, dict) and (
         owner_admission.get("status") == "rejected"
