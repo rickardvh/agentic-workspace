@@ -10369,6 +10369,76 @@ def test_start_pr_reference_wording_does_not_route_as_unknown_issue_scope(tmp_pa
     assert payload.get("missing") == ["issue_reference_intent"]
 
 
+@pytest.mark.parametrize("task", ["Branch-sync #2474 into this branch", "Sync branch #2474 before continuing"])
+def test_start_branch_sync_reference_does_not_route_as_unknown_issue_scope(tmp_path: Path, capsys, task: str) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                task,
+                "--select",
+                "planning_safety_gate,issue_reference_intent",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["values"]["planning_safety_gate"]
+    assert gate["issue_refs"] == []
+    assert gate["pr_context"]["refs"] == ["#2474"]
+    assert payload.get("missing") == ["issue_reference_intent"]
+
+
+@pytest.mark.parametrize(
+    ("task", "issue_refs", "pr_refs"),
+    [
+        ("Review issue #123", ["#123"], []),
+        ("Sync branch #2474 for issue #2481", ["#2481"], ["#2474"]),
+        ("Review PR #2474 for issue #2481", ["#2481"], ["#2474"]),
+    ],
+)
+def test_start_classifies_mixed_issue_and_pr_references_per_reference(
+    tmp_path: Path,
+    capsys,
+    task: str,
+    issue_refs: list[str],
+    pr_refs: list[str],
+) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                task,
+                "--select",
+                "planning_safety_gate,issue_reference_intent",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["values"]["planning_safety_gate"]
+    assert gate["issue_refs"] == issue_refs
+    assert gate["pr_context"]["refs"] == pr_refs
+
+
 def test_start_github_comment_report_correction_does_not_force_planning(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
