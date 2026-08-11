@@ -1267,6 +1267,22 @@ def test_current_work_context_explicit_pr_stack_preserves_ordered_refs(tmp_path:
     assert binding["provenance"]["pr_refs"] == "explicit-task"
 
 
+@pytest.mark.parametrize("task", ["Branch-sync #2474 into this branch", "Sync branch #2474 before continuing"])
+def test_current_work_context_branch_sync_binds_pr_without_inventing_issue(tmp_path: Path, monkeypatch, task: str) -> None:
+    target = _target(tmp_path)
+    monkeypatch.setattr(
+        current_work_context,
+        "_git",
+        lambda _root, *args: "repair-branch" if args == ("branch", "--show-current") else "repair-head",
+    )
+
+    binding = current_work_context.resolve_current_work_context(root=target, task=task)
+
+    assert binding["issue_refs"] == []
+    assert binding["pr_refs"] == ["#2474"]
+    assert binding["provenance"]["pr_refs"] == "explicit-task"
+
+
 def test_current_work_context_head_advance_does_not_alone_stale_active_thread(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(

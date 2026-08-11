@@ -213,13 +213,41 @@ def _ordered_refs(values: Iterable[Any]) -> list[str]:
     return refs
 
 
-def _task_pr_refs(task: str) -> list[str]:
-    return _ordered_refs(match.group(1) for match in re.finditer(r"\b(?:PR|pull request)\s*#?(\d+)", task, flags=re.IGNORECASE))
+def task_pr_context_refs(task: str) -> list[str]:
+    """Return numeric refs that task wording identifies as pull-request context."""
+
+    explicit_refs = _ordered_refs(match.group(1) for match in re.finditer(r"\b(?:PR|pull request)\s*#?(\d+)", task, flags=re.IGNORECASE))
+    if explicit_refs:
+        return explicit_refs
+    refs = _ordered_refs(match.group(1) for match in re.finditer(r"#(\d+)", task))
+    if not refs:
+        return []
+    normalized = " ".join(task.lower().split())
+    pr_terms = (
+        " pr ",
+        " pull request",
+        "review",
+        "reviews",
+        "reviewed",
+        "merge conflict",
+        "merge conflicts",
+        "conflict in",
+        "conflicts in",
+        "update pr",
+        "address reviews",
+        "address the reviews",
+        "fix merge",
+        "branch sync",
+        "branch-sync",
+        "sync branch",
+    )
+    padded = f" {normalized} "
+    return refs if any(term in padded for term in pr_terms) else []
 
 
 def _task_issue_refs(task: str) -> list[str]:
-    task_without_pr_refs = re.sub(r"\b(?:PR|pull request)\s*#?\d+", "", task, flags=re.IGNORECASE)
-    return _ordered_refs(match.group(1) for match in re.finditer(r"#(\d+)", task_without_pr_refs))
+    pr_refs = set(task_pr_context_refs(task))
+    return [ref for ref in _ordered_refs(match.group(1) for match in re.finditer(r"#(\d+)", task)) if ref not in pr_refs]
 
 
 def resolve_current_work_context(
@@ -239,7 +267,7 @@ def resolve_current_work_context(
     refs = thread.get("refs", {}) if isinstance(thread, dict) else {}
     issue_refs = _ordered_refs(refs.get("issues", [])) if isinstance(refs, dict) else []
     pr_refs = _ordered_refs(refs.get("prs", [])) if isinstance(refs, dict) else []
-    task_pr_refs = _task_pr_refs(task)
+    task_pr_refs = task_pr_context_refs(task)
     plan_refs = list(dict.fromkeys([*plan_refs, *sorted({f"#{value}" for value in re.findall(r"(?:^|\D)(\d{3,})(?:\D|$)", plan_id)})]))
     conflicts: list[str] = []
     thread_status = str(thread.get("status") or "").strip().lower() if thread else ""
