@@ -6,7 +6,57 @@ from pathlib import Path
 
 import pytest
 
-from repo_verification_bootstrap.runtime_primitives import VerificationUsageError, verification_report_payload
+from repo_verification_bootstrap.runtime_primitives import (
+    VerificationUsageError,
+    validation_result_admission,
+    verification_report_payload,
+)
+
+
+def _validation_result(*, head: str = "head-a", outcome: str = "passed") -> dict[str, object]:
+    return {
+        "kind": "agentic-workspace/validation-constituent-result/v1",
+        "constituent_id": "test.workspace-integration",
+        "command": ["uv", "run", "pytest"],
+        "plan_identity": {"graph_sha256": "plan-graph"},
+        "repository": {"head": head, "tree": "tree-a", "runtime": {"status": "matched"}},
+        "run_id": "run-1",
+        "started_at": "2026-08-11T10:00:00+00:00",
+        "ended_at": "2026-08-11T10:00:04+00:00",
+        "duration_seconds": 4.0,
+        "outcome": outcome,
+        "exit_code": 0 if outcome == "passed" else 1,
+        "result_path": "scratch/validation-results/run-1/test.workspace-integration.json",
+    }
+
+
+def test_validation_result_admission_binds_exact_subject_route_and_cost() -> None:
+    decision = validation_result_admission(record=_validation_result(), current_head="head-a")
+
+    assert decision["status"] == "admitted"
+    bundle = decision["bundle"]
+    assert bundle["proof_route_id"] == "test.workspace-integration"
+    assert bundle["freshness"]["bound_head"] == "head-a"
+    assert bundle["completion_cost"] == {"duration_seconds": 4.0, "rerun": False, "outcome": "passed"}
+    assert bundle["transcript_refs"] == []
+
+
+@pytest.mark.parametrize(
+    ("record", "current_head", "reason"),
+    [
+        (_validation_result(head="old-head"), "head-a", "stale-or-mismatched-subject"),
+        (_validation_result(outcome="failed"), "head-a", "result-not-successful"),
+        ({"kind": "agentic-workspace/validation-constituent-result/v1"}, "head-a", "plan-identity-missing"),
+    ],
+)
+def test_validation_result_admission_rejects_stale_failed_and_partial_records(
+    record: dict[str, object], current_head: str, reason: str
+) -> None:
+    decision = validation_result_admission(record=record, current_head=current_head)
+
+    assert decision["status"] == "rejected"
+    assert reason in decision["reason_codes"]
+    assert "bundle" not in decision
 
 
 def test_verification_report_absent_manifest(tmp_path: Path) -> None:
