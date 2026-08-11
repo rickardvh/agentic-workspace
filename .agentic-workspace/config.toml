@@ -15,10 +15,9 @@ improvement_latitude = "proactive"
 optimization_bias = "agent-efficiency"
 advanced_features = ["review_artifacts", "external_adapters"]
 # Keep a spawned/linked worktree on the caller's already-active environment.
-# Without --active, uv ignores VIRTUAL_ENV when the worktree has a different
-# project path, creates a second .venv, and buries the first AW decision behind
-# installation output.
-cli_invoke = "uv run --active python scripts/run_agentic_workspace.py"
+# --no-sync prevents a mismatched active environment from being retargeted
+# before the launcher can verify its editable distribution origins.
+cli_invoke = "uv run --active --no-sync python scripts/run_agentic_workspace.py"
 
 [assurance]
 default_level = "medium"
