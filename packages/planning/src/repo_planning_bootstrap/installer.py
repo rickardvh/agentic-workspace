@@ -11,7 +11,7 @@ import time
 import tomllib
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
-from functools import wraps
+from functools import partial, wraps
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, cast
 
@@ -14780,23 +14780,17 @@ def apply_integration_proposal(
         result.add("would preserve", target_root / PLANNING_STATE_PATH, "current selection and aggregate indexes")
         return result
 
-    def write_integration() -> None:
-        if updated_owner is not None and owner_path is not None and owner_changed_fields:
-            _write_schema_backed_planning_record(
-                record_path=owner_path,
-                record=updated_owner,
-                schema_path=owner_schema_path,
-            )
-        _write_schema_backed_planning_record(
-            record_path=proposal_path,
-            record=updated_record,
-            schema_path=INTEGRATION_PROPOSAL_SCHEMA_PATH,
-        )
-        _write_schema_backed_planning_record(
-            record_path=receipt_path,
-            record=receipt,
-            schema_path=INTEGRATION_RECEIPT_SCHEMA_PATH,
-        )
+    write_integration = partial(
+        _write_integration_records,
+        updated_owner=updated_owner,
+        owner_path=owner_path,
+        owner_changed_fields=owner_changed_fields,
+        owner_schema_path=owner_schema_path,
+        proposal_path=proposal_path,
+        updated_record=updated_record,
+        receipt_path=receipt_path,
+        receipt=receipt,
+    )
 
     try:
         affected_paths = [path for path in (owner_path if owner_changed_fields else None, proposal_path, receipt_path) if path is not None]
@@ -14812,6 +14806,33 @@ def apply_integration_proposal(
     result.add("preserved", target_root / PLANNING_STATE_PATH, "current selection and aggregate indexes")
     _add_planning_mutation_proof_actions(result)
     return result
+
+
+def _write_integration_records(
+    *,
+    updated_owner: dict[str, Any] | None,
+    owner_path: Path | None,
+    owner_changed_fields: list[str],
+    owner_schema_path: Path,
+    proposal_path: Path,
+    updated_record: dict[str, Any],
+    receipt_path: Path,
+    receipt: dict[str, Any],
+) -> None:
+    """Persist the admitted owner, proposal, and receipt as one atomic write effect."""
+
+    if updated_owner is not None and owner_path is not None and owner_changed_fields:
+        _write_schema_backed_planning_record(record_path=owner_path, record=updated_owner, schema_path=owner_schema_path)
+    _write_schema_backed_planning_record(
+        record_path=proposal_path,
+        record=updated_record,
+        schema_path=INTEGRATION_PROPOSAL_SCHEMA_PATH,
+    )
+    _write_schema_backed_planning_record(
+        record_path=receipt_path,
+        record=receipt,
+        schema_path=INTEGRATION_RECEIPT_SCHEMA_PATH,
+    )
 
 
 def _load_lane_candidate_decomposition(path: Path) -> dict[str, Any] | None:
