@@ -11,7 +11,7 @@ import time
 import tomllib
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
-from functools import wraps
+from functools import partial, wraps
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, cast
 
@@ -2228,6 +2228,48 @@ def planning_summary_query(
     }
 
 
+def _planning_summary_work_items(*, target_root: Path, todo_path: Path, legacy_todo_path: Path, roadmap_path: Path) -> dict[str, Any]:
+    """Resolve active, queued, and roadmap work from the canonical or legacy source."""
+
+    state = _read_state_from_toml(target_root)
+    if state:
+        active_items = _state_active_items(state)
+        queued_items = _state_queued_items(state)
+        return {
+            "state": state,
+            "active_items": active_items,
+            "queued_items": queued_items,
+            "roadmap_lanes": _state_roadmap_lanes(state),
+            "roadmap_candidates": _state_roadmap_candidates(state),
+            "todo_line_count": 0,
+            "todo_item_count": len(active_items) + len(queued_items),
+        }
+    legacy_todo_lines, legacy_todo_items = _read_todo_items(legacy_todo_path)
+    todo_lines, todo_items = (legacy_todo_lines, legacy_todo_items) if legacy_todo_items else _read_todo_items(todo_path)
+    active_items: list[dict[str, Any]] = []
+    queued_items: list[dict[str, Any]] = []
+    for item in todo_items:
+        status = item.fields.get("status", "").lower()
+        projection = {
+            "id": item.fields.get("id", ""),
+            "surface": item.fields.get("surface", ""),
+            "why_now": item.fields.get("why now", ""),
+        }
+        if any(marker in status for marker in ("in-progress", "active", "ongoing")):
+            active_items.append(projection)
+        elif status not in {"completed", "done", "closed"}:
+            queued_items.append({**projection, "status": item.fields.get("status", "")})
+    return {
+        "state": state,
+        "active_items": active_items,
+        "queued_items": queued_items,
+        "roadmap_lanes": _roadmap_candidate_lanes(roadmap_path),
+        "roadmap_candidates": _roadmap_candidates(roadmap_path),
+        "todo_line_count": len(todo_lines),
+        "todo_item_count": len(todo_items),
+    }
+
+
 def planning_summary(
     *,
     target: str | Path | None = None,
@@ -2244,46 +2286,19 @@ def planning_summary(
     execplan_dir = target_root / ".agentic-workspace" / "planning" / "execplans"
     decomposition_dir = target_root / ".agentic-workspace" / "planning" / "decompositions"
 
-    state = _read_state_from_toml(target_root)
-    if state:
-        active_items = _state_active_items(state)
-        queued_items = _state_queued_items(state)
-        roadmap_lanes = _state_roadmap_lanes(state)
-        roadmap_candidates = _state_roadmap_candidates(state)
-        todo_line_count = 0  # We don't have a direct line count for the TOML state
-        todo_item_count = len(active_items) + len(queued_items)
-    else:
-        legacy_todo_lines, legacy_todo_items = _read_todo_items(legacy_todo_path)
-        if legacy_todo_items:
-            todo_lines, todo_items = legacy_todo_lines, legacy_todo_items
-        else:
-            todo_lines, todo_items = _read_todo_items(todo_path)
-        active_items = []
-        queued_items = []
-        for item in todo_items:
-            status = item.fields.get("status", "").lower()
-            if "in-progress" in status or "active" in status or "ongoing" in status:
-                active_items.append(
-                    {
-                        "id": item.fields.get("id", ""),
-                        "surface": item.fields.get("surface", ""),
-                        "why_now": item.fields.get("why now", ""),
-                    }
-                )
-                continue
-            if status not in {"completed", "done", "closed"}:
-                queued_items.append(
-                    {
-                        "id": item.fields.get("id", ""),
-                        "surface": item.fields.get("surface", ""),
-                        "why_now": item.fields.get("why now", ""),
-                        "status": item.fields.get("status", ""),
-                    }
-                )
-        roadmap_lanes = _roadmap_candidate_lanes(roadmap_path)
-        roadmap_candidates = _roadmap_candidates(roadmap_path)
-        todo_line_count = len(todo_lines)
-        todo_item_count = len(todo_items)
+    work_items = _planning_summary_work_items(
+        target_root=target_root,
+        todo_path=todo_path,
+        legacy_todo_path=legacy_todo_path,
+        roadmap_path=roadmap_path,
+    )
+    state = work_items["state"]
+    active_items = work_items["active_items"]
+    queued_items = work_items["queued_items"]
+    roadmap_lanes = work_items["roadmap_lanes"]
+    roadmap_candidates = work_items["roadmap_candidates"]
+    todo_line_count = work_items["todo_line_count"]
+    todo_item_count = work_items["todo_item_count"]
 
     ownership_review = _ownership_review(target_root)
     decomposition_projection = _planning_decomposition_projection(target_root=target_root, decomposition_dir=decomposition_dir)
@@ -3115,18 +3130,9 @@ def _planning_reconciliation_transaction(
     required.  That makes the compiler useful for a merged stack without turning
     provider state into an authority to satisfy wider Planning intent.
     """
-    if apply and proposal_id.strip():
-        requested_id = proposal_id.strip()
-        if not re.fullmatch(r"[0-9a-f]{20}", requested_id):
-            return {"kind": "agentic-planning/reconciliation-transaction/v1", "status": "blocked", "reason": "invalid-proposal-id"}
-        existing_receipt_path = target_root / PLANNING_RECONCILIATION_RECEIPT_ROOT / f"{requested_id}.json"
-        if existing_receipt_path.is_file():
-            receipt = json.loads(existing_receipt_path.read_text(encoding="utf-8"))
-            return {
-                "kind": "agentic-planning/reconciliation-transaction/v1",
-                "status": "already-applied",
-                "receipt": receipt,
-            }
+    prior_result = _reconciliation_prior_apply_result(target_root=target_root, apply=apply, proposal_id=proposal_id)
+    if prior_result is not None:
+        return prior_result
     revision = planning_revision(target_root)
     planning_revision_id = str(revision.get("revision_id") or "")
     cleanup_targets = [
@@ -3407,6 +3413,24 @@ def _planning_reconciliation_transaction(
         "proposal": proposal_payload,
         "receipt": receipt,
         "post_apply": _planning_reconcile_payload(target_root),
+    }
+
+
+def _reconciliation_prior_apply_result(*, target_root: Path, apply: bool, proposal_id: str) -> dict[str, Any] | None:
+    """Validate an apply identifier and return an existing idempotent receipt when present."""
+
+    if not apply or not proposal_id.strip():
+        return None
+    requested_id = proposal_id.strip()
+    if not re.fullmatch(r"[0-9a-f]{20}", requested_id):
+        return {"kind": "agentic-planning/reconciliation-transaction/v1", "status": "blocked", "reason": "invalid-proposal-id"}
+    existing_receipt_path = target_root / PLANNING_RECONCILIATION_RECEIPT_ROOT / f"{requested_id}.json"
+    if not existing_receipt_path.is_file():
+        return None
+    return {
+        "kind": "agentic-planning/reconciliation-transaction/v1",
+        "status": "already-applied",
+        "receipt": json.loads(existing_receipt_path.read_text(encoding="utf-8")),
     }
 
 
@@ -4649,320 +4673,325 @@ def _apply_reconcile_safe_prune(
     }
 
 
-def _planning_summary_schema() -> dict[str, Any]:
-    return {
-        "schema_version": "planning-summary-schema/v1",
-        "canonical_docs": [
-            ".agentic-workspace/docs/execution-flow-contract.md",
-            ".agentic-workspace/docs/system-intent-contract.md",
-            ".agentic-workspace/docs/routing-contract.md",
-            ".agentic-workspace/docs/lifecycle-and-config-contract.md",
-            ".agentic-workspace/docs/extraction-and-discovery-contract.md",
-            ".agentic-workspace/docs/candidate-lanes-contract.md",
-            ".agentic-workspace/docs/context-budget-contract.md",
-            ".agentic-workspace/docs/external-intent-evidence-contract.md",
-            ".agentic-workspace/docs/finished-work-inspection-contract.md",
-            ".agentic-workspace/planning/execplans/README.md",
-            ".agentic-workspace/planning/lanes/README.md",
+_PLANNING_SUMMARY_SCHEMA: dict[str, Any] = {
+    "schema_version": "planning-summary-schema/v1",
+    "canonical_docs": [
+        ".agentic-workspace/docs/execution-flow-contract.md",
+        ".agentic-workspace/docs/system-intent-contract.md",
+        ".agentic-workspace/docs/routing-contract.md",
+        ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+        ".agentic-workspace/docs/extraction-and-discovery-contract.md",
+        ".agentic-workspace/docs/candidate-lanes-contract.md",
+        ".agentic-workspace/docs/context-budget-contract.md",
+        ".agentic-workspace/docs/external-intent-evidence-contract.md",
+        ".agentic-workspace/docs/finished-work-inspection-contract.md",
+        ".agentic-workspace/planning/execplans/README.md",
+        ".agentic-workspace/planning/lanes/README.md",
+    ],
+    "command": "agentic-workspace summary --format json --verbose",
+    "shared_fields": [
+        "kind",
+        "schema",
+        "target_root",
+        "adoption_mode",
+        "todo",
+        "execplans",
+        "machine_first_planning",
+        "decomposition",
+        "lanes",
+        "issue_relations",
+        "integration",
+        "work_maturity",
+        "execution_readiness",
+        "autopilot_loop",
+        "ownership_review",
+        "planning_surface_health",
+        "continuation_view",
+        "planning_record",
+        "active_contract",
+        "resumable_contract",
+        "follow_through_contract",
+        "intent_interpretation_contract",
+        "context_budget_contract",
+        "execution_run_contract",
+        "finished_run_review_contract",
+        "closeout_distillation_contract",
+        "intent_validation_contract",
+        "finished_work_inspection_contract",
+        "hierarchy_contract",
+        "handoff_contract",
+        "system_intent",
+        "roadmap",
+        "warnings",
+        "warning_count",
+    ],
+    "view_fields": {
+        "machine_first_planning": [
+            "status",
+            "canonical_record_extension",
+            "human_view_extension",
+            "active_canonical_count",
+            "active_markdown_fallback_count",
+            "rule",
         ],
-        "command": "agentic-workspace summary --format json --verbose",
-        "shared_fields": [
-            "kind",
-            "schema",
-            "target_root",
-            "adoption_mode",
-            "todo",
-            "execplans",
-            "machine_first_planning",
-            "decomposition",
-            "lanes",
-            "issue_relations",
-            "integration",
-            "work_maturity",
-            "execution_readiness",
-            "autopilot_loop",
-            "ownership_review",
-            "planning_surface_health",
-            "continuation_view",
-            "planning_record",
-            "active_contract",
-            "resumable_contract",
-            "follow_through_contract",
-            "intent_interpretation_contract",
-            "context_budget_contract",
-            "execution_run_contract",
-            "finished_run_review_contract",
-            "closeout_distillation_contract",
-            "intent_validation_contract",
-            "finished_work_inspection_contract",
-            "hierarchy_contract",
-            "handoff_contract",
-            "system_intent",
-            "roadmap",
-            "warnings",
+        "work_maturity": [
+            "active_execplans",
+            "ready_slices",
+            "needs_shaping",
+            "deferred_lanes",
+            "blocked_items",
+            "residue_routing_needed",
+            "counts",
+            "recommended_next_action",
+            "rule",
+        ],
+        "planning_surface_health": [
+            "status",
             "warning_count",
+            "recommended_next_action",
+            "warnings",
         ],
-        "view_fields": {
-            "machine_first_planning": [
-                "status",
-                "canonical_record_extension",
-                "human_view_extension",
-                "active_canonical_count",
-                "active_markdown_fallback_count",
-                "rule",
-            ],
-            "work_maturity": [
-                "active_execplans",
-                "ready_slices",
-                "needs_shaping",
-                "deferred_lanes",
-                "blocked_items",
-                "residue_routing_needed",
-                "counts",
-                "recommended_next_action",
-                "rule",
-            ],
-            "planning_surface_health": [
-                "status",
-                "warning_count",
-                "recommended_next_action",
-                "warnings",
-            ],
-            "planning_record": [
-                "task",
-                "role_metadata",
-                "next_role_needed",
-                "requested_outcome",
-                "hard_constraints",
-                "agent_may_decide",
-                "capability_posture",
-                "execplan_profile",
-                "canonical_core",
-                "references",
-                "review_residue",
-                "post_decomposition_delegation",
-                "next_action",
-                "proof_expectations",
-                "proof_report",
-                "intent_satisfaction",
-                "system_intent_alignment",
-                "closure_check",
-                "required_continuation",
-                "intent_interpretation",
-                "execution_bounds",
-                "stop_conditions",
-                "execution_run",
-                "finished_run_review",
-                "delegation_outcome_feedback",
-                "adaptive_assurance",
-                "traceability_refs",
-                "control_gates",
-                "implementation_blockers",
-                "risk_registry_refs",
-                "invariant_refs",
-                "test_data_policy",
-                "layer_scaffold",
-                "architecture_decision_promotion",
-                "threat_failure_aids",
-                "tool_verification",
-                "escalate_when",
-                "continuation_owner",
-                "touched_scope",
-                "completion_criteria",
-                "blockers",
-                "minimal_refs",
-            ],
-            "active_contract": [
-                "todo_item",
-                "role_metadata",
-                "next_role_needed",
-                "intent",
-                "execplan_profile",
-                "canonical_core",
-                "references",
-                "touched_scope",
-                "proof_expectations",
-                "tool_verification",
-                "minimal_refs",
-            ],
-            "resumable_contract": [
-                "current_next_action",
-                "current_next_action_source",
-                "active_milestone",
-                "completion_criteria",
-                "proof_expectations",
-                "tool_verification",
-                "escalate_when",
-                "blockers",
-                "minimal_refs",
-            ],
-            "follow_through_contract": [
-                "larger_intended_outcome",
-                "continuation_surface",
-                "what_this_slice_enabled",
-                "intentionally_deferred",
-                "discovered_implications",
-                "proof_achieved_now",
-                "validation_still_needed",
-                "next_likely_slice",
-                "minimal_refs",
-            ],
-            "intent_interpretation_contract": [
-                "literal_request",
-                "inferred_intended_outcome",
-                "chosen_concrete_what",
-                "interpretation_distance",
-                "review_guidance",
-                "minimal_refs",
-            ],
-            "context_budget_contract": [
-                "live_working_set",
-                "recoverable_later",
-                "externalize_before_shift",
-                "pre_work_config_pull",
-                "pre_work_memory_pull",
-                "tiny_resumability_note",
-                "context_shift_triggers",
-                "interaction_cost_rule",
-                "resume_rule",
-                "minimal_refs",
-            ],
-            "execution_run_contract": [
-                "run_status",
-                "executor",
-                "handoff_source",
-                "what_happened",
-                "scope_touched",
-                "changed_surfaces",
-                "validations_run",
-                "result_for_continuation",
-                "next_step",
-                "minimal_refs",
-            ],
-            "finished_run_review_contract": [
-                "review_status",
-                "scope_respected",
-                "proof_status",
-                "intent_served",
-                "config_compliance",
-                "config_trust",
-                "recommended_next_action",
-                "misinterpretation_risk",
-                "follow_on_decision",
-                "minimal_refs",
-            ],
-            "intent_validation_contract": [
-                "rule",
-                "primary_owner",
-                "counts",
-                "external_evidence",
-                "current_external_work",
-                "historical_audit_references",
-                "closeout_reconciliation",
-                "landed_open_issue_reconciliation",
-                "signals",
-                "recommended_next_action",
-                "minimal_refs",
-            ],
-            "finished_work_inspection_contract": [
-                "rule",
-                "primary_owner",
-                "counts",
-                "evidence",
-                "signals",
-                "inspections",
-                "derived_follow_up_candidates",
-                "recommended_next_action",
-                "minimal_refs",
-            ],
-            "closeout_distillation_contract": [
-                "current_plan",
-                "rule",
-                "archive_role",
-                "buckets",
-                "counts",
-                "recommended_next_action",
-                "minimal_refs",
-            ],
-            "hierarchy_contract": [
-                "current_layer",
-                "parent_lane",
-                "active_chunk",
-                "near_term_queue",
-                "next_likely_chunk",
-                "proof_state",
-                "context_shift",
-                "required_continuation",
-                "closure_check",
-                "routing",
-                "minimal_refs",
-            ],
-            "handoff_contract": [
-                "task",
-                "parent_lane",
-                "role_metadata",
-                "next_role_needed",
-                "requested_outcome",
-                "hard_constraints",
-                "agent_may_decide",
-                "capability_posture",
-                "execplan_profile",
-                "canonical_core",
-                "references",
-                "review_residue",
-                "post_decomposition_delegation",
-                "delegation_outcome_feedback",
-                "next_action",
-                "completion_criteria",
-                "read_first",
-                "owned_write_scope",
-                "proof_expectations",
-                "intent_interpretation",
-                "system_intent_alignment",
-                "pre_work_config_pull",
-                "pre_work_memory_pull",
-                "execution_bounds",
-                "stop_conditions",
-                "tool_verification",
-                "continuation_owner",
-                "context_budget",
-                "return_with",
-                "worker_contract",
-                "ready_worker_prompt",
-            ],
-            "roadmap": [
-                "lane_count",
-                "candidate_lanes",
-                "candidate_count",
-                "candidates",
-            ],
-            "lanes": [
-                "status",
-                "active_count",
-                "open_count",
-                "closed_count",
-                "records",
-                "migration",
-                "rule",
-            ],
-        },
-        "rules": [
-            "planning_record is the canonical compact active planning state when it is available",
-            (
-                "active_contract, resumable_contract, follow_through_contract, intent_interpretation_contract, "
-                "context_budget_contract, execution_run_contract, finished_run_review_contract, closeout_distillation_contract, "
-                "intent_validation_contract, finished_work_inspection_contract, and hierarchy_contract "
-                "remain thinner projections over that state"
-            ),
-            "system intent remains durable and queryable even when the active slice is narrower than the parent issue or lane",
-            "closure decisions must distinguish bounded slice completion from larger-intent satisfaction",
-            "intent validation must still work when there is no active execplan by reconciling checked-in planning state with optional external evidence",
-            "finished-work inspection must derive from archived checked-in residue first and treat optional reopening evidence as corroboration only",
-            "closeout distillation must route durable learning to live owner buckets before archive so archived execplans are not the normal knowledge base",
-            "handoff_contract remains a thinner delegated-worker view over the same active planning state",
-            "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
+        "planning_record": [
+            "task",
+            "role_metadata",
+            "next_role_needed",
+            "requested_outcome",
+            "hard_constraints",
+            "agent_may_decide",
+            "capability_posture",
+            "execplan_profile",
+            "canonical_core",
+            "references",
+            "review_residue",
+            "post_decomposition_delegation",
+            "next_action",
+            "proof_expectations",
+            "proof_report",
+            "intent_satisfaction",
+            "system_intent_alignment",
+            "closure_check",
+            "required_continuation",
+            "intent_interpretation",
+            "execution_bounds",
+            "stop_conditions",
+            "execution_run",
+            "finished_run_review",
+            "delegation_outcome_feedback",
+            "adaptive_assurance",
+            "traceability_refs",
+            "control_gates",
+            "implementation_blockers",
+            "risk_registry_refs",
+            "invariant_refs",
+            "test_data_policy",
+            "layer_scaffold",
+            "architecture_decision_promotion",
+            "threat_failure_aids",
+            "tool_verification",
+            "escalate_when",
+            "continuation_owner",
+            "touched_scope",
+            "completion_criteria",
+            "blockers",
+            "minimal_refs",
         ],
-    }
+        "active_contract": [
+            "todo_item",
+            "role_metadata",
+            "next_role_needed",
+            "intent",
+            "execplan_profile",
+            "canonical_core",
+            "references",
+            "touched_scope",
+            "proof_expectations",
+            "tool_verification",
+            "minimal_refs",
+        ],
+        "resumable_contract": [
+            "current_next_action",
+            "current_next_action_source",
+            "active_milestone",
+            "completion_criteria",
+            "proof_expectations",
+            "tool_verification",
+            "escalate_when",
+            "blockers",
+            "minimal_refs",
+        ],
+        "follow_through_contract": [
+            "larger_intended_outcome",
+            "continuation_surface",
+            "what_this_slice_enabled",
+            "intentionally_deferred",
+            "discovered_implications",
+            "proof_achieved_now",
+            "validation_still_needed",
+            "next_likely_slice",
+            "minimal_refs",
+        ],
+        "intent_interpretation_contract": [
+            "literal_request",
+            "inferred_intended_outcome",
+            "chosen_concrete_what",
+            "interpretation_distance",
+            "review_guidance",
+            "minimal_refs",
+        ],
+        "context_budget_contract": [
+            "live_working_set",
+            "recoverable_later",
+            "externalize_before_shift",
+            "pre_work_config_pull",
+            "pre_work_memory_pull",
+            "tiny_resumability_note",
+            "context_shift_triggers",
+            "interaction_cost_rule",
+            "resume_rule",
+            "minimal_refs",
+        ],
+        "execution_run_contract": [
+            "run_status",
+            "executor",
+            "handoff_source",
+            "what_happened",
+            "scope_touched",
+            "changed_surfaces",
+            "validations_run",
+            "result_for_continuation",
+            "next_step",
+            "minimal_refs",
+        ],
+        "finished_run_review_contract": [
+            "review_status",
+            "scope_respected",
+            "proof_status",
+            "intent_served",
+            "config_compliance",
+            "config_trust",
+            "recommended_next_action",
+            "misinterpretation_risk",
+            "follow_on_decision",
+            "minimal_refs",
+        ],
+        "intent_validation_contract": [
+            "rule",
+            "primary_owner",
+            "counts",
+            "external_evidence",
+            "current_external_work",
+            "historical_audit_references",
+            "closeout_reconciliation",
+            "landed_open_issue_reconciliation",
+            "signals",
+            "recommended_next_action",
+            "minimal_refs",
+        ],
+        "finished_work_inspection_contract": [
+            "rule",
+            "primary_owner",
+            "counts",
+            "evidence",
+            "signals",
+            "inspections",
+            "derived_follow_up_candidates",
+            "recommended_next_action",
+            "minimal_refs",
+        ],
+        "closeout_distillation_contract": [
+            "current_plan",
+            "rule",
+            "archive_role",
+            "buckets",
+            "counts",
+            "recommended_next_action",
+            "minimal_refs",
+        ],
+        "hierarchy_contract": [
+            "current_layer",
+            "parent_lane",
+            "active_chunk",
+            "near_term_queue",
+            "next_likely_chunk",
+            "proof_state",
+            "context_shift",
+            "required_continuation",
+            "closure_check",
+            "routing",
+            "minimal_refs",
+        ],
+        "handoff_contract": [
+            "task",
+            "parent_lane",
+            "role_metadata",
+            "next_role_needed",
+            "requested_outcome",
+            "hard_constraints",
+            "agent_may_decide",
+            "capability_posture",
+            "execplan_profile",
+            "canonical_core",
+            "references",
+            "review_residue",
+            "post_decomposition_delegation",
+            "delegation_outcome_feedback",
+            "next_action",
+            "completion_criteria",
+            "read_first",
+            "owned_write_scope",
+            "proof_expectations",
+            "intent_interpretation",
+            "system_intent_alignment",
+            "pre_work_config_pull",
+            "pre_work_memory_pull",
+            "execution_bounds",
+            "stop_conditions",
+            "tool_verification",
+            "continuation_owner",
+            "context_budget",
+            "return_with",
+            "worker_contract",
+            "ready_worker_prompt",
+        ],
+        "roadmap": [
+            "lane_count",
+            "candidate_lanes",
+            "candidate_count",
+            "candidates",
+        ],
+        "lanes": [
+            "status",
+            "active_count",
+            "open_count",
+            "closed_count",
+            "records",
+            "migration",
+            "rule",
+        ],
+    },
+    "rules": [
+        "planning_record is the canonical compact active planning state when it is available",
+        (
+            "active_contract, resumable_contract, follow_through_contract, intent_interpretation_contract, "
+            "context_budget_contract, execution_run_contract, finished_run_review_contract, closeout_distillation_contract, "
+            "intent_validation_contract, finished_work_inspection_contract, and hierarchy_contract "
+            "remain thinner projections over that state"
+        ),
+        "system intent remains durable and queryable even when the active slice is narrower than the parent issue or lane",
+        "closure decisions must distinguish bounded slice completion from larger-intent satisfaction",
+        "intent validation must still work when there is no active execplan by reconciling checked-in planning state with optional external evidence",
+        "finished-work inspection must derive from archived checked-in residue first and treat optional reopening evidence as corroboration only",
+        "closeout distillation must route durable learning to live owner buckets before archive so archived execplans are not the normal knowledge base",
+        "handoff_contract remains a thinner delegated-worker view over the same active planning state",
+        "prefer the summary schema over raw TODO or execplan parsing when one structured answer is enough",
+    ],
+}
+
+
+def _planning_summary_schema() -> dict[str, Any]:
+    """Return an isolated copy of the declarative Planning summary schema."""
+
+    return copy.deepcopy(_PLANNING_SUMMARY_SCHEMA)
 
 
 def _machine_first_planning_payload(*, active_execplans: list[dict[str, str]]) -> dict[str, Any]:
@@ -9519,6 +9548,20 @@ def _planning_handoff_schema() -> dict[str, Any]:
     }
 
 
+def _invalid_external_evidence_signals(external_evidence: dict[str, Any]) -> list[dict[str, Any]]:
+    if external_evidence.get("status") != "invalid":
+        return []
+    return [
+        {
+            "kind": "external_evidence_invalid",
+            "severity": "warning",
+            "path": external_evidence.get("path", ""),
+            "message": str(external_evidence.get("reason", "optional external intent evidence could not be loaded")),
+            "refs": [external_evidence.get("path", "")],
+        }
+    ]
+
+
 def _intent_validation_contract(
     *,
     target_root: Path,
@@ -9535,16 +9578,7 @@ def _intent_validation_contract(
         roadmap_lanes=roadmap_lanes,
     )
     signals.extend(internal_signals)
-    if external_evidence.get("status") == "invalid":
-        signals.append(
-            {
-                "kind": "external_evidence_invalid",
-                "severity": "warning",
-                "path": external_evidence.get("path", ""),
-                "message": str(external_evidence.get("reason", "optional external intent evidence could not be loaded")),
-                "refs": [external_evidence.get("path", "")],
-            }
-        )
+    signals.extend(_invalid_external_evidence_signals(external_evidence))
 
     tracked_open = 0
     untracked_open = 0
@@ -14417,6 +14451,33 @@ def _apply_pending_integration_proposals(
         payload["recovery_command"] = _integration_apply_recovery_command(target_root)
         return payload
 
+    return _finalize_pending_integration_batch(
+        target_root=target_root,
+        result=result,
+        writes=writes,
+        owner_overrides=owner_overrides,
+        proposals_applied=proposals_applied,
+        receipts=receipts,
+        proposal_dir=proposal_dir,
+        current_target_id=current_target_id,
+        dry_run=dry_run,
+    )
+
+
+def _finalize_pending_integration_batch(
+    *,
+    target_root: Path,
+    result: InstallResult,
+    writes: list[tuple[Path, dict[str, Any], Path]],
+    owner_overrides: dict[Path, bytes],
+    proposals_applied: list[str],
+    receipts: list[dict[str, Any]],
+    proposal_dir: Path,
+    current_target_id: str,
+    dry_run: bool,
+) -> dict[str, Any]:
+    """Validate and atomically persist an admitted pending-integration batch."""
+
     final_target_id = str(_planning_target_authority_revision(target_root, file_overrides=owner_overrides).get("revision_id", ""))
     finalized_writes: list[tuple[Path, dict[str, Any], Path]] = []
     for path, record, schema_path in writes:
@@ -14748,23 +14809,17 @@ def apply_integration_proposal(
         result.add("would preserve", target_root / PLANNING_STATE_PATH, "current selection and aggregate indexes")
         return result
 
-    def write_integration() -> None:
-        if updated_owner is not None and owner_path is not None and owner_changed_fields:
-            _write_schema_backed_planning_record(
-                record_path=owner_path,
-                record=updated_owner,
-                schema_path=owner_schema_path,
-            )
-        _write_schema_backed_planning_record(
-            record_path=proposal_path,
-            record=updated_record,
-            schema_path=INTEGRATION_PROPOSAL_SCHEMA_PATH,
-        )
-        _write_schema_backed_planning_record(
-            record_path=receipt_path,
-            record=receipt,
-            schema_path=INTEGRATION_RECEIPT_SCHEMA_PATH,
-        )
+    write_integration = partial(
+        _write_integration_records,
+        updated_owner=updated_owner,
+        owner_path=owner_path,
+        owner_changed_fields=owner_changed_fields,
+        owner_schema_path=owner_schema_path,
+        proposal_path=proposal_path,
+        updated_record=updated_record,
+        receipt_path=receipt_path,
+        receipt=receipt,
+    )
 
     try:
         affected_paths = [path for path in (owner_path if owner_changed_fields else None, proposal_path, receipt_path) if path is not None]
@@ -14780,6 +14835,33 @@ def apply_integration_proposal(
     result.add("preserved", target_root / PLANNING_STATE_PATH, "current selection and aggregate indexes")
     _add_planning_mutation_proof_actions(result)
     return result
+
+
+def _write_integration_records(
+    *,
+    updated_owner: dict[str, Any] | None,
+    owner_path: Path | None,
+    owner_changed_fields: list[str],
+    owner_schema_path: Path,
+    proposal_path: Path,
+    updated_record: dict[str, Any],
+    receipt_path: Path,
+    receipt: dict[str, Any],
+) -> None:
+    """Persist the admitted owner, proposal, and receipt as one atomic write effect."""
+
+    if updated_owner is not None and owner_path is not None and owner_changed_fields:
+        _write_schema_backed_planning_record(record_path=owner_path, record=updated_owner, schema_path=owner_schema_path)
+    _write_schema_backed_planning_record(
+        record_path=proposal_path,
+        record=updated_record,
+        schema_path=INTEGRATION_PROPOSAL_SCHEMA_PATH,
+    )
+    _write_schema_backed_planning_record(
+        record_path=receipt_path,
+        record=receipt,
+        schema_path=INTEGRATION_RECEIPT_SCHEMA_PATH,
+    )
 
 
 def _load_lane_candidate_decomposition(path: Path) -> dict[str, Any] | None:
@@ -16799,6 +16881,16 @@ def _targeted_write_receipt_postcondition(
     }
 
 
+def _parse_targeted_execplan_patch(patch: Mapping[str, Any] | str) -> Mapping[str, Any] | None:
+    if not isinstance(patch, str):
+        return patch
+    try:
+        parsed = json.loads(patch)
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def targeted_execplan_write(
     *,
     target: str | Path | None = None,
@@ -16811,22 +16903,12 @@ def targeted_execplan_write(
     preflight_token: str = "",
     preflight_max_age_seconds: int = 900,
 ) -> dict[str, Any]:
-    """Preview or apply a bounded patch to exactly one live canonical execplan.
-
-    This is intentionally a narrow writer: it never selects an owner by title,
-    never rewrites a Markdown compatibility view, and rejects stale Planning or
-    owner revisions before a write.  Unspecified record fields are copied
-    byte-for-byte through the semantic record representation.
-    """
+    """Patch one exact live execplan while preserving target-bound revision guards."""
     target_root = resolve_target_root(target)
-    if isinstance(patch, str):
-        try:
-            parsed_patch = json.loads(patch)
-        except json.JSONDecodeError:
-            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch-json"}
-        if not isinstance(parsed_patch, dict):
-            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch-json"}
-        patch = parsed_patch
+    parsed_patch = _parse_targeted_execplan_patch(patch)
+    if parsed_patch is None:
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch-json"}
+    patch = parsed_patch
     if apply and str(preflight_token or "").strip():
         preflight_admission = {
             "kind": "agentic-planning/targeted-write-preflight-admission/v1",
@@ -19342,6 +19424,85 @@ def _record_closeout_operation_receipt(*, target_root: Path, request: Mapping[st
     context_path.write_text(json.dumps(context, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
+def _closeout_completion_options(
+    *,
+    plan: str,
+    normalized_claim: str,
+    closure_decision: str,
+    continuation_owner: str,
+    blocked: bool,
+    retention_skipped: bool,
+) -> list[dict[str, Any]]:
+    larger_intent_close_allowed = normalized_claim in {"lane", "epic"} and closure_decision == "archive-and-close" and not blocked
+    retention_note = "archive retention was skipped by size guardrail after closeout distillation; no rerun is needed for the removed plan"
+    options: list[dict[str, Any]] = [
+        {
+            "id": "resolve-closeout-blocker",
+            "allowed": blocked,
+            "command": f"agentic-planning closeout {plan} --proof-from <proof> --what-happened <summary> --scope-touched <paths> --changed-surfaces <surfaces>",
+            "why": "closeout warnings or manual-review actions are present"
+            if blocked
+            else retention_note
+            if retention_skipped
+            else "no closeout blocker is present",
+        },
+        {
+            "id": "claim-slice-complete",
+            "allowed": not blocked,
+            "command": "",
+            "why": "slice proof, finish-run evidence, and archive preconditions were recorded"
+            if not blocked and not retention_skipped
+            else retention_note
+            if not blocked
+            else "slice completion is blocked until closeout evidence is repaired",
+        },
+        {
+            "id": "claim-lane-or-local-intent-complete",
+            "allowed": normalized_claim in {"lane", "epic"} and not blocked,
+            "command": "",
+            "why": f"{normalized_claim} claim may be stated locally because closeout scope and intent-status were recorded"
+            if normalized_claim in {"lane", "epic"} and not blocked
+            else "only bounded slice completion is authorized by this closeout",
+        },
+        {
+            "id": "archive-retention",
+            "allowed": True,
+            "command": "",
+            "why": retention_note
+            if retention_skipped
+            else "archive retained or discarded according to closeout flags and size guardrails; this is separate from issue closure",
+        },
+        {
+            "id": "keep-larger-intent-open",
+            "allowed": (closure_decision == "archive-but-keep-lane-open" or not larger_intent_close_allowed) and not blocked,
+            "owner": continuation_owner if closure_decision == "archive-but-keep-lane-open" else PLANNING_STATE_PATH.as_posix(),
+            "why": "intent-status keeps continuation explicit"
+            if closure_decision == "archive-but-keep-lane-open"
+            else "slice closeout does not authorize larger-intent closure"
+            if normalized_claim == "slice"
+            else "larger intent was marked satisfied",
+        },
+        {
+            "id": "close-larger-intent",
+            "allowed": larger_intent_close_allowed,
+            "why": f"{normalized_claim} claim with intent-status satisfied was recorded"
+            if larger_intent_close_allowed
+            else "slice closeout does not authorize larger-intent closure"
+            if normalized_claim == "slice"
+            else "parent or larger intent remains open",
+        },
+        {
+            "id": "host-side-issue-closure",
+            "allowed": False,
+            "command": "",
+            "why": "core Planning records closeout evidence only; host tracker issue closure must be performed explicitly by the host integration or PR metadata",
+        },
+    ]
+    if retention_skipped:
+        options.append({"id": "archive-retention-status", "allowed": True, "command": "", "why": retention_note})
+    return options
+
+
 @_atomic_planning_closeout
 def closeout_execplan(
     plan: str,
@@ -19940,84 +20101,16 @@ def closeout_execplan(
         warning for warning in result.warnings if str(warning.get("warning_class", "")) not in _NONBLOCKING_CLOSEOUT_RETENTION_WARNINGS
     ]
     blocked = bool(blocking_warnings) or any(action.kind == "manual review" for action in result.actions)
-    larger_intent_close_allowed = normalized_claim in {"lane", "epic"} and closure_decision == "archive-and-close" and not blocked
-    non_blocking_retention_note = (
-        "archive retention was skipped by size guardrail after closeout distillation; no rerun is needed for the removed plan"
-    )
     result.completion_options.extend(
-        [
-            {
-                "id": "resolve-closeout-blocker",
-                "allowed": blocked,
-                "command": f"agentic-planning closeout {plan} --proof-from <proof> --what-happened <summary> --scope-touched <paths> --changed-surfaces <surfaces>",
-                "why": "closeout warnings or manual-review actions are present"
-                if blocked
-                else non_blocking_retention_note
-                if retention_skipped
-                else "no closeout blocker is present",
-            },
-            {
-                "id": "claim-slice-complete",
-                "allowed": not blocked,
-                "command": "",
-                "why": "slice proof, finish-run evidence, and archive preconditions were recorded"
-                if not blocked and not retention_skipped
-                else non_blocking_retention_note
-                if not blocked
-                else "slice completion is blocked until closeout evidence is repaired",
-            },
-            {
-                "id": "claim-lane-or-local-intent-complete",
-                "allowed": normalized_claim in {"lane", "epic"} and not blocked,
-                "command": "",
-                "why": f"{normalized_claim} claim may be stated locally because closeout scope and intent-status were recorded"
-                if normalized_claim in {"lane", "epic"} and not blocked
-                else "only bounded slice completion is authorized by this closeout",
-            },
-            {
-                "id": "archive-retention",
-                "allowed": True,
-                "command": "",
-                "why": non_blocking_retention_note
-                if retention_skipped
-                else "archive retained or discarded according to closeout flags and size guardrails; this is separate from issue closure",
-            },
-            {
-                "id": "keep-larger-intent-open",
-                "allowed": (closure_decision == "archive-but-keep-lane-open" or not larger_intent_close_allowed) and not blocked,
-                "owner": continuation_owner if closure_decision == "archive-but-keep-lane-open" else PLANNING_STATE_PATH.as_posix(),
-                "why": "intent-status keeps continuation explicit"
-                if closure_decision == "archive-but-keep-lane-open"
-                else "slice closeout does not authorize larger-intent closure"
-                if normalized_claim == "slice"
-                else "larger intent was marked satisfied",
-            },
-            {
-                "id": "close-larger-intent",
-                "allowed": larger_intent_close_allowed,
-                "why": f"{normalized_claim} claim with intent-status satisfied was recorded"
-                if larger_intent_close_allowed
-                else "slice closeout does not authorize larger-intent closure"
-                if normalized_claim == "slice"
-                else "parent or larger intent remains open",
-            },
-            {
-                "id": "host-side-issue-closure",
-                "allowed": False,
-                "command": "",
-                "why": "core Planning records closeout evidence only; host tracker issue closure must be performed explicitly by the host integration or PR metadata",
-            },
-        ]
-    )
-    if retention_skipped:
-        result.completion_options.append(
-            {
-                "id": "archive-retention-status",
-                "allowed": True,
-                "command": "",
-                "why": non_blocking_retention_note,
-            }
+        _closeout_completion_options(
+            plan=plan,
+            normalized_claim=normalized_claim,
+            closure_decision=closure_decision,
+            continuation_owner=continuation_owner,
+            blocked=blocked,
+            retention_skipped=retention_skipped,
         )
+    )
     if blocked:
         result.add("next safe action", record_path, "resolve the reported closeout blocker, then rerun planning closeout")
     else:

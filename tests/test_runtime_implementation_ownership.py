@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import json
 import shutil
 from datetime import date
 from pathlib import Path
+
+from repo_planning_bootstrap import installer
+
+from agentic_workspace import workspace_runtime_core
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -51,7 +56,26 @@ def test_current_runtime_has_one_implementation_owner() -> None:
         by_symbol["archive_execplan"]["after"]["largest_policy_effect_segment_lines"]
         < by_symbol["archive_execplan"]["before"]["largest_policy_effect_segment_lines"]
     )
+    assert by_symbol["closeout_execplan"]["after"]["lines"] < by_symbol["closeout_execplan"]["before"]["lines"]
+    assert by_symbol["closeout_execplan"]["after"]["branch_nodes"] < by_symbol["closeout_execplan"]["before"]["branch_nodes"]
     assert {item["continuation_owner"] for item in decompositions} == {"#2480"}
+
+    removed_exception_symbols = {
+        "_applicable_intent_source_projection_payload",
+        "_record_proof_receipt_payload",
+        "planning_summary",
+        "_planning_reconciliation_transaction",
+        "_intent_validation_contract",
+        "_apply_pending_integration_proposals",
+        "apply_integration_proposal",
+        "targeted_execplan_write",
+    }
+    assert removed_exception_symbols.isdisjoint({item["symbol"] for item in policy["review_scale"]["exceptions"]})
+
+    for symbol in removed_exception_symbols:
+        owner = workspace_runtime_core if hasattr(workspace_runtime_core, symbol) else installer
+        lines, _start = inspect.getsourcelines(getattr(owner, symbol))
+        assert len(lines) <= policy["review_scale"]["default_max_function_lines"], symbol
 
 
 def test_facade_definition_is_rejected(tmp_path: Path) -> None:
