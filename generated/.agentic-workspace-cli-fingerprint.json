@@ -1165,7 +1165,7 @@
     "src/agentic_workspace/workspace_selector_validation.py",
     "uv.lock"
   ],
-  "fingerprint": "502af2d61c7dd271d6fc9da119afd6988f0eb13bafd4600d5c25eb4ae49d7042",
+  "fingerprint": "a40d73d5849bb0da89f13f66f9798fd6b13699ac657edd540638717c7d26229d",
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
   "git_identity_role": "optional-source-checkout-acceleration",
   "git_index_entries": {
@@ -1904,7 +1904,7 @@
     "scripts/release/release_ownership.py": "3af627989b1a92c97c81056a3ce5d5e29c5b5a9a",
     "scripts/release/support_bearing_promotion.py": "f9064749447731dc499491e8935ef1cb54589758",
     "scripts/render_agent_docs.py": "d6883f8b7999ee8b0134c35d4c956550eff4c13a",
-    "scripts/run_agentic_workspace.py": "abd4d2847eccc6024e2ec79bf8b1bc7ee1a38567",
+    "scripts/run_agentic_workspace.py": "bc13603ebfc9c761f617d22bb6c31cb708db8ced",
     "src/agentic_workspace/__init__.py": "1d229549586cd82ca74b8a5371bbac24806168f3",
     "src/agentic_workspace/_context_authority_owner_protocol.py": "2dd6a1801547fc7383f9e62ff5790cb10d5d79be",
     "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json": "bee02ddfa645e940766c32d254bb2f472bb62fc2",
@@ -2331,7 +2331,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "4863cb8ac35bcf7a3fa224cb4b431132df798f37",
     "uv.lock": "0f45174a190b1087a7107a5f07f71ec04a4eb2ac"
   },
-  "git_index_identity": "44ef3880fa10b50eae8d8172eb8c157991a0a12d94c3d314a30dc802bdbb1142",
+  "git_index_identity": "e6d79924701d75923b2ecbf40ac449047477f1a5eb05852a4b381cf3376cbc82",
   "identity_role": "canonical-semantic-content",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"

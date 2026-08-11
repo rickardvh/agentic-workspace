@@ -170,11 +170,44 @@ def _git_index_entries(*, repo_root: Path, paths: list[str]) -> dict[str, str] |
     return {path: entries_by_path[path] for path in paths}
 
 
-def _git_index_identity(*, repo_root: Path, paths: list[str]) -> str | None:
-    """Return a stable digest of exact, stage-zero fingerprint input entries."""
+def _git_prospective_entries(*, repo_root: Path, paths: list[str]) -> dict[str, str] | None:
+    """Return the blob identities Git will index for the current text inputs.
 
-    entries_by_path = _git_index_entries(repo_root=repo_root, paths=paths)
-    if entries_by_path is None:
+    Fingerprint inputs are repo-declared LF text surfaces. Hashing their
+    normalized worktree bytes makes generation stable whether each input is
+    staged before or after the manifest is written.
+    """
+
+    if not paths:
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-object-format"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    algorithm = result.stdout.strip() if result.returncode == 0 else ""
+    if algorithm not in {"sha1", "sha256"}:
+        return None
+    entries: dict[str, str] = {}
+    try:
+        for path in paths:
+            content = (repo_root / path).read_bytes().replace(b"\r\n", b"\n")
+            digest = hashlib.new(algorithm)
+            digest.update(f"blob {len(content)}\0".encode("ascii"))
+            digest.update(content)
+            entries[path] = digest.hexdigest()
+    except OSError:
+        return None
+    return entries
+
+
+def _git_entries_identity(*, paths: list[str], entries_by_path: dict[str, str] | None) -> str | None:
+    if entries_by_path is None or set(entries_by_path) != set(paths):
         return None
     digest = hashlib.sha256()
     for expected_path in paths:
@@ -185,11 +218,18 @@ def _git_index_identity(*, repo_root: Path, paths: list[str]) -> str | None:
     return digest.hexdigest()
 
 
+def _git_index_identity(*, repo_root: Path, paths: list[str]) -> str | None:
+    """Return a stable digest of exact, stage-zero fingerprint input entries."""
+
+    return _git_entries_identity(paths=paths, entries_by_path=_git_index_entries(repo_root=repo_root, paths=paths))
+
+
 def source_cli_fingerprint_manifest(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
     """Build a transportable content identity plus optional Git acceleration."""
 
     paths = [_repo_relative(path, repo_root=repo_root) for path in _fingerprint_files(repo_root=repo_root)]
     content_identity = compute_generated_cli_fingerprint(repo_root=repo_root)
+    prospective_entries = _git_prospective_entries(repo_root=repo_root, paths=paths)
     return {
         "schema": CACHE_SCHEMA,
         "kind": "generated-cli-source-manifest/v1",
@@ -199,8 +239,8 @@ def source_cli_fingerprint_manifest(*, repo_root: Path = REPO_ROOT) -> dict[str,
         "fingerprint": content_identity["fingerprint"],
         "identity_role": "canonical-semantic-content",
         "context_rule": "Every listed input is required in source and conformance contexts; Git metadata is auxiliary only.",
-        "git_index_entries": _git_index_entries(repo_root=repo_root, paths=paths),
-        "git_index_identity": _git_index_identity(repo_root=repo_root, paths=paths),
+        "git_index_entries": prospective_entries,
+        "git_index_identity": _git_entries_identity(paths=paths, entries_by_path=prospective_entries),
         "git_identity_role": "optional-source-checkout-acceleration",
         "generation_command": "uv run python scripts/generate/generate_command_packages.py",
     }
