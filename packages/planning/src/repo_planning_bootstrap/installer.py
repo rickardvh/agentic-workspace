@@ -9524,6 +9524,20 @@ def _planning_handoff_schema() -> dict[str, Any]:
     }
 
 
+def _invalid_external_evidence_signals(external_evidence: dict[str, Any]) -> list[dict[str, Any]]:
+    if external_evidence.get("status") != "invalid":
+        return []
+    return [
+        {
+            "kind": "external_evidence_invalid",
+            "severity": "warning",
+            "path": external_evidence.get("path", ""),
+            "message": str(external_evidence.get("reason", "optional external intent evidence could not be loaded")),
+            "refs": [external_evidence.get("path", "")],
+        }
+    ]
+
+
 def _intent_validation_contract(
     *,
     target_root: Path,
@@ -9540,16 +9554,7 @@ def _intent_validation_contract(
         roadmap_lanes=roadmap_lanes,
     )
     signals.extend(internal_signals)
-    if external_evidence.get("status") == "invalid":
-        signals.append(
-            {
-                "kind": "external_evidence_invalid",
-                "severity": "warning",
-                "path": external_evidence.get("path", ""),
-                "message": str(external_evidence.get("reason", "optional external intent evidence could not be loaded")),
-                "refs": [external_evidence.get("path", "")],
-            }
-        )
+    signals.extend(_invalid_external_evidence_signals(external_evidence))
 
     tracked_open = 0
     untracked_open = 0
