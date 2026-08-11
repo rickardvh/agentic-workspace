@@ -383,19 +383,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
         "active_state_summary": payload["active_state_summary"],
         **(
-            {
-                "context_authority_projection": {
-                    "kind": payload["context_authority_projection"].get("kind"),
-                    "status": payload["context_authority_projection"].get("status"),
-                    "consumer": payload["context_authority_projection"].get("consumer"),
-                    "registry_revision": payload["context_authority_projection"].get("registry_revision"),
-                    "changed_path_count": payload["context_authority_projection"].get("changed_path_count", 0),
-                    "authority_count": len(payload["context_authority_projection"].get("authorities", [])),
-                    "missing_required_surfaces": payload["context_authority_projection"].get("missing_required_surfaces", []),
-                    "repair_operation": payload["context_authority_projection"].get("repair_operation", {}),
-                    "rule": "Use the full selector only when a missing or stale canonical input changes the startup decision.",
-                }
-            }
+            {"context_authority_projection": _compact_context_authority_projection(payload["context_authority_projection"])}
             if isinstance(payload.get("context_authority_projection"), dict)
             else {}
         ),
@@ -722,6 +710,20 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         state_delta_core=state_delta_core,
     )
     return projected
+
+
+def _compact_context_authority_projection(value: dict[str, Any]) -> dict[str, Any]:
+    compact = {
+        "kind": value.get("kind"),
+        "status": value.get("status"),
+        "consumer": value.get("consumer"),
+        "registry_revision": value.get("registry_revision"),
+        "changed_path_count": value.get("changed_path_count", 0),
+        "authority_count": len(value.get("authorities", [])),
+        "missing_required_surfaces": value.get("missing_required_surfaces", []),
+        "detail_selector": "context_authority_projection",
+    }
+    return compact
 
 
 def _local_chat_checkpoint_default_visible(local_checkpoint: dict[str, Any], *, payload: dict[str, Any]) -> bool:
@@ -1993,7 +1995,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         else payload.get("memory_consult", {}),
     }
     if isinstance(payload.get("context_authority_projection"), dict):
-        context["context_authority_projection"] = payload["context_authority_projection"]
+        context_projection = payload["context_authority_projection"]
+        if int(context_projection.get("changed_path_count", 0) or 0) > 0:
+            context["context_authority_projection"] = context_projection
     # The compact default already exposes the complete next-action packet at
     # top level.  For ordinary low-risk work, keeping a second copy of that
     # action plus the full planning-sufficiency record in context spends the
