@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import shutil
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -109,6 +111,157 @@ def test_launcher_does_not_refresh_generated_cli_for_start(monkeypatch) -> None:
 
     assert module.main(["start", "--target", ".", "--format", "json"]) == 0
     assert observed == [["start", "--target", ".", "--format", "json"]]
+
+
+def test_runtime_identity_rejects_editable_distribution_from_sibling_checkout(tmp_path: Path) -> None:
+    module = _load_module()
+    target = tmp_path / "target"
+    sibling = tmp_path / "sibling"
+    target.mkdir()
+    sibling.mkdir()
+
+    class Distribution:
+        def read_text(self, name: str) -> str | None:
+            assert name == "direct_url.json"
+            return json.dumps({"url": sibling.as_uri(), "dir_info": {"editable": True}})
+
+    def lookup(name: str):
+        if name == "agentic-workspace":
+            return Distribution()
+        raise module.importlib.metadata.PackageNotFoundError(name)
+
+    identity = module.runtime_identity_admission(repo_root=target, distribution_lookup=lookup)
+
+    assert identity["status"] == "mismatch"
+    assert identity["mismatches"] == [
+        {
+            "distribution": "agentic-workspace",
+            "origin": sibling.resolve().as_posix(),
+            "expected": target.resolve().as_posix(),
+        }
+    ]
+
+
+def test_runtime_identity_accepts_matching_active_editable_distribution(tmp_path: Path) -> None:
+    module = _load_module()
+    target = tmp_path / "target"
+    target.mkdir()
+
+    class Distribution:
+        def read_text(self, _name: str) -> str:
+            return json.dumps({"url": target.as_uri(), "dir_info": {"editable": True}})
+
+    def lookup(name: str):
+        if name == "agentic-workspace":
+            return Distribution()
+        raise module.importlib.metadata.PackageNotFoundError(name)
+
+    identity = module.runtime_identity_admission(repo_root=target, distribution_lookup=lookup)
+
+    assert identity["status"] == "matched"
+    assert identity["mismatches"] == []
+
+
+def test_runtime_identity_rejection_precedes_refresh_and_dispatch(monkeypatch) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "_admit_runtime_identity", lambda: False)
+    monkeypatch.setattr(module, "ensure_generated_cli_current", lambda: pytest.fail("refresh ran before identity admission"))
+    monkeypatch.setattr(module, "_dispatch_to_source_cli", lambda _argv: pytest.fail("dispatch ran after identity rejection"))
+
+    assert module.main(["summary", "--target", ".", "--format", "json"]) == 2
+
+
+def test_active_no_sync_runtime_identity_is_stable_across_two_checkouts(tmp_path: Path) -> None:
+    checkout_a = tmp_path / "checkout-a"
+    checkout_b = tmp_path / "checkout-b"
+    fake_site = tmp_path / "active-site"
+    for checkout in (checkout_a, checkout_b):
+        for relative in (".", "packages/memory", "packages/planning", "packages/verification"):
+            (checkout / relative).mkdir(parents=True, exist_ok=True)
+    (checkout_b / "scripts").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(SCRIPT_PATH, checkout_b / "scripts" / "run_agentic_workspace.py")
+    _write(checkout_b / "pyproject.toml", '[project]\nname = "runtime-identity-fixture"\nversion = "0.0.0"\n')
+    _write(checkout_b / "src/agentic_workspace/__init__.py", "")
+    _write(
+        checkout_b / "src/agentic_workspace/cli.py",
+        "def main(argv=None):\n    print('dispatched:' + str((argv or [''])[0]))\n    return 0\n",
+    )
+
+    distributions = {
+        "agentic-workspace": ".",
+        "agentic-workspace-memory": "packages/memory",
+        "agentic-workspace-planning": "packages/planning",
+        "agentic-workspace-verification": "packages/verification",
+    }
+
+    def bind_active_runtime(checkout: Path) -> None:
+        for name, relative in distributions.items():
+            dist_info = fake_site / f"{name.replace('-', '_')}-0.dist-info"
+            _write(dist_info / "METADATA", f"Name: {name}\nVersion: 0\n")
+            _write(
+                dist_info / "direct_url.json",
+                json.dumps({"url": (checkout / relative).resolve().as_uri(), "dir_info": {"editable": True}}),
+            )
+
+    def snapshot() -> dict[str, bytes]:
+        roots = {"a": checkout_a, "b": checkout_b, "site": fake_site}
+        return {
+            f"{label}/{path.relative_to(root).as_posix()}": path.read_bytes()
+            for label, root in roots.items()
+            for path in sorted(root.rglob("*"))
+            if path.is_file()
+        }
+
+    environment = {
+        **os.environ,
+        "PYTHONPATH": os.pathsep.join((str(fake_site), str(checkout_b / "src"))),
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "AW_SKIP_GENERATED_CLI_REFRESH": "1",
+    }
+
+    def invoke(command: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                "uv",
+                "run",
+                "--active",
+                "--no-sync",
+                "python",
+                "scripts/run_agentic_workspace.py",
+                command,
+                "--target",
+                ".",
+                "--format",
+                "json",
+            ],
+            cwd=checkout_b,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    bind_active_runtime(checkout_a)
+    mismatch_before = snapshot()
+    for command in ("start", "summary", "report", "doctor"):
+        result = invoke(command)
+        assert result.returncode == 2
+        assert "refused a runtime from another checkout before command effects" in result.stderr
+    assert snapshot() == mismatch_before
+
+    bind_active_runtime(checkout_b)
+    matching_before = snapshot()
+    for command in ("start", "summary", "report", "doctor"):
+        result = invoke(command)
+        assert result.returncode == 0, result.stderr
+        assert f"dispatched:{command}" in result.stdout
+    assert snapshot() == matching_before
+
+
+def test_repo_configured_active_invocation_forbids_dependency_sync() -> None:
+    config = (SCRIPT_PATH.parents[1] / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+
+    assert 'cli_invoke = "uv run --active --no-sync python scripts/run_agentic_workspace.py"' in config
 
 
 def test_launcher_force_refresh_still_applies_to_start(monkeypatch) -> None:
