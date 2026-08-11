@@ -14422,6 +14422,33 @@ def _apply_pending_integration_proposals(
         payload["recovery_command"] = _integration_apply_recovery_command(target_root)
         return payload
 
+    return _finalize_pending_integration_batch(
+        target_root=target_root,
+        result=result,
+        writes=writes,
+        owner_overrides=owner_overrides,
+        proposals_applied=proposals_applied,
+        receipts=receipts,
+        proposal_dir=proposal_dir,
+        current_target_id=current_target_id,
+        dry_run=dry_run,
+    )
+
+
+def _finalize_pending_integration_batch(
+    *,
+    target_root: Path,
+    result: InstallResult,
+    writes: list[tuple[Path, dict[str, Any], Path]],
+    owner_overrides: dict[Path, bytes],
+    proposals_applied: list[str],
+    receipts: list[dict[str, Any]],
+    proposal_dir: Path,
+    current_target_id: str,
+    dry_run: bool,
+) -> dict[str, Any]:
+    """Validate and atomically persist an admitted pending-integration batch."""
+
     final_target_id = str(_planning_target_authority_revision(target_root, file_overrides=owner_overrides).get("revision_id", ""))
     finalized_writes: list[tuple[Path, dict[str, Any], Path]] = []
     for path, record, schema_path in writes:

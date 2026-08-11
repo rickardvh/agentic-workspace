@@ -73,7 +73,6 @@
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_planning_summary_compact_projection", "max_lines": 472, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_intent_validation_contract", "max_lines": 306, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_finished_work_inspection_contract", "max_lines": 342, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
-      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_apply_pending_integration_proposals", "max_lines": 314, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "apply_integration_proposal", "max_lines": 303, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "targeted_execplan_write", "max_lines": 310, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_prepare_execplan_closeout", "max_lines": 406, "max_branch_nodes": 113, "expires": "2026-12-31", "tracking_issue": "#2455"},
