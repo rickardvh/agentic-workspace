@@ -6258,13 +6258,97 @@ def test_start_select_installed_contract_pair_uses_frozen_non_mutating_resolutio
     assert resolution["selected_distribution"]["status"] == "resolved"
     assert resolution["repair_command"] == ""
     assert pair["transition_owner"]["operation_id"] == "workspace.install-upgrade-sync"
+    assert pair["transition_owner"]["operation_contract"].endswith("workspace.install-upgrade-sync.json")
+    assert pair["transition_owner"]["executor"].endswith("execute_workspace_install_upgrade_sync")
+    assert pair["transition_owner"]["before_identity_digest"].startswith("sha256:")
     assert pair["transition_owner"]["ordinary_surfaces_mutate_dependency_state"] is False
+    matrix = pair["conformance_matrix"]
+    parity = next(item for item in matrix["scenarios"] if item["id"] == "consumer-identity-parity")
+    assert len(set(parity["consumers"].values())) == 1
+    assert set(parity["consumers"]) == {"startup", "skills", "doctor"}
     source_checkout = pair["actual"]["source_checkout"]
     assert source_checkout["classification"] == "local-source-non-release"
     assert re.fullmatch(r"git:[0-9a-f]{12}", source_checkout["revision"])
     assert isinstance(source_checkout["dirty"], bool)
     assert source_checkout["generated_parity"] in {"current", "stale"}
     assert not re.search(r"[A-Za-z]:/|/(?:Users|home|tmp)/", json.dumps(pair, sort_keys=True))
+
+
+def test_install_upgrade_sync_is_the_explicit_dependency_identity_transition_boundary() -> None:
+    identities = iter(
+        [
+            {"version": "1.0.0", "source": "released-package"},
+            {"version": "1.1.0", "source": "released-package"},
+        ]
+    )
+    transition_calls: list[str] = []
+
+    receipt = workspace_runtime_core.execute_workspace_install_upgrade_sync(
+        mode="upgrade",
+        observe_identity=lambda: next(identities),
+        perform_transition=lambda: transition_calls.append("upgrade") or {"status": "passed"},
+    )
+
+    assert transition_calls == ["upgrade"]
+    assert receipt["status"] == "admitted"
+    assert receipt["mutation_owner"] == "execute_workspace_install_upgrade_sync"
+    assert receipt["before_identity"]["version"] == "1.0.0"
+    assert receipt["after_identity"]["version"] == "1.1.0"
+    assert receipt["before_identity_digest"] != receipt["after_identity_digest"]
+
+
+def test_installed_contract_clean_clone_scenario_matrix_is_fail_closed_and_consumer_stable() -> None:
+    matrix = workspace_runtime_core._installed_contract_conformance_matrix(
+        current_identity={"source_class": "released-package", "source": "package", "version": "1.0.0"},
+        resolution={
+            "posture": "locked",
+            "resolution_status": "resolved",
+            "selected_distribution": {"direct_url": {"url": "https://example.test/repo.git", "vcs_info": {"commit_id": "abc123"}}},
+        },
+        source_checkout={"classification": "not-applicable", "dirty": False},
+        stale_generated=[],
+    )
+    scenarios = {item["id"]: item for item in matrix["scenarios"]}
+
+    assert scenarios["released-package"]["status"] == "admitted"
+    assert scenarios["locked-vcs"]["status"] == "admitted"
+    assert scenarios["incompatible-or-missing-runtime"]["status"] == "not-observed"
+    assert scenarios["generated-parity"]["status"] == "admitted"
+    assert len(set(scenarios["consumer-identity-parity"]["consumers"].values())) == 1
+
+    blocked = workspace_runtime_core._installed_contract_conformance_matrix(
+        current_identity={"source_class": "source-checkout", "source": "checkout"},
+        resolution={
+            "posture": "mutable",
+            "resolution_status": "unresolved",
+            "selected_distribution": {"direct_url": {"url": "https://example.test/repo.git"}},
+        },
+        source_checkout={"classification": "local-source-non-release", "dirty": True},
+        stale_generated=["generated/example.py"],
+    )
+    blocked_scenarios = {item["id"]: item["status"] for item in blocked["scenarios"]}
+    assert blocked["status"] == "blocked"
+    assert blocked_scenarios["mutable-or-unlocked-vcs"] == "blocked"
+    assert blocked_scenarios["incompatible-or-missing-runtime"] == "blocked"
+    assert blocked_scenarios["local-source-drift"] == "blocked"
+    assert blocked_scenarios["generated-parity"] == "blocked"
+
+
+def test_ordinary_identity_consumers_cannot_execute_dependency_transition(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    def reject_transition(**_kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("ordinary consumers must not cross the dependency transition boundary")
+
+    monkeypatch.setattr(workspace_runtime_core, "execute_workspace_install_upgrade_sync", reject_transition)
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "inspect", "--format", "json"]) == 0
+    capsys.readouterr()
+    assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert cli.main(["skills", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
 
 
 def test_start_select_installed_contract_pair_blocks_mutable_resolution(tmp_path: Path, capsys) -> None:

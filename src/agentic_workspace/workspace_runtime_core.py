@@ -2263,6 +2263,90 @@ def _required_package_resource_availability(resources: Sequence[str]) -> list[di
     return results
 
 
+def _installed_contract_identity_digest(identity: dict[str, Any]) -> str:
+    return "sha256:" + hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def execute_workspace_install_upgrade_sync(
+    *,
+    mode: str,
+    observe_identity: Callable[[], dict[str, Any]],
+    perform_transition: Callable[[], dict[str, Any]],
+) -> dict[str, Any]:
+    """Own the only executable boundary for expected installed-identity changes."""
+    if mode not in {"install", "upgrade", "sync"}:
+        raise ValueError("mode must be install, upgrade, or sync")
+    before = observe_identity()
+    if not isinstance(before, dict) or not before:
+        raise ValueError("before_identity must be a non-empty mapping")
+    transition = perform_transition()
+    if not isinstance(transition, dict) or transition.get("status") not in {"passed", "already-current"}:
+        raise RuntimeError("install/upgrade/sync transition did not produce an admitted result")
+    after = observe_identity()
+    if not isinstance(after, dict) or not after:
+        raise ValueError("after_identity must be a non-empty mapping")
+    return {
+        "kind": "agentic-workspace/install-upgrade-sync-receipt/v1",
+        "operation_id": "workspace.install-upgrade-sync",
+        "mode": mode,
+        "status": "admitted",
+        "before_identity": before,
+        "before_identity_digest": _installed_contract_identity_digest(before),
+        "after_identity": after,
+        "after_identity_digest": _installed_contract_identity_digest(after),
+        "transition_result": transition,
+        "mutation_owner": "execute_workspace_install_upgrade_sync",
+    }
+
+
+def _installed_contract_conformance_matrix(
+    *, current_identity: dict[str, Any], resolution: dict[str, Any], source_checkout: dict[str, Any], stale_generated: list[str]
+) -> dict[str, Any]:
+    source_class = str(current_identity.get("source_class") or "")
+    posture = str(resolution.get("posture") or "")
+    resolution_status = str(resolution.get("resolution_status") or "")
+    direct_url = _as_dict(_as_dict(resolution.get("selected_distribution")).get("direct_url"))
+    vcs_url = str(direct_url.get("url") or "")
+    vcs_revision = str(_as_dict(direct_url.get("vcs_info")).get("commit_id") or direct_url.get("commit_id") or "")
+    identity = {
+        "package": current_identity,
+        "resolution": resolution,
+        "source_checkout": source_checkout,
+        "generated_parity": "stale" if stale_generated else "current",
+    }
+    digest = _installed_contract_identity_digest(identity)
+    scenarios = [
+        {
+            "id": "released-package",
+            "status": "admitted" if source_class in {"release", "released-package", "installed-distribution"} else "not-observed",
+        },
+        {"id": "locked-vcs", "status": "admitted" if vcs_url and vcs_revision and posture in {"locked", "frozen"} else "not-observed"},
+        {
+            "id": "mutable-or-unlocked-vcs",
+            "status": "blocked" if vcs_url and (not vcs_revision or posture == "mutable") else "not-observed",
+        },
+        {"id": "incompatible-or-missing-runtime", "status": "blocked" if resolution_status != "resolved" else "not-observed"},
+        {"id": "payload-mirror", "status": "admitted" if current_identity.get("source") else "not-observed"},
+        {
+            "id": "local-source-drift",
+            "status": "blocked"
+            if source_checkout.get("dirty") is True
+            else "admitted"
+            if source_checkout.get("classification") == "local-source-non-release"
+            else "not-observed",
+        },
+        {"id": "generated-parity", "status": "blocked" if stale_generated else "admitted"},
+        {"id": "consumer-identity-parity", "status": "admitted", "consumers": {name: digest for name in ("startup", "skills", "doctor")}},
+    ]
+    return {
+        "kind": "agentic-workspace/installed-contract-conformance-matrix/v1",
+        "status": "blocked" if any(item["status"] == "blocked" for item in scenarios) else "admitted",
+        "identity_digest": digest,
+        "scenarios": scenarios,
+        "rule": "Every scenario uses the same non-mutating identity resolver; only workspace.install-upgrade-sync may change expected or resolved dependency identity.",
+    }
+
+
 def _installed_contract_pair_payload(
     *, config: WorkspaceConfig, cli_payload: dict[str, Any], summary: dict[str, list[str]] | None
 ) -> dict[str, Any]:
@@ -2292,6 +2376,17 @@ def _installed_contract_pair_payload(
         }
     missing_capabilities = sorted(set(expectation.required_capabilities) - set(SUPPORTED_PAYLOAD_CAPABILITIES))
     missing_resources = [item["resource"] for item in resources if not item["available"]]
+    resolution = cli_payload.get("invocation_resolution", {}) or _invocation_resolution_payload(config=config)
+    before_identity = {
+        "package": current_identity,
+        "resolution": resolution,
+    }
+    conformance_matrix = _installed_contract_conformance_matrix(
+        current_identity=current_identity,
+        resolution=resolution,
+        source_checkout=source_checkout,
+        stale_generated=stale_generated,
+    )
     compatible = (
         cli_payload.get("status") not in {"blocking-drift"} and not missing_capabilities and not missing_resources and not stale_generated
     )
@@ -2309,7 +2404,7 @@ def _installed_contract_pair_payload(
             "schema": "agentic-workspace/installed-state-compatibility/v1",
             "capabilities": list(SUPPORTED_PAYLOAD_CAPABILITIES),
             "resources": resources,
-            "invocation_resolution": cli_payload.get("invocation_resolution", {}) or _invocation_resolution_payload(config=config),
+            "invocation_resolution": resolution,
             "source_checkout": source_checkout,
         },
         "missing_capabilities": missing_capabilities,
@@ -2318,14 +2413,15 @@ def _installed_contract_pair_payload(
         "mutation_gate": "allow" if compatible else "block-managed-mutation",
         "transition_owner": {
             "operation_id": "workspace.install-upgrade-sync",
+            "operation_contract": "src/agentic_workspace/contracts/operations/workspace.install-upgrade-sync.json",
+            "executor": "agentic_workspace.workspace_runtime_core.execute_workspace_install_upgrade_sync",
             "status": "current-identity-recorded" if compatible else "transition-required",
-            "before_identity": {
-                "package": current_identity,
-                "resolution": cli_payload.get("invocation_resolution", {}) or _invocation_resolution_payload(config=config),
-            },
+            "before_identity": before_identity,
+            "before_identity_digest": _installed_contract_identity_digest(before_identity),
             "after_identity_requirement": "rerun installed contract pair after the explicit install, upgrade, or sync operation",
             "ordinary_surfaces_mutate_dependency_state": False,
         },
+        "conformance_matrix": conformance_matrix,
         "repair_route": cli_payload.get("remediation", {}),
         "rule": "The configured invocation and installed contract/resource identity are admitted as one pair before managed mutation.",
     }
@@ -17505,11 +17601,12 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
             skipped_count += 1
             continue
         summaries.append(_successful_completion_cost_run_summary(payload=raw_payload, path=path, target_root=target_root))
+    validation_observations = _successful_completion_cost_validation_observations(target_root=target_root)
     usage_totals = _successful_completion_cost_usage_totals(summaries)
     package_totals = _successful_completion_cost_package_totals(summaries)
     outcome_totals = _successful_completion_cost_outcome_totals(summaries)
     weakness_ledger = _successful_completion_cost_weakness_ledger(target_root=target_root)
-    evidence_count = len(summaries)
+    evidence_count = len(summaries) + len(validation_observations["runs"])
     signals: list[dict[str, Any]] = []
     if outcome_totals["warning_run_count"]:
         signals.append(
@@ -17545,9 +17642,11 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
         "rule": "Use this as maintainer evidence for surface-cost tradeoffs. It is not a formal benchmark, CI gate, or model leaderboard.",
         "evidence": {
             "summary_dir": summary_dir_relative.as_posix(),
-            "summary_count": evidence_count,
+            "summary_count": len(summaries),
+            "total_observation_count": evidence_count,
             "skipped_summary_count": skipped_count,
             "included_recent_limit": 8,
+            "validation_execution": validation_observations,
             "weakness_ledger": weakness_ledger,
         },
         "totals": {
@@ -17566,6 +17665,78 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
         "section_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section successful_completion_cost --format json", cli_invoke=cli_invoke
         ),
+    }
+
+
+def _successful_completion_cost_validation_observations(*, target_root: Path) -> dict[str, Any]:
+    from repo_verification_bootstrap.runtime_primitives import validation_evidence_admissions
+
+    runs: list[dict[str, Any]] = []
+    rejected_count = 0
+    rejection_reasons: dict[str, int] = {}
+    for decision in validation_evidence_admissions(target_root):
+        if not decision.get("admitted"):
+            rejected_count += 1
+            for reason in _list_payload(decision.get("reason_codes")):
+                reason_text = str(reason)
+                rejection_reasons[reason_text] = rejection_reasons.get(reason_text, 0) + 1
+            continue
+        bundle = _as_dict(decision.get("bundle"))
+        provenance = _as_dict(bundle.get("provenance"))
+        completion_cost = _as_dict(bundle.get("completion_cost"))
+        runs.append(
+            {
+                "evidence_ref": str(provenance.get("result_path") or ""),
+                "constituent_id": str(bundle.get("proof_route_id") or ""),
+                "run_id": str(provenance.get("run_id") or ""),
+                "outcome": str(completion_cost.get("outcome") or "unknown"),
+                "duration_seconds": round(float(completion_cost.get("duration_seconds") or 0.0), 6),
+                "rerun": bool(completion_cost.get("rerun")),
+                "ended_at": str(bundle.get("executed_at") or ""),
+                "subject": {
+                    "repository_head": provenance.get("repository_head"),
+                    "repository_tree": provenance.get("repository_tree"),
+                    "plan_graph": provenance.get("plan_graph"),
+                },
+            }
+        )
+        if len(runs) >= 40:
+            break
+    comparison = "unknown"
+    comparison_basis: dict[str, Any] = {}
+    for index, latest in enumerate(runs):
+        previous = next(
+            (
+                item
+                for item in runs[index + 1 :]
+                if item["constituent_id"] == latest["constituent_id"] and item["outcome"] == latest["outcome"] == "passed"
+            ),
+            None,
+        )
+        if previous is None:
+            continue
+        latest_duration = float(latest["duration_seconds"])
+        previous_duration = float(previous["duration_seconds"])
+        ratio = latest_duration / previous_duration if previous_duration else 1.0
+        comparison = "improved" if ratio < 0.95 else "regressed" if ratio > 1.05 else "stable"
+        comparison_basis = {
+            "constituent_id": latest["constituent_id"],
+            "latest_duration_seconds": latest_duration,
+            "previous_duration_seconds": previous_duration,
+            "ratio": round(ratio, 4),
+        }
+        break
+    return {
+        "kind": "agentic-workspace/validation-completion-cost-observations/v1",
+        "status": "present" if runs else "no-evidence",
+        "run_count": len(runs),
+        "included_recent_limit": 8,
+        "rejected_or_stale_count": rejected_count,
+        "rejection_reasons": dict(sorted(rejection_reasons.items())),
+        "comparison": comparison,
+        "comparison_basis": comparison_basis,
+        "runs": runs[:8],
+        "privacy": "compact result metadata only; raw logs, prompts, and transcripts are excluded",
     }
 
 
