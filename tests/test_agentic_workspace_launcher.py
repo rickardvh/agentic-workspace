@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import shutil
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -167,6 +169,93 @@ def test_runtime_identity_rejection_precedes_refresh_and_dispatch(monkeypatch) -
     monkeypatch.setattr(module, "_dispatch_to_source_cli", lambda _argv: pytest.fail("dispatch ran after identity rejection"))
 
     assert module.main(["summary", "--target", ".", "--format", "json"]) == 2
+
+
+def test_active_no_sync_runtime_identity_is_stable_across_two_checkouts(tmp_path: Path) -> None:
+    checkout_a = tmp_path / "checkout-a"
+    checkout_b = tmp_path / "checkout-b"
+    fake_site = tmp_path / "active-site"
+    for checkout in (checkout_a, checkout_b):
+        for relative in (".", "packages/memory", "packages/planning", "packages/verification"):
+            (checkout / relative).mkdir(parents=True, exist_ok=True)
+    (checkout_b / "scripts").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(SCRIPT_PATH, checkout_b / "scripts" / "run_agentic_workspace.py")
+    _write(checkout_b / "pyproject.toml", '[project]\nname = "runtime-identity-fixture"\nversion = "0.0.0"\n')
+    _write(checkout_b / "src/agentic_workspace/__init__.py", "")
+    _write(
+        checkout_b / "src/agentic_workspace/cli.py",
+        "def main(argv=None):\n    print('dispatched:' + str((argv or [''])[0]))\n    return 0\n",
+    )
+
+    distributions = {
+        "agentic-workspace": ".",
+        "agentic-workspace-memory": "packages/memory",
+        "agentic-workspace-planning": "packages/planning",
+        "agentic-workspace-verification": "packages/verification",
+    }
+
+    def bind_active_runtime(checkout: Path) -> None:
+        for name, relative in distributions.items():
+            dist_info = fake_site / f"{name.replace('-', '_')}-0.dist-info"
+            _write(dist_info / "METADATA", f"Name: {name}\nVersion: 0\n")
+            _write(
+                dist_info / "direct_url.json",
+                json.dumps({"url": (checkout / relative).resolve().as_uri(), "dir_info": {"editable": True}}),
+            )
+
+    def snapshot() -> dict[str, bytes]:
+        roots = {"a": checkout_a, "b": checkout_b, "site": fake_site}
+        return {
+            f"{label}/{path.relative_to(root).as_posix()}": path.read_bytes()
+            for label, root in roots.items()
+            for path in sorted(root.rglob("*"))
+            if path.is_file()
+        }
+
+    environment = {
+        **os.environ,
+        "PYTHONPATH": os.pathsep.join((str(fake_site), str(checkout_b / "src"))),
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "AW_SKIP_GENERATED_CLI_REFRESH": "1",
+    }
+
+    def invoke(command: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                "uv",
+                "run",
+                "--active",
+                "--no-sync",
+                "python",
+                "scripts/run_agentic_workspace.py",
+                command,
+                "--target",
+                ".",
+                "--format",
+                "json",
+            ],
+            cwd=checkout_b,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    bind_active_runtime(checkout_a)
+    mismatch_before = snapshot()
+    for command in ("start", "summary", "report", "doctor"):
+        result = invoke(command)
+        assert result.returncode == 2
+        assert "refused a runtime from another checkout before command effects" in result.stderr
+    assert snapshot() == mismatch_before
+
+    bind_active_runtime(checkout_b)
+    matching_before = snapshot()
+    for command in ("start", "summary", "report", "doctor"):
+        result = invoke(command)
+        assert result.returncode == 0, result.stderr
+        assert f"dispatched:{command}" in result.stdout
+    assert snapshot() == matching_before
 
 
 def test_repo_configured_active_invocation_forbids_dependency_sync() -> None:
