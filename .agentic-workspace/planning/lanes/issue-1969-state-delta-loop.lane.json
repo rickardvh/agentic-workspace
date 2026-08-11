@@ -73,22 +73,21 @@
   "acceptance_boundary": "The lane is complete only when the stacked branches/PRs together satisfy #1969 and all child issue acceptance criteria, with tests proving compact packets and skill discovery while preserving proof, residue, next action, and honest closure.",
   "proof_strategy": "Run changed-path AW proof selection, focused CLI tests for start/implement/report/skills packet exposure, summary/doctor planning checks, and a real CLI sample showing compact state-delta packets without broad always-on dumps.",
   "proof_aggregation": {
-    "status": "partial",
+    "status": "satisfied",
     "evidence": [
-      "Child issues #1970-#1974 are completed and their PR stack #1976-#1980 is merged."
+      "Child issues #1970-#1974 are completed and their PR stack #1976-#1980 is merged.",
+      "Issue #2273 migrated the remaining effectiveness questions to Evaluation and completed the bounded future-evidence audit."
     ],
-    "known_gaps": [
-      "Issue #2273 owns migration of the remaining #1969 effectiveness questions into Evaluation and the resulting closure decision."
-    ]
+    "known_gaps": []
   },
-  "residual_lane_work": "Wait for #2273 to migrate the remaining effectiveness questions into an owned evaluation and decide whether #1969 can close.",
-  "lane_to_epic_contribution": "The original state-delta packet and operating-loop adoption stack is complete; remaining longitudinal evidence ownership moved to #2273.",
-  "parent_close_permission": "do-not-close-parent",
+  "residual_lane_work": "Longitudinal effectiveness collection continues in Evaluation and does not keep the implementation issue open.",
+  "lane_to_epic_contribution": "The state-delta implementation is complete and its remaining effectiveness questions have a durable Evaluation owner.",
+  "parent_close_permission": "may-close-parent",
   "closeout_state": {
-    "status": "open",
-    "summary": "The original #1970-#1974 implementation stack is complete; the parent remains open for its explicitly broader effectiveness boundary.",
-    "residual_work": "#2273 must migrate the remaining effectiveness questions and decide the #1969 closure boundary.",
-    "next_owner": "issue-2273"
+    "status": "closed",
+    "summary": "The implementation stack is complete and #2273 moved the only remaining longitudinal questions to the Evaluation lifecycle.",
+    "residual_work": "none for implementation; Evaluation owns later effectiveness observations",
+    "next_owner": "state-delta-operating-loop-1969 evaluation"
   },
   "references": [
     {

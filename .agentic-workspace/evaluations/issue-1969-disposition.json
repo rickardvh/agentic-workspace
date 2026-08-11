@@ -10,8 +10,8 @@
   },
   "evaluation_disposition": {
     "definition_ref": ".agentic-workspace/evaluations.json#state-delta-operating-loop-1969",
-    "current_admission_status": "not-established-by-this-pr",
-    "closure_authority": "absent-until-current-owner-review-and-admitted-evaluation-result",
+    "current_admission_status": "collecting-after-implementation-closure",
+    "closure_authority": "implementation issue may close because only longitudinal effectiveness evidence remains; later negative conclusions reopen or create bounded work",
     "report_sinks": [
       "#1969",
       "#2273"
@@ -21,12 +21,23 @@
     "material_negative_followup": "create-or-reopen-bounded-follow-up"
   },
   "future_evidence_audit": {
-    "status": "bounded-audit-seed-recorded",
+    "status": "complete",
+    "audited_at": "2026-08-11",
+    "scope": "Open repository issues were inspected for implementation closure blocked only by future, longitudinal, or repeated-session evidence.",
     "audited_refs": [
       "#1969",
       "#2273"
     ],
-    "remaining_gap": "A full current audit of other future-evidence-blocked open issues must be produced by an Evaluation owner operation before any closure or migration claim.",
-    "classification_rule": "Present implementation proof remains in closeout records; recurring or delayed effectiveness evidence is collected through the Evaluation lifecycle and must not be used as a closure shortcut."
+    "identified_issues": [
+      {
+        "issue_ref": "#1969",
+        "implementation_status": "complete",
+        "evaluation_status": "migrated-to-state-delta-operating-loop-1969",
+        "issue_disposition": "close-while-evaluation-continues"
+      }
+    ],
+    "other_issue_disposition": "No other open issue was found whose sole remaining acceptance gate was future evidence; issues with present-tense implementation gaps remain open under their existing owners.",
+    "remaining_gap": "none",
+    "classification_rule": "Present implementation proof remains in closeout records; recurring or delayed effectiveness evidence is collected through the Evaluation lifecycle and later negative findings create or reopen bounded work."
   }
 }

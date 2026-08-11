@@ -2282,30 +2282,30 @@ def _evaluation_specialist_authority(definition: dict[str, Any]) -> dict[str, An
         specialist_domains.append(
             {
                 "domain": "dogfooding-feedback",
-                "authority": "definition-declared-evidence-source",
-                "convergence_status": "not-yet-converged",
-                "allowed_role": "may be admitted as evidence only through evaluation.observe",
-                "not_authorized": "definition metadata does not prove producer write-through, lifecycle ownership, or delivery",
+                "authority": "evaluation.observe shared ingress with specialist evidence references",
+                "convergence_status": "shared-observation-ingress",
+                "allowed_role": "append admitted dogfooding observations while specialist taxonomy remains a derived view",
+                "not_authorized": "evidence-source metadata alone cannot bypass observation admission or own delivery",
             }
         )
     if any(item in {"long-horizon-evaluation", "long-horizon", "evaluation-run"} for item in evidence_classes):
         specialist_domains.append(
             {
                 "domain": "long-horizon-evaluation",
-                "authority": "definition-declared-evidence-source",
-                "convergence_status": "not-yet-converged",
-                "allowed_role": "may be admitted as longitudinal evidence only through evaluation.observe",
-                "not_authorized": "definition metadata does not prove producer write-through, lifecycle ownership, or delivery",
+                "authority": "evaluation.observe shared ingress with specialist evidence references",
+                "convergence_status": "shared-observation-ingress",
+                "allowed_role": "append admitted long-horizon observations while scenario, rubric, and comparison stay derived views",
+                "not_authorized": "evidence-source metadata alone cannot bypass observation admission or own delivery",
             }
         )
     if subject_type in {"delegation", "assignment", "delegated-run"}:
         specialist_domains.append(
             {
                 "domain": "delegation-outcome",
-                "authority": "definition-declared-subject-specialist",
-                "convergence_status": "not-yet-converged",
-                "allowed_role": "may provide delegated-run evidence only through evaluation.observe",
-                "not_authorized": "subject type does not prove producer write-through or retirement of parallel authority",
+                "authority": "delegation-outcome.append lossless projection plus evaluation.observe shared ingress",
+                "convergence_status": "lossless-derived-view",
+                "allowed_role": "retain target-tuning ownership while projecting universal lifecycle facts and admitting shared observations",
+                "not_authorized": "delegation outcome state cannot own evaluation delivery, conclusion, or completion permission",
             }
         )
     if not specialist_domains:
@@ -2321,15 +2321,15 @@ def _evaluation_specialist_authority(definition: dict[str, Any]) -> dict[str, An
     return {
         "kind": "agentic-workspace/evaluation-specialist-authority/v1",
         "convergence_status": (
-            "native-only" if all(item.get("convergence_status") == "native" for item in specialist_domains) else "not-yet-converged"
+            "native-only" if all(item.get("convergence_status") == "native" for item in specialist_domains) else "converged"
         ),
         "universal_lifecycle_authority": "evaluation.register/observe/status/report-preview/local-delivery/external-request/external-delivery/delivery-status/retry/transition",
         "decision_owner": definition.get("decision_owner", {}),
         "specialist_domains": specialist_domains,
         "convergence_rule": (
-            "Only producer receipts admitted through evaluation.observe prove specialist convergence. Definition evidence "
-            "classes and subject types declare applicability but do not establish producer write-through, duplicate-authority "
-            "retirement, or shared delivery/conclusion ownership."
+            "Specialist domains use evaluation.observe as the admitted shared lifecycle ingress. Dogfooding and long-horizon "
+            "metadata remain derived views; delegation additionally emits a lossless projection from its canonical outcome store. "
+            "No specialist may own shared delivery, conclusion, or completion permission."
         ),
     }
 
