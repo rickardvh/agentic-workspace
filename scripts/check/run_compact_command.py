@@ -167,15 +167,21 @@ def _git_value(*args: str) -> str:
 
 def _repository_identity() -> dict[str, object]:
     status = _git_value("status", "--porcelain=v1", "--untracked-files=no")
+    try:
+        runtime = json.loads(os.environ.get("AW_RUNTIME_IDENTITY", "{}"))
+    except json.JSONDecodeError:
+        runtime = {}
+    if not isinstance(runtime, dict) or not runtime:
+        runtime = {
+            "status": "matched",
+            "executable": str(Path(sys.executable).resolve()),
+        }
     return {
         "kind": "agentic-workspace/validation-repository-identity/v1",
         "head": _git_value("rev-parse", "HEAD"),
         "tree": _git_value("rev-parse", "HEAD^{tree}"),
         "tracked_dirty": bool(status.strip()),
-        "runtime": {
-            "status": "matched",
-            "executable": str(Path(sys.executable).resolve()),
-        },
+        "runtime": runtime,
     }
 
 
