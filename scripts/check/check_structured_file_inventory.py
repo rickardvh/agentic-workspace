@@ -481,6 +481,31 @@ def storage_policy_findings(paths: list[str], inventory: dict[str, Any]) -> list
     return findings
 
 
+def merge_safety_findings(inventory: dict[str, Any]) -> list[Finding]:
+    """Reject declarations that put set-like branch writes in one shared file."""
+
+    findings: list[Finding] = []
+    for index, entry in enumerate(inventory["entries"]):
+        policy = entry.get("merge_safety")
+        if not isinstance(policy, dict) or policy.get("collection_semantics") != "set-like":
+            continue
+        location = f"{INVENTORY_PATH.relative_to(REPO_ROOT).as_posix()}#entries[{index}]"
+        pattern = str(entry.get("pattern") or "")
+        filename = PurePosixPath(pattern).name
+        if policy.get("branch_write_shape") != "owner-scoped-record" or not any(token in filename for token in ("*", "?", "[")):
+            findings.append(
+                Finding(
+                    path=location,
+                    message="set-like branch-carried state must use owner-scoped record paths, not a shared aggregate file",
+                )
+            )
+        if policy.get("logical_collection") != "derived-sorted-read-view":
+            findings.append(
+                Finding(path=location, message="set-like logical collections must be derived deterministically from owner records")
+            )
+    return findings
+
+
 def generated_mirror_policy_findings(paths: list[str], inventory: dict[str, Any]) -> list[Finding]:
     mirrors = inventory.get("generated_mirrors", [])
     findings: list[Finding] = []
@@ -566,6 +591,7 @@ def inventory_findings(
         unmatched_structured_files(checked_paths, inventory)
         + claim_validation_findings(checked_paths, inventory)
         + storage_policy_findings(checked_paths, inventory)
+        + merge_safety_findings(inventory)
         + generated_mirror_policy_findings(checked_all_paths, inventory)
     )
 

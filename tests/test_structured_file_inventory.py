@@ -492,6 +492,27 @@ def test_generated_adapter_requires_regeneration_source() -> None:
     assert "reconstructable_from" in findings[0].message
 
 
+def test_set_like_branch_state_rejects_shared_aggregate_path() -> None:
+    inventory = {
+        "entries": [
+            {
+                "pattern": ".agentic-workspace/verification/decisions.json",
+                "merge_safety": {
+                    "collection_semantics": "set-like",
+                    "branch_write_shape": "owner-scoped-record",
+                    "logical_collection": "derived-sorted-read-view",
+                },
+            }
+        ]
+    }
+
+    findings = check_structured_file_inventory.merge_safety_findings(inventory)
+
+    assert [finding.message for finding in findings] == [
+        "set-like branch-carried state must use owner-scoped record paths, not a shared aggregate file"
+    ]
+
+
 def test_generated_adapter_requires_matching_mirror_metadata() -> None:
     inventory = {
         "entries": [

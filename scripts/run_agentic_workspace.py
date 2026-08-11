@@ -17,20 +17,52 @@ SOURCE_MANIFEST_PATH = REPO_ROOT / "generated" / ".agentic-workspace-cli-fingerp
 GENERATOR_SCRIPT = REPO_ROOT / "scripts" / "generate" / "generate_command_packages.py"
 CACHE_SCHEMA = "generated-cli-fingerprint/v1"
 
-FINGERPRINT_PATTERNS = (
+GENERATION_DEPENDENCY_PATTERNS = (
     "pyproject.toml",
     "uv.lock",
-    "scripts/**/*.py",
-    "src/**/*.py",
-    "src/**/*.json",
-    "src/**/*.mjs",
-    "packages/*/src/**/*.py",
-    "packages/*/src/**/*.json",
-    "packages/*/src/**/*.mjs",
-    "generated/**/*.py",
-    "generated/**/*.json",
-    "generated/**/*.mjs",
+    "LICENSE",
+    ".github/release-ownership.json",
+    "scripts/generate/generate_command_packages.py",
+    "scripts/generate/workspace_command_generation.py",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/operation_primitives.json",
+    "src/agentic_workspace/contracts/python_primitive_support.py",
+    "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
+    "generated/*/typescript/package.json",
 )
+
+
+def _operation_contract_paths(*, repo_root: Path) -> list[str]:
+    """Return only operation contracts referenced by the command-package IR."""
+
+    ir_path = repo_root / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json"
+    try:
+        manifest = json.loads(ir_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    paths: set[str] = set()
+
+    def collect(command: object, *, root: str, inherited: str = "") -> None:
+        if not isinstance(command, dict):
+            return
+        operation_ref = command.get("operation_ref")
+        operation_path = inherited
+        if isinstance(operation_ref, dict):
+            operation_path = str(operation_ref.get("path") or inherited).strip()
+        if root and operation_path:
+            paths.add((Path(root) / operation_path).as_posix())
+        interface = command.get("interface")
+        if isinstance(interface, dict):
+            for subcommand in interface.get("subcommands", []):
+                collect(subcommand, root=root, inherited=operation_path)
+
+    for package in manifest.get("packages", []) if isinstance(manifest, dict) else []:
+        if not isinstance(package, dict):
+            continue
+        root = str(package.get("operation_contract_root") or "").strip()
+        for command in package.get("commands", []):
+            collect(command, root=root)
+    return sorted(paths)
 
 
 def _repo_relative(path: Path, *, repo_root: Path) -> str:
@@ -39,12 +71,15 @@ def _repo_relative(path: Path, *, repo_root: Path) -> str:
 
 def _fingerprint_files(*, repo_root: Path) -> list[Path]:
     files: dict[str, Path] = {}
-    for pattern in FINGERPRINT_PATTERNS:
+    for pattern in GENERATION_DEPENDENCY_PATTERNS:
         for path in repo_root.glob(pattern):
             if path.is_file() and "__pycache__" not in path.parts:
                 relative = _repo_relative(path, repo_root=repo_root)
-                if relative != "generated/.agentic-workspace-cli-fingerprint.json":
-                    files[relative] = path
+                files[relative] = path
+    for relative in _operation_contract_paths(repo_root=repo_root):
+        path = repo_root / relative
+        if path.is_file():
+            files[relative] = path
     return [files[relative] for relative in sorted(files)]
 
 
@@ -170,58 +205,11 @@ def _git_index_entries(*, repo_root: Path, paths: list[str]) -> dict[str, str] |
     return {path: entries_by_path[path] for path in paths}
 
 
-def _git_prospective_entries(*, repo_root: Path, paths: list[str]) -> dict[str, str] | None:
-    """Return the blob identities Git will index for the current text inputs.
-
-    Fingerprint inputs are repo-declared LF text surfaces. Hashing their
-    normalized worktree bytes makes generation stable whether each input is
-    staged before or after the manifest is written.
-    """
-
-    if not paths:
-        return None
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--show-object-format"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except OSError:
-        return None
-    algorithm = result.stdout.strip() if result.returncode == 0 else ""
-    if algorithm not in {"sha1", "sha256"}:
-        return None
-    entries: dict[str, str] = {}
-    try:
-        for path in paths:
-            content = (repo_root / path).read_bytes().replace(b"\r\n", b"\n")
-            digest = hashlib.new(algorithm)
-            digest.update(f"blob {len(content)}\0".encode("ascii"))
-            digest.update(content)
-            entries[path] = digest.hexdigest()
-    except OSError:
-        return None
-    return entries
-
-
-def _git_index_identity_from_entries(*, paths: list[str], entries: dict[str, str]) -> str:
-    digest = hashlib.sha256()
-    for expected_path in paths:
-        digest.update(expected_path.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(entries[expected_path].encode("utf-8"))
-        digest.update(b"\0")
-    return digest.hexdigest()
-
-
 def source_cli_fingerprint_manifest(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
-    """Build a transportable content identity plus optional Git acceleration."""
+    """Build the merge-stable semantic identity of generation dependencies."""
 
     paths = [_repo_relative(path, repo_root=repo_root) for path in _fingerprint_files(repo_root=repo_root)]
     content_identity = compute_generated_cli_fingerprint(repo_root=repo_root)
-    prospective_entries = _git_prospective_entries(repo_root=repo_root, paths=paths)
     return {
         "schema": CACHE_SCHEMA,
         "kind": "generated-cli-source-manifest/v1",
@@ -230,12 +218,7 @@ def source_cli_fingerprint_manifest(*, repo_root: Path = REPO_ROOT) -> dict[str,
         "algorithm": content_identity["algorithm"],
         "fingerprint": content_identity["fingerprint"],
         "identity_role": "canonical-semantic-content",
-        "context_rule": "Every listed input is required in source and conformance contexts; Git metadata is auxiliary only.",
-        "git_index_entries": prospective_entries,
-        "git_index_identity": (
-            _git_index_identity_from_entries(paths=paths, entries=prospective_entries) if prospective_entries is not None else None
-        ),
-        "git_identity_role": "optional-source-checkout-acceleration",
+        "context_rule": "Only actual generation dependencies are listed. Git checkout witnesses are derived locally and never carried across branches.",
         "generation_command": "uv run python scripts/generate/generate_command_packages.py",
     }
 
@@ -252,8 +235,6 @@ def source_cli_fingerprint_manifest_status(
     if payload is None:
         return {"status": "invalid", "reason": "invalid-manifest", "auxiliary_witness": "not-evaluated"}
     paths = payload.get("file_paths")
-    expected_entries = payload.get("git_index_entries")
-    expected_identity = payload.get("git_index_identity")
     expected_content_identity = payload.get("fingerprint")
     if (
         payload.get("kind") != "generated-cli-source-manifest/v1"
@@ -263,38 +244,17 @@ def source_cli_fingerprint_manifest_status(
         or not expected_content_identity
     ):
         return {"status": "invalid", "reason": "invalid-manifest", "auxiliary_witness": "not-evaluated"}
+    if "git_index_entries" in payload or "git_index_identity" in payload:
+        return {"status": "invalid", "reason": "branch-carried-git-witness", "auxiliary_witness": "not-evaluated"}
     current_paths = [_repo_relative(path, repo_root=repo_root) for path in _fingerprint_files(repo_root=repo_root)]
     if current_paths != paths:
         return {"status": "stale", "reason": "semantic-path-set-drift", "auxiliary_witness": "not-evaluated"}
     current_entries = _git_index_entries(repo_root=repo_root, paths=paths)
-    expected_entries_valid = (
-        isinstance(expected_entries, dict)
-        and set(expected_entries) == set(paths)
-        and all(isinstance(entry, str) and entry for entry in expected_entries.values())
-    )
-    expected_identity_valid = isinstance(expected_identity, str) and bool(expected_identity)
     inputs_unmodified = current_entries is not None and _git_input_paths_are_unmodified(repo_root=repo_root, paths=paths)
-    if (
-        current_entries is not None
-        and expected_entries_valid
-        and expected_identity_valid
-        and inputs_unmodified
-        and current_entries == expected_entries
-        and _git_index_identity_from_entries(paths=paths, entries=current_entries) == expected_identity
-    ):
-        return {"status": "current", "reason": "git-index-fast-path", "auxiliary_witness": "match"}
-
-    if current_entries is None:
-        auxiliary_witness = "unavailable"
-    elif not expected_entries_valid or not expected_identity_valid:
-        auxiliary_witness = "invalid"
-    elif not inputs_unmodified:
-        auxiliary_witness = "dirty-inputs"
-    else:
-        auxiliary_witness = "mismatch"
+    auxiliary_witness = "derived-clean-index" if inputs_unmodified else "unavailable" if current_entries is None else "dirty-inputs"
     current_content_identity = compute_generated_cli_fingerprint(repo_root=repo_root).get("fingerprint")
     if current_content_identity == expected_content_identity:
-        return {"status": "current", "reason": "semantic-fallback", "auxiliary_witness": auxiliary_witness}
+        return {"status": "current", "reason": "semantic-content-match", "auxiliary_witness": auxiliary_witness}
     return {"status": "stale", "reason": "semantic-content-drift", "auxiliary_witness": auxiliary_witness}
 
 

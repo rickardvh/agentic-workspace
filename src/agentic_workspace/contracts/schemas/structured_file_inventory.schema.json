@@ -200,6 +200,27 @@
             "pattern": "^#[0-9]+$",
             "description": "Storage routed to text value used by this contract."
           },
+          "merge_safety": {
+            "type": "object",
+            "required": [
+              "collection_semantics",
+              "branch_write_shape",
+              "logical_collection"
+            ],
+            "properties": {
+              "collection_semantics": {
+                "const": "set-like"
+              },
+              "branch_write_shape": {
+                "const": "owner-scoped-record"
+              },
+              "logical_collection": {
+                "const": "derived-sorted-read-view"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Required merge-order policy for branch-carried set-like records."
+          },
           "notes": {
             "type": "string",
             "minLength": 1,

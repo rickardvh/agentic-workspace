@@ -481,9 +481,14 @@
       "editable_by_agents": true,
       "format": "json",
       "generated": false,
-      "notes": "Optional compact disposition records explain ordinary test evidence ownership, durability, and follow-up proof decisions without storing raw review transcripts.",
+      "notes": "Optional owner-scoped disposition records explain ordinary test evidence ownership, durability, and follow-up proof decisions. The logical collection is derived by sorted record id; a shared append-style aggregate is prohibited.",
       "owner": "verification",
-      "pattern": ".agentic-workspace/verification/test-strategy-dispositions.json",
+      "pattern": ".agentic-workspace/verification/test-strategy-dispositions/*.json",
+      "merge_safety": {
+        "collection_semantics": "set-like",
+        "branch_write_shape": "owner-scoped-record",
+        "logical_collection": "derived-sorted-read-view"
+      },
       "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._load_test_strategy_dispositions",
       "status": "typed-validator-backed",
       "storage_class": "non-reconstructable-decision"

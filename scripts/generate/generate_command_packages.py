@@ -42,11 +42,7 @@ def _write_source_cli_fingerprint_manifest(
     repo_root: Path = REPO_ROOT,
     launcher: ModuleType | None = None,
 ) -> None:
-    """Publish the generator-owned cold-start freshness witness.
-
-    The launcher uses the Git witness only as an acceleration hint and falls
-    back to the canonical semantic identity when checkout state changes.
-    """
+    """Publish the generator-owned, merge-stable semantic freshness witness."""
 
     effective_launcher = launcher or _load_launcher(repo_root=repo_root)
     manifest = effective_launcher.source_cli_fingerprint_manifest(repo_root=repo_root)
@@ -99,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
         witness = manifest_status["auxiliary_witness"]
-        detail = "" if manifest_status["reason"] == "git-index-fast-path" else f" (semantic fallback; Git witness: {witness})"
+        detail = f" (local Git witness: {witness})"
         print(f"[ok] generated command packages{detail}")
     else:
         _write_source_cli_fingerprint_manifest()
