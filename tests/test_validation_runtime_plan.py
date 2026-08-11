@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -140,6 +141,32 @@ def test_automatic_validation_run_ids_do_not_collide_within_one_second_or_concur
 
     assert len(run_ids) == len(set(run_ids))
     assert all(run_id.startswith("local-") for run_id in run_ids)
+
+
+def test_make_materializes_one_automatic_run_id_per_process(tmp_path: Path) -> None:
+    root = Path(__file__).resolve().parents[1]
+    probe = tmp_path / "validation-id-probe.mk"
+    probe.write_text(
+        ".PHONY: validation-id-probe\nvalidation-id-probe:\n\t@echo $(VALIDATION_RUN_ID)\n\t@echo $(VALIDATION_RUN_ID)\n",
+        encoding="utf-8",
+    )
+
+    def invoke() -> list[str]:
+        result = subprocess.run(
+            ["make", "--no-print-directory", "-f", str(root / "Makefile"), "-f", str(probe), "validation-id-probe"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+    first = invoke()
+    second = invoke()
+
+    assert len(first) == 2 and first[0] == first[1]
+    assert len(second) == 2 and second[0] == second[1]
+    assert first[0] != second[0]
 
 
 def test_stock_pre_commit_routes_through_the_repo_owned_composition() -> None:

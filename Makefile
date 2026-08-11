@@ -3,7 +3,9 @@
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache-root
 REVIEW_MAX_CYCLES ?= 3
 export UV_CACHE_DIR
-VALIDATION_RUN_ID ?= $(shell python scripts/check/allocate_validation_run_id.py)
+ifeq ($(origin VALIDATION_RUN_ID), undefined)
+VALIDATION_RUN_ID := $(shell python scripts/check/allocate_validation_run_id.py)
+endif
 export VALIDATION_RUN_ID
 # Serial execution is the safe local default.  Callers that have measured
 # capacity may explicitly opt in, for example: PYTEST_PARALLEL_ARGS='-n 4'.
