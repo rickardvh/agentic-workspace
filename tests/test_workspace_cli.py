@@ -1025,6 +1025,7 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
         "snapshot_reuse": "revision-keyed",
     }
     assert visible["composed_closeout"]["requires_additional_report_scan"] is False
+
     assert replay["workflow_class_count"] >= 2
     assert [item["task_class"] for item in study_comparison["scenarios"]] == [
         "clear",
@@ -5037,7 +5038,38 @@ def test_start_select_surfaces_state_delta_packets(tmp_path: Path, capsys) -> No
     assert visible["status"] == "ready"
     assert visible["route_budget"]["max_report_scans"] == 1
     assert visible["route_budget"]["generated_action_policy"] == "never-verbose-without-explicit-expansion"
+    assert visible["observed_cost"] == {
+        "generated_next_actions": 1,
+        "report_scans": 0,
+        "verbose_generated_actions": 0,
+        "visible_part_count": 4,
+        "snapshot_loads": 0,
+        "snapshot_reused": False,
+    }
     assert visible["composed_closeout"]["requires_additional_report_scan"] is False
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/example.md",
+                "--select",
+                "visible_state_delta_response",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    implementation_visible = json.loads(capsys.readouterr().out)["values"]["visible_state_delta_response"]
+    assert implementation_visible["route_budget"]["status"] == "within-budget"
+    assert implementation_visible["observed_cost"]["generated_next_actions"] == 1
+    assert implementation_visible["observed_cost"]["report_scans"] == 0
+    assert implementation_visible["observed_cost"]["verbose_generated_actions"] == 0
+    assert implementation_visible["observed_cost"]["visible_part_count"] == 4
 
 
 def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path: Path, capsys) -> None:
@@ -13023,6 +13055,8 @@ def test_report_exposes_reasoning_economy_evidence_section(tmp_path: Path, capsy
     ]
     replay_examples = {item["id"]: item for item in full["reasoning_economy"]["state_delta_replay_evidence"]["examples"]}
     assert replay_examples["handoff-continuation"]["workflow_class"] == "handoff"
+    assert all(item["observed_cost"]["snapshot_loads"] == 1 for item in replay_examples.values())
+    assert all(item["observed_cost"]["snapshot_reused"] is True for item in replay_examples.values())
     assert "proof boundary remains visible" in full["reasoning_economy"]["state_delta_replay_evidence"]["safety_preserved"]
 
 

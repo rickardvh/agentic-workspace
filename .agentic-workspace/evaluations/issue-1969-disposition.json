@@ -10,7 +10,8 @@
     "remaining_gap": "none; longitudinal effectiveness remains Evaluation-owned and does not block present implementation closure.",
     "evidence_refs": [
       "#1969#issuecomment-4937313161",
-      "#2166"
+      "#2166",
+      "agentic-workspace report --target . --section reasoning_economy --format json#state_delta_replay_evidence"
     ]
   },
   "evaluation_disposition": {

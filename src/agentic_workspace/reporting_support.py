@@ -535,7 +535,7 @@ def visible_state_delta_response_payload(
         "omitted_details": omitted_details,
         "missing_evidence": missing_evidence,
         "route_budget": {
-            "status": "within-budget",
+            "status": "pending-observation",
             "max_generated_next_actions": 1,
             "max_report_scans": 1,
             "max_visible_parts": 4,
@@ -552,51 +552,118 @@ def visible_state_delta_response_payload(
     }
     if include_source_packets:
         payload["source_packets"] = ["current_decision", "message_economy", "evidence_bundle"]
+    observed_cost = state_delta_route_observation(
+        response=payload,
+        report_scans=0,
+        snapshot_loads=0,
+        snapshot_reused=False,
+    )
+    payload["observed_cost"] = observed_cost
+    payload["route_budget"]["status"] = (
+        "within-budget"
+        if observed_cost["generated_next_actions"] <= payload["route_budget"]["max_generated_next_actions"]
+        and observed_cost["report_scans"] <= payload["route_budget"]["max_report_scans"]
+        and observed_cost["visible_part_count"] <= payload["route_budget"]["max_visible_parts"]
+        and observed_cost["verbose_generated_actions"] == 0
+        else "exceeded"
+    )
     return payload
 
 
-def state_delta_replay_evidence_payload() -> dict[str, Any]:
-    route_budget = {
-        "generated_next_actions": 1,
-        "report_scans": 1,
-        "verbose_generated_actions": 0,
-        "visible_part_count": 4,
+def state_delta_route_observation(
+    *,
+    response: dict[str, Any],
+    report_scans: int,
+    snapshot_loads: int,
+    snapshot_reused: bool,
+) -> dict[str, Any]:
+    """Measure a compiled response instead of asserting route-cost constants."""
+
+    parts = response.get("parts", {})
+    visible_parts = parts if isinstance(parts, dict) else {}
+    next_actions = [value for key, value in visible_parts.items() if key == "next_safe_action" and str(value).strip()]
+    serialized = json.dumps(response, sort_keys=True)
+    return {
+        "generated_next_actions": len(next_actions),
+        "report_scans": report_scans,
+        "verbose_generated_actions": serialized.count("--verbose"),
+        "visible_part_count": len([value for value in visible_parts.values() if str(value).strip()]),
+        "snapshot_loads": snapshot_loads,
+        "snapshot_reused": snapshot_reused,
     }
+
+
+def _observed_state_delta_replay_example(
+    *, example_id: str, workflow_class: str, input_packets: list[str], avoided: list[str], comparison: str
+) -> dict[str, Any]:
+    report_scans = 0
+    snapshot_loads = 0
+    revision = f"{workflow_class}-revision"
+    snapshots: dict[str, dict[str, Any]] = {}
+
+    def load_snapshot() -> dict[str, Any]:
+        nonlocal report_scans, snapshot_loads
+        if revision in snapshots:
+            return snapshots[revision]
+        report_scans += 1
+        snapshot_loads += 1
+        snapshots[revision] = {
+            "decision_question": f"What changed in {workflow_class}?",
+            "proof_boundary": "bounded-proof",
+            "residue_owner": "planning",
+            "next_action": f"continue-{workflow_class}",
+            "state_backed": True,
+        }
+        return snapshots[revision]
+
+    current = load_snapshot()
+    response = visible_state_delta_response_payload(surface=workflow_class, current_decision=current)
+    assert load_snapshot() is current
+    observed = state_delta_route_observation(
+        response=response,
+        report_scans=report_scans,
+        snapshot_loads=snapshot_loads,
+        snapshot_reused=True,
+    )
+    return {
+        "id": example_id,
+        "workflow_class": workflow_class,
+        "input_packets": input_packets,
+        "visible_parts": list(response["parts"]),
+        "avoided": avoided,
+        "comparison": comparison,
+        "observed_cost": observed,
+        "composed_from_state": response["state_backed"],
+    }
+
+
+def state_delta_replay_evidence_payload() -> dict[str, Any]:
     examples = [
-        {
-            "id": "review-rereview",
-            "workflow_class": "review",
-            "input_packets": ["current_decision", "message_economy", "evidence_bundle"],
-            "visible_parts": ["decision_or_finding", "evidence_or_proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
-            "avoided": ["full prose recap", "manual reconstruction of proof boundary"],
-            "comparison": "Review update can lead with the finding and proof boundary instead of replaying inspected files.",
-            "observed_cost": route_budget,
-            "composed_from_state": True,
-        },
-        {
-            "id": "handoff-continuation",
-            "workflow_class": "handoff",
-            "input_packets": ["current_decision", "continuation_capsule", "evidence_bundle"],
-            "visible_parts": ["decision_or_finding", "evidence_or_proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
-            "avoided": ["chat-history reconstruction", "duplicated context already carried by continuation capsule"],
-            "comparison": "Continuation update resumes from preserved intent, unresolved residue, and next safe action.",
-            "observed_cost": route_budget,
-            "composed_from_state": True,
-        },
-        {
-            "id": "closeout",
-            "workflow_class": "closeout",
-            "input_packets": ["closeout_ready", "current_decision", "message_economy"],
-            "visible_parts": ["decision_or_finding", "evidence_or_proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
-            "avoided": ["joining multiple closeout reports by hand", "unsafe closure wording without claim boundary"],
-            "comparison": "Closeout update can state strongest safe claim, proof state, residue, and closure boundary directly.",
-            "observed_cost": route_budget,
-            "composed_from_state": True,
-        },
+        _observed_state_delta_replay_example(
+            example_id="review-rereview",
+            workflow_class="review",
+            input_packets=["current_decision", "message_economy", "evidence_bundle"],
+            avoided=["full prose recap", "manual reconstruction of proof boundary"],
+            comparison="Review update can lead with the finding and proof boundary instead of replaying inspected files.",
+        ),
+        _observed_state_delta_replay_example(
+            example_id="handoff-continuation",
+            workflow_class="handoff",
+            input_packets=["current_decision", "continuation_capsule", "evidence_bundle"],
+            avoided=["chat-history reconstruction", "duplicated context already carried by continuation capsule"],
+            comparison="Continuation update resumes from preserved intent, unresolved residue, and next safe action.",
+        ),
+        _observed_state_delta_replay_example(
+            example_id="closeout",
+            workflow_class="closeout",
+            input_packets=["closeout_ready", "current_decision", "message_economy"],
+            avoided=["joining multiple closeout reports by hand", "unsafe closure wording without claim boundary"],
+            comparison="Closeout update can state strongest safe claim, proof state, residue, and closure boundary directly.",
+        ),
     ]
     return {
         "kind": "agentic-workspace/state-delta-replay-evidence/v1",
-        "status": "available",
+        "status": "admitted-observed",
         "workflow_class_count": len({example["workflow_class"] for example in examples}),
         "examples": examples,
         "required_visible_parts": [
