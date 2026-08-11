@@ -3,9 +3,9 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
-import os
 import sys
 from pathlib import Path
+from types import ModuleType
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_ROOT = REPO_ROOT / "scripts" / "generate"
@@ -40,40 +40,35 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def _write_source_cli_fingerprint_manifest() -> None:
     """Publish the generator-owned cold-start freshness witness.
 
-    The launcher accepts it when the manifest's exact Git-tracked inputs are
-    unchanged; unrelated worktree edits do not force a full content scan.
+    The launcher uses the Git witness only as an acceleration hint and falls
+    back to the canonical semantic identity when checkout state changes.
     """
 
-    launcher_path = REPO_ROOT / "scripts" / "run_agentic_workspace.py"
+    launcher = _load_launcher(repo_root=REPO_ROOT)
+    manifest = launcher.source_cli_fingerprint_manifest(repo_root=REPO_ROOT)
+    launcher.SOURCE_MANIFEST_PATH.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _load_launcher(*, repo_root: Path) -> ModuleType:
+    launcher_path = repo_root / "scripts" / "run_agentic_workspace.py"
     spec = importlib.util.spec_from_file_location("run_agentic_workspace", launcher_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Unable to load launcher from {launcher_path}")
     launcher = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(launcher)
-    manifest = launcher.source_cli_fingerprint_manifest(repo_root=REPO_ROOT)
-    launcher.SOURCE_MANIFEST_PATH.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return launcher
 
 
-def _source_cli_fingerprint_manifest_is_current() -> bool:
-    launcher_path = REPO_ROOT / "scripts" / "run_agentic_workspace.py"
-    spec = importlib.util.spec_from_file_location("run_agentic_workspace", launcher_path)
-    if spec is None or spec.loader is None:
-        return False
-    launcher = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(launcher)
+def _source_cli_fingerprint_manifest_status(
+    *,
+    repo_root: Path = REPO_ROOT,
+    launcher: ModuleType | None = None,
+) -> dict[str, str]:
     try:
-        actual = json.loads(launcher.SOURCE_MANIFEST_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return False
-    expected = launcher.source_cli_fingerprint_manifest(repo_root=REPO_ROOT)
-    if actual == expected:
-        return True
-    if os.environ.get("AGENTIC_GENERATED_CONFORMANCE_CONTAINER") and expected.get("git_index_entries") is None:
-        ignored = {"git_index_entries", "git_index_identity"}
-        return {key: value for key, value in actual.items() if key not in ignored} == {
-            key: value for key, value in expected.items() if key not in ignored
-        }
-    return False
+        effective_launcher = launcher or _load_launcher(repo_root=repo_root)
+    except (OSError, RuntimeError):
+        return {"status": "invalid", "reason": "launcher-unavailable", "auxiliary_witness": "not-evaluated"}
+    return effective_launcher.source_cli_fingerprint_manifest_status(repo_root=repo_root)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -90,10 +85,16 @@ def main(argv: list[str] | None = None) -> int:
                 else:
                     print(f"{output} is stale; regenerate command packages.")
             return 1
-        if not _source_cli_fingerprint_manifest_is_current():
-            print("generated/.agentic-workspace-cli-fingerprint.json is stale; regenerate command packages.")
+        manifest_status = _source_cli_fingerprint_manifest_status()
+        if manifest_status["status"] != "current":
+            print(
+                "generated/.agentic-workspace-cli-fingerprint.json "
+                f"failed freshness validation ({manifest_status['reason']}); regenerate command packages."
+            )
             return 1
-        print("[ok] generated command packages")
+        witness = manifest_status["auxiliary_witness"]
+        detail = "" if manifest_status["reason"] == "git-index-fast-path" else f" (semantic fallback; Git witness: {witness})"
+        print(f"[ok] generated command packages{detail}")
     else:
         _write_source_cli_fingerprint_manifest()
     return 0
