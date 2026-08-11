@@ -16866,6 +16866,16 @@ def _targeted_write_receipt_postcondition(
     }
 
 
+def _parse_targeted_execplan_patch(patch: Mapping[str, Any] | str) -> Mapping[str, Any] | None:
+    if not isinstance(patch, str):
+        return patch
+    try:
+        parsed = json.loads(patch)
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def targeted_execplan_write(
     *,
     target: str | Path | None = None,
@@ -16878,22 +16888,12 @@ def targeted_execplan_write(
     preflight_token: str = "",
     preflight_max_age_seconds: int = 900,
 ) -> dict[str, Any]:
-    """Preview or apply a bounded patch to exactly one live canonical execplan.
-
-    This is intentionally a narrow writer: it never selects an owner by title,
-    never rewrites a Markdown compatibility view, and rejects stale Planning or
-    owner revisions before a write.  Unspecified record fields are copied
-    byte-for-byte through the semantic record representation.
-    """
+    """Patch one exact live execplan while preserving target-bound revision guards."""
     target_root = resolve_target_root(target)
-    if isinstance(patch, str):
-        try:
-            parsed_patch = json.loads(patch)
-        except json.JSONDecodeError:
-            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch-json"}
-        if not isinstance(parsed_patch, dict):
-            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch-json"}
-        patch = parsed_patch
+    parsed_patch = _parse_targeted_execplan_patch(patch)
+    if parsed_patch is None:
+        return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "invalid-patch-json"}
+    patch = parsed_patch
     if apply and str(preflight_token or "").strip():
         preflight_admission = {
             "kind": "agentic-planning/targeted-write-preflight-admission/v1",
