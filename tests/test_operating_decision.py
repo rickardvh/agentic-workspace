@@ -1616,7 +1616,7 @@ def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path:
     record = _resolve_context_authority_source(item=item, target_root=tmp_path, task="", paths=["generated/client.py"])
 
     assert record["status"] == "stale"
-    assert record["reason"] == "generated-source-manifest-stale"
+    assert record["reason"] == "invalid-manifest"
 
 
 def test_context_authority_resolver_rejects_mutation_baseline_without_git_head(tmp_path: Path) -> None:

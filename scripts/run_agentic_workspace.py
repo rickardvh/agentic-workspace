@@ -206,22 +206,14 @@ def _git_prospective_entries(*, repo_root: Path, paths: list[str]) -> dict[str, 
     return entries
 
 
-def _git_entries_identity(*, paths: list[str], entries_by_path: dict[str, str] | None) -> str | None:
-    if entries_by_path is None or set(entries_by_path) != set(paths):
-        return None
+def _git_index_identity_from_entries(*, paths: list[str], entries: dict[str, str]) -> str:
     digest = hashlib.sha256()
     for expected_path in paths:
         digest.update(expected_path.encode("utf-8"))
         digest.update(b"\0")
-        digest.update(entries_by_path[expected_path].encode("utf-8"))
+        digest.update(entries[expected_path].encode("utf-8"))
         digest.update(b"\0")
     return digest.hexdigest()
-
-
-def _git_index_identity(*, repo_root: Path, paths: list[str]) -> str | None:
-    """Return a stable digest of exact, stage-zero fingerprint input entries."""
-
-    return _git_entries_identity(paths=paths, entries_by_path=_git_index_entries(repo_root=repo_root, paths=paths))
 
 
 def source_cli_fingerprint_manifest(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
@@ -240,46 +232,76 @@ def source_cli_fingerprint_manifest(*, repo_root: Path = REPO_ROOT) -> dict[str,
         "identity_role": "canonical-semantic-content",
         "context_rule": "Every listed input is required in source and conformance contexts; Git metadata is auxiliary only.",
         "git_index_entries": prospective_entries,
-        "git_index_identity": _git_entries_identity(paths=paths, entries_by_path=prospective_entries),
+        "git_index_identity": (
+            _git_index_identity_from_entries(paths=paths, entries=prospective_entries) if prospective_entries is not None else None
+        ),
         "git_identity_role": "optional-source-checkout-acceleration",
         "generation_command": "uv run python scripts/generate/generate_command_packages.py",
     }
 
 
-def _source_manifest_is_trustworthy(*, repo_root: Path) -> bool:
-    """Validate semantic content in every context, using Git only as a fast path."""
+def source_cli_fingerprint_manifest_status(
+    *,
+    repo_root: Path = REPO_ROOT,
+    manifest_path: Path | None = None,
+) -> dict[str, str]:
+    """Classify source-manifest freshness with semantic content as authority."""
 
-    source_manifest = repo_root / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest = manifest_path or repo_root / "generated" / ".agentic-workspace-cli-fingerprint.json"
     payload = _read_cached_fingerprint_payload(cache_path=source_manifest)
     if payload is None:
-        return False
+        return {"status": "invalid", "reason": "invalid-manifest", "auxiliary_witness": "not-evaluated"}
     paths = payload.get("file_paths")
     expected_entries = payload.get("git_index_entries")
     expected_identity = payload.get("git_index_identity")
     expected_content_identity = payload.get("fingerprint")
     if (
-        not isinstance(paths, list)
+        payload.get("kind") != "generated-cli-source-manifest/v1"
+        or not isinstance(paths, list)
         or not all(isinstance(path, str) for path in paths)
         or not isinstance(expected_content_identity, str)
         or not expected_content_identity
     ):
-        return False
+        return {"status": "invalid", "reason": "invalid-manifest", "auxiliary_witness": "not-evaluated"}
     current_paths = [_repo_relative(path, repo_root=repo_root) for path in _fingerprint_files(repo_root=repo_root)]
     if current_paths != paths:
-        return False
+        return {"status": "stale", "reason": "semantic-path-set-drift", "auxiliary_witness": "not-evaluated"}
     current_entries = _git_index_entries(repo_root=repo_root, paths=paths)
-    if current_entries is not None:
-        if (
-            not isinstance(expected_entries, dict)
-            or set(expected_entries) != set(paths)
-            or not all(isinstance(entry, str) and entry for entry in expected_entries.values())
-            or not isinstance(expected_identity, str)
-            or not expected_identity
-            or not _git_input_paths_are_unmodified(repo_root=repo_root, paths=paths)
-        ):
-            return False
-        return current_entries == expected_entries and _git_index_identity(repo_root=repo_root, paths=paths) == expected_identity
-    return compute_generated_cli_fingerprint(repo_root=repo_root).get("fingerprint") == expected_content_identity
+    expected_entries_valid = (
+        isinstance(expected_entries, dict)
+        and set(expected_entries) == set(paths)
+        and all(isinstance(entry, str) and entry for entry in expected_entries.values())
+    )
+    expected_identity_valid = isinstance(expected_identity, str) and bool(expected_identity)
+    inputs_unmodified = current_entries is not None and _git_input_paths_are_unmodified(repo_root=repo_root, paths=paths)
+    if (
+        current_entries is not None
+        and expected_entries_valid
+        and expected_identity_valid
+        and inputs_unmodified
+        and current_entries == expected_entries
+        and _git_index_identity_from_entries(paths=paths, entries=current_entries) == expected_identity
+    ):
+        return {"status": "current", "reason": "git-index-fast-path", "auxiliary_witness": "match"}
+
+    if current_entries is None:
+        auxiliary_witness = "unavailable"
+    elif not expected_entries_valid or not expected_identity_valid:
+        auxiliary_witness = "invalid"
+    elif not inputs_unmodified:
+        auxiliary_witness = "dirty-inputs"
+    else:
+        auxiliary_witness = "mismatch"
+    current_content_identity = compute_generated_cli_fingerprint(repo_root=repo_root).get("fingerprint")
+    if current_content_identity == expected_content_identity:
+        return {"status": "current", "reason": "semantic-fallback", "auxiliary_witness": auxiliary_witness}
+    return {"status": "stale", "reason": "semantic-content-drift", "auxiliary_witness": auxiliary_witness}
+
+
+def _source_manifest_is_trustworthy(*, repo_root: Path) -> bool:
+    """Validate semantic content in every context, using Git only as a fast path."""
+
+    return source_cli_fingerprint_manifest_status(repo_root=repo_root)["status"] == "current"
 
 
 def _cached_fingerprint_manifest_is_fresh(*, repo_root: Path, cache_path: Path) -> bool:
