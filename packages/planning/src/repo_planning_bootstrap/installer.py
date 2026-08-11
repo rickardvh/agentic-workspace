@@ -2228,6 +2228,48 @@ def planning_summary_query(
     }
 
 
+def _planning_summary_work_items(*, target_root: Path, todo_path: Path, legacy_todo_path: Path, roadmap_path: Path) -> dict[str, Any]:
+    """Resolve active, queued, and roadmap work from the canonical or legacy source."""
+
+    state = _read_state_from_toml(target_root)
+    if state:
+        active_items = _state_active_items(state)
+        queued_items = _state_queued_items(state)
+        return {
+            "state": state,
+            "active_items": active_items,
+            "queued_items": queued_items,
+            "roadmap_lanes": _state_roadmap_lanes(state),
+            "roadmap_candidates": _state_roadmap_candidates(state),
+            "todo_line_count": 0,
+            "todo_item_count": len(active_items) + len(queued_items),
+        }
+    legacy_todo_lines, legacy_todo_items = _read_todo_items(legacy_todo_path)
+    todo_lines, todo_items = (legacy_todo_lines, legacy_todo_items) if legacy_todo_items else _read_todo_items(todo_path)
+    active_items: list[dict[str, Any]] = []
+    queued_items: list[dict[str, Any]] = []
+    for item in todo_items:
+        status = item.fields.get("status", "").lower()
+        projection = {
+            "id": item.fields.get("id", ""),
+            "surface": item.fields.get("surface", ""),
+            "why_now": item.fields.get("why now", ""),
+        }
+        if any(marker in status for marker in ("in-progress", "active", "ongoing")):
+            active_items.append(projection)
+        elif status not in {"completed", "done", "closed"}:
+            queued_items.append({**projection, "status": item.fields.get("status", "")})
+    return {
+        "state": state,
+        "active_items": active_items,
+        "queued_items": queued_items,
+        "roadmap_lanes": _roadmap_candidate_lanes(roadmap_path),
+        "roadmap_candidates": _roadmap_candidates(roadmap_path),
+        "todo_line_count": len(todo_lines),
+        "todo_item_count": len(todo_items),
+    }
+
+
 def planning_summary(
     *,
     target: str | Path | None = None,
@@ -2244,46 +2286,19 @@ def planning_summary(
     execplan_dir = target_root / ".agentic-workspace" / "planning" / "execplans"
     decomposition_dir = target_root / ".agentic-workspace" / "planning" / "decompositions"
 
-    state = _read_state_from_toml(target_root)
-    if state:
-        active_items = _state_active_items(state)
-        queued_items = _state_queued_items(state)
-        roadmap_lanes = _state_roadmap_lanes(state)
-        roadmap_candidates = _state_roadmap_candidates(state)
-        todo_line_count = 0  # We don't have a direct line count for the TOML state
-        todo_item_count = len(active_items) + len(queued_items)
-    else:
-        legacy_todo_lines, legacy_todo_items = _read_todo_items(legacy_todo_path)
-        if legacy_todo_items:
-            todo_lines, todo_items = legacy_todo_lines, legacy_todo_items
-        else:
-            todo_lines, todo_items = _read_todo_items(todo_path)
-        active_items = []
-        queued_items = []
-        for item in todo_items:
-            status = item.fields.get("status", "").lower()
-            if "in-progress" in status or "active" in status or "ongoing" in status:
-                active_items.append(
-                    {
-                        "id": item.fields.get("id", ""),
-                        "surface": item.fields.get("surface", ""),
-                        "why_now": item.fields.get("why now", ""),
-                    }
-                )
-                continue
-            if status not in {"completed", "done", "closed"}:
-                queued_items.append(
-                    {
-                        "id": item.fields.get("id", ""),
-                        "surface": item.fields.get("surface", ""),
-                        "why_now": item.fields.get("why now", ""),
-                        "status": item.fields.get("status", ""),
-                    }
-                )
-        roadmap_lanes = _roadmap_candidate_lanes(roadmap_path)
-        roadmap_candidates = _roadmap_candidates(roadmap_path)
-        todo_line_count = len(todo_lines)
-        todo_item_count = len(todo_items)
+    work_items = _planning_summary_work_items(
+        target_root=target_root,
+        todo_path=todo_path,
+        legacy_todo_path=legacy_todo_path,
+        roadmap_path=roadmap_path,
+    )
+    state = work_items["state"]
+    active_items = work_items["active_items"]
+    queued_items = work_items["queued_items"]
+    roadmap_lanes = work_items["roadmap_lanes"]
+    roadmap_candidates = work_items["roadmap_candidates"]
+    todo_line_count = work_items["todo_line_count"]
+    todo_item_count = work_items["todo_item_count"]
 
     ownership_review = _ownership_review(target_root)
     decomposition_projection = _planning_decomposition_projection(target_root=target_root, decomposition_dir=decomposition_dir)
