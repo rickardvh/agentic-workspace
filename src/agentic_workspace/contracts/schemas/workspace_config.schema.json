@@ -1043,6 +1043,31 @@
           "examples": [
             "agentic-workspace"
           ]
+        },
+        "contract_schema": {
+          "description": "Durable installed-state contract schema expected by this repository.",
+          "type": "string",
+          "minLength": 1,
+          "default": "agentic-workspace/installed-state-compatibility/v1"
+        },
+        "required_capabilities": {
+          "description": "Package capabilities required from the configured Agentic Workspace runtime.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "default": []
+        },
+        "required_resources": {
+          "description": "Package resources required from the configured Agentic Workspace runtime, expressed as package:relative/path.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "default": []
+        },
+        "resolution_policy": {
+          "description": "Required dependency-resolution posture for the configured invocation.",
+          "enum": ["direct", "locked", "frozen"],
+          "default": "direct"
         }
       },
       "additionalProperties": true

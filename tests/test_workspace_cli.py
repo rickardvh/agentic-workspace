@@ -6197,6 +6197,112 @@ def test_start_select_installed_state_advisory_drift_limits_currentness_claims(t
     )
 
 
+def test_start_select_installed_contract_pair_uses_frozen_non_mutating_resolution(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[workspace]\n"
+        'cli_invoke = "uv run --frozen --active python scripts/run_agentic_workspace.py"\n\n'
+        "[cli_compatibility]\n"
+        'contract_schema = "agentic-workspace/installed-state-compatibility/v1"\n'
+        'required_capabilities = ["installed-state-sync-v2"]\n'
+        'required_resources = ["agentic_workspace:contracts/context_authority_registry.json"]\n'
+        'resolution_policy = "frozen"\n',
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Inspect installed state",
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    pair = compatibility["contract_pair"]
+    resolution = compatibility["invocation_resolution"]
+
+    assert pair["status"] == "compatible"
+    assert pair["mutation_gate"] == "allow"
+    assert pair["expected"]["provenance"] == "repo-config"
+    assert pair["actual"]["resources"] == [
+        {
+            "resource": "agentic_workspace:contracts/context_authority_registry.json",
+            "available": True,
+            "resolution": "package-resource",
+        }
+    ]
+    assert resolution["environment_manager_adapter"] == "uv"
+    assert resolution["posture"] == "frozen"
+    assert resolution["preflight_mutates_dependency_state"] is False
+    assert resolution["repair_command"] == ""
+    source_checkout = pair["actual"]["source_checkout"]
+    assert source_checkout["classification"] == "local-source-non-release"
+    assert re.fullmatch(r"git:[0-9a-f]{12}", source_checkout["revision"])
+    assert isinstance(source_checkout["dirty"], bool)
+    assert source_checkout["generated_parity"] in {"current", "stale"}
+    assert not re.search(r"[A-Za-z]:/|/(?:Users|home|tmp)/", json.dumps(pair, sort_keys=True))
+
+
+def test_start_select_installed_contract_pair_blocks_mutable_resolution(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[workspace]\n"
+        'cli_invoke = "uv run --active python scripts/run_agentic_workspace.py"\n\n'
+        "[cli_compatibility]\n"
+        'resolution_policy = "frozen"\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    resolution = compatibility["invocation_resolution"]
+
+    assert compatibility["status"] == "blocking-drift"
+    assert compatibility["contract_pair"]["status"] == "incompatible"
+    assert compatibility["contract_pair"]["mutation_gate"] == "block-managed-mutation"
+    assert resolution["posture"] == "mutable"
+    assert resolution["preflight_status"] == "unsafe-mutable-resolution"
+    assert resolution["preflight_mutates_dependency_state"] is True
+    assert "uv run --frozen" in resolution["repair_command"]
+
+
+def test_start_select_installed_contract_pair_blocks_missing_package_resource(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        'schema_version = 1\n\n[cli_compatibility]\nrequired_resources = ["agentic_workspace:contracts/missing-contract.json"]\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    pair = compatibility["contract_pair"]
+
+    assert compatibility["status"] == "blocking-drift"
+    assert pair["status"] == "incompatible"
+    assert pair["mutation_gate"] == "block-managed-mutation"
+    assert pair["missing_resources"] == ["agentic_workspace:contracts/missing-contract.json"]
+
+
 def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

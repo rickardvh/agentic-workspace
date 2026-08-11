@@ -15,6 +15,7 @@ import fnmatch
 import hashlib
 import importlib
 import importlib.metadata
+import importlib.resources
 import io
 import json
 import os
@@ -695,6 +696,16 @@ def _package_version(package: str) -> str:
 def _git_source_identity(root: Path | None) -> str:
     if root is None:
         return ""
+    completed = subprocess.run(
+        ["git", "rev-parse", "--verify", "HEAD"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    revision = completed.stdout.strip() if completed.returncode == 0 else ""
+    if revision:
+        return f"git:{revision[:12]}"
     git_dir = root / ".git"
     head_path = git_dir / "HEAD"
     try:
@@ -1910,6 +1921,8 @@ def _payload_repair_subflow_payload(
 def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False) -> dict[str, Any]:
     expectation = config.cli_compatibility
     identity = _invoked_cli_identity_payload(target_root=config.target_root)
+    invocation_resolution = _invocation_resolution_payload(config=config)
+    resource_availability = _required_package_resource_availability(expectation.required_resources)
     checks: list[dict[str, Any]] = []
 
     def add_check(name: str, expected: Any, actual: Any, satisfied: bool, *, configured: bool) -> None:
@@ -1943,12 +1956,48 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
         not expectation.target_relations or identity["target_relation"] in expectation.target_relations,
         configured=bool(expectation.target_relations),
     )
+    add_check(
+        "resolution_posture",
+        expectation.resolution_policy,
+        invocation_resolution["posture"],
+        invocation_resolution["policy_satisfied"],
+        configured=expectation.resolution_policy != "direct",
+    )
+    add_check(
+        "contract_schema",
+        expectation.contract_schema,
+        "agentic-workspace/installed-state-compatibility/v1",
+        expectation.contract_schema == "agentic-workspace/installed-state-compatibility/v1",
+        configured=True,
+    )
+    missing_capabilities = sorted(set(expectation.required_capabilities) - set(SUPPORTED_PAYLOAD_CAPABILITIES))
+    add_check(
+        "required_capabilities",
+        list(expectation.required_capabilities),
+        list(SUPPORTED_PAYLOAD_CAPABILITIES),
+        not missing_capabilities,
+        configured=bool(expectation.required_capabilities),
+    )
+    missing_resources = [item["resource"] for item in resource_availability if not item["available"]]
+    add_check(
+        "required_resources",
+        list(expectation.required_resources),
+        resource_availability,
+        not missing_resources,
+        configured=bool(expectation.required_resources),
+    )
     configured_checks = [check for check in checks if check["configured"]]
     failed_checks = [check for check in configured_checks if not check["satisfied"]]
     configured = expectation.enforcement != "off" or bool(configured_checks) or expectation.command is not None
     if not configured:
         status = "no-expectation"
-    elif failed_checks and expectation.enforcement == "blocking":
+    elif failed_checks and (
+        expectation.enforcement == "blocking"
+        or any(
+            check["name"] in {"resolution_posture", "contract_schema", "required_capabilities", "required_resources"}
+            for check in failed_checks
+        )
+    ):
         status = "blocking-drift"
     elif failed_checks:
         status = "advisory-drift"
@@ -1964,6 +2013,14 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
         "enforcement_source": expectation.enforcement_source,
         "expectation_source": expectation.source,
         "expected_command": expectation.command,
+        "invocation_resolution": invocation_resolution,
+        "contract_expectation": {
+            "schema": expectation.contract_schema,
+            "capabilities": list(expectation.required_capabilities),
+            "resources": list(expectation.required_resources),
+            "source": expectation.source,
+        },
+        "package_resources": resource_availability,
         "invocation_confidence": identity["confidence"],
         "drift_findings": drift_findings,
         "remediation": remediation,
@@ -1986,8 +2043,138 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
             compact_payload["invocation_confidence"] = identity["confidence"]
         if configured_checks:
             compact_payload["checks"] = payload["checks"]
+        if expectation.source != "product-default" or expectation.resolution_policy != "direct":
+            compact_payload["invocation_resolution"] = invocation_resolution
+            compact_payload["contract_expectation"] = payload["contract_expectation"]
+            compact_payload["package_resources"] = resource_availability
         return compact_payload
     return payload
+
+
+def _invocation_resolution_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    """Describe the configured invocation recipe without resolving or mutating dependencies."""
+
+    try:
+        tokens = shlex.split(config.cli_invoke, posix=os.name != "nt")
+    except ValueError:
+        tokens = []
+    normalized = [token.strip("\"'") for token in tokens]
+    executable = Path(normalized[0]).name.lower() if normalized else ""
+    adapter = "direct"
+    posture = "direct"
+    lockfile = ""
+    mutates_resolution = False
+    repair_tokens = list(normalized)
+    if executable in {"uv", "uv.exe"} and "run" in normalized:
+        adapter = "uv"
+        lockfile = "uv.lock" if config.target_root and (config.target_root / "uv.lock").is_file() else ""
+        if "--frozen" in normalized:
+            posture = "frozen"
+        elif "--locked" in normalized:
+            posture = "locked"
+        else:
+            posture = "mutable"
+            mutates_resolution = True
+            run_index = normalized.index("run")
+            repair_tokens.insert(run_index + 1, "--frozen")
+    elif executable in {"pipx", "pipx.exe"} and "run" in normalized:
+        adapter = "pipx"
+        pinned = any("==" in token or "@" in token for token in normalized[normalized.index("run") + 1 :])
+        posture = "locked" if pinned else "mutable"
+        mutates_resolution = not pinned
+    elif executable in {"poetry", "poetry.exe"} and "run" in normalized:
+        adapter = "poetry"
+        lockfile = "poetry.lock" if config.target_root and (config.target_root / "poetry.lock").is_file() else ""
+        posture = "locked" if lockfile else "mutable"
+        mutates_resolution = not bool(lockfile)
+    required = config.cli_compatibility.resolution_policy
+    policy_satisfied = required == "direct" or posture == required or (required == "locked" and posture == "frozen")
+    return {
+        "kind": "agentic-workspace/invocation-resolution/v1",
+        "configured_recipe": config.cli_invoke,
+        "invocation_source": config.cli_invoke_source,
+        "environment_manager_adapter": adapter,
+        "posture": posture,
+        "required_posture": required,
+        "policy_satisfied": policy_satisfied,
+        "lockfile": lockfile,
+        "preflight_mutates_dependency_state": mutates_resolution,
+        "preflight_status": "non-mutating" if not mutates_resolution else "unsafe-mutable-resolution",
+        "repair_command": shlex.join(repair_tokens) if repair_tokens and not policy_satisfied else "",
+        "rule": "Ordinary compatibility preflight parses the configured recipe only; dependency changes belong to explicit install, upgrade, or sync operations.",
+    }
+
+
+def _required_package_resource_availability(resources: Sequence[str]) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for resource in resources:
+        package, separator, relative = str(resource).partition(":")
+        available = False
+        if package and separator and relative and not Path(relative).is_absolute() and ".." not in Path(relative).parts:
+            try:
+                available = importlib.resources.files(package).joinpath(relative).is_file()
+            except (ModuleNotFoundError, TypeError):
+                available = False
+        results.append({"resource": str(resource), "available": available, "resolution": "package-resource"})
+    return results
+
+
+def _installed_contract_pair_payload(
+    *, config: WorkspaceConfig, cli_payload: dict[str, Any], summary: dict[str, list[str]] | None
+) -> dict[str, Any]:
+    expectation = config.cli_compatibility
+    resources = _required_package_resource_availability(expectation.required_resources)
+    current_identity = _payload_installer_identity(target_root=config.target_root)
+    stale_generated = list((summary or {}).get("stale_generated_surfaces", []))
+    source_checkout: dict[str, Any] = {"classification": "not-applicable"}
+    if current_identity.get("source_class") == "source-checkout":
+        root = _agentic_workspace_package_root()
+        revision = _git_source_identity(root)
+        dirty = False
+        if root is not None:
+            completed = subprocess.run(
+                ["git", "status", "--porcelain=v1", "--untracked-files=no"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            dirty = bool(completed.stdout.strip()) if completed.returncode == 0 else True
+        source_checkout = {
+            "classification": "local-source-non-release",
+            "revision": revision,
+            "dirty": dirty,
+            "generated_parity": "stale" if stale_generated else "current",
+        }
+    missing_capabilities = sorted(set(expectation.required_capabilities) - set(SUPPORTED_PAYLOAD_CAPABILITIES))
+    missing_resources = [item["resource"] for item in resources if not item["available"]]
+    compatible = (
+        cli_payload.get("status") not in {"blocking-drift"} and not missing_capabilities and not missing_resources and not stale_generated
+    )
+    return {
+        "kind": "agentic-workspace/installed-contract-pair/v1",
+        "status": "compatible" if compatible else "incompatible",
+        "expected": {
+            "schema": expectation.contract_schema,
+            "capabilities": list(expectation.required_capabilities),
+            "resources": list(expectation.required_resources),
+            "provenance": expectation.source,
+        },
+        "actual": {
+            "package": current_identity,
+            "schema": "agentic-workspace/installed-state-compatibility/v1",
+            "capabilities": list(SUPPORTED_PAYLOAD_CAPABILITIES),
+            "resources": resources,
+            "invocation_resolution": cli_payload.get("invocation_resolution", {}) or _invocation_resolution_payload(config=config),
+            "source_checkout": source_checkout,
+        },
+        "missing_capabilities": missing_capabilities,
+        "missing_resources": missing_resources,
+        "stale_generated_surfaces": stale_generated,
+        "mutation_gate": "allow" if compatible else "block-managed-mutation",
+        "repair_route": cli_payload.get("remediation", {}),
+        "rule": "The configured invocation and installed contract/resource identity are admitted as one pair before managed mutation.",
+    }
 
 
 def _cli_compatibility_drift_findings(
@@ -2243,6 +2430,7 @@ def _installed_state_compatibility_payload(
     compact: bool = False,
 ) -> dict[str, Any]:
     cli_payload = cli_compatibility or _cli_compatibility_payload(config=config, compact=compact)
+    contract_pair = _installed_contract_pair_payload(config=config, cli_payload=cli_payload, summary=summary)
     failed_cli_checks = {str(check) for check in cli_payload.get("failed_checks", [])}
     stale_generated_surfaces = list((summary or {}).get("stale_generated_surfaces", []))
     payload_warnings = list((summary or {}).get("warnings", []))
@@ -2402,6 +2590,8 @@ def _installed_state_compatibility_payload(
         "status": status,
         "reason": reason,
         "authority": "repo-state-authoritative",
+        "contract_pair": contract_pair,
+        "invocation_resolution": contract_pair["actual"]["invocation_resolution"] or _invocation_resolution_payload(config=config),
         "action_state": action_state,
         "payload_surface_manifest": payload_upgrade_attention_plan["surface_manifest"],
         "payload_upgrade_attention_plan": payload_upgrade_attention_plan,
@@ -2471,6 +2661,8 @@ def _installed_state_compatibility_payload(
             "kind": payload["kind"],
             "status": payload["status"],
             "authority": payload["authority"],
+            "contract_pair": payload["contract_pair"],
+            "invocation_resolution": payload["invocation_resolution"],
             "action_state": payload["action_state"],
             "payload_surface_manifest": payload_upgrade_attention_plan["surface_manifest"],
             "payload_upgrade_attention_plan": _compact_payload_upgrade_attention_plan(payload_upgrade_attention_plan),
