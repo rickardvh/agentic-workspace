@@ -1,5 +1,22 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
+[scenarios.aw_context_consistency]
+protocol_id = "aw_context_consistency"
+title = "AW-consumed context consistency"
+steps = [
+  "Validate the exact Memory manifest/note set and freshness triggers.",
+  "Validate registered context authorities, skills, operations, and generated projections.",
+  "Confirm unrelated paths do not select this protocol.",
+]
+expected_observations = [
+  "Every AW-consumed Memory note is registered, routed, and freshness-aware.",
+  "Context authority and skill dependencies remain source-owned and current.",
+  "Wrong-source generated edits name their canonical source and regeneration route.",
+]
+pass_evidence_labels = ["memory_context_freshness", "context_contract_consistency"]
+fail_evidence_labels = ["memory_manifest_drift", "context_authority_drift", "generated_context_drift"]
+automation_hint = "uv run python scripts/check/check_memory_freshness.py --strict && uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"
+
 [scenarios.generated_adapter_local_conformance]
 protocol_id = "generated_adapter_conformance"
 title = "Generated adapter local conformance"
@@ -185,6 +202,51 @@ commands = [
 review_aids = [
   "If Docker is unavailable, record the proof-environment gap rather than treating missing Docker as adapter success.",
   "Do not let stale generated adapter evidence satisfy changed command_package_ir, generator, checker, or generated-root changes.",
+]
+
+[protocols.aw_context_consistency]
+title = "AW-consumed context consistency"
+purpose = "Protect only repository inputs consumed by AW, with changed-path-selected checks and bounded repair output."
+applies_to_paths = [
+  "AGENTS.md",
+  "SYSTEM_INTENT.md",
+  ".agentic-workspace/config*.toml",
+  ".agentic-workspace/memory/repo/**",
+  ".agentic-workspace/skills/**",
+  "src/agentic_workspace/contracts/context_authority_registry.json",
+  "src/agentic_workspace/contracts/operation_contracts.json",
+  "src/agentic_workspace/contracts/structured_file_inventory.json",
+  "scripts/check/check_memory_freshness.py",
+  "scripts/check/check_contract_tooling_surfaces.py",
+]
+applies_to_task_markers = ["memory manifest", "context authority", "AW context", "skill registry", "system intent"]
+scenario_refs = ["aw_context_consistency"]
+steps = [
+  "Run the strict Memory manifest/freshness audit when Memory inputs change.",
+  "Run contract tooling when registered authority, skill, operation, or generated context changes.",
+]
+expected_evidence = ["memory_context_freshness", "context_contract_consistency"]
+review_owner = "context source owner"
+authority_refs = [
+  ".agentic-workspace/memory/repo/manifest.toml",
+  "src/agentic_workspace/contracts/context_authority_registry.json",
+  "scripts/check/check_memory_freshness.py",
+  "scripts/check/check_contract_tooling_surfaces.py",
+]
+stale_when = [
+  ".agentic-workspace/memory/repo/**",
+  ".agentic-workspace/skills/**",
+  "src/agentic_workspace/contracts/context_authority_registry.json",
+  "src/agentic_workspace/contracts/operation_contracts.json",
+]
+retention = "retain-summary"
+non_goals = [
+  "Do not lint unrelated documentation or code.",
+  "Do not turn advisory historical material into current authority.",
+]
+commands = [
+  "uv run python scripts/check/check_memory_freshness.py --strict",
+  "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
 ]
 
 [protocols.closeout_intent_satisfaction]

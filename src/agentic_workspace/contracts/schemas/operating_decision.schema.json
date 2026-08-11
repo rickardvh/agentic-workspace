@@ -15,6 +15,37 @@
     "canonical_decision_input_revision": {"type": "string", "description": "Canonical revision of the typed action's current owner, context, authority, proof, mutation, evaluation, and executor inputs."},
     "context_authority_coverage": {"type": "object", "description": "Registry-derived coverage of context authority sources and ordinary consumers considered by the decision compiler."},
     "context_authority_projection": {"type": "object", "description": "Consumer-specific admitted context authorities and the typed repair operation when any required source is unavailable."},
+    "context_consequences": {
+      "type": "array",
+      "description": "Stable one-per-finding operational consequences, ordered from highest to lowest current impact.",
+      "items": {
+        "type": "object",
+        "required": ["kind", "consequence_id", "finding_id", "consequence", "active", "owner", "dedupe_key"],
+        "properties": {
+          "kind": {"const": "agentic-workspace/context-finding-consequence/v1"},
+          "consequence_id": {"type": "string", "pattern": "^context-consequence:[0-9a-f]{16}$"},
+          "finding_id": {"type": "string", "minLength": 1},
+          "finding_class": {"type": "string"},
+          "source_kind": {"type": "string"},
+          "stage": {"type": "string"},
+          "severity": {"type": "string"},
+          "lifecycle": {"type": "string"},
+          "consequence": {
+            "enum": ["block-now", "require-review-now", "safe-typed-repair", "narrow-current-action", "closeout-obligation", "route-durable-improvement", "defer-with-owner", "advisory", "terminal-disposition", "non-applicable"]
+          },
+          "active": {"type": "boolean"},
+          "owner": {"type": "string", "minLength": 1},
+          "reason": {"type": "string"},
+          "next_route": {"type": "string"},
+          "trigger": {"type": "string"},
+          "safe_repair": {"type": "object"},
+          "action_effect": {"type": "object"},
+          "dedupe_key": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "highest_impact_context_consequence": {"type": "object", "description": "The first active or terminal context consequence projected for ordinary consumers, or an empty object."},
     "current_work": {"type": "object", "description": "Current-work identity admitted into the composed decision."},
     "selected_owner": {"type": "object", "description": "Selected owner identity admitted into the composed decision."},
     "terminal_state": {"type": "string", "description": "Terminal outcome state used for continuation or finalization claims."},

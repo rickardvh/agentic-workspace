@@ -964,6 +964,108 @@ def derive_context_gaps(*, declarations: list[dict[str, Any]], selected_surfaces
     return gaps
 
 
+_CONTEXT_CONSEQUENCE_PRECEDENCE = {
+    "block-now": 0,
+    "require-review-now": 1,
+    "safe-typed-repair": 2,
+    "narrow-current-action": 3,
+    "closeout-obligation": 4,
+    "route-durable-improvement": 5,
+    "defer-with-owner": 6,
+    "advisory": 7,
+    "terminal-disposition": 8,
+    "non-applicable": 9,
+}
+
+
+def derive_context_consequences(*, findings: list[dict[str, Any]], current_stage: str = "implement") -> list[dict[str, Any]]:
+    """Compile one stable operational consequence for each context finding.
+
+    Specialist owners retain finding lifecycle and repair authority. This
+    compiler only makes their task effect explicit and deduplicable.
+    """
+
+    consequences: list[dict[str, Any]] = []
+    terminal_lifecycles = {"fixed", "dismissed", "accepted", "closed", "resolved"}
+    for raw in findings:
+        finding = _as_dict(raw)
+        finding_id = str(finding.get("id") or finding.get("finding_id") or "").strip()
+        if not finding_id:
+            finding_id = f"context-finding:{_digest(finding)[:16]}"
+        lifecycle = str(finding.get("lifecycle") or finding.get("status") or "unresolved").strip().lower()
+        severity = str(finding.get("severity") or "advisory").strip().lower()
+        owner = str(finding.get("owner") or finding.get("authority_owner") or "workspace-maintainer")
+        next_route = str(finding.get("next_route") or finding.get("repair") or "")
+        relevant = finding.get("task_relevant", True) is not False
+        finding_class = str(finding.get("gap_class") or finding.get("finding_class") or finding.get("class") or "context-finding")
+        safe_repair = _as_dict(finding.get("safe_repair") or finding.get("typed_repair"))
+        current_effect = str(finding.get("current_task_effect") or "")
+        trigger = str(finding.get("trigger") or finding.get("defer_until") or "")
+
+        if not relevant:
+            consequence = "non-applicable"
+            reason = "finding is not relevant to the current task or stage"
+        elif lifecycle in terminal_lifecycles:
+            consequence = "terminal-disposition"
+            reason = f"finding lifecycle is {lifecycle}"
+        elif severity in {"blocking", "critical"}:
+            consequence = "block-now"
+            reason = "material context uncertainty makes the current mutation or claim unsafe"
+        elif finding_class in {"ambiguity", "contradiction", "intent-conflict", "architecture-conflict"}:
+            consequence = "require-review-now"
+            reason = "human-owned context conflict requires a reviewable decision"
+        elif safe_repair.get("operation_id") and safe_repair.get("expected_input_revision"):
+            consequence = "safe-typed-repair"
+            reason = "a revision-bound idempotent repair operation is available"
+        elif "narrow" in current_effect.lower() or finding.get("narrow_claims"):
+            consequence = "narrow-current-action"
+            reason = "safe work may continue only within the finding's reduced claim boundary"
+        elif trigger and owner:
+            consequence = "defer-with-owner"
+            reason = "the finding has an explicit owner and re-entry trigger"
+        elif next_route and owner:
+            consequence = "route-durable-improvement"
+            reason = "the finding has a durable owner and progress-making route"
+        elif severity in {"low", "advisory", "info"}:
+            consequence = "advisory"
+            reason = "the finding does not materially alter the current decision"
+        else:
+            consequence = "closeout-obligation"
+            reason = "material unresolved context must reach a disposition before the related claim"
+
+        active = consequence not in {"non-applicable", "terminal-disposition", "advisory"}
+        record = {
+            "kind": "agentic-workspace/context-finding-consequence/v1",
+            "finding_id": finding_id,
+            "finding_class": finding_class,
+            "source_kind": str(finding.get("kind") or "context-finding"),
+            "stage": current_stage,
+            "severity": severity,
+            "lifecycle": lifecycle,
+            "consequence": consequence,
+            "active": active,
+            "owner": owner,
+            "reason": reason,
+            "next_route": next_route,
+            "trigger": trigger,
+            "safe_repair": safe_repair,
+            "action_effect": {
+                "blocks_current_action": consequence == "block-now",
+                "requires_review": consequence == "require-review-now",
+                "narrows_claims": consequence == "narrow-current-action",
+                "creates_closeout_obligation": consequence == "closeout-obligation",
+            },
+        }
+        record["consequence_id"] = f"context-consequence:{_digest(record)[:16]}"
+        record["dedupe_key"] = f"{finding_id}:{current_stage}:{consequence}"
+        consequences.append(record)
+
+    return sorted(
+        consequences,
+        key=lambda item: (_CONTEXT_CONSEQUENCE_PRECEDENCE.get(str(item.get("consequence")), 99), str(item.get("finding_id"))),
+    )
+
+
 def _specialist_blocker(authority: dict[str, Any], *, default_owner: str, default_repair: str = "") -> dict[str, str] | None:
     blocker = _as_dict(authority.get("operating_blocker") or authority.get("blocker"))
     reason_code = str(blocker.get("reason_code") or authority.get("reason_code") or "").strip()
@@ -1325,9 +1427,22 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
                 "repair": "resolve and revalidate a live mutation baseline before admitting this typed action",
             }
         )
-    for gap in _as_list(inputs.get("context_gaps")):
-        if isinstance(gap, dict) and str(gap.get("severity") or "") == "blocking":
-            blockers.append({"reason_code": "context-coverage-gap", "owner": gap.get("owner", ""), "repair": gap.get("next_route", "")})
+    context_findings = [
+        item for item in [*_as_list(inputs.get("context_gaps")), *_as_list(inputs.get("context_findings"))] if isinstance(item, dict)
+    ]
+    context_consequences = derive_context_consequences(
+        findings=context_findings,
+        current_stage=str(inputs.get("stage") or inputs.get("consumer") or "implement"),
+    )
+    for consequence in context_consequences:
+        if consequence["consequence"] == "block-now":
+            blockers.append(
+                {
+                    "reason_code": "context-coverage-gap",
+                    "owner": consequence.get("owner", ""),
+                    "repair": consequence.get("next_route", ""),
+                }
+            )
     if (
         not invocation
         and action
@@ -1444,6 +1559,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "canonical_decision_input_revision": invocation_current_revision,
         "context_authority_coverage": coverage,
         "context_authority_projection": context_authority_projection,
+        "context_consequences": context_consequences,
+        "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),
         "terminal_state": str(inputs.get("terminal_state") or "CONTINUE"),

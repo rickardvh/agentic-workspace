@@ -23,6 +23,7 @@ from agentic_workspace.operating_decision import (
     context_authority_coverage,
     context_authority_declarations,
     context_surface_admission,
+    derive_context_consequences,
     derive_context_gaps,
     derive_operating_blockers_from_authorities,
     live_decision_input_revision,
@@ -469,6 +470,80 @@ def test_blocking_context_gap_prevents_primary_action() -> None:
     assert decision["status"] == "blocked"
     assert decision["external_blocker"]["reason_code"] == "context-coverage-gap"
     assert decision["external_blocker"]["owner"] == "verification and proof runtime"
+    assert decision["highest_impact_context_consequence"]["consequence"] == "block-now"
+
+
+def test_context_findings_compile_to_one_stable_consequence_each() -> None:
+    findings = [
+        {
+            "kind": "agentic-workspace/context-gap/v1",
+            "id": "configured-but-unpopulated:memory",
+            "gap_class": "configured-but-unpopulated",
+            "severity": "material",
+            "owner": "memory package",
+            "next_route": "populate or disable the required Memory surface",
+        },
+        {
+            "kind": "agentic-workspace/system-intent-finding/v1",
+            "id": "intent-conflict:release-policy",
+            "finding_class": "intent-conflict",
+            "severity": "material",
+            "owner": "maintainer",
+            "next_route": "review conflicting intent evidence",
+        },
+        {
+            "kind": "agentic-workspace/memory-freshness-finding/v1",
+            "id": "stale-memory:runtime-boundary",
+            "finding_class": "stale-memory",
+            "severity": "material",
+            "owner": "memory package",
+            "safe_repair": {
+                "operation_id": "memory.refresh-note",
+                "expected_input_revision": "sha256:current",
+                "idempotency_key": "memory.refresh-note:runtime-boundary",
+            },
+        },
+        {
+            "kind": "agentic-workspace/skill-finding/v1",
+            "id": "missing-skill:review",
+            "finding_class": "missing-skill-dependency",
+            "severity": "material",
+            "owner": "skill registry",
+            "trigger": "before the next review task",
+        },
+        {
+            "kind": "agentic-workspace/context-gap/v1",
+            "id": "retired-gap",
+            "gap_class": "coverage-gap",
+            "severity": "blocking",
+            "owner": "workspace",
+            "lifecycle": "dismissed",
+        },
+        {
+            "kind": "agentic-workspace/context-gap/v1",
+            "id": "material-unrouted-gap",
+            "gap_class": "coverage-gap",
+            "severity": "material",
+            "owner": "workspace",
+        },
+    ]
+
+    first = derive_context_consequences(findings=findings, current_stage="implement")
+    second = derive_context_consequences(findings=findings, current_stage="implement")
+
+    assert first == second
+    assert len(first) == len(findings)
+    assert len({item["finding_id"] for item in first}) == len(findings)
+    assert {item["consequence"] for item in first} == {
+        "closeout-obligation",
+        "route-durable-improvement",
+        "require-review-now",
+        "safe-typed-repair",
+        "defer-with-owner",
+        "terminal-disposition",
+    }
+    assert all(item["dedupe_key"] for item in first)
+    assert next(item for item in first if item["finding_id"] == "retired-gap")["active"] is False
 
 
 @pytest.mark.parametrize(

@@ -1748,9 +1748,7 @@ def route_memory(
     manifest = _load_memory_manifest(target_root / MANIFEST_PATH)
     routing_baseline = _routing_baseline_paths(manifest)
     high_level_paths = set(_high_level_paths(manifest))
-    suggestions: list[tuple[str, str, str, str, int]] = [
-        ("required", path.as_posix(), "always-read routing note", "routing-baseline", 0) for path in routing_baseline
-    ]
+    suggestions: list[tuple[str, str, str, str, int]] = []
     manifest_suggestions = _find_manifest_matches(
         manifest,
         files=files or [],
@@ -1813,6 +1811,48 @@ def route_memory(
                 4,
             )
         )
+
+    if not suggestions:
+        result.route_summary = {
+            "routed_note_count": 0,
+            "required_count": 0,
+            "optional_count": 0,
+            "exceeded_target": "no",
+            "confidence": "high",
+            "confidence_reasons": ["no durable Memory route matched the structured task or path signals"],
+            "direct_match_count": 0,
+            "fallback_match_count": 0,
+            "weak_signal_note_count": 0,
+            "baseline_note_count": 0,
+            "weak_signal_notes": [],
+            "decision": "no-memory-required",
+            "route_context": {
+                "files": list(files or []),
+                "surfaces": sorted(selected_surfaces),
+                "explicit_surfaces": explicit_surfaces,
+                "stage_surface": normalized_stage,
+                "inferred_surfaces": inferred_surfaces,
+                "pending_command_supplied": pending_command_supplied,
+                "stage": normalized_stage,
+                "task_supplied": bool(task and task.strip()),
+                "task_used_for_matching": False,
+                "rule": "Files, explicit surfaces, and stage are route signals; an unmatched direct task receives no Memory payload.",
+            },
+            "selected_note_trust": {
+                "status": "not-applicable",
+                "selected_note_count": 0,
+                "attention_count": 0,
+                "items": [],
+                "rule": "No Memory note was selected, so no note trust decision is required.",
+            },
+        }
+        result.missing_note_hint = ""
+        return result
+
+    suggestions = [
+        *(("required", path.as_posix(), "routing index for matched durable notes", "routing-baseline", 0) for path in routing_baseline),
+        *suggestions,
+    ]
 
     deduped = _dedupe_route_suggestions(suggestions)
     required = [item for item in deduped if item[0] == "required"]
