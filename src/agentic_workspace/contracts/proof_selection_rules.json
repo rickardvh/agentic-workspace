@@ -147,6 +147,7 @@
       "id": "generated-command-packages",
       "lane": "generated_command_packages",
       "exact": [
+        "generated/.agentic-workspace-cli-fingerprint.json",
         "src/agentic_workspace/contracts/command_package_ir.json"
       ],
       "prefixes": [
@@ -293,6 +294,9 @@
       {
         "id": "generated-command-package-output",
         "role": "projection",
+        "exact": [
+          "generated/.agentic-workspace-cli-fingerprint.json"
+        ],
         "prefixes": [
           "generated/workspace/python/",
           "generated/planning/python/",

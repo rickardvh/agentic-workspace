@@ -406,6 +406,38 @@ def test_source_manifest_rejects_semantic_drift_even_when_git_witness_matches(tm
     }
 
 
+def test_canonical_fingerprint_regeneration_clears_stale_source_manifest(tmp_path: Path) -> None:
+    module = _load_module()
+    generator = _load_generator_module()
+    _minimal_repo(tmp_path)
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "fixture@example.invalid")
+    _git(tmp_path, "config", "user.name", "Fixture")
+
+    _git(tmp_path, "add", ".")
+    generator._write_source_cli_fingerprint_manifest(repo_root=tmp_path, launcher=module)
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "publish generated fingerprint")
+    fingerprint_path = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    prior_fingerprint = fingerprint_path.read_bytes()
+
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 2\n")
+    stale = generator._source_cli_fingerprint_manifest_status(repo_root=tmp_path, launcher=module)
+    assert stale == {
+        "status": "stale",
+        "reason": "semantic-content-drift",
+        "auxiliary_witness": "dirty-inputs",
+    }
+
+    generator._write_source_cli_fingerprint_manifest(repo_root=tmp_path, launcher=module)
+    regenerated_fingerprint = fingerprint_path.read_bytes()
+    assert regenerated_fingerprint != prior_fingerprint
+    assert generator._source_cli_fingerprint_manifest_status(repo_root=tmp_path, launcher=module)["status"] == "current"
+
+    generator._write_source_cli_fingerprint_manifest(repo_root=tmp_path, launcher=module)
+    assert fingerprint_path.read_bytes() == regenerated_fingerprint
+
+
 def test_launcher_rejects_clean_source_manifest_missing_new_input(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)

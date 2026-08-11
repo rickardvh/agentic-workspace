@@ -675,6 +675,18 @@
       "storage_class": "non-reconstructable-decision"
     },
     {
+      "checked_in_justification": "Applied branch-safe Planning transitions require a durable target-branch receipt that records the exact lifecycle decision and authority revisions.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": false,
+      "notes": "Integration apply writes schema-validated receipts after an accepted proposal is committed on the target branch.",
+      "owner": "planning",
+      "pattern": ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json",
+      "schema_or_validator": ".agentic-workspace/planning/schemas/planning-integration-receipt.schema.json",
+      "status": "schema-backed",
+      "storage_class": "non-reconstructable-decision"
+    },
+    {
       "checked_in_justification": "Trusted proof receipts bind reusable validation evidence to exact commands, paths, and repository state.",
       "editable_by_agents": false,
       "format": "json",

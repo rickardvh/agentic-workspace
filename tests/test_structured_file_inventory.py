@@ -220,7 +220,10 @@ def test_planning_record_entries_are_schema_backed() -> None:
         ".agentic-workspace/planning/execplans/*.plan.json": "planning-execplan.schema.json",
         ".agentic-workspace/planning/execplans/archive/*.plan.json": "planning-execplan.schema.json",
         ".agentic-workspace/planning/decompositions/*.decomposition.json": "planning-decomposition.schema.json",
+        ".agentic-workspace/planning/integration-proposals/*.integration-proposal.json": "planning-integration-proposal.schema.json",
+        ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json": "planning-integration-receipt.schema.json",
         ".agentic-workspace/planning/reviews/*.review.json": "planning-review.schema.json",
+        ".agentic-workspace/proof/receipts/*.json": "validator:",
         "packages/planning/bootstrap/.agentic-workspace/planning/execplans/*.plan.json": "planning-execplan.schema.json",
         "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/*.decomposition.json": "planning-decomposition.schema.json",
         "packages/planning/bootstrap/.agentic-workspace/planning/reviews/*.review.json": "planning-review.schema.json",
@@ -230,9 +233,32 @@ def test_planning_record_entries_are_schema_backed() -> None:
     assert set(entries) == set(planning_patterns)
     for pattern, schema_name in planning_patterns.items():
         entry = entries[pattern]
-        assert entry["status"] == "schema-backed"
+        expected_status = "typed-validator-backed" if pattern == ".agentic-workspace/proof/receipts/*.json" else "schema-backed"
+        assert entry["status"] == expected_status
         assert schema_name in entry["schema_or_validator"]
         assert "routed_to" not in entry
+
+
+def test_planning_integration_receipt_inventory_claim_fails_closed(tmp_path: Path) -> None:
+    inventory = check_structured_file_inventory.load_inventory()
+    pattern = ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json"
+    entry = next(entry for entry in inventory["entries"] if entry["pattern"] == pattern)
+    receipt_path = ".agentic-workspace/planning/integration-receipts/malformed.integration-receipt.json"
+    schema_path = Path(entry["schema_or_validator"])
+
+    (tmp_path / receipt_path).parent.mkdir(parents=True)
+    (tmp_path / receipt_path).write_text("{}\n", encoding="utf-8")
+    (tmp_path / schema_path).parent.mkdir(parents=True)
+    (tmp_path / schema_path).write_text(
+        (check_structured_file_inventory.REPO_ROOT / schema_path).read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    findings = check_structured_file_inventory.claim_validation_findings([receipt_path], {"entries": [entry]}, root=tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].path == receipt_path
+    assert "planning-integration-receipt.schema.json" in findings[0].message
 
 
 def test_planning_evidence_entries_are_schema_backed() -> None:

@@ -37,16 +37,22 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _write_source_cli_fingerprint_manifest() -> None:
+def _write_source_cli_fingerprint_manifest(
+    *,
+    repo_root: Path = REPO_ROOT,
+    launcher: ModuleType | None = None,
+) -> None:
     """Publish the generator-owned cold-start freshness witness.
 
     The launcher uses the Git witness only as an acceleration hint and falls
     back to the canonical semantic identity when checkout state changes.
     """
 
-    launcher = _load_launcher(repo_root=REPO_ROOT)
-    manifest = launcher.source_cli_fingerprint_manifest(repo_root=REPO_ROOT)
-    launcher.SOURCE_MANIFEST_PATH.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    effective_launcher = launcher or _load_launcher(repo_root=repo_root)
+    manifest = effective_launcher.source_cli_fingerprint_manifest(repo_root=repo_root)
+    manifest_path = repo_root / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _load_launcher(*, repo_root: Path) -> ModuleType:
