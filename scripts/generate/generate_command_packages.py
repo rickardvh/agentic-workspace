@@ -37,22 +37,21 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _write_source_cli_fingerprint_manifest(
+def _write_source_cli_fingerprint_manifests(
     *,
     repo_root: Path = REPO_ROOT,
     launcher: ModuleType | None = None,
 ) -> None:
-    """Publish the generator-owned cold-start freshness witness.
-
-    The launcher uses the Git witness only as an acceleration hint and falls
-    back to the canonical semantic identity when checkout state changes.
-    """
+    """Publish the generator-owned, merge-stable semantic freshness witness."""
 
     effective_launcher = launcher or _load_launcher(repo_root=repo_root)
-    manifest = effective_launcher.source_cli_fingerprint_manifest(repo_root=repo_root)
-    manifest_path = repo_root / "generated" / ".agentic-workspace-cli-fingerprint.json"
-    manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifests = effective_launcher.source_cli_fingerprint_manifests(repo_root=repo_root)
+    for owner, manifest in manifests.items():
+        manifest_path = effective_launcher.source_cli_fingerprint_manifest_path(repo_root=repo_root, owner=owner)
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        rendered = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+        if not manifest_path.is_file() or manifest_path.read_text(encoding="utf-8") != rendered:
+            manifest_path.write_text(rendered, encoding="utf-8", newline="\n")
 
 
 def _load_launcher(*, repo_root: Path) -> ModuleType:
@@ -94,15 +93,15 @@ def main(argv: list[str] | None = None) -> int:
         manifest_status = _source_cli_fingerprint_manifest_status()
         if manifest_status["status"] != "current":
             print(
-                "generated/.agentic-workspace-cli-fingerprint.json "
+                "generated/<owner>/.agentic-workspace-cli-fingerprint.json "
                 f"failed freshness validation ({manifest_status['reason']}); regenerate command packages."
             )
             return 1
         witness = manifest_status["auxiliary_witness"]
-        detail = "" if manifest_status["reason"] == "git-index-fast-path" else f" (semantic fallback; Git witness: {witness})"
+        detail = f" (local Git witness: {witness})"
         print(f"[ok] generated command packages{detail}")
     else:
-        _write_source_cli_fingerprint_manifest()
+        _write_source_cli_fingerprint_manifests()
     return 0
 
 

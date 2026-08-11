@@ -6562,7 +6562,7 @@ def test_proof_routes_root_generated_fingerprint_through_existing_generated_pack
                 "--target",
                 str(ROOT),
                 "--changed",
-                "generated/.agentic-workspace-cli-fingerprint.json",
+                "generated/workspace/.agentic-workspace-cli-fingerprint.json",
                 "--format",
                 "json",
             ]
@@ -6603,7 +6603,7 @@ def test_generated_fingerprint_route_reports_typed_node_gap_without_losing_owner
                 "--target",
                 str(ROOT),
                 "--changed",
-                "generated/.agentic-workspace-cli-fingerprint.json",
+                "generated/workspace/.agentic-workspace-cli-fingerprint.json",
                 "--format",
                 "json",
             ]
@@ -6651,7 +6651,7 @@ def test_generated_package_authority_keeps_sibling_output_and_unknown_root_file_
 
 
 def test_generated_fingerprint_route_authorities_remain_consistent() -> None:
-    fingerprint = "generated/.agentic-workspace-cli-fingerprint.json"
+    fingerprint = "generated/workspace/.agentic-workspace-cli-fingerprint.json"
     config = tomllib.loads((ROOT / ".agentic-workspace/config.toml").read_text(encoding="utf-8"))
     rules = json.loads((ROOT / "src/agentic_workspace/contracts/proof_selection_rules.json").read_text(encoding="utf-8"))
 
