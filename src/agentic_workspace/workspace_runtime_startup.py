@@ -1942,6 +1942,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         }
     primary_action = _compact_start_route_action(payload["immediate_next_allowed_action"])
     primary_action.setdefault("command", None)
+    primary_action.setdefault("read_first", [])
     context: dict[str, Any] = {
         "primary_action": primary_action,
         **({"route_decision": _compact_start_route_decision(payload.get("route_decision"))} if payload.get("route_decision") else {}),
@@ -1979,6 +1980,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             "status": "projected-in-next_safe_action",
             "detail_selector": "next_safe_action",
             "command": None,
+            "read_first": [],
         }
     # The compact default already exposes the complete next-action packet at
     # top level.  For ordinary low-risk work, keeping a second copy of that
@@ -1990,6 +1992,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             "status": "projected-in-next_safe_action",
             "detail_selector": "next_safe_action",
             "command": None,
+            "read_first": [],
         }
         context["planning"] = {
             "status": compact_workflow.get("sufficiency_result", "unknown"),
