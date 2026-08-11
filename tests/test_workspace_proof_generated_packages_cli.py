@@ -175,6 +175,7 @@ def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(cap
 
     assert _stable_lane_ids(answer) == [
         "contract_tooling",
+        "verification:aw_context_consistency",
         "verification:test_evidence_decision",
         "domain:test_evidence_decision",
     ]
@@ -183,6 +184,7 @@ def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(cap
         "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
         "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
         "uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json",
+        "uv run python scripts/check/check_memory_freshness.py --strict",
     ]
     domain_commands = [command for command in answer["selected_commands"] if command["lane"] == "domain:test_evidence_decision"]
     assert [command["command"] for command in domain_commands] == [
