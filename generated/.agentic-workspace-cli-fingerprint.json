@@ -1165,7 +1165,7 @@
     "src/agentic_workspace/workspace_selector_validation.py",
     "uv.lock"
   ],
-  "fingerprint": "409f628ce7dd921a0a0b512d6b8776cd4666514278b32ab69e60c521d6c20fb9",
+  "fingerprint": "1f912ff104e3aeadd5c328095b765122684d30f2567c8087ab47de82565d87dd",
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
   "git_identity_role": "optional-source-checkout-acceleration",
   "git_index_entries": {
@@ -1876,7 +1876,7 @@
     "scripts/check/check_validation_runtime_plan.py": "3dbde6d63f0d619ba9b84bad6ca1c0dd77c98802",
     "scripts/check/measure_lazy_discovery.py": "834c506b024f575f6938f725d33a1c3b9dae9cae",
     "scripts/check/prove_command_generation_artifact_consumption.py": "9b4218d9adf4d1434152745be1417243000e95cd",
-    "scripts/check/run_compact_command.py": "ce53a76f660a62fb896567653ca3437047e30545",
+    "scripts/check/run_compact_command.py": "ad1b4767604bad674bdbd6167868fa964fbb753b",
     "scripts/check/run_external_consumer_readiness.py": "e697de47cf20e7b9800d129bf08185c15af85eca",
     "scripts/check/run_generated_command_package_proof.py": "4b304568e7eb66c1d601e47917f4d1637c7c2931",
     "scripts/check/run_operation_conformance_tests.py": "b2d52329718c5342fca30edeb2d143ee1b655cc0",
@@ -2331,7 +2331,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "e6c134bac891622acae570f83dae865d71ff6bbd",
     "uv.lock": "630bbf372bc645b0dd0dac2dfa43e78e5a88c8a5"
   },
-  "git_index_identity": "b73112b6643447dc2e3ac4f2ec6a74aeebe091afd90e49642d4b8662f5d35241",
+  "git_index_identity": "5e705e479ccfb2fba797a1cea32ee78b94a4ee0d9bac960bbcc453f4a404fc33",
   "identity_role": "canonical-semantic-content",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
