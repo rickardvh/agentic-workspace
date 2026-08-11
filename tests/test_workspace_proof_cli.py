@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import sys
+import tomllib
 from contextlib import contextmanager
 
 # ruff: noqa: F403,F405
@@ -6550,6 +6551,122 @@ def test_proof_changed_selector_flags_direct_cli_edits(tmp_path: Path, capsys) -
     assert "runtime primitive implementation and live workspace inspection" in review["allowed_direct_cli_work"]
     assert "route interface or generated-surface changes back" in review["recovery_signal"]
     assert answer["subsystem_ownership"]["matched_subsystems"][0]["id"] == "workspace-cli-runtime"
+
+
+def test_proof_routes_root_generated_fingerprint_through_existing_generated_package_authority(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(ROOT),
+                "--changed",
+                "generated/.agentic-workspace-cli-fingerprint.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lane_ids = [lane["id"] for lane in answer["selected_lanes"]]
+    assert "generated_command_packages" in lane_ids
+    assert "cli_authority" in lane_ids
+    assert "uv run python scripts/check/check_generated_command_packages.py --require-node" in answer["required_commands"]
+    assert "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node" in answer["required_commands"]
+    assert answer["generated_cli_freshness"]["freshness_check_command"] == (
+        "uv run python scripts/generate/generate_command_packages.py --check"
+    )
+    classification = answer["cli_authority_review"]["classifications"][0]
+    assert classification["classification_id"] == "generated-command-package-output"
+    assert classification["role"] == "projection"
+    assert classification["direct_edit_allowed"] is False
+    assert classification["source_contract"] == "src/agentic_workspace/contracts/command_package_ir.json"
+    assert classification["regeneration_path"] == "uv run python scripts/check/check_generated_command_packages.py"
+
+
+def test_generated_fingerprint_route_reports_typed_node_gap_without_losing_ownership(capsys, monkeypatch) -> None:
+    from agentic_workspace import workspace_runtime_proof
+
+    real_which = workspace_runtime_proof.shutil.which
+    monkeypatch.setattr(
+        workspace_runtime_proof.shutil, "which", lambda executable: None if executable == "node" else real_which(executable)
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(ROOT),
+                "--changed",
+                "generated/.agentic-workspace-cli-fingerprint.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert "generated_command_packages" in [lane["id"] for lane in answer["selected_lanes"]]
+    unavailable = [item for item in answer["unavailable_proof_commands"] if item["lane"] == "domain:generated_command_packages"]
+    assert [item["command"] for item in unavailable] == [
+        "uv run python scripts/check/check_generated_command_packages.py --require-node",
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
+    ]
+    assert {item["required_runtime"] for item in unavailable} == {"node"}
+    assert answer["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert answer["route_refinement_required"]["status"] == "not-required"
+    assert answer["manual_verification"]["status"] == "required-for-unavailable-proof"
+
+
+def test_generated_package_authority_keeps_sibling_output_and_unknown_root_file_distinct(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "generated/workspace/typescript/cli.mjs",
+                "generated/unknown-root-metadata.json",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    classified_paths = {item["path"] for item in answer["cli_authority_review"]["classifications"]}
+    assert "generated/workspace/typescript/cli.mjs" in classified_paths
+    assert "generated/unknown-root-metadata.json" not in classified_paths
+
+
+def test_generated_fingerprint_route_authorities_remain_consistent() -> None:
+    fingerprint = "generated/.agentic-workspace-cli-fingerprint.json"
+    config = tomllib.loads((ROOT / ".agentic-workspace/config.toml").read_text(encoding="utf-8"))
+    rules = json.loads((ROOT / "src/agentic_workspace/contracts/proof_selection_rules.json").read_text(encoding="utf-8"))
+
+    domain_paths = config["assurance"]["domain_proof_lanes"]["generated_command_packages"]["applies_to_paths"]
+    route = next(item for item in rules["rules"] if item["id"] == "generated-command-packages")
+    classification = next(item for item in rules["cli_authority"]["classifications"] if item["id"] == "generated-command-package-output")
+
+    assert fingerprint in domain_paths
+    assert fingerprint in route["exact"]
+    assert fingerprint in classification["exact"]
+    assert classification["direct_edit_allowed"] is False
+    assert any(
+        "check_generated_command_packages.py --require-node" in command
+        for command in config["assurance"]["domain_proof_lanes"]["generated_command_packages"]["commands"]
+    )
 
 
 def test_proof_changed_selector_broadens_contract_plus_cli_changes(tmp_path: Path, capsys) -> None:
