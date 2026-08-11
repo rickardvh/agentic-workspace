@@ -3115,18 +3115,9 @@ def _planning_reconciliation_transaction(
     required.  That makes the compiler useful for a merged stack without turning
     provider state into an authority to satisfy wider Planning intent.
     """
-    if apply and proposal_id.strip():
-        requested_id = proposal_id.strip()
-        if not re.fullmatch(r"[0-9a-f]{20}", requested_id):
-            return {"kind": "agentic-planning/reconciliation-transaction/v1", "status": "blocked", "reason": "invalid-proposal-id"}
-        existing_receipt_path = target_root / PLANNING_RECONCILIATION_RECEIPT_ROOT / f"{requested_id}.json"
-        if existing_receipt_path.is_file():
-            receipt = json.loads(existing_receipt_path.read_text(encoding="utf-8"))
-            return {
-                "kind": "agentic-planning/reconciliation-transaction/v1",
-                "status": "already-applied",
-                "receipt": receipt,
-            }
+    prior_result = _reconciliation_prior_apply_result(target_root=target_root, apply=apply, proposal_id=proposal_id)
+    if prior_result is not None:
+        return prior_result
     revision = planning_revision(target_root)
     planning_revision_id = str(revision.get("revision_id") or "")
     cleanup_targets = [
@@ -3407,6 +3398,24 @@ def _planning_reconciliation_transaction(
         "proposal": proposal_payload,
         "receipt": receipt,
         "post_apply": _planning_reconcile_payload(target_root),
+    }
+
+
+def _reconciliation_prior_apply_result(*, target_root: Path, apply: bool, proposal_id: str) -> dict[str, Any] | None:
+    """Validate an apply identifier and return an existing idempotent receipt when present."""
+
+    if not apply or not proposal_id.strip():
+        return None
+    requested_id = proposal_id.strip()
+    if not re.fullmatch(r"[0-9a-f]{20}", requested_id):
+        return {"kind": "agentic-planning/reconciliation-transaction/v1", "status": "blocked", "reason": "invalid-proposal-id"}
+    existing_receipt_path = target_root / PLANNING_RECONCILIATION_RECEIPT_ROOT / f"{requested_id}.json"
+    if not existing_receipt_path.is_file():
+        return None
+    return {
+        "kind": "agentic-planning/reconciliation-transaction/v1",
+        "status": "already-applied",
+        "receipt": json.loads(existing_receipt_path.read_text(encoding="utf-8")),
     }
 
 

@@ -68,7 +68,6 @@
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_delegation_next_action_decision", "max_lines": 487, "max_branch_nodes": 135, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_task_posture_packet_payload", "max_lines": 391, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "planning_summary", "max_lines": 323, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
-      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_planning_reconciliation_transaction", "max_lines": 309, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_reconcile_lane_current_slice", "max_lines": 502, "max_branch_nodes": 111, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_planning_summary_compact_projection", "max_lines": 472, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_finished_work_inspection_contract", "max_lines": 342, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
