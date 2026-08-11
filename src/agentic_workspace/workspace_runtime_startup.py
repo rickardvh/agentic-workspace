@@ -150,7 +150,7 @@ from agentic_workspace.workspace_runtime_projection import _workflow_participati
 from agentic_workspace.workspace_runtime_proof import (
     _proof_selection_for_changed_paths,
 )
-from agentic_workspace.workspace_selector_validation import _selector_inventory_selected_payload
+from agentic_workspace.workspace_selector_validation import _selector_inventory_selected_payload, _validated_detail_route_command
 
 
 def _startup_command_target_arg(target_root: Path | None) -> str:
@@ -163,6 +163,19 @@ def _startup_command_target_arg(target_root: Path | None) -> str:
     if relative == ".":
         return "."
     return Path(relative).as_posix()
+
+
+def _startup_detail_routes(*, cli_invoke: str, active_planning: bool) -> dict[str, str]:
+    routes = {
+        "why_blocked": f"{cli_invoke} start --target . --select next_safe_action,action_signals --format json",
+        "active_plan": (
+            f"{cli_invoke} summary --target . --select continuation_view --format json"
+            if active_planning
+            else f"{cli_invoke} summary --target . --format json"
+        ),
+        "proof_detail": f"{cli_invoke} proof --target . --changed <paths> --format json",
+    }
+    return {route_id: _validated_detail_route_command(command) for route_id, command in routes.items()}
 
 
 def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
@@ -650,15 +663,10 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         claim_boundary=projected["next_safe_action"].get("claim_boundary", "completion claim requires proof"),
         residue_owner="active continuation state" if payload.get("active_state_summary", {}).get("active_execplan") else "none",
         reasons=list(projected["action_signals"].get("changed_signals", []))[:6],
-        detail_routes={
-            "why_blocked": "agentic-workspace start --target . --select next_safe_action,action_signals --format json",
-            "active_plan": (
-                "agentic-workspace start --target . --select active_state_summary,continuation_view --format json"
-                if _active_state_has_planning(payload.get("active_state_summary", {}))
-                else "agentic-workspace summary --target . --format json"
-            ),
-            "proof_detail": "agentic-workspace proof --target . --changed <paths> --format json",
-        },
+        detail_routes=_startup_detail_routes(
+            cli_invoke="agentic-workspace",
+            active_planning=_active_state_has_planning(payload.get("active_state_summary", {})),
+        ),
         shown_because=["command_phase=start", *list(projected["action_signals"].get("changed_signals", []))[:3]],
         absence_states={
             "full_selector_inventory": "hidden_behind_detail_route",
@@ -1567,15 +1575,10 @@ def _hydrate_selected_start_advisory_payloads(
                 claim_boundary=next_safe_action.get("claim_boundary", "completion claim requires proof"),
                 residue_owner="active continuation state" if payload.get("active_state_summary", {}).get("active_execplan") else "none",
                 reasons=list(action_signals.get("changed_signals", []))[:6],
-                detail_routes={
-                    "why_blocked": f"{config.cli_invoke} start --target . --select next_safe_action,action_signals --format json",
-                    "active_plan": (
-                        f"{config.cli_invoke} start --target . --select active_state_summary,continuation_view --format json"
-                        if _active_state_has_planning(payload.get("active_state_summary", {}))
-                        else f"{config.cli_invoke} summary --target . --format json"
-                    ),
-                    "proof_detail": f"{config.cli_invoke} proof --target . --changed <paths> --format json",
-                },
+                detail_routes=_startup_detail_routes(
+                    cli_invoke=config.cli_invoke,
+                    active_planning=_active_state_has_planning(payload.get("active_state_summary", {})),
+                ),
                 shown_because=["command_phase=start", *list(action_signals.get("changed_signals", []))[:3]],
                 absence_states={
                     "full_selector_inventory": "hidden_behind_detail_route",
@@ -2410,15 +2413,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             claim_boundary=next_safe_action.get("claim_boundary", "completion claim requires proof"),
             residue_owner="active continuation state" if payload.get("active_state_summary", {}).get("active_execplan") else "none",
             reasons=startup_changed_signals[:6],
-            detail_routes={
-                "why_blocked": f"{cli_invoke} start --target . --select next_safe_action,action_signals --format json",
-                "active_plan": (
-                    f"{cli_invoke} start --target . --select active_state_summary,continuation_view --format json"
-                    if _active_state_has_planning(payload.get("active_state_summary", {}))
-                    else f"{cli_invoke} summary --target . --format json"
-                ),
-                "proof_detail": f"{cli_invoke} proof --target . --changed <paths> --format json",
-            },
+            detail_routes=_startup_detail_routes(
+                cli_invoke=cli_invoke,
+                active_planning=_active_state_has_planning(payload.get("active_state_summary", {})),
+            ),
             shown_because=["command_phase=start", *startup_changed_signals[:3]],
             absence_states={
                 "full_selector_inventory": "hidden_behind_detail_route",
