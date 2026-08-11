@@ -2141,6 +2141,11 @@
       "description": "Optimistic Planning state revision observed by this implementer read surface.",
       "additionalProperties": true
     },
+    "context_authority_projection": {
+      "type": "object",
+      "description": "Registry-owned authority selection and changed-path guardrail for the implementation consumer.",
+      "additionalProperties": true
+    },
     "active_plan_reliance": {
       "type": "object",
       "description": "Permission signal separating command-written integrity, planning freshness, and active-plan reliance.",

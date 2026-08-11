@@ -1043,7 +1043,14 @@ def test_context_authority_projection_selects_repository_sources_and_ignores_for
     assert skills["source"]["source_adapter"] == "skill-registry-source-adapter"
     assert skills["source"]["freshness_enforcement"]["status"] == "active"
     assert skills["caller_record_status"] == "ignored"
-    assert projection["excluded_authorities"] == []
+    assert projection["excluded_authorities"] == [
+        {
+            "surface": "proof",
+            "reason": "not-selected-by-task-or-path",
+            "selected_required": False,
+            "caller_record_status": "ignored",
+        }
+    ]
 
 
 def test_context_authority_projection_curates_memory_from_manifest_routes(tmp_path: Path) -> None:

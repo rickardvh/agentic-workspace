@@ -773,6 +773,9 @@ def resolve_context_authority_projection(
             "owner": str(item.get("owner") or ""),
             "authority_class": str(item.get("authority_class") or ""),
             "activation": str(item.get("activation") or ""),
+            "source_owner": expected_producer,
+            "proof_route": str(item.get("proof_route") or ""),
+            "repair_operation_id": expected_operation_id,
             "revision_fields": [str(field) for field in _as_list(item.get("revision_fields"))],
             "disposition": str(item.get("disposition") or ""),
             "source": {
