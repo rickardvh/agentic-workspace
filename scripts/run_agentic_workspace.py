@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.metadata
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -10,12 +12,19 @@ import uuid
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CACHE_PATH = REPO_ROOT / ".agentic-workspace" / "local" / "cache" / "generated-cli-fingerprint.json"
 SOURCE_MANIFEST_PATH = REPO_ROOT / "generated" / ".agentic-workspace-cli-fingerprint.json"
 GENERATOR_SCRIPT = REPO_ROOT / "scripts" / "generate" / "generate_command_packages.py"
 CACHE_SCHEMA = "generated-cli-fingerprint/v1"
+RUNTIME_DISTRIBUTION_PATHS = {
+    "agentic-workspace": Path("."),
+    "agentic-workspace-memory": Path("packages/memory"),
+    "agentic-workspace-planning": Path("packages/planning"),
+    "agentic-workspace-verification": Path("packages/verification"),
+}
 
 FINGERPRINT_PATTERNS = (
     "pyproject.toml",
@@ -414,6 +423,71 @@ def _dispatch_to_source_cli(argv: Sequence[str]) -> int:
     return int(cli_main(list(argv)))
 
 
+def _editable_distribution_origin(distribution: importlib.metadata.Distribution) -> Path | None:
+    raw = distribution.read_text("direct_url.json")
+    if not raw:
+        return None
+    try:
+        direct_url = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    dir_info = direct_url.get("dir_info") if isinstance(direct_url, dict) else None
+    if not isinstance(dir_info, dict) or not bool(dir_info.get("editable")):
+        return None
+    parsed = urlparse(str(direct_url.get("url") or ""))
+    if parsed.scheme != "file":
+        return None
+    path_text = unquote(parsed.path)
+    if os.name == "nt" and re.match(r"^/[A-Za-z]:/", path_text):
+        path_text = path_text[1:]
+    return Path(path_text).resolve()
+
+
+def runtime_identity_admission(
+    *,
+    repo_root: Path = REPO_ROOT,
+    distribution_lookup: Callable[[str], importlib.metadata.Distribution] = importlib.metadata.distribution,
+) -> dict[str, object]:
+    target_root = repo_root.resolve()
+    observed: list[dict[str, str]] = []
+    mismatches: list[dict[str, str]] = []
+    for name, relative_expected in RUNTIME_DISTRIBUTION_PATHS.items():
+        try:
+            distribution = distribution_lookup(name)
+        except importlib.metadata.PackageNotFoundError:
+            continue
+        origin = _editable_distribution_origin(distribution)
+        if origin is None:
+            continue
+        expected = (target_root / relative_expected).resolve()
+        item = {"distribution": name, "origin": origin.as_posix(), "expected": expected.as_posix()}
+        observed.append(item)
+        if origin != expected:
+            mismatches.append(item)
+    status = "mismatch" if mismatches else "matched" if observed else "no-editable-runtime"
+    return {
+        "kind": "agentic-workspace/runtime-identity/v1",
+        "status": status,
+        "target_root": target_root.as_posix(),
+        "executable": Path(sys.executable).resolve().as_posix(),
+        "environment": Path(os.environ["VIRTUAL_ENV"]).resolve().as_posix() if os.environ.get("VIRTUAL_ENV") else "",
+        "editable_distributions": observed,
+        "mismatches": mismatches,
+    }
+
+
+def _admit_runtime_identity() -> bool:
+    identity = runtime_identity_admission()
+    os.environ["AW_RUNTIME_IDENTITY"] = json.dumps(identity, sort_keys=True, separators=(",", ":"))
+    if identity["status"] != "mismatch":
+        return True
+    recovery = f'uv run --project "{REPO_ROOT.as_posix()}" --no-sync python scripts/run_agentic_workspace.py'
+    print("Agentic Workspace refused a runtime from another checkout before command effects.", file=sys.stderr)
+    print(f"Runtime identity: {json.dumps(identity, sort_keys=True)}", file=sys.stderr)
+    print(f"Recovery: {recovery} <command arguments>", file=sys.stderr)
+    return False
+
+
 def _should_refresh_generated_cli_for_argv(argv: Sequence[str]) -> bool:
     if os.environ.get("AW_SKIP_GENERATED_CLI_REFRESH") == "1":
         return False
@@ -425,6 +499,8 @@ def _should_refresh_generated_cli_for_argv(argv: Sequence[str]) -> bool:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
+    if not _admit_runtime_identity():
+        return 2
     if _should_refresh_generated_cli_for_argv(args):
         ensure_generated_cli_current()
     return _dispatch_to_source_cli(args)
