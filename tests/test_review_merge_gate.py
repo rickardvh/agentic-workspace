@@ -13,6 +13,7 @@ WORKFLOW = ROOT / ".github" / "workflows" / "exact-head-review.yml"
 RULESET = ROOT / ".github" / "rulesets" / "master-support-bearing.json"
 HEAD_A = "a" * 40
 HEAD_B = "b" * 40
+HEAD_C = "c" * 40
 
 
 def _module():
@@ -50,21 +51,21 @@ def _comment(
             2498,
             HEAD_B,
             [_comment(decision="blocked", head=HEAD_A, pr_number=2498)],
-            "review-stale-head",
+            "review-blocked",
             id="2498-stale-head",
         ),
         pytest.param(
             2499,
             HEAD_B,
             [_comment(decision="blocked", head=HEAD_A, pr_number=2499)],
-            "review-stale-head",
+            "review-blocked",
             id="2499-stale-head",
         ),
         pytest.param(
             2500,
             HEAD_B,
             [_comment(decision="blocked", head=HEAD_A, pr_number=2500)],
-            "review-stale-head",
+            "review-blocked",
             id="2500-stale-head",
         ),
         pytest.param(2501, HEAD_A, [], "review-missing", id="2501-generated-release-without-review"),
@@ -75,8 +76,18 @@ def test_incident_replays_fail_closed(pr_number: int, head_sha: str, comments: l
 
     assert decision.status == expected_status
     assert decision.conclusion == "failure"
-    if expected_status == "review-stale-head":
-        assert HEAD_A in decision.summary
+
+
+def test_prior_merge_ready_without_ancestry_proof_fails_closed() -> None:
+    decision = _module().review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_B,
+        comments=[_comment(decision="merge-ready", head=HEAD_A)],
+    )
+
+    assert decision.status == "review-ancestry-unverified"
+    assert decision.conclusion == "failure"
+    assert HEAD_A in decision.summary
 
 
 def test_latest_current_head_merge_ready_decision_admits_merge() -> None:
@@ -88,6 +99,48 @@ def test_latest_current_head_merge_ready_decision_admits_merge() -> None:
 
     assert decision.status == "merge-ready"
     assert decision.conclusion == "success"
+    assert decision.review_url == "https://example.test/review/2"
+
+
+def test_prior_merge_ready_decision_admits_descendant_head() -> None:
+    decision = _module().review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_B,
+        comments=[_comment(decision="merge-ready", head=HEAD_A)],
+        is_ancestor=lambda reviewed, current: (reviewed, current) == (HEAD_A, HEAD_B),
+    )
+
+    assert decision.status == "merge-ready-carried-forward"
+    assert decision.conclusion == "success"
+    assert HEAD_A in decision.summary
+    assert HEAD_B in decision.summary
+
+
+def test_prior_merge_ready_decision_rejects_diverged_head() -> None:
+    decision = _module().review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_B,
+        comments=[_comment(decision="merge-ready", head=HEAD_A)],
+        is_ancestor=lambda _reviewed, _current: False,
+    )
+
+    assert decision.status == "review-diverged-head"
+    assert decision.conclusion == "failure"
+
+
+def test_newer_blocker_supersedes_prior_merge_ready_decision() -> None:
+    decision = _module().review_gate_decision(
+        pr_number=2501,
+        head_sha=HEAD_C,
+        comments=[
+            _comment(decision="merge-ready", head=HEAD_A, identifier=1),
+            _comment(decision="blocked", head=HEAD_B, identifier=2),
+        ],
+        is_ancestor=lambda _reviewed, _current: True,
+    )
+
+    assert decision.status == "review-blocked"
+    assert decision.conclusion == "failure"
     assert decision.review_url == "https://example.test/review/2"
 
 
@@ -108,7 +161,7 @@ def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> N
     assert "pull_request_target:" not in workflow
     assert "issue_comment:" in workflow
     assert "scripts/github/review_merge_gate.py" in workflow
-    assert '"context": "Exact-head review approval"' in ruleset
+    assert '"context": "Review approval"' in ruleset
 
 
 def test_workflow_run_resolves_its_pull_request() -> None:

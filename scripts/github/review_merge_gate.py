@@ -1,4 +1,4 @@
-"""Publish the exact-head review authority required before merging a PR."""
+"""Publish the review authority required before merging a PR."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS_ROOT = REPO_ROOT / "tools"
@@ -17,7 +17,7 @@ if str(TOOLS_ROOT) not in sys.path:
 
 from chatgpt_review_loop import REVIEW_POLICY, parse_reviews  # noqa: E402
 
-CHECK_NAME = "Exact-head review approval"
+CHECK_NAME = "Review approval"
 TRUSTED_ASSOCIATIONS = frozenset({"OWNER", "MEMBER", "COLLABORATOR"})
 
 
@@ -36,7 +36,13 @@ def _comment_order(comment: dict[str, Any]) -> tuple[str, int]:
     return timestamp, identifier
 
 
-def review_gate_decision(*, pr_number: int, head_sha: str, comments: Sequence[dict[str, Any]]) -> GateDecision:
+def review_gate_decision(
+    *,
+    pr_number: int,
+    head_sha: str,
+    comments: Sequence[dict[str, Any]],
+    is_ancestor: Callable[[str, str], bool] | None = None,
+) -> GateDecision:
     candidates = [
         comment
         for comment in comments
@@ -47,7 +53,7 @@ def review_gate_decision(*, pr_number: int, head_sha: str, comments: Sequence[di
         return GateDecision(
             status="review-missing",
             conclusion="failure",
-            title="Current head has no authoritative review",
+            title="Pull request has no authoritative review",
             summary=f"Run {REVIEW_POLICY} for head {head_sha}; green CI is not merge authority.",
         )
 
@@ -56,11 +62,64 @@ def review_gate_decision(*, pr_number: int, head_sha: str, comments: Sequence[di
     if not matches:
         reason = str((rejected or [{}])[0].get("reason") or "invalid-review-marker")
         reviewed_head = str((rejected or [{}])[0].get("reviewed_head") or "")
+        if reason == "stale-head" and reviewed_head:
+            reviewed, reviewed_rejections = parse_reviews(
+                [latest], expected_pr=pr_number, expected_head=reviewed_head
+            )
+            if not reviewed:
+                reason = str((reviewed_rejections or [{}])[0].get("reason") or "invalid-review-marker")
+            else:
+                review = reviewed[0]
+                review_url = str(latest.get("html_url") or review.url)
+                if review.decision != "merge-ready":
+                    return GateDecision(
+                        status="review-blocked",
+                        conclusion="failure",
+                        title="Latest authoritative review is blocked",
+                        summary="Resolve the review blocker and obtain a merge-ready decision.",
+                        review_url=review_url,
+                    )
+                if is_ancestor is None:
+                    return GateDecision(
+                        status="review-ancestry-unverified",
+                        conclusion="failure",
+                        title="Approved review ancestry was not verified",
+                        summary=f"Verify that reviewed head {reviewed_head} is an ancestor of {head_sha}.",
+                        review_url=review_url,
+                    )
+                try:
+                    ancestor = is_ancestor(reviewed_head, head_sha)
+                except Exception as exc:  # pragma: no cover - exercised through the command boundary
+                    return GateDecision(
+                        status="review-ancestry-unverified",
+                        conclusion="failure",
+                        title="Approved review ancestry could not be verified",
+                        summary=f"GitHub could not verify {reviewed_head} as an ancestor of {head_sha}: {exc}",
+                        review_url=review_url,
+                    )
+                if ancestor:
+                    return GateDecision(
+                        status="merge-ready-carried-forward",
+                        conclusion="success",
+                        title="Prior merge-ready review remains authoritative",
+                        summary=(
+                            f"{REVIEW_POLICY} marked {reviewed_head} merge-ready, and GitHub verified "
+                            f"that it is an ancestor of current head {head_sha}."
+                        ),
+                        review_url=review_url,
+                    )
+                return GateDecision(
+                    status="review-diverged-head",
+                    conclusion="failure",
+                    title="Approved review is not in the current history",
+                    summary=f"Reviewed head {reviewed_head} is not an ancestor of current head {head_sha}.",
+                    review_url=review_url,
+                )
         detail = f"; latest review covers {reviewed_head}" if reviewed_head else ""
         return GateDecision(
             status=f"review-{reason}",
             conclusion="failure",
-            title="Latest review does not authorize the current head",
+            title="Latest review does not authorize this pull request",
             summary=f"Review head {head_sha} again ({reason}{detail}).",
             review_url=str(latest.get("html_url") or latest.get("url") or ""),
         )
@@ -71,14 +130,14 @@ def review_gate_decision(*, pr_number: int, head_sha: str, comments: Sequence[di
         return GateDecision(
             status="review-blocked",
             conclusion="failure",
-            title="Current exact-head review is blocked",
-            summary="Resolve the review blocker and obtain a fresh merge-ready decision for this head.",
+            title="Latest authoritative review is blocked",
+            summary="Resolve the review blocker and obtain a merge-ready decision.",
             review_url=review_url,
         )
     return GateDecision(
         status="merge-ready",
         conclusion="success",
-        title="Current exact head is review-approved",
+        title="Current head is review-approved",
         summary=f"{REVIEW_POLICY} marked {head_sha} merge-ready.",
         review_url=review_url,
     )
@@ -87,6 +146,11 @@ def review_gate_decision(*, pr_number: int, head_sha: str, comments: Sequence[di
 def _gh_json(args: Sequence[str]) -> Any:
     completed = subprocess.run(["gh", *args], cwd=REPO_ROOT, check=True, capture_output=True, text=True)
     return json.loads(completed.stdout)
+
+
+def _github_is_ancestor(*, repository: str, reviewed_head: str, current_head: str) -> bool:
+    comparison = _gh_json(["api", f"repos/{repository}/compare/{reviewed_head}...{current_head}"])
+    return str(comparison.get("status", "")) in {"ahead", "identical"}
 
 
 def _post_check(*, repository: str, head_sha: str, decision: GateDecision) -> None:
@@ -139,7 +203,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     head_sha = str(pull_request["head"]["sha"])
     pages = _gh_json(["api", "--paginate", "--slurp", f"repos/{args.repository}/issues/{pr_number}/comments?per_page=100"])
     comments = [comment for page in pages for comment in page]
-    decision = review_gate_decision(pr_number=pr_number, head_sha=head_sha, comments=comments)
+    decision = review_gate_decision(
+        pr_number=pr_number,
+        head_sha=head_sha,
+        comments=comments,
+        is_ancestor=lambda reviewed, current: _github_is_ancestor(
+            repository=args.repository, reviewed_head=reviewed, current_head=current
+        ),
+    )
     _post_check(repository=args.repository, head_sha=head_sha, decision=decision)
     print(json.dumps({"pr_number": pr_number, "head_sha": head_sha, **decision.__dict__}, sort_keys=True))
     return 0
