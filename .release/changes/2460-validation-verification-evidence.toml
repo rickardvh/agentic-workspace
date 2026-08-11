@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Admit exact-subject validation results as Verification and completion-cost evidence."
