@@ -5,8 +5,9 @@ import fnmatch
 import hashlib
 import json
 import subprocess
+import sys
 import tomllib
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -1793,7 +1794,79 @@ def _bundle_state(bundle: dict[str, Any], *, changed_paths: list[str]) -> dict[s
     }
 
 
-def validation_result_admission(*, record: dict[str, Any], current_head: str) -> dict[str, Any]:
+def _validation_plan_graph_payload(plan: dict[str, Any]) -> dict[str, Any]:
+    traces = []
+    for trace in _list_payload(plan.get("trace_fixtures")):
+        trace_record = trace if isinstance(trace, dict) else {}
+        events = [
+            {
+                "constituent_id": str(event.get("constituent_id", "")),
+                "outcome": str(event.get("outcome", "")),
+                **({"repeat_allowed": True} if event.get("repeat_allowed") else {}),
+            }
+            for event in _list_payload(trace_record.get("events"))
+            if isinstance(event, dict)
+        ]
+        traces.append({"id": trace_record.get("id"), "command": trace_record.get("command"), "events": events})
+    return {
+        "kind": plan.get("kind"),
+        "schema_version": plan.get("schema_version"),
+        "issue": plan.get("issue"),
+        "parallel_modes": plan.get("parallel_modes", []),
+        "compact_label_map": plan.get("compact_label_map", {}),
+        "constituents": plan.get("constituents", []),
+        "duplicate_dispositions": plan.get("duplicate_dispositions", []),
+        "trace_fixtures": traces,
+    }
+
+
+def _current_validation_authority(target_root: Path) -> dict[str, Any]:
+    plan_path = target_root / "docs" / "maintainer" / "validation-runtime-2435" / "validation-plan.json"
+    try:
+        raw_plan = plan_path.read_bytes()
+        plan = json.loads(raw_plan.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        raw_plan, plan = b"", {}
+    plan = plan if isinstance(plan, dict) else {}
+    raw_label_map = plan.get("compact_label_map")
+    label_map: dict[str, Any] = raw_label_map if isinstance(raw_label_map, dict) else {}
+    routes = {
+        str(metadata.get("id")): list(metadata.get("command", []))
+        for metadata in label_map.values()
+        if isinstance(metadata, dict) and metadata.get("id") and isinstance(metadata.get("command"), list)
+    }
+
+    def git_value(*args: str) -> str:
+        try:
+            result = subprocess.run(["git", *args], cwd=target_root, capture_output=True, text=True, check=False, timeout=2)
+        except (OSError, subprocess.SubprocessError):
+            return ""
+        return result.stdout.strip() if result.returncode == 0 else ""
+
+    graph = _validation_plan_graph_payload(plan)
+    return {
+        "repository_head": git_value("rev-parse", "HEAD"),
+        "repository_tree": git_value("rev-parse", "HEAD^{tree}"),
+        "tracked_dirty": bool(git_value("status", "--porcelain=v1", "--untracked-files=no")),
+        "plan_file_sha256": hashlib.sha256(raw_plan).hexdigest() if raw_plan else "",
+        "plan_graph_sha256": hashlib.sha256(json.dumps(graph, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+        if plan
+        else "",
+        "routes": routes,
+        "runtime_executable": str(Path(sys.executable).resolve()),
+    }
+
+
+def _ordered_validation_timestamps(record: dict[str, Any]) -> bool:
+    try:
+        started = datetime.fromisoformat(str(record.get("started_at") or ""))
+        ended = datetime.fromisoformat(str(record.get("ended_at") or ""))
+    except ValueError:
+        return False
+    return started.tzinfo is not None and ended.tzinfo is not None and ended >= started
+
+
+def validation_result_admission(*, record: dict[str, Any], current_head: str, authority: dict[str, Any] | None = None) -> dict[str, Any]:
     """Admit an exact, successful compact-validation subject or reject it with typed reasons."""
 
     reasons: list[str] = []
@@ -1823,6 +1896,28 @@ def validation_result_admission(*, record: dict[str, Any], current_head: str) ->
         reasons.append("stale-or-mismatched-subject")
     if runtime and str(runtime.get("status") or "") == "mismatch":
         reasons.append("runtime-identity-mismatch")
+    if not _ordered_validation_timestamps(record):
+        reasons.append("invalid-or-unordered-timestamps")
+    if authority is not None:
+        if str(repository.get("tree") or "") != str(authority.get("repository_tree") or ""):
+            reasons.append("repository-tree-mismatch")
+        if bool(repository.get("tracked_dirty")) or bool(authority.get("tracked_dirty")):
+            reasons.append("dirty-repository-subject")
+        if str(plan_identity.get("file_sha256") or "") != str(authority.get("plan_file_sha256") or "") or str(
+            plan_identity.get("graph_sha256") or ""
+        ) != str(authority.get("plan_graph_sha256") or ""):
+            reasons.append("validation-plan-identity-mismatch")
+        raw_routes = authority.get("routes")
+        routes: dict[str, Any] = raw_routes if isinstance(raw_routes, dict) else {}
+        expected_command = routes.get(str(record.get("constituent_id") or ""))
+        if expected_command is None:
+            reasons.append("unknown-validation-constituent")
+        elif list(record.get("command") or []) != expected_command:
+            reasons.append("validation-command-mismatch")
+        if str(runtime.get("status") or "") != "matched" or str(Path(str(runtime.get("executable") or "")).resolve()) != str(
+            authority.get("runtime_executable") or ""
+        ):
+            reasons.append("runtime-identity-mismatch")
     subject_payload = {
         "repository_head": repository.get("head"),
         "repository_tree": repository.get("tree"),
@@ -1893,12 +1988,9 @@ def validation_result_admission(*, record: dict[str, Any], current_head: str) ->
     return decision
 
 
-def _validation_evidence_admissions(target_root: Path) -> list[dict[str, Any]]:
-    try:
-        git = subprocess.run(["git", "rev-parse", "HEAD"], cwd=target_root, capture_output=True, text=True, check=False, timeout=2)
-        current_head = git.stdout.strip() if git.returncode == 0 else ""
-    except (OSError, subprocess.SubprocessError):
-        current_head = ""
+def validation_evidence_admissions(target_root: Path) -> list[dict[str, Any]]:
+    authority = _current_validation_authority(target_root)
+    current_head = str(authority.get("repository_head") or "")
     result_root = target_root / "scratch" / "validation-results"
     paths = sorted(result_root.glob("**/*.json"), key=lambda path: path.stat().st_mtime, reverse=True) if result_root.exists() else []
     decisions: list[dict[str, Any]] = []
@@ -1912,8 +2004,12 @@ def _validation_evidence_admissions(target_root: Path) -> list[dict[str, Any]]:
         if not isinstance(record, dict):
             continue
         record["result_path"] = path.relative_to(target_root).as_posix()
-        decisions.append(validation_result_admission(record=record, current_head=current_head))
+        decisions.append(validation_result_admission(record=record, current_head=current_head, authority=authority))
     return decisions
+
+
+def _validation_evidence_admissions(target_root: Path) -> list[dict[str, Any]]:
+    return validation_evidence_admissions(target_root)
 
 
 def _match_protocol(

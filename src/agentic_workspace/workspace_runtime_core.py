@@ -17226,40 +17226,34 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
 
 
 def _successful_completion_cost_validation_observations(*, target_root: Path) -> dict[str, Any]:
-    result_root = target_root / "scratch" / "validation-results"
-    paths = sorted(result_root.glob("**/*.json"), key=lambda path: path.stat().st_mtime, reverse=True) if result_root.exists() else []
-    current_head = _checkpoint_git_value(target_root=target_root, args=["rev-parse", "HEAD"])
+    from repo_verification_bootstrap.runtime_primitives import validation_evidence_admissions
+
     runs: list[dict[str, Any]] = []
     rejected_count = 0
-    for path in paths[:200]:
-        if path.name == "manifest.json":
-            continue
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+    rejection_reasons: dict[str, int] = {}
+    for decision in validation_evidence_admissions(target_root):
+        if not decision.get("admitted"):
             rejected_count += 1
+            for reason in _list_payload(decision.get("reason_codes")):
+                reason_text = str(reason)
+                rejection_reasons[reason_text] = rejection_reasons.get(reason_text, 0) + 1
             continue
-        repository = payload.get("repository") if isinstance(payload, dict) and isinstance(payload.get("repository"), dict) else {}
-        if (
-            not isinstance(payload, dict)
-            or payload.get("kind") != "agentic-workspace/validation-constituent-result/v1"
-            or str(repository.get("head") or "") != current_head
-        ):
-            rejected_count += 1
-            continue
+        bundle = _as_dict(decision.get("bundle"))
+        provenance = _as_dict(bundle.get("provenance"))
+        completion_cost = _as_dict(bundle.get("completion_cost"))
         runs.append(
             {
-                "evidence_ref": path.relative_to(target_root).as_posix(),
-                "constituent_id": str(payload.get("constituent_id") or ""),
-                "run_id": str(payload.get("run_id") or ""),
-                "outcome": str(payload.get("outcome") or "unknown"),
-                "duration_seconds": round(float(payload.get("duration_seconds") or 0.0), 6),
-                "rerun": "/attempts/" in path.as_posix(),
-                "ended_at": str(payload.get("ended_at") or ""),
+                "evidence_ref": str(provenance.get("result_path") or ""),
+                "constituent_id": str(bundle.get("proof_route_id") or ""),
+                "run_id": str(provenance.get("run_id") or ""),
+                "outcome": str(completion_cost.get("outcome") or "unknown"),
+                "duration_seconds": round(float(completion_cost.get("duration_seconds") or 0.0), 6),
+                "rerun": bool(completion_cost.get("rerun")),
+                "ended_at": str(bundle.get("executed_at") or ""),
                 "subject": {
-                    "repository_head": repository.get("head"),
-                    "repository_tree": repository.get("tree"),
-                    "plan_graph": _as_dict(payload.get("plan_identity")).get("graph_sha256"),
+                    "repository_head": provenance.get("repository_head"),
+                    "repository_tree": provenance.get("repository_tree"),
+                    "plan_graph": provenance.get("plan_graph"),
                 },
             }
         )
@@ -17295,6 +17289,7 @@ def _successful_completion_cost_validation_observations(*, target_root: Path) ->
         "run_count": len(runs),
         "included_recent_limit": 8,
         "rejected_or_stale_count": rejected_count,
+        "rejection_reasons": dict(sorted(rejection_reasons.items())),
         "comparison": comparison,
         "comparison_basis": comparison_basis,
         "runs": runs[:8],

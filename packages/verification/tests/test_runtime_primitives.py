@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -13,13 +15,18 @@ from repo_verification_bootstrap.runtime_primitives import (
 )
 
 
-def _validation_result(*, head: str = "head-a", outcome: str = "passed") -> dict[str, object]:
+def _validation_result(*, head: str = "head-a", outcome: str = "passed") -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/validation-constituent-result/v1",
         "constituent_id": "test.workspace-integration",
         "command": ["uv", "run", "pytest"],
-        "plan_identity": {"graph_sha256": "plan-graph"},
-        "repository": {"head": head, "tree": "tree-a", "runtime": {"status": "matched"}},
+        "plan_identity": {"file_sha256": "plan-file", "graph_sha256": "plan-graph"},
+        "repository": {
+            "head": head,
+            "tree": "tree-a",
+            "tracked_dirty": False,
+            "runtime": {"status": "matched", "executable": str(Path(sys.executable).resolve())},
+        },
         "run_id": "run-1",
         "started_at": "2026-08-11T10:00:00+00:00",
         "ended_at": "2026-08-11T10:00:04+00:00",
@@ -30,8 +37,20 @@ def _validation_result(*, head: str = "head-a", outcome: str = "passed") -> dict
     }
 
 
+def _validation_authority() -> dict[str, object]:
+    return {
+        "repository_head": "head-a",
+        "repository_tree": "tree-a",
+        "tracked_dirty": False,
+        "plan_file_sha256": "plan-file",
+        "plan_graph_sha256": "plan-graph",
+        "routes": {"test.workspace-integration": ["uv", "run", "pytest"]},
+        "runtime_executable": str(Path(sys.executable).resolve()),
+    }
+
+
 def test_validation_result_admission_binds_exact_subject_route_and_cost() -> None:
-    decision = validation_result_admission(record=_validation_result(), current_head="head-a")
+    decision = validation_result_admission(record=_validation_result(), current_head="head-a", authority=_validation_authority())
 
     assert decision["status"] == "admitted"
     bundle = decision["bundle"]
@@ -52,11 +71,35 @@ def test_validation_result_admission_binds_exact_subject_route_and_cost() -> Non
 def test_validation_result_admission_rejects_stale_failed_and_partial_records(
     record: dict[str, object], current_head: str, reason: str
 ) -> None:
-    decision = validation_result_admission(record=record, current_head=current_head)
+    decision = validation_result_admission(record=record, current_head=current_head, authority=_validation_authority())
 
     assert decision["status"] == "rejected"
     assert reason in decision["reason_codes"]
     assert "bundle" not in decision
+
+
+@pytest.mark.parametrize(
+    ("mutation", "reason"),
+    [
+        (lambda record: record["plan_identity"].update({"graph_sha256": "old-plan"}), "validation-plan-identity-mismatch"),
+        (lambda record: record.update({"constituent_id": "arbitrary-route"}), "unknown-validation-constituent"),
+        (lambda record: record["repository"].update({"tracked_dirty": True}), "dirty-repository-subject"),
+        (lambda record: record["repository"].update({"tree": "other-tree"}), "repository-tree-mismatch"),
+        (lambda record: record.update({"started_at": "not-a-time"}), "invalid-or-unordered-timestamps"),
+        (
+            lambda record: record["repository"]["runtime"].update({"executable": "other-python"}),
+            "runtime-identity-mismatch",
+        ),
+    ],
+)
+def test_validation_result_admission_rejects_authority_mismatches(mutation, reason: str) -> None:
+    record = _validation_result()
+    mutation(record)
+
+    decision = validation_result_admission(record=record, current_head="head-a", authority=_validation_authority())
+
+    assert decision["status"] == "rejected"
+    assert reason in decision["reason_codes"]
 
 
 def test_verification_report_absent_manifest(tmp_path: Path) -> None:
