@@ -158,6 +158,8 @@ INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE = "agentic-workspace.independent-review"
 INDEPENDENT_REVIEW_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/independent-review-receipts.json")
 INDEPENDENT_REVIEW_HOST_ADMISSION_CAPABILITY_KIND = "agentic-workspace/independent-review-host-admission-capability/v1"
 IndependentReviewHostResultResolver = Callable[[str], dict[str, Any]]
+PROOF_TINY_SEMANTIC_BUDGET_BYTES = 4500
+_PROOF_COMMAND_VALUE_KEYS = frozenset({"command", "run", "template", "detail_command"})
 
 
 def _proof_lifecycle_command(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -203,6 +205,54 @@ def _compact_tiny_intent_proof(intent_proof: Any) -> dict[str, Any]:
         if compact.get(key) == []:
             compact.pop(key, None)
     return compact
+
+
+def _canonical_proof_command_semantics(command: str) -> str:
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        tokens = command.split()
+    for marker in ("scripts/run_agentic_workspace.py", "agentic-workspace"):
+        if marker in tokens:
+            tokens = ["agentic-workspace", *tokens[tokens.index(marker) + 1 :]]
+            break
+    else:
+        if tokens[:2] == ["uv", "run"]:
+            tokens = tokens[2:]
+        if len(tokens) >= 2 and tokens[0] in {"python", "python3"} and tokens[1].endswith(".py"):
+            tokens = tokens[1:]
+        if tokens and tokens[0].startswith("scripts/") and tokens[0].endswith(".py"):
+            tokens[0] = Path(tokens[0]).stem
+    if "--target" in tokens and tokens.index("--target") + 1 < len(tokens):
+        tokens[tokens.index("--target") + 1] = "<target>"
+    if not tokens:
+        return ""
+    if tokens[0] == "agentic-workspace" and len(tokens) > 1:
+        operation = f"aw:{tokens[1]}"
+        semantic_arguments = tokens[2:]
+    else:
+        operation = hashlib.sha256(tokens[0].encode("utf-8")).hexdigest()[:6]
+        semantic_arguments = tokens[1:]
+    return "\x1f".join((operation, *semantic_arguments))
+
+
+def _proof_tiny_semantic_budget_projection(payload: Any, *, field_name: str = "") -> Any:
+    """Normalize transport spelling while retaining decision-bearing command arguments."""
+
+    if isinstance(payload, dict):
+        return {key: _proof_tiny_semantic_budget_projection(value, field_name=key) for key, value in payload.items()}
+    if isinstance(payload, list):
+        return [_proof_tiny_semantic_budget_projection(value, field_name=field_name) for value in payload]
+    if field_name == "target" and isinstance(payload, str):
+        return "<target>"
+    if isinstance(payload, str) and (field_name in _PROOF_COMMAND_VALUE_KEYS or field_name == "required_commands"):
+        return _canonical_proof_command_semantics(payload)
+    return payload
+
+
+def _proof_tiny_semantic_budget_bytes(payload: dict[str, Any]) -> int:
+    projection = _proof_tiny_semantic_budget_projection(payload)
+    return len(json.dumps(projection))
 
 
 def _compact_tiny_proof_narrowness(value: Any) -> dict[str, Any]:
