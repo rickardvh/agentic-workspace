@@ -713,6 +713,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _compact_context_authority_projection(value: dict[str, Any]) -> dict[str, Any]:
+    guardrail = value.get("changed_path_guardrail", {}) if isinstance(value.get("changed_path_guardrail"), dict) else {}
     compact = {
         "kind": value.get("kind"),
         "status": value.get("status"),
@@ -721,6 +722,13 @@ def _compact_context_authority_projection(value: dict[str, Any]) -> dict[str, An
         "changed_path_count": value.get("changed_path_count", 0),
         "authority_count": len(value.get("authorities", [])),
         "missing_required_surfaces": value.get("missing_required_surfaces", []),
+        "changed_path_guardrail": {
+            "kind": guardrail.get("kind"),
+            "status": guardrail.get("status"),
+            "checked_surface_count": len(guardrail.get("ownership", [])),
+            "missing_checker_surfaces": guardrail.get("missing_checker_surfaces", []),
+            "failure_matrix": guardrail.get("failure_matrix", {}),
+        },
         "detail_selector": "context_authority_projection",
     }
     return compact

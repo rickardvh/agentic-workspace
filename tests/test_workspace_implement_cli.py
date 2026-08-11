@@ -768,6 +768,28 @@ def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Pa
     assert bundle["state_backed"] is True
 
 
+def test_start_and_implement_use_registry_owned_context_authority_guardrails(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    _write(tmp_path / "src" / "example.py", "VALUE = 1\n")
+    capsys.readouterr()
+    task = "Implement architecture and package ownership changes using registered skills and proof"
+
+    assert cli.main(["start", "--target", str(tmp_path), "--changed", "src/example.py", "--task", task, "--format", "json"]) == 0
+    start = json.loads(capsys.readouterr().out)["context"]["context_authority_projection"]
+    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "src/example.py", "--task", task, "--format", "json"]) == 0
+    implement = json.loads(capsys.readouterr().out)["context"]["context_authority_projection"]
+
+    assert start["consumer"] == "start"
+    assert implement["consumer"] == "implement"
+    assert start["registry_revision"] == implement["registry_revision"]
+    assert start["changed_path_guardrail"]["status"] == "enforced"
+    assert implement["changed_path_guardrail"]["status"] == "enforced"
+    assert start["changed_path_guardrail"]["missing_checker_surfaces"] == []
+    assert implement["changed_path_guardrail"]["missing_checker_surfaces"] == []
+    assert set(start["changed_path_guardrail"]["failure_matrix"]) == set(implement["changed_path_guardrail"]["failure_matrix"])
+
+
 def _write_architecture_principles(target_root: Path) -> None:
     _write(
         target_root / ".agentic-workspace" / "system-intent" / "intent.toml",

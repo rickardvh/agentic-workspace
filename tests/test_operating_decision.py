@@ -381,6 +381,35 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
     ]
 
 
+def test_context_authority_changed_path_guardrail_maps_every_required_surface_once() -> None:
+    from agentic_workspace.operating_decision import context_authority_changed_path_guardrail
+
+    declarations = context_authority_declarations()
+    selected = [{"surface": item["surface"]} for item in declarations if "start" in item["consumer"]]
+    guardrail = context_authority_changed_path_guardrail(
+        consumer="start",
+        changed_paths=["src/agentic_workspace/runtime.py"],
+        selected=selected,
+        excluded=[],
+    )
+
+    expected = set(context_authority_coverage()["consumer_requirements"]["start"])
+    mapped = [item["surface"] for item in guardrail["ownership"]]
+    assert guardrail["status"] == "enforced"
+    assert set(mapped) == expected
+    assert len(mapped) == len(set(mapped))
+    assert guardrail["missing_checker_surfaces"] == []
+    assert set(guardrail["failure_matrix"]) == {
+        "contradiction",
+        "skill-registry-or-dependency-drift",
+        "configured-empty",
+        "stale-generated-projection",
+        "wrong-source-edit",
+        "renamed-canonical-source",
+        "unrelated-path",
+    }
+
+
 def test_runtime_actionability_call_sites_resolve_live_revision_before_derivation() -> None:
     """Static guard for ordinary boundaries that would otherwise reuse stale typed actions."""
 

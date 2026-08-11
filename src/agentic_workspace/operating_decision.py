@@ -654,6 +654,52 @@ def context_authority_coverage(
     }
 
 
+def context_authority_changed_path_guardrail(
+    *, consumer: str, changed_paths: list[str], selected: list[dict[str, Any]], excluded: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Project one registry-owned changed-path guardrail without parallel owner tables."""
+    required = set(ORDINARY_DECISION_CONSUMER_REQUIREMENTS.get(consumer, []))
+    registry_items = [item for item in CONTEXT_AUTHORITY_REGISTRY if str(item.get("surface") or "") in required]
+    ownership = [
+        {
+            "surface": str(item.get("surface") or ""),
+            "checker_owner": str(_as_dict(item.get("source_owner_contract")).get("owner_module") or ""),
+            "repair_operation_id": str(_as_dict(item.get("source_owner_contract")).get("repair_operation_id") or ""),
+            "proof_route": str(item.get("proof_route") or ""),
+        }
+        for item in registry_items
+    ]
+    missing_checker = [item["surface"] for item in ownership if not all(item.values())]
+    selected_surfaces = {str(item.get("surface") or "") for item in selected}
+    excluded_by_surface = {str(item.get("surface") or ""): str(item.get("reason") or "") for item in excluded}
+    return {
+        "kind": "agentic-workspace/context-authority-changed-path-guardrail/v1",
+        "status": "blocked" if missing_checker else "enforced" if changed_paths else "not-triggered",
+        "consumer": consumer,
+        "changed_paths": list(changed_paths),
+        "ownership": ownership,
+        "missing_checker_surfaces": missing_checker,
+        "surface_states": [
+            {
+                "surface": item["surface"],
+                "status": "selected" if item["surface"] in selected_surfaces else "excluded",
+                **({"reason": excluded_by_surface[item["surface"]]} if item["surface"] in excluded_by_surface else {}),
+            }
+            for item in ownership
+        ],
+        "failure_matrix": {
+            "contradiction": "registry-coverage-and-owner-admission",
+            "skill-registry-or-dependency-drift": "workspace.skills.resolve-dependencies",
+            "configured-empty": "source-owner-population-admission",
+            "stale-generated-projection": "generated-command-packages.refresh",
+            "wrong-source-edit": "source-owner-admission-reject",
+            "renamed-canonical-source": "registry-owned-repair-operation",
+            "unrelated-path": "exclude-without-source-expansion",
+        },
+        "rule": "Every required AW-input authority has exactly one registry-declared checker owner; omission or duplicate ownership fails closed.",
+    }
+
+
 def resolve_context_authority_projection(
     *,
     consumer: str,
@@ -791,6 +837,14 @@ def resolve_context_authority_projection(
             key=lambda item: str(item.get("surface") or ""),
         )
     ]
+    changed_path_guardrail = context_authority_changed_path_guardrail(
+        consumer=consumer,
+        changed_paths=paths,
+        selected=selected,
+        excluded=excluded,
+    )
+    if changed_path_guardrail["status"] == "blocked":
+        status = "repair-required"
     return {
         "kind": "agentic-workspace/context-authority-projection/v1",
         "status": status,
@@ -809,6 +863,7 @@ def resolve_context_authority_projection(
             "repairs": repairs,
             "blocked_claims": ["mutation", "proof-claim", "completion-claim"] if repairs else [],
         },
+        "changed_path_guardrail": changed_path_guardrail,
         "repair": ("repair the registry declaration or consumer requirement before mutation" if status == "repair-required" else ""),
     }
 
