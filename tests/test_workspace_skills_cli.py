@@ -343,6 +343,10 @@ def test_registered_skill_dependency_closure_accepts_package_owned_resource(tmp_
     skills = workspace_runtime_core._load_registered_skills(source=source, registry_file=registry, target_root=target)
 
     assert skills[0].availability == "available"
+    assert skills[0].resource_resolution_receipts[0]["status"] == "resolved"
+    assert skills[0].resource_resolution_receipts[0]["selected_owner"] == "package-owned"
+    assert skills[0].resource_resolution_receipts[0]["resolver"] == "installed-contract-pair.package-resource"
+    assert skills[0].resource_resolution_receipts[0]["receipt_id"].startswith("package-resource:")
 
 
 def test_registered_skill_discovery_resolves_package_resource_when_target_registry_exists(

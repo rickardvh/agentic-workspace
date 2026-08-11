@@ -2052,7 +2052,7 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
 
 
 def _invocation_resolution_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
-    """Describe the configured invocation recipe without resolving or mutating dependencies."""
+    """Resolve the configured executable, distribution, source, and lock without mutation."""
 
     try:
         tokens = shlex.split(config.cli_invoke, posix=os.name != "nt")
@@ -2087,8 +2087,125 @@ def _invocation_resolution_payload(*, config: WorkspaceConfig) -> dict[str, Any]
         lockfile = "poetry.lock" if config.target_root and (config.target_root / "poetry.lock").is_file() else ""
         posture = "locked" if lockfile else "mutable"
         mutates_resolution = not bool(lockfile)
+    executable_path = shutil.which(normalized[0]) if normalized else None
+    configured_script = next((token for token in normalized if token.endswith("run_agentic_workspace.py")), "")
+    configured_script_path = Path(configured_script) if configured_script else None
+    if configured_script_path is not None and not configured_script_path.is_absolute() and config.target_root:
+        configured_script_path = config.target_root / configured_script_path
+    configured_script_exists = bool(configured_script_path and configured_script_path.resolve().is_file())
+    distribution: dict[str, Any] = {"status": "missing"}
+    try:
+        installed = importlib.metadata.distribution("agentic-workspace")
+        direct_url_raw = installed.read_text("direct_url.json")
+        direct_url = json.loads(direct_url_raw) if direct_url_raw else {}
+        direct_url_value = str(direct_url.get("url") or "")
+        distribution = {
+            "status": "resolved",
+            "name": str(installed.metadata["Name"] or "agentic-workspace"),
+            "version": installed.version,
+            "direct_url": {
+                "url_scheme": direct_url_value.split(":", 1)[0] if ":" in direct_url_value else "",
+                "url_fingerprint": ("sha256:" + hashlib.sha256(direct_url_value.encode("utf-8")).hexdigest() if direct_url_value else ""),
+                "vcs_info": _as_dict(direct_url.get("vcs_info")),
+                "editable": bool(_as_dict(direct_url.get("dir_info")).get("editable")),
+            },
+        }
+    except (importlib.metadata.PackageNotFoundError, json.JSONDecodeError):
+        pass
+
+    lock_entry: dict[str, Any] = {}
+    lock_status = "not-required"
+    if adapter in {"uv", "poetry"}:
+        lock_status = "missing"
+        lock_path = config.target_root / lockfile if config.target_root and lockfile else None
+        if lock_path and lock_path.is_file():
+            try:
+                lock_payload = tomllib.loads(lock_path.read_text(encoding="utf-8"))
+                packages = lock_payload.get("package", [])
+                if isinstance(packages, list):
+                    lock_entry = next(
+                        (item for item in packages if isinstance(item, dict) and item.get("name") == "agentic-workspace"),
+                        {},
+                    )
+                lock_status = "resolved" if lock_entry else "package-missing"
+            except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+                lock_status = "invalid"
+    manager_probe: dict[str, Any] = {"status": "not-required"}
+    if adapter in {"pipx", "poetry"} and executable_path:
+        probe_command = [executable_path, "list", "--json"] if adapter == "pipx" else [executable_path, "env", "info", "--executable"]
+        try:
+            completed = subprocess.run(probe_command, capture_output=True, text=True, check=False, timeout=5)
+            manager_probe = {
+                "status": "resolved" if completed.returncode == 0 else "failed",
+                "returncode": completed.returncode,
+                "output_fingerprint": "sha256:" + hashlib.sha256(completed.stdout.encode("utf-8")).hexdigest(),
+            }
+            if completed.returncode == 0 and adapter == "pipx":
+                pipx_payload = json.loads(completed.stdout)
+                venvs = _as_dict(pipx_payload.get("venvs"))
+                managed = _as_dict(_as_dict(venvs.get("agentic-workspace")).get("metadata")).get("main_package")
+                managed_package = _as_dict(managed)
+                manager_probe["selected_package"] = {
+                    "name": str(managed_package.get("package") or ""),
+                    "version": str(managed_package.get("package_version") or ""),
+                    "source": str(managed_package.get("package_or_url") or ""),
+                }
+                if manager_probe["selected_package"]["name"] != "agentic-workspace":
+                    manager_probe["status"] = "package-missing"
+            elif completed.returncode == 0 and adapter == "poetry":
+                environment_python = completed.stdout.strip()
+                identity_code = (
+                    "import importlib.metadata as m,json;"
+                    "d=m.distribution('agentic-workspace');"
+                    "u=d.read_text('direct_url.json');"
+                    "print(json.dumps({'name':d.metadata.get('Name',''),'version':d.version,'direct_url':json.loads(u) if u else {}}))"
+                )
+                identity = subprocess.run([environment_python, "-c", identity_code], capture_output=True, text=True, check=False, timeout=5)
+                if identity.returncode == 0:
+                    manager_probe["selected_package"] = json.loads(identity.stdout)
+                    poetry_package = _as_dict(manager_probe["selected_package"])
+                    poetry_direct_url = _as_dict(poetry_package.get("direct_url"))
+                    poetry_url = str(poetry_direct_url.get("url") or "")
+                    distribution = {
+                        "status": "resolved",
+                        "name": str(poetry_package.get("name") or ""),
+                        "version": str(poetry_package.get("version") or ""),
+                        "direct_url": {
+                            "url_scheme": poetry_url.split(":", 1)[0] if ":" in poetry_url else "",
+                            "url_fingerprint": ("sha256:" + hashlib.sha256(poetry_url.encode("utf-8")).hexdigest() if poetry_url else ""),
+                            "vcs_info": _as_dict(poetry_direct_url.get("vcs_info")),
+                            "editable": bool(_as_dict(poetry_direct_url.get("dir_info")).get("editable")),
+                        },
+                    }
+                else:
+                    manager_probe["status"] = "package-missing"
+        except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+            manager_probe = {"status": "unavailable"}
+
+    runtime_version = str(distribution.get("version") or "")
+    lock_version = str(lock_entry.get("version") or "")
+    version_matches_lock = not lock_entry or not runtime_version or runtime_version == lock_version
+    lock_identity = (
+        "sha256:" + hashlib.sha256(json.dumps(lock_entry, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+        if lock_entry
+        else ""
+    )
+    actual_resolution_ok = bool(
+        executable_path and distribution.get("status") == "resolved" and (not configured_script or configured_script_exists)
+    )
+    if adapter in {"uv", "poetry"}:
+        actual_resolution_ok = actual_resolution_ok and lock_status == "resolved" and version_matches_lock
+    if adapter == "pipx":
+        selected_package = _as_dict(manager_probe.get("selected_package"))
+        actual_resolution_ok = bool(
+            executable_path
+            and manager_probe.get("status") == "resolved"
+            and selected_package.get("name") == "agentic-workspace"
+            and selected_package.get("version")
+        )
     required = config.cli_compatibility.resolution_policy
-    policy_satisfied = required == "direct" or posture == required or (required == "locked" and posture == "frozen")
+    posture_satisfied = required == "direct" or posture == required or (required == "locked" and posture == "frozen")
+    policy_satisfied = posture_satisfied and actual_resolution_ok
     return {
         "kind": "agentic-workspace/invocation-resolution/v1",
         "configured_recipe": config.cli_invoke,
@@ -2097,11 +2214,29 @@ def _invocation_resolution_payload(*, config: WorkspaceConfig) -> dict[str, Any]
         "posture": posture,
         "required_posture": required,
         "policy_satisfied": policy_satisfied,
+        "resolution_status": "resolved" if actual_resolution_ok else "unresolved",
+        "selected_executable": {
+            "name": Path(executable_path).name if executable_path else executable,
+            "path_fingerprint": (
+                "sha256:" + hashlib.sha256(str(Path(executable_path).resolve()).encode("utf-8")).hexdigest() if executable_path else ""
+            ),
+            "configured_script": configured_script,
+            "configured_script_exists": configured_script_exists,
+        },
+        "selected_distribution": distribution,
+        "lock_resolution": {
+            "status": lock_status,
+            "identity": lock_identity,
+            "package_version": lock_version,
+            "source": _as_dict(lock_entry.get("source")),
+            "runtime_version_matches": version_matches_lock,
+        },
+        "manager_probe": manager_probe,
         "lockfile": lockfile,
         "preflight_mutates_dependency_state": mutates_resolution,
         "preflight_status": "non-mutating" if not mutates_resolution else "unsafe-mutable-resolution",
         "repair_command": shlex.join(repair_tokens) if repair_tokens and not policy_satisfied else "",
-        "rule": "Ordinary compatibility preflight parses the configured recipe only; dependency changes belong to explicit install, upgrade, or sync operations.",
+        "rule": "The manager adapter resolves executable, distribution/direct URL, and lock identity non-mutatingly; dependency changes belong only to explicit install, upgrade, or sync operations.",
     }
 
 
@@ -2115,7 +2250,15 @@ def _required_package_resource_availability(resources: Sequence[str]) -> list[di
                 available = importlib.resources.files(package).joinpath(relative).is_file()
             except (ModuleNotFoundError, TypeError):
                 available = False
-        results.append({"resource": str(resource), "available": available, "resolution": "package-resource"})
+        results.append(
+            {
+                "resource": str(resource),
+                "available": available,
+                "resolution": "package-resource",
+                "resolver": "installed-contract-pair.package-resource",
+                "receipt_id": "package-resource:" + hashlib.sha256(str(resource).encode("utf-8")).hexdigest()[:16],
+            }
+        )
     return results
 
 
@@ -2172,6 +2315,16 @@ def _installed_contract_pair_payload(
         "missing_resources": missing_resources,
         "stale_generated_surfaces": stale_generated,
         "mutation_gate": "allow" if compatible else "block-managed-mutation",
+        "transition_owner": {
+            "operation_id": "workspace.install-upgrade-sync",
+            "status": "current-identity-recorded" if compatible else "transition-required",
+            "before_identity": {
+                "package": current_identity,
+                "resolution": cli_payload.get("invocation_resolution", {}) or _invocation_resolution_payload(config=config),
+            },
+            "after_identity_requirement": "rerun installed contract pair after the explicit install, upgrade, or sync operation",
+            "ordinary_surfaces_mutate_dependency_state": False,
+        },
         "repair_route": cli_payload.get("remediation", {}),
         "rule": "The configured invocation and installed contract/resource identity are admitted as one pair before managed mutation.",
     }
@@ -4833,6 +4986,7 @@ class RegisteredSkill:
     availability: str = "available"
     blocked_reasons: tuple[str, ...] = ()
     dependency_diagnostics: tuple[dict[str, str], ...] = ()
+    resource_resolution_receipts: tuple[dict[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -55684,17 +55838,26 @@ def _load_registered_skills(
         if not isinstance(activation_hints, dict):
             activation_hints = {}
         required_resources = tuple(str(value).strip() for value in raw.get("required_resources", []) if str(value).strip())
+        resource_resolution_receipts = tuple(
+            _skill_resource_resolution(
+                resource_id=resource_id,
+                resource_paths=resource_paths,
+                target_root=target_root,
+                registry_file=registry_file,
+                package_registry_file=package_registry_file,
+            )
+            for resource_id in required_resources
+        )
         dependency_diagnostics = tuple(
             diagnostic
-            for resource_id in required_resources
+            for resource_id, resolution in zip(required_resources, resource_resolution_receipts, strict=True)
             if (
                 diagnostic := _skill_resource_diagnostic(
                     resource_id=resource_id,
                     resource_paths=resource_paths,
-                    target_root=target_root,
                     registry_file=registry_file,
-                    package_registry_file=package_registry_file,
                     source=source,
+                    resolution=resolution,
                 )
             )
             is not None
@@ -55721,6 +55884,7 @@ def _load_registered_skills(
                 availability="blocked" if blocked_reasons else "available",
                 blocked_reasons=blocked_reasons,
                 dependency_diagnostics=dependency_diagnostics,
+                resource_resolution_receipts=resource_resolution_receipts,
             )
         )
     return [skill for skill in skills if skill.skill_id and skill.path.as_posix()]
@@ -55730,10 +55894,9 @@ def _skill_resource_diagnostic(
     *,
     resource_id: str,
     resource_paths: dict[str, tuple[Path, Path]],
-    target_root: Path,
     registry_file: Path,
-    package_registry_file: Path | None,
     source: SkillCatalogSource,
+    resolution: dict[str, str],
 ) -> dict[str, str] | None:
     if resource_id not in resource_paths:
         return {
@@ -55746,6 +55909,43 @@ def _skill_resource_diagnostic(
             "repair_route": "manual",
             "repair_safe_to_apply": "false",
             "manual_action": f"Declare resource '{resource_id}' in {registry_file.as_posix()} before the skill can be executable.",
+        }
+    if resolution["status"] == "resolved":
+        return None
+    repo_path, package_path = resource_paths[resource_id]
+    candidate_paths = resolution["candidates"].split("\n") if resolution["candidates"] else []
+    repair_route = _skill_resource_repair_route(source=source, repo_path=repo_path, package_path=package_path)
+    return {
+        "resource_id": resource_id,
+        "status": "blocked",
+        "reason_code": f"missing-resource:{resource_id}",
+        "expected_owner": resolution["expected_owner"],
+        "expected_source": candidate_paths[0] if candidate_paths else registry_file.as_posix(),
+        "compatibility_state": "resource-unresolved",
+        **repair_route,
+    }
+
+
+def _skill_resource_resolution(
+    *,
+    resource_id: str,
+    resource_paths: dict[str, tuple[Path, Path]],
+    target_root: Path,
+    registry_file: Path,
+    package_registry_file: Path | None,
+) -> dict[str, str]:
+    """Resolve a declared dependency and retain a stable package-resource receipt."""
+
+    if resource_id not in resource_paths:
+        return {
+            "resource_id": resource_id,
+            "status": "unresolved",
+            "resolver": "installed-contract-pair.package-resource",
+            "selected_owner": "",
+            "selected_source": "",
+            "expected_owner": "skill-registry",
+            "candidates": "",
+            "receipt_id": "package-resource:" + hashlib.sha256(resource_id.encode("utf-8")).hexdigest()[:16],
         }
     repo_path, package_path = resource_paths[resource_id]
     candidates: list[tuple[str, Path]] = []
@@ -55761,20 +55961,19 @@ def _skill_resource_diagnostic(
                     package_registry_file.parent.parent / "_payload" / package_path.as_posix().removeprefix("../bootstrap/"),
                 )
             )
-    for owner, candidate in candidates:
-        if candidate.is_file():
-            return None
-    expected_owner = candidates[0][0] if candidates else "skill-registry"
-    expected_source = candidates[0][1].as_posix() if candidates else registry_file.as_posix()
-    repair_route = _skill_resource_repair_route(source=source, repo_path=repo_path, package_path=package_path)
+    selected = next(((owner, candidate) for owner, candidate in candidates if candidate.is_file()), None)
+    selected_owner, selected_path = selected or ("", None)
+    candidate_text = "\n".join(candidate.as_posix() for _, candidate in candidates)
+    receipt_material = f"{resource_id}\0{selected_owner}\0{selected_path.as_posix() if selected_path else ''}"
     return {
         "resource_id": resource_id,
-        "status": "blocked",
-        "reason_code": f"missing-resource:{resource_id}",
-        "expected_owner": expected_owner,
-        "expected_source": expected_source,
-        "compatibility_state": "resource-unresolved",
-        **repair_route,
+        "status": "resolved" if selected else "unresolved",
+        "resolver": "installed-contract-pair.package-resource",
+        "selected_owner": selected_owner,
+        "selected_source": selected_path.as_posix() if selected_path else "",
+        "expected_owner": candidates[0][0] if candidates else "skill-registry",
+        "candidates": candidate_text,
+        "receipt_id": "package-resource:" + hashlib.sha256(receipt_material.encode("utf-8")).hexdigest()[:16],
     }
 
 
@@ -55830,6 +56029,7 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
         "required_resources": list(skill.required_resources),
         "availability": skill.availability,
         "blocked_reasons": list(skill.blocked_reasons),
+        "resource_resolution_receipts": list(skill.resource_resolution_receipts),
     }
     if skill.dependency_diagnostics:
         payload["dependency_diagnostics"] = _skill_dependency_diagnostic_payloads(skill)

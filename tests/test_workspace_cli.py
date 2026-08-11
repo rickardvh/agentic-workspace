@@ -6213,6 +6213,13 @@ def test_start_select_installed_contract_pair_uses_frozen_non_mutating_resolutio
         'resolution_policy = "frozen"\n',
         encoding="utf-8",
     )
+    script = tmp_path / "scripts" / "run_agentic_workspace.py"
+    script.parent.mkdir()
+    script.write_text("from agentic_workspace.cli import main\nraise SystemExit(main())\n", encoding="utf-8")
+    (tmp_path / "uv.lock").write_text(
+        'version = 1\n\n[[package]]\nname = "agentic-workspace"\nversion = "' + cli.__version__ + '"\n',
+        encoding="utf-8",
+    )
 
     assert (
         cli.main(
@@ -6237,17 +6244,21 @@ def test_start_select_installed_contract_pair_uses_frozen_non_mutating_resolutio
     assert pair["status"] == "compatible"
     assert pair["mutation_gate"] == "allow"
     assert pair["expected"]["provenance"] == "repo-config"
-    assert pair["actual"]["resources"] == [
-        {
-            "resource": "agentic_workspace:contracts/context_authority_registry.json",
-            "available": True,
-            "resolution": "package-resource",
-        }
-    ]
+    resource = pair["actual"]["resources"][0]
+    assert resource["resource"] == "agentic_workspace:contracts/context_authority_registry.json"
+    assert resource["available"] is True
+    assert resource["resolution"] == "package-resource"
+    assert resource["resolver"] == "installed-contract-pair.package-resource"
+    assert resource["receipt_id"].startswith("package-resource:")
     assert resolution["environment_manager_adapter"] == "uv"
     assert resolution["posture"] == "frozen"
     assert resolution["preflight_mutates_dependency_state"] is False
+    assert resolution["resolution_status"] == "resolved"
+    assert resolution["lock_resolution"]["runtime_version_matches"] is True
+    assert resolution["selected_distribution"]["status"] == "resolved"
     assert resolution["repair_command"] == ""
+    assert pair["transition_owner"]["operation_id"] == "workspace.install-upgrade-sync"
+    assert pair["transition_owner"]["ordinary_surfaces_mutate_dependency_state"] is False
     source_checkout = pair["actual"]["source_checkout"]
     assert source_checkout["classification"] == "local-source-non-release"
     assert re.fullmatch(r"git:[0-9a-f]{12}", source_checkout["revision"])
@@ -6301,6 +6312,100 @@ def test_start_select_installed_contract_pair_blocks_missing_package_resource(tm
     assert pair["status"] == "incompatible"
     assert pair["mutation_gate"] == "block-managed-mutation"
     assert pair["missing_resources"] == ["agentic_workspace:contracts/missing-contract.json"]
+
+
+@pytest.mark.parametrize(
+    ("recipe", "expected_posture", "expected_policy"),
+    [
+        ("pipx run agentic-workspace@git+https://example.test/agentic-workspace@abc123", "locked", True),
+        ("pipx run agentic-workspace", "mutable", False),
+    ],
+)
+def test_invocation_resolution_distinguishes_locked_and_mutable_pipx_vcs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    recipe: str,
+    expected_posture: str,
+    expected_policy: bool,
+) -> None:
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text(
+        f'schema_version = 1\n\n[workspace]\ncli_invoke = "{recipe}"\n\n[cli_compatibility]\nresolution_policy = "locked"\n',
+        encoding="utf-8",
+    )
+    pipx_list = {
+        "venvs": {
+            "agentic-workspace": {
+                "metadata": {
+                    "main_package": {
+                        "package": "agentic-workspace",
+                        "package_version": cli.__version__,
+                        "package_or_url": "git+https://example.test/agentic-workspace@abc123",
+                    }
+                }
+            }
+        }
+    }
+    monkeypatch.setattr(workspace_runtime_core.shutil, "which", lambda _name: "tools/pipx.exe")
+    monkeypatch.setattr(
+        workspace_runtime_core.subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess([], 0, json.dumps(pipx_list), ""),
+    )
+
+    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
+    resolution = workspace_runtime_core._invocation_resolution_payload(config=config)
+
+    assert resolution["environment_manager_adapter"] == "pipx"
+    assert resolution["posture"] == expected_posture
+    assert resolution["policy_satisfied"] is expected_policy
+    assert resolution["manager_probe"]["selected_package"]["name"] == "agentic-workspace"
+
+
+def test_invocation_resolution_reads_poetry_environment_identity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text(
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "poetry run agentic-workspace"\n\n'
+        '[cli_compatibility]\nresolution_policy = "locked"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "poetry.lock").write_text(
+        '[[package]]\nname = "agentic-workspace"\nversion = "' + cli.__version__ + '"\n', encoding="utf-8"
+    )
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        if command[1:4] == ["env", "info", "--executable"]:
+            return subprocess.CompletedProcess(command, 0, sys.executable + "\n", "")
+        identity = {"name": "agentic-workspace", "version": cli.__version__, "direct_url": {}}
+        return subprocess.CompletedProcess(command, 0, json.dumps(identity), "")
+
+    monkeypatch.setattr(workspace_runtime_core.shutil, "which", lambda _name: "tools/poetry.exe")
+    monkeypatch.setattr(workspace_runtime_core.subprocess, "run", fake_run)
+
+    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
+    resolution = workspace_runtime_core._invocation_resolution_payload(config=config)
+
+    assert resolution["policy_satisfied"] is True
+    assert resolution["selected_distribution"]["version"] == cli.__version__
+    assert len(calls) == 2
+
+
+def test_invocation_resolution_blocks_missing_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text('schema_version = 1\n\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
+    monkeypatch.setattr(workspace_runtime_core.shutil, "which", lambda _name: None)
+
+    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
+    resolution = workspace_runtime_core._invocation_resolution_payload(config=config)
+
+    assert resolution["resolution_status"] == "unresolved"
+    assert resolution["policy_satisfied"] is False
+    assert resolution["selected_executable"]["path_fingerprint"] == ""
 
 
 def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Path, capsys) -> None:
