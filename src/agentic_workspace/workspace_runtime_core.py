@@ -32660,12 +32660,14 @@ def _planning_owner_intent_refs(owner_payload: dict[str, Any]) -> list[str]:
 
     intent = _as_dict(owner_payload.get("intent"))
     parent = _as_dict(owner_payload.get("parent"))
+    scope = _as_dict(owner_payload.get("scope"))
     texts = [
         str(owner_payload.get("id") or ""),
         str(owner_payload.get("title") or ""),
         str(intent.get("outcome") or ""),
         str(parent.get("owner_id") or ""),
     ]
+    texts.extend(str(value) for value in _list_payload(scope.get("owned")))
     for reference in _list_payload(owner_payload.get("references")):
         record = _as_dict(reference)
         if str(record.get("role") or "").strip().lower() == "intake":
