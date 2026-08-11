@@ -1967,6 +1967,19 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         if read_only_compact_default
         else payload.get("memory_consult", {}),
     }
+    compact_route = _as_dict(context.get("route_decision"))
+    if compact_route:
+        route_action = _as_dict(compact_route.get("next_safe_action"))
+        compact_route["next_safe_action"] = {
+            key: copy.deepcopy(route_action[key])
+            for key in ("action", "implementation_allowed")
+            if route_action.get(key) not in (None, "", [], {})
+        }
+        context["primary_action"] = {
+            "status": "projected-in-next_safe_action",
+            "detail_selector": "next_safe_action",
+            "command": None,
+        }
     # The compact default already exposes the complete next-action packet at
     # top level.  For ordinary low-risk work, keeping a second copy of that
     # action plus the full planning-sufficiency record in context spends the
