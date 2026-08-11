@@ -43,6 +43,14 @@
         "before": {"lines": 840, "branch_nodes": 155, "largest_policy_effect_segment_lines": 95, "direct_fan_out": 54},
         "after": {"lines": 772, "branch_nodes": 147, "largest_policy_effect_segment_lines": 45, "direct_fan_out": 57},
         "continuation_owner": "#2480"
+      },
+      {
+        "path": "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "symbol": "closeout_execplan",
+        "extracted_boundary": ["_closeout_completion_options"],
+        "before": {"lines": 691, "branch_nodes": 146, "largest_policy_effect_segment_lines": 149, "direct_fan_out": 30},
+        "after": {"lines": 623, "branch_nodes": 128, "largest_policy_effect_segment_lines": 149, "direct_fan_out": 31},
+        "continuation_owner": "#2480"
       }
     ],
     "paths": [
@@ -72,8 +80,8 @@
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "apply_integration_proposal", "max_lines": 303, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "targeted_execplan_write", "max_lines": 310, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_prepare_execplan_closeout", "max_lines": 406, "max_branch_nodes": 113, "expires": "2026-12-31", "tracking_issue": "#2455"},
-      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "closeout_execplan", "max_lines": 635, "max_branch_nodes": 139, "expires": "2026-12-31", "tracking_issue": "#2491"},
-      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "archive_execplan", "max_lines": 772, "max_branch_nodes": 147, "expires": "2026-12-31", "tracking_issue": "#2480"}
+      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "closeout_execplan", "max_lines": 623, "max_branch_nodes": 128, "expires": "2026-12-31", "tracking_issue": "#2491"},
+      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "archive_execplan", "max_lines": 757, "max_branch_nodes": 147, "expires": "2026-12-31", "tracking_issue": "#2480"}
     ]
   }
 }

@@ -51,6 +51,8 @@ def test_current_runtime_has_one_implementation_owner() -> None:
         by_symbol["archive_execplan"]["after"]["largest_policy_effect_segment_lines"]
         < by_symbol["archive_execplan"]["before"]["largest_policy_effect_segment_lines"]
     )
+    assert by_symbol["closeout_execplan"]["after"]["lines"] < by_symbol["closeout_execplan"]["before"]["lines"]
+    assert by_symbol["closeout_execplan"]["after"]["branch_nodes"] < by_symbol["closeout_execplan"]["before"]["branch_nodes"]
     assert {item["continuation_owner"] for item in decompositions} == {"#2480"}
 
 

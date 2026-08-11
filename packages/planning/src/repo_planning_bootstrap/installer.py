@@ -19342,6 +19342,85 @@ def _record_closeout_operation_receipt(*, target_root: Path, request: Mapping[st
     context_path.write_text(json.dumps(context, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
+def _closeout_completion_options(
+    *,
+    plan: str,
+    normalized_claim: str,
+    closure_decision: str,
+    continuation_owner: str,
+    blocked: bool,
+    retention_skipped: bool,
+) -> list[dict[str, Any]]:
+    larger_intent_close_allowed = normalized_claim in {"lane", "epic"} and closure_decision == "archive-and-close" and not blocked
+    retention_note = "archive retention was skipped by size guardrail after closeout distillation; no rerun is needed for the removed plan"
+    options: list[dict[str, Any]] = [
+        {
+            "id": "resolve-closeout-blocker",
+            "allowed": blocked,
+            "command": f"agentic-planning closeout {plan} --proof-from <proof> --what-happened <summary> --scope-touched <paths> --changed-surfaces <surfaces>",
+            "why": "closeout warnings or manual-review actions are present"
+            if blocked
+            else retention_note
+            if retention_skipped
+            else "no closeout blocker is present",
+        },
+        {
+            "id": "claim-slice-complete",
+            "allowed": not blocked,
+            "command": "",
+            "why": "slice proof, finish-run evidence, and archive preconditions were recorded"
+            if not blocked and not retention_skipped
+            else retention_note
+            if not blocked
+            else "slice completion is blocked until closeout evidence is repaired",
+        },
+        {
+            "id": "claim-lane-or-local-intent-complete",
+            "allowed": normalized_claim in {"lane", "epic"} and not blocked,
+            "command": "",
+            "why": f"{normalized_claim} claim may be stated locally because closeout scope and intent-status were recorded"
+            if normalized_claim in {"lane", "epic"} and not blocked
+            else "only bounded slice completion is authorized by this closeout",
+        },
+        {
+            "id": "archive-retention",
+            "allowed": True,
+            "command": "",
+            "why": retention_note
+            if retention_skipped
+            else "archive retained or discarded according to closeout flags and size guardrails; this is separate from issue closure",
+        },
+        {
+            "id": "keep-larger-intent-open",
+            "allowed": (closure_decision == "archive-but-keep-lane-open" or not larger_intent_close_allowed) and not blocked,
+            "owner": continuation_owner if closure_decision == "archive-but-keep-lane-open" else PLANNING_STATE_PATH.as_posix(),
+            "why": "intent-status keeps continuation explicit"
+            if closure_decision == "archive-but-keep-lane-open"
+            else "slice closeout does not authorize larger-intent closure"
+            if normalized_claim == "slice"
+            else "larger intent was marked satisfied",
+        },
+        {
+            "id": "close-larger-intent",
+            "allowed": larger_intent_close_allowed,
+            "why": f"{normalized_claim} claim with intent-status satisfied was recorded"
+            if larger_intent_close_allowed
+            else "slice closeout does not authorize larger-intent closure"
+            if normalized_claim == "slice"
+            else "parent or larger intent remains open",
+        },
+        {
+            "id": "host-side-issue-closure",
+            "allowed": False,
+            "command": "",
+            "why": "core Planning records closeout evidence only; host tracker issue closure must be performed explicitly by the host integration or PR metadata",
+        },
+    ]
+    if retention_skipped:
+        options.append({"id": "archive-retention-status", "allowed": True, "command": "", "why": retention_note})
+    return options
+
+
 @_atomic_planning_closeout
 def closeout_execplan(
     plan: str,
@@ -19940,84 +20019,16 @@ def closeout_execplan(
         warning for warning in result.warnings if str(warning.get("warning_class", "")) not in _NONBLOCKING_CLOSEOUT_RETENTION_WARNINGS
     ]
     blocked = bool(blocking_warnings) or any(action.kind == "manual review" for action in result.actions)
-    larger_intent_close_allowed = normalized_claim in {"lane", "epic"} and closure_decision == "archive-and-close" and not blocked
-    non_blocking_retention_note = (
-        "archive retention was skipped by size guardrail after closeout distillation; no rerun is needed for the removed plan"
-    )
     result.completion_options.extend(
-        [
-            {
-                "id": "resolve-closeout-blocker",
-                "allowed": blocked,
-                "command": f"agentic-planning closeout {plan} --proof-from <proof> --what-happened <summary> --scope-touched <paths> --changed-surfaces <surfaces>",
-                "why": "closeout warnings or manual-review actions are present"
-                if blocked
-                else non_blocking_retention_note
-                if retention_skipped
-                else "no closeout blocker is present",
-            },
-            {
-                "id": "claim-slice-complete",
-                "allowed": not blocked,
-                "command": "",
-                "why": "slice proof, finish-run evidence, and archive preconditions were recorded"
-                if not blocked and not retention_skipped
-                else non_blocking_retention_note
-                if not blocked
-                else "slice completion is blocked until closeout evidence is repaired",
-            },
-            {
-                "id": "claim-lane-or-local-intent-complete",
-                "allowed": normalized_claim in {"lane", "epic"} and not blocked,
-                "command": "",
-                "why": f"{normalized_claim} claim may be stated locally because closeout scope and intent-status were recorded"
-                if normalized_claim in {"lane", "epic"} and not blocked
-                else "only bounded slice completion is authorized by this closeout",
-            },
-            {
-                "id": "archive-retention",
-                "allowed": True,
-                "command": "",
-                "why": non_blocking_retention_note
-                if retention_skipped
-                else "archive retained or discarded according to closeout flags and size guardrails; this is separate from issue closure",
-            },
-            {
-                "id": "keep-larger-intent-open",
-                "allowed": (closure_decision == "archive-but-keep-lane-open" or not larger_intent_close_allowed) and not blocked,
-                "owner": continuation_owner if closure_decision == "archive-but-keep-lane-open" else PLANNING_STATE_PATH.as_posix(),
-                "why": "intent-status keeps continuation explicit"
-                if closure_decision == "archive-but-keep-lane-open"
-                else "slice closeout does not authorize larger-intent closure"
-                if normalized_claim == "slice"
-                else "larger intent was marked satisfied",
-            },
-            {
-                "id": "close-larger-intent",
-                "allowed": larger_intent_close_allowed,
-                "why": f"{normalized_claim} claim with intent-status satisfied was recorded"
-                if larger_intent_close_allowed
-                else "slice closeout does not authorize larger-intent closure"
-                if normalized_claim == "slice"
-                else "parent or larger intent remains open",
-            },
-            {
-                "id": "host-side-issue-closure",
-                "allowed": False,
-                "command": "",
-                "why": "core Planning records closeout evidence only; host tracker issue closure must be performed explicitly by the host integration or PR metadata",
-            },
-        ]
-    )
-    if retention_skipped:
-        result.completion_options.append(
-            {
-                "id": "archive-retention-status",
-                "allowed": True,
-                "command": "",
-                "why": non_blocking_retention_note,
-            }
+        _closeout_completion_options(
+            plan=plan,
+            normalized_claim=normalized_claim,
+            closure_decision=closure_decision,
+            continuation_owner=continuation_owner,
+            blocked=blocked,
+            retention_skipped=retention_skipped,
         )
+    )
     if blocked:
         result.add("next safe action", record_path, "resolve the reported closeout blocker, then rerun planning closeout")
     else:
