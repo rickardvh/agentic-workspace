@@ -68,6 +68,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `evidence_bundle.decision_changes_when` | array of object | yes |  | Conditions under which the supported decision may change. |  |  |
 | `evidence_bundle.escalate_when` | ref `#/$defs/string_array` | yes |  | Conditions that require evidence escalation instead of compact reliance. |  |  |
 | `evidence_bundle.state_backed` | boolean | yes |  | Whether the packet is backed by explicit startup state rather than narration. |  |  |
+| `visible_state_delta_response` | object | no |  | Composed decision/proof/residue/next-action response with explicit successful-completion route budgets. |  |  |
 | `pre_test_evidence_guardrail` | object | no |  | Optional non-blocking pre-test evidence-owner advisory surfaced when configured assurance signals or declared changed evidence/test paths indicate proof-shape decisions. |  |  |
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional dynamic instruction packet emitted when task facts, config posture, workflow obligations, or module contributions change startup routing. |  |  |
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |

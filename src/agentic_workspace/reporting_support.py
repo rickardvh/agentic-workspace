@@ -512,12 +512,10 @@ def visible_state_delta_response_payload(
     omitted_details = [
         {
             "detail": "chronological recap",
-            "reason": "not needed when decision, evidence, boundary, and next action are state-backed",
-            "route": "detail selectors or verbose report output",
+            "route": "detail/verbose output",
         },
         {
             "detail": "full evidence payload",
-            "reason": "minimal evidence surfaces and missing evidence are enough for the visible update",
             "route": ",".join(minimal_surfaces) if minimal_surfaces else "evidence_bundle",
         },
     ]
@@ -535,11 +533,6 @@ def visible_state_delta_response_payload(
         "expansion_triggers": expansion_triggers,
         "omitted_details": omitted_details,
         "missing_evidence": missing_evidence,
-        "source_packets": [
-            "current_decision",
-            *([] if message_economy is None else ["message_economy"]),
-            *([] if evidence_bundle is None else ["evidence_bundle"]),
-        ],
         "route_budget": {
             "status": "within-budget",
             "max_generated_next_actions": 1,
@@ -553,9 +546,7 @@ def visible_state_delta_response_payload(
             "derived_from_parts": list(parts),
             "requires_additional_report_scan": False,
         },
-        "ownership_boundary": (
-            "This packet compiles visible answer parts from existing AW packets; it is a renderer and not a new truth source."
-        ),
+        "ownership_boundary": "not a new truth source.",
         "state_backed": bool(current_decision.get("state_backed", True)),
     }
 
