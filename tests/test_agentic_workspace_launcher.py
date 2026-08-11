@@ -36,6 +36,7 @@ def _write(path: Path, content: str) -> None:
 
 
 def _minimal_repo(root: Path) -> None:
+    _write(root / ".gitattributes", "*.json text eol=lf\n*.py text eol=lf\n*.toml text eol=lf\nuv.lock text eol=lf\n")
     _write(root / "pyproject.toml", '[project]\nname = "fixture"\n')
     _write(root / "uv.lock", "# lock\n")
     _write(root / "scripts" / "generate" / "generate_command_packages.py", "print('generate')\n")
@@ -237,6 +238,35 @@ def test_source_manifest_ignores_unrelated_dirtiness_but_rejects_input_changes(t
     assert not module._source_manifest_is_trustworthy(repo_root=tmp_path)
 
 
+def test_source_manifest_survives_generate_then_stage_and_commit(tmp_path: Path) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "fixture@example.invalid")
+    _git(tmp_path, "config", "user.name", "Fixture")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "fixture")
+
+    source = tmp_path / "src" / "agentic_workspace" / "runtime.py"
+    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    _write(source, "VALUE = 2\n")
+    manifest = module.source_cli_fingerprint_manifest(repo_root=tmp_path)
+    source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+
+    indexed_before_staging = module._git_index_entries(repo_root=tmp_path, paths=manifest["file_paths"])
+    assert indexed_before_staging is not None
+    assert (
+        indexed_before_staging[source.relative_to(tmp_path).as_posix()]
+        != manifest["git_index_entries"][source.relative_to(tmp_path).as_posix()]
+    )
+
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "regenerate after source edit")
+
+    assert module._source_manifest_is_trustworthy(repo_root=tmp_path)
+    assert module.source_cli_fingerprint_manifest(repo_root=tmp_path) == manifest
+
+
 def test_source_manifest_uses_same_semantic_identity_without_git(tmp_path: Path) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
@@ -291,7 +321,7 @@ def test_launcher_accepts_semantic_match_after_git_index_witness_changes(tmp_pat
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
     monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: True)
     monkeypatch.setattr(module, "_git_index_entries", lambda **_: manifest["git_index_entries"])
-    monkeypatch.setattr(module, "_git_index_identity", lambda **_: "current-index")
+    monkeypatch.setattr(module, "_git_index_identity_from_entries", lambda **_: "current-index")
     original = module.compute_generated_cli_fingerprint
     calls: list[Path] = []
 
@@ -348,10 +378,7 @@ def test_source_manifest_publication_orders_converge_on_committed_head(tmp_path:
         _git(repo, "commit", "-m", f"publish {publication_shape}")
 
         canonical_check = generator._source_cli_fingerprint_manifest_status(repo_root=repo, launcher=module)
-        if publication_order == "generate-before-stage":
-            assert canonical_check == {"status": "current", "reason": "semantic-fallback", "auxiliary_witness": "mismatch"}
-        else:
-            assert canonical_check == {"status": "current", "reason": "git-index-fast-path", "auxiliary_witness": "match"}
+        assert canonical_check == {"status": "current", "reason": "git-index-fast-path", "auxiliary_witness": "match"}
         assert not module.ensure_generated_cli_current(
             repo_root=repo,
             cache_path=repo / ".agentic-workspace" / "local" / "cache" / "missing.json",
@@ -419,7 +446,7 @@ def test_launcher_rejects_clean_source_manifest_missing_new_input(tmp_path: Path
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
     monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: True)
     monkeypatch.setattr(module, "_git_index_entries", lambda **_: manifest["git_index_entries"])
-    monkeypatch.setattr(module, "_git_index_identity", lambda **_: "current-index")
+    monkeypatch.setattr(module, "_git_index_identity_from_entries", lambda **_: "current-index")
     original = module.compute_generated_cli_fingerprint
     calls: list[Path] = []
 
