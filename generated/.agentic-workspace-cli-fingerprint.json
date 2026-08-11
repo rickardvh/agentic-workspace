@@ -1165,7 +1165,7 @@
     "src/agentic_workspace/workspace_selector_validation.py",
     "uv.lock"
   ],
-  "fingerprint": "402d490f9fb8df45ed29665affcaebe6d78503fb9c989ba77f5cf1e3e2e1640f",
+  "fingerprint": "6532b8f5827709ab09569a75bd17105c2c54dc6c6f98ff08a3745bdcaf18b808",
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
   "git_identity_role": "optional-source-checkout-acceleration",
   "git_index_entries": {
@@ -2320,18 +2320,18 @@
     "src/agentic_workspace/target_evidence.py": "5b256ee0e635dbbd25d72596400ddd3d684ad0cc",
     "src/agentic_workspace/trusted_execution.py": "774c1de6d72f9a17ef05328b7731aff3b7fe99e0",
     "src/agentic_workspace/workspace_output.py": "a156e2513050ee3e2b5183084912a0cddcee43f1",
-    "src/agentic_workspace/workspace_runtime_core.py": "485c695a88631b60c37168b76761077ae7c7b92f",
+    "src/agentic_workspace/workspace_runtime_core.py": "332e3fa509d34041f6fb4db1549a49af50e07d1d",
     "src/agentic_workspace/workspace_runtime_generated_surface.py": "82203eefe65eab1653eaa36ae574ac07a9f96864",
-    "src/agentic_workspace/workspace_runtime_implement.py": "a88f729ee60ff05a1a51882b6d8251bf1012f493",
-    "src/agentic_workspace/workspace_runtime_planning.py": "603594dca61649fc65069d4a5f4bca7b9bdc80ff",
+    "src/agentic_workspace/workspace_runtime_implement.py": "509ce4dfe85f447f6c77ee1c9b18727b94cda05c",
+    "src/agentic_workspace/workspace_runtime_planning.py": "99f749857d9cf0914c2570cac7f8c02b49fb4731",
     "src/agentic_workspace/workspace_runtime_primitives.py": "e1ed284f2ca68bb2ad80524e88b7436a5a582593",
     "src/agentic_workspace/workspace_runtime_projection.py": "8db623c90efe888f5a6bba8a75bb96d253d1f707",
     "src/agentic_workspace/workspace_runtime_proof.py": "e5f84669e576fcda2414721fb0c47cb65d211efd",
     "src/agentic_workspace/workspace_runtime_startup.py": "4d6969d0309ae1c041ccc500ecffd4d183116028",
-    "src/agentic_workspace/workspace_selector_validation.py": "e6c134bac891622acae570f83dae865d71ff6bbd",
+    "src/agentic_workspace/workspace_selector_validation.py": "f711b9d196cf67b07ea6e60c80574875637d2cd1",
     "uv.lock": "630bbf372bc645b0dd0dac2dfa43e78e5a88c8a5"
   },
-  "git_index_identity": "32f6ccdf45818a86bc8533be317d0bfea91cf507af3120623b869b4dc70cee5f",
+  "git_index_identity": "bd5dfaa8bea799507234f7f18932eba2c93ba27742f61424cc98d718a343311f",
   "identity_role": "canonical-semantic-content",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"

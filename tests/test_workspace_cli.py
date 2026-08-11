@@ -7133,6 +7133,47 @@ def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Pat
     assert "issue-2045" in plural_lane_switch["mismatch_evidence"]["shared_refs"]
 
 
+def test_active_owner_refs_ignore_non_authoritative_plan_history(tmp_path: Path) -> None:
+    owner_ref = ".agentic-workspace/planning/execplans/issue-2258.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        f'''schema_version = 1
+
+[todo]
+active_items = [{{ id = "issue-2258", status = "active", surface = "{owner_ref}", refs = ["#2258"] }}]
+''',
+    )
+    _write(
+        tmp_path / owner_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2258",
+                "title": "Implement #2258",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "intent": {"outcome": "Complete issue #2258", "non_goals": ["Do not absorb #9001"]},
+                "dependencies": ["#9002"],
+                "relationships": {"related": ["#9003"]},
+                "proof": {"refs": ["#9004"]},
+                "execution_summary": {"completed follow-up": "#9005"},
+                "references": [
+                    {"kind": "issue", "target": "#2258", "role": "intake"},
+                    {"kind": "issue", "target": "#9006", "role": "supporting-evidence"},
+                ],
+            }
+        ),
+    )
+
+    summary = cli._fast_planning_active_summary(target_root=tmp_path)
+
+    assert summary["active_owner_refs"] == ["#2258", "issue-2258"]
+    for unrelated_ref in ("#9001", "#9002", "#9003", "#9004", "#9005", "#9006"):
+        mismatch = cli._task_switch_mismatch_evidence(active_summary=summary, task_text=f"Continue {unrelated_ref}")
+        assert mismatch["shared_refs"] == []
+        assert mismatch["overlap_signal"] == "low-overlap-explicit-task"
+
+
 def test_start_route_rejects_stale_local_selected_planning_owner(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     shared_ref = ".agentic-workspace/planning/execplans/issue-2290.plan.json"

@@ -32655,6 +32655,28 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
     }
 
 
+def _planning_owner_intent_refs(owner_payload: dict[str, Any]) -> list[str]:
+    """Return refs from the selected owner's identity and intake fields only."""
+
+    intent = _as_dict(owner_payload.get("intent"))
+    parent = _as_dict(owner_payload.get("parent"))
+    texts = [
+        str(owner_payload.get("id") or ""),
+        str(owner_payload.get("title") or ""),
+        str(intent.get("outcome") or ""),
+        str(parent.get("owner_id") or ""),
+    ]
+    for reference in _list_payload(owner_payload.get("references")):
+        record = _as_dict(reference)
+        if str(record.get("role") or "").strip().lower() == "intake":
+            texts.extend((str(record.get("target") or ""), str(record.get("label") or "")))
+    numbers: set[str] = set()
+    for text in texts:
+        numbers.update(re.findall(r"#(\d+)", text))
+        numbers.update(re.findall(r"\bissue[-_\s]+#?(\d+)\b", text, flags=re.IGNORECASE))
+    return [ref for number in sorted(numbers, key=int) for ref in (f"#{number}", f"issue-{number}")]
+
+
 def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
     if not state_path.exists():
@@ -32696,9 +32718,7 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
         except (OSError, ValueError, json.JSONDecodeError):
             owner_payload = {}
         if isinstance(owner_payload, dict):
-            owner_text = json.dumps(owner_payload, sort_keys=True)
-            numeric_refs = sorted(set(re.findall(r"#(\d+)", owner_text)))
-            summary["active_owner_refs"] = [ref for number in numeric_refs for ref in (f"#{number}", f"issue-{number}")]
+            summary["active_owner_refs"] = _planning_owner_intent_refs(owner_payload)
     selected_source = str(_as_dict(owner_admission.get("selected_owner")).get("source") or "") if isinstance(owner_admission, dict) else ""
     if isinstance(owner_admission, dict) and (
         owner_admission.get("status") == "rejected"
