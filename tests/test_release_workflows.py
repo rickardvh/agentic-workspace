@@ -132,19 +132,19 @@ def test_package_affecting_scope_excludes_github_automation() -> None:
     assert "uv.lock" in paths
 
     metadata = _ownership()["non_semver_generated_metadata"]
-    assert metadata == [
-        {
-            "path": "generated/.agentic-workspace-cli-fingerprint.json",
-            "role": "generated-command-freshness-integrity",
-            "freshness_owner": "scripts/check/check_generated_command_packages.py",
-        }
+    assert [item["path"] for item in metadata] == [
+        "generated/workspace/.agentic-workspace-cli-fingerprint.json",
+        "generated/planning/.agentic-workspace-cli-fingerprint.json",
+        "generated/memory/.agentic-workspace-cli-fingerprint.json",
+        "generated/verification/.agentic-workspace-cli-fingerprint.json",
     ]
+    assert all(item["role"] == "generated-command-freshness-integrity" for item in metadata)
 
 
 def test_release_path_classification_exempts_only_exact_integrity_metadata() -> None:
     classify = _load_release_ownership_classifier().classify_changed_paths
     ownership = _ownership()
-    fingerprint = "generated/.agentic-workspace-cli-fingerprint.json"
+    fingerprint = "generated/workspace/.agentic-workspace-cli-fingerprint.json"
 
     assert classify([fingerprint, "docs/maintenance.md"], ownership)["package_affecting"] is False
     assert classify([fingerprint, "src/agentic_workspace/__init__.py"], ownership)["package_affecting"] is True

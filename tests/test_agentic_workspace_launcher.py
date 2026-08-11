@@ -42,17 +42,34 @@ def _minimal_repo(root: Path) -> None:
     _write(root / "scripts" / "generate" / "generate_command_packages.py", "print('generate')\n")
     _write(root / "scripts" / "generate" / "workspace_command_generation.py", "VALUE = 1\n")
     _write(root / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
-    _write(root / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json", "{}\n")
+    _write(
+        root / "src" / "agentic_workspace" / "contracts" / "command_package_ir.json",
+        json.dumps(
+            {
+                "packages": [
+                    {
+                        "id": "root-workspace",
+                        "operation_contract_root": "src/agentic_workspace/contracts",
+                        "commands": [],
+                        "targets": [{"generated_root": "generated/workspace/python"}],
+                    }
+                ]
+            }
+        )
+        + "\n",
+    )
     _write(root / "generated" / "workspace" / "python" / "cli.py", "def main(argv=None):\n    return 0\n")
     _write(root / "generated" / "workspace" / "typescript" / "package.json", '{"version":"0.39.2"}\n')
 
 
 def _source_manifest(module, root: Path, *, paths: list[str] | None = None) -> dict[str, object]:
-    paths = paths or [module._repo_relative(path, repo_root=root) for path in module._fingerprint_files(repo_root=root)]
+    if paths is None:
+        return module.source_cli_fingerprint_manifest(repo_root=root, owner="workspace")
     content_identity = module.compute_generated_cli_fingerprint(repo_root=root)
     return {
         "schema": module.CACHE_SCHEMA,
-        "kind": "generated-cli-source-manifest/v1",
+        "kind": "generated-cli-owner-source-manifest/v1",
+        "owner": "workspace",
         "file_paths": paths,
         "algorithm": "sha256",
         "fingerprint": content_identity["fingerprint"],
@@ -124,9 +141,14 @@ def test_launcher_force_refresh_still_applies_to_start(monkeypatch) -> None:
 def test_launcher_skips_content_hash_when_manifest_cache_is_fresh(tmp_path: Path) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "fixture@example.invalid")
+    _git(tmp_path, "config", "user.name", "Fixture")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "fixture")
     cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "generated-cli-fingerprint.json"
     fingerprint = module.compute_generated_cli_fingerprint(repo_root=tmp_path)
-    module._write_cached_fingerprint(fingerprint, cache_path=cache_path)
+    module._write_cached_fingerprint(fingerprint, cache_path=cache_path, repo_root=tmp_path)
 
     def fail_content_hash(repo_root: Path) -> dict[str, object]:
         raise AssertionError(f"unexpected content hash for fresh cache in {repo_root}")
@@ -145,10 +167,31 @@ def test_launcher_skips_content_hash_when_manifest_cache_is_fresh(tmp_path: Path
     assert refreshed is False
 
 
+def test_semantic_admission_populates_local_git_fast_path(tmp_path: Path) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    manifest = module.source_cli_fingerprint_manifest(repo_root=tmp_path, owner="workspace")
+    source_manifest = tmp_path / "generated/workspace/.agentic-workspace-cli-fingerprint.json"
+    source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "fixture@example.invalid")
+    _git(tmp_path, "config", "user.name", "Fixture")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "fixture")
+    cache_path = tmp_path / ".agentic-workspace/local/cache/generated-cli-fingerprint.json"
+
+    assert not module.ensure_generated_cli_current(repo_root=tmp_path, cache_path=cache_path)
+    assert json.loads(cache_path.read_text(encoding="utf-8"))["local_git_index_identity"]
+
+    module.compute_generated_cli_fingerprint = lambda **_: (_ for _ in ()).throw(AssertionError("content hash used"))
+    module._fingerprint_payload = lambda **_: (_ for _ in ()).throw(AssertionError("owner content hash used"))
+    assert not module.ensure_generated_cli_current(repo_root=tmp_path, cache_path=cache_path)
+
+
 def test_launcher_uses_source_owned_manifest_on_cold_clean_worktree(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
-    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest = tmp_path / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
     manifest = _source_manifest(module, tmp_path)
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
 
@@ -165,7 +208,7 @@ def test_launcher_uses_source_owned_manifest_on_cold_clean_worktree(tmp_path: Pa
 def test_launcher_uses_source_manifest_with_unrelated_dirty_worktree(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
-    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest = tmp_path / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
     manifest = _source_manifest(module, tmp_path)
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
     refreshed = module.ensure_generated_cli_current(
@@ -181,7 +224,7 @@ def test_launcher_uses_source_manifest_with_unrelated_dirty_worktree(tmp_path: P
 def test_launcher_accepts_semantically_current_manifest_when_input_witness_is_dirty(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
-    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest = tmp_path / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
     manifest = _source_manifest(module, tmp_path)
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
     monkeypatch.setattr(module, "_git_index_entries", lambda **_: {path: "current" for path in manifest["file_paths"]})
@@ -211,8 +254,8 @@ def test_source_manifest_ignores_unrelated_dirtiness_but_rejects_input_changes(t
     _git(tmp_path, "config", "user.name", "Fixture")
     _git(tmp_path, "add", ".")
     _git(tmp_path, "commit", "-m", "fixture")
-    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
-    source_manifest.write_text(json.dumps(module.source_cli_fingerprint_manifest(repo_root=tmp_path)), encoding="utf-8")
+    source_manifest = tmp_path / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest.write_text(json.dumps(module.source_cli_fingerprint_manifest(repo_root=tmp_path, owner="workspace")), encoding="utf-8")
 
     _write(tmp_path / "README.md", "unrelated local note\n")
     assert module._source_manifest_is_trustworthy(repo_root=tmp_path)
@@ -234,9 +277,9 @@ def test_source_manifest_survives_generate_then_stage_and_commit(tmp_path: Path)
     _git(tmp_path, "commit", "-m", "fixture")
 
     source = tmp_path / "scripts" / "generate" / "workspace_command_generation.py"
-    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest = tmp_path / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
     _write(source, "VALUE = 2\n")
-    manifest = module.source_cli_fingerprint_manifest(repo_root=tmp_path)
+    manifest = module.source_cli_fingerprint_manifest(repo_root=tmp_path, owner="workspace")
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
 
     indexed_before_staging = module._git_index_entries(repo_root=tmp_path, paths=manifest["file_paths"])
@@ -249,17 +292,17 @@ def test_source_manifest_survives_generate_then_stage_and_commit(tmp_path: Path)
     _git(tmp_path, "commit", "-m", "regenerate after source edit")
 
     assert module._source_manifest_is_trustworthy(repo_root=tmp_path)
-    assert module.source_cli_fingerprint_manifest(repo_root=tmp_path) == manifest
+    assert module.source_cli_fingerprint_manifest(repo_root=tmp_path, owner="workspace") == manifest
 
 
 def test_source_manifest_uses_same_semantic_identity_without_git(tmp_path: Path) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
-    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
-    manifest = module.source_cli_fingerprint_manifest(repo_root=tmp_path)
+    source_manifest = tmp_path / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
+    manifest = module.source_cli_fingerprint_manifest(repo_root=tmp_path, owner="workspace")
     assert "git_index_entries" not in manifest
     assert "git_index_identity" not in manifest
-    assert manifest["identity_role"] == "canonical-semantic-content"
+    assert manifest["identity_role"] == "owner-scoped-semantic-content"
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
 
     assert module._source_manifest_is_trustworthy(repo_root=tmp_path)
@@ -271,16 +314,26 @@ def test_source_manifest_uses_same_semantic_identity_without_git(tmp_path: Path)
 def test_source_manifest_rejects_branch_carried_git_witness(tmp_path: Path) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
-    manifest = module.source_cli_fingerprint_manifest(repo_root=tmp_path)
+    manifest = module.source_cli_fingerprint_manifest(repo_root=tmp_path, owner="workspace")
     manifest["git_index_entries"] = {}
-    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest = tmp_path / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
 
     assert module.source_cli_fingerprint_manifest_status(repo_root=tmp_path) == {
         "status": "invalid",
-        "reason": "branch-carried-git-witness",
+        "reason": "workspace:branch-carried-git-witness",
         "auxiliary_witness": "not-evaluated",
     }
+
+
+def test_source_manifest_rejects_orphaned_owner_receipt(tmp_path: Path) -> None:
+    module = _load_module()
+    _minimal_repo(tmp_path)
+    manifest = module.source_cli_fingerprint_manifest(repo_root=tmp_path, owner="workspace")
+    _write(tmp_path / "generated/workspace/.agentic-workspace-cli-fingerprint.json", json.dumps(manifest))
+    _write(tmp_path / "generated/orphan/.agentic-workspace-cli-fingerprint.json", json.dumps({"owner": "orphan"}))
+
+    assert module.source_cli_fingerprint_manifest_status(repo_root=tmp_path)["reason"] == "owner-manifest-set-drift"
 
 
 def test_manifest_status_filter_is_bounded_and_rejects_relevant_records(tmp_path: Path, monkeypatch) -> None:
@@ -316,7 +369,7 @@ def test_manifest_status_filter_fails_closed_when_git_fails(tmp_path: Path, monk
 def test_launcher_accepts_semantic_match_with_derived_git_witness(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
-    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest = tmp_path / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
     manifest = _source_manifest(module, tmp_path)
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
     monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: True)
@@ -364,8 +417,8 @@ def test_source_manifest_publication_orders_converge_on_committed_head(tmp_path:
 
         if publication_order == "stage-before-generation":
             _git(repo, "add", ".")
-        source_manifest = repo / "generated" / ".agentic-workspace-cli-fingerprint.json"
-        manifest = module.source_cli_fingerprint_manifest(repo_root=repo)
+        source_manifest = repo / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
+        manifest = module.source_cli_fingerprint_manifest(repo_root=repo, owner="workspace")
         source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
         fingerprints[publication_order] = str(manifest["fingerprint"])
 
@@ -379,7 +432,7 @@ def test_source_manifest_publication_orders_converge_on_committed_head(tmp_path:
         canonical_check = generator._source_cli_fingerprint_manifest_status(repo_root=repo, launcher=module)
         assert canonical_check == {
             "status": "current",
-            "reason": "semantic-content-match",
+            "reason": "owner-manifests-current",
             "auxiliary_witness": "derived-clean-index",
         }
         assert not module.ensure_generated_cli_current(
@@ -396,7 +449,7 @@ def test_source_manifest_rejects_semantic_drift_even_when_git_witness_matches(tm
     module = _load_module()
     _minimal_repo(tmp_path)
     manifest = _source_manifest(module, tmp_path)
-    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest = tmp_path / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
     _write(tmp_path / "scripts" / "generate" / "workspace_command_generation.py", "VALUE = 2\n")
     monkeypatch.setattr(module, "_git_index_entries", lambda **_: {path: "current" for path in manifest["file_paths"]})
@@ -404,7 +457,7 @@ def test_source_manifest_rejects_semantic_drift_even_when_git_witness_matches(tm
 
     assert module.source_cli_fingerprint_manifest_status(repo_root=tmp_path) == {
         "status": "stale",
-        "reason": "semantic-content-drift",
+        "reason": "workspace:semantic-content-drift",
         "auxiliary_witness": "dirty-inputs",
     }
 
@@ -418,33 +471,33 @@ def test_canonical_fingerprint_regeneration_clears_stale_source_manifest(tmp_pat
     _git(tmp_path, "config", "user.name", "Fixture")
 
     _git(tmp_path, "add", ".")
-    generator._write_source_cli_fingerprint_manifest(repo_root=tmp_path, launcher=module)
+    generator._write_source_cli_fingerprint_manifests(repo_root=tmp_path, launcher=module)
     _git(tmp_path, "add", ".")
     _git(tmp_path, "commit", "-m", "publish generated fingerprint")
-    fingerprint_path = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    fingerprint_path = tmp_path / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
     prior_fingerprint = fingerprint_path.read_bytes()
 
     _write(tmp_path / "scripts" / "generate" / "workspace_command_generation.py", "VALUE = 2\n")
     stale = generator._source_cli_fingerprint_manifest_status(repo_root=tmp_path, launcher=module)
     assert stale == {
         "status": "stale",
-        "reason": "semantic-content-drift",
+        "reason": "workspace:semantic-content-drift",
         "auxiliary_witness": "dirty-inputs",
     }
 
-    generator._write_source_cli_fingerprint_manifest(repo_root=tmp_path, launcher=module)
+    generator._write_source_cli_fingerprint_manifests(repo_root=tmp_path, launcher=module)
     regenerated_fingerprint = fingerprint_path.read_bytes()
     assert regenerated_fingerprint != prior_fingerprint
     assert generator._source_cli_fingerprint_manifest_status(repo_root=tmp_path, launcher=module)["status"] == "current"
 
-    generator._write_source_cli_fingerprint_manifest(repo_root=tmp_path, launcher=module)
+    generator._write_source_cli_fingerprint_manifests(repo_root=tmp_path, launcher=module)
     assert fingerprint_path.read_bytes() == regenerated_fingerprint
 
 
 def test_launcher_rejects_clean_source_manifest_missing_new_input(tmp_path: Path, monkeypatch) -> None:
     module = _load_module()
     _minimal_repo(tmp_path)
-    source_manifest = tmp_path / "generated" / ".agentic-workspace-cli-fingerprint.json"
+    source_manifest = tmp_path / "generated" / "workspace" / ".agentic-workspace-cli-fingerprint.json"
     manifest = _source_manifest(module, tmp_path, paths=["pyproject.toml"])
     source_manifest.write_text(json.dumps(manifest), encoding="utf-8")
     monkeypatch.setattr(module, "_git_input_paths_are_unmodified", lambda **_: True)

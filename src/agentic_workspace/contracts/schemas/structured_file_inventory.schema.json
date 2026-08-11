@@ -203,23 +203,30 @@
           "merge_safety": {
             "type": "object",
             "required": [
-              "collection_semantics",
-              "branch_write_shape",
-              "logical_collection"
+              "classification",
+              "owner_boundary",
+              "reason"
             ],
             "properties": {
-              "collection_semantics": {
-                "const": "set-like"
+              "classification": {
+                "type": "string",
+                "enum": [
+                  "owner-scoped",
+                  "derived",
+                  "true-singleton"
+                ]
               },
-              "branch_write_shape": {
-                "const": "owner-scoped-record"
+              "owner_boundary": {
+                "type": "string",
+                "minLength": 1
               },
-              "logical_collection": {
-                "const": "derived-sorted-read-view"
+              "reason": {
+                "type": "string",
+                "minLength": 1
               }
             },
             "additionalProperties": false,
-            "description": "Required merge-order policy for branch-carried set-like records."
+            "description": "Merge-order classification for branch-carried collection or generated state."
           },
           "notes": {
             "type": "string",
