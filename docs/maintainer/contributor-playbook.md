@@ -59,7 +59,7 @@ Default startup path for an agent maintainer:
 
 Prefer repository-native state over chat-only context. If a follow-up matters after the current turn, record it in planning or memory instead of relying on conversational residue.
 
-If you are maintaining the repo through git commits locally, run `make setup` to sync the shared environment and install hooks for this clone. If the environment is already synced and you only need to restore the hook, run `make install-hooks`. The repo-managed pre-commit Git hook formats staged Ruff-managed files, stages those formatter edits automatically, then runs the shared lint lane and the remaining commit checks. On `master`, the hook also runs the full test lane before allowing the commit. If you intentionally want the stock pre-commit wrapper behavior instead, reinstall it explicitly with `uv run pre-commit install`.
+If you are maintaining the repo through git commits locally, run `make setup` to sync the shared environment and install hooks for this clone. If the environment is already synced and you only need to restore the hook, run `make install-hooks`. The repo-managed pre-commit Git hook allocates one collision-safe validation run, synchronizes dependencies once, formats and stages Ruff-managed files, then runs the setup-free lint and typecheck lanes. The stock pre-commit wrapper routes through the same composition when installed explicitly with `uv run pre-commit install`.
 The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`, so tracked files cannot introduce absolute filesystem paths.
 
 ## Ownership Map
