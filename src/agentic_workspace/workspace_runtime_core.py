@@ -17159,11 +17159,12 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
             skipped_count += 1
             continue
         summaries.append(_successful_completion_cost_run_summary(payload=raw_payload, path=path, target_root=target_root))
+    validation_observations = _successful_completion_cost_validation_observations(target_root=target_root)
     usage_totals = _successful_completion_cost_usage_totals(summaries)
     package_totals = _successful_completion_cost_package_totals(summaries)
     outcome_totals = _successful_completion_cost_outcome_totals(summaries)
     weakness_ledger = _successful_completion_cost_weakness_ledger(target_root=target_root)
-    evidence_count = len(summaries)
+    evidence_count = len(summaries) + len(validation_observations["runs"])
     signals: list[dict[str, Any]] = []
     if outcome_totals["warning_run_count"]:
         signals.append(
@@ -17199,9 +17200,11 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
         "rule": "Use this as maintainer evidence for surface-cost tradeoffs. It is not a formal benchmark, CI gate, or model leaderboard.",
         "evidence": {
             "summary_dir": summary_dir_relative.as_posix(),
-            "summary_count": evidence_count,
+            "summary_count": len(summaries),
+            "total_observation_count": evidence_count,
             "skipped_summary_count": skipped_count,
             "included_recent_limit": 8,
+            "validation_execution": validation_observations,
             "weakness_ledger": weakness_ledger,
         },
         "totals": {
@@ -17220,6 +17223,78 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
         "section_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section successful_completion_cost --format json", cli_invoke=cli_invoke
         ),
+    }
+
+
+def _successful_completion_cost_validation_observations(*, target_root: Path) -> dict[str, Any]:
+    from repo_verification_bootstrap.runtime_primitives import validation_evidence_admissions
+
+    runs: list[dict[str, Any]] = []
+    rejected_count = 0
+    rejection_reasons: dict[str, int] = {}
+    for decision in validation_evidence_admissions(target_root):
+        if not decision.get("admitted"):
+            rejected_count += 1
+            for reason in _list_payload(decision.get("reason_codes")):
+                reason_text = str(reason)
+                rejection_reasons[reason_text] = rejection_reasons.get(reason_text, 0) + 1
+            continue
+        bundle = _as_dict(decision.get("bundle"))
+        provenance = _as_dict(bundle.get("provenance"))
+        completion_cost = _as_dict(bundle.get("completion_cost"))
+        runs.append(
+            {
+                "evidence_ref": str(provenance.get("result_path") or ""),
+                "constituent_id": str(bundle.get("proof_route_id") or ""),
+                "run_id": str(provenance.get("run_id") or ""),
+                "outcome": str(completion_cost.get("outcome") or "unknown"),
+                "duration_seconds": round(float(completion_cost.get("duration_seconds") or 0.0), 6),
+                "rerun": bool(completion_cost.get("rerun")),
+                "ended_at": str(bundle.get("executed_at") or ""),
+                "subject": {
+                    "repository_head": provenance.get("repository_head"),
+                    "repository_tree": provenance.get("repository_tree"),
+                    "plan_graph": provenance.get("plan_graph"),
+                },
+            }
+        )
+        if len(runs) >= 40:
+            break
+    comparison = "unknown"
+    comparison_basis: dict[str, Any] = {}
+    for index, latest in enumerate(runs):
+        previous = next(
+            (
+                item
+                for item in runs[index + 1 :]
+                if item["constituent_id"] == latest["constituent_id"] and item["outcome"] == latest["outcome"] == "passed"
+            ),
+            None,
+        )
+        if previous is None:
+            continue
+        latest_duration = float(latest["duration_seconds"])
+        previous_duration = float(previous["duration_seconds"])
+        ratio = latest_duration / previous_duration if previous_duration else 1.0
+        comparison = "improved" if ratio < 0.95 else "regressed" if ratio > 1.05 else "stable"
+        comparison_basis = {
+            "constituent_id": latest["constituent_id"],
+            "latest_duration_seconds": latest_duration,
+            "previous_duration_seconds": previous_duration,
+            "ratio": round(ratio, 4),
+        }
+        break
+    return {
+        "kind": "agentic-workspace/validation-completion-cost-observations/v1",
+        "status": "present" if runs else "no-evidence",
+        "run_count": len(runs),
+        "included_recent_limit": 8,
+        "rejected_or_stale_count": rejected_count,
+        "rejection_reasons": dict(sorted(rejection_reasons.items())),
+        "comparison": comparison,
+        "comparison_basis": comparison_basis,
+        "runs": runs[:8],
+        "privacy": "compact result metadata only; raw logs, prompts, and transcripts are excluded",
     }
 
 

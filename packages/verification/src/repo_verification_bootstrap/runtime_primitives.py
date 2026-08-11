@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import ast
 import fnmatch
+import hashlib
+import json
+import subprocess
+import sys
 import tomllib
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +18,8 @@ SCHEMA_VERSION = "agentic-workspace/verification-manifest/v1"
 EVIDENCE_STRATEGY_KIND = "agentic-workspace/verification-evidence-strategy/v1"
 PROOF_GOVERNANCE_KIND = "agentic-workspace/verification-proof-governance/v1"
 PROOF_DECISION_KIND = "agentic-workspace/verification-proof-decision/v1"
+VALIDATION_RESULT_KIND = "agentic-workspace/validation-constituent-result/v1"
+VALIDATION_PROTOCOL_ID = "authoritative_validation"
 CORE_EVIDENCE_CONCEPTS = {
     "scenario_coverage": "Scenario or workflow coverage evidence.",
     "contract": "Contract, conformance, or interface evidence.",
@@ -1788,6 +1794,224 @@ def _bundle_state(bundle: dict[str, Any], *, changed_paths: list[str]) -> dict[s
     }
 
 
+def _validation_plan_graph_payload(plan: dict[str, Any]) -> dict[str, Any]:
+    traces = []
+    for trace in _list_payload(plan.get("trace_fixtures")):
+        trace_record = trace if isinstance(trace, dict) else {}
+        events = [
+            {
+                "constituent_id": str(event.get("constituent_id", "")),
+                "outcome": str(event.get("outcome", "")),
+                **({"repeat_allowed": True} if event.get("repeat_allowed") else {}),
+            }
+            for event in _list_payload(trace_record.get("events"))
+            if isinstance(event, dict)
+        ]
+        traces.append({"id": trace_record.get("id"), "command": trace_record.get("command"), "events": events})
+    return {
+        "kind": plan.get("kind"),
+        "schema_version": plan.get("schema_version"),
+        "issue": plan.get("issue"),
+        "parallel_modes": plan.get("parallel_modes", []),
+        "compact_label_map": plan.get("compact_label_map", {}),
+        "constituents": plan.get("constituents", []),
+        "duplicate_dispositions": plan.get("duplicate_dispositions", []),
+        "trace_fixtures": traces,
+    }
+
+
+def _current_validation_authority(target_root: Path) -> dict[str, Any]:
+    plan_path = target_root / "docs" / "maintainer" / "validation-runtime-2435" / "validation-plan.json"
+    try:
+        raw_plan = plan_path.read_bytes()
+        plan = json.loads(raw_plan.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        raw_plan, plan = b"", {}
+    plan = plan if isinstance(plan, dict) else {}
+    raw_label_map = plan.get("compact_label_map")
+    label_map: dict[str, Any] = raw_label_map if isinstance(raw_label_map, dict) else {}
+    routes = {
+        str(metadata.get("id")): list(metadata.get("command", []))
+        for metadata in label_map.values()
+        if isinstance(metadata, dict) and metadata.get("id") and isinstance(metadata.get("command"), list)
+    }
+
+    def git_value(*args: str) -> str:
+        try:
+            result = subprocess.run(["git", *args], cwd=target_root, capture_output=True, text=True, check=False, timeout=2)
+        except (OSError, subprocess.SubprocessError):
+            return ""
+        return result.stdout.strip() if result.returncode == 0 else ""
+
+    graph = _validation_plan_graph_payload(plan)
+    return {
+        "repository_head": git_value("rev-parse", "HEAD"),
+        "repository_tree": git_value("rev-parse", "HEAD^{tree}"),
+        "tracked_dirty": bool(git_value("status", "--porcelain=v1", "--untracked-files=no")),
+        "plan_file_sha256": hashlib.sha256(raw_plan).hexdigest() if raw_plan else "",
+        "plan_graph_sha256": hashlib.sha256(json.dumps(graph, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+        if plan
+        else "",
+        "routes": routes,
+        "runtime_executable": str(Path(sys.executable).resolve()),
+    }
+
+
+def _ordered_validation_timestamps(record: dict[str, Any]) -> bool:
+    try:
+        started = datetime.fromisoformat(str(record.get("started_at") or ""))
+        ended = datetime.fromisoformat(str(record.get("ended_at") or ""))
+    except ValueError:
+        return False
+    return started.tzinfo is not None and ended.tzinfo is not None and ended >= started
+
+
+def validation_result_admission(*, record: dict[str, Any], current_head: str, authority: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Admit an exact, successful compact-validation subject or reject it with typed reasons."""
+
+    reasons: list[str] = []
+    raw_plan_identity = record.get("plan_identity")
+    plan_identity: dict[str, Any] = raw_plan_identity if isinstance(raw_plan_identity, dict) else {}
+    raw_repository = record.get("repository")
+    repository: dict[str, Any] = raw_repository if isinstance(raw_repository, dict) else {}
+    raw_runtime = repository.get("runtime")
+    runtime: dict[str, Any] = raw_runtime if isinstance(raw_runtime, dict) else {}
+    required = {
+        "constituent-id-missing": str(record.get("constituent_id") or ""),
+        "command-missing": record.get("command") if isinstance(record.get("command"), list) else [],
+        "plan-identity-missing": str(plan_identity.get("graph_sha256") or ""),
+        "repository-head-missing": str(repository.get("head") or ""),
+        "repository-tree-missing": str(repository.get("tree") or ""),
+        "started-at-missing": str(record.get("started_at") or ""),
+        "ended-at-missing": str(record.get("ended_at") or ""),
+    }
+    reasons.extend(reason for reason, value in required.items() if not value)
+    if record.get("kind") != VALIDATION_RESULT_KIND:
+        reasons.append("unsupported-result-kind")
+    if str(record.get("outcome") or "") != "passed" or record.get("exit_code") != 0:
+        reasons.append("result-not-successful")
+    if not current_head:
+        reasons.append("current-subject-unavailable")
+    elif str(repository.get("head") or "") != current_head:
+        reasons.append("stale-or-mismatched-subject")
+    if runtime and str(runtime.get("status") or "") == "mismatch":
+        reasons.append("runtime-identity-mismatch")
+    if not _ordered_validation_timestamps(record):
+        reasons.append("invalid-or-unordered-timestamps")
+    if authority is not None:
+        if str(repository.get("tree") or "") != str(authority.get("repository_tree") or ""):
+            reasons.append("repository-tree-mismatch")
+        if bool(repository.get("tracked_dirty")) or bool(authority.get("tracked_dirty")):
+            reasons.append("dirty-repository-subject")
+        if str(plan_identity.get("file_sha256") or "") != str(authority.get("plan_file_sha256") or "") or str(
+            plan_identity.get("graph_sha256") or ""
+        ) != str(authority.get("plan_graph_sha256") or ""):
+            reasons.append("validation-plan-identity-mismatch")
+        raw_routes = authority.get("routes")
+        routes: dict[str, Any] = raw_routes if isinstance(raw_routes, dict) else {}
+        expected_command = routes.get(str(record.get("constituent_id") or ""))
+        if expected_command is None:
+            reasons.append("unknown-validation-constituent")
+        elif list(record.get("command") or []) != expected_command:
+            reasons.append("validation-command-mismatch")
+        if str(runtime.get("status") or "") != "matched" or str(Path(str(runtime.get("executable") or "")).resolve()) != str(
+            authority.get("runtime_executable") or ""
+        ):
+            reasons.append("runtime-identity-mismatch")
+    subject_payload = {
+        "repository_head": repository.get("head"),
+        "repository_tree": repository.get("tree"),
+        "plan_graph": plan_identity.get("graph_sha256"),
+    }
+    subject_fingerprint = hashlib.sha256(json.dumps(subject_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    route_id = str(record.get("constituent_id") or "")
+    bundle_id = (
+        "validation-"
+        + hashlib.sha256(f"{subject_fingerprint}:{route_id}:{record.get('run_id')}:{record.get('started_at')}".encode("utf-8")).hexdigest()[
+            :20
+        ]
+    )
+    decision: dict[str, Any] = {
+        "kind": "agentic-workspace/validation-evidence-admission/v1",
+        "status": "rejected" if reasons else "admitted",
+        "admitted": not reasons,
+        "reason_codes": _dedupe(reasons),
+        "subject_fingerprint": subject_fingerprint,
+        "proof_route_id": route_id,
+        "source_run_id": str(record.get("run_id") or ""),
+    }
+    if reasons:
+        return decision
+    decision["bundle"] = {
+        "id": bundle_id,
+        "protocol_id": VALIDATION_PROTOCOL_ID,
+        "scenario_id": "authoritative_validation_run",
+        "task_refs": [],
+        "issue_refs": [],
+        "pr_refs": [],
+        "changed_paths": [],
+        "executor": "compact-validation-runner",
+        "executed_at": str(record.get("ended_at") or ""),
+        "outcome": "passed",
+        "evidence_items": ["authoritative_validation_pass"],
+        "transcript_refs": [],
+        "transcript_summaries": [],
+        "residual_risk": "Process success proves only the declared validation route for the exact recorded subject.",
+        "claim_boundaries": ["exact-subject-and-proof-route-only"],
+        "reviewer": "",
+        "retention_until": "",
+        "stale_when": [],
+        "redaction": "raw child output and transcripts are not retained in the bundle",
+        "source_tool": "scripts/check/run_compact_command.py",
+        "source_model": "",
+        "post_score_reference": "",
+        "subject_fingerprint": subject_fingerprint,
+        "proof_route_id": route_id,
+        "provenance": {
+            "result_kind": record.get("kind"),
+            "result_path": record.get("result_path", ""),
+            "run_id": record.get("run_id"),
+            "plan_graph": plan_identity.get("graph_sha256"),
+            "repository_head": repository.get("head"),
+            "repository_tree": repository.get("tree"),
+            "runtime_status": runtime.get("status", "not-recorded") if runtime else "not-recorded",
+            "runtime_executable": runtime.get("executable", "") if runtime else "",
+            "command": record.get("command"),
+        },
+        "freshness": {"status": "current", "bound_head": current_head, "expires_when": "repository HEAD changes"},
+        "completion_cost": {
+            "duration_seconds": float(record.get("duration_seconds") or 0.0),
+            "rerun": "/attempts/" in str(record.get("result_path") or "").replace("\\", "/"),
+            "outcome": "passed",
+        },
+    }
+    return decision
+
+
+def validation_evidence_admissions(target_root: Path) -> list[dict[str, Any]]:
+    authority = _current_validation_authority(target_root)
+    current_head = str(authority.get("repository_head") or "")
+    result_root = target_root / "scratch" / "validation-results"
+    paths = sorted(result_root.glob("**/*.json"), key=lambda path: path.stat().st_mtime, reverse=True) if result_root.exists() else []
+    decisions: list[dict[str, Any]] = []
+    for path in paths[:200]:
+        if path.name == "manifest.json":
+            continue
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(record, dict):
+            continue
+        record["result_path"] = path.relative_to(target_root).as_posix()
+        decisions.append(validation_result_admission(record=record, current_head=current_head, authority=authority))
+    return decisions
+
+
+def _validation_evidence_admissions(target_root: Path) -> list[dict[str, Any]]:
+    return validation_evidence_admissions(target_root)
+
+
 def _match_protocol(
     *,
     protocol: dict[str, Any],
@@ -2233,7 +2457,19 @@ def verification_report_payload(
     manifest = _load_manifest(target_root=target_root)
     configured_protocols = manifest["protocols"]
     configured_scenarios = manifest["scenarios"]
-    evidence_bundles = manifest["evidence_bundles"]
+    validation_evidence_admissions = _validation_evidence_admissions(target_root)
+    admitted_validation_bundles: list[dict[str, Any]] = []
+    admitted_routes: set[str] = set()
+    for decision in validation_evidence_admissions:
+        bundle = decision.get("bundle")
+        route_id = str(decision.get("proof_route_id") or "")
+        if not decision.get("admitted") or not isinstance(bundle, dict) or route_id in admitted_routes:
+            continue
+        admitted_validation_bundles.append(bundle)
+        admitted_routes.add(route_id)
+        if len(admitted_validation_bundles) >= 16:
+            break
+    evidence_bundles = [*manifest["evidence_bundles"], *admitted_validation_bundles]
     proof_routes = manifest["proof_routes"]
     known_gaps = manifest["known_gaps"]
     evidence_concepts = manifest["evidence_concepts"]
@@ -2457,6 +2693,25 @@ def verification_report_payload(
         "proof_routes": proof_routes,
         "known_gaps": known_gaps,
         "evidence_bundles": evidence_bundles,
+        "validation_evidence_admission_summary": {
+            "kind": "agentic-workspace/validation-evidence-admission-summary/v1",
+            "decision_count": len(validation_evidence_admissions),
+            "admitted_count": sum(1 for item in validation_evidence_admissions if item.get("admitted")),
+            "rejected_count": sum(1 for item in validation_evidence_admissions if not item.get("admitted")),
+            "rejection_reason_counts": {
+                reason: sum(1 for item in validation_evidence_admissions if reason in _list_payload(item.get("reason_codes")))
+                for reason in sorted(
+                    {
+                        str(reason)
+                        for item in validation_evidence_admissions
+                        for reason in _list_payload(item.get("reason_codes"))
+                        if str(reason)
+                    }
+                )
+            },
+            "current_bundle_ids": [str(bundle.get("id") or "") for bundle in admitted_validation_bundles],
+            "rule": "Detailed decisions remain in the local validation result trail; report output retains bounded ids and rejection counts.",
+        },
         "active_protocols": active_protocols,
         "active_proof_routes": active_proof_routes,
         "active_known_gaps": active_known_gaps,

@@ -1,5 +1,56 @@
 schema_version = "agentic-workspace/verification-manifest/v1"
 
+[scenarios.authoritative_validation_run]
+protocol_id = "authoritative_validation"
+title = "Authoritative compact validation run"
+steps = [
+  "Run a constituent through the compact validation runner.",
+  "Admit only a successful result with exact plan, repository, route, and timestamp identity.",
+]
+expected_observations = [
+  "The result is bound to the current repository HEAD and validation-plan graph.",
+  "The evidence bundle retains compact identity and cost metadata without raw child output.",
+]
+pass_evidence_labels = ["authoritative_validation_pass"]
+fail_evidence_labels = ["validation_result_rejected"]
+automation_hint = "uv run python scripts/check/run_compact_command.py --label <label> -- <command>"
+
+[protocols.authoritative_validation]
+title = "Authoritative validation admission"
+purpose = "Admit ordinary compact validation as reusable exact-subject evidence without treating exit zero alone as proof."
+applies_to_paths = [
+  "scripts/check/run_compact_command.py",
+  "docs/maintainer/validation-runtime-2435/**",
+  "scratch/validation-results/**",
+]
+scenario_refs = ["authoritative_validation_run"]
+steps = [
+  "Validate result, proof-route, plan, repository, runtime, and time identity.",
+  "Reject stale, partial, failed, or mismatched results with typed reasons.",
+]
+expected_evidence = ["authoritative_validation_pass"]
+review_owner = "maintainer"
+authority_refs = [
+  "scripts/check/run_compact_command.py",
+  "docs/maintainer/validation-runtime-2435/validation-plan.json",
+]
+stale_when = ["scripts/check/run_compact_command.py", "docs/maintainer/validation-runtime-2435/**"]
+retention = "local-compact-summary"
+non_goals = [
+  "Verification does not retain raw child output or transcripts.",
+  "A passing process does not prove a different subject or route.",
+]
+commands = ["uv run python scripts/check/run_compact_command.py --label <label> -- <command>"]
+review_aids = ["Inspect validation_evidence_admissions for typed rejection reasons before relying on a bundle."]
+
+[proof_routes.authoritative_validation]
+protocol_refs = ["authoritative_validation"]
+scenario_refs = ["authoritative_validation_run"]
+commands = ["uv run python scripts/check/run_compact_command.py --label <label> -- <command>"]
+review_aids = ["Reference the admitted bundle id; do not reinterpret raw process output."]
+proof_lane_hint = "authoritative-validation"
+reason = "Ordinary compact validation needs exact-subject admission before reuse by release or promotion."
+
 [scenarios.generated_adapter_local_conformance]
 protocol_id = "generated_adapter_conformance"
 title = "Generated adapter local conformance"
