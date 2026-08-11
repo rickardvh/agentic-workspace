@@ -6838,6 +6838,7 @@ candidates = []
         == 0
     )
     route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+    start_route = route
     assert route["task_relation"] == "independent-pending-scope"
     assert route["required_transition"] == "inspect-current-task-scope"
     assert route["implementation_allowed"] is False
@@ -6865,6 +6866,8 @@ candidates = []
     assert route["task_relation"] == "independent-pending-scope"
     assert route["required_transition"] == "inspect-current-task-scope"
     assert route["implementation_allowed"] is False
+    assert route["consumer_contract"] == start_route["consumer_contract"]
+    assert route["identity_effects"] == start_route["identity_effects"]
 
 
 def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp_path: Path, capsys) -> None:
@@ -7735,6 +7738,55 @@ def test_route_decision_keeps_relation_posture_and_transition_separate() -> None
     assert decision["next_safe_action"]["action"] == "continue-active-plan"
     assert decision["input_provenance"]["required_transition"].endswith("planning reconcile")
     assert decision["selected_owner_identity"]["ref"].endswith("issue-2046-lane.plan.json")
+    consumers = decision["consumer_contract"]
+    assert consumers["ordinary_consumers"] == ["start", "implement", "summary", "handoff", "skills"]
+    assert consumers["profiles"] == ["tiny", "compact", "full"]
+    assert consumers["parallel_classification"] == "backgrounded-diagnostic-only"
+    assert consumers["degraded_recovery"] == {
+        "status": "typed",
+        "missing_owner": "select-owner",
+        "stale_binding": "refresh-planning-route-decision",
+        "projection_drift": "repair-projection",
+        "external_conflict": "reconcile",
+    }
+    assert decision["identity_effects"][0]["effect"] == "invalidate-and-rebind-before-action"
+    assert decision["identity_effects"][0]["residue_policy"] == "do-not-persist-orienting-read-state"
+
+
+def test_route_decision_consumer_profiles_share_one_authority_and_recovery_matrix() -> None:
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    base = {
+        "task_relation": "continues-selected-owner",
+        "owner_posture": "projection-drifted",
+        "route_inputs": {"owner": {"ref": "owner-a", "revision": "revision-a", "projection_status": "drifted"}},
+    }
+    decisions = [
+        _planning_route_decision_payload({**base, "consumer_profile": profile}, planning_revision={"revision_id": "planning-a"})
+        for profile in ("tiny", "compact", "full")
+    ]
+
+    authoritative = [
+        (
+            item["task_relation"],
+            item["owner_posture"],
+            item["required_transition"],
+            item["next_safe_action"]["action"],
+            item["consumer_contract"],
+        )
+        for item in decisions
+    ]
+    assert authoritative[0] == authoritative[1] == authoritative[2]
+    assert decisions[0]["required_transition"] == "repair-projection"
+    assert decisions[0]["consumer_contract"]["freshness_inputs"] == [
+        "planning_revision",
+        "selected_owner_revision",
+        "selected_owner_lifecycle",
+        "selected_owner_projection_status",
+        "task_binding_identity",
+        "mutation_baseline_id",
+        "reconciliation_proposal_revision",
+    ]
 
 
 def test_route_decision_fails_closed_for_genuine_ambiguity() -> None:

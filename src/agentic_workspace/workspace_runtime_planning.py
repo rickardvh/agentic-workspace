@@ -1375,7 +1375,13 @@ def _planning_route_decision_payload(
             "ref": selected_owner_ref,
             "revision": str(_as_dict(planning_revision).get("revision_id") or _as_dict(planning_revision).get("revision") or ""),
         },
-        "identity_effects": [],
+        "identity_effects": [
+            {
+                "inputs": ["branch", "worktree", "repository", "target", "selected_owner_revision"],
+                "effect": "invalidate-and-rebind-before-action",
+                "residue_policy": "do-not-persist-orienting-read-state",
+            }
+        ],
         "input_provenance": {
             "task_relation": "current-work binding, explicit structured references, and scoped current-task evidence",
             "owner_posture": "selected-owner lifecycle, projection, proof, and admitted external-observation facts",
@@ -1419,6 +1425,30 @@ def _planning_route_decision_payload(
             "task_switch_reconciliation.blocked_claims": "route_decision.blocked_claims",
             "task_switch_reconciliation.route_acknowledgement": "route_decision.next_safe_action.operation_invocation.input_identity",
             "task_switch_reconciliation.permission": "route_decision.implementation_allowed + route_decision.mutation_authority",
+        },
+        "consumer_contract": {
+            "authority": "planning_safety_gate.route_decision",
+            "ordinary_consumers": ["start", "implement", "summary", "handoff", "skills"],
+            "profiles": ["tiny", "compact", "full"],
+            "dimensions": ["task_relation", "owner_posture", "required_transition"],
+            "freshness_inputs": [
+                "planning_revision",
+                "selected_owner_revision",
+                "selected_owner_lifecycle",
+                "selected_owner_projection_status",
+                "task_binding_identity",
+                "mutation_baseline_id",
+                "reconciliation_proposal_revision",
+            ],
+            "parallel_classification": "backgrounded-diagnostic-only",
+            "degraded_recovery": {
+                "status": "typed",
+                "missing_owner": "select-owner",
+                "stale_binding": "refresh-planning-route-decision",
+                "projection_drift": "repair-projection",
+                "external_conflict": "reconcile",
+            },
+            "rule": "Every ordinary consumer projects this decision; no consumer may derive route permission from legacy task-switch labels.",
         },
         "next_safe_action": next_packet,
     }
