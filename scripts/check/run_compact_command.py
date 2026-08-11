@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,6 +19,7 @@ RESULT_ROOT = REPO_ROOT / "scratch" / "validation-results"
 PLAN_PATH = REPO_ROOT / "docs" / "maintainer" / "validation-runtime-2435" / "validation-plan.json"
 DEFAULT_FAILURE_TAIL_LINES = 80
 DEFAULT_PROGRESS_INTERVAL_SECONDS = 30.0
+DEFAULT_PROGRESS_THRESHOLD_SECONDS = 30.0
 TIMEOUT_EXIT_CODE = 124
 DUPLICATE_EXIT_CODE = 125
 MANIFEST_LOCK_WAIT_SECONDS = 10.0
@@ -281,6 +283,7 @@ def _write_result(
     exit_code: int | None,
     timed_out: bool,
     log_path: Path | None,
+    heartbeat: dict[str, object],
 ) -> Path:
     payload = {
         "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -302,6 +305,7 @@ def _write_result(
         "exit_code": exit_code,
         "timed_out": timed_out,
         "log_path": log_path.relative_to(REPO_ROOT).as_posix() if log_path is not None else None,
+        "heartbeat": heartbeat,
     }
     _atomic_write_json(result_path, payload)
     return result_path
@@ -369,8 +373,14 @@ def _run_command(
     cwd: Path,
     timeout_seconds: float | None,
     progress_interval_seconds: float,
+    progress_threshold_seconds: float,
     progress_label: str,
-) -> tuple[int | None, str, str, bool]:
+    constituent_id: str,
+    durable_result_path: str,
+    monotonic: Callable[[], float] = time.monotonic,
+    process_factory: Callable[..., subprocess.Popen[str]] = subprocess.Popen,
+    emit_heartbeat: Callable[[str], None] | None = None,
+) -> tuple[int | None, str, str, bool, dict[str, object]]:
     popen_kwargs: dict[str, object] = {
         "cwd": cwd,
         "stdout": subprocess.PIPE,
@@ -384,30 +394,46 @@ def _run_command(
     else:
         popen_kwargs["start_new_session"] = True
 
-    process = subprocess.Popen(command, **popen_kwargs)
-    started = time.monotonic()
+    process = process_factory(command, **popen_kwargs)
+    started = monotonic()
     deadline = started + timeout_seconds if timeout_seconds is not None else None
-    next_progress = started + progress_interval_seconds
+    next_progress = started + progress_threshold_seconds
+    heartbeat_elapsed_seconds: list[float] = []
+    heartbeat_writer = emit_heartbeat or (lambda message: print(message, file=sys.stderr, flush=True))
     while True:
-        now = time.monotonic()
+        now = monotonic()
         wait_until = next_progress if deadline is None else min(next_progress, deadline)
         wait_seconds = max(0.001, wait_until - now)
         try:
             stdout, stderr = process.communicate(timeout=wait_seconds)
-            return process.returncode, stdout or "", stderr or "", False
+            return process.returncode, stdout or "", stderr or "", False, {
+                "kind": "agentic-workspace/validation-heartbeat/v1",
+                "count": len(heartbeat_elapsed_seconds),
+                "elapsed_seconds": heartbeat_elapsed_seconds,
+                "threshold_seconds": progress_threshold_seconds,
+                "interval_seconds": progress_interval_seconds,
+                "claim": "process-liveness-only",
+            }
         except subprocess.TimeoutExpired as exc:
-            now = time.monotonic()
+            now = monotonic()
             if deadline is not None and now >= deadline:
                 _terminate_process_tree(process)
                 stdout, stderr = process.communicate()
                 combined_stdout = _combine_output(exc.stdout, stdout)
                 combined_stderr = _combine_output(exc.stderr, stderr)
-                return None, combined_stdout, combined_stderr, True
+                return None, combined_stdout, combined_stderr, True, {
+                    "kind": "agentic-workspace/validation-heartbeat/v1",
+                    "count": len(heartbeat_elapsed_seconds),
+                    "elapsed_seconds": heartbeat_elapsed_seconds,
+                    "threshold_seconds": progress_threshold_seconds,
+                    "interval_seconds": progress_interval_seconds,
+                    "claim": "process-liveness-only",
+                }
             elapsed = now - started
-            print(
-                f"[progress] {progress_label} still running ({_format_duration(elapsed)} elapsed; output buffered)",
-                file=sys.stderr,
-                flush=True,
+            heartbeat_elapsed_seconds.append(round(elapsed, 6))
+            heartbeat_writer(
+                f"[heartbeat] {progress_label} ({constituent_id}) still running "
+                f"({_format_duration(elapsed)} elapsed; process liveness only; output buffered); result: {durable_result_path}"
             )
             next_progress = now + progress_interval_seconds
 
@@ -444,6 +470,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=_positive_float,
         default=None,
         help="Fail with compact timeout output after this many seconds.",
+    )
+    parser.add_argument(
+        "--progress-threshold-seconds",
+        type=_positive_float,
+        default=DEFAULT_PROGRESS_THRESHOLD_SECONDS,
+        help="Wait this many seconds before the first still-running heartbeat (default: 30).",
     )
     parser.add_argument(
         "--progress-interval-seconds",
@@ -504,12 +536,16 @@ def main(argv: list[str] | None = None) -> int:
     started_at = _utc_now()
     print(f"[run] {args.label} ({constituent_id})", flush=True)
     started = time.perf_counter()
-    returncode, stdout, stderr, timed_out = _run_command(
+    durable_result_path = _repo_relative(result_path)
+    returncode, stdout, stderr, timed_out, heartbeat = _run_command(
         args.command,
         cwd=working_directory,
         timeout_seconds=args.timeout_seconds,
         progress_interval_seconds=args.progress_interval_seconds,
+        progress_threshold_seconds=args.progress_threshold_seconds,
         progress_label=args.label,
+        constituent_id=constituent_id,
+        durable_result_path=durable_result_path,
     )
     duration_seconds = time.perf_counter() - started
     duration = _format_duration(duration_seconds)
@@ -536,6 +572,7 @@ def main(argv: list[str] | None = None) -> int:
                 exit_code=returncode,
                 timed_out=False,
                 log_path=None,
+                heartbeat=heartbeat,
             )
             _update_manifest(result_root=result_root, run_id=args.run_id)
         finally:
@@ -574,6 +611,7 @@ def main(argv: list[str] | None = None) -> int:
             exit_code=None if timed_out else int(returncode),
             timed_out=timed_out,
             log_path=log_path,
+            heartbeat=heartbeat,
         )
         _update_manifest(result_root=result_root, run_id=args.run_id)
     finally:
