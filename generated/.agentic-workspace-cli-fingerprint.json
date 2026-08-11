@@ -1165,7 +1165,7 @@
     "src/agentic_workspace/workspace_selector_validation.py",
     "uv.lock"
   ],
-  "fingerprint": "ea9166f1182a0a9099f9857fe2bf10e610a0c0cc452f758269fb7a43a456c69e",
+  "fingerprint": "863df4b98192fb36613a4a27fc97e6d30f43442112ba6f6587c50486167db9a6",
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
   "git_identity_role": "optional-source-checkout-acceleration",
   "git_index_entries": {
@@ -2290,7 +2290,7 @@
     "src/agentic_workspace/contracts/security_supply_chain_policy.json": "618fba3f2062f443bf940067033c8444ddf76cbc",
     "src/agentic_workspace/contracts/setup_findings_policy.json": "b7ea3382248db34f5f9571bb3ccf26e796cfe031",
     "src/agentic_workspace/contracts/skill_specs.json": "24a5e624d1e826914f56b418919a55a2958da899",
-    "src/agentic_workspace/contracts/structured_file_inventory.json": "35bbd7f765ece12ad9d6ff7736ed88d75e4621ac",
+    "src/agentic_workspace/contracts/structured_file_inventory.json": "0524920dbb231f92a232308027cdf231c554c38a",
     "src/agentic_workspace/contracts/target_support.json": "464d0f8f818c9e1d59b838b9d9b709048726d35f",
     "src/agentic_workspace/contracts/typescript_primitive_support.mjs": "1478de3af3686c4a588a372ea953dfeb16ced5a8",
     "src/agentic_workspace/contracts/view_specs/memory.report.tiny.json": "7f802fdd8e528c39fdb12b06e7ba05b87487816a",
@@ -2331,7 +2331,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "e6c134bac891622acae570f83dae865d71ff6bbd",
     "uv.lock": "0f45174a190b1087a7107a5f07f71ec04a4eb2ac"
   },
-  "git_index_identity": "17d4c187776f317402a8bc44c7b466a5edd2f69a4cf33207dd9a8a98877d7e75",
+  "git_index_identity": "ccd18ce3a2b4946df409d8d1e67eb0059a01a41fa4b4d9606e181dc554dc7b79",
   "identity_role": "canonical-semantic-content",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
