@@ -2793,7 +2793,7 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
         owner_result = generated_authority.get("source", {}).get("admission", {}).get("owner_result", {})
         if owner_admission.get("producer") != "agentic_workspace.contract_tooling.generated_references":
             errors.append("generated-references must be admitted by its registered contract-tooling owner")
-        if owner_result.get("kind") != "generated-cli-source-manifest/v1" or owner_result.get("status") != "current":
+        if owner_result.get("kind") != "generated-cli-owner-source-manifest/v1" or owner_result.get("status") != "current":
             errors.append("generated-references must admit a current generated-source owner result")
         if generated_authority.get("source", {}).get("freshness_enforcement", {}).get("status") != "active":
             errors.append("generated-references must carry active freshness enforcement")

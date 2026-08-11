@@ -8066,7 +8066,8 @@ LOCAL_AGENT_INSTRUCTIONS_FILE = Path("AGENTS.local.md")
 LOCAL_AGENT_REFERENCE_LINE = f"Follow instructions in `{LOCAL_AGENT_INSTRUCTIONS_FILE.as_posix()}` if present."
 EXTERNAL_INTENT_CACHE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 EXTERNAL_INTENT_PLANNING_RELATIVE_PATH = Path(".agentic-workspace") / "planning" / "external-intent-evidence.json"
-TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-strategy-dispositions.json"
+TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-strategy-dispositions"
+LEGACY_TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-strategy-dispositions.json"
 TEST_SUITE_BUDGET_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-suite-budget.json"
 ASSURANCE_EVIDENCE_RECORDS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "assurance-evidence-records.json"
 EXTERNAL_INTENT_CACHE_CLOSED_RETENTION_DAYS = 7
@@ -38299,42 +38300,60 @@ def _pre_test_evidence_guardrail_payload(
 
 
 def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
-    path = target_root / TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH
-    if not path.exists():
+    directory = target_root / TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH
+    legacy_path = target_root / LEGACY_TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH
+    if legacy_path.exists():
+        return {
+            "kind": "agentic-workspace/test-strategy-dispositions/v1",
+            "status": "invalid",
+            "path": LEGACY_TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
+            "items": [],
+            "invalid_items": [
+                {
+                    "id": "legacy-shared-aggregate",
+                    "missing_or_invalid_fields": ["owner_scoped_record"],
+                    "error": (
+                        "shared test-strategy-dispositions.json is no longer accepted; move each item to "
+                        f"{TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix()}/<id>.json"
+                    ),
+                }
+            ],
+        }
+    if not directory.exists():
         return {
             "kind": "agentic-workspace/test-strategy-dispositions/v1",
             "status": "absent",
             "path": TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
             "items": [],
         }
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+    if not directory.is_dir():
         return {
             "kind": "agentic-workspace/test-strategy-dispositions/v1",
             "status": "invalid",
             "path": TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
             "items": [],
-            "error": str(exc),
+            "invalid_items": [{"id": "storage", "missing_or_invalid_fields": ["directory"]}],
         }
-    if not isinstance(payload, dict):
-        return {
-            "kind": "agentic-workspace/test-strategy-dispositions/v1",
-            "status": "invalid",
-            "path": TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
-            "items": [],
-            "error": "record must be a JSON object",
-        }
-    items = [item for item in _list_payload(payload.get("items")) if isinstance(item, dict)]
     normalized_items: list[dict[str, Any]] = []
     invalid_items: list[dict[str, Any]] = []
-    for index, item in enumerate(items):
+    seen_ids: set[str] = set()
+    record_paths = sorted(directory.glob("*.json"), key=lambda item: item.name)
+    for index, record_path in enumerate(record_paths):
+        try:
+            item = json.loads(record_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+            invalid_items.append({"id": record_path.name, "missing_or_invalid_fields": ["json"], "error": str(exc)})
+            continue
+        if not isinstance(item, dict):
+            invalid_items.append({"id": record_path.name, "missing_or_invalid_fields": ["object"]})
+            continue
         changed_test_paths = [
             str(path).strip().replace("\\", "/") for path in _list_payload(item.get("changed_test_paths")) if str(path).strip()
         ]
         disposition = str(item.get("disposition") or "").strip()
+        record_id = str(item.get("id") or "").strip()
         normalized = {
-            "id": str(item.get("id") or f"item-{index + 1}").strip(),
+            "id": record_id or f"item-{index + 1}",
             "disposition": disposition,
             "changed_test_paths": changed_test_paths,
             "reason": str(item.get("reason") or "").strip(),
@@ -38354,8 +38373,21 @@ def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
             }.items()
             if not value
         ]
+        if item.get("kind") != "agentic-workspace/test-strategy-disposition/v1":
+            missing.append("kind")
+        if not record_id or record_path.stem != record_id:
+            missing.append("id_filename_match")
+        if record_id in seen_ids:
+            missing.append("unique_id")
+        seen_ids.add(record_id)
         if missing:
-            invalid_items.append({"id": normalized["id"], "missing_or_invalid_fields": missing})
+            invalid_items.append(
+                {
+                    "id": normalized["id"],
+                    "path": record_path.relative_to(target_root).as_posix(),
+                    "missing_or_invalid_fields": sorted(set(missing)),
+                }
+            )
         normalized_items.append(normalized)
     return {
         "kind": "agentic-workspace/test-strategy-dispositions/v1",
