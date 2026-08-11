@@ -9,8 +9,10 @@ PRs #2522 and #2525 were independent implementation lanes, yet both changed
 `generated/.agentic-workspace-cli-fingerprint.json`. PRs #2523 and #2524 show the same pair of
 branch-global writes. #2522, #2523, and #2524 each needed a merge-from-master commit after those
 otherwise disjoint lanes overlapped. The overlap forced conflict-only head changes, another CI
-round, and therefore another exact-head approval round even when the underlying owners did not
-compete.
+round, and formerly another approval round even when the already-approved commit remained in the
+branch history and the underlying owners did not compete. The review gate now carries a
+`merge-ready` decision forward only when GitHub proves that reviewed commit is an ancestor of the
+current head; a newer blocker or diverged history still fails closed.
 
 The new storage shape removes both common paths:
 
