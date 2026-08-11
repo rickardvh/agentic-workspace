@@ -1165,7 +1165,7 @@
     "src/agentic_workspace/workspace_selector_validation.py",
     "uv.lock"
   ],
-  "fingerprint": "8a3d46ece24296f177ae510073b5237238cddfe1fb65490bf54899ae82ee4486",
+  "fingerprint": "125d5dcb3dd7ee57e1dfc62a50a261017f59f98acb0bd27db65faf7ea3f46b28",
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
   "git_identity_role": "optional-source-checkout-acceleration",
   "git_index_entries": {
@@ -1842,7 +1842,7 @@
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.uninstall.lifecycle.json": "00d4e498f21df04fb9c55cc783584d69de521046",
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.upgrade.lifecycle.json": "09d668919ea060f22d9d184d29e01a81eb172782",
     "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.verify-payload.report.json": "9275479126e9db2455273654a2918ca3957a8021",
-    "packages/planning/src/repo_planning_bootstrap/installer.py": "f334a351cbdeb64ffeb52a0b82f774bff72deb93",
+    "packages/planning/src/repo_planning_bootstrap/installer.py": "92bf9a8ef820c7adf69801140ef3ec710f07618c",
     "packages/planning/src/repo_planning_bootstrap/runtime_projection.py": "6f5ec61fe73ab836f496fcd064f5aaa979386ef7",
     "packages/verification/src/repo_verification_bootstrap/__init__.py": "e3907ed2815e2d612a03c18d62f9327a10afc673",
     "packages/verification/src/repo_verification_bootstrap/cli.py": "c63348a6174dd9be97b2764c0b8d5d332c45f689",
@@ -1876,7 +1876,7 @@
     "scripts/check/check_validation_runtime_plan.py": "3dbde6d63f0d619ba9b84bad6ca1c0dd77c98802",
     "scripts/check/measure_lazy_discovery.py": "834c506b024f575f6938f725d33a1c3b9dae9cae",
     "scripts/check/prove_command_generation_artifact_consumption.py": "9b4218d9adf4d1434152745be1417243000e95cd",
-    "scripts/check/run_compact_command.py": "739b332703358e3ac1e2c3961754b51bf52da919",
+    "scripts/check/run_compact_command.py": "50dcb5d80580e24028dd672726fbeea2b53e9b55",
     "scripts/check/run_external_consumer_readiness.py": "e697de47cf20e7b9800d129bf08185c15af85eca",
     "scripts/check/run_generated_command_package_proof.py": "4b304568e7eb66c1d601e47917f4d1637c7c2931",
     "scripts/check/run_operation_conformance_tests.py": "b2d52329718c5342fca30edeb2d143ee1b655cc0",
@@ -2163,7 +2163,7 @@
     "src/agentic_workspace/contracts/python_runtime_projection_inventory.json": "e94d0b593097022da4c94543a9c19a85118a5a09",
     "src/agentic_workspace/contracts/repo_friction_policy.json": "6e0430b35766f281b97bb628543f90382d341d30",
     "src/agentic_workspace/contracts/report_contract.json": "730ab32e9c20eda3e8f0a362b82f324ec410ee35",
-    "src/agentic_workspace/contracts/runtime_implementation_ownership.json": "20d8445b70d38f2afa37c49258312a9f0989e9db",
+    "src/agentic_workspace/contracts/runtime_implementation_ownership.json": "d54eae41bab5f6698726805bca31c213cadfab6a",
     "src/agentic_workspace/contracts/runtime_semantic_exceptions.json": "ea1eb69f628943d5a1386350df18573b42983229",
     "src/agentic_workspace/contracts/schemas/agent_aid_manifest.schema.json": "9dd51fd49fe3ee9c569bdf3df6eff621c4cd3ae6",
     "src/agentic_workspace/contracts/schemas/agent_feedback.schema.json": "f5cb9e1af211e673bc0befd831258d1c12a939c7",
@@ -2320,7 +2320,7 @@
     "src/agentic_workspace/target_evidence.py": "5b256ee0e635dbbd25d72596400ddd3d684ad0cc",
     "src/agentic_workspace/trusted_execution.py": "774c1de6d72f9a17ef05328b7731aff3b7fe99e0",
     "src/agentic_workspace/workspace_output.py": "a156e2513050ee3e2b5183084912a0cddcee43f1",
-    "src/agentic_workspace/workspace_runtime_core.py": "485c695a88631b60c37168b76761077ae7c7b92f",
+    "src/agentic_workspace/workspace_runtime_core.py": "1d8e9902ca45bddbd19c9cf6bac7d7e169eaa19e",
     "src/agentic_workspace/workspace_runtime_generated_surface.py": "82203eefe65eab1653eaa36ae574ac07a9f96864",
     "src/agentic_workspace/workspace_runtime_implement.py": "a88f729ee60ff05a1a51882b6d8251bf1012f493",
     "src/agentic_workspace/workspace_runtime_planning.py": "603594dca61649fc65069d4a5f4bca7b9bdc80ff",
@@ -2331,7 +2331,7 @@
     "src/agentic_workspace/workspace_selector_validation.py": "e6c134bac891622acae570f83dae865d71ff6bbd",
     "uv.lock": "630bbf372bc645b0dd0dac2dfa43e78e5a88c8a5"
   },
-  "git_index_identity": "0d3466fe2a87e6fb47030828e0ad1a68d6a4c8ab81be3435e3f44a7b177311f0",
+  "git_index_identity": "3a691fda2f49899b8c035a6a3cb18c9d1050d3547f0634a3b91cc31d409a2620",
   "identity_role": "canonical-semantic-content",
   "kind": "generated-cli-source-manifest/v1",
   "schema": "generated-cli-fingerprint/v1"
