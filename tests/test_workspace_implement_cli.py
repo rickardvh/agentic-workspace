@@ -7986,20 +7986,16 @@ def test_runtime_theta(): assert True
 """,
     )
     _write_json(
-        tmp_path / ".agentic-workspace" / "verification" / "test-strategy-dispositions.json",
+        tmp_path / ".agentic-workspace" / "verification" / "test-strategy-dispositions" / "runtime-matrix.json",
         {
-            "kind": "agentic-workspace/test-strategy-dispositions/v1",
-            "items": [
-                {
-                    "id": "runtime-matrix",
-                    "disposition": "matrix-merge",
-                    "changed_test_paths": ["tests/test_runtime.py"],
-                    "reason": "The change keeps related behavior cases in one scenario matrix.",
-                    "proof_owner": "root-orchestration",
-                    "replacement_or_follow_up_evidence": ["scenario labels retained"],
-                    "reviewer_requested_coverage": True,
-                }
-            ],
+            "kind": "agentic-workspace/test-strategy-disposition/v1",
+            "id": "runtime-matrix",
+            "disposition": "matrix-merge",
+            "changed_test_paths": ["tests/test_runtime.py"],
+            "reason": "The change keeps related behavior cases in one scenario matrix.",
+            "proof_owner": "root-orchestration",
+            "replacement_or_follow_up_evidence": ["scenario labels retained"],
+            "reviewer_requested_coverage": True,
         },
     )
 
@@ -8276,19 +8272,15 @@ def test_test_strategy_check_requires_temporary_follow_up_evidence(tmp_path: Pat
     _write_python_test_evidence_config(tmp_path)
     _write(tmp_path / "tests" / "test_runtime.py", "def test_runtime_case():\n    assert True\n")
     _write_json(
-        tmp_path / ".agentic-workspace" / "verification" / "test-strategy-dispositions.json",
+        tmp_path / ".agentic-workspace" / "verification" / "test-strategy-dispositions" / "temporary-runtime.json",
         {
-            "kind": "agentic-workspace/test-strategy-dispositions/v1",
-            "items": [
-                {
-                    "id": "temporary-runtime",
-                    "disposition": "temporary-with-follow-up-consolidation",
-                    "changed_test_paths": ["tests/test_runtime.py"],
-                    "reason": "Reviewer requested temporary coverage before consolidation.",
-                    "proof_owner": "root-orchestration",
-                    "reviewer_requested_coverage": True,
-                }
-            ],
+            "kind": "agentic-workspace/test-strategy-disposition/v1",
+            "id": "temporary-runtime",
+            "disposition": "temporary-with-follow-up-consolidation",
+            "changed_test_paths": ["tests/test_runtime.py"],
+            "reason": "Reviewer requested temporary coverage before consolidation.",
+            "proof_owner": "root-orchestration",
+            "reviewer_requested_coverage": True,
         },
     )
 

@@ -481,6 +481,47 @@ def storage_policy_findings(paths: list[str], inventory: dict[str, Any]) -> list
     return findings
 
 
+BRANCH_COLLECTION_KEYS = frozenset({"items", "entries", "records", "scopes", "observations", "evaluations", "findings"})
+
+
+def merge_safety_findings(paths: list[str], inventory: dict[str, Any], *, root: Path = REPO_ROOT) -> list[Finding]:
+    """Require merge-order classification for branch-carried collection state."""
+
+    findings: list[Finding] = []
+    for index, entry in enumerate(inventory["entries"]):
+        policy = entry.get("merge_safety")
+        location = f"{INVENTORY_PATH.relative_to(REPO_ROOT).as_posix()}#entries[{index}]"
+        pattern = str(entry.get("pattern") or "")
+        matched = _matched_files(paths, entry)
+        relevant = pattern.endswith("/.agentic-workspace-cli-fingerprint.json")
+        if entry.get("editable_by_agents") and pattern.startswith(".agentic-workspace/"):
+            for path in matched:
+                payload, error = _load_json_file(root / path)
+                if error is None and isinstance(payload, dict) and any(isinstance(payload.get(key), list) for key in BRANCH_COLLECTION_KEYS):
+                    relevant = True
+                    break
+        if relevant and not isinstance(policy, dict):
+            findings.append(
+                Finding(
+                    path=location,
+                    message="branch-carried collection/generated state must declare merge_safety classification, owner_boundary, and reason",
+                )
+            )
+            continue
+        if not isinstance(policy, dict):
+            continue
+        classification = policy.get("classification")
+        if classification == "owner-scoped" and not any(token in pattern for token in ("*", "?", "[")):
+            findings.append(
+                Finding(path=location, message="owner-scoped merge safety requires a path pattern containing an owner selector")
+            )
+        if classification == "derived" and (not entry.get("generated") or not entry.get("reconstructable_from")):
+            findings.append(Finding(path=location, message="derived merge safety requires generated=true and reconstructable_from"))
+        if classification == "true-singleton" and any(token in pattern for token in ("*", "?", "[")):
+            findings.append(Finding(path=location, message="true-singleton merge safety requires one exact path"))
+    return findings
+
+
 def generated_mirror_policy_findings(paths: list[str], inventory: dict[str, Any]) -> list[Finding]:
     mirrors = inventory.get("generated_mirrors", [])
     findings: list[Finding] = []
@@ -566,6 +607,7 @@ def inventory_findings(
         unmatched_structured_files(checked_paths, inventory)
         + claim_validation_findings(checked_paths, inventory)
         + storage_policy_findings(checked_paths, inventory)
+        + merge_safety_findings(checked_all_paths, inventory)
         + generated_mirror_policy_findings(checked_all_paths, inventory)
     )
 

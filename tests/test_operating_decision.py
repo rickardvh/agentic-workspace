@@ -1505,10 +1505,10 @@ def test_context_authority_each_owner_family_uses_concrete_adapter_output(tmp_pa
     (tmp_path / "generated").mkdir(parents=True, exist_ok=True)
     (tmp_path / "src/agentic_workspace/contracts").mkdir(parents=True, exist_ok=True)
     (tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json").write_text("{}\n", encoding="utf-8")
-    (tmp_path / "generated/.agentic-workspace-cli-fingerprint.json").write_text(
-        json.dumps({"kind": "generated-cli-source-manifest/v1", "source_hashes": {}}),
-        encoding="utf-8",
-    )
+    for owner in ("workspace", "planning", "memory", "verification"):
+        path = tmp_path / f"generated/{owner}/.agentic-workspace-cli-fingerprint.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"kind": "generated-cli-owner-source-manifest/v1", "owner": owner}), encoding="utf-8")
     monkeypatch.setattr(operating_decision, "_git_head", lambda _root: "f" * 40)
     monkeypatch.setattr(
         "agentic_workspace.authority_envelope.mutation_baseline_payload",
@@ -1815,10 +1815,10 @@ def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path:
     (tmp_path / "src/agentic_workspace/contracts").mkdir(parents=True)
     (tmp_path / "src/example.py").write_text("print('current')\n", encoding="utf-8")
     (tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json").write_text("{}\n", encoding="utf-8")
-    (tmp_path / "generated/.agentic-workspace-cli-fingerprint.json").write_text(
-        json.dumps({"source_hashes": {"src/example.py": "not-current"}}),
-        encoding="utf-8",
-    )
+    for owner in ("workspace", "planning", "memory", "verification"):
+        path = tmp_path / f"generated/{owner}/.agentic-workspace-cli-fingerprint.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"owner": owner, "source_hashes": {"src/example.py": "not-current"}}), encoding="utf-8")
     item = next(item for item in context_authority_declarations() if item["surface"] == "generated-references")
 
     record = _resolve_context_authority_source(item=item, target_root=tmp_path, task="", paths=["generated/client.py"])

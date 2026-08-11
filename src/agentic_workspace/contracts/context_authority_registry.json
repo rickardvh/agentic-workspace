@@ -297,7 +297,7 @@
       "revision_fields": ["command_package_fingerprint", "adapter_fingerprint"],
       "source_owner_contract": {
         "owner_module": "agentic_workspace.contract_tooling.generated_references",
-        "owner_result_kind": "generated-cli-source-manifest/v1",
+        "owner_result_kind": "generated-cli-owner-source-manifest/v1",
         "repair_operation_id": "generated-command-packages.refresh",
         "activation_terms": ["generated", "contract", "schema", "operation", "adapter", "package"]
       }

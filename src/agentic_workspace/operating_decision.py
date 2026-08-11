@@ -166,8 +166,14 @@ CONTEXT_AUTHORITY_SOURCE_SPECS: dict[str, dict[str, Any]] = {
         "source_adapter": "terminal-outcome-source-adapter",
     },
     "generated-references": {
-        "source": "generated/.agentic-workspace-cli-fingerprint.json",
-        "required": ["generated/.agentic-workspace-cli-fingerprint.json", "src/agentic_workspace/contracts/structured_file_inventory.json"],
+        "source": "generated/workspace/.agentic-workspace-cli-fingerprint.json",
+        "required": [
+            "generated/workspace/.agentic-workspace-cli-fingerprint.json",
+            "generated/planning/.agentic-workspace-cli-fingerprint.json",
+            "generated/memory/.agentic-workspace-cli-fingerprint.json",
+            "generated/verification/.agentic-workspace-cli-fingerprint.json",
+            "src/agentic_workspace/contracts/structured_file_inventory.json",
+        ],
         "routes": ["generated/**", "src/agentic_workspace/contracts/**"],
         "generated_freshness": True,
         "source_adapter": "generated-reference-source-adapter",
