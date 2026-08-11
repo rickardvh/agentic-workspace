@@ -499,6 +499,7 @@ def visible_state_delta_response_payload(
     current_decision: dict[str, Any],
     message_economy: dict[str, Any] | None = None,
     evidence_bundle: dict[str, Any] | None = None,
+    include_source_packets: bool = False,
 ) -> dict[str, Any]:
     economy = message_economy if isinstance(message_economy, dict) else message_economy_payload(surface=surface)
     evidence = evidence_bundle if isinstance(evidence_bundle, dict) else {}
@@ -525,7 +526,7 @@ def visible_state_delta_response_payload(
         "residue_or_claim_boundary": str(current_decision.get("residue_owner") or "none"),
         "next_safe_action": str(current_decision.get("next_action") or current_decision.get("safe_probe") or ""),
     }
-    return {
+    payload = {
         "kind": "agentic-workspace/visible-state-delta-response/v1",
         "surface": surface,
         "status": "ready" if all(parts.values()) else "incomplete",
@@ -549,6 +550,9 @@ def visible_state_delta_response_payload(
         "ownership_boundary": "not a new truth source.",
         "state_backed": bool(current_decision.get("state_backed", True)),
     }
+    if include_source_packets:
+        payload["source_packets"] = ["current_decision", "message_economy", "evidence_bundle"]
+    return payload
 
 
 def state_delta_replay_evidence_payload() -> dict[str, Any]:
@@ -737,6 +741,7 @@ def reasoning_economy_evidence_payload(*, target_root: Path | None = None, cli_i
         current_decision=sample_current,
         message_economy=sample_economy,
         evidence_bundle=sample_evidence,
+        include_source_packets=True,
     )
     replay_evidence = state_delta_replay_evidence_payload()
     return {
