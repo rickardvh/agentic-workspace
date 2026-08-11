@@ -211,8 +211,8 @@
       "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
     },
     {
-      "path": "src/agentic_workspace/workspace_runtime_core.py",
-      "function": "_pr_context_refs_from_task",
+      "path": "src/agentic_workspace/current_work_context.py",
+      "function": "task_pr_context_refs",
       "variable": "pr_terms",
       "classification": "advisory-diagnostic",
       "authority": "The table distinguishes PR/review wording from generic issue-scope evidence; it downgrades unknown-issue noise but does not prove provider state or task completion.",
