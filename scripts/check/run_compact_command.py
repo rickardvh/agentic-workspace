@@ -172,6 +172,10 @@ def _repository_identity() -> dict[str, object]:
         "head": _git_value("rev-parse", "HEAD"),
         "tree": _git_value("rev-parse", "HEAD^{tree}"),
         "tracked_dirty": bool(status.strip()),
+        "runtime": {
+            "status": "matched",
+            "executable": str(Path(sys.executable).resolve()),
+        },
     }
 
 
