@@ -5110,6 +5110,52 @@ def test_start_embeds_active_planning_orientation_without_immediate_summary_reru
             "current-task-scope-inspection-required",
         }
     assert "summary --target . --format json" not in payload["decision_packet"]["detail_routes"]["active_plan"]
+    active_plan_route = payload["decision_packet"]["detail_routes"]["active_plan"]
+    assert "summary --target . --select continuation_view" in active_plan_route
+    assert "start --target . --select active_state_summary,continuation_view" not in active_plan_route
+    from agentic_workspace.workspace_runtime_startup import _startup_detail_routes
+    from agentic_workspace.workspace_selector_validation import _detail_route_command_validation
+
+    default_route = _startup_detail_routes(cli_invoke="agentic-workspace", active_planning=True)["active_plan"]
+    for route in (active_plan_route, default_route):
+        validation = _detail_route_command_validation(route)
+        argv = shlex.split(route)[validation["command_index"] :]
+        argv[argv.index("--target") + 1] = str(tmp_path)
+        assert cli.main(argv) == 0
+        selected = json.loads(capsys.readouterr().out)
+        assert selected["kind"] == "agentic-workspace/selected-output/v1"
+        assert selected["values"]["continuation_view"]["status"]
+
+
+@pytest.mark.parametrize("active_planning", [False, True])
+@pytest.mark.parametrize("cli_invoke", ["agentic-workspace", "uv run --active python scripts/run_agentic_workspace.py"])
+def test_startup_detail_routes_follow_authoritative_selector_ownership(cli_invoke: str, active_planning: bool) -> None:
+    from agentic_workspace.workspace_runtime_startup import _startup_detail_routes
+    from agentic_workspace.workspace_selector_validation import _detail_route_command_validation
+
+    routes = _startup_detail_routes(cli_invoke=cli_invoke, active_planning=active_planning)
+
+    assert set(routes) == {"why_blocked", "active_plan", "proof_detail"}
+    validations = {route_id: _detail_route_command_validation(command) for route_id, command in routes.items()}
+    assert all(validation["status"] == "valid" for validation in validations.values())
+    assert validations["active_plan"]["source_command"] == "summary"
+    assert validations["active_plan"]["selectors"] == (["continuation_view"] if active_planning else [])
+    assert validations["why_blocked"]["executable"] is True
+    assert validations["active_plan"]["executable"] is True
+    assert validations["proof_detail"]["executable"] is False
+
+
+def test_detail_route_validation_rejects_cross_command_selector() -> None:
+    from agentic_workspace.workspace_selector_validation import _detail_route_command_validation, _validated_detail_route_command
+
+    invalid_route = "agentic-workspace start --target . --select active_state_summary,continuation_view --format json"
+    validation = _detail_route_command_validation(invalid_route)
+
+    assert validation["status"] == "invalid"
+    assert validation["reason"] == "selector-owner-mismatch"
+    assert validation["unknown_selectors"] == ["continuation_view"]
+    with pytest.raises(ValueError, match="selector-owner-mismatch"):
+        _validated_detail_route_command(invalid_route)
 
 
 def test_start_surfaces_configured_pre_test_guardrail_without_universal_bug_keyword(tmp_path: Path, capsys) -> None:

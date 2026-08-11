@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import shlex
 from typing import Any
 
 _MAX_SELECTOR_COUNT = 32
@@ -390,6 +391,42 @@ def _replacement_for_deprecated_selector(*, source_command: str, selector: str) 
 def _declared_selector_for_command(*, source_command: str, selector: str) -> bool:
     available = _selector_descriptor_for_command(source_command)
     return selector in available
+
+
+def _detail_route_command_validation(command: str) -> dict[str, Any]:
+    """Validate an emitted AW detail route against selector ownership."""
+
+    try:
+        tokens = shlex.split(command)
+    except ValueError as exc:
+        return {"status": "invalid", "reason": "malformed-command", "detail": str(exc)}
+    select_index = tokens.index("--select") if "--select" in tokens else len(tokens)
+    command_candidates = [(index, token) for index, token in enumerate(tokens[:select_index]) if token in _SELECTOR_DESCRIPTORS_BY_COMMAND]
+    if not command_candidates:
+        return {"status": "invalid", "reason": "unknown-command-surface"}
+    command_index, source_command = command_candidates[-1]
+    selectors: list[str] = []
+    if select_index < len(tokens):
+        if select_index + 1 >= len(tokens):
+            return {"status": "invalid", "reason": "missing-selector-value", "source_command": source_command}
+        selectors = [item.strip() for item in tokens[select_index + 1].split(",") if item.strip()]
+    missing = [selector for selector in selectors if not _declared_selector_for_command(source_command=source_command, selector=selector)]
+    return {
+        "status": "invalid" if missing else "valid",
+        "reason": "selector-owner-mismatch" if missing else "selector-owner-match",
+        "source_command": source_command,
+        "command_index": command_index,
+        "selectors": selectors,
+        "unknown_selectors": missing,
+        "executable": not any("<" in token and ">" in token for token in tokens),
+    }
+
+
+def _validated_detail_route_command(command: str) -> str:
+    validation = _detail_route_command_validation(command)
+    if validation.get("status") != "valid":
+        raise ValueError(f"invalid detail route: {validation}")
+    return command
 
 
 def _selector_suggestions(*, unknown: str, available: list[str], limit: int = _SELECTOR_SUGGESTION_LIMIT) -> list[str]:
