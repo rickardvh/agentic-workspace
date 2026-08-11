@@ -111,6 +111,70 @@ def test_launcher_does_not_refresh_generated_cli_for_start(monkeypatch) -> None:
     assert observed == [["start", "--target", ".", "--format", "json"]]
 
 
+def test_runtime_identity_rejects_editable_distribution_from_sibling_checkout(tmp_path: Path) -> None:
+    module = _load_module()
+    target = tmp_path / "target"
+    sibling = tmp_path / "sibling"
+    target.mkdir()
+    sibling.mkdir()
+
+    class Distribution:
+        def read_text(self, name: str) -> str | None:
+            assert name == "direct_url.json"
+            return json.dumps({"url": sibling.as_uri(), "dir_info": {"editable": True}})
+
+    def lookup(name: str):
+        if name == "agentic-workspace":
+            return Distribution()
+        raise module.importlib.metadata.PackageNotFoundError(name)
+
+    identity = module.runtime_identity_admission(repo_root=target, distribution_lookup=lookup)
+
+    assert identity["status"] == "mismatch"
+    assert identity["mismatches"] == [
+        {
+            "distribution": "agentic-workspace",
+            "origin": sibling.resolve().as_posix(),
+            "expected": target.resolve().as_posix(),
+        }
+    ]
+
+
+def test_runtime_identity_accepts_matching_active_editable_distribution(tmp_path: Path) -> None:
+    module = _load_module()
+    target = tmp_path / "target"
+    target.mkdir()
+
+    class Distribution:
+        def read_text(self, _name: str) -> str:
+            return json.dumps({"url": target.as_uri(), "dir_info": {"editable": True}})
+
+    def lookup(name: str):
+        if name == "agentic-workspace":
+            return Distribution()
+        raise module.importlib.metadata.PackageNotFoundError(name)
+
+    identity = module.runtime_identity_admission(repo_root=target, distribution_lookup=lookup)
+
+    assert identity["status"] == "matched"
+    assert identity["mismatches"] == []
+
+
+def test_runtime_identity_rejection_precedes_refresh_and_dispatch(monkeypatch) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "_admit_runtime_identity", lambda: False)
+    monkeypatch.setattr(module, "ensure_generated_cli_current", lambda: pytest.fail("refresh ran before identity admission"))
+    monkeypatch.setattr(module, "_dispatch_to_source_cli", lambda _argv: pytest.fail("dispatch ran after identity rejection"))
+
+    assert module.main(["summary", "--target", ".", "--format", "json"]) == 2
+
+
+def test_repo_configured_active_invocation_forbids_dependency_sync() -> None:
+    config = (SCRIPT_PATH.parents[1] / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+
+    assert 'cli_invoke = "uv run --active --no-sync python scripts/run_agentic_workspace.py"' in config
+
+
 def test_launcher_force_refresh_still_applies_to_start(monkeypatch) -> None:
     module = _load_module()
     calls: list[str] = []
