@@ -1283,6 +1283,34 @@ def test_current_work_context_branch_sync_binds_pr_without_inventing_issue(tmp_p
     assert binding["provenance"]["pr_refs"] == "explicit-task"
 
 
+@pytest.mark.parametrize(
+    ("task", "issue_refs", "pr_refs"),
+    [
+        ("Review issue #123", ["#123"], []),
+        ("Sync branch #2474 for issue #2481", ["#2481"], ["#2474"]),
+        ("Review PR #2203 for issue #2204", ["#2204"], ["#2203"]),
+    ],
+)
+def test_current_work_context_classifies_each_task_reference(
+    tmp_path: Path,
+    monkeypatch,
+    task: str,
+    issue_refs: list[str],
+    pr_refs: list[str],
+) -> None:
+    target = _target(tmp_path)
+    monkeypatch.setattr(
+        current_work_context,
+        "_git",
+        lambda _root, *args: "mixed-refs" if args == ("branch", "--show-current") else "mixed-head",
+    )
+
+    binding = current_work_context.resolve_current_work_context(root=target, task=task)
+
+    assert binding["issue_refs"] == issue_refs
+    assert binding["pr_refs"] == pr_refs
+
+
 def test_current_work_context_head_advance_does_not_alone_stale_active_thread(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(

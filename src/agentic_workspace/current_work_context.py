@@ -216,33 +216,16 @@ def _ordered_refs(values: Iterable[Any]) -> list[str]:
 def task_pr_context_refs(task: str) -> list[str]:
     """Return numeric refs that task wording identifies as pull-request context."""
 
-    explicit_refs = _ordered_refs(match.group(1) for match in re.finditer(r"\b(?:PR|pull request)\s*#?(\d+)", task, flags=re.IGNORECASE))
-    if explicit_refs:
-        return explicit_refs
-    refs = _ordered_refs(match.group(1) for match in re.finditer(r"#(\d+)", task))
-    if not refs:
-        return []
-    normalized = " ".join(task.lower().split())
-    pr_terms = (
-        " pr ",
-        " pull request",
-        "review",
-        "reviews",
-        "reviewed",
-        "merge conflict",
-        "merge conflicts",
-        "conflict in",
-        "conflicts in",
-        "update pr",
-        "address reviews",
-        "address the reviews",
-        "fix merge",
-        "branch sync",
-        "branch-sync",
-        "sync branch",
+    pattern = re.compile(
+        r"\b(?:"
+        r"(?:PR|pull request)\s*#?(?P<explicit>\d+)"
+        r"|(?:branch[- ]sync|sync(?:ing)?\s+(?:the\s+)?branch)\s*#?(?P<branch_sync>\d+)"
+        r"|(?:address(?:\s+the)?\s+reviews?|review(?:ed|s|ing)?|merge\s+conflicts?|conflicts?)"
+        r"\s+(?:on|in|for)?\s*#(?P<review>\d+)"
+        r")",
+        flags=re.IGNORECASE,
     )
-    padded = f" {normalized} "
-    return refs if any(term in padded for term in pr_terms) else []
+    return _ordered_refs(next(value for value in match.groups() if value is not None) for match in pattern.finditer(task))
 
 
 def _task_issue_refs(task: str) -> list[str]:
