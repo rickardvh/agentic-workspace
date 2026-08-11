@@ -3,7 +3,7 @@
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache-root
 REVIEW_MAX_CYCLES ?= 3
 export UV_CACHE_DIR
-VALIDATION_RUN_ID ?= local-$(shell python -c "from datetime import datetime, timezone; print(datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ'))")
+VALIDATION_RUN_ID ?= $(shell python scripts/check/allocate_validation_run_id.py)
 export VALIDATION_RUN_ID
 # Serial execution is the safe local default.  Callers that have measured
 # capacity may explicitly opt in, for example: PYTEST_PARALLEL_ARGS='-n 4'.
@@ -100,7 +100,7 @@ WORKSPACE_TEST_INTEGRATION = \
 	tests/test_source_payload_operational_install.py
 
 .PHONY: help sync-all sync-memory sync-planning sync-verification \
-	setup install-hooks \
+	setup install-hooks pre-commit \
 	test test-nosync test-workspace test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification \
 	lint lint-nosync lint-workspace lint-memory lint-planning lint-verification markdownlint markdownlint-memory \
 	typecheck typecheck-nosync typecheck-workspace typecheck-memory typecheck-planning typecheck-verification \
@@ -116,6 +116,7 @@ help:
 	@echo "  help                 Show this help."
 	@echo "  setup                Sync the dev environment and install local git hooks."
 	@echo "  install-hooks        Install the repo-managed local git hooks for this clone."
+	@echo "  pre-commit           Run format, lint, and typecheck in one collision-safe validation run."
 	@echo "  sync-all             Sync merged root environment for all workspace packages."
 	@echo "  sync-memory          Sync consolidated root dev environment for memory package checks."
 	@echo "  sync-planning        Sync consolidated root dev environment for planning package checks."
@@ -174,6 +175,9 @@ install-hooks:
 	uv run python scripts/install_git_hooks.py
 
 setup: sync-all install-hooks
+
+pre-commit:
+	@uv run python scripts/git_hooks/pre_commit.py
 
 start-review-poller:
 	@$(COMPACT_RUN) --label "review poller" -- uv run python tools/start_chatgpt_review_poller.py --target . --max-cycles $(REVIEW_MAX_CYCLES)
