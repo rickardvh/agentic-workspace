@@ -30,6 +30,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "current_decision",
         "message_economy",
         "evidence_bundle",
+        "visible_state_delta_response",
         "local_footprint",
         "installed_state_compatibility",
         "routine_work_context",
@@ -56,6 +57,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
     ),
     "implement": (
         "next",
+        "visible_state_delta_response",
         "proof",
         "proof.proof_obligations",
         "proof.proof_route_maintenance",

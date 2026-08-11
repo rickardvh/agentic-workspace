@@ -1016,6 +1016,15 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
         "next_safe_action": "Run the focused proof.",
     }
     assert visible["ownership_boundary"].endswith("not a new truth source.")
+    assert visible["route_budget"] == {
+        "status": "within-budget",
+        "max_generated_next_actions": 1,
+        "max_report_scans": 1,
+        "max_visible_parts": 4,
+        "generated_action_policy": "never-verbose-without-explicit-expansion",
+        "snapshot_reuse": "revision-keyed",
+    }
+    assert visible["composed_closeout"]["requires_additional_report_scan"] is False
     assert replay["workflow_class_count"] >= 2
     assert [item["task_class"] for item in study_comparison["scenarios"]] == [
         "clear",
@@ -1028,6 +1037,9 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
     assert all("study_cost" in item and "downstream_savings" in item for item in study_comparison["scenarios"])
     assert {"review", "handoff", "closeout"} == {item["workflow_class"] for item in replay["examples"]}
     assert all("next_safe_action" in item["visible_parts"] for item in replay["examples"])
+    assert all(item["composed_from_state"] is True for item in replay["examples"])
+    assert all(item["observed_cost"]["report_scans"] == 1 for item in replay["examples"])
+    assert replay["route_cost_budget"]["max_verbose_generated_actions"] == 0
 
 
 def _assert_selector_inventory_omitted_from_compact_start(payload: dict[str, Any]) -> dict[str, Any]:
@@ -4994,7 +5006,7 @@ def test_start_select_surfaces_state_delta_packets(tmp_path: Path, capsys) -> No
                 "--task",
                 "Fix one docs typo",
                 "--select",
-                "current_decision,message_economy,evidence_bundle",
+                "current_decision,message_economy,evidence_bundle,visible_state_delta_response",
                 "--format",
                 "json",
             ]
@@ -5021,6 +5033,11 @@ def test_start_select_surfaces_state_delta_packets(tmp_path: Path, capsys) -> No
     assert values["evidence_bundle"]["supports_decision"] == "Startup posture?"
     assert values["evidence_bundle"]["minimal_evidence_surfaces"][0]["id"] == "why_blocked"
     assert values["evidence_bundle"]["state_backed"] is True
+    visible = values["visible_state_delta_response"]
+    assert visible["status"] == "ready"
+    assert visible["route_budget"]["max_report_scans"] == 1
+    assert visible["route_budget"]["generated_action_policy"] == "never-verbose-without-explicit-expansion"
+    assert visible["composed_closeout"]["requires_additional_report_scan"] is False
 
 
 def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path: Path, capsys) -> None:

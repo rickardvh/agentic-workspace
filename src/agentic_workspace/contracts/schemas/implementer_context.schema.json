@@ -1498,6 +1498,11 @@
       "description": "Minimal selector-backed evidence bundle for the implementation current decision, including missing proof evidence when stronger claims are blocked.",
       "type": "object"
     },
+    "visible_state_delta_response": {
+      "additionalProperties": true,
+      "description": "Composed decision/proof/residue/next-action response with explicit successful-completion route budgets.",
+      "type": "object"
+    },
     "execution_posture": {
       "additionalProperties": false,
       "description": "Actionable local execution posture for orchestration before implementation.",

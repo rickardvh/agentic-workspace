@@ -2,12 +2,12 @@
   "kind": "agentic-workspace/evaluation-issue-disposition/v1",
   "issue_ref": "#1969",
   "evaluation_id": "state-delta-operating-loop-1969",
-  "status": "implementation-open-evaluation-open",
+  "status": "implementation-closed-evaluation-open",
   "implementation_disposition": {
-    "present_tense_status": "gap-remains",
+    "present_tense_status": "satisfied",
     "evidence_ref": ".agentic-workspace/planning/execplans/archive/issue-1969-state-delta-operating-loop-closeout.plan.json",
-    "closure_boundary": "The archived child-slice closeout does not satisfy the parent's later successful-completion-cost evidence. #1969 remains open until the bounded #2166 trace gaps are implemented or explicitly superseded by current proof.",
-    "remaining_gap": "The #2166 trace records generated verbose rereads, repeated report scans, non-composed closeout, and missing route-level cost budgets in the ordinary operating loop.",
+    "closure_boundary": "Ordinary start and implement routes now emit one composed visible state-delta response with explicit route budgets, revision-keyed snapshot reuse, no generated verbose action, and no additional closeout report scan.",
+    "remaining_gap": "none; longitudinal effectiveness remains Evaluation-owned and does not block present implementation closure.",
     "evidence_refs": [
       "#1969#issuecomment-4937313161",
       "#2166"
@@ -15,8 +15,8 @@
   },
   "evaluation_disposition": {
     "definition_ref": ".agentic-workspace/evaluations.json#state-delta-operating-loop-1969",
-    "current_admission_status": "collecting-with-present-implementation-gap",
-    "closure_authority": "absent-while-present-tense-gap-remains",
+    "current_admission_status": "collecting-after-present-implementation-satisfaction",
+    "closure_authority": "admitted-for-present-implementation",
     "report_sinks": [
       "#1969",
       "#2273"
@@ -40,9 +40,9 @@
     "identified_issues": [
       {
         "issue_ref": "#1969",
-        "implementation_status": "gap-remains",
+        "implementation_status": "satisfied",
         "evaluation_status": "migrated-to-state-delta-operating-loop-1969",
-        "issue_disposition": "retain-open-with-bounded-implementation-gap"
+        "issue_disposition": "close-present-implementation; continue-longitudinal-evaluation"
       }
     ],
     "non_matches": {
@@ -50,7 +50,7 @@
       "evaluation-capability-or-audit-owner": ["#2273", "#2266"]
     },
     "other_issue_disposition": "No open issue has only a future-evidence gate. #1969 has a bounded present-tense implementation gap; all other issues retain implementation or capability owners.",
-    "remaining_gap": "#1969 successful-completion-cost implementation gap",
+    "remaining_gap": "none in present implementation; Evaluation retains longitudinal observation authority",
     "classification_rule": "Present implementation proof remains in closeout records; recurring or delayed effectiveness evidence is collected through the Evaluation lifecycle and later negative findings create or reopen bounded work."
   }
 }

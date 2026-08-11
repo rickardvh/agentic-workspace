@@ -2008,7 +2008,7 @@ def test_evaluation_report_delivery_generated_operation_family_fails_closed_with
         )
 
 
-def test_checked_in_1969_evaluation_disposition_keeps_present_gap_open_while_evaluation_collects() -> None:
+def test_checked_in_1969_evaluation_disposition_closes_present_gap_while_evaluation_collects() -> None:
     evaluations_text = (ROOT / ".agentic-workspace/evaluations.json").read_text(encoding="utf-8")
     assert "<<<<<<<" not in evaluations_text
     payload = json.loads(evaluations_text)
@@ -2016,10 +2016,10 @@ def test_checked_in_1969_evaluation_disposition_keeps_present_gap_open_while_eva
     assert evaluation["selectors"]["issue_refs"] == ["#1969"]
     assert evaluation["action_policy"]["material_negative_finding"] == "create-or-reopen-bounded-follow-up"
     disposition = json.loads((ROOT / ".agentic-workspace/evaluations/issue-1969-disposition.json").read_text(encoding="utf-8"))
-    assert disposition["status"] == "implementation-open-evaluation-open"
-    assert disposition["implementation_disposition"]["present_tense_status"] == "gap-remains"
+    assert disposition["status"] == "implementation-closed-evaluation-open"
+    assert disposition["implementation_disposition"]["present_tense_status"] == "satisfied"
     assert disposition["evaluation_disposition"]["definition_ref"].endswith("#state-delta-operating-loop-1969")
-    assert disposition["evaluation_disposition"]["current_admission_status"] == "collecting-with-present-implementation-gap"
+    assert disposition["evaluation_disposition"]["current_admission_status"] == "collecting-after-present-implementation-satisfaction"
     audit = disposition["future_evidence_audit"]
     assert audit["status"] == "complete-current-open-issue-snapshot"
     assert len(audit["current_open_issue_refs"]) == 35
@@ -2028,16 +2028,16 @@ def test_checked_in_1969_evaluation_disposition_keeps_present_gap_open_while_eva
         *audit["non_matches"]["evaluation-capability-or-audit-owner"],
         "#1969",
     }
-    assert audit["remaining_gap"] == "#1969 successful-completion-cost implementation gap"
+    assert audit["remaining_gap"] == "none in present implementation; Evaluation retains longitudinal observation authority"
     assert audit["identified_issues"] == [
         {
             "issue_ref": "#1969",
-            "implementation_status": "gap-remains",
+            "implementation_status": "satisfied",
             "evaluation_status": "migrated-to-state-delta-operating-loop-1969",
-            "issue_disposition": "retain-open-with-bounded-implementation-gap",
+            "issue_disposition": "close-present-implementation; continue-longitudinal-evaluation",
         }
     ]
     lane = json.loads((ROOT / ".agentic-workspace/planning/lanes/issue-1969-state-delta-loop.lane.json").read_text(encoding="utf-8"))
-    assert lane["proof_aggregation"]["status"] == "partial"
-    assert lane["parent_close_permission"] == "do-not-close-parent"
-    assert lane["closeout_state"]["status"] == "open"
+    assert lane["proof_aggregation"]["status"] == "satisfied"
+    assert lane["parent_close_permission"] == "close-parent"
+    assert lane["closeout_state"]["status"] == "closed"

@@ -540,6 +540,19 @@ def visible_state_delta_response_payload(
             *([] if message_economy is None else ["message_economy"]),
             *([] if evidence_bundle is None else ["evidence_bundle"]),
         ],
+        "route_budget": {
+            "status": "within-budget",
+            "max_generated_next_actions": 1,
+            "max_report_scans": 1,
+            "max_visible_parts": 4,
+            "generated_action_policy": "never-verbose-without-explicit-expansion",
+            "snapshot_reuse": "revision-keyed",
+        },
+        "composed_closeout": {
+            "status": "ready" if all(parts.values()) else "incomplete",
+            "derived_from_parts": list(parts),
+            "requires_additional_report_scan": False,
+        },
         "ownership_boundary": (
             "This packet compiles visible answer parts from existing AW packets; it is a renderer and not a new truth source."
         ),
@@ -548,6 +561,12 @@ def visible_state_delta_response_payload(
 
 
 def state_delta_replay_evidence_payload() -> dict[str, Any]:
+    route_budget = {
+        "generated_next_actions": 1,
+        "report_scans": 1,
+        "verbose_generated_actions": 0,
+        "visible_part_count": 4,
+    }
     examples = [
         {
             "id": "review-rereview",
@@ -556,6 +575,8 @@ def state_delta_replay_evidence_payload() -> dict[str, Any]:
             "visible_parts": ["decision_or_finding", "evidence_or_proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
             "avoided": ["full prose recap", "manual reconstruction of proof boundary"],
             "comparison": "Review update can lead with the finding and proof boundary instead of replaying inspected files.",
+            "observed_cost": route_budget,
+            "composed_from_state": True,
         },
         {
             "id": "handoff-continuation",
@@ -564,6 +585,8 @@ def state_delta_replay_evidence_payload() -> dict[str, Any]:
             "visible_parts": ["decision_or_finding", "evidence_or_proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
             "avoided": ["chat-history reconstruction", "duplicated context already carried by continuation capsule"],
             "comparison": "Continuation update resumes from preserved intent, unresolved residue, and next safe action.",
+            "observed_cost": route_budget,
+            "composed_from_state": True,
         },
         {
             "id": "closeout",
@@ -572,6 +595,8 @@ def state_delta_replay_evidence_payload() -> dict[str, Any]:
             "visible_parts": ["decision_or_finding", "evidence_or_proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
             "avoided": ["joining multiple closeout reports by hand", "unsafe closure wording without claim boundary"],
             "comparison": "Closeout update can state strongest safe claim, proof state, residue, and closure boundary directly.",
+            "observed_cost": route_budget,
+            "composed_from_state": True,
         },
     ]
     return {
@@ -591,6 +616,14 @@ def state_delta_replay_evidence_payload() -> dict[str, Any]:
             "next action remains visible",
             "expansion triggers remain explicit",
         ],
+        "route_cost_budget": {
+            "max_generated_next_actions": 1,
+            "max_report_scans": 1,
+            "max_verbose_generated_actions": 0,
+            "max_visible_parts": 4,
+            "snapshot_reuse": "revision-keyed",
+            "rule": "A compact command must not externalize its cost into verbose generated actions or repeated report scans.",
+        },
         "non_goals": [
             "hidden reasoning evaluation",
             "prompt-keyword scoring",

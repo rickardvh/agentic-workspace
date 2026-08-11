@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "issue-1969-state-delta-loop",
   "title": "Issue 1969 state-delta-first operating loop",
-  "status": "ready",
+  "status": "completed",
   "parent_decomposition_ref": "",
   "lane_outcome": "Make ordinary AW operating-loop packets state-delta-first for issue #1969 across startup, implementation, report/continuation, and shipped skill adoption.",
   "purpose_for_parent": "Close the #1969 parent by landing all child slices #1970-#1974 as an ordered stack, with proof that the loop exposes current decision, message economy, continuation capsule, evidence bundle, and skill guidance without prompt-prose classifiers.",
@@ -73,23 +73,23 @@
   "acceptance_boundary": "The lane is complete only when the stacked branches/PRs together satisfy #1969 and all child issue acceptance criteria, with tests proving compact packets and skill discovery while preserving proof, residue, next action, and honest closure.",
   "proof_strategy": "Run changed-path AW proof selection, focused CLI tests for start/implement/report/skills packet exposure, summary/doctor planning checks, and a real CLI sample showing compact state-delta packets without broad always-on dumps.",
   "proof_aggregation": {
-    "status": "partial",
+    "status": "satisfied",
     "evidence": [
       "Child issues #1970-#1974 are completed and their PR stack #1976-#1980 is merged.",
-      "Issue #2273 registered the remaining effectiveness questions with Evaluation and audited current open issues."
+      "Issue #2273 registered longitudinal effectiveness questions with Evaluation and audited current open issues.",
+      "Ordinary start and implement routes compile current decision, evidence, proof/residue boundary, and next action into one visible state-delta response.",
+      "Review, handoff, and closeout replay fixtures enforce one generated action, one report scan, zero generated verbose actions, four visible parts, and revision-keyed snapshot reuse."
     ],
-    "known_gaps": [
-      "The #2166 dogfooding trace records present-tense successful-completion-cost gaps in generated actions, report reuse, route budgets, and composed closeout."
-    ]
+    "known_gaps": []
   },
-  "residual_lane_work": "Implement or supersede the bounded #2166 successful-completion-cost gaps; Evaluation continues collecting longitudinal effectiveness evidence independently.",
-  "lane_to_epic_contribution": "The initial state-delta mechanism and Evaluation owner exist, but current ordinary-loop cost evidence prevents parent closure.",
-  "parent_close_permission": "do-not-close-parent",
+  "residual_lane_work": "Longitudinal effectiveness observation continues under Evaluation without reopening present implementation.",
+  "lane_to_epic_contribution": "The ordinary loop now exposes a composed, budgeted state-delta response across start, implement, review, handoff, and closeout classes.",
+  "parent_close_permission": "close-parent",
   "closeout_state": {
-    "status": "open",
-    "summary": "Evaluation owns longitudinal evidence, while #1969 remains open for the concrete #2166 successful-completion-cost gap.",
-    "residual_work": "Generated-action budgets, true decision projections, route-level cost regressions, evidence reuse, and composed closeout remain current implementation work.",
-    "next_owner": "issue-1969 implementation plus state-delta-operating-loop-1969 evaluation"
+    "status": "closed",
+    "summary": "Present implementation satisfies the #1969 completion rule; Evaluation retains longitudinal effectiveness ownership.",
+    "residual_work": "none for present implementation",
+    "next_owner": "state-delta-operating-loop-1969 evaluation"
   },
   "references": [
     {

@@ -27,6 +27,7 @@ from agentic_workspace.reporting_support import (
     evidence_bundle_payload,
     message_economy_payload,
     state_delta_core_payload,
+    visible_state_delta_response_payload,
 )
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.runtime_source_review import (
@@ -1825,6 +1826,16 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         decision_packet=decision_packet,
         state_delta_core=state_delta_core,
     )
+    state_delta_economy = message_economy_payload(
+        surface="implementation",
+        communication_contract=communication_contract,
+        state_delta_core=state_delta_core,
+    )
+    state_delta_evidence = evidence_bundle_payload(
+        surface="implementation",
+        current_decision=current_decision,
+        state_delta_core=state_delta_core,
+    )
     proof_detail_route = str(_as_dict(decision_packet.get("detail_routes")).get("proof_detail") or "")
     operation_sources = compile_implement_context_operating_decision(
         target=str(payload.get("target") or ""),
@@ -1945,15 +1956,13 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
         "decision_packet": decision_packet,
         "current_decision": current_decision,
-        "message_economy": message_economy_payload(
-            surface="implementation",
-            communication_contract=communication_contract,
-            state_delta_core=state_delta_core,
-        ),
-        "evidence_bundle": evidence_bundle_payload(
+        "message_economy": state_delta_economy,
+        "evidence_bundle": state_delta_evidence,
+        "visible_state_delta_response": visible_state_delta_response_payload(
             surface="implementation",
             current_decision=current_decision,
-            state_delta_core=state_delta_core,
+            message_economy=state_delta_economy,
+            evidence_bundle=state_delta_evidence,
         ),
         "proof": {
             "kind": payload.get("proof", {}).get("kind", "proof-selection/v1")
