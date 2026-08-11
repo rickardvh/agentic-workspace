@@ -200,6 +200,34 @@
             "pattern": "^#[0-9]+$",
             "description": "Storage routed to text value used by this contract."
           },
+          "merge_safety": {
+            "type": "object",
+            "required": [
+              "classification",
+              "owner_boundary",
+              "reason"
+            ],
+            "properties": {
+              "classification": {
+                "type": "string",
+                "enum": [
+                  "owner-scoped",
+                  "derived",
+                  "true-singleton"
+                ]
+              },
+              "owner_boundary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false,
+            "description": "Merge-order classification for branch-carried collection or generated state."
+          },
           "notes": {
             "type": "string",
             "minLength": 1,

@@ -1,20 +1,9 @@
 repos:
   - repo: local
     hooks:
-      - id: format
-        name: format
-        entry: make format
-        language: system
-        pass_filenames: false
-      - id: lint
-        name: lint
-        entry: make lint
-        language: system
-        pass_filenames: false
-        always_run: true
-      - id: typecheck
-        name: typecheck
-        entry: make typecheck
+      - id: validation
+        name: format, lint, and typecheck
+        entry: uv run python scripts/git_hooks/pre_commit.py
         language: system
         pass_filenames: false
         always_run: true
