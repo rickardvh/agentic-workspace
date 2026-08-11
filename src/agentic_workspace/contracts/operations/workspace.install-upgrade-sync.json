@@ -20,7 +20,7 @@
   "writes": [{"surface": "dependency environment identity", "required": true}],
   "steps": [
     {"id": "observe_before", "uses": "installed-contract.resolve", "description": "Record the admitted before identity."},
-    {"id": "perform_transition", "uses": "workspace.install-upgrade-sync", "description": "Perform the explicit install, upgrade, or sync transition."},
+    {"id": "perform_transition", "uses": "workspace.lifecycle.apply", "description": "Perform the explicit install, upgrade, or sync transition through the production lifecycle primitive."},
     {"id": "observe_after", "uses": "installed-contract.resolve", "description": "Resolve and admit the after identity."}
   ],
   "guards": ["Ordinary startup, doctor, skills, and managed mutation surfaces are read-only for dependency identity."],

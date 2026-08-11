@@ -2270,22 +2270,61 @@ def _installed_contract_identity_digest(identity: dict[str, Any]) -> str:
 def execute_workspace_install_upgrade_sync(
     *,
     mode: str,
-    observe_identity: Callable[[], dict[str, Any]],
-    perform_transition: Callable[[], dict[str, Any]],
+    target_root: Path,
+    local_only_repo_root: Path | None,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    descriptors: dict[str, ModuleDescriptor],
+    non_interactive: bool,
+    config: WorkspaceConfig,
+    module_scope_explicit: bool = False,
+    to_payload_target: bool = False,
+    footprint_profile: str | None = None,
+    mirror_payload: bool = False,
+    include_local_footprint: bool = True,
 ) -> dict[str, Any]:
-    """Own the only executable boundary for expected installed-identity changes."""
+    """Execute and admit the production install/upgrade dependency-identity transition."""
     if mode not in {"install", "upgrade", "sync"}:
         raise ValueError("mode must be install, upgrade, or sync")
-    before = observe_identity()
-    if not isinstance(before, dict) or not before:
-        raise ValueError("before_identity must be a non-empty mapping")
-    transition = perform_transition()
-    if not isinstance(transition, dict) or transition.get("status") not in {"passed", "already-current"}:
-        raise RuntimeError("install/upgrade/sync transition did not produce an admitted result")
-    after = observe_identity()
-    if not isinstance(after, dict) or not after:
-        raise ValueError("after_identity must be a non-empty mapping")
-    return {
+    before_pair = _installed_contract_pair_payload(
+        config=config,
+        cli_payload=_cli_compatibility_payload(config=config, compact=True),
+        summary=None,
+    )
+    before_payload_mirror = _read_payload_provenance(target_root=target_root)
+    transition = _run_lifecycle_command(
+        command_name="upgrade" if mode == "sync" else mode,
+        target_root=target_root,
+        local_only_repo_root=local_only_repo_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        dry_run=False,
+        non_interactive=non_interactive,
+        config=config,
+        module_scope_explicit=module_scope_explicit,
+        to_payload_target=to_payload_target,
+        footprint_profile=footprint_profile,
+        mirror_payload=mirror_payload,
+        include_local_footprint=include_local_footprint,
+    )
+    effective_config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
+    after_pair = _installed_contract_pair_payload(
+        config=effective_config,
+        cli_payload=_cli_compatibility_payload(config=effective_config, compact=True),
+        summary={"stale_generated_surfaces": list(transition.get("stale_generated_surfaces", []))},
+    )
+    before = {
+        "expected": before_pair["expected"],
+        "actual": before_pair["actual"],
+        "payload_mirror": before_payload_mirror,
+    }
+    after = {
+        "expected": after_pair["expected"],
+        "actual": after_pair["actual"],
+        "payload_mirror": _read_payload_provenance(target_root=target_root),
+    }
+    receipt = {
         "kind": "agentic-workspace/install-upgrade-sync-receipt/v1",
         "operation_id": "workspace.install-upgrade-sync",
         "mode": mode,
@@ -2294,24 +2333,38 @@ def execute_workspace_install_upgrade_sync(
         "before_identity_digest": _installed_contract_identity_digest(before),
         "after_identity": after,
         "after_identity_digest": _installed_contract_identity_digest(after),
-        "transition_result": transition,
+        "transition_result": {
+            "status": "passed",
+            "command": transition.get("command", mode),
+            "created": list(transition.get("created", [])),
+            "updated_managed": list(transition.get("updated_managed", [])),
+        },
         "mutation_owner": "execute_workspace_install_upgrade_sync",
     }
+    transition["installed_identity_transition"] = receipt
+    return transition
 
 
 def _installed_contract_conformance_matrix(
-    *, current_identity: dict[str, Any], resolution: dict[str, Any], source_checkout: dict[str, Any], stale_generated: list[str]
+    *,
+    current_identity: dict[str, Any],
+    resolution: dict[str, Any],
+    source_checkout: dict[str, Any],
+    stale_generated: list[str],
+    payload_mirror: dict[str, Any],
 ) -> dict[str, Any]:
     source_class = str(current_identity.get("source_class") or "")
     posture = str(resolution.get("posture") or "")
     resolution_status = str(resolution.get("resolution_status") or "")
     direct_url = _as_dict(_as_dict(resolution.get("selected_distribution")).get("direct_url"))
-    vcs_url = str(direct_url.get("url") or "")
-    vcs_revision = str(_as_dict(direct_url.get("vcs_info")).get("commit_id") or direct_url.get("commit_id") or "")
+    vcs_info = _as_dict(direct_url.get("vcs_info"))
+    vcs_url = str(direct_url.get("url_fingerprint") or direct_url.get("url") or "") if vcs_info else ""
+    vcs_revision = str(vcs_info.get("commit_id") or direct_url.get("commit_id") or "")
     identity = {
         "package": current_identity,
         "resolution": resolution,
         "source_checkout": source_checkout,
+        "payload_mirror": payload_mirror,
         "generated_parity": "stale" if stale_generated else "current",
     }
     digest = _installed_contract_identity_digest(identity)
@@ -2326,7 +2379,7 @@ def _installed_contract_conformance_matrix(
             "status": "blocked" if vcs_url and (not vcs_revision or posture == "mutable") else "not-observed",
         },
         {"id": "incompatible-or-missing-runtime", "status": "blocked" if resolution_status != "resolved" else "not-observed"},
-        {"id": "payload-mirror", "status": "admitted" if current_identity.get("source") else "not-observed"},
+        {"id": "payload-mirror", "status": "admitted" if payload_mirror.get("status") == "present" else "not-observed"},
         {
             "id": "local-source-drift",
             "status": "blocked"
@@ -2355,6 +2408,7 @@ def _installed_contract_pair_payload(
     current_identity = _payload_installer_identity(target_root=config.target_root)
     stale_generated = list((summary or {}).get("stale_generated_surfaces", []))
     source_checkout: dict[str, Any] = {"classification": "not-applicable"}
+    payload_mirror = _read_payload_provenance(target_root=config.target_root or Path.cwd())
     if current_identity.get("source_class") == "source-checkout":
         root = _agentic_workspace_package_root()
         revision = _git_source_identity(root)
@@ -2386,10 +2440,42 @@ def _installed_contract_pair_payload(
         resolution=resolution,
         source_checkout=source_checkout,
         stale_generated=stale_generated,
+        payload_mirror=payload_mirror,
     )
     compatible = (
-        cli_payload.get("status") not in {"blocking-drift"} and not missing_capabilities and not missing_resources and not stale_generated
+        cli_payload.get("status") not in {"blocking-drift"}
+        and not missing_capabilities
+        and not missing_resources
+        and not stale_generated
+        and conformance_matrix["status"] == "admitted"
     )
+    blocked_scenarios = [item["id"] for item in conformance_matrix["scenarios"] if item["status"] == "blocked"]
+    if "mutable-or-unlocked-vcs" in blocked_scenarios:
+        repair_route = {
+            "status": "required",
+            "action": "lock-dependency-resolution",
+            "command": str(resolution.get("repair_command") or cli_payload.get("remediation", {}).get("command") or config.cli_invoke),
+        }
+    elif "incompatible-or-missing-runtime" in blocked_scenarios:
+        repair_route = {
+            "status": "required",
+            "action": "install-or-select-compatible-runtime",
+            "command": str(resolution.get("repair_command") or config.cli_invoke),
+        }
+    elif "local-source-drift" in blocked_scenarios:
+        repair_route = {"status": "required", "action": "clean-or-commit-local-source", "command": "git status --short"}
+    elif "generated-parity" in blocked_scenarios:
+        repair_route = {
+            "status": "required",
+            "action": "regenerate-managed-surfaces",
+            "command": "uv run python scripts/generate/generate_command_packages.py",
+        }
+    elif missing_resources:
+        repair_route = {"status": "required", "action": "restore-package-resources", "command": config.cli_invoke}
+    elif missing_capabilities:
+        repair_route = {"status": "required", "action": "upgrade-compatible-runtime", "command": config.cli_invoke}
+    else:
+        repair_route = {"status": "none", "action": "none", "command": ""}
     return {
         "kind": "agentic-workspace/installed-contract-pair/v1",
         "status": "compatible" if compatible else "incompatible",
@@ -2422,8 +2508,24 @@ def _installed_contract_pair_payload(
             "ordinary_surfaces_mutate_dependency_state": False,
         },
         "conformance_matrix": conformance_matrix,
-        "repair_route": cli_payload.get("remediation", {}),
+        "repair_route": repair_route,
         "rule": "The configured invocation and installed contract/resource identity are admitted as one pair before managed mutation.",
+    }
+
+
+def _installed_contract_consumer_receipt(*, config: WorkspaceConfig) -> dict[str, Any]:
+    pair = _installed_contract_pair_payload(
+        config=config,
+        cli_payload=_cli_compatibility_payload(config=config, compact=True),
+        summary=None,
+    )
+    return {
+        "kind": "agentic-workspace/installed-contract-consumer-receipt/v1",
+        "status": pair["status"],
+        "identity_digest": pair["conformance_matrix"]["identity_digest"],
+        "contract_resources": pair["actual"]["resources"],
+        "repair_route": pair["repair_route"],
+        "ordinary_surface_mutates_dependency_state": False,
     }
 
 
@@ -48796,21 +48898,37 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
         }
         _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
-    payload = _run_lifecycle_command(
-        command_name=command_name,
-        target_root=target_root,
-        local_only_repo_root=local_only_repo_root,
-        selected_modules=selected_modules,
-        resolved_preset=resolved_preset,
-        descriptors=descriptors,
-        dry_run=bool(getattr(args, "dry_run", False)),
-        non_interactive=args.non_interactive,
-        config=config,
-        module_scope_explicit=bool(getattr(args, "modules", None)),
-        to_payload_target=bool(getattr(args, "to_payload_target", False)),
-        footprint_profile=getattr(args, "footprint_profile", None),
-        mirror_payload=bool(getattr(args, "mirror_payload", False)),
-    )
+    if command_name in {"install", "upgrade"} and not bool(getattr(args, "dry_run", False)):
+        payload = execute_workspace_install_upgrade_sync(
+            mode=command_name,
+            target_root=target_root,
+            local_only_repo_root=local_only_repo_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            non_interactive=args.non_interactive,
+            config=config,
+            module_scope_explicit=bool(getattr(args, "modules", None)),
+            to_payload_target=bool(getattr(args, "to_payload_target", False)),
+            footprint_profile=getattr(args, "footprint_profile", None),
+            mirror_payload=bool(getattr(args, "mirror_payload", False)),
+        )
+    else:
+        payload = _run_lifecycle_command(
+            command_name=command_name,
+            target_root=target_root,
+            local_only_repo_root=local_only_repo_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            dry_run=bool(getattr(args, "dry_run", False)),
+            non_interactive=args.non_interactive,
+            config=config,
+            module_scope_explicit=bool(getattr(args, "modules", None)),
+            to_payload_target=bool(getattr(args, "to_payload_target", False)),
+            footprint_profile=getattr(args, "footprint_profile", None),
+            mirror_payload=bool(getattr(args, "mirror_payload", False)),
+        )
     _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
     return 0
 
@@ -55590,6 +55708,7 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
         "agent_aids": payload.get("agent_aids", []),
         "agent_aid_recommendations": payload.get("agent_aid_recommendations", []),
         "agent_aid_source": payload.get("agent_aid_source", {}),
+        "installed_contract": payload.get("installed_contract", {}),
         "warnings": payload.get("warnings", []),
         "catalog_summary": _skill_catalog_summary_from_payload(payload),
         "inventory_detail": {
@@ -55610,6 +55729,7 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
     recommendations = _recommend_skills(task_text=task_text, skills=skills) if task_text else []
     blocked_recommendations = _recommend_skills(task_text=task_text, skills=skills, availability="blocked") if task_text else []
     agent_aids, aid_warnings = _checked_in_agent_aid_entries(target_root=target_root)
+    installed_contract = _installed_contract_consumer_receipt(config=_load_workspace_config(target_root=target_root))
     visible_agent_aids = [aid for aid in agent_aids if aid["status"] != "retired"]
     agent_aid_recommendations = _recommend_agent_aids(task_text=task_text, aids=visible_agent_aids) if task_text else []
     skill_recommendation_payloads = [
@@ -55653,6 +55773,7 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
             "section_command": "agentic-workspace report --target ./repo --section agent_aids --format json",
             "retired_aids_excluded": True,
         },
+        "installed_contract": installed_contract,
         "warnings": warnings,
         "agent_aid_warnings": aid_warnings,
         "sources": sources,
