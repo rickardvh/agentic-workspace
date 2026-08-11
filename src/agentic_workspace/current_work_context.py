@@ -213,13 +213,24 @@ def _ordered_refs(values: Iterable[Any]) -> list[str]:
     return refs
 
 
-def _task_pr_refs(task: str) -> list[str]:
-    return _ordered_refs(match.group(1) for match in re.finditer(r"\b(?:PR|pull request)\s*#?(\d+)", task, flags=re.IGNORECASE))
+def task_pr_context_refs(task: str) -> list[str]:
+    """Return numeric refs that task wording identifies as pull-request context."""
+
+    pattern = re.compile(
+        r"\b(?:"
+        r"(?:PR|pull request)\s*#?(?P<explicit>\d+)"
+        r"|(?:branch[- ]sync|sync(?:ing)?\s+(?:the\s+)?branch)\s*#?(?P<branch_sync>\d+)"
+        r"|(?:address(?:\s+the)?\s+reviews?|review(?:ed|s|ing)?|merge\s+conflicts?|conflicts?)"
+        r"\s+(?:on|in|for)?\s*#(?P<review>\d+)"
+        r")",
+        flags=re.IGNORECASE,
+    )
+    return _ordered_refs(next(value for value in match.groups() if value is not None) for match in pattern.finditer(task))
 
 
 def _task_issue_refs(task: str) -> list[str]:
-    task_without_pr_refs = re.sub(r"\b(?:PR|pull request)\s*#?\d+", "", task, flags=re.IGNORECASE)
-    return _ordered_refs(match.group(1) for match in re.finditer(r"#(\d+)", task_without_pr_refs))
+    pr_refs = set(task_pr_context_refs(task))
+    return [ref for ref in _ordered_refs(match.group(1) for match in re.finditer(r"#(\d+)", task)) if ref not in pr_refs]
 
 
 def resolve_current_work_context(
@@ -239,7 +250,7 @@ def resolve_current_work_context(
     refs = thread.get("refs", {}) if isinstance(thread, dict) else {}
     issue_refs = _ordered_refs(refs.get("issues", [])) if isinstance(refs, dict) else []
     pr_refs = _ordered_refs(refs.get("prs", [])) if isinstance(refs, dict) else []
-    task_pr_refs = _task_pr_refs(task)
+    task_pr_refs = task_pr_context_refs(task)
     plan_refs = list(dict.fromkeys([*plan_refs, *sorted({f"#{value}" for value in re.findall(r"(?:^|\D)(\d{3,})(?:\D|$)", plan_id)})]))
     conflicts: list[str] = []
     thread_status = str(thread.get("status") or "").strip().lower() if thread else ""
