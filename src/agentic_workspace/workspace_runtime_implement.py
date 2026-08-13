@@ -19,7 +19,7 @@ from agentic_workspace.authority_envelope import (
 )
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
-from agentic_workspace.operating_decision import compile_implement_context_operating_decision
+from agentic_workspace.operating_decision import compile_implement_context_operating_decision, resolve_context_authority_projection
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -202,6 +202,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     requirement_grounding_selected = _selector_requests_requirement_grounding(selected_fields)
     plan_delegation_packet_selected = _selector_requests_plan_delegation_packet(selected_fields)
     test_strategy_check_selected = _selector_requests_test_strategy_check(selected_fields)
+    context_authority_projection_selected = _selector_requests(selected_fields, "context_authority_projection")
     runtime_diagnostics_selected = _selector_requests(selected_fields, "proof.runtime_source_edit_review") or _selector_requests(
         selected_fields, "proof.runtime_symbol_working_set"
     )
@@ -253,6 +254,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload.setdefault("context", {})["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
         if test_strategy_check_selected:
             payload["test_strategy_check"] = full_payload["test_strategy_check"]
+        if context_authority_projection_selected:
+            payload["context_authority_projection"] = full_payload["context_authority_projection"]
         if _selector_requests(getattr(args, "select", None), "proof_route_strategy_preservation"):
             payload["proof_route_strategy_preservation"] = full_payload.get("proof_route_strategy_preservation", {})
         if _selector_requests(getattr(args, "select", None), "proof_route_strategy_consumer_gate"):
@@ -1115,6 +1118,12 @@ def _implement_payload(
         "execution_posture": execution_posture,
         "planning_safety_gate": planning_safety_gate,
         "planning_revision": planning_safety_gate.get("planning_revision", {}),
+        "context_authority_projection": resolve_context_authority_projection(
+            consumer="implement",
+            task=task_text or "",
+            changed_paths=normalized_paths,
+            target_root=target_root,
+        ),
         "active_plan_reliance": planning_safety_gate.get("active_plan_reliance", {}),
         "delegation_decision": execution_posture["delegation_decision"],
         "durable_intent": _intent_decision_projection(target_root=target_root, config=config, changed_paths=normalized_paths, compact=True),
@@ -2059,6 +2068,20 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "changed_paths": payload.get("changed_paths", []),
                 "inspect_files": payload.get("inspect_files", []),
                 "warnings": path_warnings,
+            },
+            "context_authority_projection": {
+                key: payload.get("context_authority_projection", {}).get(key)
+                for key in (
+                    "kind",
+                    "status",
+                    "consumer",
+                    "registry_revision",
+                    "changed_path_count",
+                    "missing_required_surfaces",
+                    "repair_operation",
+                    "changed_path_guardrail",
+                )
+                if isinstance(payload.get("context_authority_projection"), dict) and key in payload.get("context_authority_projection", {})
             },
             "task_intent": {
                 "status": payload.get("task_intent", {}).get("status", "absent")

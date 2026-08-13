@@ -1027,6 +1027,8 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
     assert visible["composed_closeout"]["requires_additional_report_scan"] is False
 
     assert replay["workflow_class_count"] >= 2
+    assert replay["status"] == "admitted-ordinary-route-measurement"
+    assert replay["ordinary_route_measurement"]["workflow_classes"] == ["startup", "implementation", "closeout"]
     assert [item["task_class"] for item in study_comparison["scenarios"]] == [
         "clear",
         "shape-uncertain",
@@ -4849,7 +4851,7 @@ def test_start_exposes_workflow_sufficiency_and_continuation_selectors(tmp_path:
     assert (
         cli.main(
             [
-                "start",
+                "summary",
                 "--target",
                 str(tmp_path),
                 "--task",
@@ -5040,11 +5042,11 @@ def test_start_select_surfaces_state_delta_packets(tmp_path: Path, capsys) -> No
     assert visible["route_budget"]["generated_action_policy"] == "never-verbose-without-explicit-expansion"
     assert visible["observed_cost"] == {
         "generated_next_actions": 1,
-        "report_scans": 0,
+        "report_scans": 1,
         "verbose_generated_actions": 0,
         "visible_part_count": 4,
-        "snapshot_loads": 0,
-        "snapshot_reused": False,
+        "snapshot_loads": 1,
+        "snapshot_reused": True,
     }
     assert visible["composed_closeout"]["requires_additional_report_scan"] is False
 
@@ -5067,9 +5069,33 @@ def test_start_select_surfaces_state_delta_packets(tmp_path: Path, capsys) -> No
     implementation_visible = json.loads(capsys.readouterr().out)["values"]["visible_state_delta_response"]
     assert implementation_visible["route_budget"]["status"] == "within-budget"
     assert implementation_visible["observed_cost"]["generated_next_actions"] == 1
-    assert implementation_visible["observed_cost"]["report_scans"] == 0
+    assert implementation_visible["observed_cost"]["report_scans"] == 1
+    assert implementation_visible["observed_cost"]["snapshot_loads"] == 1
+    assert implementation_visible["observed_cost"]["snapshot_reused"] is True
     assert implementation_visible["observed_cost"]["verbose_generated_actions"] == 0
     assert implementation_visible["observed_cost"]["visible_part_count"] == 4
+
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "closeout_trust_inspection",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    closeout = json.loads(capsys.readouterr().out)["values"]["closeout_trust_inspection"]
+    measurement = closeout["state_delta_measurement"]
+    assert measurement["workflow_class"] == "closeout"
+    assert measurement["source"] == "ordinary closeout planning_report load boundary"
+    assert measurement["observed_cost"]["report_scans"] == 1
+    assert measurement["observed_cost"]["snapshot_loads"] == 1
+    assert measurement["observed_cost"]["snapshot_reused"] is True
 
 
 def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path: Path, capsys) -> None:
@@ -9249,6 +9275,42 @@ def test_start_explicit_changed_path_still_uses_changed_path_startup(tmp_path: P
 
     assert payload["next_safe_action"]["next_safe_action"] == "select-changed-path-proof"
     assert payload["context"]["primary_action"]["command"].endswith("proof --changed AGENTS.md --format json")
+    projection = payload["context"]["context_authority_projection"]
+    assert projection["consumer"] == "start"
+    assert projection["changed_path_count"] == 1
+    assert len(projection["authorities"]) >= 1
+    assert projection["registry_revision"].startswith("sha256:")
+
+
+def test_start_context_authority_projection_fails_closed_for_missing_scoped_instruction_source(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / "AGENTS.md").unlink()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/example.py",
+                "--task",
+                "Use the scoped instructions and skills before editing",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    projection = payload["context"]["context_authority_projection"]
+
+    assert projection["status"] == "repair-required"
+    assert "scoped-instructions" in projection["missing_required_surfaces"]
+    repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "scoped-instructions")
+    assert repair["operation_id"] == "workspace.instructions.route"
 
 
 def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_packet(tmp_path: Path, capsys) -> None:

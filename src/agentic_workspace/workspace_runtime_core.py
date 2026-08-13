@@ -146,6 +146,7 @@ from agentic_workspace.projection_reuse import lookup_projection_reuse, record_p
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
 from agentic_workspace.reporting_support import (
+    StateDeltaRouteMeasurement,
     closeout_claim_boundary_payload,
     communication_contract_payload,
     output_contract_payload,
@@ -8067,7 +8068,8 @@ LOCAL_AGENT_INSTRUCTIONS_FILE = Path("AGENTS.local.md")
 LOCAL_AGENT_REFERENCE_LINE = f"Follow instructions in `{LOCAL_AGENT_INSTRUCTIONS_FILE.as_posix()}` if present."
 EXTERNAL_INTENT_CACHE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
 EXTERNAL_INTENT_PLANNING_RELATIVE_PATH = Path(".agentic-workspace") / "planning" / "external-intent-evidence.json"
-TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-strategy-dispositions.json"
+TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-strategy-dispositions"
+LEGACY_TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-strategy-dispositions.json"
 TEST_SUITE_BUDGET_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "test-suite-budget.json"
 ASSURANCE_EVIDENCE_RECORDS_RELATIVE_PATH = Path(".agentic-workspace") / "verification" / "assurance-evidence-records.json"
 EXTERNAL_INTENT_CACHE_CLOSED_RETENTION_DAYS = 7
@@ -28374,7 +28376,10 @@ def _completion_closeout_inspection_payload(
                 "resolution_command": command,
             },
         }
-    planning_payload = planning_report(target=target_root)
+    measurement = StateDeltaRouteMeasurement()
+    planning_revision = f"planning-closeout:{target_root.resolve().as_posix()}"
+    measurement.load(revision=planning_revision, loader=lambda: planning_report(target=target_root))
+    planning_payload = measurement.load(revision=planning_revision, loader=lambda: planning_report(target=target_root))
     closeout = _report_closeout_trust_payload(
         module_reports=[planning_payload], target_root=target_root, config=config, cli_invoke=config.cli_invoke
     )
@@ -28434,7 +28439,7 @@ def _completion_closeout_inspection_payload(
         "resolution_selector": "closeout_trust_inspection",
         "resolution_command": command,
     }
-    return {
+    result = {
         "status": "required" if needs_surface else "clear",
         "reason": "explicit closeout_trust inspection found residue to reconcile before claiming broad work is done"
         if needs_surface
@@ -28476,6 +28481,22 @@ def _completion_closeout_inspection_payload(
             rule="AW reports closeout residue when asked; it does not infer completion/status intent from prompt keywords.",
         ),
     }
+    measurement_response = {
+        "parts": {
+            "decision_or_finding": result["reason"],
+            "evidence_or_proof_boundary": result["action_effect"]["claim_boundary"],
+            "residue_or_claim_boundary": result["trust"],
+            "next_safe_action": result["required_next_inspection"],
+        }
+    }
+    result["state_delta_measurement"] = {
+        "kind": "agentic-workspace/state-delta-route-measurement/v1",
+        "workflow_class": "closeout",
+        "snapshot_revision": planning_revision,
+        "observed_cost": measurement.observation(response=measurement_response),
+        "source": "ordinary closeout planning_report load boundary",
+    }
+    return result
 
 
 def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
@@ -38300,42 +38321,60 @@ def _pre_test_evidence_guardrail_payload(
 
 
 def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
-    path = target_root / TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH
-    if not path.exists():
+    directory = target_root / TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH
+    legacy_path = target_root / LEGACY_TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH
+    if legacy_path.exists():
+        return {
+            "kind": "agentic-workspace/test-strategy-dispositions/v1",
+            "status": "invalid",
+            "path": LEGACY_TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
+            "items": [],
+            "invalid_items": [
+                {
+                    "id": "legacy-shared-aggregate",
+                    "missing_or_invalid_fields": ["owner_scoped_record"],
+                    "error": (
+                        "shared test-strategy-dispositions.json is no longer accepted; move each item to "
+                        f"{TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix()}/<id>.json"
+                    ),
+                }
+            ],
+        }
+    if not directory.exists():
         return {
             "kind": "agentic-workspace/test-strategy-dispositions/v1",
             "status": "absent",
             "path": TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
             "items": [],
         }
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+    if not directory.is_dir():
         return {
             "kind": "agentic-workspace/test-strategy-dispositions/v1",
             "status": "invalid",
             "path": TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
             "items": [],
-            "error": str(exc),
+            "invalid_items": [{"id": "storage", "missing_or_invalid_fields": ["directory"]}],
         }
-    if not isinstance(payload, dict):
-        return {
-            "kind": "agentic-workspace/test-strategy-dispositions/v1",
-            "status": "invalid",
-            "path": TEST_STRATEGY_DISPOSITIONS_RELATIVE_PATH.as_posix(),
-            "items": [],
-            "error": "record must be a JSON object",
-        }
-    items = [item for item in _list_payload(payload.get("items")) if isinstance(item, dict)]
     normalized_items: list[dict[str, Any]] = []
     invalid_items: list[dict[str, Any]] = []
-    for index, item in enumerate(items):
+    seen_ids: set[str] = set()
+    record_paths = sorted(directory.glob("*.json"), key=lambda item: item.name)
+    for index, record_path in enumerate(record_paths):
+        try:
+            item = json.loads(record_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+            invalid_items.append({"id": record_path.name, "missing_or_invalid_fields": ["json"], "error": str(exc)})
+            continue
+        if not isinstance(item, dict):
+            invalid_items.append({"id": record_path.name, "missing_or_invalid_fields": ["object"]})
+            continue
         changed_test_paths = [
             str(path).strip().replace("\\", "/") for path in _list_payload(item.get("changed_test_paths")) if str(path).strip()
         ]
         disposition = str(item.get("disposition") or "").strip()
+        record_id = str(item.get("id") or "").strip()
         normalized = {
-            "id": str(item.get("id") or f"item-{index + 1}").strip(),
+            "id": record_id or f"item-{index + 1}",
             "disposition": disposition,
             "changed_test_paths": changed_test_paths,
             "reason": str(item.get("reason") or "").strip(),
@@ -38355,8 +38394,21 @@ def _load_test_strategy_dispositions(target_root: Path) -> dict[str, Any]:
             }.items()
             if not value
         ]
+        if item.get("kind") != "agentic-workspace/test-strategy-disposition/v1":
+            missing.append("kind")
+        if not record_id or record_path.stem != record_id:
+            missing.append("id_filename_match")
+        if record_id in seen_ids:
+            missing.append("unique_id")
+        seen_ids.add(record_id)
         if missing:
-            invalid_items.append({"id": normalized["id"], "missing_or_invalid_fields": missing})
+            invalid_items.append(
+                {
+                    "id": normalized["id"],
+                    "path": record_path.relative_to(target_root).as_posix(),
+                    "missing_or_invalid_fields": sorted(set(missing)),
+                }
+            )
         normalized_items.append(normalized)
     return {
         "kind": "agentic-workspace/test-strategy-dispositions/v1",

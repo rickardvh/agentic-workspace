@@ -18,11 +18,11 @@
     "autopilot": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "autopilot-executor"],
     "closeout": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "terminal-outcome"],
     "contract-checks": ["generated-references"],
-    "implement": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "skills", "target-guidance"],
+    "implement": ["system-intent", "architecture-principles", "scoped-instructions", "ownership", "planning", "memory", "assignment", "mutation-baseline", "proof", "evaluation", "skills", "target-guidance"],
     "next": ["planning", "assignment", "skills", "target-guidance"],
     "proof": ["planning", "proof", "mutation-baseline", "evaluation"],
     "skills": ["scoped-instructions", "skills"],
-    "start": ["system-intent", "architecture-principles", "scoped-instructions", "ownership", "planning", "memory", "skills", "target-guidance"],
+    "start": ["system-intent", "architecture-principles", "scoped-instructions", "ownership", "planning", "memory", "proof", "skills", "target-guidance"],
     "status": ["planning", "assignment", "proof", "evaluation", "terminal-outcome"],
     "summary": ["planning", "memory", "terminal-outcome"]
   },
@@ -178,7 +178,7 @@
       "surface": "proof",
       "owner": "verification and proof runtime",
       "authority_class": "canonical",
-      "consumers": ["proof", "implement", "status", "autopilot", "closeout", "operating-decision"],
+      "consumers": ["start", "proof", "implement", "status", "autopilot", "closeout", "operating-decision"],
       "activation": "selected proof subject for current changed paths",
       "editable_by": "proof receipt admission and verification operations",
       "stale_when": "proof subject, selected command, or changed-path fingerprint changes",
@@ -297,7 +297,7 @@
       "revision_fields": ["command_package_fingerprint", "adapter_fingerprint"],
       "source_owner_contract": {
         "owner_module": "agentic_workspace.contract_tooling.generated_references",
-        "owner_result_kind": "generated-cli-source-manifest/v1",
+        "owner_result_kind": "generated-cli-owner-source-manifest/v1",
         "repair_operation_id": "generated-command-packages.refresh",
         "activation_terms": ["generated", "contract", "schema", "operation", "adapter", "package"]
       }

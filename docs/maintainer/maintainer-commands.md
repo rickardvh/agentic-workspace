@@ -41,7 +41,7 @@ Use this page when you need the canonical command to run, not the broader routin
 
 ## Policy
 
-- The repo-managed pre-commit Git hook formats staged Ruff-managed files, stages those formatter edits, and then runs the configured lint, branch-specific test gate, and absolute-path checks.
+- The repo-managed pre-commit Git hook owns one collision-safe validation run, synchronizes once, formats and stages Ruff-managed files, and then runs setup-free lint, typecheck, and absolute-path checks.
 - Reinstall hooks with `make install-hooks`; do not use `uv run pre-commit install` directly unless you intentionally want the stock pre-commit wrapper instead of the repo-managed hook behavior.
 - `make test`, `make test-workspace`, `make test-memory`, `make test-planning`, and the package `make test` lanes run pytest serial by default; opt into xdist only when local capacity is known, for example with `PYTEST_PARALLEL_ARGS='-n 4'`.
 - Full tests should run in CI and in explicit local validation runs such as `make check-all`.

@@ -492,6 +492,29 @@ def test_generated_adapter_requires_regeneration_source() -> None:
     assert "reconstructable_from" in findings[0].message
 
 
+def test_branch_collection_requires_merge_safety_even_when_declaration_is_omitted(tmp_path: Path) -> None:
+    path = tmp_path / ".agentic-workspace/verification/decisions.json"
+    path.parent.mkdir(parents=True)
+    path.write_text('{"items": [{"id": "a"}, {"id": "b"}]}\n', encoding="utf-8")
+    inventory = {
+        "entries": [
+            {
+                "pattern": ".agentic-workspace/verification/decisions.json",
+                "format": "json",
+                "editable_by_agents": True,
+            }
+        ]
+    }
+
+    findings = check_structured_file_inventory.merge_safety_findings(
+        [".agentic-workspace/verification/decisions.json"], inventory, root=tmp_path
+    )
+
+    assert [finding.message for finding in findings] == [
+        "branch-carried collection/generated state must declare merge_safety classification, owner_boundary, and reason"
+    ]
+
+
 def test_generated_adapter_requires_matching_mirror_metadata() -> None:
     inventory = {
         "entries": [

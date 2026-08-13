@@ -1479,6 +1479,11 @@
       "description": "Compact state-delta decision packet for the implementation workflow, derived from the implement decision packet rather than prompt prose.",
       "type": "object"
     },
+    "context_authority_projection": {
+      "additionalProperties": true,
+      "description": "Registry-owned authority selection and changed-path guardrail for the implementation consumer.",
+      "type": "object"
+    },
     "delegation_decision": {
       "additionalProperties": true,
       "description": "Top-level copy of the compact delegation decision for next-action consumers.",
@@ -2139,6 +2144,11 @@
     "planning_revision": {
       "type": "object",
       "description": "Optimistic Planning state revision observed by this implementer read surface.",
+      "additionalProperties": true
+    },
+    "context_authority_projection": {
+      "type": "object",
+      "description": "Registry-owned authority selection and changed-path guardrail for the implementation consumer.",
       "additionalProperties": true
     },
     "active_plan_reliance": {

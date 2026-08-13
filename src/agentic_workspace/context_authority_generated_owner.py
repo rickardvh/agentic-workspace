@@ -33,15 +33,15 @@ def generated_references_context_authority_owner_operation(**kwargs: Any) -> dic
         manifest = json.loads(kwargs["chosen"].read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         manifest = {}
-    expected_identity = manifest.get("git_index_identity")
+    expected_identity = manifest.get("fingerprint")
     legacy_empty_manifest = (
-        set(manifest) == {"kind", "source_hashes"}
-        and manifest.get("kind") == "generated-cli-source-manifest/v1"
-        and not manifest["source_hashes"]
+        set(manifest) == {"kind", "owner"}
+        and manifest.get("kind") == "generated-cli-owner-source-manifest/v1"
+        and bool(manifest.get("owner"))
     )
     if legacy_empty_manifest:
         manifest_status = {"status": "current", "reason": "legacy-empty-source-hashes", "auxiliary_witness": "not-applicable"}
-    elif manifest.get("kind") != "generated-cli-source-manifest/v1":
+    elif manifest.get("kind") != "generated-cli-owner-source-manifest/v1":
         manifest_status = {"status": "invalid", "reason": "invalid-manifest", "auxiliary_witness": "not-evaluated"}
     else:
         manifest_status = _source_manifest_status(root=kwargs["root"], chosen=kwargs["chosen"])
@@ -64,7 +64,7 @@ def generated_references_context_authority_owner_operation(**kwargs: Any) -> dic
     return _issue_owner_result(
         surface="generated-references",
         producer=producer,
-        result_kind="generated-cli-source-manifest/v1",
+        result_kind="generated-cli-owner-source-manifest/v1",
         operation_id=operation_id,
         owner=kwargs.get("owner"),
         root=kwargs["root"],

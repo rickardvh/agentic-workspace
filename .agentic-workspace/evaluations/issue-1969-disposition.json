@@ -6,12 +6,13 @@
   "implementation_disposition": {
     "present_tense_status": "satisfied",
     "evidence_ref": ".agentic-workspace/planning/execplans/archive/issue-1969-state-delta-operating-loop-closeout.plan.json",
-    "closure_boundary": "Ordinary start and implement routes now emit one composed visible state-delta response with explicit route budgets, revision-keyed snapshot reuse, no generated verbose action, and no additional closeout report scan.",
+    "closure_boundary": "Ordinary start and implement routes measure one authoritative packet scan and reuse its revision-keyed snapshot for composed closeout; the real closeout_trust consumer measures one planning_report scan and reuses that same admitted object without another scan.",
     "remaining_gap": "none; longitudinal effectiveness remains Evaluation-owned and does not block present implementation closure.",
     "evidence_refs": [
       "#1969#issuecomment-4937313161",
       "#2166",
-      "agentic-workspace report --target . --section reasoning_economy --format json#state_delta_replay_evidence"
+      "agentic-workspace report --target . --section reasoning_economy --format json#state_delta_replay_evidence",
+      "tests/test_workspace_cli.py::test_start_select_surfaces_state_delta_packets#ordinary-start-implement-closeout-measurements"
     ]
   },
   "evaluation_disposition": {

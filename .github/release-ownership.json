@@ -78,7 +78,22 @@
   ],
   "non_semver_generated_metadata": [
     {
-      "path": "generated/.agentic-workspace-cli-fingerprint.json",
+      "path": "generated/workspace/.agentic-workspace-cli-fingerprint.json",
+      "role": "generated-command-freshness-integrity",
+      "freshness_owner": "scripts/check/check_generated_command_packages.py"
+    },
+    {
+      "path": "generated/planning/.agentic-workspace-cli-fingerprint.json",
+      "role": "generated-command-freshness-integrity",
+      "freshness_owner": "scripts/check/check_generated_command_packages.py"
+    },
+    {
+      "path": "generated/memory/.agentic-workspace-cli-fingerprint.json",
+      "role": "generated-command-freshness-integrity",
+      "freshness_owner": "scripts/check/check_generated_command_packages.py"
+    },
+    {
+      "path": "generated/verification/.agentic-workspace-cli-fingerprint.json",
       "role": "generated-command-freshness-integrity",
       "freshness_owner": "scripts/check/check_generated_command_packages.py"
     }

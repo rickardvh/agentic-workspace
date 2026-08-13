@@ -22,7 +22,9 @@ from agentic_workspace.operating_decision import (
     compile_operating_decision,
     context_authority_coverage,
     context_authority_declarations,
+    context_consequence_effects,
     context_surface_admission,
+    derive_context_consequences,
     derive_context_gaps,
     derive_operating_blockers_from_authorities,
     live_decision_input_revision,
@@ -379,6 +381,35 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
     ]
 
 
+def test_context_authority_changed_path_guardrail_maps_every_required_surface_once() -> None:
+    from agentic_workspace.operating_decision import context_authority_changed_path_guardrail
+
+    declarations = context_authority_declarations()
+    selected = [{"surface": item["surface"]} for item in declarations if "start" in item["consumer"]]
+    guardrail = context_authority_changed_path_guardrail(
+        consumer="start",
+        changed_paths=["src/agentic_workspace/runtime.py"],
+        selected=selected,
+        excluded=[],
+    )
+
+    expected = set(context_authority_coverage()["consumer_requirements"]["start"])
+    mapped = [item["surface"] for item in guardrail["ownership"]]
+    assert guardrail["status"] == "enforced"
+    assert set(mapped) == expected
+    assert len(mapped) == len(set(mapped))
+    assert guardrail["missing_checker_surfaces"] == []
+    assert set(guardrail["failure_matrix"]) == {
+        "contradiction",
+        "skill-registry-or-dependency-drift",
+        "configured-empty",
+        "stale-generated-projection",
+        "wrong-source-edit",
+        "renamed-canonical-source",
+        "unrelated-path",
+    }
+
+
 def test_runtime_actionability_call_sites_resolve_live_revision_before_derivation() -> None:
     """Static guard for ordinary boundaries that would otherwise reuse stale typed actions."""
 
@@ -469,6 +500,176 @@ def test_blocking_context_gap_prevents_primary_action() -> None:
     assert decision["status"] == "blocked"
     assert decision["external_blocker"]["reason_code"] == "context-coverage-gap"
     assert decision["external_blocker"]["owner"] == "verification and proof runtime"
+    assert decision["highest_impact_context_consequence"]["consequence"] == "block-now"
+
+
+def test_context_findings_compile_to_one_stable_consequence_each() -> None:
+    findings = [
+        {
+            "kind": "agentic-workspace/context-gap/v1",
+            "id": "configured-but-unpopulated:memory",
+            "gap_class": "configured-but-unpopulated",
+            "severity": "material",
+            "owner": "memory package",
+            "next_route": "populate or disable the required Memory surface",
+        },
+        {
+            "kind": "agentic-workspace/system-intent-finding/v1",
+            "id": "intent-conflict:release-policy",
+            "finding_class": "intent-conflict",
+            "severity": "material",
+            "owner": "maintainer",
+            "next_route": "review conflicting intent evidence",
+        },
+        {
+            "kind": "agentic-workspace/memory-freshness-finding/v1",
+            "id": "stale-memory:runtime-boundary",
+            "finding_class": "stale-memory",
+            "severity": "material",
+            "owner": "memory package",
+            "safe_repair": {
+                "operation_id": "memory.refresh-note",
+                "expected_input_revision": "sha256:current",
+                "idempotency_key": "memory.refresh-note:runtime-boundary",
+            },
+        },
+        {
+            "kind": "agentic-workspace/skill-finding/v1",
+            "id": "missing-skill:review",
+            "finding_class": "missing-skill-dependency",
+            "severity": "material",
+            "owner": "skill registry",
+            "trigger": "before the next review task",
+        },
+        {
+            "kind": "agentic-workspace/context-gap/v1",
+            "id": "retired-gap",
+            "gap_class": "coverage-gap",
+            "severity": "blocking",
+            "owner": "workspace",
+            "lifecycle": "dismissed",
+        },
+        {
+            "kind": "agentic-workspace/context-gap/v1",
+            "id": "material-unrouted-gap",
+            "gap_class": "coverage-gap",
+            "severity": "material",
+            "owner": "workspace",
+        },
+    ]
+
+    first = derive_context_consequences(findings=findings, current_stage="implement")
+    second = derive_context_consequences(findings=findings, current_stage="implement")
+
+    assert first == second
+    assert len(first) == len(findings)
+    assert len({item["finding_id"] for item in first}) == len(findings)
+    assert {item["consequence"] for item in first} == {
+        "closeout-obligation",
+        "route-durable-improvement",
+        "require-review-now",
+        "safe-typed-repair",
+        "defer-with-owner",
+        "terminal-disposition",
+    }
+    assert all(item["dedupe_key"] for item in first)
+    assert next(item for item in first if item["finding_id"] == "retired-gap")["active"] is False
+
+
+def test_context_consequences_enforce_review_narrowing_closeout_repair_and_durable_lifecycle() -> None:
+    findings = [
+        {
+            "id": "review-conflict",
+            "finding_class": "intent-conflict",
+            "severity": "material",
+            "owner": "maintainer",
+            "next_route": "review intent",
+        },
+        {
+            "id": "narrow-scope",
+            "severity": "material",
+            "owner": "planning",
+            "current_task_effect": "narrow to docs-only",
+        },
+        {"id": "closeout-gap", "severity": "material", "owner": "verification"},
+        {
+            "id": "repairable-skill",
+            "severity": "material",
+            "owner": "skill registry",
+            "safe_repair": {
+                "operation_id": "workspace.skills.resolve-dependencies",
+                "expected_input_revision": "sha256:current",
+                "idempotency_key": "skills:current",
+            },
+        },
+        {
+            "id": "dogfooding-signal-not-checked",
+            "severity": "material",
+            "owner": "improvement intake",
+            "next_route": "report --section dogfooding_signal_status",
+            "trigger": "before broad closeout",
+        },
+    ]
+    consequences = derive_context_consequences(findings=findings)
+    effects = context_consequence_effects(consequences)
+
+    assert effects["review_gate"] == {"status": "blocked-pending-review", "finding_refs": ["review-conflict"]}
+    assert effects["action_narrowing"]["finding_refs"] == ["narrow-scope"]
+    assert effects["blocked_claim_classes"] == [
+        "unreviewed-context-change",
+        "claims-outside-context-boundary",
+        "full-intent-complete",
+        "issue-closure",
+    ]
+    assert effects["closeout_obligations"][0]["finding_ref"] == "closeout-gap"
+    assert effects["typed_repairs"][0]["operation_invocation"]["operation_id"] == "workspace.skills.resolve-dependencies"
+    assert effects["durable_dispositions"] == [
+        {
+            "finding_ref": "dogfooding-signal-not-checked",
+            "owner": "improvement intake",
+            "route": "report --section dogfooding_signal_status",
+            "reentry_trigger": "before broad closeout",
+            "status": "deferred-with-owner",
+            "dedupe_key": "dogfooding-signal-not-checked:implement:defer-with-owner",
+        }
+    ]
+
+    repeated = context_consequence_effects(derive_context_consequences(findings=findings))
+    assert repeated == effects
+
+    terminal = context_consequence_effects(derive_context_consequences(findings=[{**findings[-1], "lifecycle": "resolved"}]))
+    assert terminal["status"] == "quiet"
+    assert terminal["durable_dispositions"] == []
+
+
+def test_operating_decision_applies_context_review_and_claim_gates() -> None:
+    decision = compile_operating_decision(
+        inputs={
+            "context_findings": [
+                {
+                    "id": "review-conflict",
+                    "finding_class": "intent-conflict",
+                    "severity": "material",
+                    "owner": "maintainer",
+                    "next_route": "review intent",
+                },
+                {"id": "closeout-gap", "severity": "material", "owner": "verification"},
+            ]
+        }
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["external_blocker"] == {
+        "kind": "agentic-workspace/operating-decision-blocker/v1",
+        "reason_code": "conflicting-input",
+        "owner": "maintainer",
+        "repair": "review intent",
+    }
+    assert decision["blocked_claim_classes"] == [
+        "unreviewed-context-change",
+        "full-intent-complete",
+        "issue-closure",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -842,7 +1043,14 @@ def test_context_authority_projection_selects_repository_sources_and_ignores_for
     assert skills["source"]["source_adapter"] == "skill-registry-source-adapter"
     assert skills["source"]["freshness_enforcement"]["status"] == "active"
     assert skills["caller_record_status"] == "ignored"
-    assert projection["excluded_authorities"] == []
+    assert projection["excluded_authorities"] == [
+        {
+            "surface": "proof",
+            "reason": "not-selected-by-task-or-path",
+            "selected_required": False,
+            "caller_record_status": "ignored",
+        }
+    ]
 
 
 def test_context_authority_projection_curates_memory_from_manifest_routes(tmp_path: Path) -> None:
@@ -1297,10 +1505,10 @@ def test_context_authority_each_owner_family_uses_concrete_adapter_output(tmp_pa
     (tmp_path / "generated").mkdir(parents=True, exist_ok=True)
     (tmp_path / "src/agentic_workspace/contracts").mkdir(parents=True, exist_ok=True)
     (tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json").write_text("{}\n", encoding="utf-8")
-    (tmp_path / "generated/.agentic-workspace-cli-fingerprint.json").write_text(
-        json.dumps({"kind": "generated-cli-source-manifest/v1", "source_hashes": {}}),
-        encoding="utf-8",
-    )
+    for owner in ("workspace", "planning", "memory", "verification"):
+        path = tmp_path / f"generated/{owner}/.agentic-workspace-cli-fingerprint.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"kind": "generated-cli-owner-source-manifest/v1", "owner": owner}), encoding="utf-8")
     monkeypatch.setattr(operating_decision, "_git_head", lambda _root: "f" * 40)
     monkeypatch.setattr(
         "agentic_workspace.authority_envelope.mutation_baseline_payload",
@@ -1607,10 +1815,10 @@ def test_context_authority_resolver_rejects_stale_generated_projection(tmp_path:
     (tmp_path / "src/agentic_workspace/contracts").mkdir(parents=True)
     (tmp_path / "src/example.py").write_text("print('current')\n", encoding="utf-8")
     (tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json").write_text("{}\n", encoding="utf-8")
-    (tmp_path / "generated/.agentic-workspace-cli-fingerprint.json").write_text(
-        json.dumps({"source_hashes": {"src/example.py": "not-current"}}),
-        encoding="utf-8",
-    )
+    for owner in ("workspace", "planning", "memory", "verification"):
+        path = tmp_path / f"generated/{owner}/.agentic-workspace-cli-fingerprint.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"owner": owner, "source_hashes": {"src/example.py": "not-current"}}), encoding="utf-8")
     item = next(item for item in context_authority_declarations() if item["surface"] == "generated-references")
 
     record = _resolve_context_authority_source(item=item, target_root=tmp_path, task="", paths=["generated/client.py"])

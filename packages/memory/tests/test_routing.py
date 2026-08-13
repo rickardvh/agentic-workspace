@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys as _sys
+import tomllib
 
 # ruff: noqa: F403,F405
 from pathlib import Path as _Path
@@ -99,6 +100,69 @@ surfaces = ["api"]
     assert result.route_summary["confidence"] == "high"
     assert result.route_summary["direct_match_count"] == 1
     assert result.route_summary["weak_signal_note_count"] == 0
+
+
+def test_route_memory_returns_no_payload_for_direct_task_without_memory_match(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    memory_root = target / ".agentic-workspace" / "memory" / "repo"
+    (memory_root / "domains").mkdir(parents=True, exist_ok=True)
+    (memory_root / "index.md").write_text("# Memory Index\n", encoding="utf-8")
+    (memory_root / "domains" / "api.md").write_text("# API\n", encoding="utf-8")
+    (memory_root / "manifest.toml").write_text(
+        """
+version = 1
+
+[notes.".agentic-workspace/memory/repo/index.md"]
+note_type = "routing"
+canonical_home = ".agentic-workspace/memory/repo/index.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "required"
+routing_only = true
+
+[notes.".agentic-workspace/memory/repo/domains/api.md"]
+note_type = "domain"
+canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
+authority = "canonical"
+audience = "human+agent"
+canonicality = "agent_only"
+task_relevance = "optional"
+routes_from = ["src/api/**"]
+stale_when = ["src/api/**"]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = installer.route_memory(target=target, files=["README.md"], stage="implement")
+
+    assert result.actions == []
+    assert result.route_summary["decision"] == "no-memory-required"
+    assert result.route_summary["routed_note_count"] == 0
+    assert result.route_summary["baseline_note_count"] == 0
+    assert result.route_summary["confidence"] == "high"
+
+
+def test_checked_in_memory_curation_has_bounded_routes_and_disposition_evidence() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    manifest = tomllib.loads((repo_root / ".agentic-workspace/memory/repo/manifest.toml").read_text(encoding="utf-8"))
+    notes = manifest["notes"]
+
+    assert len(notes) == 6
+    assert set(notes) == {
+        ".agentic-workspace/memory/repo/index.md",
+        ".agentic-workspace/memory/repo/domains/example-runtime-boundary.md",
+        ".agentic-workspace/memory/repo/domains/memory-package-context.md",
+        ".agentic-workspace/memory/repo/domains/planning-package-context.md",
+        ".agentic-workspace/memory/repo/decisions/installed-system-consolidation-2026-04-05.md",
+        ".agentic-workspace/memory/repo/mistakes/recurring-failures.md",
+    }
+    evidence = (repo_root / "docs/maintainer/context-memory-curation.md").read_text(encoding="utf-8")
+    assert "Retained manifest routes | 6" in evidence
+    assert "Removed files | 19" in evidence
+    assert "Proof procedures and active work state are intentionally excluded" in evidence
 
 
 def test_route_memory_uses_stage_as_structured_signal_not_task_prose(tmp_path: Path) -> None:

@@ -2018,6 +2018,9 @@ def test_checked_in_1969_evaluation_disposition_closes_present_gap_while_evaluat
     disposition = json.loads((ROOT / ".agentic-workspace/evaluations/issue-1969-disposition.json").read_text(encoding="utf-8"))
     assert disposition["status"] == "implementation-closed-evaluation-open"
     assert disposition["implementation_disposition"]["present_tense_status"] == "satisfied"
+    assert any(
+        "test_start_select_surfaces_state_delta_packets" in ref for ref in disposition["implementation_disposition"]["evidence_refs"]
+    )
     assert disposition["evaluation_disposition"]["definition_ref"].endswith("#state-delta-operating-loop-1969")
     assert disposition["evaluation_disposition"]["current_admission_status"] == "collecting-after-present-implementation-satisfaction"
     audit = disposition["future_evidence_audit"]

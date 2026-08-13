@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Curate route-exact repository Memory and select context consistency checks from changed AW input paths."

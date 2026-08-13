@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -24,8 +25,9 @@ def _repo_root(cwd: Path | None = None) -> Path:
 REPO_ROOT = _repo_root()
 FORMAT_EXTENSIONS = {".py", ".pyi", ".ipynb"}
 FORMAT_ROOTS = {"src", "tests", "packages"}
-HOOK_COMMANDS = (
-    ["make", "lint"],
+POST_FORMAT_COMMANDS = (
+    ["make", "lint-nosync"],
+    ["make", "typecheck-nosync"],
     [sys.executable, "scripts/check/check_no_absolute_paths.py"],
 )
 
@@ -51,15 +53,27 @@ def _partial_stage_conflicts(format_candidates: list[Path]) -> list[Path]:
     return sorted(path for path in format_candidates if path in unstaged_paths)
 
 
-def _run(command: list[str]) -> int:
-    return subprocess.run(command, cwd=REPO_ROOT, check=False).returncode
+def _validation_environment() -> dict[str, str]:
+    environment = os.environ.copy()
+    if environment.get("VALIDATION_RUN_ID"):
+        return environment
+    result = subprocess.run(
+        [sys.executable, "scripts/check/allocate_validation_run_id.py"],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    environment["VALIDATION_RUN_ID"] = result.stdout.strip()
+    return environment
 
 
-def _run_checked(command: list[str]) -> int:
-    return subprocess.run(command, cwd=REPO_ROOT, check=False).returncode
+def _run(command: list[str], *, environment: dict[str, str]) -> int:
+    return subprocess.run(command, cwd=REPO_ROOT, env=environment, check=False).returncode
 
 
 def main() -> int:
+    environment = _validation_environment()
     format_candidates = _format_candidates()
     conflicts = _partial_stage_conflicts(format_candidates)
     if conflicts:
@@ -75,15 +89,37 @@ def main() -> int:
         )
         return 1
 
+    if _run(["make", "sync-all"], environment=environment) != 0:
+        return 1
+
     if format_candidates:
-        format_command = [sys.executable, "-m", "ruff", "format", *[path.as_posix() for path in format_candidates]]
-        if _run_checked(format_command) != 0:
+        format_command = [
+            sys.executable,
+            "scripts/check/run_compact_command.py",
+            "--label",
+            "pre-commit format",
+            "--id",
+            "format.pre-commit",
+            "--depends-on",
+            "sync.all",
+            "--proof-purpose",
+            "format staged Ruff-managed files before commit",
+            "--",
+            sys.executable,
+            "-m",
+            "ruff",
+            "format",
+            *[path.as_posix() for path in format_candidates],
+        ]
+        if _run(format_command, environment=environment) != 0:
             return 1
-        if _run(["git", "add", "--", *[path.as_posix() for path in format_candidates]]) != 0:
+        if _run(
+            ["git", "add", "--", *[path.as_posix() for path in format_candidates]], environment=environment
+        ) != 0:
             return 1
 
-    for command in HOOK_COMMANDS:
-        if _run(command) != 0:
+    for command in POST_FORMAT_COMMANDS:
+        if _run(command, environment=environment) != 0:
             return 1
     return 0
 
