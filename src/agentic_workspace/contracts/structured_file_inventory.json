@@ -26,6 +26,11 @@
     },
     {
       "pattern": ".agentic-workspace/evaluations.json",
+      "merge_safety": {
+        "classification": "true-singleton",
+        "owner_boundary": "repository evaluation registry",
+        "reason": "Evaluation definitions form one canonical admitted registry whose criteria are jointly versioned and must conflict when edited concurrently."
+      },
       "format": "json",
       "owner": "workspace-evaluation",
       "status": "typed-validator-backed",
@@ -230,6 +235,11 @@
     },
     {
       "pattern": ".agentic-workspace/evaluations.json",
+      "merge_safety": {
+        "classification": "true-singleton",
+        "owner_boundary": "repository evaluation registry",
+        "reason": "Longitudinal criteria and admission policy are one shared authority; concurrent edits require semantic reconciliation."
+      },
       "format": "json",
       "owner": "evaluation runtime",
       "status": "typed-validator-backed",
@@ -443,6 +453,11 @@
       "notes": "Optional compact evidence handoff records satisfied Assurance/Verification labels after proof or review without storing raw transcripts.",
       "owner": "verification",
       "pattern": ".agentic-workspace/verification/assurance-evidence-records.json",
+      "merge_safety": {
+        "classification": "true-singleton",
+        "owner_boundary": "current repository assurance-label state",
+        "reason": "The record expresses one jointly reviewed assurance-label state, so competing edits require reconciliation rather than silent composition."
+      },
       "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._load_assurance_evidence_records",
       "status": "typed-validator-backed",
       "storage_class": "non-reconstructable-decision"
@@ -471,6 +486,11 @@
       "notes": "Optional repo-local reasoning-economy evidence ledger consumed by report --section reasoning_economy when present.",
       "owner": "verification",
       "pattern": ".agentic-workspace/verification/reasoning-economy-evidence.json",
+      "merge_safety": {
+        "classification": "true-singleton",
+        "owner_boundary": "bounded repository reasoning-economy ledger",
+        "reason": "The bounded ledger is reviewed and compacted as one repository-level measurement set."
+      },
       "schema_or_validator": "agentic_workspace.reporting_support._load_reasoning_economy_evidence_ledger runtime validator",
       "status": "typed-validator-backed",
       "storage_class": "historical-audit-distillation",
@@ -481,9 +501,14 @@
       "editable_by_agents": true,
       "format": "json",
       "generated": false,
-      "notes": "Optional compact disposition records explain ordinary test evidence ownership, durability, and follow-up proof decisions without storing raw review transcripts.",
+      "notes": "Optional owner-scoped disposition records explain ordinary test evidence ownership, durability, and follow-up proof decisions. The logical collection is derived by sorted record id; a shared append-style aggregate is prohibited.",
       "owner": "verification",
-      "pattern": ".agentic-workspace/verification/test-strategy-dispositions.json",
+      "pattern": ".agentic-workspace/verification/test-strategy-dispositions/*.json",
+      "merge_safety": {
+        "classification": "owner-scoped",
+        "owner_boundary": "disposition id and matching filename",
+        "reason": "Each proof owner writes one record; consumers derive a sorted logical collection without a shared branch-written aggregate."
+      },
       "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._load_test_strategy_dispositions",
       "status": "typed-validator-backed",
       "storage_class": "non-reconstructable-decision"
@@ -496,6 +521,11 @@
       "notes": "Optional repo-owned test suite budget observations with provenance and freshness semantics for test_strategy_check drift output.",
       "owner": "verification",
       "pattern": ".agentic-workspace/verification/test-suite-budget.json",
+      "merge_safety": {
+        "classification": "true-singleton",
+        "owner_boundary": "repository test strategy budget",
+        "reason": "Suite targets and observations are one maintainer-owned strategy decision and concurrent changes must reconcile."
+      },
       "schema_or_validator": "agentic_workspace.workspace_runtime_primitives._load_test_suite_budget",
       "status": "typed-validator-backed",
       "storage_class": "non-reconstructable-decision"
@@ -785,6 +815,11 @@
       "notes": "Review records validate against the planning review schema while remaining historical audit evidence.",
       "owner": "planning-review",
       "pattern": ".agentic-workspace/planning/reviews/*.review.json",
+      "merge_safety": {
+        "classification": "owner-scoped",
+        "owner_boundary": "planning review id and filename",
+        "reason": "Each review artifact is independently owned; aggregate review history is derived from the directory."
+      },
       "reconstructable_from": [
         "review prompt source",
         "issue or PR references in the review record",
@@ -1291,7 +1326,12 @@
       "generated": true,
       "notes": "Generated source manifest used by the source-checkout launcher and package checks to detect stale generated CLI artifacts.",
       "owner": "generated-command-adapters",
-      "pattern": "generated/.agentic-workspace-cli-fingerprint.json",
+      "pattern": "generated/*/.agentic-workspace-cli-fingerprint.json",
+      "merge_safety": {
+        "classification": "owner-scoped",
+        "owner_boundary": "generated command package owner directory",
+        "reason": "Each generated package carries only its own operation-contract receipt; shared generator inputs are true shared dependencies across receipts."
+      },
       "reconstructable_from": [
         "uv run python scripts/generate/generate_command_packages.py",
         "generated command package inputs"
@@ -1386,7 +1426,12 @@
       "storage_class": "generated-required-adapter"
     },
     {
-      "pattern": "generated/.agentic-workspace-cli-fingerprint.json",
+      "pattern": "generated/*/.agentic-workspace-cli-fingerprint.json",
+      "merge_safety": {
+        "classification": "owner-scoped",
+        "owner_boundary": "generated command package owner directory",
+        "reason": "Owner receipts prevent disjoint generated packages from rewriting one repo-global fingerprint."
+      },
       "format": "json",
       "owner": "generated-command-adapters",
       "status": "generated-derived",
@@ -2006,7 +2051,7 @@
   ],
   "generated_mirrors": [
     {
-      "pattern": "generated/.agentic-workspace-cli-fingerprint.json",
+      "pattern": "generated/*/.agentic-workspace-cli-fingerprint.json",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",
       "named_consumer": "source-checkout launcher and generated command package freshness checks",
       "checked_in_justification": "The source-checkout launcher, CI, and local package checks need a checked-in source manifest to decide whether generated CLI artifacts are stale.",
@@ -2026,7 +2071,7 @@
       "source_command": "uv run python scripts/generate/generate_external_consumer_profile.py"
     },
     {
-      "pattern": "generated/.agentic-workspace-cli-fingerprint.json",
+      "pattern": "generated/*/.agentic-workspace-cli-fingerprint.json",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",
       "named_consumer": "generated command package freshness checks",
       "checked_in_justification": "Deterministic generated-surface fingerprint is required to detect stale generated command packages.",
