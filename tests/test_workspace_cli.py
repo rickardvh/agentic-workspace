@@ -4754,7 +4754,7 @@ def test_summary_fresh_session_digest_is_selector_backed(tmp_path: Path, capsys)
     assert (
         cli.main(
             [
-                "start",
+                "summary",
                 "--target",
                 str(tmp_path),
                 "--task",
@@ -4851,7 +4851,7 @@ def test_start_exposes_workflow_sufficiency_and_continuation_selectors(tmp_path:
     assert (
         cli.main(
             [
-                "summary",
+                "start",
                 "--target",
                 str(tmp_path),
                 "--task",
