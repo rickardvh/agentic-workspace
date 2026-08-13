@@ -1238,6 +1238,16 @@
           "additionalProperties": true,
           "description": "Structured current-state convergence plan for payload upgrade attention items."
         },
+        "contract_pair": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Expected and actual installed contract, package-resource, and invocation identity pair."
+        },
+        "invocation_resolution": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Non-mutating classification of the configured environment-manager invocation."
+        },
         "executable": {
           "type": "object",
           "description": "Executable identity and compatibility classification.",
@@ -1366,7 +1376,11 @@
             "exact_version",
             "minimum_version",
             "source_class",
-            "target_relation"
+            "target_relation",
+            "resolution_posture",
+            "contract_schema",
+            "required_capabilities",
+            "required_resources"
           ],
           "description": "Human-readable or lookup name for this entry."
         },
@@ -1387,7 +1401,7 @@
           "description": "Expected contract value used by this contract."
         },
         "actual": {
-          "type": "string",
+          "type": ["array", "object", "string", "null"],
           "description": "Actual text value used by this contract."
         },
         "satisfied": {
@@ -1448,6 +1462,21 @@
           ],
           "description": "Expected command contract value used by this contract."
         },
+        "invocation_resolution": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Non-mutating classification of the configured environment-manager invocation."
+        },
+        "contract_expectation": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Durable schema, capability, and package-resource expectation owned by repo config."
+        },
+        "package_resources": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Availability results for required package resources."
+        },
         "invocation_confidence": {
           "enum": [
             "high",
@@ -1483,7 +1512,11 @@
               "exact_version",
               "minimum_version",
               "source_class",
-              "target_relation"
+              "target_relation",
+              "resolution_posture",
+              "contract_schema",
+              "required_capabilities",
+              "required_resources"
             ],
             "description": "One entry in the failed checks list."
           },

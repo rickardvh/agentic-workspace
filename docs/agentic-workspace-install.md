@@ -66,4 +66,20 @@ agentic-workspace config --target . --format json
 agentic-workspace doctor --target . --format json
 ```
 
+The repo-owned `[cli_compatibility]` table is the durable expected identity for
+the installed contract pair. It can declare the contract schema, required
+capabilities and package resources, and the required invocation resolution
+posture. Startup and diagnostics only parse and inspect that recipe; they do not
+resolve dependencies, rewrite a lockfile, or move a VCS/source revision. Use an
+explicit install, upgrade, or sync operation to change dependency resolution or
+the expected identity.
+
+When the target owns a lock, configure its environment-manager adapter in a
+locked or frozen mode (for example, `uv run --frozen ...`). The
+`installed_state_compatibility` selector reports the adapter, actual posture,
+package-resource availability, and mutation gate. Local source dogfooding is
+reported as a non-release source checkout with its revision, dirty state, and
+generated-target parity; those diagnostic details are not copied into durable
+repo state.
+
 If ordinary bootstrap needs a finishing brief, it is written under `.agentic-workspace/local/scratch/` and should not be checked in. Payload mirror mode may still write `.agentic-workspace/bootstrap-handoff.md` or `.agentic-workspace/bootstrap-handoff.json`; treat those as bounded finishing briefs before normal repo work resumes.
