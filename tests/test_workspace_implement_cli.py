@@ -766,6 +766,12 @@ def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Pa
     }
     assert bundle["missing_evidence"] == current_decision["missing_evidence"]
     assert bundle["state_backed"] is True
+    visible = payload["visible_state_delta_response"]
+    assert visible["status"] == "ready"
+    assert visible["source_packets"] == ["current_decision", "message_economy", "evidence_bundle"]
+    assert visible["route_budget"]["max_report_scans"] == 1
+    assert visible["route_budget"]["generated_action_policy"] == "never-verbose-without-explicit-expansion"
+    assert visible["composed_closeout"]["requires_additional_report_scan"] is False
 
 
 def test_start_and_implement_use_registry_owned_context_authority_guardrails(tmp_path: Path, capsys) -> None:

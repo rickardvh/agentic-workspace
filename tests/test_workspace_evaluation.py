@@ -33,6 +33,7 @@ from agentic_workspace.evaluation import (
     _external_delivery_adapter_host_admission_signature_payload,
     _write_indexed_owner_receipt,
     append_observation,
+    append_specialist_projection,
     closure_authority,
     evaluation_collection_actions,
     evaluation_report_delivery_retry_request,
@@ -1092,8 +1093,74 @@ def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(t
     assert loop["matching"]["quiet_non_match"] is True
     assert loop["observe_admission"]["typed_boundary"] == "assignment authority + mutation baseline + proof receipt + definition revision"
     assert loop["specialist_authority"]["specialist_domains"][0]["domain"] == "dogfooding-feedback"
-    assert loop["specialist_authority"]["convergence_status"] == "not-yet-converged"
-    assert loop["specialist_authority"]["specialist_domains"][0]["convergence_status"] == "not-yet-converged"
+    assert loop["specialist_authority"]["convergence_status"] == "converged"
+    assert loop["specialist_authority"]["specialist_domains"][0]["convergence_status"] == "producer-projection"
+
+
+@pytest.mark.parametrize(
+    ("evaluation_id", "subject_type", "evidence_class", "expected_domain", "expected_status"),
+    [
+        ("eval-dogfood", "issue", "dogfooding-feedback", "dogfooding-feedback", "producer-projection"),
+        ("eval-long-horizon", "scenario", "long-horizon-evaluation", "long-horizon-evaluation", "producer-projection"),
+        ("eval-delegation", "delegation", "external-ref", "delegation-outcome", "producer-projection"),
+    ],
+)
+def test_specialist_domains_converge_on_the_admitted_shared_lifecycle(
+    tmp_path: Path,
+    evaluation_id: str,
+    subject_type: str,
+    evidence_class: str,
+    expected_domain: str,
+    expected_status: str,
+) -> None:
+    _init_git_repo(tmp_path)
+    definition = _definition_kwargs()
+    definition.update(
+        evaluation_id=evaluation_id,
+        subject={"type": subject_type, "refs": [evaluation_id]},
+        evidence_sources=[{"id": f"{evaluation_id}-source", "class": evidence_class}],
+        selectors={"issue_refs": [evaluation_id]},
+    )
+    register_evaluation(target_root=tmp_path, **definition)
+    context = _bound_context(tmp_path, evaluation_id=evaluation_id)
+
+    from agentic_workspace.evaluation_projection import specialist_evaluation_projection
+
+    projection = specialist_evaluation_projection(
+        domain=expected_domain,
+        producer=f"ordinary-{expected_domain}-producer",
+        source_identity="result-1",
+        source_ref=f"{expected_domain}://result-1",
+        criterion="reconstruction-cost",
+        result="supports",
+        facts={"ordinary_producer_result": "passed"},
+    )
+    appended = append_specialist_projection(
+        target_root=tmp_path,
+        evaluation_id=evaluation_id,
+        projection=projection,
+        context=context,
+    )
+
+    assert appended["outcome"] == "appended"
+    authority = evaluation_summary(target_root=tmp_path, evaluation_id=evaluation_id)["summaries"][0]["operating_loop"][
+        "specialist_authority"
+    ]
+    assert authority["convergence_status"] == "converged"
+    assert authority["specialist_domains"] == [
+        {
+            **authority["specialist_domains"][0],
+            "domain": expected_domain,
+            "convergence_status": expected_status,
+        }
+    ]
+    observations_path = tmp_path / ".agentic-workspace/local/evaluations" / f"{evaluation_id}.jsonl"
+    observations = [json.loads(line) for line in observations_path.read_text(encoding="utf-8").splitlines()]
+    assert len(observations) == 1
+    assert observations[0]["evidence_refs"] == [
+        f"{expected_domain}://result-1",
+        f"specialist-observation:{projection['observation_id']}",
+    ]
 
 
 def test_evaluation_report_is_quiet_until_explicit_or_material(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1941,7 +2008,7 @@ def test_evaluation_report_delivery_generated_operation_family_fails_closed_with
         )
 
 
-def test_checked_in_1969_evaluation_disposition_is_parseable_and_honest() -> None:
+def test_checked_in_1969_evaluation_disposition_closes_present_gap_while_evaluation_collects() -> None:
     evaluations_text = (ROOT / ".agentic-workspace/evaluations.json").read_text(encoding="utf-8")
     assert "<<<<<<<" not in evaluations_text
     payload = json.loads(evaluations_text)
@@ -1950,6 +2017,30 @@ def test_checked_in_1969_evaluation_disposition_is_parseable_and_honest() -> Non
     assert evaluation["action_policy"]["material_negative_finding"] == "create-or-reopen-bounded-follow-up"
     disposition = json.loads((ROOT / ".agentic-workspace/evaluations/issue-1969-disposition.json").read_text(encoding="utf-8"))
     assert disposition["status"] == "implementation-closed-evaluation-open"
-    assert disposition["implementation_disposition"]["present_tense_status"] == "implemented-in-archived-closeout"
+    assert disposition["implementation_disposition"]["present_tense_status"] == "satisfied"
+    assert any(
+        "test_start_select_surfaces_state_delta_packets" in ref for ref in disposition["implementation_disposition"]["evidence_refs"]
+    )
     assert disposition["evaluation_disposition"]["definition_ref"].endswith("#state-delta-operating-loop-1969")
-    assert disposition["future_evidence_audit"]["status"] == "bounded-audit-seed-recorded"
+    assert disposition["evaluation_disposition"]["current_admission_status"] == "collecting-after-present-implementation-satisfaction"
+    audit = disposition["future_evidence_audit"]
+    assert audit["status"] == "complete-current-open-issue-snapshot"
+    assert len(audit["current_open_issue_refs"]) == 35
+    assert set(audit["current_open_issue_refs"]) == {
+        *audit["non_matches"]["implementation-work-open"],
+        *audit["non_matches"]["evaluation-capability-or-audit-owner"],
+        "#1969",
+    }
+    assert audit["remaining_gap"] == "none in present implementation; Evaluation retains longitudinal observation authority"
+    assert audit["identified_issues"] == [
+        {
+            "issue_ref": "#1969",
+            "implementation_status": "satisfied",
+            "evaluation_status": "migrated-to-state-delta-operating-loop-1969",
+            "issue_disposition": "close-present-implementation; continue-longitudinal-evaluation",
+        }
+    ]
+    lane = json.loads((ROOT / ".agentic-workspace/planning/lanes/issue-1969-state-delta-loop.lane.json").read_text(encoding="utf-8"))
+    assert lane["proof_aggregation"]["status"] == "satisfied"
+    assert lane["parent_close_permission"] == "close-parent"
+    assert lane["closeout_state"]["status"] == "closed"
