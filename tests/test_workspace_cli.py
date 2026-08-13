@@ -4020,6 +4020,11 @@ candidates = []
     )
     assert route["mutation_authority"] == "none"
     assert route["next_safe_action"]["action"] == "refresh-mutation-baseline"
+    closeout_projection = route["consumer_projections"]["closeout"]
+    assert closeout_projection["decision_id"] == route["decision_id"]
+    assert closeout_projection["input_revision"] == route["input_revision"]
+    assert closeout_projection["action_identity"] == route["action_identity"]
+    assert closeout_projection["blocked_claims"] == route["blocked_claims"]
 
 
 def test_closeout_trust_preserves_current_task_manual_proof_obligations(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -7835,6 +7840,7 @@ def test_every_declared_route_consumer_is_a_no_divergence_projection() -> None:
     }
     assert len(identity) == 1
     assert all(item["authority"] == "planning_safety_gate.route_decision" for item in projections)
+    assert decision["consumer_projections"] == {item["consumer"]: item for item in projections}
     with pytest.raises(ValueError, match="unsupported Planning route consumer"):
         planning_route_consumer_projection(route_decision=decision, consumer="parallel-classifier")
 
@@ -8646,6 +8652,26 @@ def test_ordinary_planning_consumers_project_one_route_authority_without_orienta
     assert len({route["input_revision"] for route in routes}) == 1
     assert len({json.dumps(route["action_identity"], sort_keys=True) for route in routes}) == 1
     assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in routes)
+    for route in routes:
+        assert set(route["consumer_projections"]) == set(route["consumer_contract"]["ordinary_consumers"])
+        assert {
+            (
+                projection["decision_id"],
+                projection["input_revision"],
+                json.dumps(projection["action_identity"], sort_keys=True),
+                projection["required_transition"],
+                tuple(projection["blocked_claims"]),
+            )
+            for projection in route["consumer_projections"].values()
+        } == {
+            (
+                route["decision_id"],
+                route["input_revision"],
+                json.dumps(route["action_identity"], sort_keys=True),
+                route["required_transition"],
+                tuple(route["blocked_claims"]),
+            )
+        }
     assert planning_state.read_bytes() == state_before
     assert not (tmp_path / ".agentic-workspace" / "local" / "planning-carry.json").exists()
 
@@ -8681,6 +8707,22 @@ def test_planning_route_consumer_inventory_and_degraded_capsule_are_closed_and_c
     assert {"managed-state-mutation", "external-write", "destructive-action"}.issubset(policy["forbidden_effects"])
     assert {"proof-complete", "issue-closeable", "task-complete"}.issubset(policy["forbidden_claims"])
     assert policy["restoration"]["action"] == "restore-configured-cli-and-rerun-start"
+
+    workflow = (repo_root / ".agentic-workspace/WORKFLOW.md").read_text(encoding="utf-8")
+    installed_workflow = (repo_root / "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md").read_text(encoding="utf-8")
+    assert workflow == installed_workflow
+    assert len(workflow.encode()) < 4_000
+    assert "python .agentic-workspace/fallback/no_cli_startup.py" in workflow
+    assert "Fallback Work Shape" not in workflow
+    assert "do not reconstruct work shape" in workflow
+
+    startup_skill = (repo_root / ".agentic-workspace/skills/workspace-startup/SKILL.md").read_text(encoding="utf-8")
+    installed_startup_skill = (repo_root / "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    assert startup_skill == installed_startup_skill
+    assert "planning_route_decision" in startup_skill
+    assert "Do not reclassify the task" in startup_skill
 
 
 def test_startup_profiles_and_skill_projection_share_current_planning_route(tmp_path: Path, capsys) -> None:

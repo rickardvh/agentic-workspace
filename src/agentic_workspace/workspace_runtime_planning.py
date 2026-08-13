@@ -1537,6 +1537,10 @@ def _planning_route_decision_payload(
         "planning-route:"
         + _stable_revision({"input_revision": decision["input_revision"], "action_identity": decision.get("action_identity", {})})[:20]
     )
+    decision["consumer_projections"] = {
+        consumer: planning_route_consumer_projection(route_decision=decision, consumer=consumer)
+        for consumer in decision["consumer_contract"]["ordinary_consumers"]
+    }
     return decision
 
 
