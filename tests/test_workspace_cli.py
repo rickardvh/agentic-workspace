@@ -4754,7 +4754,7 @@ def test_summary_fresh_session_digest_is_selector_backed(tmp_path: Path, capsys)
     assert (
         cli.main(
             [
-                "summary",
+                "start",
                 "--target",
                 str(tmp_path),
                 "--task",
