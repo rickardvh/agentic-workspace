@@ -6272,6 +6272,459 @@ def test_start_select_installed_state_advisory_drift_limits_currentness_claims(t
     )
 
 
+def test_start_select_installed_contract_pair_uses_frozen_non_mutating_resolution(
+    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original_run = workspace_runtime_core.subprocess.run
+
+    def clean_source_status(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        if command[:3] == ["git", "status", "--porcelain=v1"]:
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        return original_run(command, **kwargs)
+
+    monkeypatch.setattr(workspace_runtime_core.subprocess, "run", clean_source_status)
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[workspace]\n"
+        'cli_invoke = "uv run --frozen --active python scripts/run_agentic_workspace.py"\n\n'
+        "[cli_compatibility]\n"
+        'contract_schema = "agentic-workspace/installed-state-compatibility/v1"\n'
+        'required_capabilities = ["installed-state-sync-v2"]\n'
+        'required_resources = ["agentic_workspace:contracts/context_authority_registry.json"]\n'
+        'resolution_policy = "frozen"\n',
+        encoding="utf-8",
+    )
+    script = tmp_path / "scripts" / "run_agentic_workspace.py"
+    script.parent.mkdir()
+    script.write_text("from agentic_workspace.cli import main\nraise SystemExit(main())\n", encoding="utf-8")
+    (tmp_path / "uv.lock").write_text(
+        'version = 1\n\n[[package]]\nname = "agentic-workspace"\nversion = "' + cli.__version__ + '"\n',
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Inspect installed state",
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    pair = compatibility["contract_pair"]
+    resolution = compatibility["invocation_resolution"]
+
+    assert pair["status"] == "compatible"
+    assert pair["mutation_gate"] == "allow"
+    assert pair["expected"]["provenance"] == "repo-config"
+    resource = pair["actual"]["resources"][0]
+    assert resource["resource"] == "agentic_workspace:contracts/context_authority_registry.json"
+    assert resource["available"] is True
+    assert resource["resolution"] == "package-resource"
+    assert resource["resolver"] == "installed-contract-pair.package-resource"
+    assert resource["receipt_id"].startswith("package-resource:")
+    assert resolution["environment_manager_adapter"] == "uv"
+    assert resolution["posture"] == "frozen"
+    assert resolution["preflight_mutates_dependency_state"] is False
+    assert resolution["resolution_status"] == "resolved"
+    assert resolution["lock_resolution"]["runtime_version_matches"] is True
+    assert resolution["selected_distribution"]["status"] == "resolved"
+    assert resolution["repair_command"] == ""
+    assert pair["transition_owner"]["operation_id"] == "workspace.install-upgrade-sync"
+    assert pair["transition_owner"]["operation_contract"].endswith("workspace.install-upgrade-sync.json")
+    assert pair["transition_owner"]["executor"].endswith("execute_workspace_install_upgrade_sync")
+    assert pair["transition_owner"]["before_identity_digest"].startswith("sha256:")
+    assert pair["transition_owner"]["ordinary_surfaces_mutate_dependency_state"] is False
+    matrix = pair["conformance_matrix"]
+    parity = next(item for item in matrix["scenarios"] if item["id"] == "consumer-identity-parity")
+    assert len(set(parity["consumers"].values())) == 1
+    assert set(parity["consumers"]) == {"startup", "skills", "doctor"}
+    source_checkout = pair["actual"]["source_checkout"]
+    assert source_checkout["classification"] == "local-source-non-release"
+    assert re.fullmatch(r"git:[0-9a-f]{12}", source_checkout["revision"])
+    assert source_checkout["dirty"] is False
+    assert source_checkout["generated_parity"] in {"current", "stale"}
+    assert not re.search(r"[A-Za-z]:/|/(?:Users|home|tmp)/", json.dumps(pair, sort_keys=True))
+
+
+def test_install_upgrade_sync_is_the_production_dependency_identity_transition_boundary(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "upgrade",
+                "--target",
+                str(tmp_path),
+                "--to-payload-target",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    receipt = payload["installed_identity_transition"]
+
+    assert receipt["status"] == "admitted"
+    assert receipt["mutation_owner"] == "execute_workspace_install_upgrade_sync"
+    assert receipt["transition_result"]["command"] == "upgrade"
+    assert receipt["before_identity"]["payload_mirror"]["status"] == "missing"
+    assert receipt["after_identity"]["payload_mirror"]["status"] == "present"
+    assert receipt["before_identity_digest"] != receipt["after_identity_digest"]
+
+
+def test_installed_contract_necessary_surface_clone_is_consumer_stable(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    assert not (tmp_path / ".agentic-workspace" / "payload-provenance.json").exists()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Inspect installed contract",
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    startup = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]["contract_pair"]
+    assert cli.main(["doctor", "--target", str(tmp_path), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+    doctor = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]["contract_pair"]
+    assert cli.main(["skills", "--target", str(tmp_path), "--select", "installed_contract,skills", "--format", "json"]) == 0
+    skills = json.loads(capsys.readouterr().out)["values"]
+
+    digests = {
+        startup["conformance_matrix"]["identity_digest"],
+        doctor["conformance_matrix"]["identity_digest"],
+        skills["installed_contract"]["identity_digest"],
+    }
+    assert len(digests) == 1
+    assert startup["actual"]["resources"] == doctor["actual"]["resources"] == skills["installed_contract"]["contract_resources"]
+    package_receipts = [
+        receipt
+        for skill in skills["skills"]
+        for receipt in skill["resource_resolution_receipts"]
+        if receipt["selected_owner"] == "package-owned"
+    ]
+    assert package_receipts
+    assert all(receipt["resolver"] == "installed-contract-pair.package-resource" for receipt in package_receipts)
+    assert not (tmp_path / ".agentic-workspace" / "package-payload").exists()
+
+
+@pytest.mark.parametrize(
+    ("scenario_id", "source_class", "posture", "resolution_status", "vcs_revision", "mirror_payload", "expected_status", "repair_action"),
+    [
+        ("released-package", "released-package", "locked", "resolved", "", False, "admitted", "none"),
+        ("locked-vcs", "installed-distribution", "locked", "resolved", "abc123", False, "admitted", "none"),
+        ("mutable-or-unlocked-vcs", "installed-distribution", "mutable", "resolved", "", False, "blocked", "lock-dependency-resolution"),
+        (
+            "incompatible-or-missing-runtime",
+            "installed-distribution",
+            "locked",
+            "missing",
+            "",
+            False,
+            "blocked",
+            "install-or-select-compatible-runtime",
+        ),
+        ("payload-mirror", "installed-distribution", "locked", "resolved", "", True, "admitted", "none"),
+        ("local-source-drift", "source-checkout", "locked", "resolved", "", False, "blocked", "clean-or-commit-local-source"),
+    ],
+)
+def test_installed_contract_scenarios_use_black_box_start_and_exact_repair_routes(
+    tmp_path: Path,
+    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+    scenario_id: str,
+    source_class: str,
+    posture: str,
+    resolution_status: str,
+    vcs_revision: str,
+    mirror_payload: bool,
+    expected_status: str,
+    repair_action: str,
+) -> None:
+    _init_git_repo(tmp_path)
+    init_args = ["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]
+    if mirror_payload:
+        init_args.insert(-2, "--mirror-payload")
+    assert cli.main(init_args) == 0
+    capsys.readouterr()
+    if source_class == "source-checkout":
+        source_root = tmp_path / "aw-source"
+        source_root.mkdir()
+        subprocess.run(["git", "init", "--quiet"], cwd=source_root, check=True)
+        tracked = source_root / "tracked.txt"
+        tracked.write_text("before\n", encoding="utf-8")
+        subprocess.run(["git", "add", "tracked.txt"], cwd=source_root, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Test", "-c", "user.email=test@example.test", "commit", "-m", "initial"], cwd=source_root, check=True
+        )
+        tracked.write_text("after\n", encoding="utf-8")
+        monkeypatch.setattr(workspace_runtime_core, "_agentic_workspace_package_root", lambda: source_root)
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_payload_installer_identity",
+        lambda **_kwargs: {
+            "package": "agentic-workspace",
+            "version": "1.0.0",
+            "source": "local-source" if source_class == "source-checkout" else "released-wheel",
+            "source_class": source_class,
+            "source_identity": "git:abc123" if source_class == "source-checkout" else "site-packages:agentic_workspace",
+            "module_path": "agentic_workspace",
+            "python_executable": "python",
+        },
+    )
+    direct_url = {
+        "url_scheme": "https" if vcs_revision or posture == "mutable" else "",
+        "url_fingerprint": "sha256:fixture" if vcs_revision or posture == "mutable" else "",
+        "vcs_info": {"vcs": "git", **({"commit_id": vcs_revision} if vcs_revision else {})} if vcs_revision or posture == "mutable" else {},
+    }
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_invocation_resolution_payload",
+        lambda **_kwargs: {
+            "posture": posture,
+            "resolution_status": resolution_status,
+            "policy_satisfied": posture == "locked",
+            "selected_distribution": {"direct_url": direct_url},
+            "preflight_mutates_dependency_state": posture == "mutable",
+            "preflight_status": "unsafe-mutable-resolution" if posture == "mutable" else "non-mutating",
+            "repair_command": "uv run --frozen agentic-workspace",
+        },
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+    pair = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]["contract_pair"]
+    scenario = next(item for item in pair["conformance_matrix"]["scenarios"] if item["id"] == scenario_id)
+
+    assert scenario["status"] == expected_status
+    assert pair["repair_route"]["action"] == repair_action
+    assert pair["status"] == ("incompatible" if expected_status == "blocked" else "compatible")
+
+
+def test_installed_contract_generated_parity_blocks_through_black_box_doctor(
+    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    original_summarise = workspace_runtime_core._summarise_reports
+
+    def stale_summary(**kwargs: Any) -> dict[str, Any]:
+        summary = original_summarise(**kwargs)
+        summary["stale_generated_surfaces"] = ["generated/example.py"]
+        return summary
+
+    monkeypatch.setattr(workspace_runtime_core, "_summarise_reports", stale_summary)
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_payload_installer_identity",
+        lambda **_kwargs: {
+            "package": "agentic-workspace",
+            "version": "1.0.0",
+            "source": "released-wheel",
+            "source_class": "released-package",
+            "source_identity": "site-packages:agentic_workspace",
+            "module_path": "agentic_workspace",
+            "python_executable": "python",
+        },
+    )
+    assert cli.main(["doctor", "--target", str(tmp_path), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+    pair = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]["contract_pair"]
+    generated = next(item for item in pair["conformance_matrix"]["scenarios"] if item["id"] == "generated-parity")
+
+    assert generated["status"] == "blocked"
+    assert pair["status"] == "incompatible"
+    assert pair["repair_route"] == {
+        "status": "required",
+        "action": "regenerate-managed-surfaces",
+        "command": "uv run python scripts/generate/generate_command_packages.py",
+    }
+
+
+def test_ordinary_identity_consumers_cannot_execute_dependency_transition(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    def reject_transition(**_kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("ordinary consumers must not cross the dependency transition boundary")
+
+    monkeypatch.setattr(workspace_runtime_core, "execute_workspace_install_upgrade_sync", reject_transition)
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "inspect", "--format", "json"]) == 0
+    capsys.readouterr()
+    assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert cli.main(["skills", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+
+def test_start_select_installed_contract_pair_blocks_mutable_resolution(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[workspace]\n"
+        'cli_invoke = "uv run --active python scripts/run_agentic_workspace.py"\n\n'
+        "[cli_compatibility]\n"
+        'resolution_policy = "frozen"\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    resolution = compatibility["invocation_resolution"]
+
+    assert compatibility["status"] == "blocking-drift"
+    assert compatibility["contract_pair"]["status"] == "incompatible"
+    assert compatibility["contract_pair"]["mutation_gate"] == "block-managed-mutation"
+    assert resolution["posture"] == "mutable"
+    assert resolution["preflight_status"] == "unsafe-mutable-resolution"
+    assert resolution["preflight_mutates_dependency_state"] is True
+    assert "uv run --frozen" in resolution["repair_command"]
+
+
+def test_start_select_installed_contract_pair_blocks_missing_package_resource(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        'schema_version = 1\n\n[cli_compatibility]\nrequired_resources = ["agentic_workspace:contracts/missing-contract.json"]\n',
+        encoding="utf-8",
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "installed_state_compatibility", "--format", "json"]) == 0
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    pair = compatibility["contract_pair"]
+
+    assert compatibility["status"] == "blocking-drift"
+    assert pair["status"] == "incompatible"
+    assert pair["mutation_gate"] == "block-managed-mutation"
+    assert pair["missing_resources"] == ["agentic_workspace:contracts/missing-contract.json"]
+
+
+@pytest.mark.parametrize(
+    ("recipe", "expected_posture", "expected_policy"),
+    [
+        ("pipx run agentic-workspace@git+https://example.test/agentic-workspace@abc123", "locked", True),
+        ("pipx run agentic-workspace", "mutable", False),
+    ],
+)
+def test_invocation_resolution_distinguishes_locked_and_mutable_pipx_vcs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    recipe: str,
+    expected_posture: str,
+    expected_policy: bool,
+) -> None:
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text(
+        f'schema_version = 1\n\n[workspace]\ncli_invoke = "{recipe}"\n\n[cli_compatibility]\nresolution_policy = "locked"\n',
+        encoding="utf-8",
+    )
+    pipx_list = {
+        "venvs": {
+            "agentic-workspace": {
+                "metadata": {
+                    "main_package": {
+                        "package": "agentic-workspace",
+                        "package_version": cli.__version__,
+                        "package_or_url": "git+https://example.test/agentic-workspace@abc123",
+                    }
+                }
+            }
+        }
+    }
+    monkeypatch.setattr(workspace_runtime_core.shutil, "which", lambda _name: "tools/pipx.exe")
+    monkeypatch.setattr(
+        workspace_runtime_core.subprocess,
+        "run",
+        lambda *_args, **_kwargs: subprocess.CompletedProcess([], 0, json.dumps(pipx_list), ""),
+    )
+
+    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
+    resolution = workspace_runtime_core._invocation_resolution_payload(config=config)
+
+    assert resolution["environment_manager_adapter"] == "pipx"
+    assert resolution["posture"] == expected_posture
+    assert resolution["policy_satisfied"] is expected_policy
+    assert resolution["manager_probe"]["selected_package"]["name"] == "agentic-workspace"
+
+
+def test_invocation_resolution_reads_poetry_environment_identity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text(
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "poetry run agentic-workspace"\n\n'
+        '[cli_compatibility]\nresolution_policy = "locked"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "poetry.lock").write_text(
+        '[[package]]\nname = "agentic-workspace"\nversion = "' + cli.__version__ + '"\n', encoding="utf-8"
+    )
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        if command[1:4] == ["env", "info", "--executable"]:
+            return subprocess.CompletedProcess(command, 0, sys.executable + "\n", "")
+        identity = {"name": "agentic-workspace", "version": cli.__version__, "direct_url": {}}
+        return subprocess.CompletedProcess(command, 0, json.dumps(identity), "")
+
+    monkeypatch.setattr(workspace_runtime_core.shutil, "which", lambda _name: "tools/poetry.exe")
+    monkeypatch.setattr(workspace_runtime_core.subprocess, "run", fake_run)
+
+    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
+    resolution = workspace_runtime_core._invocation_resolution_payload(config=config)
+
+    assert resolution["policy_satisfied"] is True
+    assert resolution["selected_distribution"]["version"] == cli.__version__
+    assert len(calls) == 2
+
+
+def test_invocation_resolution_blocks_missing_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    (workspace / "config.toml").write_text('schema_version = 1\n\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
+    monkeypatch.setattr(workspace_runtime_core.shutil, "which", lambda _name: None)
+
+    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
+    resolution = workspace_runtime_core._invocation_resolution_payload(config=config)
+
+    assert resolution["resolution_status"] == "unresolved"
+    assert resolution["policy_satisfied"] is False
+    assert resolution["selected_executable"]["path_fingerprint"] == ""
+
+
 def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

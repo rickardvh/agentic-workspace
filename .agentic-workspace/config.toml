@@ -15,9 +15,12 @@ improvement_latitude = "proactive"
 optimization_bias = "agent-efficiency"
 advanced_features = ["review_artifacts", "external_adapters"]
 # Keep a spawned/linked worktree on the caller's already-active environment.
-# --no-sync prevents a mismatched active environment from being retargeted
+# Without --active, uv ignores VIRTUAL_ENV when the worktree has a different
+# project path, creates a second .venv, and buries the first AW decision behind
+# installation output.
+# --frozen/--no-sync prevents a mismatched active environment from being retargeted
 # before the launcher can verify its editable distribution origins.
-cli_invoke = "uv run --active --no-sync python scripts/run_agentic_workspace.py"
+cli_invoke = "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py"
 
 [assurance]
 default_level = "medium"
@@ -251,6 +254,14 @@ notes = "Model harness and test-knowledge changes need scorer proof and inventor
 enforcement = "advisory"
 source_classes = ["source-checkout"]
 target_relations = ["inside-target"]
+contract_schema = "agentic-workspace/installed-state-compatibility/v1"
+required_capabilities = ["installed-state-sync-v2"]
+required_resources = [
+  "agentic_workspace:contracts/context_authority_registry.json",
+  "agentic_workspace:contracts/schemas/operating_decision.schema.json",
+  "agentic_workspace:contracts/workspace_defaults/payload.json",
+]
+resolution_policy = "frozen"
 
 [payload]
 target_release = "source-current"

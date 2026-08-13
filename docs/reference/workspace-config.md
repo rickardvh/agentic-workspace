@@ -154,3 +154,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `cli_compatibility.source_classes` | array of enum `"source-checkout"`, `"installed-package"`, `"editable-dev"`, `"unknown"` | no | `[]` | Allowed source classes for the invoked CLI executable. |  |  |
 | `cli_compatibility.target_relations` | array of enum `"inside-target"`, `"outside-target"`, `"no-target"` | no | `[]` | Allowed relation between the invoked CLI executable and the target repo. |  |  |
 | `cli_compatibility.command` | string | no |  | Expected CLI command string when the repo wants compatibility checks to match a specific invocation. | `"agentic-workspace"` |  |
+| `cli_compatibility.contract_schema` | string | no | `"agentic-workspace/installed-state-compatibility/v1"` | Durable installed-state contract schema expected by this repository. |  |  |
+| `cli_compatibility.required_capabilities` | array of string | no | `[]` | Package capabilities required from the configured Agentic Workspace runtime. |  |  |
+| `cli_compatibility.required_resources` | array of string | no | `[]` | Package resources required from the configured Agentic Workspace runtime, expressed as package:relative/path. |  |  |
+| `cli_compatibility.resolution_policy` | enum `"direct"`, `"locked"`, `"frozen"` | no | `"direct"` | Required dependency-resolution posture for the configured invocation. |  |  |

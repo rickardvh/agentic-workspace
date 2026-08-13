@@ -125,11 +125,14 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `cli_compatibility.enforcement_source` | string | no |  | Enforcement source text value used by this contract. |  |  |
 | `cli_compatibility.expectation_source` | string | no |  | Expectation source text value used by this contract. |  |  |
 | `cli_compatibility.expected_command` | string \| null | no |  | Expected command contract value used by this contract. |  |  |
+| `cli_compatibility.invocation_resolution` | object | no |  | Non-mutating classification of the configured environment-manager invocation. |  |  |
+| `cli_compatibility.contract_expectation` | object | no |  | Durable schema, capability, and package-resource expectation owned by repo config. |  |  |
+| `cli_compatibility.package_resources` | array of object | no |  | Availability results for required package resources. |  |  |
 | `cli_compatibility.invocation_confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | Allowed invocation confidence value for routing or validation. |  |  |
 | `cli_compatibility.drift_findings` | array of object | no |  | Ordered drift findings entries used by this contract. |  |  |
 | `cli_compatibility.remediation` | object | no |  | Remediation details used by this contract. |  |  |
 | `cli_compatibility.checks` | array of ref `#/$defs/cli_compatibility_check` | no |  | Ordered checks entries used by this contract. |  |  |
-| `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"` | yes |  | Ordered failed checks entries used by this contract. |  |  |
+| `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"`, `"resolution_posture"`, `"contract_schema"`, `"required_capabilities"`, `"required_resources"` | yes |  | Ordered failed checks entries used by this contract. |  |  |
 | `cli_compatibility.rule` | string | no |  | Policy rule that explains this contract behavior. |  |  |
 | `installed_state_compatibility` | ref `#/$defs/installed_state_compatibility` | no |  | Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts. |  |  |
 | `installed_state_compatibility.kind` | const `"agentic-workspace/installed-state-compatibility/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
@@ -159,6 +162,8 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `installed_state_compatibility.action_state.rule` | string | no |  | Policy rule for applying this action state. |  |  |
 | `installed_state_compatibility.payload_surface_manifest` | object | no |  | Current payload surface contract used to classify installed-state upgrade work. |  |  |
 | `installed_state_compatibility.payload_upgrade_attention_plan` | object | no |  | Structured current-state convergence plan for payload upgrade attention items. |  |  |
+| `installed_state_compatibility.contract_pair` | object | no |  | Expected and actual installed contract, package-resource, and invocation identity pair. |  |  |
+| `installed_state_compatibility.invocation_resolution` | object | no |  | Non-mutating classification of the configured environment-manager invocation. |  |  |
 | `installed_state_compatibility.executable` | object | yes |  | Executable identity and compatibility classification. |  |  |
 | `installed_state_compatibility.payload` | object | yes |  | Installed repo payload compatibility and sync guidance. |  |  |
 | `installed_state_compatibility.generated_artifacts` | object | yes |  | Generated artifact freshness classification. |  |  |

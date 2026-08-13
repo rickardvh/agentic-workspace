@@ -297,6 +297,11 @@ SUPPORTED_CLI_TARGET_RELATIONS = (
     "outside-target",
     "no-target",
 )
+SUPPORTED_CLI_RESOLUTION_POLICIES = (
+    "direct",
+    "locked",
+    "frozen",
+)
 SUPPORTED_PAYLOAD_TARGET_POLICIES = (
     "advisory",
     "required-before-claim",
@@ -566,6 +571,10 @@ class CLICompatibilityExpectation:
     source_classes: tuple[str, ...]
     target_relations: tuple[str, ...]
     command: str | None
+    contract_schema: str
+    required_capabilities: tuple[str, ...]
+    required_resources: tuple[str, ...]
+    resolution_policy: str
     source: str
 
 
@@ -875,6 +884,10 @@ def _load_cli_compatibility_expectation(*, raw_cli_compatibility: Any, config_pa
         "source_classes",
         "target_relations",
         "command",
+        "contract_schema",
+        "required_capabilities",
+        "required_resources",
+        "resolution_policy",
     }
     unknown = sorted(set(raw_cli_compatibility) - supported_fields)
     if unknown:
@@ -895,6 +908,9 @@ def _load_cli_compatibility_expectation(*, raw_cli_compatibility: Any, config_pa
     command = raw_cli_compatibility.get("command")
     if command is not None and (not isinstance(command, str) or not command.strip()):
         raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.command must be a non-empty string when present.")
+    contract_schema = raw_cli_compatibility.get("contract_schema", "agentic-workspace/installed-state-compatibility/v1")
+    if not isinstance(contract_schema, str) or not contract_schema.strip():
+        raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.contract_schema must be a non-empty string.")
     return (
         CLICompatibilityExpectation(
             enforcement=enforcement,
@@ -912,6 +928,24 @@ def _load_cli_compatibility_expectation(*, raw_cli_compatibility: Any, config_pa
             source_classes=source_classes,
             target_relations=target_relations,
             command=command.strip() if isinstance(command, str) else None,
+            contract_schema=contract_schema.strip(),
+            required_capabilities=require_optional_string_list(
+                payload=raw_cli_compatibility,
+                key="required_capabilities",
+                config_path=config_path,
+            ),
+            required_resources=require_optional_string_list(
+                payload=raw_cli_compatibility,
+                key="required_resources",
+                config_path=config_path,
+            ),
+            resolution_policy=require_optional_enum(
+                payload=raw_cli_compatibility,
+                key="resolution_policy",
+                config_path=config_path,
+                allowed=SUPPORTED_CLI_RESOLUTION_POLICIES,
+                default="direct",
+            ),
             source="repo-config" if raw_cli_compatibility else "product-default",
         ),
         warnings,

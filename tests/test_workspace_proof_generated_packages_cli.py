@@ -70,7 +70,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
         "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
         focused_proof,
-        "uv run --active --no-sync python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
+        "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
         "uv run python scripts/generate/generate_command_packages.py --check",
         "uv run python scripts/check/check_generated_command_packages.py --require-node",
     ]
@@ -134,7 +134,7 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
         "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
         "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
         focused_proof,
-        "uv run --active --no-sync python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
+        "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
         "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
         "uv run python scripts/generate/generate_command_packages.py --check",
         "uv run python scripts/check/check_generated_command_packages.py --require-node",

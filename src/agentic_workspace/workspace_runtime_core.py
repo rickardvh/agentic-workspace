@@ -16,6 +16,7 @@ import functools
 import hashlib
 import importlib
 import importlib.metadata
+import importlib.resources
 import io
 import json
 import os
@@ -699,6 +700,16 @@ def _package_version(package: str) -> str:
 def _git_source_identity(root: Path | None) -> str:
     if root is None:
         return ""
+    completed = subprocess.run(
+        ["git", "rev-parse", "--verify", "HEAD"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    revision = completed.stdout.strip() if completed.returncode == 0 else ""
+    if revision:
+        return f"git:{revision[:12]}"
     git_dir = root / ".git"
     head_path = git_dir / "HEAD"
     try:
@@ -1914,6 +1925,8 @@ def _payload_repair_subflow_payload(
 def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False) -> dict[str, Any]:
     expectation = config.cli_compatibility
     identity = _invoked_cli_identity_payload(target_root=config.target_root)
+    invocation_resolution = _invocation_resolution_payload(config=config)
+    resource_availability = _required_package_resource_availability(expectation.required_resources)
     checks: list[dict[str, Any]] = []
 
     def add_check(name: str, expected: Any, actual: Any, satisfied: bool, *, configured: bool) -> None:
@@ -1947,12 +1960,48 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
         not expectation.target_relations or identity["target_relation"] in expectation.target_relations,
         configured=bool(expectation.target_relations),
     )
+    add_check(
+        "resolution_posture",
+        expectation.resolution_policy,
+        invocation_resolution["posture"],
+        invocation_resolution["policy_satisfied"],
+        configured=expectation.resolution_policy != "direct",
+    )
+    add_check(
+        "contract_schema",
+        expectation.contract_schema,
+        "agentic-workspace/installed-state-compatibility/v1",
+        expectation.contract_schema == "agentic-workspace/installed-state-compatibility/v1",
+        configured=True,
+    )
+    missing_capabilities = sorted(set(expectation.required_capabilities) - set(SUPPORTED_PAYLOAD_CAPABILITIES))
+    add_check(
+        "required_capabilities",
+        list(expectation.required_capabilities),
+        list(SUPPORTED_PAYLOAD_CAPABILITIES),
+        not missing_capabilities,
+        configured=bool(expectation.required_capabilities),
+    )
+    missing_resources = [item["resource"] for item in resource_availability if not item["available"]]
+    add_check(
+        "required_resources",
+        list(expectation.required_resources),
+        resource_availability,
+        not missing_resources,
+        configured=bool(expectation.required_resources),
+    )
     configured_checks = [check for check in checks if check["configured"]]
     failed_checks = [check for check in configured_checks if not check["satisfied"]]
     configured = expectation.enforcement != "off" or bool(configured_checks) or expectation.command is not None
     if not configured:
         status = "no-expectation"
-    elif failed_checks and expectation.enforcement == "blocking":
+    elif failed_checks and (
+        expectation.enforcement == "blocking"
+        or any(
+            check["name"] in {"resolution_posture", "contract_schema", "required_capabilities", "required_resources"}
+            for check in failed_checks
+        )
+    ):
         status = "blocking-drift"
     elif failed_checks:
         status = "advisory-drift"
@@ -1968,6 +2017,14 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
         "enforcement_source": expectation.enforcement_source,
         "expectation_source": expectation.source,
         "expected_command": expectation.command,
+        "invocation_resolution": invocation_resolution,
+        "contract_expectation": {
+            "schema": expectation.contract_schema,
+            "capabilities": list(expectation.required_capabilities),
+            "resources": list(expectation.required_resources),
+            "source": expectation.source,
+        },
+        "package_resources": resource_availability,
         "invocation_confidence": identity["confidence"],
         "drift_findings": drift_findings,
         "remediation": remediation,
@@ -1990,8 +2047,489 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
             compact_payload["invocation_confidence"] = identity["confidence"]
         if configured_checks:
             compact_payload["checks"] = payload["checks"]
+        if expectation.source != "product-default" or expectation.resolution_policy != "direct":
+            compact_payload["invocation_resolution"] = invocation_resolution
+            compact_payload["contract_expectation"] = payload["contract_expectation"]
+            compact_payload["package_resources"] = resource_availability
         return compact_payload
     return payload
+
+
+def _invocation_resolution_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    """Resolve the configured executable, distribution, source, and lock without mutation."""
+
+    try:
+        tokens = shlex.split(config.cli_invoke, posix=os.name != "nt")
+    except ValueError:
+        tokens = []
+    normalized = [token.strip("\"'") for token in tokens]
+    executable = Path(normalized[0]).name.lower() if normalized else ""
+    adapter = "direct"
+    posture = "direct"
+    lockfile = ""
+    mutates_resolution = False
+    repair_tokens = list(normalized)
+    if executable in {"uv", "uv.exe"} and "run" in normalized:
+        adapter = "uv"
+        lockfile = "uv.lock" if config.target_root and (config.target_root / "uv.lock").is_file() else ""
+        if "--frozen" in normalized:
+            posture = "frozen"
+        elif "--locked" in normalized:
+            posture = "locked"
+        else:
+            posture = "mutable"
+            mutates_resolution = True
+            run_index = normalized.index("run")
+            repair_tokens.insert(run_index + 1, "--frozen")
+    elif executable in {"pipx", "pipx.exe"} and "run" in normalized:
+        adapter = "pipx"
+        pinned = any("==" in token or "@" in token for token in normalized[normalized.index("run") + 1 :])
+        posture = "locked" if pinned else "mutable"
+        mutates_resolution = not pinned
+    elif executable in {"poetry", "poetry.exe"} and "run" in normalized:
+        adapter = "poetry"
+        lockfile = "poetry.lock" if config.target_root and (config.target_root / "poetry.lock").is_file() else ""
+        posture = "locked" if lockfile else "mutable"
+        mutates_resolution = not bool(lockfile)
+    executable_path = shutil.which(normalized[0]) if normalized else None
+    configured_script = next((token for token in normalized if token.endswith("run_agentic_workspace.py")), "")
+    configured_script_path = Path(configured_script) if configured_script else None
+    if configured_script_path is not None and not configured_script_path.is_absolute() and config.target_root:
+        configured_script_path = config.target_root / configured_script_path
+    configured_script_exists = bool(configured_script_path and configured_script_path.resolve().is_file())
+    distribution: dict[str, Any] = {"status": "missing"}
+    try:
+        installed = importlib.metadata.distribution("agentic-workspace")
+        direct_url_raw = installed.read_text("direct_url.json")
+        direct_url = json.loads(direct_url_raw) if direct_url_raw else {}
+        direct_url_value = str(direct_url.get("url") or "")
+        distribution = {
+            "status": "resolved",
+            "name": str(installed.metadata["Name"] or "agentic-workspace"),
+            "version": installed.version,
+            "direct_url": {
+                "url_scheme": direct_url_value.split(":", 1)[0] if ":" in direct_url_value else "",
+                "url_fingerprint": ("sha256:" + hashlib.sha256(direct_url_value.encode("utf-8")).hexdigest() if direct_url_value else ""),
+                "vcs_info": _as_dict(direct_url.get("vcs_info")),
+                "editable": bool(_as_dict(direct_url.get("dir_info")).get("editable")),
+            },
+        }
+    except (importlib.metadata.PackageNotFoundError, json.JSONDecodeError):
+        pass
+
+    lock_entry: dict[str, Any] = {}
+    lock_status = "not-required"
+    if adapter in {"uv", "poetry"}:
+        lock_status = "missing"
+        lock_path = config.target_root / lockfile if config.target_root and lockfile else None
+        if lock_path and lock_path.is_file():
+            try:
+                lock_payload = tomllib.loads(lock_path.read_text(encoding="utf-8"))
+                packages = lock_payload.get("package", [])
+                if isinstance(packages, list):
+                    lock_entry = next(
+                        (item for item in packages if isinstance(item, dict) and item.get("name") == "agentic-workspace"),
+                        {},
+                    )
+                lock_status = "resolved" if lock_entry else "package-missing"
+            except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+                lock_status = "invalid"
+    manager_probe: dict[str, Any] = {"status": "not-required"}
+    if adapter in {"pipx", "poetry"} and executable_path:
+        probe_command = [executable_path, "list", "--json"] if adapter == "pipx" else [executable_path, "env", "info", "--executable"]
+        try:
+            completed = subprocess.run(probe_command, capture_output=True, text=True, check=False, timeout=5)
+            manager_probe = {
+                "status": "resolved" if completed.returncode == 0 else "failed",
+                "returncode": completed.returncode,
+                "output_fingerprint": "sha256:" + hashlib.sha256(completed.stdout.encode("utf-8")).hexdigest(),
+            }
+            if completed.returncode == 0 and adapter == "pipx":
+                pipx_payload = json.loads(completed.stdout)
+                venvs = _as_dict(pipx_payload.get("venvs"))
+                managed = _as_dict(_as_dict(venvs.get("agentic-workspace")).get("metadata")).get("main_package")
+                managed_package = _as_dict(managed)
+                manager_probe["selected_package"] = {
+                    "name": str(managed_package.get("package") or ""),
+                    "version": str(managed_package.get("package_version") or ""),
+                    "source": str(managed_package.get("package_or_url") or ""),
+                }
+                if manager_probe["selected_package"]["name"] != "agentic-workspace":
+                    manager_probe["status"] = "package-missing"
+            elif completed.returncode == 0 and adapter == "poetry":
+                environment_python = completed.stdout.strip()
+                identity_code = (
+                    "import importlib.metadata as m,json;"
+                    "d=m.distribution('agentic-workspace');"
+                    "u=d.read_text('direct_url.json');"
+                    "print(json.dumps({'name':d.metadata.get('Name',''),'version':d.version,'direct_url':json.loads(u) if u else {}}))"
+                )
+                identity = subprocess.run([environment_python, "-c", identity_code], capture_output=True, text=True, check=False, timeout=5)
+                if identity.returncode == 0:
+                    manager_probe["selected_package"] = json.loads(identity.stdout)
+                    poetry_package = _as_dict(manager_probe["selected_package"])
+                    poetry_direct_url = _as_dict(poetry_package.get("direct_url"))
+                    poetry_url = str(poetry_direct_url.get("url") or "")
+                    distribution = {
+                        "status": "resolved",
+                        "name": str(poetry_package.get("name") or ""),
+                        "version": str(poetry_package.get("version") or ""),
+                        "direct_url": {
+                            "url_scheme": poetry_url.split(":", 1)[0] if ":" in poetry_url else "",
+                            "url_fingerprint": ("sha256:" + hashlib.sha256(poetry_url.encode("utf-8")).hexdigest() if poetry_url else ""),
+                            "vcs_info": _as_dict(poetry_direct_url.get("vcs_info")),
+                            "editable": bool(_as_dict(poetry_direct_url.get("dir_info")).get("editable")),
+                        },
+                    }
+                else:
+                    manager_probe["status"] = "package-missing"
+        except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+            manager_probe = {"status": "unavailable"}
+
+    runtime_version = str(distribution.get("version") or "")
+    lock_version = str(lock_entry.get("version") or "")
+    version_matches_lock = not lock_entry or not runtime_version or runtime_version == lock_version
+    lock_identity = (
+        "sha256:" + hashlib.sha256(json.dumps(lock_entry, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+        if lock_entry
+        else ""
+    )
+    actual_resolution_ok = bool(
+        executable_path and distribution.get("status") == "resolved" and (not configured_script or configured_script_exists)
+    )
+    if adapter in {"uv", "poetry"}:
+        actual_resolution_ok = actual_resolution_ok and lock_status == "resolved" and version_matches_lock
+    if adapter == "pipx":
+        selected_package = _as_dict(manager_probe.get("selected_package"))
+        actual_resolution_ok = bool(
+            executable_path
+            and manager_probe.get("status") == "resolved"
+            and selected_package.get("name") == "agentic-workspace"
+            and selected_package.get("version")
+        )
+    required = config.cli_compatibility.resolution_policy
+    posture_satisfied = required == "direct" or posture == required or (required == "locked" and posture == "frozen")
+    policy_satisfied = posture_satisfied and actual_resolution_ok
+    return {
+        "kind": "agentic-workspace/invocation-resolution/v1",
+        "configured_recipe": config.cli_invoke,
+        "invocation_source": config.cli_invoke_source,
+        "environment_manager_adapter": adapter,
+        "posture": posture,
+        "required_posture": required,
+        "policy_satisfied": policy_satisfied,
+        "resolution_status": "resolved" if actual_resolution_ok else "unresolved",
+        "selected_executable": {
+            "name": Path(executable_path).name if executable_path else executable,
+            "path_fingerprint": (
+                "sha256:" + hashlib.sha256(str(Path(executable_path).resolve()).encode("utf-8")).hexdigest() if executable_path else ""
+            ),
+            "configured_script": configured_script,
+            "configured_script_exists": configured_script_exists,
+        },
+        "selected_distribution": distribution,
+        "lock_resolution": {
+            "status": lock_status,
+            "identity": lock_identity,
+            "package_version": lock_version,
+            "source": _as_dict(lock_entry.get("source")),
+            "runtime_version_matches": version_matches_lock,
+        },
+        "manager_probe": manager_probe,
+        "lockfile": lockfile,
+        "preflight_mutates_dependency_state": mutates_resolution,
+        "preflight_status": "non-mutating" if not mutates_resolution else "unsafe-mutable-resolution",
+        "repair_command": shlex.join(repair_tokens) if repair_tokens and not policy_satisfied else "",
+        "rule": "The manager adapter resolves executable, distribution/direct URL, and lock identity non-mutatingly; dependency changes belong only to explicit install, upgrade, or sync operations.",
+    }
+
+
+def _required_package_resource_availability(resources: Sequence[str]) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    for resource in resources:
+        package, separator, relative = str(resource).partition(":")
+        available = False
+        if package and separator and relative and not Path(relative).is_absolute() and ".." not in Path(relative).parts:
+            try:
+                available = importlib.resources.files(package).joinpath(relative).is_file()
+            except (ModuleNotFoundError, TypeError):
+                available = False
+        results.append(
+            {
+                "resource": str(resource),
+                "available": available,
+                "resolution": "package-resource",
+                "resolver": "installed-contract-pair.package-resource",
+                "receipt_id": "package-resource:" + hashlib.sha256(str(resource).encode("utf-8")).hexdigest()[:16],
+            }
+        )
+    return results
+
+
+def _installed_contract_identity_digest(identity: dict[str, Any]) -> str:
+    return "sha256:" + hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def execute_workspace_install_upgrade_sync(
+    *,
+    mode: str,
+    target_root: Path,
+    local_only_repo_root: Path | None,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    descriptors: dict[str, ModuleDescriptor],
+    non_interactive: bool,
+    config: WorkspaceConfig,
+    module_scope_explicit: bool = False,
+    to_payload_target: bool = False,
+    footprint_profile: str | None = None,
+    mirror_payload: bool = False,
+    include_local_footprint: bool = True,
+) -> dict[str, Any]:
+    """Execute and admit the production install/upgrade dependency-identity transition."""
+    if mode not in {"install", "upgrade", "sync"}:
+        raise ValueError("mode must be install, upgrade, or sync")
+    before_pair = _installed_contract_pair_payload(
+        config=config,
+        cli_payload=_cli_compatibility_payload(config=config, compact=True),
+        summary=None,
+    )
+    before_payload_mirror = _read_payload_provenance(target_root=target_root)
+    transition = _run_lifecycle_command(
+        command_name="upgrade" if mode == "sync" else mode,
+        target_root=target_root,
+        local_only_repo_root=local_only_repo_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        dry_run=False,
+        non_interactive=non_interactive,
+        config=config,
+        module_scope_explicit=module_scope_explicit,
+        to_payload_target=to_payload_target,
+        footprint_profile=footprint_profile,
+        mirror_payload=mirror_payload,
+        include_local_footprint=include_local_footprint,
+    )
+    effective_config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
+    after_pair = _installed_contract_pair_payload(
+        config=effective_config,
+        cli_payload=_cli_compatibility_payload(config=effective_config, compact=True),
+        summary={"stale_generated_surfaces": list(transition.get("stale_generated_surfaces", []))},
+    )
+    before = {
+        "expected": before_pair["expected"],
+        "actual": before_pair["actual"],
+        "payload_mirror": before_payload_mirror,
+    }
+    after = {
+        "expected": after_pair["expected"],
+        "actual": after_pair["actual"],
+        "payload_mirror": _read_payload_provenance(target_root=target_root),
+    }
+    receipt = {
+        "kind": "agentic-workspace/install-upgrade-sync-receipt/v1",
+        "operation_id": "workspace.install-upgrade-sync",
+        "mode": mode,
+        "status": "admitted",
+        "before_identity": before,
+        "before_identity_digest": _installed_contract_identity_digest(before),
+        "after_identity": after,
+        "after_identity_digest": _installed_contract_identity_digest(after),
+        "transition_result": {
+            "status": "passed",
+            "command": transition.get("command", mode),
+            "created": list(transition.get("created", [])),
+            "updated_managed": list(transition.get("updated_managed", [])),
+        },
+        "mutation_owner": "execute_workspace_install_upgrade_sync",
+    }
+    transition["installed_identity_transition"] = receipt
+    return transition
+
+
+def _installed_contract_conformance_matrix(
+    *,
+    current_identity: dict[str, Any],
+    resolution: dict[str, Any],
+    source_checkout: dict[str, Any],
+    stale_generated: list[str],
+    payload_mirror: dict[str, Any],
+) -> dict[str, Any]:
+    source_class = str(current_identity.get("source_class") or "")
+    posture = str(resolution.get("posture") or "")
+    resolution_status = str(resolution.get("resolution_status") or "")
+    direct_url = _as_dict(_as_dict(resolution.get("selected_distribution")).get("direct_url"))
+    vcs_info = _as_dict(direct_url.get("vcs_info"))
+    vcs_url = str(direct_url.get("url_fingerprint") or direct_url.get("url") or "") if vcs_info else ""
+    vcs_revision = str(vcs_info.get("commit_id") or direct_url.get("commit_id") or "")
+    identity = {
+        "package": current_identity,
+        "resolution": resolution,
+        "source_checkout": source_checkout,
+        "payload_mirror": payload_mirror,
+        "generated_parity": "stale" if stale_generated else "current",
+    }
+    digest = _installed_contract_identity_digest(identity)
+    scenarios = [
+        {
+            "id": "released-package",
+            "status": "admitted" if source_class in {"release", "released-package", "installed-distribution"} else "not-observed",
+        },
+        {"id": "locked-vcs", "status": "admitted" if vcs_url and vcs_revision and posture in {"locked", "frozen"} else "not-observed"},
+        {
+            "id": "mutable-or-unlocked-vcs",
+            "status": "blocked" if vcs_url and (not vcs_revision or posture == "mutable") else "not-observed",
+        },
+        {"id": "incompatible-or-missing-runtime", "status": "blocked" if resolution_status != "resolved" else "not-observed"},
+        {"id": "payload-mirror", "status": "admitted" if payload_mirror.get("status") == "present" else "not-observed"},
+        {
+            "id": "local-source-drift",
+            "status": "blocked"
+            if source_checkout.get("dirty") is True
+            else "admitted"
+            if source_checkout.get("classification") == "local-source-non-release"
+            else "not-observed",
+        },
+        {"id": "generated-parity", "status": "blocked" if stale_generated else "admitted"},
+        {"id": "consumer-identity-parity", "status": "admitted", "consumers": {name: digest for name in ("startup", "skills", "doctor")}},
+    ]
+    return {
+        "kind": "agentic-workspace/installed-contract-conformance-matrix/v1",
+        "status": "blocked" if any(item["status"] == "blocked" for item in scenarios) else "admitted",
+        "identity_digest": digest,
+        "scenarios": scenarios,
+        "rule": "Every scenario uses the same non-mutating identity resolver; only workspace.install-upgrade-sync may change expected or resolved dependency identity.",
+    }
+
+
+def _installed_contract_pair_payload(
+    *, config: WorkspaceConfig, cli_payload: dict[str, Any], summary: dict[str, list[str]] | None
+) -> dict[str, Any]:
+    expectation = config.cli_compatibility
+    resources = _required_package_resource_availability(expectation.required_resources)
+    current_identity = _payload_installer_identity(target_root=config.target_root)
+    stale_generated = list((summary or {}).get("stale_generated_surfaces", []))
+    source_checkout: dict[str, Any] = {"classification": "not-applicable"}
+    payload_mirror = _read_payload_provenance(target_root=config.target_root or Path.cwd())
+    if current_identity.get("source_class") == "source-checkout":
+        root = _agentic_workspace_package_root()
+        revision = _git_source_identity(root)
+        dirty = False
+        if root is not None:
+            completed = subprocess.run(
+                ["git", "status", "--porcelain=v1", "--untracked-files=no"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            dirty = bool(completed.stdout.strip()) if completed.returncode == 0 else True
+        source_checkout = {
+            "classification": "local-source-non-release",
+            "revision": revision,
+            "dirty": dirty,
+            "generated_parity": "stale" if stale_generated else "current",
+        }
+    missing_capabilities = sorted(set(expectation.required_capabilities) - set(SUPPORTED_PAYLOAD_CAPABILITIES))
+    missing_resources = [item["resource"] for item in resources if not item["available"]]
+    resolution = cli_payload.get("invocation_resolution", {}) or _invocation_resolution_payload(config=config)
+    before_identity = {
+        "package": current_identity,
+        "resolution": resolution,
+    }
+    conformance_matrix = _installed_contract_conformance_matrix(
+        current_identity=current_identity,
+        resolution=resolution,
+        source_checkout=source_checkout,
+        stale_generated=stale_generated,
+        payload_mirror=payload_mirror,
+    )
+    compatible = (
+        cli_payload.get("status") not in {"blocking-drift"}
+        and not missing_capabilities
+        and not missing_resources
+        and not stale_generated
+        and conformance_matrix["status"] == "admitted"
+    )
+    blocked_scenarios = [item["id"] for item in conformance_matrix["scenarios"] if item["status"] == "blocked"]
+    if "mutable-or-unlocked-vcs" in blocked_scenarios:
+        repair_route = {
+            "status": "required",
+            "action": "lock-dependency-resolution",
+            "command": str(resolution.get("repair_command") or cli_payload.get("remediation", {}).get("command") or config.cli_invoke),
+        }
+    elif "incompatible-or-missing-runtime" in blocked_scenarios:
+        repair_route = {
+            "status": "required",
+            "action": "install-or-select-compatible-runtime",
+            "command": str(resolution.get("repair_command") or config.cli_invoke),
+        }
+    elif "local-source-drift" in blocked_scenarios:
+        repair_route = {"status": "required", "action": "clean-or-commit-local-source", "command": "git status --short"}
+    elif "generated-parity" in blocked_scenarios:
+        repair_route = {
+            "status": "required",
+            "action": "regenerate-managed-surfaces",
+            "command": "uv run python scripts/generate/generate_command_packages.py",
+        }
+    elif missing_resources:
+        repair_route = {"status": "required", "action": "restore-package-resources", "command": config.cli_invoke}
+    elif missing_capabilities:
+        repair_route = {"status": "required", "action": "upgrade-compatible-runtime", "command": config.cli_invoke}
+    else:
+        repair_route = {"status": "none", "action": "none", "command": ""}
+    return {
+        "kind": "agentic-workspace/installed-contract-pair/v1",
+        "status": "compatible" if compatible else "incompatible",
+        "expected": {
+            "schema": expectation.contract_schema,
+            "capabilities": list(expectation.required_capabilities),
+            "resources": list(expectation.required_resources),
+            "provenance": expectation.source,
+        },
+        "actual": {
+            "package": current_identity,
+            "schema": "agentic-workspace/installed-state-compatibility/v1",
+            "capabilities": list(SUPPORTED_PAYLOAD_CAPABILITIES),
+            "resources": resources,
+            "invocation_resolution": resolution,
+            "source_checkout": source_checkout,
+        },
+        "missing_capabilities": missing_capabilities,
+        "missing_resources": missing_resources,
+        "stale_generated_surfaces": stale_generated,
+        "mutation_gate": "allow" if compatible else "block-managed-mutation",
+        "transition_owner": {
+            "operation_id": "workspace.install-upgrade-sync",
+            "operation_contract": "src/agentic_workspace/contracts/operations/workspace.install-upgrade-sync.json",
+            "executor": "agentic_workspace.workspace_runtime_core.execute_workspace_install_upgrade_sync",
+            "status": "current-identity-recorded" if compatible else "transition-required",
+            "before_identity": before_identity,
+            "before_identity_digest": _installed_contract_identity_digest(before_identity),
+            "after_identity_requirement": "rerun installed contract pair after the explicit install, upgrade, or sync operation",
+            "ordinary_surfaces_mutate_dependency_state": False,
+        },
+        "conformance_matrix": conformance_matrix,
+        "repair_route": repair_route,
+        "rule": "The configured invocation and installed contract/resource identity are admitted as one pair before managed mutation.",
+    }
+
+
+def _installed_contract_consumer_receipt(*, config: WorkspaceConfig) -> dict[str, Any]:
+    pair = _installed_contract_pair_payload(
+        config=config,
+        cli_payload=_cli_compatibility_payload(config=config, compact=True),
+        summary=None,
+    )
+    return {
+        "kind": "agentic-workspace/installed-contract-consumer-receipt/v1",
+        "status": pair["status"],
+        "identity_digest": pair["conformance_matrix"]["identity_digest"],
+        "contract_resources": pair["actual"]["resources"],
+        "repair_route": pair["repair_route"],
+        "ordinary_surface_mutates_dependency_state": False,
+    }
 
 
 def _cli_compatibility_drift_findings(
@@ -2247,6 +2785,7 @@ def _installed_state_compatibility_payload(
     compact: bool = False,
 ) -> dict[str, Any]:
     cli_payload = cli_compatibility or _cli_compatibility_payload(config=config, compact=compact)
+    contract_pair = _installed_contract_pair_payload(config=config, cli_payload=cli_payload, summary=summary)
     failed_cli_checks = {str(check) for check in cli_payload.get("failed_checks", [])}
     stale_generated_surfaces = list((summary or {}).get("stale_generated_surfaces", []))
     payload_warnings = list((summary or {}).get("warnings", []))
@@ -2406,6 +2945,8 @@ def _installed_state_compatibility_payload(
         "status": status,
         "reason": reason,
         "authority": "repo-state-authoritative",
+        "contract_pair": contract_pair,
+        "invocation_resolution": contract_pair["actual"]["invocation_resolution"] or _invocation_resolution_payload(config=config),
         "action_state": action_state,
         "payload_surface_manifest": payload_upgrade_attention_plan["surface_manifest"],
         "payload_upgrade_attention_plan": payload_upgrade_attention_plan,
@@ -2475,6 +3016,8 @@ def _installed_state_compatibility_payload(
             "kind": payload["kind"],
             "status": payload["status"],
             "authority": payload["authority"],
+            "contract_pair": payload["contract_pair"],
+            "invocation_resolution": payload["invocation_resolution"],
             "action_state": payload["action_state"],
             "payload_surface_manifest": payload_upgrade_attention_plan["surface_manifest"],
             "payload_upgrade_attention_plan": _compact_payload_upgrade_attention_plan(payload_upgrade_attention_plan),
@@ -4650,6 +5193,7 @@ class RegisteredSkill:
     availability: str = "available"
     blocked_reasons: tuple[str, ...] = ()
     dependency_diagnostics: tuple[dict[str, str], ...] = ()
+    resource_resolution_receipts: tuple[dict[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -48443,21 +48987,37 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
         }
         _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
-    payload = _run_lifecycle_command(
-        command_name=command_name,
-        target_root=target_root,
-        local_only_repo_root=local_only_repo_root,
-        selected_modules=selected_modules,
-        resolved_preset=resolved_preset,
-        descriptors=descriptors,
-        dry_run=bool(getattr(args, "dry_run", False)),
-        non_interactive=args.non_interactive,
-        config=config,
-        module_scope_explicit=bool(getattr(args, "modules", None)),
-        to_payload_target=bool(getattr(args, "to_payload_target", False)),
-        footprint_profile=getattr(args, "footprint_profile", None),
-        mirror_payload=bool(getattr(args, "mirror_payload", False)),
-    )
+    if command_name in {"install", "upgrade"} and not bool(getattr(args, "dry_run", False)):
+        payload = execute_workspace_install_upgrade_sync(
+            mode=command_name,
+            target_root=target_root,
+            local_only_repo_root=local_only_repo_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            non_interactive=args.non_interactive,
+            config=config,
+            module_scope_explicit=bool(getattr(args, "modules", None)),
+            to_payload_target=bool(getattr(args, "to_payload_target", False)),
+            footprint_profile=getattr(args, "footprint_profile", None),
+            mirror_payload=bool(getattr(args, "mirror_payload", False)),
+        )
+    else:
+        payload = _run_lifecycle_command(
+            command_name=command_name,
+            target_root=target_root,
+            local_only_repo_root=local_only_repo_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            dry_run=bool(getattr(args, "dry_run", False)),
+            non_interactive=args.non_interactive,
+            config=config,
+            module_scope_explicit=bool(getattr(args, "modules", None)),
+            to_payload_target=bool(getattr(args, "to_payload_target", False)),
+            footprint_profile=getattr(args, "footprint_profile", None),
+            mirror_payload=bool(getattr(args, "mirror_payload", False)),
+        )
     _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
     return 0
 
@@ -55244,6 +55804,7 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
         "agent_aids": payload.get("agent_aids", []),
         "agent_aid_recommendations": payload.get("agent_aid_recommendations", []),
         "agent_aid_source": payload.get("agent_aid_source", {}),
+        "installed_contract": payload.get("installed_contract", {}),
         "warnings": payload.get("warnings", []),
         "catalog_summary": _skill_catalog_summary_from_payload(payload),
         "inventory_detail": {
@@ -55264,6 +55825,7 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
     recommendations = _recommend_skills(task_text=task_text, skills=skills) if task_text else []
     blocked_recommendations = _recommend_skills(task_text=task_text, skills=skills, availability="blocked") if task_text else []
     agent_aids, aid_warnings = _checked_in_agent_aid_entries(target_root=target_root)
+    installed_contract = _installed_contract_consumer_receipt(config=_load_workspace_config(target_root=target_root))
     visible_agent_aids = [aid for aid in agent_aids if aid["status"] != "retired"]
     agent_aid_recommendations = _recommend_agent_aids(task_text=task_text, aids=visible_agent_aids) if task_text else []
     skill_recommendation_payloads = [
@@ -55307,6 +55869,7 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
             "section_command": "agentic-workspace report --target ./repo --section agent_aids --format json",
             "retired_aids_excluded": True,
         },
+        "installed_contract": installed_contract,
         "warnings": warnings,
         "agent_aid_warnings": aid_warnings,
         "sources": sources,
@@ -55637,17 +56200,26 @@ def _load_registered_skills(
         if not isinstance(activation_hints, dict):
             activation_hints = {}
         required_resources = tuple(str(value).strip() for value in raw.get("required_resources", []) if str(value).strip())
+        resource_resolution_receipts = tuple(
+            _skill_resource_resolution(
+                resource_id=resource_id,
+                resource_paths=resource_paths,
+                target_root=target_root,
+                registry_file=registry_file,
+                package_registry_file=package_registry_file,
+            )
+            for resource_id in required_resources
+        )
         dependency_diagnostics = tuple(
             diagnostic
-            for resource_id in required_resources
+            for resource_id, resolution in zip(required_resources, resource_resolution_receipts, strict=True)
             if (
                 diagnostic := _skill_resource_diagnostic(
                     resource_id=resource_id,
                     resource_paths=resource_paths,
-                    target_root=target_root,
                     registry_file=registry_file,
-                    package_registry_file=package_registry_file,
                     source=source,
+                    resolution=resolution,
                 )
             )
             is not None
@@ -55674,6 +56246,7 @@ def _load_registered_skills(
                 availability="blocked" if blocked_reasons else "available",
                 blocked_reasons=blocked_reasons,
                 dependency_diagnostics=dependency_diagnostics,
+                resource_resolution_receipts=resource_resolution_receipts,
             )
         )
     return [skill for skill in skills if skill.skill_id and skill.path.as_posix()]
@@ -55683,10 +56256,9 @@ def _skill_resource_diagnostic(
     *,
     resource_id: str,
     resource_paths: dict[str, tuple[Path, Path]],
-    target_root: Path,
     registry_file: Path,
-    package_registry_file: Path | None,
     source: SkillCatalogSource,
+    resolution: dict[str, str],
 ) -> dict[str, str] | None:
     if resource_id not in resource_paths:
         return {
@@ -55699,6 +56271,43 @@ def _skill_resource_diagnostic(
             "repair_route": "manual",
             "repair_safe_to_apply": "false",
             "manual_action": f"Declare resource '{resource_id}' in {registry_file.as_posix()} before the skill can be executable.",
+        }
+    if resolution["status"] == "resolved":
+        return None
+    repo_path, package_path = resource_paths[resource_id]
+    candidate_paths = resolution["candidates"].split("\n") if resolution["candidates"] else []
+    repair_route = _skill_resource_repair_route(source=source, repo_path=repo_path, package_path=package_path)
+    return {
+        "resource_id": resource_id,
+        "status": "blocked",
+        "reason_code": f"missing-resource:{resource_id}",
+        "expected_owner": resolution["expected_owner"],
+        "expected_source": candidate_paths[0] if candidate_paths else registry_file.as_posix(),
+        "compatibility_state": "resource-unresolved",
+        **repair_route,
+    }
+
+
+def _skill_resource_resolution(
+    *,
+    resource_id: str,
+    resource_paths: dict[str, tuple[Path, Path]],
+    target_root: Path,
+    registry_file: Path,
+    package_registry_file: Path | None,
+) -> dict[str, str]:
+    """Resolve a declared dependency and retain a stable package-resource receipt."""
+
+    if resource_id not in resource_paths:
+        return {
+            "resource_id": resource_id,
+            "status": "unresolved",
+            "resolver": "installed-contract-pair.package-resource",
+            "selected_owner": "",
+            "selected_source": "",
+            "expected_owner": "skill-registry",
+            "candidates": "",
+            "receipt_id": "package-resource:" + hashlib.sha256(resource_id.encode("utf-8")).hexdigest()[:16],
         }
     repo_path, package_path = resource_paths[resource_id]
     candidates: list[tuple[str, Path]] = []
@@ -55714,20 +56323,19 @@ def _skill_resource_diagnostic(
                     package_registry_file.parent.parent / "_payload" / package_path.as_posix().removeprefix("../bootstrap/"),
                 )
             )
-    for owner, candidate in candidates:
-        if candidate.is_file():
-            return None
-    expected_owner = candidates[0][0] if candidates else "skill-registry"
-    expected_source = candidates[0][1].as_posix() if candidates else registry_file.as_posix()
-    repair_route = _skill_resource_repair_route(source=source, repo_path=repo_path, package_path=package_path)
+    selected = next(((owner, candidate) for owner, candidate in candidates if candidate.is_file()), None)
+    selected_owner, selected_path = selected or ("", None)
+    candidate_text = "\n".join(candidate.as_posix() for _, candidate in candidates)
+    receipt_material = f"{resource_id}\0{selected_owner}\0{selected_path.as_posix() if selected_path else ''}"
     return {
         "resource_id": resource_id,
-        "status": "blocked",
-        "reason_code": f"missing-resource:{resource_id}",
-        "expected_owner": expected_owner,
-        "expected_source": expected_source,
-        "compatibility_state": "resource-unresolved",
-        **repair_route,
+        "status": "resolved" if selected else "unresolved",
+        "resolver": "installed-contract-pair.package-resource",
+        "selected_owner": selected_owner,
+        "selected_source": selected_path.as_posix() if selected_path else "",
+        "expected_owner": candidates[0][0] if candidates else "skill-registry",
+        "candidates": candidate_text,
+        "receipt_id": "package-resource:" + hashlib.sha256(receipt_material.encode("utf-8")).hexdigest()[:16],
     }
 
 
@@ -55783,6 +56391,7 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
         "required_resources": list(skill.required_resources),
         "availability": skill.availability,
         "blocked_reasons": list(skill.blocked_reasons),
+        "resource_resolution_receipts": list(skill.resource_resolution_receipts),
     }
     if skill.dependency_diagnostics:
         payload["dependency_diagnostics"] = _skill_dependency_diagnostic_payloads(skill)
