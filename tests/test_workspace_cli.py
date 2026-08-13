@@ -9200,6 +9200,42 @@ def test_start_explicit_changed_path_still_uses_changed_path_startup(tmp_path: P
 
     assert payload["next_safe_action"]["next_safe_action"] == "select-changed-path-proof"
     assert payload["context"]["primary_action"]["command"].endswith("proof --changed AGENTS.md --format json")
+    projection = payload["context"]["context_authority_projection"]
+    assert projection["consumer"] == "start"
+    assert projection["changed_path_count"] == 1
+    assert len(projection["authorities"]) >= 1
+    assert projection["registry_revision"].startswith("sha256:")
+
+
+def test_start_context_authority_projection_fails_closed_for_missing_scoped_instruction_source(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / "AGENTS.md").unlink()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/example.py",
+                "--task",
+                "Use the scoped instructions and skills before editing",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    projection = payload["context"]["context_authority_projection"]
+
+    assert projection["status"] == "repair-required"
+    assert "scoped-instructions" in projection["missing_required_surfaces"]
+    repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "scoped-instructions")
+    assert repair["operation_id"] == "workspace.instructions.route"
 
 
 def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_packet(tmp_path: Path, capsys) -> None:
