@@ -30,6 +30,12 @@ class GateDecision:
     review_url: str = ""
 
 
+@dataclass(frozen=True)
+class CarryForwardVerdict:
+    allowed: bool
+    reason: str
+
+
 def _comment_order(comment: dict[str, Any]) -> tuple[str, int]:
     timestamp = str(comment.get("updated_at") or comment.get("created_at") or "")
     identifier = int(comment.get("id") or comment.get("databaseId") or 0)
@@ -41,7 +47,7 @@ def review_gate_decision(
     pr_number: int,
     head_sha: str,
     comments: Sequence[dict[str, Any]],
-    is_ancestor: Callable[[str, str], bool] | None = None,
+    carry_forward: Callable[[str, str], CarryForwardVerdict] | None = None,
 ) -> GateDecision:
     candidates = [
         comment
@@ -79,7 +85,7 @@ def review_gate_decision(
                         summary="Resolve the review blocker and obtain a merge-ready decision.",
                         review_url=review_url,
                     )
-                if is_ancestor is None:
+                if carry_forward is None:
                     return GateDecision(
                         status="review-ancestry-unverified",
                         conclusion="failure",
@@ -88,7 +94,7 @@ def review_gate_decision(
                         review_url=review_url,
                     )
                 try:
-                    ancestor = is_ancestor(reviewed_head, head_sha)
+                    verdict = carry_forward(reviewed_head, head_sha)
                 except Exception as exc:  # pragma: no cover - exercised through the command boundary
                     return GateDecision(
                         status="review-ancestry-unverified",
@@ -97,22 +103,22 @@ def review_gate_decision(
                         summary=f"GitHub could not verify {reviewed_head} as an ancestor of {head_sha}: {exc}",
                         review_url=review_url,
                     )
-                if ancestor:
+                if verdict.allowed:
                     return GateDecision(
                         status="merge-ready-carried-forward",
                         conclusion="success",
                         title="Prior merge-ready review remains authoritative",
                         summary=(
-                            f"{REVIEW_POLICY} marked {reviewed_head} merge-ready, and GitHub verified "
-                            f"that it is an ancestor of current head {head_sha}."
+                            f"{REVIEW_POLICY} marked {reviewed_head} merge-ready; every later commit is "
+                            f"a trusted-base merge that preserves the reviewed patch through {head_sha}."
                         ),
                         review_url=review_url,
                     )
                 return GateDecision(
-                    status="review-diverged-head",
+                    status="review-carry-forward-rejected",
                     conclusion="failure",
-                    title="Approved review is not in the current history",
-                    summary=f"Reviewed head {reviewed_head} is not an ancestor of current head {head_sha}.",
+                    title="Unreviewed delta is not a patch-preserving base integration",
+                    summary=f"Review head {head_sha} again ({verdict.reason}; reviewed head {reviewed_head}).",
                     review_url=review_url,
                 )
         detail = f"; latest review covers {reviewed_head}" if reviewed_head else ""
@@ -148,9 +154,44 @@ def _gh_json(args: Sequence[str]) -> Any:
     return json.loads(completed.stdout)
 
 
-def _github_is_ancestor(*, repository: str, reviewed_head: str, current_head: str) -> bool:
-    comparison = _gh_json(["api", f"repos/{repository}/compare/{reviewed_head}...{current_head}"])
-    return str(comparison.get("status", "")) in {"ahead", "identical"}
+def _git(args: Sequence[str], *, input_text: str | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args], cwd=REPO_ROOT, check=check, capture_output=True, text=True, input=input_text
+    )
+
+
+def _patch_id(base: str, head: str) -> str:
+    patch = _git(["diff", "--binary", "--full-index", "--no-renames", base, head]).stdout
+    if not patch:
+        return "empty"
+    result = _git(["patch-id", "--verbatim"], input_text=patch).stdout.strip()
+    return result.split()[0] if result else "empty"
+
+
+def _trusted_base_carry_forward(
+    *, pr_number: int, reviewed_head: str, current_head: str, base_head: str
+) -> CarryForwardVerdict:
+    _git(["fetch", "--no-tags", "origin", f"pull/{pr_number}/head"])
+    cursor = current_head
+    visited: set[str] = set()
+    while cursor != reviewed_head:
+        if cursor in visited:
+            return CarryForwardVerdict(False, "first-parent-cycle")
+        visited.add(cursor)
+        fields = _git(["rev-list", "--parents", "-n", "1", cursor]).stdout.strip().split()
+        if len(fields) != 3:
+            return CarryForwardVerdict(False, "ordinary-or-octopus-commit-after-review")
+        _, first_parent, integrated_parent = fields
+        base_ancestor = _git(
+            ["merge-base", "--is-ancestor", integrated_parent, base_head], check=False
+        )
+        if base_ancestor.returncode != 0:
+            return CarryForwardVerdict(False, "merge-parent-is-not-trusted-base-history")
+        merge_base = _git(["merge-base", first_parent, integrated_parent]).stdout.strip()
+        if not merge_base or _patch_id(merge_base, first_parent) != _patch_id(integrated_parent, cursor):
+            return CarryForwardVerdict(False, "merge-does-not-preserve-reviewed-patch")
+        cursor = first_parent
+    return CarryForwardVerdict(True, "trusted-base-merges-preserve-reviewed-patch")
 
 
 def _post_check(*, repository: str, head_sha: str, decision: GateDecision) -> None:
@@ -207,8 +248,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         pr_number=pr_number,
         head_sha=head_sha,
         comments=comments,
-        is_ancestor=lambda reviewed, current: _github_is_ancestor(
-            repository=args.repository, reviewed_head=reviewed, current_head=current
+        carry_forward=lambda reviewed, current: _trusted_base_carry_forward(
+            pr_number=pr_number,
+            reviewed_head=reviewed,
+            current_head=current,
+            base_head=str(pull_request["base"]["sha"]),
         ),
     )
     _post_check(repository=args.repository, head_sha=head_sha, decision=decision)

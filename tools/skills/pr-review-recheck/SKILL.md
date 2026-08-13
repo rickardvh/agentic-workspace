@@ -38,9 +38,9 @@ Use this repo-owned skill when reviewing an Agentic Workspace PR, checking a fix
    - merge only when the user explicitly asks or the current instruction permits it.
 9. Treat the review approval check as the merge boundary:
    - `merge-ready` for the current head admits the review side of merge;
-   - a prior `merge-ready` decision also admits a descendant head, so conflict-only merges and other additive follow-ups do not require a redundant review;
+   - a prior `merge-ready` decision also admits a later head only when every intervening commit is a trusted-base merge and the stable PR patch is unchanged;
    - the newest trusted decision wins, so a later blocker remains blocking;
-   - absent, malformed, untrusted, diverged, or unverifiable review history keeps `Review approval` failing.
+   - ordinary follow-up commits, unrelated merges, patch-changing conflict resolutions, absent/malformed/untrusted history, or unverifiable topology keep `Review approval` failing.
 
 ## Recheck Focus
 

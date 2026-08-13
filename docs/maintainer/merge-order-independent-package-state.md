@@ -11,8 +11,9 @@ branch-global writes. #2522, #2523, and #2524 each needed a merge-from-master co
 otherwise disjoint lanes overlapped. The overlap forced conflict-only head changes, another CI
 round, and formerly another approval round even when the already-approved commit remained in the
 branch history and the underlying owners did not compete. The review gate now carries a
-`merge-ready` decision forward only when GitHub proves that reviewed commit is an ancestor of the
-current head; a newer blocker or diverged history still fails closed.
+`merge-ready` decision forward only across trusted-base merge commits whose stable PR patch remains
+identical. Ordinary follow-up commits, unrelated merges, patch-changing conflict resolutions, and
+newer blockers still fail closed.
 
 The new storage shape removes both common paths:
 
