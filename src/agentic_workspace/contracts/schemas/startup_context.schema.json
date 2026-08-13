@@ -53,6 +53,11 @@
       "$ref": "#/$defs/evidence_bundle",
       "description": "Minimal evidence route view derived from the shared state-delta core."
     },
+    "visible_state_delta_response": {
+      "type": "object",
+      "description": "Composed decision/proof/residue/next-action response with explicit successful-completion route budgets.",
+      "additionalProperties": true
+    },
     "pre_test_evidence_guardrail": {
       "type": "object",
       "description": "Optional non-blocking pre-test evidence-owner advisory surfaced when configured assurance signals or declared changed evidence/test paths indicate proof-shape decisions.",

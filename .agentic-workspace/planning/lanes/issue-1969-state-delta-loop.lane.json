@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "issue-1969-state-delta-loop",
   "title": "Issue 1969 state-delta-first operating loop",
-  "status": "ready",
+  "status": "completed",
   "parent_decomposition_ref": "",
   "lane_outcome": "Make ordinary AW operating-loop packets state-delta-first for issue #1969 across startup, implementation, report/continuation, and shipped skill adoption.",
   "purpose_for_parent": "Close the #1969 parent by landing all child slices #1970-#1974 as an ordered stack, with proof that the loop exposes current decision, message economy, continuation capsule, evidence bundle, and skill guidance without prompt-prose classifiers.",
@@ -73,22 +73,23 @@
   "acceptance_boundary": "The lane is complete only when the stacked branches/PRs together satisfy #1969 and all child issue acceptance criteria, with tests proving compact packets and skill discovery while preserving proof, residue, next action, and honest closure.",
   "proof_strategy": "Run changed-path AW proof selection, focused CLI tests for start/implement/report/skills packet exposure, summary/doctor planning checks, and a real CLI sample showing compact state-delta packets without broad always-on dumps.",
   "proof_aggregation": {
-    "status": "partial",
+    "status": "satisfied",
     "evidence": [
-      "Child issues #1970-#1974 are completed and their PR stack #1976-#1980 is merged."
+      "Child issues #1970-#1974 are completed and their PR stack #1976-#1980 is merged.",
+      "Issue #2273 registered longitudinal effectiveness questions with Evaluation and audited current open issues.",
+      "Ordinary start and implement routes compile current decision, evidence, proof/residue boundary, and next action into one visible state-delta response.",
+      "Review, handoff, and closeout replay fixtures enforce one generated action, one report scan, zero generated verbose actions, four visible parts, and revision-keyed snapshot reuse."
     ],
-    "known_gaps": [
-      "Issue #2273 owns migration of the remaining #1969 effectiveness questions into Evaluation and the resulting closure decision."
-    ]
+    "known_gaps": []
   },
-  "residual_lane_work": "Wait for #2273 to migrate the remaining effectiveness questions into an owned evaluation and decide whether #1969 can close.",
-  "lane_to_epic_contribution": "The original state-delta packet and operating-loop adoption stack is complete; remaining longitudinal evidence ownership moved to #2273.",
-  "parent_close_permission": "do-not-close-parent",
+  "residual_lane_work": "Longitudinal effectiveness observation continues under Evaluation without reopening present implementation.",
+  "lane_to_epic_contribution": "The ordinary loop now exposes a composed, budgeted state-delta response across start, implement, review, handoff, and closeout classes.",
+  "parent_close_permission": "close-parent",
   "closeout_state": {
-    "status": "open",
-    "summary": "The original #1970-#1974 implementation stack is complete; the parent remains open for its explicitly broader effectiveness boundary.",
-    "residual_work": "#2273 must migrate the remaining effectiveness questions and decide the #1969 closure boundary.",
-    "next_owner": "issue-2273"
+    "status": "closed",
+    "summary": "Present implementation satisfies the #1969 completion rule; Evaluation retains longitudinal effectiveness ownership.",
+    "residual_work": "none for present implementation",
+    "next_owner": "state-delta-operating-loop-1969 evaluation"
   },
   "references": [
     {
