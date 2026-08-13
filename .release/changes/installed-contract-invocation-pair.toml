@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Preflight the configured invocation and required package contracts as one reproducible, non-mutating compatibility pair."

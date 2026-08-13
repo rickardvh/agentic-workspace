@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Refuse cross-checkout active runtimes before Agentic Workspace command effects."
