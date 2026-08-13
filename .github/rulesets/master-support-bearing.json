@@ -30,7 +30,7 @@
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {"context": "Support-bearing promotion"},
-          {"context": "Exact-head review approval"}
+          {"context": "Review approval"}
         ]
       }
     }
