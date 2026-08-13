@@ -18,11 +18,12 @@ Use the configured AW invocation exposed by the repo adapter, config, or compact
 
 1. Run the configured invocation with `start --target . --task "<task>" --format json` for ordinary first contact.
 2. If changed paths are already known, run the configured invocation with `implement --target . --changed <paths> --task "<task>" --format json`.
-3. Preserve `module_slot`, `next_safe_action`, `allowed_actions`, `forbidden_actions`, `proof_required`, and `completion_claim_allowed`.
-4. Follow `next_safe_action` before opening raw `.agentic-workspace/` files or running drill-down commands.
-5. Keep direct work direct when the router allows no-artifact work; do not create Planning, Memory, review, or handoff artifacts just to show work.
-6. Load specialized subskills only for routed intent/shape, proof, setup, or fallback/reference needs.
-7. Before claiming completion, reconcile intent, proof, residue, issue/PR closure, and next owner separately.
+3. When `planning_route_decision` is present, consume the projection for the current surface and preserve its `decision_id`, `input_revision`, `action_identity`, transition, proof, mutation, and claim boundaries. Do not reclassify the task from prose or a legacy task-switch field.
+4. Preserve `module_slot`, `next_safe_action`, `allowed_actions`, `forbidden_actions`, `proof_required`, and `completion_claim_allowed`.
+5. Follow `next_safe_action` before opening raw `.agentic-workspace/` files or running drill-down commands.
+6. Keep direct work direct when the router allows no-artifact work; do not create Planning, Memory, review, or handoff artifacts just to show work.
+7. Load specialized subskills only for routed intent/shape, proof, setup, or fallback/reference needs.
+8. Before claiming completion, reconcile intent, proof, residue, issue/PR closure, and next owner separately.
 
 ## Subskill Routes
 
@@ -47,7 +48,7 @@ This skill is the hand-authored startup pilot for the installed package's `start
 - Interpreted fields: `workflow_participation`, `immediate_next_allowed_action`, `next_safe_action`, `planning_safety_gate`, `skill_routing.preferred_routes`, and `detail_commands`.
 - Direct work: if compact startup does not require planning and proof is obvious, keep the work direct and avoid planning, review, Memory, or handoff artifacts.
 - Planning work: if `planning_safety_gate.implementation_allowed` is false, run the named planning command before implementation.
-- No-CLI fallback: continue from this startup skill and `.agentic-workspace/docs/module-map.md` only far enough to preserve the same forbidden actions and no-artifact-by-default rule.
+- No-CLI fallback: if the configured invocation is unavailable, run `python .agentic-workspace/fallback/no_cli_startup.py`. Follow its `forbidden_actions` and `next_safe_action`; a blocked result permits only repair of the named installed fallback surface.
 
 ## Module Map
 

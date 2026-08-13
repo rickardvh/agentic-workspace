@@ -4035,6 +4035,11 @@ candidates = []
     )
     assert route["mutation_authority"] == "none"
     assert route["next_safe_action"]["action"] == "refresh-mutation-baseline"
+    closeout_projection = route["consumer_projections"]["closeout"]
+    assert closeout_projection["decision_id"] == route["decision_id"]
+    assert closeout_projection["input_revision"] == route["input_revision"]
+    assert closeout_projection["action_identity"] == route["action_identity"]
+    assert closeout_projection["blocked_claims"] == route["blocked_claims"]
 
 
 def test_closeout_trust_preserves_current_task_manual_proof_obligations(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -7366,6 +7371,7 @@ candidates = []
         == 0
     )
     route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+    start_route = route
     assert route["task_relation"] == "independent-pending-scope"
     assert route["required_transition"] == "inspect-current-task-scope"
     assert route["implementation_allowed"] is False
@@ -7393,6 +7399,8 @@ candidates = []
     assert route["task_relation"] == "independent-pending-scope"
     assert route["required_transition"] == "inspect-current-task-scope"
     assert route["implementation_allowed"] is False
+    assert route["consumer_contract"] == start_route["consumer_contract"]
+    assert route["identity_effects"] == start_route["identity_effects"]
 
 
 def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp_path: Path, capsys) -> None:
@@ -7659,6 +7667,47 @@ def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Pat
     )
     assert plural_lane_switch["status"] == "issue-matched-continuation"
     assert "issue-2045" in plural_lane_switch["mismatch_evidence"]["shared_refs"]
+
+
+def test_active_owner_refs_ignore_non_authoritative_plan_history(tmp_path: Path) -> None:
+    owner_ref = ".agentic-workspace/planning/execplans/issue-2258.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        f'''schema_version = 1
+
+[todo]
+active_items = [{{ id = "issue-2258", status = "active", surface = "{owner_ref}", refs = ["#2258"] }}]
+''',
+    )
+    _write(
+        tmp_path / owner_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2258",
+                "title": "Implement #2258",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "intent": {"outcome": "Complete issue #2258", "non_goals": ["Do not absorb #9001"]},
+                "dependencies": ["#9002"],
+                "relationships": {"related": ["#9003"]},
+                "proof": {"refs": ["#9004"]},
+                "execution_summary": {"completed follow-up": "#9005"},
+                "references": [
+                    {"kind": "issue", "target": "#2258", "role": "intake"},
+                    {"kind": "issue", "target": "#9006", "role": "supporting-evidence"},
+                ],
+            }
+        ),
+    )
+
+    summary = cli._fast_planning_active_summary(target_root=tmp_path)
+
+    assert summary["active_owner_refs"] == ["#2258", "issue-2258"]
+    for unrelated_ref in ("#9001", "#9002", "#9003", "#9004", "#9005", "#9006"):
+        mismatch = cli._task_switch_mismatch_evidence(active_summary=summary, task_text=f"Continue {unrelated_ref}")
+        assert mismatch["shared_refs"] == []
+        assert mismatch["overlap_signal"] == "low-overlap-explicit-task"
 
 
 def test_start_route_rejects_stale_local_selected_planning_owner(tmp_path: Path, capsys) -> None:
@@ -8222,6 +8271,106 @@ def test_route_decision_keeps_relation_posture_and_transition_separate() -> None
     assert decision["next_safe_action"]["action"] == "continue-active-plan"
     assert decision["input_provenance"]["required_transition"].endswith("planning reconcile")
     assert decision["selected_owner_identity"]["ref"].endswith("issue-2046-lane.plan.json")
+    consumers = decision["consumer_contract"]
+    assert consumers["ordinary_consumers"] == [
+        "startup",
+        "implement",
+        "preflight",
+        "summary",
+        "actionability",
+        "skills",
+        "SkillSpec",
+        "Planning handoff",
+        "proof",
+        "closeout",
+        "generated targets",
+        "external consumers",
+        "no-CLI fallback",
+    ]
+    assert consumers["inventory_ref"] == "docs/maintainer/planning-route-consumer-inventory.json"
+    assert consumers["profiles"] == ["tiny", "compact", "full"]
+    assert consumers["parallel_classification"] == "backgrounded-diagnostic-only"
+    assert consumers["degraded_recovery"] == {
+        "status": "typed",
+        "missing_owner": "select-owner",
+        "stale_binding": "refresh-planning-route-decision",
+        "projection_drift": "repair-projection",
+        "external_conflict": "reconcile",
+    }
+    assert decision["identity_effects"][0]["effect"] == "invalidate-and-rebind-before-action"
+    assert decision["identity_effects"][0]["residue_policy"] == "do-not-persist-orienting-read-state"
+
+
+def test_route_decision_consumer_profiles_share_one_authority_and_recovery_matrix() -> None:
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    base = {
+        "task_relation": "continues-selected-owner",
+        "owner_posture": "projection-drifted",
+        "route_inputs": {"owner": {"ref": "owner-a", "revision": "revision-a", "projection_status": "drifted"}},
+    }
+    decisions = [
+        _planning_route_decision_payload({**base, "consumer_profile": profile}, planning_revision={"revision_id": "planning-a"})
+        for profile in ("tiny", "compact", "full")
+    ]
+
+    authoritative = [
+        (
+            item["task_relation"],
+            item["owner_posture"],
+            item["required_transition"],
+            item["next_safe_action"]["action"],
+            item["consumer_contract"],
+        )
+        for item in decisions
+    ]
+    assert authoritative[0] == authoritative[1] == authoritative[2]
+    assert decisions[0]["required_transition"] == "repair-projection"
+    assert decisions[0]["consumer_contract"]["freshness_inputs"] == [
+        "planning_revision",
+        "selected_owner_revision",
+        "selected_owner_lifecycle",
+        "selected_owner_projection_status",
+        "task_binding_identity",
+        "mutation_baseline_id",
+        "reconciliation_proposal_revision",
+    ]
+
+
+def test_every_declared_route_consumer_is_a_no_divergence_projection() -> None:
+    from agentic_workspace.workspace_runtime_planning import (
+        _planning_route_decision_payload,
+        planning_route_consumer_projection,
+    )
+
+    decision = _planning_route_decision_payload(
+        {
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "route_inputs": {"task_binding": {"mode": "read-only"}},
+        },
+        planning_revision={"revision_id": "planning-current"},
+    )
+    projections = [
+        planning_route_consumer_projection(route_decision=decision, consumer=consumer)
+        for consumer in decision["consumer_contract"]["ordinary_consumers"]
+    ]
+    identity = {
+        (
+            item["decision_id"],
+            item["input_revision"],
+            json.dumps(item["action_identity"], sort_keys=True),
+            item["required_transition"],
+            tuple(item["blocked_claims"]),
+            item["state_update_policy"],
+        )
+        for item in projections
+    }
+    assert len(identity) == 1
+    assert all(item["authority"] == "planning_safety_gate.route_decision" for item in projections)
+    assert decision["consumer_projections"] == {item["consumer"]: item for item in projections}
+    with pytest.raises(ValueError, match="unsupported Planning route consumer"):
+        planning_route_consumer_projection(route_decision=decision, consumer="parallel-classifier")
 
 
 def test_route_decision_fails_closed_for_genuine_ambiguity() -> None:
@@ -8943,6 +9092,217 @@ def test_startup_route_identity_rejects_head_change_before_adoption(tmp_path: Pa
     assert check["status"] == "stale-projection-rejected"
     assert check["action"] == "re-resolve-route"
     assert check["changed_fields"] == ["head"]
+
+
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    [
+        ("branch", "feature/other"),
+        ("worktree", "../other-worktree"),
+        ("repository", "/repositories/other.git"),
+        ("target", "/targets/other"),
+        ("current_work", "other-current-work"),
+        ("selected_owner", {"id": "other-owner", "ref": "plans/other.json"}),
+    ],
+)
+def test_startup_route_identity_transition_matrix_rejects_and_leaves_no_residue(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, field: str, replacement: object
+) -> None:
+    from agentic_workspace import current_work_context
+
+    observed = {
+        "target": "/targets/current",
+        "repository": "/repositories/current.git",
+        "worktree": ".",
+        "branch": "main",
+        "head": "a" * 40,
+        "current_work": "current-work",
+        "selected_owner": {"id": "owner", "ref": "plans/owner.json"},
+    }
+    expected = {
+        "kind": "agentic-workspace/startup-route-identity/v1",
+        "fingerprint": "expected",
+        "observed": observed,
+    }
+    changed = {**observed, field: replacement}
+    monkeypatch.setattr(
+        current_work_context,
+        "startup_route_identity",
+        lambda **_kwargs: {
+            "kind": "agentic-workspace/startup-route-identity/v1",
+            "fingerprint": "actual",
+            "observed": changed,
+            "comparison_fields": list(observed),
+        },
+    )
+    before = list(tmp_path.rglob("*"))
+
+    check = current_work_context.startup_route_identity_check(expected=expected, root=tmp_path, task="continue")
+
+    assert check["status"] == "stale-projection-rejected"
+    assert check["changed_fields"] == [field]
+    assert check["action"] == "re-resolve-route"
+    assert list(tmp_path.rglob("*")) == before
+
+
+def test_ordinary_planning_consumers_project_one_route_authority_without_orientation_residue(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    planning_state = tmp_path / ".agentic-workspace" / "planning" / "state.toml"
+    state_before = planning_state.read_bytes()
+    task = "Inspect the current Planning route"
+    commands = [
+        ["start", "--select", "planning_route_decision"],
+        ["implement", "--select", "planning_route_decision"],
+        ["summary", "--select", "planning_route_decision"],
+        ["skills", "--select", "planning_route_decision"],
+    ]
+    routes = []
+    for command in commands:
+        assert cli.main([*command, "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
+        selected = json.loads(capsys.readouterr().out)
+        routes.append(selected["values"]["planning_route_decision"])
+
+    authoritative = [
+        (
+            route["task_relation"],
+            route["owner_posture"],
+            route["required_transition"],
+            route["implementation_allowed"],
+            route["mutation_authority"],
+            route["next_safe_action"]["action"],
+        )
+        for route in routes
+    ]
+    assert authoritative[0] == authoritative[1] == authoritative[2] == authoritative[3]
+    assert len({route["decision_id"] for route in routes}) == 1
+    assert len({route["input_revision"] for route in routes}) == 1
+    assert len({json.dumps(route["action_identity"], sort_keys=True) for route in routes}) == 1
+    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in routes)
+    for route in routes:
+        assert set(route["consumer_projections"]) == set(route["consumer_contract"]["ordinary_consumers"])
+        assert {
+            (
+                projection["decision_id"],
+                projection["input_revision"],
+                json.dumps(projection["action_identity"], sort_keys=True),
+                projection["required_transition"],
+                tuple(projection["blocked_claims"]),
+            )
+            for projection in route["consumer_projections"].values()
+        } == {
+            (
+                route["decision_id"],
+                route["input_revision"],
+                json.dumps(route["action_identity"], sort_keys=True),
+                route["required_transition"],
+                tuple(route["blocked_claims"]),
+            )
+        }
+    assert planning_state.read_bytes() == state_before
+    assert not (tmp_path / ".agentic-workspace" / "local" / "planning-carry.json").exists()
+
+
+def test_planning_route_consumer_inventory_and_degraded_capsule_are_closed_and_current() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    inventory = json.loads((repo_root / "docs/maintainer/planning-route-consumer-inventory.json").read_text(encoding="utf-8"))
+    required = {
+        "startup",
+        "implement",
+        "preflight",
+        "summary",
+        "actionability",
+        "skills",
+        "SkillSpec",
+        "Planning handoff",
+        "proof",
+        "closeout",
+        "generated targets",
+        "external consumers",
+        "no-CLI fallback",
+    }
+    assert set(inventory["consumers"]) == required
+    assert all(entry["projection"] != "independent" for entry in inventory["consumers"].values())
+    assert inventory["compatibility_removal"]
+
+    policy_path = repo_root / "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json"
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    expected = policy.pop("contract_digest")
+    actual = "sha256:" + hashlib.sha256(json.dumps(policy, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    assert expected == actual
+    assert policy["authority"]["decision_source"] == inventory["authority"]
+    assert {"managed-state-mutation", "external-write", "destructive-action"}.issubset(policy["forbidden_effects"])
+    assert {"proof-complete", "issue-closeable", "task-complete"}.issubset(policy["forbidden_claims"])
+    assert policy["restoration"]["action"] == "restore-configured-cli-and-rerun-start"
+
+    workflow = (repo_root / ".agentic-workspace/WORKFLOW.md").read_text(encoding="utf-8")
+    installed_workflow = (repo_root / "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md").read_text(encoding="utf-8")
+    assert workflow == installed_workflow
+    assert len(workflow.encode()) < 4_000
+    assert "python .agentic-workspace/fallback/no_cli_startup.py" in workflow
+    assert "Fallback Work Shape" not in workflow
+    assert "do not reconstruct work shape" in workflow
+
+    startup_skill = (repo_root / ".agentic-workspace/skills/workspace-startup/SKILL.md").read_text(encoding="utf-8")
+    installed_startup_skill = (repo_root / "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    assert startup_skill == installed_startup_skill
+    assert "planning_route_decision" in startup_skill
+    assert "Do not reclassify the task" in startup_skill
+
+
+def test_startup_profiles_and_skill_projection_share_current_planning_route(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "issue-2275", title = "Planning route parity", status = "active", surface = ".agentic-workspace/planning/execplans/issue-2275.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "issue-2275.plan.json",
+        json.dumps({"id": "issue-2275", "title": "Planning route parity", "refs": ["#2275"]}),
+    )
+    task = "Continue #2275"
+    invocations = [
+        ["start"],
+        ["start", "--verbose"],
+        ["start", "--select", "planning_safety_gate"],
+        ["start", "--select", "planning_route_decision"],
+        ["skills", "--select", "planning_route_decision"],
+    ]
+    routes = []
+    for invocation in invocations:
+        assert cli.main([*invocation, "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        if invocation[-1] == "planning_route_decision":
+            route = payload["values"]["planning_route_decision"]
+        elif invocation[-1] == "planning_safety_gate":
+            route = payload["values"]["planning_safety_gate"]["route_decision"]
+        else:
+            route = payload.get("route_decision") or payload.get("context", {}).get("route_decision")
+            assert route
+        routes.append(route)
+
+    dimensions = [(route["task_relation"], route["owner_posture"], route["required_transition"]) for route in routes]
+    assert len(set(dimensions)) == 1
+    assert dimensions[0] == ("continues-selected-owner", "current", "none")
+    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in routes)
 
 
 def test_decision_point_carry_rejects_stale_startup_route_before_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

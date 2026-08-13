@@ -1375,7 +1375,13 @@ def _planning_route_decision_payload(
             "ref": selected_owner_ref,
             "revision": str(_as_dict(planning_revision).get("revision_id") or _as_dict(planning_revision).get("revision") or ""),
         },
-        "identity_effects": [],
+        "identity_effects": [
+            {
+                "inputs": ["branch", "worktree", "repository", "target", "selected_owner_revision"],
+                "effect": "invalidate-and-rebind-before-action",
+                "residue_policy": "do-not-persist-orienting-read-state",
+            }
+        ],
         "input_provenance": {
             "task_relation": "current-work binding, explicit structured references, and scoped current-task evidence",
             "owner_posture": "selected-owner lifecycle, projection, proof, and admitted external-observation facts",
@@ -1419,6 +1425,45 @@ def _planning_route_decision_payload(
             "task_switch_reconciliation.blocked_claims": "route_decision.blocked_claims",
             "task_switch_reconciliation.route_acknowledgement": "route_decision.next_safe_action.operation_invocation.input_identity",
             "task_switch_reconciliation.permission": "route_decision.implementation_allowed + route_decision.mutation_authority",
+        },
+        "consumer_contract": {
+            "authority": "planning_safety_gate.route_decision",
+            "ordinary_consumers": [
+                "startup",
+                "implement",
+                "preflight",
+                "summary",
+                "actionability",
+                "skills",
+                "SkillSpec",
+                "Planning handoff",
+                "proof",
+                "closeout",
+                "generated targets",
+                "external consumers",
+                "no-CLI fallback",
+            ],
+            "inventory_ref": "docs/maintainer/planning-route-consumer-inventory.json",
+            "profiles": ["tiny", "compact", "full"],
+            "dimensions": ["task_relation", "owner_posture", "required_transition"],
+            "freshness_inputs": [
+                "planning_revision",
+                "selected_owner_revision",
+                "selected_owner_lifecycle",
+                "selected_owner_projection_status",
+                "task_binding_identity",
+                "mutation_baseline_id",
+                "reconciliation_proposal_revision",
+            ],
+            "parallel_classification": "backgrounded-diagnostic-only",
+            "degraded_recovery": {
+                "status": "typed",
+                "missing_owner": "select-owner",
+                "stale_binding": "refresh-planning-route-decision",
+                "projection_drift": "repair-projection",
+                "external_conflict": "reconcile",
+            },
+            "rule": "Every ordinary consumer projects this decision; no consumer may derive route permission from legacy task-switch labels.",
         },
         "next_safe_action": next_packet,
     }
@@ -1472,6 +1517,30 @@ def _planning_route_decision_payload(
         )
         decision["reason_codes"] = [*decision["reason_codes"], "stale-reconciliation-proposal"]
         decision["reconciliation_proposal"] = proposal
+    identity_basis = {
+        key: decision.get(key)
+        for key in (
+            "task_relation",
+            "owner_posture",
+            "required_transition",
+            "selected_owner_identity",
+            "structured_inputs",
+            "mutation_baseline_admission",
+            "reconciliation_proposal",
+            "action_identity",
+            "blocked_claims",
+            "state_update_policy",
+        )
+    }
+    decision["input_revision"] = "sha256:" + _stable_revision(identity_basis)
+    decision["decision_id"] = (
+        "planning-route:"
+        + _stable_revision({"input_revision": decision["input_revision"], "action_identity": decision.get("action_identity", {})})[:20]
+    )
+    decision["consumer_projections"] = {
+        consumer: planning_route_consumer_projection(route_decision=decision, consumer=consumer)
+        for consumer in decision["consumer_contract"]["ordinary_consumers"]
+    }
     return decision
 
 
@@ -1490,6 +1559,44 @@ def _route_decision_blocked_claims(*, task_relation: str, owner_posture: str, tr
     if task_relation == "ambiguous" or transition == "ask-for-route-decision":
         return ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"]
     return ["claim-route-transition-complete-without-receipt"]
+
+
+def planning_route_consumer_projection(*, route_decision: dict[str, Any], consumer: str) -> dict[str, Any]:
+    """Project the one route/action identity without granting consumer-local authority."""
+
+    admitted = {
+        "startup",
+        "implement",
+        "preflight",
+        "summary",
+        "actionability",
+        "skills",
+        "SkillSpec",
+        "Planning handoff",
+        "proof",
+        "closeout",
+        "generated targets",
+        "external consumers",
+        "no-CLI fallback",
+    }
+    if consumer not in admitted:
+        raise ValueError(f"unsupported Planning route consumer: {consumer}")
+    return {
+        "kind": "agentic-planning/route-consumer-projection/v1",
+        "consumer": consumer,
+        "decision_id": str(route_decision.get("decision_id") or ""),
+        "input_revision": str(route_decision.get("input_revision") or ""),
+        "action_identity": copy.deepcopy(_as_dict(route_decision.get("action_identity"))),
+        "required_transition": str(route_decision.get("required_transition") or ""),
+        "implementation_allowed": bool(route_decision.get("implementation_allowed")),
+        "mutation_authority": str(route_decision.get("mutation_authority") or "none"),
+        "proof_expectation": str(route_decision.get("proof_expectation") or ""),
+        "blocked_claims": [str(item) for item in _as_list(route_decision.get("blocked_claims"))],
+        "state_update_policy": str(route_decision.get("state_update_policy") or "read-only"),
+        "next_safe_action": copy.deepcopy(_as_dict(route_decision.get("next_safe_action"))),
+        "authority": "planning_safety_gate.route_decision",
+        "extension_rule": "Consumer detail may narrow this projection but cannot widen effects, claims, mutation, or terminal authority.",
+    }
 
 
 def _route_decision_next_action_packet(
@@ -3043,7 +3150,10 @@ def _task_switch_mismatch_evidence(*, active_summary: dict[str, Any], task_text:
     task_terms = _task_switch_terms(task)
     active_terms = _task_switch_terms(active_text)
     task_refs = _task_switch_refs(task)
-    active_refs = _task_switch_refs(active_text)
+    active_refs = sorted(
+        set(_task_switch_refs(active_text))
+        | {str(ref) for ref in active_summary.get("active_owner_refs", []) if isinstance(active_summary.get("active_owner_refs"), list)}
+    )
     shared_terms = [term for term in task_terms if term in set(active_terms)]
     shared_refs = [ref for ref in task_refs if ref in set(active_refs)]
     overlap_signal = "possible-continuation" if shared_refs or len(shared_terms) >= 2 else "low-overlap-explicit-task"
@@ -3058,7 +3168,7 @@ def _task_switch_mismatch_evidence(*, active_summary: dict[str, Any], task_text:
         "active_plan_terms": active_terms[:8],
         "shared_terms": shared_terms[:8],
         "overlap_signal": overlap_signal,
-        "rule": "Overlap evidence is bounded routing support; it does not decide user intent or close active planning.",
+        "rule": "Structured refs from the current task and selected owner are bounded continuation evidence; they do not close active planning.",
     }
 
 

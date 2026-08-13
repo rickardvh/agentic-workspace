@@ -74,6 +74,8 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "context.delegation_decision.delegation_next_step.must_report_if_not_run",
         "context.delegation_decision.effort_guidance.cost_posture",
         "context.plan_delegation_packet",
+        "context.planning_safety_gate",
+        "context.planning_safety_gate.route_decision",
         "context.workflow_sufficiency",
         "context.scope",
         "context.guidance",
@@ -95,6 +97,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "completion_options",
         "decision_point_intent_confirmation",
         "planning_safety_gate",
+        "planning_route_decision",
         "work_threads",
     ),
     "summary": (

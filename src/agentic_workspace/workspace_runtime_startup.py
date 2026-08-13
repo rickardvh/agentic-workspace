@@ -263,6 +263,8 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
             "proof_expectation",
             "state_update_policy",
             "action_identity",
+            "identity_effects",
+            "consumer_contract",
             "reconciliation_proposal",
             "next_safe_action",
             "binding",
@@ -1725,7 +1727,7 @@ def _hydrate_selected_start_advisory_payloads(
         )
     if _selector_requests(select, "repo_posture"):
         payload["repo_posture"] = _repo_posture_payload(config=config, surface="start", compact=False)
-    if _selector_requests(select, "planning_safety_gate"):
+    if _selector_requests(select, "planning_safety_gate") or _selector_requests(select, "planning_route_decision"):
         execution_posture = _execution_posture_payload(config=config, changed_paths=[], task_text=task_text, target_root=target_root)
         gate = _planning_safety_gate_payload(
             target_root=target_root,
@@ -1744,7 +1746,10 @@ def _hydrate_selected_start_advisory_payloads(
                 cli_invoke=config.cli_invoke,
             )
             gate["route_decision"] = route
-        payload["planning_safety_gate"] = gate
+        if _selector_requests(select, "planning_safety_gate"):
+            payload["planning_safety_gate"] = gate
+        if _selector_requests(select, "planning_route_decision"):
+            payload["planning_route_decision"] = _as_dict(gate.get("route_decision"))
     if _selector_requests(select, "issue_reference_intent"):
         gate = payload.get("planning_safety_gate")
         if not isinstance(gate, dict):
@@ -1994,6 +1999,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         }
     primary_action = _compact_start_route_action(payload["immediate_next_allowed_action"])
     primary_action.setdefault("command", None)
+    primary_action.setdefault("read_first", [])
     context: dict[str, Any] = {
         "primary_action": primary_action,
         **({"route_decision": _compact_start_route_decision(payload.get("route_decision"))} if payload.get("route_decision") else {}),
@@ -2019,6 +2025,20 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         if read_only_compact_default
         else payload.get("memory_consult", {}),
     }
+    compact_route = _as_dict(context.get("route_decision"))
+    if compact_route:
+        route_action = _as_dict(compact_route.get("next_safe_action"))
+        compact_route["next_safe_action"] = {
+            key: copy.deepcopy(route_action[key])
+            for key in ("action", "implementation_allowed")
+            if route_action.get(key) not in (None, "", [], {})
+        }
+        context["primary_action"] = {
+            "status": "projected-in-next_safe_action",
+            "detail_selector": "next_safe_action",
+            "command": None,
+            "read_first": [],
+        }
     if isinstance(payload.get("context_authority_projection"), dict):
         context_projection = payload["context_authority_projection"]
         if int(context_projection.get("changed_path_count", 0) or 0) > 0:
@@ -2033,6 +2053,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             "status": "projected-in-next_safe_action",
             "detail_selector": "next_safe_action",
             "command": None,
+            "read_first": [],
         }
         context["planning"] = {
             "status": compact_workflow.get("sufficiency_result", "unknown"),

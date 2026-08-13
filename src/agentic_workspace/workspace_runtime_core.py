@@ -29853,6 +29853,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "proof_expectation",
                 "state_update_policy",
                 "action_identity",
+                "identity_effects",
+                "consumer_contract",
                 "legacy_consumer_replacement_map",
                 "reconciliation_proposal",
                 "next_safe_action",
@@ -33303,6 +33305,30 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
     }
 
 
+def _planning_owner_intent_refs(owner_payload: dict[str, Any]) -> list[str]:
+    """Return refs from the selected owner's identity and intake fields only."""
+
+    intent = _as_dict(owner_payload.get("intent"))
+    parent = _as_dict(owner_payload.get("parent"))
+    scope = _as_dict(owner_payload.get("scope"))
+    texts = [
+        str(owner_payload.get("id") or ""),
+        str(owner_payload.get("title") or ""),
+        str(intent.get("outcome") or ""),
+        str(parent.get("owner_id") or ""),
+    ]
+    texts.extend(str(value) for value in _list_payload(scope.get("owned")))
+    for reference in _list_payload(owner_payload.get("references")):
+        record = _as_dict(reference)
+        if str(record.get("role") or "").strip().lower() == "intake":
+            texts.extend((str(record.get("target") or ""), str(record.get("label") or "")))
+    numbers: set[str] = set()
+    for text in texts:
+        numbers.update(re.findall(r"#(\d+)", text))
+        numbers.update(re.findall(r"\bissue[-_\s]+#?(\d+)\b", text, flags=re.IGNORECASE))
+    return [ref for number in sorted(numbers, key=int) for ref in (f"#{number}", f"issue-{number}")]
+
+
 def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
     if not state_path.exists():
@@ -33336,6 +33362,15 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
         "active_execplan": active_execplan,
         "planning_status": "present" if active_execplan else "unavailable",
     }
+    if active_execplan:
+        try:
+            owner_path = (target_root / str(active_execplan)).resolve()
+            owner_path.relative_to(target_root.resolve())
+            owner_payload = json.loads(owner_path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError, json.JSONDecodeError):
+            owner_payload = {}
+        if isinstance(owner_payload, dict):
+            summary["active_owner_refs"] = _planning_owner_intent_refs(owner_payload)
     selected_source = str(_as_dict(owner_admission.get("selected_owner")).get("source") or "") if isinstance(owner_admission, dict) else ""
     if isinstance(owner_admission, dict) and (
         owner_admission.get("status") == "rejected"
@@ -55804,6 +55839,7 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
         "agent_aids": payload.get("agent_aids", []),
         "agent_aid_recommendations": payload.get("agent_aid_recommendations", []),
         "agent_aid_source": payload.get("agent_aid_source", {}),
+        "planning_route_decision": payload.get("planning_route_decision", {}),
         "installed_contract": payload.get("installed_contract", {}),
         "warnings": payload.get("warnings", []),
         "catalog_summary": _skill_catalog_summary_from_payload(payload),
@@ -55873,6 +55909,17 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
         "warnings": warnings,
         "agent_aid_warnings": aid_warnings,
         "sources": sources,
+        **(
+            {
+                "planning_route_decision": _summary_planning_route_decision_payload(
+                    target_root=target_root,
+                    task_text=task_text,
+                    changed_paths=[],
+                )
+            }
+            if str(task_text or "").strip()
+            else {}
+        ),
     }
 
 
