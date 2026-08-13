@@ -1428,7 +1428,22 @@ def _planning_route_decision_payload(
         },
         "consumer_contract": {
             "authority": "planning_safety_gate.route_decision",
-            "ordinary_consumers": ["start", "implement", "summary", "handoff", "skills"],
+            "ordinary_consumers": [
+                "startup",
+                "implement",
+                "preflight",
+                "summary",
+                "actionability",
+                "skills",
+                "SkillSpec",
+                "Planning handoff",
+                "proof",
+                "closeout",
+                "generated targets",
+                "external consumers",
+                "no-CLI fallback",
+            ],
+            "inventory_ref": "docs/maintainer/planning-route-consumer-inventory.json",
             "profiles": ["tiny", "compact", "full"],
             "dimensions": ["task_relation", "owner_posture", "required_transition"],
             "freshness_inputs": [
@@ -1502,6 +1517,26 @@ def _planning_route_decision_payload(
         )
         decision["reason_codes"] = [*decision["reason_codes"], "stale-reconciliation-proposal"]
         decision["reconciliation_proposal"] = proposal
+    identity_basis = {
+        key: decision.get(key)
+        for key in (
+            "task_relation",
+            "owner_posture",
+            "required_transition",
+            "selected_owner_identity",
+            "structured_inputs",
+            "mutation_baseline_admission",
+            "reconciliation_proposal",
+            "action_identity",
+            "blocked_claims",
+            "state_update_policy",
+        )
+    }
+    decision["input_revision"] = "sha256:" + _stable_revision(identity_basis)
+    decision["decision_id"] = (
+        "planning-route:"
+        + _stable_revision({"input_revision": decision["input_revision"], "action_identity": decision.get("action_identity", {})})[:20]
+    )
     return decision
 
 
@@ -1520,6 +1555,44 @@ def _route_decision_blocked_claims(*, task_relation: str, owner_posture: str, tr
     if task_relation == "ambiguous" or transition == "ask-for-route-decision":
         return ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"]
     return ["claim-route-transition-complete-without-receipt"]
+
+
+def planning_route_consumer_projection(*, route_decision: dict[str, Any], consumer: str) -> dict[str, Any]:
+    """Project the one route/action identity without granting consumer-local authority."""
+
+    admitted = {
+        "startup",
+        "implement",
+        "preflight",
+        "summary",
+        "actionability",
+        "skills",
+        "SkillSpec",
+        "Planning handoff",
+        "proof",
+        "closeout",
+        "generated targets",
+        "external consumers",
+        "no-CLI fallback",
+    }
+    if consumer not in admitted:
+        raise ValueError(f"unsupported Planning route consumer: {consumer}")
+    return {
+        "kind": "agentic-planning/route-consumer-projection/v1",
+        "consumer": consumer,
+        "decision_id": str(route_decision.get("decision_id") or ""),
+        "input_revision": str(route_decision.get("input_revision") or ""),
+        "action_identity": copy.deepcopy(_as_dict(route_decision.get("action_identity"))),
+        "required_transition": str(route_decision.get("required_transition") or ""),
+        "implementation_allowed": bool(route_decision.get("implementation_allowed")),
+        "mutation_authority": str(route_decision.get("mutation_authority") or "none"),
+        "proof_expectation": str(route_decision.get("proof_expectation") or ""),
+        "blocked_claims": [str(item) for item in _as_list(route_decision.get("blocked_claims"))],
+        "state_update_policy": str(route_decision.get("state_update_policy") or "read-only"),
+        "next_safe_action": copy.deepcopy(_as_dict(route_decision.get("next_safe_action"))),
+        "authority": "planning_safety_gate.route_decision",
+        "extension_rule": "Consumer detail may narrow this projection but cannot widen effects, claims, mutation, or terminal authority.",
+    }
 
 
 def _route_decision_next_action_packet(

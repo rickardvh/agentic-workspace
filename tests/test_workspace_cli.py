@@ -7739,7 +7739,22 @@ def test_route_decision_keeps_relation_posture_and_transition_separate() -> None
     assert decision["input_provenance"]["required_transition"].endswith("planning reconcile")
     assert decision["selected_owner_identity"]["ref"].endswith("issue-2046-lane.plan.json")
     consumers = decision["consumer_contract"]
-    assert consumers["ordinary_consumers"] == ["start", "implement", "summary", "handoff", "skills"]
+    assert consumers["ordinary_consumers"] == [
+        "startup",
+        "implement",
+        "preflight",
+        "summary",
+        "actionability",
+        "skills",
+        "SkillSpec",
+        "Planning handoff",
+        "proof",
+        "closeout",
+        "generated targets",
+        "external consumers",
+        "no-CLI fallback",
+    ]
+    assert consumers["inventory_ref"] == "docs/maintainer/planning-route-consumer-inventory.json"
     assert consumers["profiles"] == ["tiny", "compact", "full"]
     assert consumers["parallel_classification"] == "backgrounded-diagnostic-only"
     assert consumers["degraded_recovery"] == {
@@ -7787,6 +7802,41 @@ def test_route_decision_consumer_profiles_share_one_authority_and_recovery_matri
         "mutation_baseline_id",
         "reconciliation_proposal_revision",
     ]
+
+
+def test_every_declared_route_consumer_is_a_no_divergence_projection() -> None:
+    from agentic_workspace.workspace_runtime_planning import (
+        _planning_route_decision_payload,
+        planning_route_consumer_projection,
+    )
+
+    decision = _planning_route_decision_payload(
+        {
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "route_inputs": {"task_binding": {"mode": "read-only"}},
+        },
+        planning_revision={"revision_id": "planning-current"},
+    )
+    projections = [
+        planning_route_consumer_projection(route_decision=decision, consumer=consumer)
+        for consumer in decision["consumer_contract"]["ordinary_consumers"]
+    ]
+    identity = {
+        (
+            item["decision_id"],
+            item["input_revision"],
+            json.dumps(item["action_identity"], sort_keys=True),
+            item["required_transition"],
+            tuple(item["blocked_claims"]),
+            item["state_update_policy"],
+        )
+        for item in projections
+    }
+    assert len(identity) == 1
+    assert all(item["authority"] == "planning_safety_gate.route_decision" for item in projections)
+    with pytest.raises(ValueError, match="unsupported Planning route consumer"):
+        planning_route_consumer_projection(route_decision=decision, consumer="parallel-classifier")
 
 
 def test_route_decision_fails_closed_for_genuine_ambiguity() -> None:
@@ -8592,9 +8642,45 @@ def test_ordinary_planning_consumers_project_one_route_authority_without_orienta
         for route in routes
     ]
     assert authoritative[0] == authoritative[1] == authoritative[2] == authoritative[3]
+    assert len({route["decision_id"] for route in routes}) == 1
+    assert len({route["input_revision"] for route in routes}) == 1
+    assert len({json.dumps(route["action_identity"], sort_keys=True) for route in routes}) == 1
     assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in routes)
     assert planning_state.read_bytes() == state_before
     assert not (tmp_path / ".agentic-workspace" / "local" / "planning-carry.json").exists()
+
+
+def test_planning_route_consumer_inventory_and_degraded_capsule_are_closed_and_current() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    inventory = json.loads((repo_root / "docs/maintainer/planning-route-consumer-inventory.json").read_text(encoding="utf-8"))
+    required = {
+        "startup",
+        "implement",
+        "preflight",
+        "summary",
+        "actionability",
+        "skills",
+        "SkillSpec",
+        "Planning handoff",
+        "proof",
+        "closeout",
+        "generated targets",
+        "external consumers",
+        "no-CLI fallback",
+    }
+    assert set(inventory["consumers"]) == required
+    assert all(entry["projection"] != "independent" for entry in inventory["consumers"].values())
+    assert inventory["compatibility_removal"]
+
+    policy_path = repo_root / "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json"
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    expected = policy.pop("contract_digest")
+    actual = "sha256:" + hashlib.sha256(json.dumps(policy, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    assert expected == actual
+    assert policy["authority"]["decision_source"] == inventory["authority"]
+    assert {"managed-state-mutation", "external-write", "destructive-action"}.issubset(policy["forbidden_effects"])
+    assert {"proof-complete", "issue-closeable", "task-complete"}.issubset(policy["forbidden_claims"])
+    assert policy["restoration"]["action"] == "restore-configured-cli-and-rerun-start"
 
 
 def test_startup_profiles_and_skill_projection_share_current_planning_route(tmp_path: Path, capsys) -> None:
@@ -9432,6 +9518,42 @@ def test_start_explicit_changed_path_still_uses_changed_path_startup(tmp_path: P
 
     assert payload["next_safe_action"]["next_safe_action"] == "select-changed-path-proof"
     assert payload["context"]["primary_action"]["command"].endswith("proof --changed AGENTS.md --format json")
+    projection = payload["context"]["context_authority_projection"]
+    assert projection["consumer"] == "start"
+    assert projection["changed_path_count"] == 1
+    assert len(projection["authorities"]) >= 1
+    assert projection["registry_revision"].startswith("sha256:")
+
+
+def test_start_context_authority_projection_fails_closed_for_missing_scoped_instruction_source(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / "AGENTS.md").unlink()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/example.py",
+                "--task",
+                "Use the scoped instructions and skills before editing",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    projection = payload["context"]["context_authority_projection"]
+
+    assert projection["status"] == "repair-required"
+    assert "scoped-instructions" in projection["missing_required_surfaces"]
+    repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "scoped-instructions")
+    assert repair["operation_id"] == "workspace.instructions.route"
 
 
 def test_local_chat_checkpoint_write_creates_valid_local_record_and_startup_packet(tmp_path: Path, capsys) -> None:

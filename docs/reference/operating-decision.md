@@ -20,6 +20,18 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `canonical_decision_input_revision` | string | no |  | Canonical revision of the typed action's current owner, context, authority, proof, mutation, evaluation, and executor inputs. |  |  |
 | `context_authority_coverage` | object | no |  | Registry-derived coverage of context authority sources and ordinary consumers considered by the decision compiler. |  |  |
 | `context_authority_projection` | object | no |  | Consumer-specific admitted context authorities and the typed repair operation when any required source is unavailable. |  |  |
+| `context_consequences` | array of object | no |  | Stable one-per-finding operational consequences, ordered from highest to lowest current impact. |  |  |
+| `highest_impact_context_consequence` | object | no |  | The first active or terminal context consequence projected for ordinary consumers, or an empty object. |  |  |
+| `context_effects` | object | no |  | Enforced ordinary action, review, claim, closeout, repair, and durable-lifecycle effects compiled from context consequences. |  |  |
+| `context_effects.kind` | const `"agentic-workspace/context-consequence-effects/v1"` | yes |  | Schema discriminator for enforced context effects. |  |  |
+| `context_effects.status` | enum `"quiet"`, `"action-changing"` | yes |  | Whether any active context finding changes ordinary work. |  |  |
+| `context_effects.review_gate` | object | yes |  | Owner-review gate and contributing finding identities. |  |  |
+| `context_effects.action_narrowing` | object | yes |  | Constraint applied to the current primary action and claims. |  |  |
+| `context_effects.blocked_claim_classes` | array of string | yes |  | Claims forbidden until the owning finding is disposed. |  |  |
+| `context_effects.closeout_obligations` | array of object | yes |  | Finding dispositions required before broad closeout. |  |  |
+| `context_effects.typed_repairs` | array of object | yes |  | Revision-bound repair operations supplied by specialist owners. |  |  |
+| `context_effects.durable_dispositions` | array of object | yes |  | Stable routed or deferred owner destinations and re-entry triggers. |  |  |
+| `context_effects.convergence_rule` | string | yes |  | Rule for deduplication, terminal lifecycle, and continuation convergence. |  |  |
 | `current_work` | object | no |  | Current-work identity admitted into the composed decision. |  |  |
 | `selected_owner` | object | no |  | Selected owner identity admitted into the composed decision. |  |  |
 | `terminal_state` | string | no |  | Terminal outcome state used for continuation or finalization claims. |  |  |

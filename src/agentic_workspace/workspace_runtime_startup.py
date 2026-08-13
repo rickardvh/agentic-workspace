@@ -17,6 +17,7 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
+from agentic_workspace.operating_decision import resolve_context_authority_projection
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -383,6 +384,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             else command_with_target("agentic-workspace modules --target ./repo --format json"),
         },
         "active_state_summary": payload["active_state_summary"],
+        **(
+            {"context_authority_projection": _compact_context_authority_projection(payload["context_authority_projection"])}
+            if isinstance(payload.get("context_authority_projection"), dict)
+            else {}
+        ),
         "planning_revision": payload.get("planning_revision", {}),
         "active_plan_reliance": payload.get("active_plan_reliance", {}),
         **({"evaluation_actions": payload["evaluation_actions"]} if "evaluation_actions" in payload else {}),
@@ -708,6 +714,28 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return projected
 
 
+def _compact_context_authority_projection(value: dict[str, Any]) -> dict[str, Any]:
+    guardrail = value.get("changed_path_guardrail", {}) if isinstance(value.get("changed_path_guardrail"), dict) else {}
+    compact = {
+        "kind": value.get("kind"),
+        "status": value.get("status"),
+        "consumer": value.get("consumer"),
+        "registry_revision": value.get("registry_revision"),
+        "changed_path_count": value.get("changed_path_count", 0),
+        "authority_count": len(value.get("authorities", [])),
+        "missing_required_surfaces": value.get("missing_required_surfaces", []),
+        "changed_path_guardrail": {
+            "kind": guardrail.get("kind"),
+            "status": guardrail.get("status"),
+            "checked_surface_count": len(guardrail.get("ownership", [])),
+            "missing_checker_surfaces": guardrail.get("missing_checker_surfaces", []),
+            "failure_matrix": guardrail.get("failure_matrix", {}),
+        },
+        "detail_selector": "context_authority_projection",
+    }
+    return compact
+
+
 def _local_chat_checkpoint_default_visible(local_checkpoint: dict[str, Any], *, payload: dict[str, Any]) -> bool:
     status = str(local_checkpoint.get("status") or "").strip()
     if status in {"stale", "unreadable"}:
@@ -732,6 +760,12 @@ def _start_payload(
             target_root=target_root, changed_paths=changed_paths, task_text=task_text, config=config, startup_template=startup_template
         )
         normalized_paths = _normalize_changed_paths(changed_paths)
+        payload["context_authority_projection"] = resolve_context_authority_projection(
+            consumer="start",
+            task=task_text or "",
+            changed_paths=normalized_paths,
+            target_root=target_root,
+        )
         work_threads_dir = target_root / ".agentic-workspace" / "local" / "work-threads"
         if work_threads_dir.is_dir():
             payload["work_threads"] = _local_work_threads_projection(
@@ -1485,6 +1519,12 @@ def _start_payload(
         payload["path_boundaries"] = [
             _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
         ]
+    payload["context_authority_projection"] = resolve_context_authority_projection(
+        consumer="start",
+        task=task_text or "",
+        changed_paths=normalized_paths,
+        target_root=target_root,
+    )
     improvement_pressure = _session_improvement_pressure_payload(
         target_root=target_root,
         config=config,
@@ -1982,6 +2022,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             "command": None,
             "read_first": [],
         }
+    if isinstance(payload.get("context_authority_projection"), dict):
+        context_projection = payload["context_authority_projection"]
+        if int(context_projection.get("changed_path_count", 0) or 0) > 0:
+            context["context_authority_projection"] = context_projection
     # The compact default already exposes the complete next-action packet at
     # top level.  For ordinary low-risk work, keeping a second copy of that
     # action plus the full planning-sufficiency record in context spends the

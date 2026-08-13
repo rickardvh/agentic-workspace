@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -109,7 +110,7 @@ def _write_workspace_surface_manifest(root: Path, *, include_target: bool = True
     )
     _write(root / "src/agentic_workspace/_payload/.agentic-workspace/fallback/no_cli_startup.py", fallback_source)
     policy = {
-        "kind": "agentic-workspace/no-cli-policy/v1",
+        "kind": "agentic-workspace/degraded-recovery-capsule/v1",
         "required_surfaces": [
             ".agentic-workspace/config.toml",
             ".agentic-workspace/skills/workspace-startup/SKILL.md",
@@ -123,6 +124,7 @@ def _write_workspace_surface_manifest(root: Path, *, include_target: bool = True
             "verification": {"surface": ".agentic-workspace/verification/manifest.toml", "boundary": "verification"},
         },
     }
+    policy["contract_digest"] = "sha256:" + hashlib.sha256(json.dumps(policy, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     _write(
         root / "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json",
         json.dumps(policy),
@@ -237,6 +239,7 @@ def test_no_cli_black_box_preserves_boundaries_for_each_module_combination(tmp_p
         "bypass-planning-safety-gate",
         "claim-completion-without-proof",
     ]
+    assert result["contract_digest"].startswith("sha256:")
     assert result["next_safe_action"] == "continue-from-installed-startup-without-managed-state-mutation"
 
 
