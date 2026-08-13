@@ -63,6 +63,33 @@ Failure signals
 Last confirmed
 2026-04-26 during issue #322 planning-backed dogfooding guardrail work.
 
+### Failure: selected plan blocks its next owned task
+
+Symptom
+- After a task is completed externally, the still-active plan makes the next explicitly owned issue look unrelated and requests another plan, worktree, or scope inspection.
+
+Likely cause
+- Routing compares only the plan filename or stale local carry instead of the selected owner's structured refs and current task evidence.
+
+Verify
+- Inspect `planning_safety_gate.route_decision`; an issue ref declared by the selected plan should resolve to `continues-selected-owner` with no transition.
+
+Fix
+- Rebind from the selected owner and task. Preserve old closeout residue as a separate obligation; do not create a new worktree merely to escape it.
+
+Load when
+- A new task starts while the previous task's plan remains active, especially after an external PR merge.
+
+Review when
+- Planning route-decision or current-work binding semantics change.
+
+Failure signals
+- `independent-pending-scope` is returned for an issue explicitly listed in the selected plan.
+- Startup and implement disagree about `implementation_allowed`.
+
+Last confirmed
+2026-08-11 while reproducing issue #2277.
+
 ## Entry format
 
 ### Failure: <short symptom-first label>

@@ -768,7 +768,131 @@ def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Pa
     assert bundle["state_backed"] is True
 
 
+def test_start_and_implement_use_registry_owned_context_authority_guardrails(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    _write(tmp_path / "src" / "example.py", "VALUE = 1\n")
+    capsys.readouterr()
+    task = "Implement architecture and package ownership changes using registered skills and proof"
+
+    assert cli.main(["start", "--target", str(tmp_path), "--changed", "src/example.py", "--task", task, "--format", "json"]) == 0
+    start = json.loads(capsys.readouterr().out)["context"]["context_authority_projection"]
+    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "src/example.py", "--task", task, "--format", "json"]) == 0
+    implement = json.loads(capsys.readouterr().out)["context"]["context_authority_projection"]
+
+    assert start["consumer"] == "start"
+    assert implement["consumer"] == "implement"
+    assert start["registry_revision"] == implement["registry_revision"]
+    assert start["changed_path_guardrail"]["status"] == "enforced"
+    assert implement["changed_path_guardrail"]["status"] == "enforced"
+    assert start["changed_path_guardrail"]["missing_checker_surfaces"] == []
+    assert implement["changed_path_guardrail"]["missing_checker_surfaces"] == []
+    assert set(start["changed_path_guardrail"]["failure_matrix"]) == set(implement["changed_path_guardrail"]["failure_matrix"])
+
+
+@pytest.mark.parametrize(
+    ("task_class", "task", "changed_path", "expected_selected", "expected_excluded"),
+    [
+        (
+            "architecture-product",
+            "Shape the product architecture principle",
+            "src/product.py",
+            {"system-intent", "architecture-principles", "ownership", "target-guidance"},
+            {"memory"},
+        ),
+        (
+            "pr-issue",
+            "Review PR #12 issue using the registered skill and proof",
+            "src/review.py",
+            {"scoped-instructions", "ownership", "planning", "skills", "target-guidance"},
+            {"memory"},
+        ),
+        (
+            "package-generated",
+            "Update the generated package contract and proof",
+            "src/agentic_workspace/contracts/operations/config.report.json",
+            {"architecture-principles", "ownership", "skills", "target-guidance"},
+            {"memory"},
+        ),
+        (
+            "memory-planning",
+            "Continue planning with memory, the registered skill, and proof",
+            ".agentic-workspace/planning/state.toml",
+            {"scoped-instructions", "ownership", "planning", "memory", "skills", "target-guidance"},
+            {"system-intent"},
+        ),
+        (
+            "command-generated-target",
+            "Change the generated command contract and proof",
+            "src/agentic_workspace/contracts/operations/start.json",
+            {"architecture-principles", "ownership", "skills", "target-guidance"},
+            {"memory"},
+        ),
+        (
+            "unrelated",
+            "Fix unrelated application text",
+            "app/text.py",
+            {"ownership", "target-guidance"},
+            {"system-intent", "architecture-principles", "memory", "skills"},
+        ),
+    ],
+)
+def test_start_and_implement_route_representative_context_classes_from_one_registry(
+    tmp_path: Path,
+    capsys,
+    task_class: str,
+    task: str,
+    changed_path: str,
+    expected_selected: set[str],
+    expected_excluded: set[str],
+) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_architecture_principles(tmp_path)
+    if not (tmp_path / changed_path).exists():
+        _write(tmp_path / changed_path, "fixture\n")
+
+    projections: dict[str, dict[str, Any]] = {}
+    for consumer in ("start", "implement"):
+        args = [consumer, "--target", str(tmp_path), "--changed", changed_path, "--task", task]
+        assert cli.main([*args, "--select", "context_authority_projection", "--format", "json"]) == 0
+        selected_output = json.loads(capsys.readouterr().out)
+        assert "values" in selected_output, selected_output
+        assert "context_authority_projection" in selected_output["values"], selected_output
+        projections[consumer] = selected_output["values"]["context_authority_projection"]
+
+    assert projections["start"]["registry_revision"] == projections["implement"]["registry_revision"]
+    for consumer, projection in projections.items():
+        selected = {item["surface"]: item for item in projection["authorities"]}
+        excluded = {item["surface"] for item in projection["excluded_authorities"]}
+        assert expected_selected <= set(selected), f"{task_class}:{consumer}:{sorted(selected)}:{projection['excluded_authorities']}"
+        assert expected_excluded <= excluded, f"{task_class}:{consumer}:{sorted(excluded)}"
+        assert set(selected).isdisjoint(excluded)
+        for authority in selected.values():
+            assert authority["owner"]
+            assert authority["source"]["id"]
+            assert authority["source_owner"]
+            assert authority["proof_route"]
+            assert authority["repair_operation_id"]
+        ownership = {item["surface"]: item for item in projection["changed_path_guardrail"]["ownership"]}
+        assert all(item["checker_owner"] and item["proof_route"] for item in ownership.values())
+        if "proof" in task:
+            assert "proof" in projection["missing_required_surfaces"]
+            repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "proof")
+            assert repair["operation_id"] == "proof.select"
+            assert repair["reason_code"]
+        if task_class == "unrelated":
+            assert len(selected) <= (3 if consumer == "start" else 4)
+
+
 def _write_architecture_principles(target_root: Path) -> None:
+    _write(
+        target_root / "SYSTEM_INTENT.md",
+        "# System Intent\n\n## Purpose\n\nPortable product architecture.\n\n"
+        "## Governing intents\n\nShape product architecture from explicit principles.\n\n"
+        "## Architecture principles\n\nPreserve host-agnostic generated runtime contract boundaries.\n",
+    )
     _write(
         target_root / ".agentic-workspace" / "system-intent" / "intent.toml",
         """
