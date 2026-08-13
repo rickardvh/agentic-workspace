@@ -26,6 +26,7 @@ from agentic_workspace.reporting_support import (
     evidence_bundle_payload,
     message_economy_payload,
     state_delta_core_payload,
+    visible_state_delta_response_payload,
 )
 from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
@@ -711,6 +712,15 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         current_decision=projected["current_decision"],
         state_delta_core=state_delta_core,
     )
+    projected["visible_state_delta_response"] = visible_state_delta_response_payload(
+        surface="startup",
+        current_decision=projected["current_decision"],
+        message_economy=projected["message_economy"],
+        evidence_bundle=projected["evidence_bundle"],
+    )
+    projected["visible_state_delta_response"].pop("expansion_triggers", None)
+    projected["visible_state_delta_response"].pop("omitted_details", None)
+    projected["visible_state_delta_response"]["detail_selector"] = "visible_state_delta_response"
     return projected
 
 
@@ -1586,6 +1596,7 @@ def _hydrate_selected_start_advisory_payloads(
             "current_decision",
             "message_economy",
             "evidence_bundle",
+            "visible_state_delta_response",
             "continuation_capsule",
         )
     )
@@ -1656,6 +1667,12 @@ def _hydrate_selected_start_advisory_payloads(
             surface="startup",
             current_decision=payload["current_decision"],
             state_delta_core=state_delta_core,
+        )
+        payload["visible_state_delta_response"] = visible_state_delta_response_payload(
+            surface="startup",
+            current_decision=payload["current_decision"],
+            message_economy=payload["message_economy"],
+            evidence_bundle=payload["evidence_bundle"],
         )
         if _selector_requests(select, "continuation_capsule") and isinstance(payload.get("continuation_view"), dict):
             continuation_answers = (
@@ -2612,6 +2629,15 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         selected["evidence_bundle"] = evidence_bundle_payload(
             surface="startup", current_decision=selected["current_decision"], state_delta_core=state_delta_core
         )
+        selected["visible_state_delta_response"] = visible_state_delta_response_payload(
+            surface="startup",
+            current_decision=selected["current_decision"],
+            message_economy=selected["message_economy"],
+            evidence_bundle=selected["evidence_bundle"],
+        )
+        selected["visible_state_delta_response"].pop("expansion_triggers", None)
+        selected["visible_state_delta_response"].pop("omitted_details", None)
+        selected["visible_state_delta_response"]["detail_selector"] = "visible_state_delta_response"
     if isinstance(payload.get("continuation_view"), dict) or isinstance(payload.get("continuation_reorientation"), dict):
         drill_down: dict[str, Any] = selected["drill_down"]
         omitted_detail = drill_down.get("omitted_detail")

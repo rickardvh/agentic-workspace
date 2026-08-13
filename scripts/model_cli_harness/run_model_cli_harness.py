@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from agentic_workspace.config import DEFAULT_AGENT_INSTRUCTIONS_FILE, WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
+from agentic_workspace.evaluation_projection import specialist_evaluation_projection
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUITE = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
@@ -3766,6 +3767,26 @@ def run_suite(
         "eventual_success_count": sum(1 for loop in completion_loops if loop.get("eventual_success") is True),
         "first_pass_success_count": sum(1 for loop in completion_loops if loop.get("first_pass_success") is True),
     }
+    payload["shared_evaluation_observation"] = specialist_evaluation_projection(
+        domain="dogfooding-feedback",
+        producer="model-cli-harness.run-suite",
+        source_identity=f"{suite_id}:{adapter_id}:{resolved_model}",
+        source_ref=f"model-cli-harness://{suite_id}/{adapter_id}/{resolved_model}",
+        criterion="reconstruction-cost",
+        result=(
+            "unknown"
+            if not execute
+            else "contradicts"
+            if payload["finding_classification"].get("material_finding_count", 0)
+            else "supports"
+        ),
+        facts={
+            "execute": execute,
+            "result_count": len(run_results),
+            "finding_classification": payload["finding_classification"],
+            "completion_loop_summary": payload["completion_loop_summary"],
+        },
+    )
     summary_root = output_root / f"{_now_id()}-{suite_id}-{adapter_id}-summary"
     summary_root.mkdir(parents=True, exist_ok=False)
     _write_scratch_run_manifest(

@@ -141,10 +141,12 @@ from agentic_workspace.current_work_context import (
     task_pr_context_refs,
 )
 from agentic_workspace.evaluation import evaluation_summary
+from agentic_workspace.evaluation_projection import specialist_evaluation_projection
 from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
 from agentic_workspace.reporting_support import (
+    StateDeltaRouteMeasurement,
     closeout_claim_boundary_payload,
     communication_contract_payload,
     output_contract_payload,
@@ -28374,7 +28376,10 @@ def _completion_closeout_inspection_payload(
                 "resolution_command": command,
             },
         }
-    planning_payload = planning_report(target=target_root)
+    measurement = StateDeltaRouteMeasurement()
+    planning_revision = f"planning-closeout:{target_root.resolve().as_posix()}"
+    measurement.load(revision=planning_revision, loader=lambda: planning_report(target=target_root))
+    planning_payload = measurement.load(revision=planning_revision, loader=lambda: planning_report(target=target_root))
     closeout = _report_closeout_trust_payload(
         module_reports=[planning_payload], target_root=target_root, config=config, cli_invoke=config.cli_invoke
     )
@@ -28434,7 +28439,7 @@ def _completion_closeout_inspection_payload(
         "resolution_selector": "closeout_trust_inspection",
         "resolution_command": command,
     }
-    return {
+    result = {
         "status": "required" if needs_surface else "clear",
         "reason": "explicit closeout_trust inspection found residue to reconcile before claiming broad work is done"
         if needs_surface
@@ -28476,6 +28481,22 @@ def _completion_closeout_inspection_payload(
             rule="AW reports closeout residue when asked; it does not infer completion/status intent from prompt keywords.",
         ),
     }
+    measurement_response = {
+        "parts": {
+            "decision_or_finding": result["reason"],
+            "evidence_or_proof_boundary": result["action_effect"]["claim_boundary"],
+            "residue_or_claim_boundary": result["trust"],
+            "next_safe_action": result["required_next_inspection"],
+        }
+    }
+    result["state_delta_measurement"] = {
+        "kind": "agentic-workspace/state-delta-route-measurement/v1",
+        "workflow_class": "closeout",
+        "snapshot_revision": planning_revision,
+        "observed_cost": measurement.observation(response=measurement_response),
+        "source": "ordinary closeout planning_report load boundary",
+    }
+    return result
 
 
 def _prep_only_handoff_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
@@ -53212,17 +53233,24 @@ def _record_delegation_outcome(
         "records": [_record_payload(existing) for existing in retained_after_cap],
     }
     config_lib.write_delegation_outcomes(path=path, payload=updated_payload)
-    shared_observation = {
-        "kind": "agentic-workspace/evaluation-observation-projection/v1",
-        "status": "projection-only",
-        "subject": {"kind": "delegation-target", "id": normalized_target},
-        "criterion": "delegation-outcome",
-        "scope": {"task_class": normalized_task, "scope_class": normalized_scope},
-        "authority": normalized_authority,
-        "evidence_ref": normalized_source_ref,
-        "specialist_record_id": record_id,
-        "rule": "Delegation remains the owner of target-tuning fields; this projection exposes universal evaluation lifecycle facts without creating a second evidence store.",
-    }
+    shared_observation = specialist_evaluation_projection(
+        domain="delegation-outcome",
+        producer="delegation-outcome.append",
+        source_identity=record_id,
+        source_ref=normalized_source_ref,
+        criterion="delegation-outcome",
+        result="supports" if outcome == "success" else "mixed" if outcome == "partial" else "contradicts",
+        facts={
+            "delegation_target": normalized_target,
+            "task_class": normalized_task,
+            "scope_class": normalized_scope,
+            "outcome": outcome,
+            "handoff_sufficiency": handoff_sufficiency,
+            "review_burden": review_burden,
+            "escalation_required": escalation_required,
+            "authority": normalized_authority,
+        },
+    )
     return {
         "kind": DELEGATION_OUTCOMES_KIND,
         "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),

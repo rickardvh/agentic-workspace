@@ -279,6 +279,11 @@ def test_long_horizon_episode_runs_two_phase_hidden_restart(tmp_path: Path) -> N
     assert mode["phases"][1]["prior_transcript_included"] is False
     assert mode["phases"][1]["mutation_summary"]["modified"] == []
     assert mode["phases"][1]["validation_results"][0]["returncode"] == 0
+    projection = payload["shared_evaluation_observation"]
+    assert projection["domain"] == "long-horizon-evaluation"
+    assert projection["producer"] == "model-cli-harness.run-long-horizon-episode"
+    assert projection["lifecycle_owner"] == "evaluation.observe"
+    assert projection["delivery_owner"] == "evaluation report/delivery operations"
 
 
 def test_long_horizon_episode_records_agent_switch_and_aw_modes(tmp_path: Path) -> None:
