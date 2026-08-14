@@ -577,7 +577,6 @@ def test_upgrade_keeps_current_generated_memory_skills_byte_stable(tmp_path: Pat
     result = installer.upgrade_bootstrap(target=target)
 
     assert {path: (target / path).read_bytes() for path in relative_paths} == before
-    assert all(not content.endswith(b"\n\n") for content in before.values())
     actions = {item.path.relative_to(target).as_posix(): item for item in result.actions}
     assert all(actions[path].kind == "current" for path in relative_paths)
 

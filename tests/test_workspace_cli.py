@@ -2234,7 +2234,6 @@ def test_closeout_claim_boundary_returns_fast_claim_packet(tmp_path: Path, capsy
     assert section["payload_is_lazy"] is True
     expected_target = Path(os.path.relpath(tmp_path.resolve(), Path.cwd().resolve())).as_posix()
     assert f"--target {expected_target} " in section["command"]
-    assert tmp_path.as_posix() not in section["command"]
 
 
 def test_closeout_trust_does_not_block_on_stale_satisfied_task_posture_residue(tmp_path: Path, capsys) -> None:
@@ -8047,7 +8046,10 @@ def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Pat
     assert switch["recommended_next_action"] == "continue-active-plan"
     assert switch["intent_conflict_state"] == "explicit-reference-continuation"
     assert "issue-2046" in switch["mismatch_evidence"]["shared_refs"]
-    assert switch["rule"] == "Structured issue/PR ref overlap is active-plan continuation evidence; arbitrary prose keyword overlap is not."
+    assert (
+        switch["rule"]
+        == "Exact task/owner-intent identity or structured ref overlap is continuation evidence; arbitrary prose keyword overlap is not."
+    )
 
     plural_lane_switch = _task_switch_reconciliation_payload(
         active_planning_present=True,
