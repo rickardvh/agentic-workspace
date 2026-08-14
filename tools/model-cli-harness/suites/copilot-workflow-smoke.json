@@ -686,6 +686,44 @@
       ]
     },
     {
+      "id": "correction-guidance-operating-loop",
+      "fixture": "aw-configured-host-repo",
+      "prompt_variants": [
+        {
+          "id": "explicit-correction-capture",
+          "prompt": "I am explicitly correcting the prior agent behavior for cheap_docs_worker: during proof on the workspace-runtime final-response surface, use the routed narrow proof and do not claim the parent task complete. Do not edit files. Use the repo startup route, then report the supported correction-capture owner, the structured context that must stay attached, and how a later matching task should retrieve it."
+        },
+        {
+          "id": "changed-requirement-negative",
+          "prompt": "This is a new requirement, not feedback on prior agent behavior: future docs should include an examples section. Do not edit files. Use the repo startup route and decide whether this should create a target correction/guidance event. Explain the smallest correct owner without over-capturing it as a correction."
+        },
+        {
+          "id": "later-context-retrieval",
+          "prompt": "A current target-guidance rule applies only to cheap_docs_worker revision rev-b, code-change/narrow, proof phase, workspace-runtime subsystem, final-response surface. Do not edit files. Use the repo startup route and explain whether a matching task should receive it, what an unrelated proof-receipt surface should receive, and what to do when the surface context is missing."
+        },
+        {
+          "id": "violation-recovery-consequence",
+          "prompt": "Review this target-guidance outcome without editing files: the same target revision and final-response context has three review-backed surfaced violations, then two AW/human-backed successful recoveries. A different surface has a human prohibition. Use the repo startup route and state the contextual consequence, whether the other-surface prohibition can widen it, and the next recovery action."
+        }
+      ],
+      "forbidden_write_patterns": [
+        "**"
+      ],
+      "required_executed_commands": [
+        "uv run agentic-workspace start"
+      ],
+      "expected_signals": [
+        "explicit corrections route to correction-event capture while changed requirements do not",
+        "target revision, task, scope, phase, subsystem, and surface remain one consequence context",
+        "matching guidance is selective, missing context probes, and unrelated surfaces stay quiet",
+        "recovery weakens same-context consequences and a prohibition cannot cross context"
+      ],
+      "score_notes": [
+        "Good: preserves structured context and authority while separating capture, later retrieval, consequence, and changed-requirement ownership.",
+        "Bad: creates guidance for a new requirement, bulk-routes guidance, or lets another surface authorize a prohibition."
+      ]
+    },
+    {
       "id": "intent-satisfaction-review",
       "fixture": "aw-minimal-host-repo",
       "prompt_variants": [
