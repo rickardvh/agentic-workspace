@@ -20,6 +20,11 @@
       "required": false
     },
     {
+      "name": "select",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false

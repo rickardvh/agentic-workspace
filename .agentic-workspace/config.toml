@@ -196,6 +196,38 @@ route_role = "behavior"
 precedence = "55"
 allowed_composition = ["maintenance", "evidence"]
 
+[assurance.domain_proof_lanes.evaluation_operation_runtime]
+purpose = "Focused Evaluation operation runtime, contract, projection, and behavior proof."
+applies_to_paths = ["src/agentic_workspace/evaluation.py", "src/agentic_workspace/contracts/operations/evaluation.*.json", "src/agentic_workspace/contracts/schemas/evaluation_summary.schema.json", "generated/workspace/python/operations/evaluation.*.json", "generated/workspace/typescript/resources/operations/evaluation.*.json", "tests/test_workspace_evaluation.py"]
+commands = ["uv run pytest tests/test_workspace_evaluation.py -q", "uv run python scripts/generate/generate_command_packages.py --check", "uv run python scripts/check/check_generated_command_packages.py"]
+review_aids = ["Confirm the exact Evaluation behavior test, operation contract, and smallest generated consumer check cover the changed operation boundary."]
+evidence_concepts = ["evaluation-operation-runtime", "generated-package-freshness", "focused-serial-proof"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/config.toml", "src/agentic_workspace/contracts/operations/evaluation.status.json"]
+escalation = ["the change alters Docker packaging, command-generation internals, or cross-target runtime handoff beyond the Evaluation operation"]
+escalation_conditions = ["cross-owner", "focused-route-insufficient", "explicit-request"]
+claim_boundary = "focused-evaluation-operation-proof-required-before-operation-claim"
+owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "70"
+allowed_composition = ["maintenance", "evidence", "broad"]
+
+[assurance.domain_proof_lanes.compact_output_contract]
+purpose = "Focused compact-output profile, public CLI option, and budget maintenance proof."
+applies_to_paths = ["docs/package/output-profiles.md", "docs/reference/evaluation-summary.md", "src/agentic_workspace/contracts/cli_commands.json", "src/agentic_workspace/contracts/schemas/evaluation_summary.schema.json", "src/agentic_workspace/contracts/structured_file_inventory.json", "tests/test_output_profile_budgets.py"]
+commands = ["uv run pytest tests/test_output_profile_budgets.py -q", "uv run python scripts/generate/generate_command_packages.py --check"]
+review_aids = ["Confirm ordinary output stays within the declared byte, field, token, and line budgets while exact detail remains selector-addressable."]
+evidence_concepts = ["compact-output-budget", "generated-package-freshness"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = ["docs/package/output-profiles.md", "tests/test_output_profile_budgets.py"]
+escalation = ["the output contract changes a cross-target runtime handoff or removes exact detail access"]
+escalation_conditions = ["focused-route-insufficient", "explicit-request"]
+claim_boundary = "focused-output-budget-proof-required-before-compact-output-claim"
+owner = "workspace-cli-runtime"
+route_role = "maintenance"
+precedence = "75"
+allowed_composition = ["behavior", "evidence", "broad"]
+
 [assurance.domain_proof_lanes.test_evidence_decision]
 purpose = "Focused test-evidence change review."
 applies_to_paths = ["tests/**", "packages/**/tests/**", "docs/maintainer/testing-strategy.md", "docs/maintainer/test-knowledge-inventory.md"]

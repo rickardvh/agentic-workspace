@@ -61,7 +61,7 @@ def test_all_declared_ordinary_profiles_obey_authoritative_output_budgets(tmp_pa
     for surface, argv in commands.items():
         samples[surface] = _run_json(capsys, argv)
 
-    assert set(samples) == set(budgets)
+    assert set(samples) == set(budgets) - {"evaluation status"}
     for surface, payload in samples.items():
         _assert_budget(payload, budgets[surface])
         assert budgets[surface]["proof"] == "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets"
@@ -85,3 +85,39 @@ def test_all_declared_ordinary_profiles_obey_authoritative_output_budgets(tmp_pa
     assert "module_reports" in verbose_init
     selected_start = _run_json(capsys, ["start", "--target", str(tmp_path), "--task", "Fix one docs typo", "--select", "next_safe_action"])
     assert selected_start["values"]["next_safe_action"]
+
+    assert (
+        cli.main(
+            [
+                "evaluation",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+                "register",
+                "--evaluation-id",
+                "budget-evaluation",
+                "--question",
+                "Does the ordinary status envelope remain bounded?",
+                "--criteria",
+                json.dumps({"budget": {"type": "boolean", "question": "Bounded?", "success_condition": "yes"}}),
+                "--decision-owner",
+                json.dumps({"id": "maintainer", "class": "maintainer"}),
+                "--evidence-sources",
+                "test",
+                "--report-sinks",
+                "local",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    evaluation_command = ["evaluation", "--target", str(tmp_path), "status", "--evaluation-id", "budget-evaluation"]
+    cold_evaluation = _run_json(capsys, evaluation_command)
+    warm_evaluation = _run_json(capsys, evaluation_command)
+    _assert_budget(cold_evaluation, budgets["evaluation status"])
+    _assert_budget(warm_evaluation, budgets["evaluation status"])
+    assert _semantic_signature("evaluation status", cold_evaluation) == _semantic_signature("evaluation status", warm_evaluation)
+    assert cli.main(evaluation_command) == 0
+    evaluation_lines = [line for line in capsys.readouterr().out.splitlines() if line.strip()]
+    assert len(evaluation_lines) <= int(budgets["evaluation status"]["max_human_lines"])

@@ -2202,6 +2202,13 @@
               "flags": [
                 "--evaluation-id"
               ]
+            },
+            {
+              "name": "select",
+              "flags": [
+                "--select"
+              ],
+              "help": "Expand one or more comma-separated evaluation status detail fields, or full."
             }
           ],
           "role": "core_lifecycle",

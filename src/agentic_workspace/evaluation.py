@@ -2807,6 +2807,106 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
     return {"kind": EVALUATION_SUMMARY_KIND, "path": WORKSPACE_EVALUATIONS_PATH.as_posix(), "summaries": summaries}
 
 
+_EVALUATION_STATUS_DETAIL_SELECTORS = {
+    "criterion_status",
+    "contradictions",
+    "latest_material_changes",
+    "fresh_result_admission",
+    "owner",
+    "sinks",
+    "observation_authority",
+    "operating_loop",
+}
+
+
+def evaluation_status_payload(*, target_root: Path, evaluation_id: str | None = None, select: str | None = None) -> dict[str, Any]:
+    """Return the ordinary decision envelope, expanding only exact requested detail."""
+    full = evaluation_summary(target_root=target_root, evaluation_id=evaluation_id)
+    selectors = {item.strip() for item in str(select or "").split(",") if item.strip()}
+    if selectors == {"full"}:
+        return full
+    unknown = sorted(selectors - _EVALUATION_STATUS_DETAIL_SELECTORS)
+    if unknown:
+        raise WorkspaceUsageError(
+            "unsupported evaluation status selector(s): "
+            + ", ".join(unknown)
+            + ". Use one of: "
+            + ", ".join(sorted(_EVALUATION_STATUS_DETAIL_SELECTORS | {"full"}))
+            + "."
+        )
+
+    summaries: list[dict[str, Any]] = []
+    for item in full["summaries"]:
+        admission = item["fresh_result_admission"]
+        authority = item.get("observation_authority", {})
+        operating_loop = item.get("operating_loop", {})
+        compact_item = {
+            "evaluation_id": item["evaluation_id"],
+            "revision": item["revision"],
+            "lifecycle": item["lifecycle"],
+            "coverage": item["coverage"],
+            "criterion_status": [
+                {key: criterion[key] for key in ("id", "criterion", "type", "required", "state", "observation_count") if key in criterion}
+                for criterion in item["criterion_status"]
+            ],
+            "contradictions": [
+                {key: contradiction[key] for key in ("id", "criterion", "state", "observation_count") if key in contradiction}
+                for contradiction in item["contradictions"]
+            ],
+            "latest_material_changes": [
+                {
+                    key: observation[key]
+                    for key in ("criterion", "result", "finding", "recommended_action", "recorded_at")
+                    if observation.get(key) not in (None, "", [], {})
+                }
+                for observation in item["latest_material_changes"]
+            ],
+            "fresh_result_admission": {
+                "status": admission["status"],
+                "bound_observation_count": admission["bound_observation_count"],
+                "historical_observation_count": admission.get("historical_observation_count", 0),
+                "stale_count": _as_mapping(admission.get("current_result_resolution")).get("stale_count", 0),
+                "current_result_identity": {
+                    key: _as_mapping(admission.get("current_result_identity")).get(key)
+                    for key in ("status", "id", "definition_revision", "criterion", "result")
+                    if _as_mapping(admission.get("current_result_identity")).get(key) not in (None, "", [], {})
+                },
+                "finding_followup": {
+                    key: _as_mapping(admission.get("finding_followup")).get(key)
+                    for key in ("status", "unresolved_count", "required_action")
+                    if _as_mapping(admission.get("finding_followup")).get(key) not in (None, "", [], {})
+                },
+                "detail_selector": "fresh_result_admission",
+            },
+            "conclusion_readiness": item["conclusion_readiness"],
+            "owner": item["owner"],
+            "sinks": item["sinks"],
+            "observation_authority": {
+                key: authority.get(key)
+                for key in ("status", "subject", "assignment_revision", "proof_revision", "current_action")
+                if authority.get(key) not in (None, "", [], {})
+            },
+            "next_collection_action": item["next_collection_action"],
+            "operating_loop": {
+                "status": operating_loop.get("status", "unknown"),
+                "next_action": operating_loop.get("next_action", item["next_collection_action"]),
+            },
+        }
+        for selector in selectors:
+            compact_item[selector] = item[selector]
+        summaries.append(compact_item)
+    return {
+        "kind": EVALUATION_SUMMARY_KIND,
+        "path": WORKSPACE_EVALUATIONS_PATH.as_posix(),
+        "summaries": summaries,
+        "detail_routes": {
+            selector: f"agentic-workspace evaluation status --target . --evaluation-id <id> --select {selector} --format json"
+            for selector in sorted(_EVALUATION_STATUS_DETAIL_SELECTORS)
+        }
+        | {"full": "agentic-workspace evaluation status --target . --evaluation-id <id> --select full --format json"},
+    }
+
+
 def evaluation_report_payload(*, target_root: Path, evaluation_id: str, explicit: bool = False) -> dict[str, Any]:
     """Compile a compact owner-facing report without delivering it to a sink."""
     authority = evaluation_report_authority(target_root=target_root, evaluation_id=evaluation_id, explicit=explicit)
@@ -3382,7 +3482,11 @@ def _evaluation_adapter_payload(args: Any, *, target_root: Path) -> dict[str, An
             evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
         )
     if command == "status":
-        return evaluation_summary(target_root=target_root, evaluation_id=getattr(args, "evaluation_id", None))
+        return evaluation_status_payload(
+            target_root=target_root,
+            evaluation_id=getattr(args, "evaluation_id", None),
+            select=getattr(args, "select", None),
+        )
     if command == "report-preview":
         return evaluation_report_payload(
             target_root=target_root,

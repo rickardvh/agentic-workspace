@@ -2087,11 +2087,10 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     "registry_revision",
                     "changed_path_count",
                     "missing_required_surfaces",
-                    "repair_operation",
-                    "changed_path_guardrail",
                 )
                 if isinstance(payload.get("context_authority_projection"), dict) and key in payload.get("context_authority_projection", {})
-            },
+            }
+            | {"detail_selector": "context_authority_projection"},
             "task_intent": {
                 "status": payload.get("task_intent", {}).get("status", "absent")
                 if isinstance(payload.get("task_intent"), dict)

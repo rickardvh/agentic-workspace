@@ -6029,6 +6029,7 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
     assert attention_plan["action_semantics"]["safe_explicit_apply"] is True
     assert attention_plan["action_semantics"]["manual_review_required"] is False
     assert attention_plan["command_boundary"]["reportable_commands"]["dry_run"].startswith("agentic-workspace upgrade --target .")
+
     assert tmp_path.as_posix() in attention_plan["command_boundary"]["machine_commands"]["dry_run"]
     assert all("release" not in item["required_action"].lower() for item in attention_plan["attention_items"])
     assert compatibility["payload_surface_manifest"]["kind"] == "agentic-workspace/payload-surface-manifest/v1"
@@ -6068,6 +6069,41 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
     assert report_payload["answer"]["payload"]["target"]["status"] == "target-mismatch"
     assert report_payload["answer"]["action_state"]["recheck_command"]
     assert report_payload["answer"]["payload_upgrade_attention_plan"]["status"] == attention_plan["status"]
+
+
+def test_payload_target_drift_keeps_unrelated_read_only_start_actionable(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[payload]\n"
+        'target_release = "source-current"\n'
+        'minimum_capabilities = ["installed-state-sync-v2"]\n'
+        'policy = "required-before-work"\n'
+        "dogfood_latest = true\n",
+        encoding="utf-8",
+    )
+    provenance_path = workspace / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance.pop("payload_capabilities", None)
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    task = "Review recent Agentic Workspace dogfooding experience and identify remaining problems"
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["next_safe_action"]["next_safe_action"] == "continue-read-only-source-evidence-review"
+    assert payload["next_safe_action"]["implementation_allowed"] is False
+    assert payload["next_safe_action"]["read_only_allowed"] is True
+    scope = payload["installed_state_read_only_scope"]
+    assert scope["repair_deferred"] is True
+    assert "--to-payload-target --dry-run" in scope["repair_command"]
+    assert "installed runtime behavior" in scope["blocked_conclusions"]
+    assert "installed_state_compatibility=payload-upgrade-required" in payload["action_signals"]["changed_signals"]
+    assert "installed_state_compatibility" in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert len(json.dumps(payload, separators=(",", ":")).encode()) <= 10_000
 
 
 def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: Path, capsys) -> None:
@@ -6246,6 +6282,40 @@ def test_upgrade_to_necessary_surfaces_preserves_durable_state_and_uses_package_
     assert cli.main(["status", "--target", str(tmp_path), "--format", "json"]) == 0
     status_payload = json.loads(capsys.readouterr().out)
     assert "necessary surfaces" not in json.dumps(status_payload).lower()
+
+
+def test_upgrade_to_necessary_surfaces_fails_closed_for_tracked_source_checkout_payload(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    workspace = tmp_path / ".agentic-workspace"
+    (workspace / "adoption-receipt.json").unlink()
+    _write(tmp_path / "pyproject.toml", '[project]\nname = "agentic-workspace"\nversion = "0.0.0"\n')
+    _write(tmp_path / "src" / "agentic_workspace" / "__init__.py", "")
+    _write(tmp_path / "AGENTS.md", "# Source checkout authority\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    protected_path = workspace / "planning" / "schemas"
+    assert protected_path.exists()
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--dry-run", "--format", "json"]) == 0
+    dry_run = json.loads(capsys.readouterr().out)["migration"]
+
+    assert dry_run["status"] == "review-required"
+    assert dry_run["safe_to_apply"] is False
+    assert dry_run["next_action"] == "inspect-deletion-impact"
+    impact = dry_run["deletion_impact"]
+    assert impact["source_development_posture"] == "package-source-checkout"
+    assert impact["tracked_file_count"] > dry_run["summary"]["remove_count"]
+    assert impact["protected_file_count"] == impact["tracked_file_count"]
+    assert "source-checkout-protected-surface" in impact["review_reasons"]
+    assert dry_run["needs_review"][0]["detail_selector"] == "migration.deletion_impact"
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
+    apply = json.loads(capsys.readouterr().out)["migration"]
+    assert apply["status"] == "review-required"
+    assert apply["safe_to_apply"] is False
+    assert protected_path.exists()
+    assert not any(action["kind"] == "removed" for action in apply["actions"])
 
 
 def test_upgrade_to_necessary_surfaces_keeps_current_memory_skill_eof_stable(

@@ -255,7 +255,6 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
             "required_transition",
             "selected_owner",
             "selected_owner_identity",
-            "owner_admission",
             "allowed_claims",
             "blocked_claims",
             "implementation_allowed",
@@ -263,8 +262,6 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
             "proof_expectation",
             "state_update_policy",
             "action_identity",
-            "identity_effects",
-            "consumer_contract",
             "reconciliation_proposal",
             "next_safe_action",
             "binding",
@@ -274,21 +271,28 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
     selected_identity = _as_dict(compact.get("selected_owner_identity"))
     if selected_identity and not selected_identity.get("ref"):
         compact.pop("selected_owner_identity", None)
+    owner_admission = _as_dict(route.get("owner_admission"))
+    selected_owner = _as_dict(owner_admission.get("selected_owner"))
+    if owner_admission:
+        compact["owner_admission"] = {
+            "status": owner_admission.get("status", "unknown"),
+            "selected_owner": {
+                key: selected_owner.get(key)
+                for key in ("owner", "ref", "status", "reason")
+                if selected_owner.get(key) not in (None, "", [], {})
+            },
+            "rejected_candidate_count": len(_list_payload(owner_admission.get("rejected_candidates"))),
+            "detail_selector": "planning_safety_gate.route_decision.owner_admission",
+        }
     binding = _as_dict(compact.get("binding"))
     identity = _as_dict(binding.get("identity"))
-    guard = _as_dict(binding.get("adoption_guard"))
-    if identity or guard:
+    if identity:
         compact["binding"] = {
             key: copy.deepcopy(binding[key]) for key in ("status", "state_commit", "reason") if binding.get(key) not in (None, "", [], {})
         }
         if identity.get("fingerprint"):
             compact["binding"]["identity"] = {"fingerprint": identity["fingerprint"]}
-        if guard:
-            compact["binding"]["adoption_guard"] = {
-                key: copy.deepcopy(guard[key])
-                for key in ("status", "expected_fingerprint", "on_mismatch")
-                if guard.get(key) not in (None, "", [], {})
-            }
+        compact["binding"]["detail_selector"] = "planning_safety_gate.route_decision.binding"
     if route.get("next_safe_action"):
         compact["next_safe_action"] = _compact_start_route_action(route["next_safe_action"])
     action_identity = _as_dict(route.get("action_identity"))
@@ -376,6 +380,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "detail_commands": detail_commands,
         },
         "communication_contract": compact_communication_contract_payload(surface="startup"),
+        **(
+            {"installed_state_read_only_scope": payload["installed_state_read_only_scope"]}
+            if isinstance(payload.get("installed_state_read_only_scope"), dict)
+            else {}
+        ),
         "feature_tier": {
             "active": compact_active_tier,
             "detail_command": feature_tier.get(
@@ -1565,6 +1574,7 @@ def _start_payload(
         target_root=target_root,
         config=config,
         startup_template=startup_template,
+        task_text=task_text,
     )
     if profile == "tiny":
         payload["routine_work_context"] = _routine_work_context_payload(
@@ -1934,7 +1944,12 @@ def _compact_start_continuation_reorientation(packet: Any) -> dict[str, Any]:
 
 
 def _apply_required_payload_target_start_gate(
-    *, payload: dict[str, Any], target_root: Path, config: WorkspaceConfig, startup_template: dict[str, Any]
+    *,
+    payload: dict[str, Any],
+    target_root: Path,
+    config: WorkspaceConfig,
+    startup_template: dict[str, Any],
+    task_text: str | None,
 ) -> None:
     installed_state = payload.get("installed_state_compatibility")
     if not isinstance(installed_state, dict):
@@ -1949,6 +1964,52 @@ def _apply_required_payload_target_start_gate(
     payload_repair_subflow = _as_dict(installed_state.get("payload_repair_subflow"))
     if payload_repair_subflow:
         payload["payload_repair_subflow"] = payload_repair_subflow
+    normalized_task = " ".join(str(task_text or "").lower().split())
+    installed_payload_dependent = any(
+        signal in normalized_task
+        for signal in (
+            "installed payload",
+            "payload drift",
+            "payload upgrade",
+            "upgrade agentic workspace",
+            "installed agentic workspace",
+            "installed runtime",
+            "payload compatibility",
+        )
+    )
+    read_only_response = _as_dict(payload.get("read_only_response"))
+    if read_only_response.get("status") == "read-only-reporting" and not installed_payload_dependent:
+        claim_boundary = {
+            "safe_conclusions": ["checked-in source and repository evidence unrelated to installed payload behavior"],
+            "blocked_conclusions": [
+                "installed payload freshness",
+                "installed runtime behavior",
+                "proof or completion claims that depend on the stale installed payload",
+            ],
+            "repair_deferred": True,
+            "repair_command": command,
+            "detail_selector": "installed_state_compatibility",
+        }
+        payload["installed_state_read_only_scope"] = claim_boundary
+        payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+            surface="start",
+            decision="read-only-source-evidence-allowed-with-stale-installed-payload",
+            reason="The requested read-only task can proceed from checked-in source evidence; installed-payload claims remain blocked.",
+            required_next_action="continue-read-only-source-evidence-review",
+            evidence_required=["claim remains independent of installed payload behavior"],
+            hard_gate=True,
+        )
+        payload["immediate_next_allowed_action"] = {
+            "action": "continue-read-only-source-evidence-review",
+            "summary": "Proceed with the requested read-only review from checked-in evidence; defer payload repair.",
+            "risk": "installed-runtime conclusions remain unavailable until payload repair",
+            "required_inputs": ["checked-in source or repository evidence"],
+            "next_proof": "Do not claim installed payload freshness; use the repair route if the review becomes payload-dependent.",
+            "read_first": [],
+            "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            "claim_boundary": claim_boundary,
+        }
+        return
     payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
         surface="start",
         decision="installed-payload-target-required-before-work",
@@ -2506,6 +2567,11 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             },
         ),
         "communication_contract": compact_communication_contract_payload(surface="startup"),
+        **(
+            {"installed_state_read_only_scope": payload["installed_state_read_only_scope"]}
+            if isinstance(payload.get("installed_state_read_only_scope"), dict)
+            else {}
+        ),
         "skills": (
             {
                 "kind": "agentic-workspace/startup-skills-projection/v1",

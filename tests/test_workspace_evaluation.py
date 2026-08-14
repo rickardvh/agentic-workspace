@@ -1905,8 +1905,32 @@ def test_evaluation_cli_register_observe_status(tmp_path: Path, capsys) -> None:
     status = json.loads(capsys.readouterr().out)
     summary = status["summaries"][0]
     assert summary["fresh_result_admission"]["status"] == "fresh-bound"
+    assert "admission_contract" not in summary["fresh_result_admission"]
     assert summary["conclusion_readiness"]["ready"] is True
     assert summary["next_collection_action"] == "owner-review-or-conclude"
+    assert len(json.dumps(status, separators=(",", ":")).encode()) <= 10_000
+    assert "fresh_result_admission" in status["detail_routes"]
+
+    assert (
+        cli.main(
+            [
+                "evaluation",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+                "status",
+                "--evaluation-id",
+                "eval-cost",
+                "--select",
+                "fresh_result_admission",
+            ]
+        )
+        == 0
+    )
+    detailed = json.loads(capsys.readouterr().out)["summaries"][0]
+    assert detailed["fresh_result_admission"]["current_result_identity"]["id"] == observed["result_identity"]["id"]
+    assert "admission_contract" in detailed["fresh_result_admission"]
 
     assert (
         cli.main(["evaluation", "--target", str(tmp_path), "--format", "json", "prune", "--evaluation-id", "eval-cost", "--dry-run"]) == 0
