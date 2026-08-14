@@ -1600,6 +1600,13 @@ def test_config_command_reports_target_identity_and_guidance_storage(tmp_path: P
     guidance_operations = [item for item in correction["operations"] if item["operation_id"].startswith("agent-guidance.")]
     assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in correction_operations)
     assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in guidance_operations)
+    decision_contracts = {item["contract"] for item in correction["decision_surfaces"]}
+    assert {
+        "agentic-workspace/correction-capture-decision/v1",
+        "agentic-workspace/agent-guidance-route/v1",
+        "agentic-workspace/guidance-compliance-result/v1",
+        "agentic-workspace/guidance-consequence-decision/v1",
+    } <= decision_contracts
     assert correction["storage"]["retention_cap"] == 20
     assert correction["storage"]["retention_operations"] == ["correction-event.prune-compact"]
     assert identity["storage"]["layers"][0]["id"] == "user-local-target-guidance"
@@ -1765,6 +1772,113 @@ def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision
     assert "correction-event.submit" in {item["operation_id"] for item in admitted["public_operations"]}
     assert all(item["receipt"]["kind"] == "agentic-workspace/correction-operation-receipt/v1" for item in admitted["public_operations"])
     assert {item["reason"] for item in admitted["rejected_events"]} == {"rejected-stale-revision"}
+
+
+def test_agent_guidance_routes_selectively_and_stays_quiet_for_unrelated_context(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import route_agent_guidance
+
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    store = {
+        "kind": "agentic-workspace/guidance-lifecycle-store/v1",
+        "records": [
+            {
+                "kind": "agentic-workspace/guidance-lifecycle-record/v1",
+                "guidance_id": "guidance:narrow-proof",
+                "status": "active",
+                "instruction": "Run the routed narrow proof before claiming completion.",
+                "applicability": {
+                    "target_identity_ref": "user-local:fast-worker",
+                    "task_class": "code-change",
+                    "scope_class": "narrow",
+                    "applies_when": ["phase:proof"],
+                },
+                "revision": 2,
+                "schema_revision": "schema-a",
+            }
+        ],
+    }
+    _write(tmp_path / ".agentic-workspace/local/guidance-lifecycle.json", json.dumps(store))
+
+    routed = route_agent_guidance(
+        target_root=tmp_path,
+        target_identity_ref="user-local:fast-worker",
+        task_class="code-change",
+        scope_class="narrow",
+        phase="proof",
+    )
+    unrelated = route_agent_guidance(
+        target_root=tmp_path,
+        target_identity_ref="user-local:other-worker",
+        task_class="docs",
+        scope_class="broad",
+        phase="planning",
+    )
+    unknown = route_agent_guidance(target_root=tmp_path, target_identity_ref="user-local:fast-worker")
+
+    assert routed["status"] == "routed"
+    assert [item["guidance_id"] for item in routed["guidance"]] == ["guidance:narrow-proof"]
+    assert routed["guidance"][0]["precedence"].startswith("current user instruction")
+    assert unrelated["status"] == "no-applicable-guidance"
+    assert unrelated["guidance"] == []
+    assert unrelated["context_overhead"]["ordinary_no_match_artifact_count"] == 0
+    assert unknown["status"] == "probe-required"
+    assert set(unknown["probe"]["required_fields"]) == {"phase", "scope_class", "task_class"}
+
+
+def test_agent_guidance_observations_drive_contextual_consequences_and_recovery(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import observe_agent_guidance
+
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    def observe(index: int, outcome: str, *, cause: str = "target-behavior", authority: str = "review") -> dict[str, Any]:
+        return observe_agent_guidance(
+            target_root=tmp_path,
+            guidance_id="guidance:narrow-proof",
+            outcome=outcome,
+            evidence_authority=authority,
+            evidence_ref=f"review-{index}",
+            target_identity_ref="user-local:fast-worker",
+            target_revision="rev-b",
+            task_class="code-change",
+            scope_class="narrow",
+            phase="proof",
+            cause_class=cause,
+        )
+
+    assert observe(1, "surfaced-violated")["consequence"]["status"] == "advisory"
+    assert observe(2, "surfaced-violated")["consequence"]["status"] == "review-required"
+    assert observe(3, "surfaced-violated")["consequence"]["status"] == "suitability-impact"
+    infrastructure = observe(4, "surfaced-violated", cause="infrastructure-defect")
+    assert infrastructure["consequence"]["status"] == "suitability-impact"
+    assert infrastructure["consequence"]["next_action"] == "route-product-improvement"
+    assert observe(5, "surfaced-followed", authority="aw-owned-proof")["consequence"]["status"] == "suitability-impact"
+    recovered = observe(6, "correct-escalation", authority="human")
+    assert recovered["consequence"]["status"] == "review-required"
+    replay = observe(6, "correct-escalation", authority="human")
+    assert replay["status"] == "duplicate-replay"
+    assert replay["storage"]["checked_in"] is False
+
+
+def test_correction_capture_decision_requires_capture_without_overcapturing_requirements() -> None:
+    from agentic_workspace.agent_guidance import correction_capture_decision
+
+    submitted = correction_capture_decision(correction_signal="explicit-user-correction", feedback_source_available=True)
+    unavailable = correction_capture_decision(correction_signal="pr-review", feedback_source_available=False)
+    changed_requirement = correction_capture_decision(correction_signal="new-requirement", feedback_source_available=True)
+    shared = correction_capture_decision(
+        correction_signal="explicit-user-correction", feedback_source_available=True, shared_repo_lesson=True
+    )
+
+    assert submitted["status"] == "event-submitted"
+    assert submitted["required_operation"] == "correction-event submit"
+    assert unavailable["status"] == "unavailable"
+    assert "not exposed" in unavailable["limitation"]
+    assert changed_requirement["status"] == "dismissed"
+    assert changed_requirement["recognized_correction"] is False
+    assert shared["status"] == "routed"
+    assert shared["owner"] == "checked-in-memory"
 
 
 def test_correction_event_lifecycle_resolves_authority_and_rejects_self_labeled_review() -> None:

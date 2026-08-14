@@ -60,6 +60,17 @@ def test_external_agent_lane_pack_validates() -> None:
     assert module.validate_pack(pack) == []
 
 
+def test_mixed_provider_availability_is_explicit_and_never_fabricates_fallback_proof() -> None:
+    availability = _read_json("provider-availability-2026-08-14.json")
+    routes = {item["family"]: item for item in availability["routes"]}
+
+    assert routes["openai-codex"]["status"] == "available-with-existing-evidence"
+    assert routes["distinct-vendor"]["status"] == "unavailable"
+    assert "do not silently substitute" in routes["distinct-vendor"]["fallback"]
+    assert routes["separate-strong-tier-live-run"]["status"] == "unavailable"
+    assert availability["rule"].startswith("Provider absence is explicit evidence")
+
+
 def test_external_agent_lane_scorecard_has_contract_ids_and_owner_surfaces() -> None:
     scorecard = _read_json("scorecard-taxonomy.json")
     boundary = scorecard["authority_boundary"]

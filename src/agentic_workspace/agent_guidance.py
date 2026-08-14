@@ -23,6 +23,8 @@ CORRECTION_EVENT_RETENTION_CAP = 20
 GUIDANCE_RECEIPT_INDEX_PATH = Path(".agentic-workspace/local/guidance-receipts.json")
 GUIDANCE_TRANSACTION_JOURNAL_PATH = Path(".agentic-workspace/local/guidance-transaction.json")
 GUIDANCE_EXTERNAL_TRANSACTION_JOURNAL_SUFFIX = ".guidance-transaction.json"
+GUIDANCE_OBSERVATION_STORE_PATH = Path(".agentic-workspace/local/guidance-observations.json")
+GUIDANCE_OBSERVATION_RETENTION_CAP = 200
 TRUSTED_AUTHORITY_EVENT_STORE_PATH = Path(".agentic-workspace/local/trusted-authority-events")
 TRUSTED_AUTHORITY_EVENT_INDEX_PATH = TRUSTED_AUTHORITY_EVENT_STORE_PATH / "index.json"
 TRUSTED_AUTHORITY_EVENT_INBOX_PATH = TRUSTED_AUTHORITY_EVENT_STORE_PATH / "inbox"
@@ -2640,6 +2642,258 @@ def apply_guidance_lifecycle_operation(
     )
 
 
+def _guidance_context_match(*, applicability: dict[str, Any], context: dict[str, str]) -> tuple[str, list[str]]:
+    reasons: list[str] = []
+    unknown: list[str] = []
+    for field in ("target_identity_ref", "task_class", "scope_class", "repository", "role", "phase"):
+        expected = applicability.get(field)
+        expected_values = _guidance_string_list(expected)
+        if not expected_values:
+            continue
+        observed = str(context.get(field) or "").strip()
+        if not observed:
+            unknown.append(field)
+        elif observed not in expected_values:
+            reasons.append(f"{field}-mismatch")
+    applies_when = _guidance_string_list(applicability.get("applies_when"))
+    for condition in applies_when:
+        if ":" not in condition:
+            continue
+        field, expected = (part.strip() for part in condition.split(":", 1))
+        if field not in context or not str(context.get(field) or "").strip():
+            unknown.append(field)
+        elif str(context.get(field) or "").strip() != expected:
+            reasons.append(f"{field}-mismatch")
+    if reasons:
+        return "not-applicable", sorted(set(reasons))
+    if unknown:
+        return "unknown", sorted(set(unknown))
+    return "applicable", []
+
+
+def route_agent_guidance(
+    *,
+    target_root: Path,
+    target_identity_ref: str,
+    task_class: str = "",
+    scope_class: str = "",
+    repository: str = "",
+    role: str = "",
+    phase: str = "",
+) -> dict[str, Any]:
+    """Select the smallest current guidance bundle for one structured decision context."""
+    context = {
+        "target_identity_ref": target_identity_ref.strip(),
+        "task_class": task_class.strip(),
+        "scope_class": scope_class.strip(),
+        "repository": repository.strip(),
+        "role": role.strip(),
+        "phase": phase.strip(),
+    }
+    stores = _candidate_guidance_store_refs(target_root=target_root, config=load_workspace_config(target_root=target_root))
+    matched: list[dict[str, Any]] = []
+    uncertain: list[dict[str, Any]] = []
+    excluded: list[dict[str, Any]] = []
+    for store_path in stores:
+        _path, store = _guidance_lifecycle_store(target_root, store_path)
+        for record in store.get("records", []):
+            if not isinstance(record, dict):
+                continue
+            status = str(record.get("status") or "")
+            if status not in {"active", "revalidated"}:
+                excluded.append({"guidance_id": record.get("guidance_id"), "reason": f"lifecycle-{status or 'unknown'}"})
+                continue
+            applicability = record.get("applicability") if isinstance(record.get("applicability"), dict) else {}
+            relevance, reasons = _guidance_context_match(applicability=applicability, context=context)
+            packet = {
+                "guidance_id": record.get("guidance_id"),
+                "instruction": record.get("instruction"),
+                "authority": "target-scoped-user-local-guidance",
+                "relevance": relevance,
+                "relevance_basis": {"applicability": applicability, "context": context, "reasons": reasons},
+                "trust": {"status": "current", "record_revision": record.get("revision"), "schema_revision": record.get("schema_revision")},
+                "affected_boundary": {
+                    "task_class": applicability.get("task_class", ""),
+                    "scope_class": applicability.get("scope_class", ""),
+                    "phase": applicability.get("phase", ""),
+                },
+                "observation_required": True,
+                "precedence": "current user instruction and checked-in repo authority override target guidance",
+            }
+            if relevance == "applicable":
+                matched.append(packet)
+            elif relevance == "unknown":
+                uncertain.append({"guidance_id": record.get("guidance_id"), "missing_context": reasons})
+            else:
+                excluded.append({"guidance_id": record.get("guidance_id"), "reason": ",".join(reasons)})
+    matched.sort(key=lambda item: str(item.get("guidance_id") or ""))
+    return {
+        "kind": "agentic-workspace/agent-guidance-route/v1",
+        "status": "routed" if matched else "probe-required" if uncertain else "no-applicable-guidance",
+        "context": context,
+        "guidance": matched,
+        "uncertain": uncertain,
+        "excluded": excluded,
+        "context_overhead": {"routed_count": len(matched), "ordinary_no_match_artifact_count": 0},
+        "probe": {"required_fields": sorted({field for item in uncertain for field in item["missing_context"]})} if uncertain else {},
+        "rule": "Route only current target guidance with structured applicability; unknown relevance requests bounded context and never broad-dumps guidance.",
+    }
+
+
+_GUIDANCE_COMPLIANCE_OUTCOMES = {
+    "surfaced-followed",
+    "surfaced-violated",
+    "inconclusive",
+    "routing-missed",
+    "not-applicable",
+    "contradicted",
+    "correct-escalation",
+}
+_GUIDANCE_OBSERVATION_AUTHORITY = {"agent-self-report": 0, "aw-owned-proof": 2, "review": 3, "human": 4}
+
+
+def guidance_consequence_decision(*, observations: list[dict[str, Any]], guidance_id: str) -> dict[str, Any]:
+    relevant = [item for item in observations if str(item.get("guidance_id") or "") == guidance_id]
+    attributable = [
+        item
+        for item in relevant
+        if item.get("outcome") == "surfaced-violated"
+        and item.get("cause_class") not in {"routing-failure", "guidance-defect", "higher-authority-contradiction", "infrastructure-defect"}
+        and int(item.get("authority_rank") or 0) >= _GUIDANCE_OBSERVATION_AUTHORITY["aw-owned-proof"]
+    ]
+    recovery = [
+        item
+        for item in relevant
+        if item.get("outcome") in {"surfaced-followed", "correct-escalation"}
+        and int(item.get("authority_rank") or 0) >= _GUIDANCE_OBSERVATION_AUTHORITY["aw-owned-proof"]
+    ]
+    infrastructure = [item for item in relevant if item.get("cause_class") == "infrastructure-defect"]
+    net = max(0, len(attributable) - (1 if len(recovery) >= 2 else 0))
+    human_prohibition = any(item.get("human_authorized_prohibition") is True for item in relevant)
+    level = (
+        "class-prohibition"
+        if net >= 3 and human_prohibition
+        else "suitability-impact"
+        if net >= 3
+        else "review-required"
+        if net >= 2
+        else "advisory"
+        if net == 1
+        else "none"
+    )
+    return {
+        "kind": "agentic-workspace/guidance-consequence-decision/v1",
+        "status": level,
+        "guidance_id": guidance_id,
+        "decisive_evidence_ids": [item.get("observation_id") for item in attributable],
+        "recovery_evidence_ids": [item.get("observation_id") for item in recovery],
+        "excluded_cause_counts": {
+            cause: sum(item.get("cause_class") == cause for item in relevant)
+            for cause in ("routing-failure", "guidance-defect", "higher-authority-contradiction", "infrastructure-defect")
+        },
+        "next_action": "route-product-improvement"
+        if infrastructure
+        else "apply-contextual-assignment-consequence"
+        if level != "none"
+        else "none",
+        "human_authority_required": level == "class-prohibition",
+        "rule": "Only admitted post-surfacing evidence can affect contextual suitability; infrastructure and guidance failures route to product repair, and prohibitions require human authority.",
+    }
+
+
+def observe_agent_guidance(
+    *,
+    target_root: Path,
+    guidance_id: str,
+    outcome: str,
+    evidence_authority: str,
+    evidence_ref: str,
+    target_identity_ref: str,
+    target_revision: str,
+    task_class: str,
+    scope_class: str,
+    phase: str,
+    cause_class: str = "target-behavior",
+    human_authorized_prohibition: bool = False,
+) -> dict[str, Any]:
+    if outcome not in _GUIDANCE_COMPLIANCE_OUTCOMES:
+        raise WorkspaceUsageError(f"unsupported guidance compliance outcome: {outcome}")
+    if evidence_authority not in _GUIDANCE_OBSERVATION_AUTHORITY:
+        raise WorkspaceUsageError(f"unsupported guidance evidence authority: {evidence_authority}")
+    identity = {
+        "guidance_id": guidance_id,
+        "outcome": outcome,
+        "evidence_ref": evidence_ref,
+        "target_identity_ref": target_identity_ref,
+        "target_revision": target_revision,
+        "task_class": task_class,
+        "scope_class": scope_class,
+        "phase": phase,
+        "cause_class": cause_class,
+    }
+    observation_id = "guidance-observation:" + _json_digest(identity)[:24]
+    path = target_root / GUIDANCE_OBSERVATION_STORE_PATH
+    if path.exists():
+        try:
+            store = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise WorkspaceUsageError("guidance observation store is unreadable") from exc
+    else:
+        store = {"kind": "agentic-workspace/guidance-observation-store/v1", "observations": []}
+    observations = [item for item in store.get("observations", []) if isinstance(item, dict)]
+    existing = next((item for item in observations if item.get("observation_id") == observation_id), None)
+    if existing is None:
+        observation = {
+            "kind": "agentic-workspace/guidance-compliance-observation/v1",
+            "observation_id": observation_id,
+            **identity,
+            "authority_rank": _GUIDANCE_OBSERVATION_AUTHORITY[evidence_authority],
+            "evidence_authority": evidence_authority,
+            "human_authorized_prohibition": human_authorized_prohibition and evidence_authority == "human",
+            "observed_at": _guidance_now(),
+        }
+        observations = [*observations, observation][-GUIDANCE_OBSERVATION_RETENTION_CAP:]
+        next_store = {"kind": "agentic-workspace/guidance-observation-store/v1", "observations": observations}
+        _write_guidance_json_transaction([(path, next_store, _json_digest(store) if path.exists() else None)], journal_root=target_root)
+        status = "recorded"
+    else:
+        observation = existing
+        status = "duplicate-replay"
+    return {
+        "kind": "agentic-workspace/guidance-compliance-result/v1",
+        "status": status,
+        "observation": observation,
+        "consequence": guidance_consequence_decision(observations=observations, guidance_id=guidance_id),
+        "storage": {
+            "path": GUIDANCE_OBSERVATION_STORE_PATH.as_posix(),
+            "checked_in": False,
+            "retention_cap": GUIDANCE_OBSERVATION_RETENTION_CAP,
+        },
+    }
+
+
+def correction_capture_decision(
+    *, correction_signal: str, feedback_source_available: bool, shared_repo_lesson: bool = False
+) -> dict[str, Any]:
+    signal = correction_signal.strip().lower()
+    recognized = signal in {"explicit-user-correction", "pr-review", "orchestrator-review", "external-adapter-correction"}
+    if not recognized:
+        status = "dismissed" if signal in {"new-requirement", "apology", "recap", "ordinary-feedback"} else "ambiguous"
+    elif not feedback_source_available:
+        status = "unavailable"
+    else:
+        status = "routed" if shared_repo_lesson else "event-submitted"
+    return {
+        "kind": "agentic-workspace/correction-capture-decision/v1",
+        "status": status,
+        "recognized_correction": recognized,
+        "owner": "checked-in-memory" if shared_repo_lesson else "correction-event.submit" if recognized else "none",
+        "required_operation": "memory guidance promotion review" if shared_repo_lesson else "correction-event submit" if recognized else "",
+        "limitation": "feedback source is not exposed by the current host" if status == "unavailable" else "",
+        "rule": "Recognized corrections require capture or an honest unavailable/routed result; apologies, recaps, and changed requirements do not create correction events.",
+    }
+
+
 def transition_guidance(
     *,
     target_root: Path,
@@ -3215,6 +3469,28 @@ def correction_feedback_contract(*, identity_posture: dict[str, Any]) -> dict[st
                 "admission": "applies the target revision policy before reuse: preserve, revalidate, migrate with predecessor, or retire",
             },
             *_guidance_public_operation_entries(),
+        ],
+        "decision_surfaces": [
+            {
+                "contract": "agentic-workspace/correction-capture-decision/v1",
+                "callable": "agentic_workspace.agent_guidance.correction_capture_decision",
+                "purpose": "distinguish required correction capture from apology, recap, changed requirements, shared Memory, and unavailable host feedback",
+            },
+            {
+                "contract": "agentic-workspace/agent-guidance-route/v1",
+                "callable": "agentic_workspace.agent_guidance.route_agent_guidance",
+                "purpose": "select the smallest target/task/scope/repository/role/phase bundle before the affected decision",
+            },
+            {
+                "contract": "agentic-workspace/guidance-compliance-result/v1",
+                "callable": "agentic_workspace.agent_guidance.observe_agent_guidance",
+                "purpose": "record authority-ranked compliance and return contextual consequence state",
+            },
+            {
+                "contract": "agentic-workspace/guidance-consequence-decision/v1",
+                "callable": "agentic_workspace.agent_guidance.guidance_consequence_decision",
+                "purpose": "derive advisory, review, suitability, human-authorized prohibition, recovery, or product-improvement consequences",
+            },
         ],
         "storage": {
             "path": correction_storage.get("path", WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH.as_posix()),

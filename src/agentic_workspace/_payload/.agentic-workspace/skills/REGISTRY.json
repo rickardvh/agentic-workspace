@@ -181,7 +181,7 @@
       "scope": "specialized-subskill",
       "stability": "contract-backed-projection",
       "visibility": "routed-on-demand",
-      "summary": "use compact AW state for state-delta visible updates while preserving module-slot ownership and direct-answer boundaries",
+      "summary": "use compact AW state for state-delta updates, correction capture, and module-slot ownership without adding direct-work ceremony",
       "activation_hints": {
         "verbs": ["reference", "interpret", "answer", "respond", "update", "resume", "recheck"],
         "nouns": [
@@ -190,6 +190,7 @@
           "current decision",
           "message economy",
           "continuation capsule",
+          "correction capture",
           "evidence bundle",
           "decision packet",
           "visible update",

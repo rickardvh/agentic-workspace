@@ -152,6 +152,7 @@
       ],
       "module_slot": "memory",
       "preferred_cli_or_report": [
+        "correction-event submit --event-json <normalized-event> --format json",
         "uv run agentic-workspace memory route --files <paths...> --format json",
         "uv run agentic-workspace memory promotion-report --mode remediation --format json"
       ],
@@ -161,10 +162,13 @@
         "improvement_signal_status"
       ],
       "allowed_actions": [
+        "capture target-scoped correction evidence",
         "capture durable anti-rediscovery knowledge",
         "route residue to the owning surface"
       ],
       "forbidden_actions": [
+        "substitute apology or Memory capture for correction-event admission",
+        "store agent-specific weakness as checked-in shared Memory",
         "write task logs, plan history, or one-off chat residue to Memory"
       ],
       "proof_obligations": [

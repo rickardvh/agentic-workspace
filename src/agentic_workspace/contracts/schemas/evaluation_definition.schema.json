@@ -58,7 +58,9 @@
         "skill_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "model_or_target": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "subsystems": {"type": "array", "items": {"type": "string", "minLength": 1}},
-        "phases": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        "phases": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "commands": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "profiles": {"type": "array", "items": {"type": "string", "minLength": 1}}
       },
       "additionalProperties": false
     },

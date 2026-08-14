@@ -2013,8 +2013,14 @@ def test_checked_in_1969_evaluation_disposition_closes_present_gap_while_evaluat
     assert "<<<<<<<" not in evaluations_text
     payload = json.loads(evaluations_text)
     evaluation = next(item for item in payload["evaluations"] if item["id"] == "state-delta-operating-loop-1969")
+    guidance_evaluation = next(item for item in payload["evaluations"] if item["id"] == "target-guidance-effectiveness-2217")
+    Draft202012Validator(contract_schema("evaluation_definition.schema.json")).validate(payload)
     assert evaluation["selectors"]["issue_refs"] == ["#1969"]
     assert evaluation["action_policy"]["material_negative_finding"] == "create-or-reopen-bounded-follow-up"
+    assert guidance_evaluation["lifecycle"] == "collecting"
+    assert set(guidance_evaluation["selectors"]["issue_refs"]) == {"#2217", "#2221", "#2222", "#2223", "#2224"}
+    assert guidance_evaluation["decision_owner"] == {"class": "maintainer", "id": "workspace-maintainer"}
+    assert {sink["id"] for sink in guidance_evaluation["report_sinks"]} == {"#2217", "#2224"}
     disposition = json.loads((ROOT / ".agentic-workspace/evaluations/issue-1969-disposition.json").read_text(encoding="utf-8"))
     assert disposition["status"] == "implementation-closed-evaluation-open"
     assert disposition["implementation_disposition"]["present_tense_status"] == "satisfied"
@@ -2042,5 +2048,5 @@ def test_checked_in_1969_evaluation_disposition_closes_present_gap_while_evaluat
     ]
     lane = json.loads((ROOT / ".agentic-workspace/planning/lanes/issue-1969-state-delta-loop.lane.json").read_text(encoding="utf-8"))
     assert lane["proof_aggregation"]["status"] == "satisfied"
-    assert lane["parent_close_permission"] == "close-parent"
+    assert lane["parent_close_permission"] == "may-close-parent"
     assert lane["closeout_state"]["status"] == "closed"
