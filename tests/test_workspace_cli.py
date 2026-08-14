@@ -175,6 +175,201 @@ def test_payload_scratch_nested_repo_scan_prunes_owned_and_preserves_unowned(tmp
     assert ".agentic-workspace/local/scratch/unowned/repo" in paths
 
 
+def test_payload_scratch_exclusion_rejects_escape_and_linked_producer_roots(tmp_path: Path) -> None:
+    scratch = tmp_path / ".agentic-workspace/local/scratch"
+    contained = scratch / "contained"
+    outside = tmp_path / "outside"
+    _write(contained / ".aw-scratch.toml", 'owner = "agentic-workspace"\nproducer = "model-cli-harness.run-suite"\n')
+    _write(outside / ".aw-scratch.toml", 'owner = "agentic-workspace"\nproducer = "model-cli-harness.run-suite"\n')
+    linked = scratch / "linked"
+    try:
+        linked.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        linked = None
+    records = [
+        {
+            "producer": "model-cli-harness.run-suite",
+            "manifest_ref": (contained / ".aw-scratch.toml").relative_to(tmp_path).as_posix(),
+        },
+        {
+            "producer": "model-cli-harness.run-suite",
+            "manifest_ref": (outside / ".aw-scratch.toml").relative_to(tmp_path).as_posix(),
+        },
+    ]
+    if linked is not None:
+        records.append(
+            {
+                "producer": "model-cli-harness.run-suite",
+                "manifest_ref": (linked / ".aw-scratch.toml").relative_to(tmp_path).as_posix(),
+            }
+        )
+    index = tmp_path / ".agentic-workspace/local/model-cli-harness/evidence-index.jsonl"
+    _write(index, "".join(json.dumps(record) + "\n" for record in records))
+
+    summary = workspace_runtime_core._local_scratch_exclusion_summary(target_root=tmp_path)
+
+    assert summary["excluded_root_count"] == 1
+    assert summary["excluded_root_examples"] == [".agentic-workspace/local/scratch/contained"]
+    assert summary["rejected_index_entry_count"] == len(records) - 1
+
+
+def test_payload_scratch_scale_collapses_owned_roots_into_one_bounded_packet(tmp_path: Path) -> None:
+    records = []
+    for number in range(28):
+        owned = tmp_path / f".agentic-workspace/local/scratch/owned-{number}"
+        (owned / "nested/.git").mkdir(parents=True)
+        _write(owned / ".aw-scratch.toml", 'owner = "agentic-workspace"\nproducer = "model-cli-harness.run-suite"\n')
+        records.append(
+            {
+                "producer": "model-cli-harness.run-suite",
+                "manifest_ref": (owned / ".aw-scratch.toml").relative_to(tmp_path).as_posix(),
+            }
+        )
+    unowned = tmp_path / ".agentic-workspace/local/scratch/unowned/nested"
+    (unowned / ".git").mkdir(parents=True)
+    index = tmp_path / ".agentic-workspace/local/model-cli-harness/evidence-index.jsonl"
+    _write(index, "".join(json.dumps(record) + "\n" for record in records))
+
+    plan = workspace_runtime_core._payload_doctor_closure_plan(
+        command_name="doctor",
+        target_root=tmp_path,
+        selected_modules=[],
+        installed_state_compatibility={"payload": {}, "action_state": {}},
+        repair_actions=[],
+        manual_review_actions=[],
+        reports=[],
+        cli_invoke="agentic-workspace",
+    )
+    scratch_surface = next(item for item in plan["surface_classes"] if item["id"] == "local_scratch_blockers")
+
+    assert scratch_surface["nested_repo_paths"] == [".agentic-workspace/local/scratch/unowned/nested"]
+    assert scratch_surface["exclusion_summary"]["excluded_root_count"] == 28
+    assert len(scratch_surface["exclusion_summary"]["excluded_root_examples"]) == 4
+    assert len([item for item in plan["surface_classes"] if item["id"] == "local_scratch_blockers"]) == 1
+
+
+def _write_completed_child_reconciliation_fixture(target_root: Path) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    ref = ".agentic-workspace/planning/execplans/merged-child.plan.json"
+    _write(
+        target_root / ".agentic-workspace/config.toml",
+        "schema_version = 1\n\n[workspace]\nenabled = true\n",
+    )
+    _write(target_root / "README.md", "# Fixture\n")
+    _write(
+        target_root / ".agentic-workspace/planning/state.toml",
+        f"""
+[todo]
+active_items = [
+  {{ id = "merged-child", status = "active", surface = "{ref}" }},
+]
+queued_items = []
+
+[roadmap]
+lanes = ["parent-lane"]
+candidates = []
+""",
+    )
+    record = planning_installer._build_legacy_execplan_record_from_todo_item(
+        title="Merged child",
+        item_id="merged-child",
+        status="active",
+        why_now="The bounded child was merged externally.",
+        next_action="Reconcile the stale completed owner.",
+        done_when="The child is archived without closing the parent lane.",
+    )
+    record["intent_continuity"]["this slice completes the larger intended outcome"] = "no"
+    record["intent_continuity"]["continuation surface"] = "external-review"
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": "external-review",
+        "activation trigger": "none",
+    }
+    record["intent_satisfaction"]["unsolved intent passed to"] = "external-review"
+    planning_installer._write_execplan_record(record_path=target_root / ref, record=record)
+
+
+def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_closed_without_proof(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    served = tmp_path / "served"
+    _write_completed_child_reconciliation_fixture(served)
+    closeout = {
+        "target": served,
+        "claim_level": "slice",
+        "intent_status": "satisfied",
+        "residue": "none",
+        "proof_from": "GitHub PR merged after the recorded bounded proof passed.",
+        "what_happened": "The bounded child merged after review.",
+        "scope_touched": "bounded child scope",
+        "changed_surfaces": "merged child PR",
+        "review_summary": "The child is complete; the parent lane remains independently open.",
+        "outcome_summary": "Reconciled the completed child owner.",
+    }
+    first = planning_installer.closeout_execplan("merged-child", **closeout)
+    replay = planning_installer.closeout_execplan("merged-child", **closeout)
+    assert not any(action.kind == "manual review" for action in first.actions)
+    assert any(action.kind == "already closed" for action in replay.actions)
+
+    planning = planning_installer.planning_summary(target=served)
+    assert planning["planning_record"]["status"] == "unavailable"
+    assert planning["work_maturity"]["status"] == "idle"
+    state = (served / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    assert "merged-child" not in state
+    assert '"parent-lane"' in state
+
+    assert cli.main(["start", "--target", str(served), "--task", "Review unrelated repository docs", "--format", "json"]) == 0
+    started = json.loads(capsys.readouterr().out)
+    assert started["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
+    assert started["next_safe_action"]["implementation_allowed"] is True
+    assert "merged-child" not in json.dumps(started.get("context", {}).get("route_decision", {}))
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(served),
+                "--changed",
+                "README.md",
+                "--task",
+                "Fix an unrelated documentation typo",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    implemented = json.loads(capsys.readouterr().out)
+    gate = implemented["context"]["planning_safety_gate"]
+    assert gate["gate_result"] == "direct-work-allowed"
+    assert gate["implementation_allowed"] is True
+
+    assert cli.main(["start", "--target", str(served), "--task", "Review unrelated repository docs", "--format", "json"]) == 0
+    next_start = json.loads(capsys.readouterr().out)
+    assert next_start["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
+
+    insufficient = tmp_path / "insufficient"
+    _write_completed_child_reconciliation_fixture(insufficient)
+    blocked_closeout = planning_installer.closeout_execplan(
+        "merged-child",
+        **{**closeout, "target": insufficient, "proof_from": "pending"},
+    )
+    manual = [action for action in blocked_closeout.actions if action.kind == "manual review"]
+    assert len(manual) == 1
+    assert "--proof-from" in manual[0].detail
+    assert (insufficient / ".agentic-workspace/planning/execplans/merged-child.plan.json").exists()
+
+    assert cli.main(["start", "--target", str(insufficient), "--task", "Fix unrelated docs typo", "--format", "json"]) == 0
+    blocked_start = json.loads(capsys.readouterr().out)
+    assert blocked_start["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
+    assert blocked_start["next_safe_action"]["implementation_allowed"] is False
+    route = blocked_start["context"]["route_decision"]
+    assert route["selected_owner"].endswith("merged-child.plan.json")
+    assert route["owner_admission"]["repair_route"]["status"] == "available"
+
+
 @pytest.mark.parametrize(
     ("argv", "blocked_command"),
     [

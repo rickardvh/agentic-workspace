@@ -57127,7 +57127,17 @@ def _local_scratch_exclusion_summary(*, target_root: Path) -> dict[str, Any]:
             continue
         manifest_ref = str(record.get("manifest_ref") or "")
         try:
-            manifest = (target_root / manifest_ref).resolve(strict=True)
+            raw_manifest = target_root / manifest_ref
+            raw_manifest.relative_to(target_root)
+            raw_manifest.parent.relative_to(target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH)
+            linked_boundary = any(
+                candidate.is_symlink() or bool(getattr(candidate, "is_junction", lambda: False)())
+                for candidate in (raw_manifest, raw_manifest.parent, *raw_manifest.parent.parents)
+                if candidate != target_root
+            )
+            if linked_boundary:
+                raise ValueError("linked scratch boundary")
+            manifest = raw_manifest.resolve(strict=True)
             manifest.parent.relative_to(scratch_root)
         except (OSError, ValueError):
             rejected += 1
