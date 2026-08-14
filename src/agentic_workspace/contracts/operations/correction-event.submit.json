@@ -116,6 +116,21 @@
       "source": "cli-option"
     },
     {
+      "name": "phase",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "subsystem",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "surface",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "route_decisions",
       "required": false,
       "source": "cli-option"

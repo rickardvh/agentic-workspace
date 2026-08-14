@@ -1207,6 +1207,9 @@ def test_correction_event_generated_operations_store_query_and_preserve_low_auth
         "target_revision": "rev-1",
         "task_class": "mechanical-follow-through",
         "scope_class": "narrow-code-change",
+        "phase": "proof",
+        "subsystem": "workspace-runtime",
+        "surface": "final-response",
         "invariant_id": "narrow-edits",
         "behavior_class": "edit-scope",
         "desired_behavior": "Prefer narrow edits.",
@@ -1273,6 +1276,60 @@ def test_correction_event_generated_operations_store_query_and_preserve_low_auth
     assert submitted["receipt_ref"].startswith(".agentic-workspace/local/correction-event-receipts/")
 
 
+def test_correction_event_query_filters_full_low_authority_context(tmp_path: Path) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation_targets.fast_worker]",
+                'target_id = "user-local:fast-worker"',
+                'target_revision = "rev-1"',
+                'aliases = ["fast"]',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    from agentic_workspace.agent_guidance import apply_correction_event_operation
+
+    context = {
+        "target_identity_ref": "fast",
+        "target_revision": "rev-1",
+        "task_class": "code-change",
+        "scope_class": "narrow",
+        "phase": "proof",
+        "subsystem": "workspace-runtime",
+        "surface": "final-response",
+    }
+    submitted = apply_correction_event_operation(
+        target_root=tmp_path,
+        operation_id="correction-event.submit",
+        values={
+            **context,
+            "delivery_id": "delivery-context-1",
+            "source_ref": "agent-context-1",
+            "desired_behavior": "Use narrow proof.",
+            "replaced_behavior": "Use broad proof.",
+            "invariant_id": "routed-narrow-proof",
+            "behavior_class": "proof-claim",
+        },
+    )
+    matching = apply_correction_event_operation(target_root=tmp_path, operation_id="correction-event.query", values=context)
+    unrelated = apply_correction_event_operation(
+        target_root=tmp_path,
+        operation_id="correction-event.query",
+        values={**context, "surface": "proof-receipt"},
+    )
+
+    assert submitted["low_authority_event_count"] == 1
+    assert matching["low_authority_event_count"] == 1
+    assert unrelated["low_authority_event_count"] == 0
+
+
 def test_correction_event_public_contract_omits_caller_authority_inputs() -> None:
     caller_authority_inputs = {"subjects_json", "trusted_authority_receipt_json"}
     correction_operations = {
@@ -1288,6 +1345,8 @@ def test_correction_event_public_contract_omits_caller_authority_inputs() -> Non
         input_names = {entry["name"] for entry in operation["contract"]["inputs"]}
         assert not caller_authority_inputs & input_names
         assert "trusted_authority_receipt_ref" in input_names
+        if operation["identity"] in {"correction-event.submit", "correction-event.query"}:
+            assert {"phase", "subsystem", "surface"} <= input_names
 
 
 def test_external_contract_bundle_exposes_ir_owned_conformance_profile() -> None:

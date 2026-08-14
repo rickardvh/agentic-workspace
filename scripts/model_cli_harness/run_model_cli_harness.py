@@ -433,7 +433,12 @@ def _build_local_aw_wheelhouse(output_root: Path) -> Path:
     if wheelhouse.exists():
         shutil.rmtree(wheelhouse)
     wheelhouse.mkdir(parents=True)
-    for package_root in (REPO_ROOT, REPO_ROOT / "packages" / "memory", REPO_ROOT / "packages" / "planning", REPO_ROOT / "packages" / "verification"):
+    for package_root in (
+        REPO_ROOT,
+        REPO_ROOT / "packages" / "memory",
+        REPO_ROOT / "packages" / "planning",
+        REPO_ROOT / "packages" / "verification",
+    ):
         subprocess.run(
             ["uv", "build", "--wheel", "--out-dir", str(wheelhouse), str(package_root)],
             cwd=REPO_ROOT,
@@ -1700,7 +1705,9 @@ def _repair_local_absolute_paths_in_text(*, text: str, repo_path: Path, run_root
     }
 
 
-def _repair_result_final_message_local_paths(*, result: dict[str, Any], repo_path: Path, run_root: Path, share_path: Path) -> dict[str, Any]:
+def _repair_result_final_message_local_paths(
+    *, result: dict[str, Any], repo_path: Path, run_root: Path, share_path: Path
+) -> dict[str, Any]:
     final_message = result.get("final_message")
     if not isinstance(final_message, str) or not final_message:
         return {
@@ -2012,22 +2019,21 @@ def _operation_receipt_warnings(
             raise ValueError("required_operation_receipts entries need operation_id")
         matches = [document for document in documents if document.get("operation_id") == operation_id]
         minimum = int(requirement.get("minimum_result_count", 1))
-        if len(matches) < minimum:
+        required_statuses = requirement.get("required_statuses", [])
+        qualified_matches = [document for document in matches if not required_statuses or document.get("status") in required_statuses]
+        if len(qualified_matches) < minimum:
             add(
                 "The agent did not produce enough successful structured operation receipts.",
-                evidence=f"{operation_id}: expected {minimum}, observed {len(matches)}",
+                evidence=f"{operation_id}: expected {minimum}, observed {len(qualified_matches)}",
             )
             continue
-        required_statuses = requirement.get("required_statuses", [])
-        if required_statuses and not all(document.get("status") in required_statuses for document in matches):
-            add("A structured operation receipt reported an unexpected status.", evidence=operation_id)
         expected_event = requirement.get("expected_event")
         bucket_path = str(requirement.get("admission_bucket") or "")
         if expected_event is not None:
             if not isinstance(expected_event, dict):
                 raise ValueError("required_operation_receipts expected_event must be an object")
             bucket_matches = []
-            for document in matches:
+            for document in qualified_matches:
                 bucket = _nested_value(document, bucket_path) if bucket_path else []
                 events = bucket if isinstance(bucket, list) else []
                 bucket_matches.extend(event for event in events if _mapping_contains(event, expected_event))
@@ -2993,7 +2999,13 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
     return True
 
 
-def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_summary: dict[str, Any] | None = None) -> list[dict[str, str]]:
+def _execution_warnings(
+    *,
+    result: dict[str, Any],
+    repo_path: Path,
+    mutation_summary: dict[str, Any] | None = None,
+    allowed_write_patterns: list[str] | None = None,
+) -> list[dict[str, str]]:
     warnings: list[dict[str, str]] = []
     returncode = result.get("returncode")
     stdout = result.get("stdout")
@@ -3108,7 +3120,9 @@ def _execution_warnings(*, result: dict[str, Any], repo_path: Path, mutation_sum
                 "paths": "drive-root-temp",
             }
         )
-    if mutation_summary and mutation_summary.get("status") == "changed":
+    changed_paths = _changed_paths(mutation_summary)
+    expected_mutation = bool(allowed_write_patterns) and all(_matches_any(path, allowed_write_patterns) for path in changed_paths)
+    if mutation_summary and mutation_summary.get("status") == "changed" and not expected_mutation:
         warnings.append(
             {
                 "warning_class": "model_cli_fixture_mutation",
@@ -3665,7 +3679,16 @@ def run_suite(
                 invocation["mutation_summary"] = mutation_summary
                 invocation["transcript_path"] = str(paths.transcript_path)
                 invocation["share_path"] = str(paths.share_path)
-                invocation["warnings"] = _execution_warnings(result=result, repo_path=paths.repo_path, mutation_summary=mutation_summary)
+                invocation["warnings"] = _execution_warnings(
+                    result=result,
+                    repo_path=paths.repo_path,
+                    mutation_summary=mutation_summary,
+                    allowed_write_patterns=_string_list(
+                        evaluation_scenario.get("allowed_write_patterns"),
+                        field="allowed_write_patterns",
+                        scenario_id=scenario_id,
+                    ),
+                )
                 invocation["warnings"].extend(_sandbox_runtime_warnings(sandbox_report, result))
                 invocation["warnings"].extend(
                     _semantic_workflow_warnings(

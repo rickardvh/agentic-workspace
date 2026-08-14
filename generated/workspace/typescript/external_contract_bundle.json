@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:05d395878db3411fc163809ac371a5f5991a9fba7bfa70e355288ccd131744ba",
+  "profile_fingerprint": "sha256:3c84c4b39898caf0dd40e67699ab8e8ae48d7779e47748da57c9e961b5d6a26b",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -12953,8 +12953,8 @@
     "correction-event.correct-dispute": {
       "identity": "correction-event.correct-dispute",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ee1356ce35f5876bc0dc0384952ec922968148069494866e9218b9434d1eedc1",
-      "compatibility_fingerprint": "sha256:adb537abe46d197eba478185d456733cfc7624973283827d16cb94240743c5f0",
+      "fingerprint": "sha256:3b0b917cea70dd560705ea7f0836d137a0808224ae8915a776ca8916864eeb79",
+      "compatibility_fingerprint": "sha256:b487a4288f5786a06569c8431791d31e7e87d76e9b119c890f81bb18794be66a",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -13502,6 +13502,15 @@
                 "scope_class": {
                   "type": "string"
                 },
+                "phase": {
+                  "type": "string"
+                },
+                "subsystem": {
+                  "type": "string"
+                },
+                "surface": {
+                  "type": "string"
+                },
                 "source": {
                   "type": "string"
                 },
@@ -13608,8 +13617,8 @@
     "correction-event.prune-compact": {
       "identity": "correction-event.prune-compact",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ccbdfdc41a2599ac2136f7f6e984caf7e05aad6bbe8514743603254df67814e8",
-      "compatibility_fingerprint": "sha256:8b932c348c48c94a3f430923823de4329634c82588210a01f21931842b65cf6b",
+      "fingerprint": "sha256:f9c7f97379a685b33ca483f612c30825de2ba806fecf2c0ace73b855fa2e3075",
+      "compatibility_fingerprint": "sha256:9d2f63f2cd092c12a1a4b5a7740a07cf841b4ee0e2f060d72a09401697e04f1c",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -14157,6 +14166,15 @@
                 "scope_class": {
                   "type": "string"
                 },
+                "phase": {
+                  "type": "string"
+                },
+                "subsystem": {
+                  "type": "string"
+                },
+                "surface": {
+                  "type": "string"
+                },
                 "source": {
                   "type": "string"
                 },
@@ -14263,8 +14281,8 @@
     "correction-event.query": {
       "identity": "correction-event.query",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:131e522eebcd9cd9a62c1a328a6b22e2bef5b6f95cfa46af1ff1c7e52053873e",
-      "compatibility_fingerprint": "sha256:2d7341d94e2a9137c1528aad8ceed1ebde78252506ad4abdf9d82e9512a0e149",
+      "fingerprint": "sha256:5b774a585bb23b873b940d16c06cacf4197257187d73fb615ceba70628de3304",
+      "compatibility_fingerprint": "sha256:ab3c99fb86ad0f4d7ab60d9e4ec4a4b1799cc524ec49b1290551a1bb9ab0ec41",
       "contract": {
         "classification": "read-only-report",
         "command_surface": {
@@ -14379,6 +14397,21 @@
           },
           {
             "name": "scope_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "phase",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "subsystem",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "surface",
             "required": false,
             "source": "cli-option"
           },
@@ -14694,6 +14727,21 @@
               "source": "cli-option"
             },
             {
+              "name": "phase",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "subsystem",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "surface",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "route_decisions",
               "required": false,
               "source": "cli-option"
@@ -14812,6 +14860,15 @@
                 "scope_class": {
                   "type": "string"
                 },
+                "phase": {
+                  "type": "string"
+                },
+                "subsystem": {
+                  "type": "string"
+                },
+                "surface": {
+                  "type": "string"
+                },
                 "source": {
                   "type": "string"
                 },
@@ -14918,8 +14975,8 @@
     "correction-event.submit": {
       "identity": "correction-event.submit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ca492ef1ac0a617993dcf3bcc167222631f409bfe78036d4f24e6e2f276f3d66",
-      "compatibility_fingerprint": "sha256:ddd71afaa564d94397329f9969767760fa6b7743c5e2441b729f247368bc8627",
+      "fingerprint": "sha256:8316983f1eb79983b1e5296b51854df6a8e7a10ab6bc8293d36e942e039ebda4",
+      "compatibility_fingerprint": "sha256:e82c5f282cac5cc2531ccb51d27381a24499c4bcdc6b8cd6ab060a366060ced6",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -15034,6 +15091,21 @@
           },
           {
             "name": "scope_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "phase",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "subsystem",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "surface",
             "required": false,
             "source": "cli-option"
           },
@@ -15349,6 +15421,21 @@
               "source": "cli-option"
             },
             {
+              "name": "phase",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "subsystem",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "surface",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "route_decisions",
               "required": false,
               "source": "cli-option"
@@ -15467,6 +15554,15 @@
                 "scope_class": {
                   "type": "string"
                 },
+                "phase": {
+                  "type": "string"
+                },
+                "subsystem": {
+                  "type": "string"
+                },
+                "surface": {
+                  "type": "string"
+                },
                 "source": {
                   "type": "string"
                 },
@@ -15573,8 +15669,8 @@
     "correction-event.withdraw-supersede": {
       "identity": "correction-event.withdraw-supersede",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:1e03640959f1f3626df5ce7e6322a60c1d960953081e2fce6aa0b8d9165ae480",
-      "compatibility_fingerprint": "sha256:e2b3e8f9a6cbbf3f312a0c8fe53b176f90560959782cf914f81f1d9ad753c69a",
+      "fingerprint": "sha256:ac48176dd7680b8ce23cadbcaa28958a84a3fbcd2dbcd13386461eec3e3fc08f",
+      "compatibility_fingerprint": "sha256:2de88b413341f22b5a0ff55cdc5bebb21b40d077359235a3d88ef156ad6e0f57",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -16120,6 +16216,15 @@
                   "type": "array"
                 },
                 "scope_class": {
+                  "type": "string"
+                },
+                "phase": {
+                  "type": "string"
+                },
+                "subsystem": {
+                  "type": "string"
+                },
+                "surface": {
                   "type": "string"
                 },
                 "source": {
@@ -20305,6 +20410,18 @@
           },
           "scope_class": {
             "description": "Scope class where the correction applies.",
+            "type": "string"
+          },
+          "phase": {
+            "description": "Workflow phase where the correction applies.",
+            "type": "string"
+          },
+          "subsystem": {
+            "description": "Subsystem boundary where the correction applies.",
+            "type": "string"
+          },
+          "surface": {
+            "description": "Concrete operation or artifact surface where the correction applies.",
             "type": "string"
           },
           "source": {

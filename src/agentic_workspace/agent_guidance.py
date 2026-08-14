@@ -597,7 +597,10 @@ def apply_correction_event_operation(
     scope_class = str(values.get("scope_class") or "") or None
     mutation_applied = False
     if operation == "query":
-        admission = admit_correction_events(events=existing_events, subjects=subjects, task_class=task_class, scope_class=scope_class)
+        query_events = [
+            event for event in existing_events if _correction_event_matches_query(event=event, values=values, subjects=subjects)
+        ]
+        admission = admit_correction_events(events=query_events, subjects=subjects, task_class=task_class, scope_class=scope_class)
         status = "queried"
     elif operation == "prune-compact":
         admission = admit_correction_events(events=existing_events, subjects=subjects, task_class=task_class, scope_class=scope_class)
@@ -658,6 +661,25 @@ def apply_correction_event_operation(
     receipt_path = _write_correction_receipt(target_root=target_root, receipt=receipt)
     receipt["receipt_ref"] = _repo_relative(receipt_path, root=target_root)
     return json.loads(json.dumps(receipt, sort_keys=True, default=str))
+
+
+def _correction_event_matches_query(*, event: dict[str, Any], values: dict[str, Any], subjects: list[dict[str, Any]]) -> bool:
+    target_ref = str(values.get("target_identity_ref") or "").strip()
+    if target_ref:
+        resolution = resolve_target_identity(subjects=subjects, value=target_ref)
+        subject = resolution.get("subject") if resolution.get("status") == "known" else None
+        expected_target = str(subject.get("stable_target_id") or "") if isinstance(subject, dict) else target_ref
+        event_target_ref = str(event.get("target_identity_ref") or "")
+        event_resolution = resolve_target_identity(subjects=subjects, value=event_target_ref)
+        event_subject = event_resolution.get("subject") if event_resolution.get("status") == "known" else None
+        actual_target = str(event_subject.get("stable_target_id") or "") if isinstance(event_subject, dict) else event_target_ref
+        if actual_target != expected_target:
+            return False
+    for field in ("target_revision", "task_class", "scope_class", "phase", "subsystem", "surface"):
+        expected = str(values.get(field) or "").strip()
+        if expected and str(event.get(field) or "") != expected:
+            return False
+    return True
 
 
 def _read_correction_event_store(path: Path) -> dict[str, Any]:

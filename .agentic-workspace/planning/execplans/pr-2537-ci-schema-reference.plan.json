@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 4,
+  "revision": 5,
   "intent": {
     "outcome": "Keep PR #2537 green and prove the correction model-harness actually submits and retrieves an AW correction event instead of merely naming the operation.",
     "non_goals": [
@@ -25,6 +25,12 @@
       "tools/model-cli-harness/fixtures/aw-configured-host-repo/.agentic-workspace/config.local.toml",
       "scripts/model_cli_harness/run_model_cli_harness.py",
       "src/agentic_workspace/agent_guidance.py",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/external_consumer_profile.json",
+      "src/agentic_workspace/contracts/operations/correction-event.submit.json",
+      "src/agentic_workspace/contracts/operations/correction-event.query.json",
+      "generated/workspace/**",
+      "generated/*/.agentic-workspace-cli-fingerprint.json",
       "tests/test_external_agent_evaluation_lane.py",
       "tests/test_external_operation_clients.py",
       "tools/model-cli-harness/external-agent-evaluation/live-results-2026-08-14-adapter-guidance.json",
