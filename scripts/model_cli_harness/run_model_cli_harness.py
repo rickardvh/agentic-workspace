@@ -107,7 +107,7 @@ def _write_scratch_run_manifest(
     retention: str = "ephemeral",
     aw_runs_root: Path | None = None,
 ) -> Path | None:
-    aw_runs_root = (aw_runs_root or REPO_ROOT / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "runs").resolve()
+    aw_runs_root = (aw_runs_root or REPO_ROOT / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH).resolve()
     try:
         run_root.resolve().relative_to(aw_runs_root)
     except ValueError:
@@ -128,6 +128,44 @@ def _write_scratch_run_manifest(
         encoding="utf-8",
     )
     return manifest
+
+
+def _register_harness_evidence(*, summary_path: Path, manifest_path: Path | None) -> None:
+    """Publish a bounded producer index so consumers never need to scan scratch."""
+    if manifest_path is None:
+        return
+    try:
+        summary_ref = summary_path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+        manifest_ref = manifest_path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        return
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True, check=False
+    ).stdout.strip()
+    tree = subprocess.run(
+        ["git", "rev-parse", "HEAD^{tree}"], cwd=REPO_ROOT, capture_output=True, text=True, check=False
+    ).stdout.strip()
+    dirty = bool(
+        subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout.strip()
+    )
+    record = {
+        "kind": "agentic-workspace/model-cli-harness-evidence-index-entry/v1",
+        "producer": "model-cli-harness.run-suite",
+        "summary_ref": summary_ref,
+        "manifest_ref": manifest_ref,
+        "subject": {"repository_head": head, "repository_tree": tree, "dirty": dirty},
+        "recorded_at": datetime.now(UTC).isoformat(),
+    }
+    index = REPO_ROOT / ".agentic-workspace" / "local" / "model-cli-harness" / "evidence-index.jsonl"
+    index.parent.mkdir(parents=True, exist_ok=True)
+    with index.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(record, sort_keys=True) + "\n")
 
 
 def _replace_placeholders(value: str, *, replacements: dict[str, str]) -> str:
@@ -914,6 +952,7 @@ def _snapshot_diff(
     after: dict[str, dict[str, Any]],
     *,
     harness_setup_patterns: Iterable[str] | None = None,
+    root: Path | None = None,
 ) -> dict[str, Any]:
     before_paths = set(before)
     after_paths = set(after)
@@ -927,7 +966,9 @@ def _snapshot_diff(
         for path in changed_paths
         if path not in ignored_paths and _is_harness_setup_mutation_path(path, patterns=harness_setup_patterns)
     ]
-    source_paths = [path for path in changed_paths if path not in set(ignored_paths) and path not in set(setup_paths)]
+    candidate_source_paths = [path for path in changed_paths if path not in set(ignored_paths) and path not in set(setup_paths)]
+    runtime_receipt_paths = [path for path in candidate_source_paths if root is not None and _is_admitted_aw_runtime_receipt(root, path)]
+    source_paths = [path for path in candidate_source_paths if path not in set(runtime_receipt_paths)]
     source_changes = _path_changes(before, after, paths=source_paths)
     ignored_changes = _path_changes(before, after, paths=ignored_paths)
     setup_changes = _path_changes(before, after, paths=setup_paths)
@@ -958,7 +999,31 @@ def _snapshot_diff(
         "harness_setup_created": setup_changes["created"],
         "harness_setup_modified": setup_changes["modified"],
         "harness_setup_deleted": setup_changes["deleted"],
+        "mutation_classes": {
+            "task_or_product_mutations": source_paths,
+            "admitted_runtime_receipts": runtime_receipt_paths,
+            "ignored_environment_noise": ignored_paths,
+            "harness_setup_mutations": setup_paths,
+        },
+        "runtime_receipt_count": len(runtime_receipt_paths),
+        "runtime_receipt_refs": runtime_receipt_paths[:8],
     }
+
+
+def _is_admitted_aw_runtime_receipt(root: Path, relative_path: str) -> bool:
+    """Admit only producer-owned AW receipts with their expected record identity."""
+    normalized = relative_path.replace("\\", "/")
+    if normalized != ".agentic-workspace/local/improvement-pressure/consequence-history.jsonl":
+        return False
+    path = root / normalized
+    try:
+        records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    except (OSError, json.JSONDecodeError):
+        return False
+    return bool(records) and all(
+        isinstance(record, dict) and record.get("kind") == "workspace-improvement-pressure-consequence-event/v1"
+        for record in records
+    )
 
 
 def _candidate_path(value: str, *, replacements: dict[str, str]) -> str:
@@ -1190,6 +1255,14 @@ def _adapter_environment(
             str(adapter.get("provider_home_path", "{run_root}/provider-home")), replacements=replacements
         )
     return env
+
+
+def _fixture_runtime_environment(env: dict[str, str], *, repo_path: Path) -> dict[str, str]:
+    """Bind local-wheelhouse runs to the fixture instead of an ambient checkout venv."""
+    isolated = dict(env)
+    isolated.pop("VIRTUAL_ENV", None)
+    isolated["UV_PROJECT_ENVIRONMENT"] = str(repo_path / ".venv")
+    return isolated
 
 
 def _prepend_env_path(env: dict[str, str], entries: list[str]) -> dict[str, str]:
@@ -3615,6 +3688,8 @@ def run_suite(
                 replacements=command_replacements,
                 isolate_provider_home=isolate_provider_home,
             )
+            if local_aw_wheelhouse is not None:
+                adapter_env = _fixture_runtime_environment(adapter_env, repo_path=paths.repo_path)
             adapter_env = _prepend_env_path(adapter_env, preflight["path_prepend"])
             adapter_env = _with_git_ceiling(adapter_env, run_root=paths.run_root)
             provider_home_env = adapter.get("provider_home_env")
@@ -3686,7 +3761,11 @@ def run_suite(
                 result["status"] = _classify_result_status(result)
                 invocation["sandbox"] = _sandbox_runtime_report(sandbox_report, result) or {"enabled": False}
                 _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
-                mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path, include_ignored=True))
+                mutation_summary = _snapshot_diff(
+                    baseline_snapshot,
+                    _file_snapshot(paths.repo_path, include_ignored=True),
+                    root=paths.repo_path,
+                )
                 invocation["usage_summary"] = _usage_summary_from_stdout(str(result.get("stdout", "")))
                 invocation["package_read_surface_summary"] = _package_read_surface_summary_from_stdout(str(result.get("stdout", "")))
                 invocation["result"] = result
@@ -3966,11 +4045,14 @@ def run_suite(
     )
     summary_root = output_root / f"{_now_id()}-{suite_id}-{adapter_id}-summary"
     summary_root.mkdir(parents=True, exist_ok=False)
-    _write_scratch_run_manifest(
+    summary_manifest = _write_scratch_run_manifest(
         summary_root,
         purpose=f"model CLI harness suite summary: {suite_id}/{adapter_id}/{resolved_model}",
+        producer="model-cli-harness.run-suite",
     )
-    _write_json(summary_root / "summary.json", payload)
+    summary_path = summary_root / "summary.json"
+    _write_json(summary_path, payload)
+    _register_harness_evidence(summary_path=summary_path, manifest_path=summary_manifest)
     return payload
 
 

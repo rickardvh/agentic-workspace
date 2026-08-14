@@ -1606,6 +1606,138 @@ def _load_observation_authority(target_root: Path, evaluation_id: str) -> dict[s
     return payload
 
 
+def _observation_authority_status(*, target_root: Path, evaluation_id: str) -> dict[str, Any]:
+    path = _observation_authority_path(target_root, evaluation_id)
+    authority = _load_json(path, default={})
+    if not authority:
+        return {
+            "status": "missing",
+            "evaluation_id": evaluation_id,
+            "next_action": "run evaluation observe after establishing one current assignment and an admitted public proof receipt",
+            "repair_command": f"agentic-workspace evaluation status --target . --evaluation-id {evaluation_id} --format json",
+        }
+    assignment = _as_mapping(authority.get("assignment"))
+    proof = _as_mapping(authority.get("proof"))
+    resolution = _as_mapping(authority.get("producer_resolution"))
+    return {
+        "status": "current" if resolution.get("status") == "resolved" else "rejected",
+        "evaluation_id": evaluation_id,
+        "target_identity_ref": assignment.get("target_identity_ref"),
+        "assignment_revision": assignment.get("assignment_revision"),
+        "proof_revision": proof.get("revision"),
+        "proof_result": proof.get("result"),
+        "producer_resolution": resolution.get("status"),
+        "next_action": "append-observation" if resolution.get("status") == "resolved" else "refresh-public-assignment-and-proof",
+    }
+
+
+def _derive_observation_authority_from_public_state(*, target_root: Path, evaluation_id: str) -> dict[str, Any]:
+    """Bind observe to current public assignment and admitted proof state."""
+    assignments_root = target_root / ".agentic-workspace" / "planning" / "assignments"
+    assignments: list[dict[str, Any]] = []
+    for path in sorted(assignments_root.glob("*.assignment.json")) if assignments_root.is_dir() else []:
+        payload = _load_json(path, default={})
+        if payload.get("kind") != "agentic-workspace/planning-assignment/v1":
+            continue
+        if str(payload.get("status") or "").lower() in {"closed", "rejected", "superseded", "cancelled"}:
+            continue
+        assignments.append(payload)
+    proof_path = target_root / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
+    proof = _load_json(proof_path, default={})
+    repair_command = f"agentic-workspace evaluation status --target . --evaluation-id {evaluation_id} --format json"
+    if len(assignments) != 1:
+        raise WorkspaceUsageError(
+            f"evaluation observation authority unavailable ({'missing' if not assignments else 'ambiguous'}-current-assignment); "
+            f"repair with public assignment lifecycle operations, then run `{repair_command}`."
+        )
+    if (
+        proof.get("kind") != "agentic-workspace/proof-receipt/v1"
+        or proof.get("result") != "passed"
+        or not _as_mapping(proof.get("admission")).get("admitted")
+    ):
+        raise WorkspaceUsageError(
+            "evaluation observation authority unavailable (missing-current-admitted-proof); "
+            f"record the selected proof through public `agentic-workspace proof --record-receipt`, then run `{repair_command}`."
+        )
+    assignment = assignments[0]
+    gate = _as_mapping(assignment.get("assignment_gate"))
+    target_identity_ref = str(gate.get("target_identity_ref") or "").strip()
+    revision = str(assignment.get("current_revision") or gate.get("assignment_decision_revision") or "").strip()
+    context_key = f"{str(gate.get('task_class') or 'workspace-task')}::{str(gate.get('scope_class') or 'bounded-work')}"
+    if not target_identity_ref or not revision:
+        raise WorkspaceUsageError(f"evaluation observation authority unavailable (incomplete-current-assignment); run `{repair_command}`.")
+    assignment_receipt_id = f"evaluation-assignment:{hashlib.sha256((target_identity_ref + revision).encode()).hexdigest()[:20]}"
+    assignment_ref = _write_indexed_owner_receipt(
+        target_root=target_root,
+        store_root=ASSIGNMENT_AUTHORITY_RECEIPT_DIR,
+        receipt_id=assignment_receipt_id,
+        payload={
+            "kind": "agentic-workspace/assignment-authority-receipt/v1",
+            "receipt_id": assignment_receipt_id,
+            "producer": "assignment.lifecycle",
+            "revision": revision,
+            "target_identity_ref": target_identity_ref,
+            "context_key": context_key,
+        },
+    )
+    proof_subject = _as_mapping(proof.get("proof_subject"))
+    proof_revision = "sha256:" + hashlib.sha256(json.dumps(proof, sort_keys=True, default=str).encode()).hexdigest()[:24]
+    proof_receipt_id = f"evaluation-proof:{proof_revision.split(':', 1)[1]}"
+    proof_ref = _write_indexed_owner_receipt(
+        target_root=target_root,
+        store_root=PROOF_AUTHORITY_RECEIPT_DIR,
+        receipt_id=proof_receipt_id,
+        payload={
+            "kind": "agentic-workspace/proof-receipt/v1",
+            "receipt_id": proof_receipt_id,
+            "producer": "aw-proof",
+            "revision": proof_revision,
+            "result": "passed",
+            "verified_by": "aw",
+            "provenance": ".agentic-workspace/local/proof-receipts/last.json",
+            "subject": {**proof_subject, "target_identity_ref": target_identity_ref},
+        },
+    )
+    assignment_context = {
+        "target_identity_ref": target_identity_ref,
+        "context_key": context_key,
+        "assignment_revision": revision,
+        "receipt": {
+            "kind": "agentic-workspace/assignment-authority-receipt/v1",
+            "receipt_id": assignment_receipt_id,
+            "producer": "assignment.lifecycle",
+            "revision": revision,
+            "source_ref": assignment_ref,
+        },
+    }
+    proof_context = {
+        "result": "passed",
+        "verified_by": "aw",
+        "revision": proof_revision,
+        "provenance": ".agentic-workspace/local/proof-receipts/last.json",
+        "receipt": {
+            "kind": "agentic-workspace/proof-receipt/v1",
+            "receipt_id": proof_receipt_id,
+            "producer": "aw-proof",
+            "revision": proof_revision,
+            "source_ref": proof_ref,
+            "subject": {**proof_subject, "target_identity_ref": target_identity_ref},
+        },
+    }
+    changed_paths = [str(item) for item in proof.get("changed_paths", []) if str(item).strip()]
+    return write_observation_authority(
+        target_root=target_root,
+        evaluation_id=evaluation_id,
+        assignment=assignment_context,
+        proof=proof_context,
+        changed_paths=changed_paths,
+    )
+
+
+def _as_mapping(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
 def _load_observations(target_root: Path, evaluation_id: str) -> list[dict[str, Any]]:
     path = _observation_path(target_root, evaluation_id)
     if not path.exists():
@@ -1796,7 +1928,16 @@ def append_observation(
         "finding": finding,
         "recommended_action": recommended_action,
     }
-    authority = _load_observation_authority(target_root, evaluation_id)
+    try:
+        authority = _load_observation_authority(target_root, evaluation_id)
+    except WorkspaceUsageError:
+        authority = _derive_observation_authority_from_public_state(target_root=target_root, evaluation_id=evaluation_id)
+    if not observation["context"]:
+        observation["context"] = {
+            "assignment": authority["assignment"],
+            "authority_envelope": authority["authority_envelope"],
+            "proof": authority["proof"],
+        }
     observation["idempotency_key"] = _observation_idempotency_key(observation, authority)
     path = _observation_path(target_root, evaluation_id)
     lock_path = path.with_suffix(path.suffix + ".lock")
@@ -2568,6 +2709,7 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
             },
             "owner": definition["decision_owner"],
             "sinks": definition["report_sinks"],
+            "observation_authority": _observation_authority_status(target_root=target_root, evaluation_id=str(definition["id"])),
             "next_collection_action": "owner-review-or-conclude"
             if conclusion_ready
             else "shape-or-resolve-material-finding-owner"

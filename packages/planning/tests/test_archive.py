@@ -2587,6 +2587,81 @@ def test_planning_closeout_routes_satisfied_slice_residue_to_open_parent(tmp_pat
     assert options["close-larger-intent"]["allowed"] is False
 
 
+def test_planning_closeout_reconciles_completed_child_continuation_without_closing_parent(tmp_path: Path, capsys) -> None:
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "merged-child", status = "active", surface = ".agentic-workspace/planning/execplans/merged-child.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = ["parent-lane"]
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/merged-child.plan.json"
+    _write_execplan_record(record_path, status="active")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["intent_continuity"]["this slice completes the larger intended outcome"] = "no"
+    record["intent_continuity"]["continuation surface"] = "external-review"
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": "external-review",
+        "activation trigger": "none",
+    }
+    record["intent_satisfaction"]["unsolved intent passed to"] = "external-review"
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "merged-child",
+                "--target",
+                str(tmp_path),
+                "--claim-level",
+                "slice",
+                "--intent-status",
+                "satisfied",
+                "--residue",
+                "none",
+                "--proof-from",
+                "GitHub PR merged after the recorded bounded proof passed.",
+                "--what-happened",
+                "The bounded child merged after review.",
+                "--scope-touched",
+                "bounded child scope",
+                "--changed-surfaces",
+                "merged child PR",
+                "--review-summary",
+                "The child is complete; the parent lane remains independently open.",
+                "--outcome-summary",
+                "Reconciled the completed child owner.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["warnings"] == [], payload
+    archived = json.loads(
+        (tmp_path / ".agentic-workspace/planning/closeout-evidence/merged-child.closeout.json").read_text(encoding="utf-8")
+    )
+
+    assert not record_path.exists()
+    assert archived["closure_check"]["closeout scope"] == "slice"
+    assert archived["residual"] == {"status": "closed", "owner": "archive"}
+    assert archived["intent_satisfaction"]["unsolved intent passed to"] == "archive"
+    assert archived["execution_summary"]["follow-on routed to"] == "none"
+    state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+    assert "merged-child" not in state_text
+    assert '"parent-lane"' in state_text
+
+
 def test_planning_closeout_blocks_proxy_lane_archive_and_close(tmp_path: Path, capsys) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"

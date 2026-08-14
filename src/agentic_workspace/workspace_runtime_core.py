@@ -17707,9 +17707,11 @@ def _final_report_budget_payload() -> dict[str, Any]:
 def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
     summary_dir_relative = WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "model-cli-harness"
     summary_dir = target_root / summary_dir_relative
-    summary_files = sorted(
+    conventional_summary_files = sorted(
         summary_dir.glob("*summary.json") if summary_dir.exists() else [], key=lambda path: (path.stat().st_mtime, path.name), reverse=True
     )
+    indexed_summary_files, index_admission = _successful_completion_cost_indexed_summaries(target_root=target_root)
+    summary_files = list(dict.fromkeys([*indexed_summary_files, *conventional_summary_files]))
     summaries: list[dict[str, Any]] = []
     skipped_count = 0
     for path in summary_files[:8]:
@@ -17763,6 +17765,7 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
         "rule": "Use this as maintainer evidence for surface-cost tradeoffs. It is not a formal benchmark, CI gate, or model leaderboard.",
         "evidence": {
             "summary_dir": summary_dir_relative.as_posix(),
+            "producer_index": index_admission,
             "summary_count": len(summaries),
             "total_observation_count": evidence_count,
             "skipped_summary_count": skipped_count,
@@ -17786,6 +17789,70 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
         "section_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section successful_completion_cost --format json", cli_invoke=cli_invoke
         ),
+    }
+
+
+def _successful_completion_cost_indexed_summaries(*, target_root: Path) -> tuple[list[Path], dict[str, Any]]:
+    index_path = target_root / ".agentic-workspace" / "local" / "model-cli-harness" / "evidence-index.jsonl"
+    if not index_path.is_file() or index_path.is_symlink():
+        return [], {"status": "absent", "admitted_count": 0, "rejected_count": 0, "rejection_reasons": {}}
+    try:
+        records = [json.loads(line) for line in index_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    except (OSError, json.JSONDecodeError):
+        return [], {"status": "invalid", "admitted_count": 0, "rejected_count": 1, "rejection_reasons": {"invalid-index": 1}}
+    current_head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=target_root, capture_output=True, text=True, check=False).stdout.strip()
+    current_tree = subprocess.run(
+        ["git", "rev-parse", "HEAD^{tree}"], cwd=target_root, capture_output=True, text=True, check=False
+    ).stdout.strip()
+    admitted: list[Path] = []
+    reasons: dict[str, int] = {}
+    target_resolved = target_root.resolve()
+
+    def reject(reason: str) -> None:
+        reasons[reason] = reasons.get(reason, 0) + 1
+
+    for record in reversed(records):
+        if not isinstance(record, dict) or record.get("kind") != "agentic-workspace/model-cli-harness-evidence-index-entry/v1":
+            reject("invalid-entry")
+            continue
+        if record.get("producer") != "model-cli-harness.run-suite":
+            reject("foreign-producer")
+            continue
+        try:
+            summary_path = (target_root / str(record.get("summary_ref") or "")).resolve()
+            manifest_path = (target_root / str(record.get("manifest_ref") or "")).resolve()
+            summary_path.relative_to(target_resolved)
+            manifest_path.relative_to(target_resolved)
+        except (OSError, ValueError):
+            reject("path-outside-target")
+            continue
+        if summary_path.is_symlink() or manifest_path.is_symlink() or not summary_path.is_file() or not manifest_path.is_file():
+            reject("missing-or-linked-evidence")
+            continue
+        try:
+            manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
+            reject("invalid-producer-manifest")
+            continue
+        if manifest.get("owner") != "agentic-workspace" or manifest.get("producer") != "model-cli-harness.run-suite":
+            reject("producer-manifest-mismatch")
+            continue
+        subject = _as_dict(record.get("subject"))
+        if subject.get("dirty") is True:
+            reject("recorded-subject-dirty")
+            continue
+        if str(subject.get("repository_head") or "") != current_head or str(subject.get("repository_tree") or "") != current_tree:
+            reject("repository-subject-mismatch")
+            continue
+        admitted.append(summary_path)
+        if len(admitted) >= 8:
+            break
+    return admitted, {
+        "status": "present" if admitted else "no-current-evidence",
+        "admitted_count": len(admitted),
+        "rejected_count": sum(reasons.values()),
+        "rejection_reasons": dict(sorted(reasons.items())),
+        "privacy": "producer index references compact summaries only; raw transcripts are not read",
     }
 
 
@@ -32870,6 +32937,12 @@ def _planning_owner_admission_contract() -> dict[str, Any]:
 
 
 def _planning_owner_action_effect(*, accepted: bool, rejected: bool) -> dict[str, Any]:
+    if not accepted and not rejected:
+        return {
+            "force": "none",
+            "consumers": _PLANNING_OWNER_ADMISSION_CONSUMERS,
+            "rule": "No live Planning owner is selected; unrelated work may use the ordinary no-owner route.",
+        }
     if accepted and not rejected:
         return {
             "force": "none",
@@ -33324,7 +33397,7 @@ def _planning_owner_admission_candidate(
         selection_revision = str(selection_payload.get("planning_revision") or "").strip()
         if not selection_revision:
             return {**candidate, "status": "rejected", "reason": "local-selection-missing-planning-revision"}
-        if expected_planning_revision and selection_revision != expected_planning_revision:
+        if expected_planning_revision and selection_revision != expected_planning_revision and not explicit_residual:
             return {
                 **candidate,
                 "status": "rejected",
@@ -33396,6 +33469,28 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
     live_entries = _planning_owner_live_graph_entries(data=state_data)
     live_refs = {entry["ref"] for entry in live_entries if entry.get("ref")}
     rejected: list[dict[str, Any]] = []
+    stale: list[dict[str, Any]] = []
+    pending_integrations = _pending_feature_integrations(target_root=target_root)
+
+    def classify_nonblocking(candidate: dict[str, Any]) -> bool:
+        ref = str(candidate.get("ref") or "").replace("\\", "/")
+        reason = str(candidate.get("reason") or "")
+        proposal = pending_integrations.get(ref, {})
+        if reason in {"owner-phase-terminal", "owner-lifecycle-not-live"} and proposal:
+            stale.append(
+                {
+                    **candidate,
+                    "status": "integration-pending",
+                    "reason": "completed-owner-integration-pending",
+                    "integration_proposal_id": proposal.get("proposal_id", ""),
+                }
+            )
+            return True
+        if reason == "owner-record-missing" and str(candidate.get("source") or "").endswith(":active.execplans"):
+            stale.append({**candidate, "status": "stale-projection", "reason": "missing-owner-stale-projection"})
+            return True
+        return False
+
     selected = _selected_planning_owner_payload(target_root)
     if selected:
         admitted = _planning_owner_admission_candidate(
@@ -33420,7 +33515,8 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
                 "action_effect": _planning_owner_action_effect(accepted=True, rejected=False),
                 "rule": "Startup routing may rely only on a currently admitted Planning/current-work owner.",
             }
-        rejected.append(admitted)
+        if not classify_nonblocking(admitted):
+            rejected.append(admitted)
     for entry in live_entries:
         admitted = _planning_owner_admission_candidate(
             target_root=target_root,
@@ -33443,16 +33539,21 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
                 "action_effect": _planning_owner_action_effect(accepted=True, rejected=bool(rejected)),
                 "rule": "Startup routing may rely only on a currently admitted Planning/current-work owner.",
             }
-        rejected.append(admitted)
+        if not classify_nonblocking(admitted):
+            rejected.append(admitted)
     return {
         "kind": "agentic-workspace/planning-owner-admission/v1",
         "status": "rejected" if rejected else "none",
         "selected_owner": {},
         "rejected_candidates": rejected,
-        "repair_route": _planning_owner_repair_route(target_root=target_root) if rejected else {},
+        "stale_candidates": stale,
+        "repair_route": _planning_owner_repair_route(target_root=target_root) if rejected or stale else {},
         "admission_contract": admission_contract,
         "action_effect": _planning_owner_action_effect(accepted=False, rejected=bool(rejected)),
-        "rule": "Rejected Planning owners are diagnostics only and must not affect task relation, claims, proof, or next action.",
+        "rule": (
+            "Rejected Planning owners block lifecycle action; completed owners with a matching feature integration proposal "
+            "and missing legacy projections remain non-blocking diagnostics."
+        ),
     }
 
 
@@ -33499,7 +33600,10 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     active_execplan = selected_owner.get("ref") if isinstance(selected_owner, dict) else None
     rejected_candidates = _list_payload(owner_admission.get("rejected_candidates")) if isinstance(owner_admission, dict) else []
     rejected_reasons = {str(_as_dict(candidate).get("reason") or "") for candidate in rejected_candidates}
-    raw_state_fallback_allowed = owner_admission.get("status") != "rejected" or rejected_reasons == {"owner-identity-mismatch"}
+    stale_candidates = _list_payload(owner_admission.get("stale_candidates")) if isinstance(owner_admission, dict) else []
+    raw_state_fallback_allowed = not stale_candidates and (
+        owner_admission.get("status") != "rejected" or rejected_reasons == {"owner-identity-mismatch"}
+    )
     if active_execplan is None and raw_state_fallback_allowed and active_items and isinstance(active_items[0], dict):
         active_execplan = active_items[0].get("surface")
     if active_execplan is None and raw_state_fallback_allowed and active_execplans and isinstance(active_execplans[0], dict):
@@ -33529,6 +33633,7 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     if isinstance(owner_admission, dict) and (
         owner_admission.get("status") == "rejected"
         or owner_admission.get("rejected_candidates")
+        or owner_admission.get("stale_candidates")
         or selected_source.endswith("owner-selection.json")
         or selected_source.endswith(":active.execplans")
     ):

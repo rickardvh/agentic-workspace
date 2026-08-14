@@ -1230,6 +1230,56 @@ def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tm
     assert "releases/download/v0.4.3" not in pyproject_text
 
 
+def test_model_cli_harness_classifies_owned_runtime_receipt_without_weakening_mutation_checks(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    receipt = tmp_path / ".agentic-workspace" / "local" / "improvement-pressure" / "consequence-history.jsonl"
+    receipt.parent.mkdir(parents=True)
+    receipt.write_text(
+        json.dumps({"kind": "workspace-improvement-pressure-consequence-event/v1", "event": "observed"}) + "\n",
+        encoding="utf-8",
+    )
+    after = {
+        "README.md": {"size": 1, "sha256": "changed"},
+        receipt.relative_to(tmp_path).as_posix(): {"size": receipt.stat().st_size, "sha256": "receipt"},
+        "src/unexpected.py": {"size": 1, "sha256": "unexpected"},
+    }
+
+    result = module._snapshot_diff(
+        {"README.md": {"size": 1, "sha256": "before"}},
+        after,
+        root=tmp_path,
+    )
+
+    assert result["mutation_classes"]["task_or_product_mutations"] == ["README.md", "src/unexpected.py"]
+    assert result["mutation_classes"]["admitted_runtime_receipts"] == [
+        ".agentic-workspace/local/improvement-pressure/consequence-history.jsonl"
+    ]
+    assert result["runtime_receipt_count"] == 1
+
+
+def test_model_cli_harness_does_not_admit_unowned_local_mutation(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    random_path = ".agentic-workspace/local/random.json"
+    result = module._snapshot_diff({}, {random_path: {"size": 1, "sha256": "random"}}, root=tmp_path)
+
+    assert result["mutation_classes"]["admitted_runtime_receipts"] == []
+    assert result["mutation_classes"]["task_or_product_mutations"] == [random_path]
+
+
+def test_model_cli_harness_local_wheelhouse_environment_is_fixture_bound(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    source_environment = str(tmp_path / "source" / ".venv")
+
+    result = module._fixture_runtime_environment(
+        {"VIRTUAL_ENV": source_environment, "UV_PROJECT_ENVIRONMENT": source_environment, "PATH": "bin"},
+        repo_path=tmp_path / "fixture",
+    )
+
+    assert "VIRTUAL_ENV" not in result
+    assert Path(result["UV_PROJECT_ENVIRONMENT"]) == tmp_path / "fixture" / ".venv"
+    assert result["PATH"] == "bin"
+
+
 def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_sources(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

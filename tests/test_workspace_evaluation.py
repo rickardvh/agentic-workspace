@@ -1305,19 +1305,6 @@ def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path
     Draft202012Validator(contract_schema("evaluation_definition.schema.json")).validate(definitions)
     _bound_context(tmp_path)
 
-    with pytest.raises(WorkspaceUsageError, match="missing-bound-context"):
-        append_observation(
-            target_root=tmp_path,
-            evaluation_id="eval-1969-operating-loop",
-            criterion="reconstruction-cost",
-            result="supports",
-            evidence_refs=["docs/reviews/session-1.md#turn-3"],
-            confidence="high",
-            burden="low",
-            finding="Startup routed directly to current-decision evidence.",
-            recommended_action="Continue collection.",
-        )
-
     observed = append_observation(
         target_root=tmp_path,
         evaluation_id="eval-1969-operating-loop",
@@ -1326,7 +1313,6 @@ def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path
         evidence_refs=["docs/reviews/session-1.md#turn-3"],
         confidence="high",
         burden="low",
-        context=_bound_context(tmp_path),
         finding="Startup routed directly to current-decision evidence.",
         recommended_action="Continue collection.",
     )
@@ -1926,6 +1912,62 @@ def test_evaluation_cli_register_observe_status(tmp_path: Path, capsys) -> None:
     )
     prune = json.loads(capsys.readouterr().out)
     assert prune["operation_id"] == "evaluation.prune"
+
+
+def test_evaluation_observe_derives_authority_from_public_assignment_and_proof(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    assignment_path = tmp_path / ".agentic-workspace" / "planning" / "assignments" / "current.assignment.json"
+    assignment_path.parent.mkdir(parents=True)
+    assignment_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/planning-assignment/v1",
+                "status": "current",
+                "current_revision": "assignment-public-rev-1",
+                "assignment_gate": {
+                    "target_identity_ref": "target:worker@1",
+                    "task_class": "mechanical-follow-through",
+                    "scope_class": "narrow-code-change",
+                    "allowed_paths": ["src/feature.py"],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    proof_path = tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
+    proof_path.parent.mkdir(parents=True)
+    proof_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "result": "passed",
+                "changed_paths": ["src/feature.py"],
+                "proof_subject": {
+                    "repository_head": subprocess.run(
+                        ["git", "rev-parse", "HEAD"], cwd=tmp_path, capture_output=True, text=True
+                    ).stdout.strip()
+                },
+                "admission": {"admitted": True, "proof_sufficient": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    observed = append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="supports",
+        evidence_refs=[".agentic-workspace/local/proof-receipts/last.json"],
+    )
+
+    assert observed["outcome"] == "appended"
+    authority = json.loads(
+        (tmp_path / ".agentic-workspace" / "local" / "evaluations" / "eval-1969-operating-loop.authority.json").read_text()
+    )
+    assert authority["producer_resolution"]["status"] == "resolved"
+    assert authority["assignment"]["target_identity_ref"] == "target:worker@1"
 
 
 def test_evaluation_report_delivery_generated_operation_family_fails_closed_without_host_trust(tmp_path: Path) -> None:

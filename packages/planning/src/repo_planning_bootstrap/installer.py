@@ -2299,6 +2299,13 @@ def planning_summary(
     roadmap_candidates = work_items["roadmap_candidates"]
     todo_line_count = work_items["todo_line_count"]
     todo_item_count = work_items["todo_item_count"]
+    owner_resolution = _selected_owner_resolution(target_root)
+    if owner_resolution.get("source") in {"integration-pending", "stale-shared"}:
+        stale_id = str(owner_resolution.get("owner_id") or "")
+        stale_ref = str(owner_resolution.get("owner_ref") or "")
+        active_items = [
+            item for item in active_items if str(item.get("id") or "") != stale_id and _active_execplan_reference(item) != stale_ref
+        ]
 
     ownership_review = _ownership_review(target_root)
     decomposition_projection = _planning_decomposition_projection(target_root=target_root, decomposition_dir=decomposition_dir)
@@ -2500,6 +2507,15 @@ def planning_summary(
         "lanes": lane_projection,
         "issue_relations": issue_relation_projection,
         "integration": integration_projection,
+        "owner_reconciliation": {
+            "status": owner_resolution.get("source", "none"),
+            "owner": owner_resolution.get("owner_id", ""),
+            "owner_ref": owner_resolution.get("owner_ref", ""),
+            "integration_proposal": owner_resolution.get("integration_proposal", {}),
+            "stale_reason": owner_resolution.get("stale_reason", ""),
+        }
+        if owner_resolution.get("source") in {"integration-pending", "stale-shared"}
+        else {},
         "work_maturity": work_maturity,
         "execution_readiness": execution_readiness,
         "autopilot_loop": _autopilot_loop_status(
@@ -7029,6 +7045,12 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
     selected_item = _selected_owner_active_item(target_root=target_root, state=state, resolution=resolution)
     if selected_item:
         active_items = [selected_item]
+    elif resolution.get("source") in {"integration-pending", "stale-shared"}:
+        stale_id = str(resolution.get("owner_id") or "")
+        stale_ref = str(resolution.get("owner_ref") or "")
+        active_items = [
+            item for item in active_items if str(item.get("id") or "") != stale_id and _active_execplan_reference(item) != stale_ref
+        ]
     lane_projection = _planning_lane_projection(target_root=target_root)
     active_execplans: list[dict[str, str]] = []
     selected_path = resolution.get("path")
@@ -7120,6 +7142,15 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
                 "recommended_next_action": recommendation,
                 "active_plan_required": bool(active_items or active_execplans),
             },
+            "owner_reconciliation": {
+                "status": resolution.get("source", "none"),
+                "owner": resolution.get("owner_id", ""),
+                "owner_ref": resolution.get("owner_ref", ""),
+                "integration_proposal": resolution.get("integration_proposal", {}),
+                "stale_reason": resolution.get("stale_reason", ""),
+            }
+            if resolution.get("source") in {"integration-pending", "stale-shared"}
+            else {},
             "decision_packet": {
                 "kind": "agentic-workspace/ordinary-decision-packet/v1",
                 "surface": "summary",
@@ -16548,11 +16579,36 @@ def _selected_owner_resolution(target_root: Path) -> dict[str, Any]:
         (item for item in _state_active_items(state) if _active_execplan_reference(item) == owner_ref),
         {},
     )
+    owner_id = str(record.get("id") or indexed.get("id") or "").strip()
+    lifecycle = _execplan_lifecycle(record)
+    phase = _execplan_phase(record)
+    if lifecycle not in {"live", "planned"} or phase in {"complete", "completed", "closeout", "closed", "archived"}:
+        proposals = _pending_integration_proposals_for_owner(
+            target_root=target_root,
+            owner_refs=[owner_ref],
+            owner_ids=[owner_id],
+        )
+        archive_proposal = next(
+            (proposal for proposal in proposals if proposal.get("requested_transition") == "archive-owner"),
+            None,
+        )
+        return {
+            "source": "integration-pending" if archive_proposal else "stale-shared",
+            "path": None,
+            "record": {},
+            "owner_id": owner_id,
+            "owner_ref": owner_ref,
+            "current_work_id": "",
+            "integration_proposal": archive_proposal or {},
+            "stale_reason": "owner-phase-terminal"
+            if phase in {"complete", "completed", "closeout", "closed", "archived"}
+            else "owner-lifecycle-not-live",
+        }
     return {
         "source": "shared",
         "path": shared_path,
         "record": record,
-        "owner_id": str(record.get("id") or indexed.get("id") or "").strip(),
+        "owner_id": owner_id,
         "owner_ref": owner_ref,
         "current_work_id": "",
     }
@@ -16564,6 +16620,8 @@ def _selected_owner_active_item(
     state: dict[str, Any],
     resolution: dict[str, Any],
 ) -> dict[str, Any]:
+    if resolution.get("source") in {"integration-pending", "stale-shared"}:
+        return {}
     owner_id = str(resolution.get("owner_id", "")).strip()
     owner_ref = str(resolution.get("owner_ref", "")).strip()
     if not owner_id or not owner_ref:
@@ -18433,7 +18491,7 @@ def _prepare_execplan_closeout(
         required_follow_on=required_follow_on,
         continuation_owner=continuation_owner_for_gate,
     )
-    if normalized_closure == "archive-and-close" and larger_intent_unresolved:
+    if normalized_closure == "archive-and-close" and larger_intent_unresolved and closeout_scope != "slice":
         result.warnings.append(
             {
                 "warning_class": "archive_larger_intent_proxy_closeout_blocked",
@@ -18563,6 +18621,14 @@ def _prepare_execplan_closeout(
     prepared_intent_continuity = dict(intent_continuity)
     if _closeout_sequence_needs_normalization(prepared_intent_continuity.get("larger intended outcome")):
         prepared_intent_continuity["larger intended outcome"] = outcome_delivered
+    if normalized_closure == "archive-but-keep-lane-open":
+        prepared_intent_continuity["this slice completes the larger intended outcome"] = "no"
+        prepared_intent_continuity["continuation surface"] = routed_unsolved_intent
+        patch["required_continuation"] = {
+            "required follow-on for the larger intended outcome": "yes",
+            "owner surface": routed_unsolved_intent,
+            "activation trigger": "when the continuation owner promotes the next slice",
+        }
     if prepared_intent_continuity:
         patch["intent_continuity"] = prepared_intent_continuity
     patch["machine_readable_contract"] = _prepared_machine_readable_contract_closeout(
@@ -19206,6 +19272,11 @@ def _closeout_continuation_conflict(
         return None
     if normalized_residue not in {"none", "dismissed"} and (residue_owner or "").strip():
         return None
+    # An explicit bounded-child closeout may retire a continuation that was
+    # satisfied by external review/merge. The slice claim cannot close a
+    # parent lane; normalization below clears only child-owned continuation.
+    if normalized_claim == "slice" and normalized_residue in {"none", "dismissed"}:
+        return None
     if normalized_claim == "slice" and normalized_residue not in {"none", "dismissed"}:
         return None
     return {
@@ -19608,6 +19679,17 @@ def closeout_execplan(
         normalized_residue=normalized_residue,
         residue_owner=residue_owner,
     )
+    existing_required_continuation = _record_section_dict(record, "required_continuation") or {}
+    existing_intent_satisfaction = _record_section_dict(record, "intent_satisfaction") or {}
+    retire_completed_child_continuation = (
+        normalized_claim == "slice"
+        and normalized_intent == "satisfied"
+        and normalized_residue in {"none", "dismissed"}
+        and (
+            str(existing_required_continuation.get("required follow-on for the larger intended outcome", "")).strip().lower() == "yes"
+            or str(existing_intent_satisfaction.get("unsolved intent passed to", "")).strip().lower() not in {"", "none", "n/a", "none yet"}
+        )
+    )
     if continuation_conflict is not None:
         owner = continuation_conflict["owner"]
         result.warnings.append(
@@ -19862,6 +19944,23 @@ def closeout_execplan(
             current = _record_section_dict(normalized_record, section) or {}
             current.update(values)
             normalized_record[section] = current
+        if retire_completed_child_continuation:
+            normalized_record["intent_continuity"] = {
+                **(_record_section_dict(normalized_record, "intent_continuity") or {}),
+                "this slice completes the larger intended outcome": "yes",
+                "continuation surface": "none",
+            }
+            normalized_record["required_continuation"] = {
+                "required follow-on for the larger intended outcome": "no",
+                "owner surface": "none",
+                "activation trigger": "none",
+            }
+            normalized_record["intent_satisfaction"] = {
+                **(_record_section_dict(normalized_record, "intent_satisfaction") or {}),
+                "was original intent fully satisfied?": "yes",
+                "evidence of intent satisfaction": proof,
+                "unsolved intent passed to": "none",
+            }
         schema_findings = _json_schema_findings(payload=normalized_record, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
         if schema_findings:
             compact_required = (
@@ -20064,6 +20163,21 @@ def closeout_execplan(
             if existing_activation_trigger in {"", "none", "n/a"}:
                 required_continuation["activation trigger"] = "when the continuation owner promotes the next slice"
             record["required_continuation"] = required_continuation
+        elif retire_completed_child_continuation:
+            intent_continuity = _record_section_dict(record, "intent_continuity") or {}
+            intent_continuity["this slice completes the larger intended outcome"] = "yes"
+            intent_continuity["continuation surface"] = "none"
+            record["intent_continuity"] = intent_continuity
+            record["required_continuation"] = {
+                "required follow-on for the larger intended outcome": "no",
+                "owner surface": "none",
+                "activation trigger": "none",
+            }
+            intent_satisfaction = _record_section_dict(record, "intent_satisfaction") or {}
+            intent_satisfaction["was original intent fully satisfied?"] = "yes"
+            intent_satisfaction["evidence of intent satisfaction"] = proof
+            intent_satisfaction["unsolved intent passed to"] = "none"
+            record["intent_satisfaction"] = intent_satisfaction
         current_record = _load_execplan_record(record_path) or {}
         current_boundary = _closeout_revision_boundary(
             target_root=target_root,
@@ -23790,7 +23904,13 @@ def _execplan_status(path: Path) -> str:
 def _execplan_is_live(path: Path) -> bool:
     record = _load_execplan_record(path)
     if record is not None:
-        return _execplan_lifecycle(record) == "live"
+        return _execplan_lifecycle(record) == "live" and _execplan_phase(record) not in {
+            "complete",
+            "completed",
+            "closeout",
+            "closed",
+            "archived",
+        }
     return _execplan_status(path) in {"active", "in-progress"}
 
 

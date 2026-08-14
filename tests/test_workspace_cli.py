@@ -16,6 +16,55 @@ from typing import Any
 from tests.workspace_cli_support import *
 
 
+def test_successful_completion_cost_discovers_manifest_indexed_custom_output_root(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+    _write(tmp_path / "README.md", "fixture\n")
+    subprocess.run(["git", "add", "README.md"], cwd=tmp_path, capture_output=True, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture"],
+        cwd=tmp_path,
+        capture_output=True,
+        check=True,
+    )
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout.strip()
+    tree = subprocess.run(["git", "rev-parse", "HEAD^{tree}"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout.strip()
+    run_root = tmp_path / ".agentic-workspace" / "local" / "scratch" / "custom-name" / "suite-summary"
+    _write(run_root / ".aw-scratch.toml", 'owner = "agentic-workspace"\nproducer = "model-cli-harness.run-suite"\n')
+    _write(
+        run_root / "summary.json",
+        json.dumps(
+            {
+                "schema": "agentic-workspace/model-cli-harness-result/v1",
+                "adapter": "fixture",
+                "model": "fixture",
+                "result_count": 1,
+                "results": [],
+                "usage_summary": {"status": "present", "output_tokens": 4},
+            }
+        ),
+    )
+    index = tmp_path / ".agentic-workspace" / "local" / "model-cli-harness" / "evidence-index.jsonl"
+    _write(
+        index,
+        json.dumps(
+            {
+                "kind": "agentic-workspace/model-cli-harness-evidence-index-entry/v1",
+                "producer": "model-cli-harness.run-suite",
+                "summary_ref": run_root.relative_to(tmp_path).as_posix() + "/summary.json",
+                "manifest_ref": run_root.relative_to(tmp_path).as_posix() + "/.aw-scratch.toml",
+                "subject": {"repository_head": head, "repository_tree": tree, "dirty": False},
+            }
+        )
+        + "\n",
+    )
+
+    payload = workspace_runtime_core._successful_completion_cost_payload(target_root=tmp_path, cli_invoke="agentic-workspace")
+
+    assert payload["status"] == "present"
+    assert payload["evidence"]["producer_index"]["admitted_count"] == 1
+    assert payload["recent_runs"][0]["adapter"] == "fixture"
+
+
 @pytest.mark.parametrize(
     ("argv", "blocked_command"),
     [

@@ -7,6 +7,24 @@ from pathlib import Path as _Path
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from memory_test_support import *
+from repo_memory_bootstrap._installer_paths import _find_nested_repo_roots
+
+
+def test_nested_repo_scan_excludes_only_manifest_owned_harness_evidence(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    owned = target / ".agentic-workspace" / "local" / "scratch" / "owned-run"
+    unowned = target / ".agentic-workspace" / "local" / "scratch" / "unowned-run"
+    (owned / "repo" / ".git").mkdir(parents=True)
+    (unowned / "repo" / ".git").mkdir(parents=True)
+    (owned / ".aw-scratch.toml").write_text(
+        'owner = "agentic-workspace"\nproducer = "model-cli-harness"\n',
+        encoding="utf-8",
+    )
+
+    found = _find_nested_repo_roots(target)
+
+    assert owned / "repo" not in found
+    assert unowned / "repo" in found
 
 
 def test_memory_doctor_does_not_flag_absent_optional_append_targets_in_clean_repo(tmp_path: Path) -> None:
