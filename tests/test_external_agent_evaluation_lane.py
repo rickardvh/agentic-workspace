@@ -64,7 +64,7 @@ def test_mixed_provider_availability_is_explicit_and_never_fabricates_fallback_p
     availability = _read_json("provider-availability-2026-08-14.json")
     routes = {item["family"]: item for item in availability["routes"]}
 
-    assert routes["openai-codex"]["status"] == "available-with-existing-evidence"
+    assert routes["openai-codex"]["status"] == "available-with-current-evidence"
     assert routes["distinct-vendor"]["status"] == "unavailable"
     assert "do not silently substitute" in routes["distinct-vendor"]["fallback"]
     assert routes["separate-strong-tier-live-run"]["status"] == "unavailable"
@@ -538,6 +538,35 @@ def test_model_cli_harness_allows_repo_relative_final_paths(tmp_path: Path) -> N
     )
 
     assert not [warning for warning in warnings if warning["warning_class"] == "model_cli_local_path_leak"]
+
+
+def test_current_adapter_guidance_live_evidence_is_head_bound_and_honest() -> None:
+    evidence_root = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation"
+    payload = json.loads((evidence_root / "live-results-2026-08-14-adapter-guidance.json").read_text(encoding="utf-8"))
+    availability = json.loads((evidence_root / "provider-availability-2026-08-14.json").read_text(encoding="utf-8"))
+
+    assert payload["evaluated_implementation_head"] == "7bd92773b48cf89679781c80128146cfe04e67ea"
+    outcomes = {run["prompt_variant"]: run["live_outcome"] for run in payload["runs"]}
+    assert outcomes["explicit-correction-capture"] in {"miss", "recovered-on-second-request"}
+    assert any(run["live_outcome"] == "miss" for run in payload["runs"])
+    recovery = next(run for run in payload["runs"] if run["live_outcome"] == "recovered-on-second-request")
+    assert recovery["requests_to_completion"] == 2
+    assert outcomes["changed-requirement-negative"].startswith("pass")
+    assert outcomes["later-context-retrieval"].startswith("pass")
+    assert outcomes["violation-recovery-consequence"].startswith("pass")
+
+    evaluation = payload["evaluation_operation"]
+    assert evaluation["operation"] == "evaluation.observe"
+    assert evaluation["admitted_observation_count"] == 5
+    assert evaluation["observed_criterion_count"] == 3
+    assert set(evaluation["current_criterion_states"].values()) == {"satisfied"}
+    assert evaluation["lifecycle"] == "collecting"
+    assert evaluation["conclusion_readiness"]["ready"] is False
+
+    codex = next(route for route in availability["routes"] if route["family"] == "openai-codex")
+    assert codex["evidence_ref"] == "live-results-2026-08-14-adapter-guidance.json"
+    assert codex["evaluated_implementation_head"] == payload["evaluated_implementation_head"]
+    assert {route["status"] for route in availability["routes"] if route["family"] != "openai-codex"} == {"unavailable"}
 
 
 def test_model_cli_harness_prepares_fixture_git_repo_for_diff_commands(tmp_path: Path) -> None:
