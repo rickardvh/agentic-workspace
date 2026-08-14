@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:25c0b30a1a1ccaeafdee03e57a42823af6c5c21af5a47e1d2e5abe691f4c2620",
+  "profile_fingerprint": "sha256:d1be42207f39b38cb91c7cacfb8a03d54faa92fd35d29cbb60b8e670ebb9dfb2",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",

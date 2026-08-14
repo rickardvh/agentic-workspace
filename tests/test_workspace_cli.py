@@ -2368,6 +2368,16 @@ def test_final_response_admit_accepts_only_authorized_bounded_report_during_cont
                 "claim_class": "slice_complete",
                 "scope_kind": "slice",
                 "source": "completion_gate.claim_authorization",
+                "report": {
+                    "kind": "agentic-workspace/bounded-progress-report/v1",
+                    "scope_id": "test-closeout:slice_complete",
+                    "claim_class": "slice_complete",
+                    "scope_kind": "slice",
+                    "scope_status": "complete",
+                    "larger_intent": {"status": "open", "completion_authorized": False},
+                    "continuation": {"owner": "#2371", "required_next_action": "continue-parent-lane"},
+                    "residue": {"status": "routed", "owner": "#2371"},
+                },
             }
         ],
         "required_next_action": "continue-parent-lane",
@@ -2415,7 +2425,9 @@ def test_final_response_admit_accepts_only_authorized_bounded_report_during_cont
     assert payload["admission"]["terminal_final_rejected"] is True
     assert payload["admission"]["attempt"]["claim_class"] == "slice_complete"
     assert payload["admission"]["attempt"]["claim_scope_id"] == "test-closeout:slice_complete"
-    assert payload["admission"]["attempt"]["detected_broader_claim_classes"] == []
+    assert payload["admission"]["attempt"]["model_authored_text_admission"]["admitted"] is False
+    assert payload["admission"]["authoritative_response"]["scope_id"] == "test-closeout:slice_complete"
+    assert payload["admission"]["authoritative_response"]["larger_intent"]["completion_authorized"] is False
     assert payload["continuation_operation"]["status"] == "not_required"
     assert payload["terminal_outcome_contract"]["final_response_authorized"] is False
 
@@ -2425,16 +2437,13 @@ def test_final_response_admit_accepts_only_authorized_bounded_report_during_cont
     [
         ("partial_progress", "test-closeout:partial_progress", "Progress recorded; proof remains.", "accepted_bounded_report"),
         ("slice_complete", "test-closeout:slice_complete", "Upgrade slice complete; parent remains open.", "accepted_bounded_report"),
-        (
-            "slice_complete",
-            "test-closeout:slice_complete",
-            "Parent lane complete; full intent satisfied. Closes #2308.",
-            "rejected_auto_resumed",
-        ),
+        ("slice_complete", "test-closeout:slice_complete", "Nothing remains and the parent work is concluded.", "accepted_bounded_report"),
+        ("slice_complete", "test-closeout:slice_complete", "The whole objective has reached its endpoint.", "accepted_bounded_report"),
+        ("slice_complete", "test-closeout:slice_complete", "No further effort is necessary anywhere.", "accepted_bounded_report"),
         ("terminal_final", "", "Done.", "rejected_auto_resumed"),
     ],
 )
-def test_final_response_admit_requires_trusted_bounded_scope_and_rejects_mislabeled_broader_claims(
+def test_final_response_admit_requires_trusted_bounded_scope_and_quarantines_model_prose(
     tmp_path: Path,
     capsys,
     monkeypatch,
@@ -2452,8 +2461,36 @@ def test_final_response_admit_requires_trusted_bounded_scope_and_rejects_mislabe
         "final_response_authorized": False,
         "allowed_claim_classes": ["partial_progress", "slice_complete"],
         "bounded_claim_authorizations": [
-            {"id": "test-closeout:partial_progress", "claim_class": "partial_progress", "scope_kind": "progress"},
-            {"id": "test-closeout:slice_complete", "claim_class": "slice_complete", "scope_kind": "slice"},
+            {
+                "id": "test-closeout:partial_progress",
+                "claim_class": "partial_progress",
+                "scope_kind": "progress",
+                "report": {
+                    "kind": "agentic-workspace/bounded-progress-report/v1",
+                    "scope_id": "test-closeout:partial_progress",
+                    "claim_class": "partial_progress",
+                    "scope_kind": "progress",
+                    "scope_status": "progress-recorded",
+                    "larger_intent": {"status": "open", "completion_authorized": False},
+                    "continuation": {"owner": "planning", "required_next_action": "continue-parent-lane"},
+                    "residue": {"status": "routed", "owner": "planning"},
+                },
+            },
+            {
+                "id": "test-closeout:slice_complete",
+                "claim_class": "slice_complete",
+                "scope_kind": "slice",
+                "report": {
+                    "kind": "agentic-workspace/bounded-progress-report/v1",
+                    "scope_id": "test-closeout:slice_complete",
+                    "claim_class": "slice_complete",
+                    "scope_kind": "slice",
+                    "scope_status": "complete",
+                    "larger_intent": {"status": "open", "completion_authorized": False},
+                    "continuation": {"owner": "planning", "required_next_action": "continue-parent-lane"},
+                    "residue": {"status": "routed", "owner": "planning"},
+                },
+            },
         ],
         "required_next_action": "continue-parent-lane",
         "safe_continuation_option_ids": ["continue-parent-lane"],
@@ -2499,12 +2536,17 @@ def test_final_response_admit_requires_trusted_bounded_scope_and_rejects_mislabe
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["status"] == expected_status
-    if expected_status == "rejected_auto_resumed" and "Closes" in claim:
-        assert payload["admission"]["attempt"]["detected_broader_claim_classes"] == [
-            "full_intent_complete",
-            "issue_closure",
-            "lane_complete",
-        ]
+    if expected_status == "accepted_bounded_report":
+        assert payload["admission"]["attempt"]["model_authored_text_admission"] == {
+            "status": "not-authoritative-decoration",
+            "admitted": False,
+            "rule": (
+                "During CONTINUE, caller/model prose is never the admitted bounded artifact; the host emits only the "
+                "closeout-owned structured report."
+            ),
+        }
+        assert payload["admission"]["authoritative_response"]["claim_class"] == claim_class
+        assert payload["admission"]["authoritative_response"]["larger_intent"]["completion_authorized"] is False
 
 
 def test_final_response_admit_executor_command_reenters_until_delivered(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -5924,9 +5966,7 @@ def test_upgrade_to_necessary_surfaces_leaves_doctor_healthy_after_apply(tmp_pat
     assert doctor_payload["warnings"] == []
 
 
-def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(
-    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     task = "Upgrade the installed workspace without losing the active task"
     plan_ref = ".agentic-workspace/planning/execplans/upgrade-replay.plan.json"
@@ -5938,37 +5978,12 @@ def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(
     repo_owned_manifest = manifest_path.read_bytes() + b'\n[notes."docs/upgrade.md"]\nnote_type = "runbook"\n'
     manifest_path.write_bytes(repo_owned_manifest)
     _write(tmp_path / "docs" / "upgrade.md", "# Upgrade replay\n")
-    _write(
-        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
-        f'''kind = "agentic-planning-state"
-schema_version = "planning-state/v1"
+    execplan_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans"
 
-[todo]
-active_items = [
-  {{ id = "upgrade-replay", status = "active", surface = "{plan_ref}" }},
-]
-queued_items = []
-''',
-    )
-    _write_json(
-        tmp_path / plan_ref,
-        {
-            "kind": "planning-execplan/v1",
-            "id": "upgrade-replay",
-            "title": "Upgrade replay",
-            "owner_level": "slice",
-            "lifecycle": "live",
-            "phase": "implementation",
-            "revision": 1,
-            "intent": {"outcome": task},
-            "scope": {"owned": ["docs/upgrade.md"]},
-            "parent": {"id": "none"},
-            "relationships": {},
-            "next_action": "Run the integrated upgrade replay.",
-            "proof": {},
-            "continuation": {"owner": "upgrade-replay"},
-        },
-    )
+    def live_execplans() -> list[Path]:
+        return [path for path in execplan_dir.glob("*.plan.json") if path.name != "TEMPLATE.plan.json"]
+
+    assert live_execplans() == []
 
     assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
     assert json.loads(capsys.readouterr().out)["migration"]["status"] == "applied"
@@ -5985,11 +6000,58 @@ queued_items = []
     status_payload = json.loads(capsys.readouterr().out)
     assert "necessary surfaces" not in json.dumps(status_payload).lower()
 
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/upgrade.md",
+                "--record-receipt",
+                "--receipt-command",
+                "pytest -q tests/test_upgrade_replay.py",
+                "--receipt-result",
+                "passed",
+                "--receipt-claim-sufficiency",
+                "sufficient",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    direct_proof = json.loads(capsys.readouterr().out)
+    assert direct_proof["receipt"]["result"] == "passed"
+    assert live_execplans() == [], "direct upgrade/proof must not synthesize Planning state"
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--target",
+                str(tmp_path),
+                "--id",
+                "upgrade-replay",
+                "--title",
+                task,
+                "--source",
+                "integrated downstream upgrade replay",
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
     assert cli.main(["implement", "--target", str(tmp_path), "--changed", "docs/upgrade.md", "--task", task, "--format", "json"]) == 0
     implement_payload = json.loads(capsys.readouterr().out)
     gate = implement_payload["context"]["planning_safety_gate"]
     assert gate["route_decision"]["task_relation"] == "continues-selected-owner"
-    assert list((tmp_path / ".agentic-workspace" / "planning" / "execplans").glob("*.plan.json")) == [tmp_path / plan_ref]
+    assert live_execplans() == [tmp_path / plan_ref]
 
     assert (
         cli.main(
@@ -6017,44 +6079,47 @@ queued_items = []
     proof_payload = json.loads(capsys.readouterr().out)
     assert proof_payload["receipt"]["result"] == "passed"
 
-    terminal = {
-        "state": "CONTINUE",
-        "final_response_authorized": False,
-        "allowed_claim_classes": ["slice_complete"],
-        "bounded_claim_authorizations": [{"id": "upgrade-replay:slice_complete", "claim_class": "slice_complete", "scope_kind": "slice"}],
-        "required_next_action": "continue-upgrade-replay",
-        "safe_continuation_option_ids": ["continue-upgrade-replay"],
-        "blocker_qualification": {"status": "not_required"},
-        "final_response_enforcement": {
-            "terminal_final_rejected": True,
-            "auto_resume_action": "continue-upgrade-replay",
-            "progress_without_yield": True,
-        },
-    }
-    monkeypatch.setattr(
-        cli, "_final_response_closeout_trust_for_admission", lambda *, target_root: ({"terminal_outcome_contract": terminal}, object())
-    )
+    residue_owner = "GitHub issue #2371"
     assert (
         cli.main(
             [
-                "final-response",
-                "admit",
+                "planning",
+                "closeout",
+                "upgrade-replay",
                 "--target",
                 str(tmp_path),
-                "--attempt",
-                "Upgrade slice complete; the parent task remains open.",
-                "--claim-class",
-                "slice-complete",
-                "--claim-scope-id",
-                "upgrade-replay:slice_complete",
+                "--claim-level",
+                "slice",
+                "--intent-status",
+                "satisfied",
+                "--residue",
+                "issue",
+                "--residue-owner",
+                residue_owner,
+                "--proof-from",
+                "last",
+                "--what-happened",
+                "Completed the bounded downstream upgrade replay.",
+                "--scope-touched",
+                "installed payload, health, proof, and bounded closeout",
+                "--changed-surfaces",
+                "docs/upgrade.md",
+                "--review-summary",
+                "The upgrade slice is proved; parent issue residue remains routed.",
+                "--outcome-summary",
+                "Bounded upgrade slice completed with parent continuation.",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    bounded = json.loads(capsys.readouterr().out)
-    assert bounded["status"] == "accepted_bounded_report"
+    json.loads(capsys.readouterr().out)
+    closeout_evidence = json.loads(
+        (tmp_path / ".agentic-workspace" / "planning" / "closeout-evidence" / "upgrade-replay.closeout.json").read_text(encoding="utf-8")
+    )
+    assert closeout_evidence["residual"] == {"status": "open", "owner": residue_owner}
+    assert live_execplans() == []
 
     assert (
         cli.main(
@@ -6064,20 +6129,37 @@ queued_items = []
                 "--target",
                 str(tmp_path),
                 "--attempt",
-                "All requested work is complete. Closes #2371.",
+                "The whole objective has reached its endpoint.",
                 "--claim-class",
                 "slice-complete",
                 "--claim-scope-id",
-                "upgrade-replay:slice_complete",
+                "closeout_trust:slice_complete",
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    rejected = json.loads(capsys.readouterr().out)
+    bounded = json.loads(capsys.readouterr().out)
+    assert bounded["status"] == "accepted_bounded_report"
+    report = bounded["admission"]["authoritative_response"]
+    assert report["claim_class"] == "slice_complete"
+    assert report["larger_intent"]["completion_authorized"] is False
+    assert report["residue"] == {"status": "routed", "owner": residue_owner}
+    assert bounded["admission"]["attempt"]["model_authored_text_admission"]["admitted"] is False
+
+    terminal = bounded["terminal_outcome_contract"]
+    rejected = cli._terminal_final_response_admission(
+        terminal_outcome_contract=terminal,
+        final_response_attempt={
+            "claim": "Nothing remains and the parent work is concluded.",
+            "claim_class": "full_intent_complete",
+            "claim_scope_id": "closeout_trust:slice_complete",
+        },
+        resume_executor=lambda _request: {"status": "executed", "invoked_operation": "continue-routed-residue"},
+    )
     assert rejected["status"] == "rejected_auto_resumed"
-    assert rejected["continuation_operation"]["status"] == "executed"
+    assert rejected["authoritative_response"] == {}
 
 
 def test_upgrade_to_necessary_surfaces_repairs_missing_required_skills(tmp_path: Path, capsys) -> None:

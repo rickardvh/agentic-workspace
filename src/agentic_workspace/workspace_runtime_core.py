@@ -22184,6 +22184,8 @@ def _terminal_outcome_contract_payload(
         str(item).strip() for item in _list_payload(claim_authorization.get("allowed_claim_classes")) if str(item).strip()
     }
     options = [option for option in _list_payload(completion_options) if isinstance(option, dict)]
+    if any(option.get("id") == "claim-slice-complete" and option.get("allowed") is True for option in options):
+        allowed_claim_classes.add("slice_complete")
     allowed_option_ids = [str(option.get("id")) for option in options if option.get("allowed") is True and str(option.get("id") or "")]
     progress_option_ids = [
         option_id
@@ -22201,15 +22203,67 @@ def _terminal_outcome_contract_payload(
     human_accepted_partial = bool(completion_gate.get("human_accepted_partial"))
     full_claim_authorized = "full_intent_complete" in allowed_claim_classes
     issue_closure_authorized = "issue_closure" in allowed_claim_classes
-    bounded_claim_authorizations = [
-        {
-            "id": f"{source_surface}:{claim_class}",
+    continuation = _as_dict(completion_gate.get("continuation"))
+    continuation_owner = str(continuation.get("owner_surface") or "").strip()
+    if not continuation_owner:
+        continuation_owner = next(
+            (
+                str(option.get("owner") or "").strip()
+                for option in options
+                if option.get("id") == "keep-parent-open" and option.get("allowed") is True and str(option.get("owner") or "").strip()
+            ),
+            "",
+        )
+    if not continuation_owner:
+        continuation_owner = next(
+            (
+                str(option.get("continuation_owner") or "").strip()
+                for option in options
+                if option.get("id") == "claim-slice-complete"
+                and option.get("allowed") is True
+                and str(option.get("continuation_owner") or "").strip()
+            ),
+            "",
+        )
+
+    def bounded_report_authorization(claim_class: str) -> dict[str, Any]:
+        scope_id = f"{source_surface}:{claim_class}"
+        scope_kind = "progress" if claim_class == "partial_progress" else "slice"
+        return {
+            "id": scope_id,
             "claim_class": claim_class,
-            "scope_kind": "progress" if claim_class == "partial_progress" else "slice",
+            "scope_kind": scope_kind,
             "source": "completion_gate.claim_authorization",
             "blocked_claim_classes": ["lane_complete", "parent_complete", "full_intent_complete", "issue_closure"],
-            "rule": "This closeout-derived identity authorizes only the named bounded scope; broader closure text remains blocked.",
+            "report": {
+                "kind": "agentic-workspace/bounded-progress-report/v1",
+                "scope_id": scope_id,
+                "claim_class": claim_class,
+                "scope_kind": scope_kind,
+                "scope_status": "progress-recorded" if claim_class == "partial_progress" else "complete",
+                "larger_intent": {
+                    "status": "open",
+                    "completion_authorized": False,
+                    "residual_intent": str(completion_gate.get("residual_intent") or "").strip(),
+                },
+                "continuation": {
+                    "owner": continuation_owner,
+                    "required_next_action": required_next_action or "continue-current-work",
+                },
+                "residue": {
+                    "status": "routed" if continuation_owner else "owner-not-recorded",
+                    "owner": continuation_owner,
+                },
+                "rendering_rule": (
+                    "This closeout-owned report is the admitted artifact. Model-authored text is non-authoritative "
+                    "decoration and cannot widen its scope."
+                ),
+            },
+            "rule": "This closeout-derived identity authorizes only the named structured bounded report.",
         }
+
+    bounded_claim_authorizations = [
+        bounded_report_authorization(claim_class)
         for claim_class in ("partial_progress", "slice_complete")
         if claim_class in allowed_claim_classes
     ]
@@ -22340,31 +22394,19 @@ def _terminal_final_response_admission(
         ),
         {},
     )
-    normalized_claim = " ".join(claim_text.lower().replace("_", " ").replace("-", " ").split())
-    broader_claim_patterns = {
-        "issue_closure": [
-            r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#?\d+\b",
-            r"\bissue\s+#?\d+\s+(?:is\s+)?(?:complete|closed|fixed|resolved)\b",
-        ],
-        "lane_complete": [r"\b(?:parent\s+)?lane\s+(?:is\s+)?(?:complete|closed|done)\b"],
-        "parent_complete": [r"\bparent(?:\s+issue)?\s+(?:is\s+)?(?:complete|closed|done)\b"],
-        "full_intent_complete": [
-            r"\bfull\s+intent\s+(?:is\s+)?(?:complete|satisfied|done)\b",
-            r"\b(?:all|every)\s+(?:requested\s+)?(?:work|issue|issues|task|tasks)\s+(?:(?:is|are)\s+)?(?:complete|closed|done|finished|resolved)\b",
-            r"\btask\s+(?:is\s+)?(?:complete|finished|done)\b",
-        ],
-    }
-    detected_broader_claim_classes = sorted(
-        claim_kind
-        for claim_kind, patterns in broader_claim_patterns.items()
-        if any(re.search(pattern, normalized_claim) for pattern in patterns)
+    authoritative_bounded_report = _as_dict(scope_authorization.get("report"))
+    structured_report_matches_scope = bool(
+        authoritative_bounded_report.get("kind") == "agentic-workspace/bounded-progress-report/v1"
+        and str(authoritative_bounded_report.get("scope_id") or "") == claim_scope_id
+        and str(authoritative_bounded_report.get("claim_class") or "").strip().lower().replace("-", "_") == claim_class
+        and _as_dict(authoritative_bounded_report.get("larger_intent")).get("completion_authorized") is False
     )
     bounded_report_authorized = (
         state == "CONTINUE"
         and claim_class in bounded_claim_classes
         and claim_class in allowed_claim_classes
         and bool(scope_authorization)
-        and not detected_broader_claim_classes
+        and structured_report_matches_scope
     )
     response_authorized = final_authorized or bounded_report_authorized
     auto_resume_action = str(enforcement.get("auto_resume_action") or terminal.get("required_next_action") or "continue-current-work")
@@ -22425,8 +22467,22 @@ def _terminal_final_response_admission(
             "claim_class": claim_class,
             "claim_scope_id": claim_scope_id,
             "scope_authorization": scope_authorization,
-            "detected_broader_claim_classes": detected_broader_claim_classes,
+            "model_authored_text_admission": {
+                "status": "not-authoritative-decoration" if bounded_report_authorized else "terminal-authority-only",
+                "admitted": bool(final_authorized),
+                "rule": (
+                    "During CONTINUE, caller/model prose is never the admitted bounded artifact; the host emits only the "
+                    "closeout-owned structured report."
+                ),
+            },
         },
+        "authoritative_response": (
+            authoritative_bounded_report
+            if bounded_report_authorized
+            else {"kind": "agentic-workspace/terminal-final/v1", "claim": claim_text}
+            if final_authorized
+            else {}
+        ),
         "resume_transition": {
             "status": "not_required" if response_authorized else "executed",
             "auto_resume_action": "" if response_authorized else auto_resume_action,
@@ -22440,8 +22496,8 @@ def _terminal_final_response_admission(
         "progress_without_yield": bool(enforcement.get("progress_without_yield")) and not response_authorized,
         "rule": (
             "A terminal final requires terminal custody authorization. An explicitly typed partial_progress or slice_complete "
-            "report may be admitted during CONTINUE only when closeout authorizes that exact bounded claim class and scope, "
-            "and the attempted text does not claim a broader parent, lane, full-intent, or issue-closure outcome."
+            "report may be admitted during CONTINUE only as a closeout-owned structured report for that exact claim class "
+            "and scope. Model-authored prose is never authoritative for a bounded report and cannot widen it."
         ),
     }
 
@@ -23585,6 +23641,7 @@ def _report_closeout_trust_payload(
         slice_trusted = bool(command_owned and proof_recorded and slice_completed and closure_decision and relevance_status != "unrelated")
         parent_status = str(closure_check.get("larger-intent status") or "").strip().lower()
         parent_closure_blocked = parent_status not in {"closed", "complete", "completed", "done"}
+        residual = _as_dict(archived_record.get("residual"))
         return {
             "status": "present",
             "trust": "normal" if slice_trusted else "lower-trust",
@@ -23617,6 +23674,8 @@ def _report_closeout_trust_payload(
             "closure_decision": closure_check.get("closure decision", ""),
             "parent_intent_status": closure_check.get("larger-intent status", ""),
             "parent_closure_blocked": parent_closure_blocked,
+            "residual": residual,
+            "continuation_owner": str(residual.get("owner") or "").strip(),
             "rule": (
                 "Archived closeout evidence may be trusted for the completed slice, but it does not restore active "
                 "planning state or authorize parent/epic closure."
@@ -23649,6 +23708,8 @@ def _report_closeout_trust_payload(
                 else:
                     updated.pop("blocking_fields", None)
                 updated["evidence_owner"] = slice_evidence.get("owner_surface", "")
+                updated["continuation_owner"] = slice_evidence.get("continuation_owner", "")
+                updated["residue"] = slice_evidence.get("residual", {})
             adjusted.append(updated)
         return adjusted
 
