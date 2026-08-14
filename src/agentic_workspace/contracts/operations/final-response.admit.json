@@ -40,6 +40,11 @@
       "required": false
     },
     {
+      "name": "claim_scope_id",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "after_compaction",
       "source": "cli-option",
       "required": false
@@ -113,7 +118,7 @@
   "guards": [
     "Rendering closeout_trust must not submit a fabricated final response.",
     "Reject terminal finals while the terminal outcome contract state is CONTINUE.",
-    "Admit partial_progress or slice_complete reports during CONTINUE only when the closeout claim authorization allows that exact class.",
+    "Admit partial_progress or slice_complete reports during CONTINUE only when the closeout claim authorization allows that exact class and closeout-derived scope identity, and reject broader closure text mislabeled as bounded.",
     "--executor-command is the package-owned ordinary host boundary: it must admit executor stdout before exposing final text.",
     "Executor mode is conservatively classified as mutation-capable, non-idempotent, network-allowed, and outside-repo-write-capable because the executor command is caller supplied.",
     "Rejected CONTINUE attempts must keep custody with the agent and re-enter the executor after the selected continuation operation.",

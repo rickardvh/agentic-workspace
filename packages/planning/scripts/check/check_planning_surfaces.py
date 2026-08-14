@@ -269,6 +269,20 @@ def _load_json(path: Path) -> object | None:
         return None
 
 
+def _planning_schema_path(*, repo_root: Path, filename: str) -> Path:
+    installed = repo_root / ".agentic-workspace" / "planning" / "schemas" / filename
+    if installed.is_file():
+        return installed
+    try:
+        import repo_planning_bootstrap
+
+        package_root = Path(repo_planning_bootstrap.__file__).resolve().parents[2]
+    except (ImportError, IndexError, OSError, TypeError):
+        return installed
+    packaged = package_root / "bootstrap" / ".agentic-workspace" / "planning" / "schemas" / filename
+    return packaged if packaged.is_file() else installed
+
+
 def _schema_record_warnings(
     *,
     record_path: Path,
@@ -364,10 +378,9 @@ def _foreign_pm_shape_warnings(record_path: Path) -> list[PlanningWarning]:
 
 
 def _check_planning_evidence_schemas(repo_root: Path) -> list[PlanningWarning]:
-    schema_dir = repo_root / ".agentic-workspace" / "planning" / "schemas"
-    external_schema_path = schema_dir / "planning-external-intent-evidence.schema.json"
-    finished_schema_path = schema_dir / "planning-finished-work-evidence.schema.json"
-    closeout_schema_path = schema_dir / "planning-closeout-evidence.schema.json"
+    external_schema_path = _planning_schema_path(repo_root=repo_root, filename="planning-external-intent-evidence.schema.json")
+    finished_schema_path = _planning_schema_path(repo_root=repo_root, filename="planning-finished-work-evidence.schema.json")
+    closeout_schema_path = _planning_schema_path(repo_root=repo_root, filename="planning-closeout-evidence.schema.json")
     checks = [
         (
             repo_root / ".agentic-workspace" / "planning" / "external-intent-evidence.json",
@@ -418,10 +431,9 @@ def _check_planning_record_schemas(repo_root: Path) -> list[PlanningWarning]:
     execplan_dir = repo_root / ".agentic-workspace" / "planning" / "execplans"
     decomposition_dir = repo_root / ".agentic-workspace" / "planning" / "decompositions"
     review_dir = repo_root / ".agentic-workspace" / "planning" / "reviews"
-    schema_dir = repo_root / ".agentic-workspace" / "planning" / "schemas"
-    execplan_schema_path = schema_dir / "planning-execplan.schema.json"
-    decomposition_schema_path = schema_dir / "planning-decomposition.schema.json"
-    review_schema_path = schema_dir / "planning-review.schema.json"
+    execplan_schema_path = _planning_schema_path(repo_root=repo_root, filename="planning-execplan.schema.json")
+    decomposition_schema_path = _planning_schema_path(repo_root=repo_root, filename="planning-decomposition.schema.json")
+    review_schema_path = _planning_schema_path(repo_root=repo_root, filename="planning-review.schema.json")
     warnings: list[PlanningWarning] = []
     for record_path in sorted(execplan_dir.glob("*.plan.json")):
         warnings.extend(_foreign_pm_shape_warnings(record_path))

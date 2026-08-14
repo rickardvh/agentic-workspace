@@ -3715,6 +3715,14 @@ const commandDefinitions = [
               "name": "claim_class"
             },
             {
+              "default": "",
+              "flags": [
+                "--claim-scope-id"
+              ],
+              "help": "Closeout-derived bounded claim-scope identity; required for partial-progress or slice-complete admission.",
+              "name": "claim_scope_id"
+            },
+            {
               "action": "store_true",
               "flags": [
                 "--after-compaction"

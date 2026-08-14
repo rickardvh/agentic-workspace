@@ -22201,6 +22201,18 @@ def _terminal_outcome_contract_payload(
     human_accepted_partial = bool(completion_gate.get("human_accepted_partial"))
     full_claim_authorized = "full_intent_complete" in allowed_claim_classes
     issue_closure_authorized = "issue_closure" in allowed_claim_classes
+    bounded_claim_authorizations = [
+        {
+            "id": f"{source_surface}:{claim_class}",
+            "claim_class": claim_class,
+            "scope_kind": "progress" if claim_class == "partial_progress" else "slice",
+            "source": "completion_gate.claim_authorization",
+            "blocked_claim_classes": ["lane_complete", "parent_complete", "full_intent_complete", "issue_closure"],
+            "rule": "This closeout-derived identity authorizes only the named bounded scope; broader closure text remains blocked.",
+        }
+        for claim_class in ("partial_progress", "slice_complete")
+        if claim_class in allowed_claim_classes
+    ]
     safe_continuation_available = bool(progress_option_ids or status == "continue-required")
     blocked_like_status = status in {"clarification-required", "blocked", "unavailable", "invalid"}
     blocker_qualification = _terminal_outcome_blocker_qualification(completion_gate=completion_gate)
@@ -22278,6 +22290,7 @@ def _terminal_outcome_contract_payload(
         },
         "allowed_terminal_states": ["DELIVERED", "BLOCKED", "USER_PAUSED", "CONTINUE"],
         "allowed_claim_classes": sorted(allowed_claim_classes),
+        "bounded_claim_authorizations": bounded_claim_authorizations,
         "issue_closure_authorized": issue_closure_authorized,
         "reason": reason,
         "invalid_pseudo_blockers": [
@@ -22309,11 +22322,50 @@ def _terminal_final_response_admission(
     state = str(terminal.get("state") or "CONTINUE")
     final_authorized = bool(terminal.get("final_response_authorized"))
     claim_class = str(attempt.get("claim_class") or "terminal_final").strip().lower().replace("-", "_")
+    claim_scope_id = str(attempt.get("claim_scope_id") or "").strip()
+    claim_text = str(attempt.get("claim") or attempt.get("text") or "").strip()
     bounded_claim_classes = {"partial_progress", "slice_complete"}
     allowed_claim_classes = {
         str(item).strip().lower().replace("-", "_") for item in _list_payload(terminal.get("allowed_claim_classes")) if str(item).strip()
     }
-    bounded_report_authorized = state == "CONTINUE" and claim_class in bounded_claim_classes and claim_class in allowed_claim_classes
+    bounded_authorizations = [
+        _as_dict(item) for item in _list_payload(terminal.get("bounded_claim_authorizations")) if isinstance(item, dict)
+    ]
+    scope_authorization = next(
+        (
+            item
+            for item in bounded_authorizations
+            if str(item.get("id") or "") == claim_scope_id
+            and str(item.get("claim_class") or "").strip().lower().replace("-", "_") == claim_class
+        ),
+        {},
+    )
+    normalized_claim = " ".join(claim_text.lower().replace("_", " ").replace("-", " ").split())
+    broader_claim_patterns = {
+        "issue_closure": [
+            r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#?\d+\b",
+            r"\bissue\s+#?\d+\s+(?:is\s+)?(?:complete|closed|fixed|resolved)\b",
+        ],
+        "lane_complete": [r"\b(?:parent\s+)?lane\s+(?:is\s+)?(?:complete|closed|done)\b"],
+        "parent_complete": [r"\bparent(?:\s+issue)?\s+(?:is\s+)?(?:complete|closed|done)\b"],
+        "full_intent_complete": [
+            r"\bfull\s+intent\s+(?:is\s+)?(?:complete|satisfied|done)\b",
+            r"\b(?:all|every)\s+(?:requested\s+)?(?:work|issue|issues|task|tasks)\s+(?:(?:is|are)\s+)?(?:complete|closed|done|finished|resolved)\b",
+            r"\btask\s+(?:is\s+)?(?:complete|finished|done)\b",
+        ],
+    }
+    detected_broader_claim_classes = sorted(
+        claim_kind
+        for claim_kind, patterns in broader_claim_patterns.items()
+        if any(re.search(pattern, normalized_claim) for pattern in patterns)
+    )
+    bounded_report_authorized = (
+        state == "CONTINUE"
+        and claim_class in bounded_claim_classes
+        and claim_class in allowed_claim_classes
+        and bool(scope_authorization)
+        and not detected_broader_claim_classes
+    )
     response_authorized = final_authorized or bounded_report_authorized
     auto_resume_action = str(enforcement.get("auto_resume_action") or terminal.get("required_next_action") or "continue-current-work")
     before_state = _as_dict(resume_state)
@@ -22335,8 +22387,9 @@ def _terminal_final_response_admission(
         "after_compaction": compaction_boundary_crossed,
         "final_response_attempt": {
             "source": str(attempt.get("source") or "model-authored-final-response"),
-            "claim": str(attempt.get("claim") or attempt.get("text") or "").strip(),
+            "claim": claim_text,
             "claim_class": claim_class,
+            "claim_scope_id": claim_scope_id,
         },
         "multi_slice_continuation": enforcement.get("multi_slice_continuation", {}),
     }
@@ -22368,8 +22421,11 @@ def _terminal_final_response_admission(
         },
         "attempt": {
             "source": str(attempt.get("source") or "model-authored-final-response"),
-            "claim": str(attempt.get("claim") or attempt.get("text") or "").strip(),
+            "claim": claim_text,
             "claim_class": claim_class,
+            "claim_scope_id": claim_scope_id,
+            "scope_authorization": scope_authorization,
+            "detected_broader_claim_classes": detected_broader_claim_classes,
         },
         "resume_transition": {
             "status": "not_required" if response_authorized else "executed",
@@ -22384,7 +22440,8 @@ def _terminal_final_response_admission(
         "progress_without_yield": bool(enforcement.get("progress_without_yield")) and not response_authorized,
         "rule": (
             "A terminal final requires terminal custody authorization. An explicitly typed partial_progress or slice_complete "
-            "report may be admitted during CONTINUE only when closeout authorizes that exact bounded claim class."
+            "report may be admitted during CONTINUE only when closeout authorizes that exact bounded claim class and scope, "
+            "and the attempted text does not claim a broader parent, lane, full-intent, or issue-closure outcome."
         ),
     }
 
@@ -58462,6 +58519,7 @@ def _run_final_response_executor_loop(
                 "source": attempt_source,
                 "claim": result.stdout.strip(),
                 "claim_class": str(getattr(args, "claim_class", "") or "terminal_final"),
+                "claim_scope_id": str(getattr(args, "claim_scope_id", "") or ""),
                 "after_compaction": bool(getattr(args, "after_compaction", False)) or slice_number > 1,
             },
             resume_state={
@@ -58584,6 +58642,7 @@ def _run_final_response_admit_adapter(args: argparse.Namespace) -> int:
         raise WorkspaceUsageError(f"Unsupported final-response command: {getattr(args, 'final_response_command', None)}")
     attempt_source = str(getattr(args, "source", "") or "model-authored-final-response").strip()
     claim_class = str(getattr(args, "claim_class", "") or "terminal_final").strip()
+    claim_scope_id = str(getattr(args, "claim_scope_id", "") or "").strip()
     executor_command = str(getattr(args, "executor_command", "") or "").strip()
     if executor_command:
         payload = _run_final_response_executor_loop(
@@ -58622,6 +58681,7 @@ def _run_final_response_admit_adapter(args: argparse.Namespace) -> int:
             "source": attempt_source,
             "claim": attempt_text,
             "claim_class": claim_class,
+            "claim_scope_id": claim_scope_id,
             "after_compaction": bool(getattr(args, "after_compaction", False)),
         },
         resume_state={
