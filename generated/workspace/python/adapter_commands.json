@@ -3647,6 +3647,37 @@
               "name": "target"
             },
             {
+              "flags": [
+                "--task"
+              ],
+              "help": "Exact direct-work task identity used to reconcile bounded closeout proof.",
+              "name": "task"
+            },
+            {
+              "action": "extend",
+              "default": [],
+              "flags": [
+                "--changed"
+              ],
+              "help": "Repo-relative direct-work paths whose selected proof receipts must reconcile before bounded admission.",
+              "name": "changed",
+              "nargs": "*"
+            },
+            {
+              "flags": [
+                "--residue"
+              ],
+              "help": "Structured direct-work residue kind: docs, issue, memory, planning, or review.",
+              "name": "residue"
+            },
+            {
+              "flags": [
+                "--residue-owner"
+              ],
+              "help": "Structured continuation owner for the still-open larger intent.",
+              "name": "residue_owner"
+            },
+            {
               "default": "",
               "flags": [
                 "--attempt"

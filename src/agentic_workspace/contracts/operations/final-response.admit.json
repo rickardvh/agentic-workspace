@@ -15,6 +15,26 @@
       "required": false
     },
     {
+      "name": "task",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "changed",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "residue",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "residue_owner",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "attempt",
       "source": "cli-option",
       "required": false
@@ -79,6 +99,10 @@
     {
       "surface": ".agentic-workspace/local/chat-checkpoint.json",
       "required": false
+    },
+    {
+      "surface": ".agentic-workspace/local/proof-receipts/last.json",
+      "required": false
     }
   ],
   "writes": [
@@ -119,6 +143,7 @@
     "Rendering closeout_trust must not submit a fabricated final response.",
     "Reject terminal finals while the terminal outcome contract state is CONTINUE.",
     "Admit partial_progress or slice_complete reports during CONTINUE only as closeout-owned structured reports for the exact authorized class and scope identity; model-authored prose is non-authoritative decoration and cannot widen the admitted artifact.",
+    "Direct-work bounded admission requires --task, --changed, --residue, and --residue-owner together plus exact accepted proof-receipt reconciliation; it must not create a Planning record or authorize parent, lane, full-intent, or issue closure.",
     "--executor-command is the package-owned ordinary host boundary: it must admit executor stdout before exposing final text.",
     "Executor mode is conservatively classified as mutation-capable, non-idempotent, network-allowed, and outside-repo-write-capable because the executor command is caller supplied.",
     "Rejected CONTINUE attempts must keep custody with the agent and re-enter the executor after the selected continuation operation.",
@@ -130,6 +155,7 @@
     "final-response admission tests execute the generated CLI command across multiple ordinary executor slices",
     "codex-sbx host adapter submits the output-last-message artifact through final-response admit before the harness can read it",
     "local checkpoint schema accepts persisted admission slices without making them completion evidence",
+    "integrated downstream upgrade proof retains zero live Planning records through proof, structured residue routing, and bounded admission",
     "closeout rendering exposes the integrated vendor-neutral ordinary executor loop and the codex-sbx dogfooding adapter"
   ],
   "migration_status": "runtime-consumed"

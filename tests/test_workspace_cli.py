@@ -5968,7 +5968,6 @@ def test_upgrade_to_necessary_surfaces_leaves_doctor_healthy_after_apply(tmp_pat
 def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     task = "Upgrade the installed workspace without losing the active task"
-    plan_ref = ".agentic-workspace/planning/execplans/upgrade-replay.plan.json"
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     (tmp_path / ".agentic-workspace" / "adoption-receipt.json").unlink()
@@ -5977,6 +5976,10 @@ def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp
     repo_owned_manifest = manifest_path.read_bytes() + b'\n[notes."docs/upgrade.md"]\nnote_type = "runbook"\n'
     manifest_path.write_bytes(repo_owned_manifest)
     _write(tmp_path / "docs" / "upgrade.md", "# Upgrade replay\n")
+    _write(tmp_path / "pyproject.toml", '[project]\nname = "upgrade-replay"\nversion = "0.0.0"\n')
+    _write(tmp_path / "Makefile", "test:\n\tpython -m pytest tests/test_upgrade_replay.py -q\n")
+    _write(tmp_path / "tests" / "test_upgrade_replay.py", "def test_upgrade_replay():\n    assert True\n")
+    changed_paths = ["docs/upgrade.md", "tests/test_upgrade_replay.py"]
     execplan_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans"
 
     def live_execplans() -> list[Path]:
@@ -6002,55 +6005,32 @@ def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp
     assert (
         cli.main(
             [
-                "proof",
+                "report",
                 "--target",
                 str(tmp_path),
-                "--changed",
-                "docs/upgrade.md",
-                "--record-receipt",
-                "--receipt-command",
-                "pytest -q tests/test_upgrade_replay.py",
-                "--receipt-result",
-                "passed",
-                "--receipt-claim-sufficiency",
-                "sufficient",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    direct_proof = json.loads(capsys.readouterr().out)
-    assert direct_proof["receipt"]["result"] == "passed"
-    assert live_execplans() == [], "direct upgrade/proof must not synthesize Planning state"
-
-    assert (
-        cli.main(
-            [
-                "planning",
-                "new-plan",
-                "--target",
-                str(tmp_path),
-                "--id",
-                "upgrade-replay",
-                "--title",
+                "--section",
+                "closeout_trust",
+                "--task",
                 task,
-                "--source",
-                "integrated downstream upgrade replay",
-                "--activate",
+                "--changed",
+                *changed_paths,
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    capsys.readouterr()
-
-    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "docs/upgrade.md", "--task", task, "--format", "json"]) == 0
-    implement_payload = json.loads(capsys.readouterr().out)
-    gate = implement_payload["context"]["planning_safety_gate"]
-    assert gate["route_decision"]["task_relation"] == "continues-selected-owner"
-    assert live_execplans() == [tmp_path / plan_ref]
+    unproved_closeout = json.loads(capsys.readouterr().out)["answer"]
+    assert unproved_closeout["current_task_closeout"]["proof_state"]["status"] != "recorded-and-accepted"
+    assert (
+        cli._direct_task_terminal_outcome_contract(
+            closeout_trust=unproved_closeout,
+            residue_kind="issue",
+            residue_owner="GitHub issue #2371",
+        )
+        == {}
+    ), "structured caller inputs cannot replace accepted product-owned proof"
+    assert live_execplans() == []
 
     assert (
         cli.main(
@@ -6059,65 +6039,74 @@ def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp
                 "--target",
                 str(tmp_path),
                 "--changed",
-                "docs/upgrade.md",
-                "--record-receipt",
-                "--receipt-command",
-                "pytest -q tests/test_upgrade_replay.py",
-                "--receipt-result",
-                "passed",
-                "--receipt-plan",
-                "upgrade-replay",
-                "--receipt-claim-sufficiency",
-                "sufficient",
+                *changed_paths,
+                "--task",
+                task,
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    proof_payload = json.loads(capsys.readouterr().out)
-    assert proof_payload["receipt"]["result"] == "passed"
+    proof_selection = json.loads(capsys.readouterr().out)
+    selected_next_command = str(proof_selection.get("next", {}).get("command") or "").strip()
+    required_commands = proof_selection.get("required_commands") or ([selected_next_command] if selected_next_command else [])
+    assert required_commands, proof_selection
+    for command in required_commands:
+        assert (
+            cli.main(
+                [
+                    "proof",
+                    "--target",
+                    str(tmp_path),
+                    "--changed",
+                    *changed_paths,
+                    "--record-receipt",
+                    "--receipt-command",
+                    command,
+                    "--receipt-result",
+                    "passed",
+                    "--receipt-claim-sufficiency",
+                    "sufficient",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        direct_proof = json.loads(capsys.readouterr().out)
+        assert direct_proof["receipt"]["result"] == "passed"
+    assert live_execplans() == [], "direct upgrade/proof must not synthesize Planning state"
 
     residue_owner = "GitHub issue #2371"
     assert (
         cli.main(
             [
-                "planning",
-                "closeout",
-                "upgrade-replay",
+                "report",
                 "--target",
                 str(tmp_path),
-                "--claim-level",
-                "slice",
-                "--intent-status",
-                "satisfied",
-                "--residue",
-                "issue",
-                "--residue-owner",
-                residue_owner,
-                "--proof-from",
-                "last",
-                "--what-happened",
-                "Completed the bounded downstream upgrade replay.",
-                "--scope-touched",
-                "installed payload, health, proof, and bounded closeout",
-                "--changed-surfaces",
-                "docs/upgrade.md",
-                "--review-summary",
-                "The upgrade slice is proved; parent issue residue remains routed.",
-                "--outcome-summary",
-                "Bounded upgrade slice completed with parent continuation.",
+                "--section",
+                "closeout_trust",
+                "--task",
+                task,
+                "--changed",
+                *changed_paths,
                 "--format",
                 "json",
             ]
         )
         == 0
     )
-    json.loads(capsys.readouterr().out)
-    closeout_evidence = json.loads(
-        (tmp_path / ".agentic-workspace" / "planning" / "closeout-evidence" / "upgrade-replay.closeout.json").read_text(encoding="utf-8")
+    closeout_answer = json.loads(capsys.readouterr().out)["answer"]
+    direct_closeout = closeout_answer["current_task_closeout"]
+    assert direct_closeout["status"] == "active"
+    assert direct_closeout["scope"]["relationship"] == "bounded-current-task"
+    assert direct_closeout["scope"]["changed_paths"] == changed_paths
+    assert direct_closeout["proof_state"]["status"] == "recorded-and-accepted", direct_closeout["proof_state"]
+    direct_terminal = cli._direct_task_terminal_outcome_contract(
+        closeout_trust=closeout_answer, residue_kind="issue", residue_owner=residue_owner
     )
-    assert closeout_evidence["residual"] == {"status": "open", "owner": residue_owner}
+    assert direct_terminal.get("direct_task_closeout"), direct_terminal
     assert live_execplans() == []
 
     assert (
@@ -6132,7 +6121,15 @@ def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp
                 "--claim-class",
                 "slice-complete",
                 "--claim-scope-id",
-                "closeout_trust:slice_complete",
+                "direct_task_closeout:slice_complete",
+                "--task",
+                task,
+                "--changed",
+                *changed_paths,
+                "--residue",
+                "issue",
+                "--residue-owner",
+                residue_owner,
                 "--format",
                 "json",
             ]
@@ -6140,12 +6137,16 @@ def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp
         == 0
     )
     bounded = json.loads(capsys.readouterr().out)
-    assert bounded["status"] == "accepted_bounded_report"
+    assert "direct_task_closeout" in bounded["terminal_outcome_contract"], bounded["terminal_outcome_contract"]
+    assert bounded["status"] == "accepted_bounded_report", bounded
     report = bounded["admission"]["authoritative_response"]
     assert report["claim_class"] == "slice_complete"
     assert report["larger_intent"]["completion_authorized"] is False
-    assert report["residue"] == {"status": "routed", "owner": residue_owner}
+    assert report["residue"] == {"kind": "issue", "status": "routed", "owner": residue_owner}
+    assert report["proof"]["status"] == "recorded-and-accepted"
     assert bounded["admission"]["attempt"]["model_authored_text_admission"]["admitted"] is False
+    assert bounded["terminal_outcome_contract"]["direct_task_closeout"]["planning_record_required"] is False
+    assert live_execplans() == [], "direct closeout/final-response admission must remain plan-free"
 
     terminal = bounded["terminal_outcome_contract"]
     rejected = cli._terminal_final_response_admission(

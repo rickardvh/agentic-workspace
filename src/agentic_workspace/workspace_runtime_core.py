@@ -58257,7 +58257,9 @@ def _executor_binding_change_guard(
     }
 
 
-def _final_response_closeout_trust_for_admission(*, target_root: Path) -> tuple[dict[str, Any], WorkspaceConfig]:
+def _final_response_closeout_trust_for_admission(
+    *, target_root: Path, task_text: str = "", changed_paths: list[str] | None = None
+) -> tuple[dict[str, Any], WorkspaceConfig]:
     descriptors = _module_operations()
     _validate_descriptor_contract(descriptors)
     config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
@@ -58281,6 +58283,10 @@ def _final_response_closeout_trust_for_admission(*, target_root: Path) -> tuple[
         "--format",
         "json",
     ]
+    if changed_paths:
+        report_command.extend(["--changed", *changed_paths])
+    if task_text:
+        report_command.extend(["--task", task_text])
     with contextlib.suppress(OSError, subprocess.SubprocessError, json.JSONDecodeError, UnicodeDecodeError):
         completed = subprocess.run(
             report_command,
@@ -58295,17 +58301,18 @@ def _final_response_closeout_trust_for_admission(*, target_root: Path) -> tuple[
             answer = _as_dict(_as_dict(routed_payload).get("answer"))
             if answer:
                 return (answer, config)
-    routed = _run_lazy_report_section_command(
-        target_root=target_root,
-        selected_modules=selected_modules,
-        resolved_preset=_resolved_preset,
-        config=config,
-        section="closeout_trust",
-    )
-    if routed:
-        answer = _as_dict(routed.get("answer"))
-        if answer:
-            return (answer, config)
+    if not changed_paths and not task_text:
+        routed = _run_lazy_report_section_command(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            resolved_preset=_resolved_preset,
+            config=config,
+            section="closeout_trust",
+        )
+        if routed:
+            answer = _as_dict(routed.get("answer"))
+            if answer:
+                return (answer, config)
     module_reports = _selected_module_reports(target_root=target_root, selected_modules=selected_modules)
     return (
         _report_closeout_trust_payload(
@@ -58313,8 +58320,132 @@ def _final_response_closeout_trust_for_admission(*, target_root: Path) -> tuple[
             target_root=target_root,
             config=config,
             cli_invoke=config.cli_invoke,
+            task_text=task_text,
+            changed_paths=changed_paths,
         ),
         config,
+    )
+
+
+_DIRECT_CLOSEOUT_RESIDUE_KINDS = {"issue", "planning", "memory", "docs", "review", "none"}
+
+
+def _direct_task_terminal_outcome_contract(*, closeout_trust: dict[str, Any], residue_kind: str, residue_owner: str) -> dict[str, Any]:
+    current_task_closeout = _as_dict(closeout_trust.get("current_task_closeout"))
+    scope = _as_dict(current_task_closeout.get("scope"))
+    proof_state = _as_dict(current_task_closeout.get("proof_state"))
+    proof_execution = _as_dict(proof_state.get("proof_execution_evidence"))
+    receipt_reconciliation = _as_dict(proof_execution.get("receipt_reconciliation"))
+    if proof_state.get("status") == "recorded-and-accepted" and not receipt_reconciliation:
+        receipt_reconciliation = {
+            "status": "accepted",
+            "source": "current_task_closeout.proof_state.status",
+            "rule": "The compact closeout projection preserves the result of exact proof-receipt reconciliation.",
+        }
+    normalized_residue_kind = str(residue_kind or "").strip().lower()
+    normalized_residue_owner = str(residue_owner or "").strip()
+    if (
+        current_task_closeout.get("status") != "active"
+        or scope.get("relationship") != "bounded-current-task"
+        or proof_state.get("status") != "recorded-and-accepted"
+        or receipt_reconciliation.get("status") != "accepted"
+        or normalized_residue_kind not in _DIRECT_CLOSEOUT_RESIDUE_KINDS
+        or normalized_residue_kind == "none"
+        or not normalized_residue_owner
+    ):
+        return {}
+    changed_paths = [str(path).strip() for path in _list_payload(scope.get("changed_paths")) if str(path).strip()]
+    if not changed_paths:
+        return {}
+    completion_gate = {
+        "kind": "agentic-workspace/completion-gate/v1",
+        "status": "continue-required",
+        "active_intent_satisfied": False,
+        "human_accepted_partial": False,
+        "claim_level_allowed": "slice-complete",
+        "required_next_action": "continue-routed-residue",
+        "claim_authorization": {
+            "allowed_claim_classes": ["slice_complete"],
+            "blocked_claim_classes": [
+                "lane_complete",
+                "parent_complete",
+                "full_intent_complete",
+                "issue_closure",
+            ],
+        },
+        "residual_intent": "The larger intent remains open with the structured continuation owner.",
+        "continuation": {
+            "created_or_required": True,
+            "owner_surface": normalized_residue_owner,
+            "residue_kind": normalized_residue_kind,
+        },
+    }
+    completion_options = [
+        {
+            "id": "claim-slice-complete",
+            "allowed": True,
+            "why": "An exact accepted current-task proof receipt and structured residue owner support a bounded slice report.",
+            "required_claim_class": "slice_complete",
+            "continuation_owner": normalized_residue_owner,
+            "residue": {"kind": normalized_residue_kind, "status": "routed", "owner": normalized_residue_owner},
+        },
+        {
+            "id": "keep-parent-open",
+            "allowed": True,
+            "why": "The direct slice is complete while broader intent remains explicitly open.",
+            "owner": normalized_residue_owner,
+        },
+    ]
+    terminal = _terminal_outcome_contract_payload(
+        completion_gate=completion_gate,
+        completion_options=completion_options,
+        recommended_next_action="continue-routed-residue",
+        source_surface="direct_task_closeout",
+    )
+    for authorization in _list_payload(terminal.get("bounded_claim_authorizations")):
+        if not isinstance(authorization, dict) or authorization.get("claim_class") != "slice_complete":
+            continue
+        authorization["source"] = "current_task_closeout.proof_state+final_response.structured_residue"
+        authorization["proof_authority"] = {
+            "status": proof_state.get("status"),
+            "receipt_reconciliation": receipt_reconciliation,
+            "changed_paths": changed_paths,
+        }
+        report = _as_dict(authorization.get("report"))
+        report["residue"] = {
+            "kind": normalized_residue_kind,
+            "status": "routed",
+            "owner": normalized_residue_owner,
+        }
+        report["proof"] = {
+            "status": "recorded-and-accepted",
+            "changed_paths": changed_paths,
+            "authority": "current-task-proof-receipt-reconciliation",
+        }
+        authorization["report"] = report
+    terminal["direct_task_closeout"] = {
+        "kind": "agentic-workspace/direct-task-closeout-authority/v1",
+        "status": "authorized",
+        "planning_record_required": False,
+        "proof_state": "recorded-and-accepted",
+        "changed_paths": changed_paths,
+        "residue": {"kind": normalized_residue_kind, "owner": normalized_residue_owner},
+        "rule": "Direct slice authority comes from exact proof receipt reconciliation plus structured residue ownership; it cannot authorize broader completion.",
+    }
+    return terminal
+
+
+def _final_response_terminal_contract(*, closeout_trust: dict[str, Any], residue_kind: str = "", residue_owner: str = "") -> dict[str, Any]:
+    direct_terminal = _direct_task_terminal_outcome_contract(
+        closeout_trust=closeout_trust,
+        residue_kind=residue_kind,
+        residue_owner=residue_owner,
+    )
+    if direct_terminal:
+        return direct_terminal
+    return _as_dict(
+        closeout_trust.get("terminal_outcome_contract")
+        or _as_dict(closeout_trust.get("closeout_protocol")).get("terminal_outcome_contract")
     )
 
 
@@ -58560,10 +58691,16 @@ def _run_final_response_executor_loop(
                 f"--executor-command failed with exit code {result.returncode}: {(result.stderr or result.stdout or '').strip()[:500]}"
             )
 
-        closeout_trust, _config = _final_response_closeout_trust_for_admission(target_root=target_root)
-        terminal_outcome_contract = _as_dict(
-            closeout_trust.get("terminal_outcome_contract")
-            or _as_dict(closeout_trust.get("closeout_protocol")).get("terminal_outcome_contract")
+        task_text = str(getattr(args, "task", "") or "").strip()
+        changed_paths = _changed_surface_paths(getattr(args, "changed", None))
+        closeout_kwargs: dict[str, Any] = {"target_root": target_root}
+        if task_text or changed_paths:
+            closeout_kwargs.update({"task_text": task_text, "changed_paths": changed_paths})
+        closeout_trust, _config = _final_response_closeout_trust_for_admission(**closeout_kwargs)
+        terminal_outcome_contract = _final_response_terminal_contract(
+            closeout_trust=closeout_trust,
+            residue_kind=str(getattr(args, "residue", "") or "").strip(),
+            residue_owner=str(getattr(args, "residue_owner", "") or "").strip(),
         )
         before_state = _final_response_admission_checkpoint_state(target_root=target_root)
 
@@ -58704,6 +58841,15 @@ def _run_final_response_admit_adapter(args: argparse.Namespace) -> int:
     attempt_source = str(getattr(args, "source", "") or "model-authored-final-response").strip()
     claim_class = str(getattr(args, "claim_class", "") or "terminal_final").strip()
     claim_scope_id = str(getattr(args, "claim_scope_id", "") or "").strip()
+    task_text = str(getattr(args, "task", "") or "").strip()
+    changed_paths = _changed_surface_paths(getattr(args, "changed", None))
+    residue_kind = str(getattr(args, "residue", "") or "").strip().lower()
+    residue_owner = str(getattr(args, "residue_owner", "") or "").strip()
+    direct_closeout_requested = bool(task_text or changed_paths or residue_kind or residue_owner)
+    if direct_closeout_requested and not (task_text and changed_paths and residue_kind and residue_owner):
+        raise WorkspaceUsageError("Direct final-response closeout requires --task, --changed, --residue, and --residue-owner together.")
+    if residue_kind and residue_kind not in _DIRECT_CLOSEOUT_RESIDUE_KINDS - {"none"}:
+        raise WorkspaceUsageError("--residue must be one of: docs, issue, memory, planning, review.")
     executor_command = str(getattr(args, "executor_command", "") or "").strip()
     if executor_command:
         payload = _run_final_response_executor_loop(
@@ -58714,10 +58860,14 @@ def _run_final_response_admit_adapter(args: argparse.Namespace) -> int:
         )
         _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
         return 0
-    closeout_trust, _config = _final_response_closeout_trust_for_admission(target_root=target_root)
-    terminal_outcome_contract = _as_dict(
-        closeout_trust.get("terminal_outcome_contract")
-        or _as_dict(closeout_trust.get("closeout_protocol")).get("terminal_outcome_contract")
+    closeout_kwargs: dict[str, Any] = {"target_root": target_root}
+    if task_text or changed_paths:
+        closeout_kwargs.update({"task_text": task_text, "changed_paths": changed_paths})
+    closeout_trust, _config = _final_response_closeout_trust_for_admission(**closeout_kwargs)
+    terminal_outcome_contract = _final_response_terminal_contract(
+        closeout_trust=closeout_trust,
+        residue_kind=residue_kind,
+        residue_owner=residue_owner,
     )
     before_state = _final_response_admission_checkpoint_state(target_root=target_root)
     attempt_file = str(getattr(args, "attempt_file", "") or "").strip()
