@@ -1,0 +1,74 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "pr-2537-ci-schema-reference",
+  "title": "Repair PR 2537 schema reference CI",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 3,
+  "intent": {
+    "outcome": "Regenerate the stale correction-event schema reference so PR #2537's Planning package check passes.",
+    "non_goals": [
+      "Do not change correction-event behavior or schemas.",
+      "Do not address the independent review-approval gate or merge the PR."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Restore generated schema-reference freshness for PR #2537.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "docs/reference/correction-event-input.md",
+      ".agentic-workspace/planning/execplans/pr-2537-ci-schema-reference.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "effects": [
+      "Regenerate the checked-in correction-event input reference from its canonical schema."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "current",
+      "refs": [
+        "make schema-reference-docs: passed",
+        "isolated Windows timing regression rerun: passed",
+        "git diff --check: passed"
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    "PR #2537",
+    "GitHub Actions run 31804309764",
+    "package-checks (planning, agentic-workspace-planning)"
+  ],
+  "next_action": "Push the regenerated reference to PR #2537 and await exact-head CI; the independent review gate remains outside this slice.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "docs/reference/correction-event-input.md matches the current canonical schema.",
+      "The Planning schema-reference freshness check passes."
+    ],
+    "requirements": [
+      "make schema-reference-docs",
+      "git diff --check"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": []
+}
