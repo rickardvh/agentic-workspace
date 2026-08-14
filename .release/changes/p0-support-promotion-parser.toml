@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Accept canonical Node runtime versions in support-bearing promotion receipts."
