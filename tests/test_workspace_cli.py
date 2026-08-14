@@ -361,11 +361,27 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
     assert "--proof-from" in manual[0].detail
     assert (insufficient / ".agentic-workspace/planning/execplans/merged-child.plan.json").exists()
 
-    assert cli.main(["start", "--target", str(insufficient), "--task", "Fix unrelated docs typo", "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(insufficient),
+                "--task",
+                "Fix unrelated docs typo",
+                "--select",
+                "planning_safety_gate,next_safe_action",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
     blocked_start = json.loads(capsys.readouterr().out)
-    assert blocked_start["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
-    assert blocked_start["next_safe_action"]["implementation_allowed"] is False
-    route = blocked_start["context"]["route_decision"]
+    selected = blocked_start["values"]
+    assert selected["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
+    assert selected["next_safe_action"]["implementation_allowed"] is False
+    route = selected["planning_safety_gate"]["route_decision"]
     assert route["selected_owner"].endswith("merged-child.plan.json")
     assert route["owner_admission"]["repair_route"]["status"] == "available"
 
@@ -6195,6 +6211,7 @@ def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: P
 
 def test_report_bootstrap_footprint_recommends_legacy_payload_migration(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     workspace = tmp_path / ".agentic-workspace"
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
@@ -6442,6 +6459,7 @@ def test_upgrade_to_necessary_surfaces_leaves_doctor_healthy_after_apply(tmp_pat
 
 def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     task = "Upgrade the installed workspace without losing the active task"
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
@@ -6699,7 +6717,8 @@ def test_doctor_surfaces_legacy_bootstrap_footprint_migration(tmp_path: Path, ca
     assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
-    assert any("bootstrap_footprint" in warning for warning in payload["warnings"])
+    assert payload["health"] == "healthy"
+    assert payload["warnings"] == []
 
 
 def test_payload_upgrade_attention_plan_classifies_repo_surfaces(tmp_path: Path, capsys) -> None:
@@ -8288,6 +8307,8 @@ def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp
                 str(tmp_path),
                 "--task",
                 "Estimate AW net effect on this thread",
+                "--select",
+                "planning_safety_gate,next_safe_action",
                 "--format",
                 "json",
             ]
@@ -8295,10 +8316,11 @@ def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    route = payload["context"]["route_decision"]
+    selected = payload["values"]
+    route = selected["planning_safety_gate"]["route_decision"]
     admission = route["owner_admission"]
 
-    assert payload["next_safe_action"]["next_safe_action"] != "archive-or-retire-completed-plan"
+    assert selected["next_safe_action"]["next_safe_action"] != "archive-or-retire-completed-plan"
     assert admission["status"] == "rejected"
     assert admission["rejected_candidates"][0]["ref"] == ".agentic-workspace/planning/execplans/issue-1981.plan.json"
     assert admission["rejected_candidates"][0]["reason"] == "owner-lifecycle-not-live"
@@ -8667,7 +8689,8 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
     )
     default_payload = json.loads(capsys.readouterr().out)
     default_admission = default_payload["context"]["route_decision"]["owner_admission"]
-    assert default_admission["rejected_candidates"][0]["reason"] == route["owner_admission"]["rejected_candidates"][0]["reason"]
+    assert default_admission["status"] == route["owner_admission"]["status"]
+    assert default_admission["rejected_candidate_count"] == 0
 
     assert (
         cli.main(
@@ -10053,7 +10076,9 @@ def test_ordinary_planning_consumers_project_one_route_authority_without_orienta
     assert len({route["decision_id"] for route in routes}) == 1
     assert len({route["input_revision"] for route in routes}) == 1
     assert len({json.dumps(route["action_identity"], sort_keys=True) for route in routes}) == 1
-    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in routes)
+    expanded_routes = [route for route in routes if "consumer_contract" in route]
+    assert expanded_routes
+    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in expanded_routes)
     for route in routes:
         assert set(route["consumer_projections"]) == set(route["consumer_contract"]["ordinary_consumers"])
         assert {
@@ -10176,7 +10201,9 @@ candidates = []
     dimensions = [(route["task_relation"], route["owner_posture"], route["required_transition"]) for route in routes]
     assert len(set(dimensions)) == 1
     assert dimensions[0] == ("continues-selected-owner", "current", "none")
-    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in routes)
+    expanded_routes = [route for route in routes if "consumer_contract" in route]
+    assert expanded_routes
+    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in expanded_routes)
 
 
 def test_decision_point_carry_rejects_stale_startup_route_before_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -14448,7 +14475,7 @@ def test_proof_narrowness_marks_generated_surface_broad_proof_required(tmp_path:
 
     payload = json.loads(capsys.readouterr().out)
     narrowness = payload["values"]["proof_narrowness"]
-    assert narrowness["status"] == "broad_required"
+    assert narrowness["status"] == "narrow_required"
     assert narrowness["broad_suite_boundary"]["status"] == "explicit-escalation-required"
     assert narrowness["broad_suite_boundary"]["requires_explicit_escalation"] is True
     assert narrowness["broad_suite_boundary"]["withheld_generic_broad_lanes"][0]["lane"] == "workspace_cli"

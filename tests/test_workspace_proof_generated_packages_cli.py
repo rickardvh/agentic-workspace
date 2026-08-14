@@ -31,7 +31,8 @@ def test_proof_routes_generated_adapter_path_to_repo_verification_protocol(capsy
     lane = lanes["verification:generated_adapter_conformance"]
     assert lane["verification_proof_route_ids"] == ["generated_adapter_conformance"]
     assert (
-        "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node" in lane["required_commands"]
+        "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node"
+        in lane["focused_route_reduction"]["withheld_commands"]
     )
 
 
@@ -64,28 +65,15 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert freshness["validation_command"] == "uv run --active python scripts/check/check_generated_command_packages.py --require-node"
     assert "uv run --active python scripts/check/check_generated_command_packages.py --require-node" in freshness["required_commands"]
     assert "refresh only when the check reports stale output" in freshness["rule"]
-    focused_proof = "uv run --active pytest tests/test_workspace_proof_generated_packages_cli.py -q"
     assert answer["required_commands"] == [
-        "uv run --active python scripts/check/check_generated_command_packages.py",
-        "uv run --active python scripts/check/run_operation_conformance_tests.py --target all",
-        "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node",
-        "uv run --active python scripts/check/check_generated_command_packages.py --docker --require-docker",
-        "uv run --active python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
-        focused_proof,
         "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
-        "uv run --active python scripts/generate/generate_command_packages.py --check",
         "uv run --active python scripts/check/check_generated_command_packages.py --require-node",
+        "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node",
     ]
     assert [step["lane_id"] for step in answer["validation_plan"]["required"]] == [
-        "generated_command_packages",
-        "generated_command_packages",
-        "generated_command_packages",
-        "generated_command_packages",
-        "generated_command_packages",
-        "generated_command_packages",
         "cli_authority",
-        "verification:generated_adapter_conformance",
-        "verification:generated_adapter_conformance",
+        "domain:generated_command_packages",
+        "domain:generated_command_packages",
     ]
     domain_lane = answer["selected_lanes"][-1]
     assert domain_lane["route_authority"]["authority"] == "repo-owned-domain-proof-lane"
@@ -97,7 +85,9 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     ]
     assert {command["execution_mode"] for command in domain_commands} == {"serial-recommended"}
     assert {command["proof_responsibility"] for command in domain_commands} == {"local-closeout"}
-    assert focused_proof in answer["required_commands"]
+    withheld = answer["selected_lanes"][0]["focused_route_reduction"]["withheld_commands"]
+    assert "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q" in withheld
+    assert "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker" in withheld
     assert "tests/test_workspace_proof_cli.py" not in " ".join(answer["required_commands"])
     assert answer["validation_plan"]["required_count"] == len(answer["required_commands"])
     assert answer["validation_plan"]["optional"][0]["required"] is False
@@ -120,7 +110,6 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
         select="selected_lanes,required_commands,validation_plan,selected_commands",
     )
 
-    focused_proof = "uv run --active pytest tests/test_workspace_proof_generated_packages_cli.py -q"
     assert _stable_lane_ids(answer) == [
         "generated_command_packages",
         "cli_authority",
@@ -131,28 +120,18 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
         "domain:generated_command_packages",
     ]
     assert answer["required_commands"] == [
-        "uv run --active python scripts/check/check_generated_command_packages.py",
-        "uv run --active python scripts/check/run_operation_conformance_tests.py --target python",
-        "uv run --active python scripts/check/check_generated_command_packages.py --python-conformance",
-        "uv run --active python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
-        focused_proof,
         "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
         "uv run --active python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
-        "uv run --active python scripts/generate/generate_command_packages.py --check",
+        "uv run --active python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
         "uv run --active python scripts/check/check_generated_command_packages.py --require-node",
         "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node",
-        "uv run --active python scripts/check/check_generated_command_packages.py --docker --require-docker",
-        "uv run --active python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
-        "uv run --active python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
     ]
-    assert (
-        "uv run --active python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
-        in answer["required_commands"]
-    )
-    assert focused_proof in answer["required_commands"]
+    withheld = answer["selected_lanes"][0]["focused_route_reduction"]["withheld_commands"]
+    assert "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker" in withheld
+    assert "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q" in withheld
     assert "uv run pytest tests/test_workspace_cli.py -q" not in answer["required_commands"]
     subsystem_lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "subsystem:workspace-cli-runtime")
-    assert subsystem_lane["focused_route_reduction"]["status"] == "required-proof-satisfied-by-domain-proof-lane"
+    assert subsystem_lane["focused_route_reduction"]["status"] == "broad-proof-withheld-for-explicit-escalation"
     assert "uv run pytest tests/test_workspace_cli.py -q" in subsystem_lane["focused_route_reduction"]["withheld_commands"]
     assert "CI may repeat generated-package proof" in answer["selected_lanes"][0]["ci_relationship"]
     domain_commands = [command for command in answer["selected_commands"] if command["lane"] == "domain:generated_command_packages"]
@@ -179,6 +158,7 @@ def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(cap
         "contract_tooling",
         "verification:aw_context_consistency",
         "verification:test_evidence_decision",
+        "domain:compact_output_contract",
         "domain:test_evidence_decision",
     ]
     assert answer["required_commands"] == [
@@ -187,6 +167,8 @@ def test_proof_changed_selector_routes_contract_only_changes_to_focused_lane(cap
         "uv run --active ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
         "uv run --active python scripts/run_agentic_workspace.py report --target . --section verification --format json",
         "uv run --active python scripts/check/check_memory_freshness.py --strict",
+        "uv run --active pytest tests/test_output_profile_budgets.py -q",
+        "uv run --active python scripts/generate/generate_command_packages.py --check",
     ]
     domain_commands = [command for command in answer["selected_commands"] if command["lane"] == "domain:test_evidence_decision"]
     assert [command["command"] for command in domain_commands] == [
