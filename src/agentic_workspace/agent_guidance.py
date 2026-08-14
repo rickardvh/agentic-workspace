@@ -124,8 +124,14 @@ def _semantic_correction_identity(*, event: dict[str, Any], subject: dict[str, A
         applicability = {}
     semantic = {
         "target_identity_ref": str(subject.get("stable_target_id") if subject is not None else target_ref),
+        "target_revision": str(event.get("target_revision") or applicability.get("target_revision") or ""),
         "task_class": str(event.get("task_class") or applicability.get("task_class") or ""),
         "scope_class": str(event.get("scope_class") or applicability.get("scope_class") or event.get("task_class") or ""),
+        "phase": str(event.get("phase") or applicability.get("phase") or ""),
+        "subsystem": str(event.get("subsystem") or applicability.get("subsystem") or ""),
+        "surface": str(event.get("surface") or applicability.get("surface") or ""),
+        "repository": str(event.get("repository") or applicability.get("repository") or ""),
+        "role": str(event.get("role") or applicability.get("role") or ""),
         "invariant_id": str(event.get("invariant_id") or event.get("semantic_invariant") or applicability.get("invariant_id") or ""),
         "behavior_class": str(event.get("behavior_class") or applicability.get("behavior_class") or ""),
         "applies_when": applicability.get("applies_when") or event.get("applies_when") or [],
@@ -2645,7 +2651,17 @@ def apply_guidance_lifecycle_operation(
 def _guidance_context_match(*, applicability: dict[str, Any], context: dict[str, str]) -> tuple[str, list[str]]:
     reasons: list[str] = []
     unknown: list[str] = []
-    for field in ("target_identity_ref", "task_class", "scope_class", "repository", "role", "phase"):
+    for field in (
+        "target_identity_ref",
+        "target_revision",
+        "task_class",
+        "scope_class",
+        "repository",
+        "role",
+        "phase",
+        "subsystem",
+        "surface",
+    ):
         expected = applicability.get(field)
         expected_values = _guidance_string_list(expected)
         if not expected_values:
@@ -2675,20 +2691,26 @@ def route_agent_guidance(
     *,
     target_root: Path,
     target_identity_ref: str,
+    target_revision: str = "",
     task_class: str = "",
     scope_class: str = "",
     repository: str = "",
     role: str = "",
     phase: str = "",
+    subsystem: str = "",
+    surface: str = "",
 ) -> dict[str, Any]:
     """Select the smallest current guidance bundle for one structured decision context."""
     context = {
         "target_identity_ref": target_identity_ref.strip(),
+        "target_revision": target_revision.strip(),
         "task_class": task_class.strip(),
         "scope_class": scope_class.strip(),
         "repository": repository.strip(),
         "role": role.strip(),
         "phase": phase.strip(),
+        "subsystem": subsystem.strip(),
+        "surface": surface.strip(),
     }
     stores = _candidate_guidance_store_refs(target_root=target_root, config=load_workspace_config(target_root=target_root))
     matched: list[dict[str, Any]] = []
@@ -2716,6 +2738,8 @@ def route_agent_guidance(
                     "task_class": applicability.get("task_class", ""),
                     "scope_class": applicability.get("scope_class", ""),
                     "phase": applicability.get("phase", ""),
+                    "subsystem": applicability.get("subsystem", ""),
+                    "surface": applicability.get("surface", ""),
                 },
                 "observation_required": True,
                 "precedence": "current user instruction and checked-in repo authority override target guidance",
@@ -2752,8 +2776,44 @@ _GUIDANCE_COMPLIANCE_OUTCOMES = {
 _GUIDANCE_OBSERVATION_AUTHORITY = {"agent-self-report": 0, "aw-owned-proof": 2, "review": 3, "human": 4}
 
 
-def guidance_consequence_decision(*, observations: list[dict[str, Any]], guidance_id: str) -> dict[str, Any]:
-    relevant = [item for item in observations if str(item.get("guidance_id") or "") == guidance_id]
+_GUIDANCE_CONSEQUENCE_CONTEXT_FIELDS = (
+    "target_identity_ref",
+    "target_revision",
+    "task_class",
+    "scope_class",
+    "phase",
+    "subsystem",
+    "surface",
+)
+
+
+def guidance_consequence_decision(
+    *,
+    observations: list[dict[str, Any]],
+    guidance_id: str,
+    target_identity_ref: str,
+    target_revision: str,
+    task_class: str,
+    scope_class: str,
+    phase: str,
+    subsystem: str,
+    surface: str,
+) -> dict[str, Any]:
+    context = {
+        "target_identity_ref": target_identity_ref,
+        "target_revision": target_revision,
+        "task_class": task_class,
+        "scope_class": scope_class,
+        "phase": phase,
+        "subsystem": subsystem,
+        "surface": surface,
+    }
+    same_guidance = [item for item in observations if str(item.get("guidance_id") or "") == guidance_id]
+    relevant = [
+        item
+        for item in same_guidance
+        if all(str(item.get(field) or "").strip() == str(context[field] or "").strip() for field in _GUIDANCE_CONSEQUENCE_CONTEXT_FIELDS)
+    ]
     attributable = [
         item
         for item in relevant
@@ -2785,6 +2845,9 @@ def guidance_consequence_decision(*, observations: list[dict[str, Any]], guidanc
         "kind": "agentic-workspace/guidance-consequence-decision/v1",
         "status": level,
         "guidance_id": guidance_id,
+        "context": context,
+        "same_context_observation_count": len(relevant),
+        "excluded_cross_context_observation_count": len(same_guidance) - len(relevant),
         "decisive_evidence_ids": [item.get("observation_id") for item in attributable],
         "recovery_evidence_ids": [item.get("observation_id") for item in recovery],
         "excluded_cause_counts": {
@@ -2813,6 +2876,8 @@ def observe_agent_guidance(
     task_class: str,
     scope_class: str,
     phase: str,
+    subsystem: str,
+    surface: str,
     cause_class: str = "target-behavior",
     human_authorized_prohibition: bool = False,
 ) -> dict[str, Any]:
@@ -2829,6 +2894,8 @@ def observe_agent_guidance(
         "task_class": task_class,
         "scope_class": scope_class,
         "phase": phase,
+        "subsystem": subsystem,
+        "surface": surface,
         "cause_class": cause_class,
     }
     observation_id = "guidance-observation:" + _json_digest(identity)[:24]
@@ -2863,7 +2930,17 @@ def observe_agent_guidance(
         "kind": "agentic-workspace/guidance-compliance-result/v1",
         "status": status,
         "observation": observation,
-        "consequence": guidance_consequence_decision(observations=observations, guidance_id=guidance_id),
+        "consequence": guidance_consequence_decision(
+            observations=observations,
+            guidance_id=guidance_id,
+            target_identity_ref=target_identity_ref,
+            target_revision=target_revision,
+            task_class=task_class,
+            scope_class=scope_class,
+            phase=phase,
+            subsystem=subsystem,
+            surface=surface,
+        ),
         "storage": {
             "path": GUIDANCE_OBSERVATION_STORE_PATH.as_posix(),
             "checked_in": False,
