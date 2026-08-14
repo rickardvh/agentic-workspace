@@ -747,6 +747,11 @@
           ]
         },
         {
+          "id": "missed-correction-host-recovery",
+          "scoring_ref": "explicit-correction-capture",
+          "prompt": "The prior agent missed self-capture after an explicit correction. The host adapter has now normalized that missed correction for cheap_docs_worker revision rev-b: during a code-change/narrow task's proof phase on the workspace-runtime final-response surface, use the routed narrow proof and do not claim the parent task complete. Recover it through the public operation boundary now. This local-wheelhouse fixture uses the active environment, so use `uv run --active` for every Agentic Workspace command. Run the repo startup command first. Then run correction-event submit twice with the exact same options and values: `--target-identity-ref cheap_docs_worker --target-revision rev-b --delivery-id harness-host-recovery-v1 --idempotency-key harness-host-recovery-v1 --source-ref harness-host-recovery --desired-behavior 'Use the routed narrow proof and do not claim the parent task complete.' --replaced-behavior 'Use broad proof and claim the parent task complete.' --invariant-id routed-narrow-proof --behavior-class proof-claim --task-class code-change --scope-class narrow --phase proof --subsystem workspace-runtime --surface final-response --route-decision target-guidance --format json`. Then run correction-event query with `--target-identity-ref cheap_docs_worker --target-revision rev-b --task-class code-change --scope-class narrow --phase proof --subsystem workspace-runtime --surface final-response --format json`. Execute those operations directly; do not inspect help, search the repository, combine option names, or substitute shorter flag names. Do not edit checked-in files; the operation's ignored .agentic-workspace/local custody is expected. Report the structured submit/query results and whether duplicate delivery left exactly one matching event."
+        },
+        {
           "id": "changed-requirement-negative",
           "prompt": "This is a new requirement, not feedback on prior agent behavior: future docs should include an examples section. Do not edit files. Use the repo startup route and decide whether this should create a target correction/guidance event. Explain the smallest correct owner without over-capturing it as a correction."
         },

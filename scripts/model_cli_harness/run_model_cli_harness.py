@@ -359,6 +359,21 @@ def _prompt_variants(scenario: dict[str, Any], *, requested: str | None = None) 
             if not isinstance(prompt_text, str):
                 raise ValueError(f"scenario '{scenario.get('id', '<unknown>')}' prompt variant '{variant_id}' needs text")
             variants.append({**raw_variant, "id": variant_id, "prompt": prompt_text})
+        variants_by_id = {variant["id"]: variant for variant in variants}
+        resolved_variants = []
+        for variant in variants:
+            scoring_ref = str(variant.get("scoring_ref") or "")
+            if not scoring_ref:
+                resolved_variants.append(variant)
+                continue
+            scoring_source = variants_by_id.get(scoring_ref)
+            if scoring_source is None:
+                raise ValueError(
+                    f"scenario '{scenario.get('id', '<unknown>')}' prompt variant '{variant['id']}' "
+                    f"references unknown scoring variant '{scoring_ref}'"
+                )
+            resolved_variants.append({**scoring_source, **variant})
+        variants = resolved_variants
     if requested is None:
         return variants[:1]
     if requested == "all":

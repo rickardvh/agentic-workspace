@@ -555,13 +555,26 @@ def test_model_cli_harness_prompt_variants_preserve_scoring_overrides() -> None:
                     "prompt": "Submit it.",
                     "forbidden_write_patterns": [],
                     "required_operation_receipts": [{"operation_id": "correction-event.submit"}],
-                }
+                },
+                {"id": "host-recovery", "prompt": "Recover it.", "scoring_ref": "submit"},
             ],
         }
     )
 
     assert variants[0]["forbidden_write_patterns"] == []
     assert variants[0]["required_operation_receipts"] == [{"operation_id": "correction-event.submit"}]
+    recovered = module._prompt_variants(
+        {
+            "id": "receipt-aware",
+            "prompt_variants": [
+                {"id": "submit", "prompt": "Submit it.", "required_artifact_patterns": ["receipt.json"]},
+                {"id": "host-recovery", "prompt": "Recover it.", "scoring_ref": "submit"},
+            ],
+        },
+        requested="host-recovery",
+    )
+    assert recovered[0]["prompt"] == "Recover it."
+    assert recovered[0]["required_artifact_patterns"] == ["receipt.json"]
 
 
 def test_model_cli_harness_requires_executed_correction_receipts_and_idempotent_local_custody(tmp_path: Path) -> None:
