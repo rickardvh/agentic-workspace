@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -10,6 +11,41 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_public_install_rehearsal_receipt_retains_exact_resolution_and_second_process_proof() -> None:
+    path = ROOT / "docs" / "maintainer" / "public-install-rehearsal-v0.40.1.json"
+    receipt = json.loads(path.read_text(encoding="utf-8"))
+
+    assert receipt["kind"] == "agentic-workspace/public-install-rehearsal/v1"
+    assert receipt["status"] == "passed"
+    assert receipt["readiness_receipt"]["sha256"] == "174ef14c13edf9a5757ef10fe91aa5a9095928a13f5386338e055d6790b177e6"
+    controlled = receipt["resolution"]["controlled_distributions"]
+    assert {item["name"] for item in controlled} == {
+        "agentic-workspace",
+        "agentic-workspace-memory",
+        "agentic-workspace-planning",
+        "agentic-workspace-verification",
+    }
+    assert {item["version"] for item in controlled} == {"0.40.1"}
+    assert all(item["url"].startswith("https://github.com/rickardvh/agentic-workspace/releases/download/v0.40.1/") for item in controlled)
+    assert all(len(item["sha256"]) == 64 for item in controlled)
+    assert receipt["resolution"]["forbidden_identity_match_count"] == 0
+    assert receipt["resolution"]["registry_resolution_used_for_controlled_distributions"] is False
+    second_process = receipt["second_process"]
+    assert second_process["bootstrap_process_exited_before_invocation"] is True
+    assert second_process["installed_executable_identity"] == {
+        "entry_point": "agentic-workspace",
+        "distribution": "agentic-workspace",
+        "version": "0.40.1",
+        "origin": "ephemeral rehearsal environment Scripts directory",
+    }
+    assert second_process["exit_code"] == 0
+    assert second_process["result_kind"] == "startup-context/v1"
+    assert second_process["durable_machine_local_path_match_count"] == 0
+    assert re.search(r"[A-Za-z]:\\\\", json.dumps(receipt)) is None
+
+
 UV = shutil.which("uv") or "uv"
 NPM = shutil.which("npm") or "npm"
 

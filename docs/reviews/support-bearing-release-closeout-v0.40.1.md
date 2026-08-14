@@ -39,6 +39,12 @@ requirement was installed into a clean CPython 3.14 environment after the
 release process had completed. Resolution installed only the coordinated,
 project-controlled distributions at version 0.40.1:
 
+The bounded machine-readable result is retained in
+[`public-install-rehearsal-v0.40.1.json`](../maintainer/public-install-rehearsal-v0.40.1.json).
+It binds the readiness receipt and root wheel by URL and SHA-256, records the
+exact four controlled distributions and their same-release hashes, and retains
+the later-process result separately from bootstrap.
+
 - `agentic-workspace`;
 - `agentic-workspace-memory`;
 - `agentic-workspace-planning`;
@@ -55,7 +61,7 @@ machine-local executable path was written as the durable distribution identity.
 
 The bounded release-critical issues #2449 through #2462 are closed, except
 issue #2452, whose final public-release and second-process evidence is recorded
-here.
+here and in the retained rehearsal receipt.
 The feature branch therefore proposes closing the #2448 Planning lane on the
 admitted merge branch through
 `.agentic-workspace/planning/integration-proposals/issue-2448-public-release-rehearsal-close-owner.integration-proposal.json`.

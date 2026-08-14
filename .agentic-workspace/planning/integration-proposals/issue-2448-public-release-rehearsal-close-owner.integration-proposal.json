@@ -10,6 +10,7 @@
   },
   "external_ref": "GitHub #2452",
   "proof_refs": [
+    "docs/maintainer/public-install-rehearsal-v0.40.1.json retains the exact readiness URL/digest, four controlled wheel URL/hash identities, forbidden-identity absence, and separate-process startup result",
     "v0.40.1 support-bearing-promotion.json passed for ddd9812dd6ac455ca546bc38568e8c68a26e6ed4",
     "v0.40.1 distribution-install-readiness.json exact URL and hashes resolved four controlled distributions at 0.40.1",
     "Fresh second process returned startup-context/v1 from the installed v0.40.1 executable",
@@ -41,5 +42,5 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "0946e834e8b50f7f"
+  "proposal_revision": "53c76ce3262c0c83"
 }
