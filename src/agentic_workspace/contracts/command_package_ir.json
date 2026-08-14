@@ -399,6 +399,21 @@
               "default": null
             },
             {
+              "name": "phase",
+              "arg": "phase",
+              "default": null
+            },
+            {
+              "name": "subsystem",
+              "arg": "subsystem",
+              "default": null
+            },
+            {
+              "name": "surface",
+              "arg": "surface",
+              "default": null
+            },
+            {
               "name": "operation",
               "arg": "operation",
               "default": "submit"
@@ -13513,6 +13528,27 @@
                     "name": "scope_class"
                   },
                   {
+                    "flags": [
+                      "--phase"
+                    ],
+                    "help": "Workflow phase applicability.",
+                    "name": "phase"
+                  },
+                  {
+                    "flags": [
+                      "--subsystem"
+                    ],
+                    "help": "Subsystem applicability.",
+                    "name": "subsystem"
+                  },
+                  {
+                    "flags": [
+                      "--surface"
+                    ],
+                    "help": "Operation or artifact surface applicability.",
+                    "name": "surface"
+                  },
+                  {
                     "action": "append",
                     "default": [],
                     "flags": [
@@ -13708,6 +13744,27 @@
                     ],
                     "help": "Scope class applicability.",
                     "name": "scope_class"
+                  },
+                  {
+                    "flags": [
+                      "--phase"
+                    ],
+                    "help": "Workflow phase applicability.",
+                    "name": "phase"
+                  },
+                  {
+                    "flags": [
+                      "--subsystem"
+                    ],
+                    "help": "Subsystem applicability.",
+                    "name": "subsystem"
+                  },
+                  {
+                    "flags": [
+                      "--surface"
+                    ],
+                    "help": "Operation or artifact surface applicability.",
+                    "name": "surface"
                   },
                   {
                     "action": "append",
@@ -14600,6 +14657,21 @@
               "arg": "scope_class",
               "default": null,
               "name": "scope_class"
+            },
+            {
+              "arg": "phase",
+              "default": null,
+              "name": "phase"
+            },
+            {
+              "arg": "subsystem",
+              "default": null,
+              "name": "subsystem"
+            },
+            {
+              "arg": "surface",
+              "default": null,
+              "name": "surface"
             },
             {
               "arg": "operation",

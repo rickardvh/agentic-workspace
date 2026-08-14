@@ -140,6 +140,77 @@
         "type": "github-issue"
       },
       "updated_at": "2026-07-25T22:02:41Z"
+    },
+    {
+      "id": "target-guidance-effectiveness-2217",
+      "revision": 1,
+      "lifecycle": "collecting",
+      "question": "Does promoted target guidance reduce repeated correction and repair cost without leaking into unrelated agents, tasks, repositories, or phases?",
+      "subject": {
+        "type": "agent-guidance-capability",
+        "ref": "#2217"
+      },
+      "criteria": [
+        {
+          "id": "selective-routing",
+          "type": "coverage",
+          "question": "Is guidance surfaced only for the matching target and structured applicability context?",
+          "success_condition": "Admitted observations cover matching and unrelated target/task/scope/repository/phase routes with no broad dump.",
+          "required": true
+        },
+        {
+          "id": "compliance-effect",
+          "type": "qualitative",
+          "question": "Does appropriate post-surfacing evidence show the desired behavior or correct escalation?",
+          "success_condition": "At least two authority-ranked observations show surfaced-followed or correct-escalation without relying on agent promise alone.",
+          "required": true
+        },
+        {
+          "id": "recovery-and-cost",
+          "type": "qualitative",
+          "question": "Do repeated violations, recovery, and retirement produce lower total repair cost with honest contextual consequences?",
+          "success_condition": "The owner reviews violation and recovery evidence, consequence transitions, unrelated-class exclusion, and ordinary no-guidance overhead.",
+          "required": true
+        }
+      ],
+      "selectors": {
+        "issue_refs": ["#2217", "#2221", "#2222", "#2223", "#2224"],
+        "operation_ids": ["correction-event.submit", "agent-guidance.promote"],
+        "skill_ids": ["workspace-operating-loop"],
+        "phases": ["planning", "implementation", "proof", "review", "closeout"]
+      },
+      "collection_policy": {
+        "mode": "local-first",
+        "minimum_observations": 5,
+        "retention": "latest-current-per-target-context-and-criterion"
+      },
+      "decision_owner": {
+        "class": "maintainer",
+        "id": "workspace-maintainer"
+      },
+      "evidence_sources": [
+        {"class": "local-guidance-observations", "id": ".agentic-workspace/local/guidance-observations.json"},
+        {"class": "review-or-human", "id": "admitted-correction-and-compliance-evidence"},
+        {"class": "aw-proof", "id": "guidance-routing-and-consequence-proof"}
+      ],
+      "report_sinks": [
+        {"class": "issue-or-report", "id": "#2217"},
+        {"class": "issue-or-report", "id": "#2224"}
+      ],
+      "conclusion_policy": {
+        "rule": "maintainer reviews all required current target/context-bound results",
+        "terminal_states": ["satisfied", "contradicted", "inconclusive", "superseded"]
+      },
+      "action_policy": {
+        "material_negative_finding": "create-or-reopen-bounded-guidance-or-orchestration-follow-up",
+        "positive_conclusion": "retain or weaken guidance using revision-guarded lifecycle operations"
+      },
+      "admission_contract": {
+        "status": "fail-closed-for-bound-results",
+        "reject_when": ["target-revision-mismatch", "guidance-not-surfaced", "unrelated-context", "self-report-only", "stale-or-superseded-guidance"]
+      },
+      "created_at": "2026-08-14T00:00:00Z",
+      "updated_at": "2026-08-14T00:00:00Z"
     }
   ],
   "kind": "agentic-workspace/evaluations/v1"

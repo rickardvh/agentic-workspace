@@ -9826,6 +9826,27 @@ const commandDefinitions = [
               "name": "scope_class"
             },
             {
+              "flags": [
+                "--phase"
+              ],
+              "help": "Workflow phase applicability.",
+              "name": "phase"
+            },
+            {
+              "flags": [
+                "--subsystem"
+              ],
+              "help": "Subsystem applicability.",
+              "name": "subsystem"
+            },
+            {
+              "flags": [
+                "--surface"
+              ],
+              "help": "Operation or artifact surface applicability.",
+              "name": "surface"
+            },
+            {
               "action": "append",
               "default": [],
               "flags": [
@@ -10021,6 +10042,27 @@ const commandDefinitions = [
               ],
               "help": "Scope class applicability.",
               "name": "scope_class"
+            },
+            {
+              "flags": [
+                "--phase"
+              ],
+              "help": "Workflow phase applicability.",
+              "name": "phase"
+            },
+            {
+              "flags": [
+                "--subsystem"
+              ],
+              "help": "Subsystem applicability.",
+              "name": "subsystem"
+            },
+            {
+              "flags": [
+                "--surface"
+              ],
+              "help": "Operation or artifact surface applicability.",
+              "name": "surface"
             },
             {
               "action": "append",

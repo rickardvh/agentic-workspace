@@ -936,6 +936,18 @@
       "storage_class": "diagnostic-fixture"
     },
     {
+      "checked_in_justification": "Maintainer-reviewed consumer inventory proving that Planning route authority is projected consistently; it does not itself select an action.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Consumer map for planning_safety_gate.route_decision and removal of legacy task-switch authority.",
+      "owner": "workspace-planning-integration",
+      "pattern": "docs/maintainer/planning-route-consumer-inventory.json",
+      "schema_or_validator": "agentic-workspace runtime validator: uv run pytest tests/test_workspace_cli.py::test_planning_route_consumer_inventory_and_degraded_capsule_are_closed_and_current",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Maintainer-reviewed dogfooding evidence used to prioritize product work; not package runtime authority.",
       "editable_by_agents": true,
       "format": "json",

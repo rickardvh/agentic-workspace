@@ -254,7 +254,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
 
     payload = json.loads(capsys.readouterr().out)
     _assert_invoked_cli_identity(payload, target_relation="outside-target")
-    _assert_cli_compatibility(payload, status="no-expectation")
+    _assert_cli_compatibility(payload, status="satisfied")
     assert payload["exists"] is False
     assert payload["edit_reference"]["reference_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["edit_reference"]["generated_reference_doc"] == "docs/reference/workspace-config.md"
@@ -1600,6 +1600,13 @@ def test_config_command_reports_target_identity_and_guidance_storage(tmp_path: P
     guidance_operations = [item for item in correction["operations"] if item["operation_id"].startswith("agent-guidance.")]
     assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in correction_operations)
     assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in guidance_operations)
+    decision_contracts = {item["contract"] for item in correction["decision_surfaces"]}
+    assert {
+        "agentic-workspace/correction-capture-decision/v1",
+        "agentic-workspace/agent-guidance-route/v1",
+        "agentic-workspace/guidance-compliance-result/v1",
+        "agentic-workspace/guidance-consequence-decision/v1",
+    } <= decision_contracts
     assert correction["storage"]["retention_cap"] == 20
     assert correction["storage"]["retention_operations"] == ["correction-event.prune-compact"]
     assert identity["storage"]["layers"][0]["id"] == "user-local-target-guidance"
@@ -1654,6 +1661,9 @@ def _correction_event(**overrides: object) -> dict[str, object]:
         "target_revision": "rev-b",
         "task_class": "mechanical-follow-through",
         "scope_class": "narrow-code-change",
+        "phase": "implementation",
+        "subsystem": "workspace-runtime",
+        "surface": "bounded-edit",
         "invariant_id": "narrow-edits",
         "behavior_class": "edit-scope",
         "desired_behavior": "Prefer narrow edits.",
@@ -1765,6 +1775,171 @@ def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision
     assert "correction-event.submit" in {item["operation_id"] for item in admitted["public_operations"]}
     assert all(item["receipt"]["kind"] == "agentic-workspace/correction-operation-receipt/v1" for item in admitted["public_operations"])
     assert {item["reason"] for item in admitted["rejected_events"]} == {"rejected-stale-revision"}
+
+
+def test_agent_guidance_routes_selectively_and_stays_quiet_for_unrelated_context(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import route_agent_guidance
+
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    store = {
+        "kind": "agentic-workspace/guidance-lifecycle-store/v1",
+        "records": [
+            {
+                "kind": "agentic-workspace/guidance-lifecycle-record/v1",
+                "guidance_id": "guidance:narrow-proof",
+                "status": "active",
+                "instruction": "Run the routed narrow proof before claiming completion.",
+                "applicability": {
+                    "target_identity_ref": "user-local:fast-worker",
+                    "task_class": "code-change",
+                    "scope_class": "narrow",
+                    "subsystem": "workspace-runtime",
+                    "surface": "final-response",
+                    "applies_when": ["phase:proof"],
+                },
+                "revision": 2,
+                "schema_revision": "schema-a",
+            }
+        ],
+    }
+    _write(tmp_path / ".agentic-workspace/local/guidance-lifecycle.json", json.dumps(store))
+
+    routed = route_agent_guidance(
+        target_root=tmp_path,
+        target_identity_ref="user-local:fast-worker",
+        task_class="code-change",
+        scope_class="narrow",
+        phase="proof",
+        subsystem="workspace-runtime",
+        surface="final-response",
+    )
+    unrelated = route_agent_guidance(
+        target_root=tmp_path,
+        target_identity_ref="user-local:other-worker",
+        task_class="docs",
+        scope_class="broad",
+        phase="planning",
+        subsystem="docs",
+        surface="readme",
+    )
+    wrong_surface = route_agent_guidance(
+        target_root=tmp_path,
+        target_identity_ref="user-local:fast-worker",
+        task_class="code-change",
+        scope_class="narrow",
+        phase="proof",
+        subsystem="workspace-runtime",
+        surface="proof-receipt",
+    )
+    unknown = route_agent_guidance(target_root=tmp_path, target_identity_ref="user-local:fast-worker")
+
+    assert routed["status"] == "routed"
+    assert [item["guidance_id"] for item in routed["guidance"]] == ["guidance:narrow-proof"]
+    assert routed["guidance"][0]["precedence"].startswith("current user instruction")
+    assert unrelated["status"] == "no-applicable-guidance"
+    assert unrelated["guidance"] == []
+    assert unrelated["context_overhead"]["ordinary_no_match_artifact_count"] == 0
+    assert wrong_surface["status"] == "no-applicable-guidance"
+    assert wrong_surface["excluded"][0]["reason"] == "surface-mismatch"
+    assert unknown["status"] == "probe-required"
+    assert set(unknown["probe"]["required_fields"]) == {"phase", "scope_class", "subsystem", "surface", "task_class"}
+
+
+def test_agent_guidance_observations_drive_contextual_consequences_and_recovery(tmp_path: Path) -> None:
+    from agentic_workspace.agent_guidance import observe_agent_guidance
+
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    def observe(
+        index: int,
+        outcome: str,
+        *,
+        cause: str = "target-behavior",
+        authority: str = "review",
+        target_identity_ref: str = "user-local:fast-worker",
+        target_revision: str = "rev-b",
+        task_class: str = "code-change",
+        scope_class: str = "narrow",
+        phase: str = "proof",
+        subsystem: str = "workspace-runtime",
+        surface: str = "final-response",
+        human_authorized_prohibition: bool = False,
+    ) -> dict[str, Any]:
+        return observe_agent_guidance(
+            target_root=tmp_path,
+            guidance_id="guidance:narrow-proof",
+            outcome=outcome,
+            evidence_authority=authority,
+            evidence_ref=f"review-{index}",
+            target_identity_ref=target_identity_ref,
+            target_revision=target_revision,
+            task_class=task_class,
+            scope_class=scope_class,
+            phase=phase,
+            subsystem=subsystem,
+            surface=surface,
+            cause_class=cause,
+            human_authorized_prohibition=human_authorized_prohibition,
+        )
+
+    assert observe(1, "surfaced-violated")["consequence"]["status"] == "advisory"
+    assert observe(2, "surfaced-violated")["consequence"]["status"] == "review-required"
+    assert observe(3, "surfaced-violated")["consequence"]["status"] == "suitability-impact"
+    infrastructure = observe(4, "surfaced-violated", cause="infrastructure-defect")
+    assert infrastructure["consequence"]["status"] == "suitability-impact"
+    assert infrastructure["consequence"]["next_action"] == "route-product-improvement"
+    assert observe(5, "surfaced-followed", authority="aw-owned-proof")["consequence"]["status"] == "suitability-impact"
+    recovered = observe(6, "correct-escalation", authority="human")
+    assert recovered["consequence"]["status"] == "review-required"
+    replay = observe(6, "correct-escalation", authority="human")
+    assert replay["status"] == "duplicate-replay"
+    assert replay["storage"]["checked_in"] is False
+
+    other_revision = observe(7, "surfaced-violated", target_revision="rev-c")
+    assert other_revision["consequence"]["status"] == "advisory"
+    assert other_revision["consequence"]["same_context_observation_count"] == 1
+    assert other_revision["consequence"]["excluded_cross_context_observation_count"] == 6
+    other_surface = observe(8, "surfaced-violated", surface="proof-receipt")
+    assert other_surface["consequence"]["status"] == "advisory"
+    other_phase = observe(9, "surfaced-violated", phase="implementation")
+    assert other_phase["consequence"]["status"] == "advisory"
+    prohibited_elsewhere = observe(
+        10,
+        "surfaced-violated",
+        authority="human",
+        surface="proof-receipt",
+        human_authorized_prohibition=True,
+    )
+    assert prohibited_elsewhere["consequence"]["status"] == "review-required"
+    assert prohibited_elsewhere["consequence"]["human_authority_required"] is False
+    current_again = observe(11, "surfaced-violated")
+    assert current_again["consequence"]["status"] == "suitability-impact"
+    assert current_again["consequence"]["human_authority_required"] is False
+    current_prohibition = observe(12, "surfaced-violated", authority="human", human_authorized_prohibition=True)
+    assert current_prohibition["consequence"]["status"] == "class-prohibition"
+    assert current_prohibition["consequence"]["human_authority_required"] is True
+
+
+def test_correction_capture_decision_requires_capture_without_overcapturing_requirements() -> None:
+    from agentic_workspace.agent_guidance import correction_capture_decision
+
+    submitted = correction_capture_decision(correction_signal="explicit-user-correction", feedback_source_available=True)
+    unavailable = correction_capture_decision(correction_signal="pr-review", feedback_source_available=False)
+    changed_requirement = correction_capture_decision(correction_signal="new-requirement", feedback_source_available=True)
+    shared = correction_capture_decision(
+        correction_signal="explicit-user-correction", feedback_source_available=True, shared_repo_lesson=True
+    )
+
+    assert submitted["status"] == "event-submitted"
+    assert submitted["required_operation"] == "correction-event submit"
+    assert unavailable["status"] == "unavailable"
+    assert "not exposed" in unavailable["limitation"]
+    assert changed_requirement["status"] == "dismissed"
+    assert changed_requirement["recognized_correction"] is False
+    assert shared["status"] == "routed"
+    assert shared["owner"] == "checked-in-memory"
 
 
 def test_correction_event_lifecycle_resolves_authority_and_rejects_self_labeled_review() -> None:

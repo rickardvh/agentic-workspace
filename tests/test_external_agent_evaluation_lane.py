@@ -60,6 +60,17 @@ def test_external_agent_lane_pack_validates() -> None:
     assert module.validate_pack(pack) == []
 
 
+def test_mixed_provider_availability_is_explicit_and_never_fabricates_fallback_proof() -> None:
+    availability = _read_json("provider-availability-2026-08-14.json")
+    routes = {item["family"]: item for item in availability["routes"]}
+
+    assert routes["openai-codex"]["status"] == "available-with-current-evidence"
+    assert routes["distinct-vendor"]["status"] == "unavailable"
+    assert "do not silently substitute" in routes["distinct-vendor"]["fallback"]
+    assert routes["separate-strong-tier-live-run"]["status"] == "unavailable"
+    assert availability["rule"].startswith("Provider absence is explicit evidence")
+
+
 def test_external_agent_lane_scorecard_has_contract_ids_and_owner_surfaces() -> None:
     scorecard = _read_json("scorecard-taxonomy.json")
     boundary = scorecard["authority_boundary"]
@@ -530,6 +541,161 @@ def test_model_cli_harness_allows_repo_relative_final_paths(tmp_path: Path) -> N
     )
 
     assert not [warning for warning in warnings if warning["warning_class"] == "model_cli_local_path_leak"]
+
+
+def test_model_cli_harness_prompt_variants_preserve_scoring_overrides() -> None:
+    module = _load_harness_module()
+
+    variants = module._prompt_variants(
+        {
+            "id": "receipt-aware",
+            "prompt_variants": [
+                {
+                    "id": "submit",
+                    "prompt": "Submit it.",
+                    "forbidden_write_patterns": [],
+                    "required_operation_receipts": [{"operation_id": "correction-event.submit"}],
+                },
+                {"id": "host-recovery", "prompt": "Recover it.", "scoring_ref": "submit"},
+            ],
+        }
+    )
+
+    assert variants[0]["forbidden_write_patterns"] == []
+    assert variants[0]["required_operation_receipts"] == [{"operation_id": "correction-event.submit"}]
+    recovered = module._prompt_variants(
+        {
+            "id": "receipt-aware",
+            "prompt_variants": [
+                {"id": "submit", "prompt": "Submit it.", "required_artifact_patterns": ["receipt.json"]},
+                {"id": "host-recovery", "prompt": "Recover it.", "scoring_ref": "submit"},
+            ],
+        },
+        requested="host-recovery",
+    )
+    assert recovered[0]["prompt"] == "Recover it."
+    assert recovered[0]["required_artifact_patterns"] == ["receipt.json"]
+
+
+def test_model_cli_harness_requires_executed_correction_receipts_and_idempotent_local_custody(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    store_path = repo / ".agentic-workspace/local/correction-events.json"
+    store_path.parent.mkdir(parents=True)
+    expected_event = {
+        "target_identity_ref": "cheap_docs_worker",
+        "target_revision": "rev-b",
+        "task_class": "code-change",
+        "scope_class": "narrow",
+        "phase": "proof",
+        "subsystem": "workspace-runtime",
+        "surface": "final-response",
+    }
+    store_path.write_text(json.dumps({"events": [expected_event]}), encoding="utf-8")
+    requirement = {
+        "operation_id": "correction-event.submit",
+        "minimum_result_count": 2,
+        "required_statuses": ["stored"],
+        "admission_bucket": "admission.low_authority_events",
+        "store_ref": ".agentic-workspace/local/correction-events.json",
+        "expected_store_event_count": 1,
+        "expected_event": expected_event,
+    }
+    receipt = {
+        "kind": "agentic-workspace/correction-event-operation-result/v1",
+        "operation_id": "correction-event.submit",
+        "status": "stored",
+        "mutation_applied": True,
+        "store_ref": ".agentic-workspace/local/correction-events.json",
+        "admission": {"low_authority_events": [expected_event]},
+    }
+    stdout = "\n".join(
+        json.dumps(
+            {
+                "type": "item.completed",
+                "item": {
+                    "type": "command_execution",
+                    "command": "uv run agentic-workspace correction-event submit --format json",
+                    "aggregated_output": json.dumps(receipt),
+                    "exit_code": 0,
+                },
+            }
+        )
+        for _ in range(2)
+    )
+
+    warnings = module._metadata_workflow_warnings(
+        scenario={"id": "receipt-aware", "required_operation_receipts": [requirement]},
+        result={"status": "success", "stdout": stdout, "final_message": "Stored and queried."},
+        mutation_summary={"created": [".agentic-workspace/local/correction-events.json"], "modified": [], "deleted": []},
+        repo_path=repo,
+    )
+
+    assert not [warning for warning in warnings if "operation receipt" in warning["message"].lower()]
+    assert not [warning for warning in warnings if "custody store" in warning["message"].lower()]
+
+
+def test_model_cli_harness_rejects_operation_recognition_without_receipt(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = module._metadata_workflow_warnings(
+        scenario={
+            "id": "receipt-aware",
+            "required_operation_receipts": [
+                {
+                    "operation_id": "correction-event.submit",
+                    "minimum_result_count": 1,
+                    "store_ref": ".agentic-workspace/local/correction-events.json",
+                }
+            ],
+        },
+        result={"status": "success", "final_message": "Use correction-event.submit."},
+        mutation_summary={"created": [], "modified": [], "deleted": []},
+        repo_path=repo,
+    )
+
+    assert any("structured operation receipts" in warning["message"] for warning in warnings)
+
+
+def test_current_adapter_guidance_live_evidence_is_head_bound_and_honest() -> None:
+    evidence_root = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation"
+    payload = json.loads((evidence_root / "live-results-2026-08-14-adapter-guidance.json").read_text(encoding="utf-8"))
+    availability = json.loads((evidence_root / "provider-availability-2026-08-14.json").read_text(encoding="utf-8"))
+
+    current_head = "2bfdf2ac3061d531742fbe37657fc8e4142b29fd"
+    assert payload["evaluated_implementation_head"] == current_head
+    current_runs = [run for run in payload["runs"] if run.get("evaluated_implementation_head") == current_head]
+    current_outcomes = {run["prompt_variant"]: run["live_outcome"] for run in current_runs}
+    assert current_outcomes["explicit-correction-capture"] == "pass-first-request-executed"
+    assert current_outcomes["missed-correction-host-recovery"] == "pass-host-normalized-recovery-executed"
+    assert all(run["warning_classes"] == [] for run in current_runs)
+    assert all(run["operation_evidence"]["submit_receipt_count"] == 2 for run in current_runs)
+    assert all(run["operation_evidence"]["query_receipt_count"] == 1 for run in current_runs)
+    assert all(run["operation_evidence"]["duplicate_mutation_applied"] is False for run in current_runs)
+    assert all(run["operation_evidence"]["matching_stored_event_count"] == 1 for run in current_runs)
+    assert any(run["live_outcome"] == "miss" for run in payload["runs"])
+    recovery = next(run for run in payload["runs"] if run["live_outcome"] == "recovered-on-second-request")
+    assert recovery["requests_to_completion"] == 2
+    historical_outcomes = {run["prompt_variant"]: run["live_outcome"] for run in payload["runs"] if run not in current_runs}
+    assert historical_outcomes["changed-requirement-negative"].startswith("pass")
+    assert historical_outcomes["later-context-retrieval"].startswith("pass")
+    assert historical_outcomes["violation-recovery-consequence"].startswith("pass")
+    assert availability["routes"][0]["evaluated_implementation_head"] == current_head
+
+    evaluation = payload["evaluation_operation"]
+    assert evaluation["operation"] == "evaluation.observe"
+    assert evaluation["admitted_observation_count"] == 5
+    assert evaluation["observed_criterion_count"] == 3
+    assert set(evaluation["current_criterion_states"].values()) == {"satisfied"}
+    assert evaluation["lifecycle"] == "collecting"
+    assert evaluation["conclusion_readiness"]["ready"] is False
+
+    codex = next(route for route in availability["routes"] if route["family"] == "openai-codex")
+    assert codex["evidence_ref"] == "live-results-2026-08-14-adapter-guidance.json"
+    assert codex["evaluated_implementation_head"] == payload["evaluated_implementation_head"]
+    assert {route["status"] for route in availability["routes"] if route["family"] != "openai-codex"} == {"unavailable"}
 
 
 def test_model_cli_harness_prepares_fixture_git_repo_for_diff_commands(tmp_path: Path) -> None:

@@ -19,6 +19,8 @@ requires_human_verification_on_pr = true
 mode = "auto"
 
 [delegation_targets.cheap_docs_worker]
+target_id = "cheap_docs_worker"
+target_revision = "rev-b"
 strength = "weak"
 location = "local"
 confidence = 0.62

@@ -29,6 +29,9 @@ Input accepted by generated correction-event lifecycle operations.
 | `replaced_behavior` | string | no |  | Behavior boundary being corrected or superseded. |  |  |
 | `route_decisions` | array of string | no |  | Requested routing decisions for trusted correction events. |  |  |
 | `scope_class` | string | no |  | Scope class where the correction applies. |  |  |
+| `phase` | string | no |  | Workflow phase where the correction applies. |  |  |
+| `subsystem` | string | no |  | Subsystem boundary where the correction applies. |  |  |
+| `surface` | string | no |  | Concrete operation or artifact surface where the correction applies. |  |  |
 | `source` | string | no |  | Human-readable correction source label. |  |  |
 | `source_ref` | string | no |  | Stable source reference for audit and idempotency. |  |  |
 | `target` | string | no |  | Target repository path. |  |  |

@@ -85,6 +85,18 @@
       "description": "Scope class where the correction applies.",
       "type": "string"
     },
+    "phase": {
+      "description": "Workflow phase where the correction applies.",
+      "type": "string"
+    },
+    "subsystem": {
+      "description": "Subsystem boundary where the correction applies.",
+      "type": "string"
+    },
+    "surface": {
+      "description": "Concrete operation or artifact surface where the correction applies.",
+      "type": "string"
+    },
     "source": {
       "description": "Human-readable correction source label.",
       "type": "string"

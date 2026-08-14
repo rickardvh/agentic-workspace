@@ -49,13 +49,13 @@ Each gate is a compact SkillSpec-shaped record:
 - Forbidden: substitute passing commands for intent satisfaction.
 - Fallback: choose the narrowest existing test, lint, contract, or inspection route for the changed surface.
 
-### Work To Memory Residue
+### Work To Correction Or Memory Residue
 
 - Trigger: repeated correction, durable lesson, closeout residue, or improvement signal.
-- Preferred route: configured AW invocation with `memory route --files <paths...> --format json` or `memory promotion-report --mode remediation --format json`.
-- Interpreted fields: `memory_consultation_status`, `durable_residue_decision`, `improvement_signal_status`.
-- Allowed: capture only durable anti-rediscovery knowledge or route to the owning surface.
-- Forbidden: write task logs, plan history, or one-off chat residue to Memory.
+- Preferred route: `correction-event submit` for agent-specific behavioral correction; configured AW `memory route` or `memory promotion-report` only for genuinely shared repo knowledge.
+- Interpreted fields: correction capture decision, target identity, `memory_consultation_status`, `durable_residue_decision`, and `improvement_signal_status`.
+- Allowed: capture target-scoped correction evidence, capture durable shared anti-rediscovery knowledge, or route to the owning surface.
+- Forbidden: substitute an apology or Memory note for correction admission; write agent-specific weakness, task logs, plan history, or one-off chat residue to checked-in Memory.
 - Fallback: inspect the Memory index and only already-routed notes.
 
 ### Proof To Closeout

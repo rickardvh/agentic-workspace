@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:05d395878db3411fc163809ac371a5f5991a9fba7bfa70e355288ccd131744ba",
+    "fingerprint": "sha256:3c84c4b39898caf0dd40e67699ab8e8ae48d7779e47748da57c9e961b5d6a26b",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -4007,7 +4007,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.query.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:c6fcc74d77b199332351fd9076167023b032afb5401b65aa6c46408fc97d8f9f"
+        "fingerprint": "sha256:4e09eeaafdd4a51ed2e8de708a90ad2010f07dce58f848c8d46491d9da4bd715"
       },
       "operation_resources": {
         "python": {
@@ -4134,7 +4134,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.submit.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:8e2ee32b12ab1d08fb8d7c8bac0643fc4efc7bd2cf9762812c88c4ed81184ce9"
+        "fingerprint": "sha256:8f69a184189b737145ac76b7420fac7f1a4ffdc2476c8b4ead7b7b8f753452e8"
       },
       "operation_resources": {
         "python": {

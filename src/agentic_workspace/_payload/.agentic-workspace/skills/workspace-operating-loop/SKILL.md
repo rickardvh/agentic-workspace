@@ -81,6 +81,19 @@ Omit a field only when it is genuinely irrelevant. Do not omit proof, residue, u
 5. If the CLI is unavailable, use the no-CLI fallback for the same slot and keep the same forbidden actions.
 6. Before completion, reconcile proof, intent, residue, and issue/PR closure separately.
 
+## Correction Capture Obligation
+
+When the user, a review, an orchestrator, or an external host explicitly corrects the acting agent's behavior, treat capture as part of the operating loop:
+
+1. Submit the normalized event through `correction-event submit` for the stable target identity, or report the typed `routed`, `ambiguous`, or `unavailable` outcome.
+2. Do not substitute an apology, recap, chat promise, ordinary new requirement, or Memory note for correction-event admission.
+3. Route genuinely shared repository knowledge to the Memory owner; keep agent-specific weakness in local target guidance.
+4. Duplicate agent and host submissions must preserve one semantic recurrence and idempotent delivery identity.
+5. Before the next affected decision, route only the smallest guidance bundle matching target, task/scope, repository, role, and phase; unknown relevance requires a bounded probe, not a broad dump.
+6. Record later compliance from the strongest available evidence. Agent self-report cannot establish a high-consequence violation or close the observation need.
+
+If the host exposes no feedback source, say so explicitly; AW must not claim automatic capture.
+
 ## Direct Answer Rule
 
 When the router or task shape supports an answer-directly/no-artifact outcome, do not create planning, Memory, review, or docs artifacts just to show work. State the answer and the proof or limitation.
