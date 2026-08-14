@@ -6226,6 +6226,7 @@ def test_report_bootstrap_footprint_recommends_legacy_payload_migration(tmp_path
 
 def test_upgrade_to_necessary_surfaces_preserves_durable_state_and_uses_package_skills(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     workspace = tmp_path / ".agentic-workspace"
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
@@ -6318,6 +6319,55 @@ def test_upgrade_to_necessary_surfaces_fails_closed_for_tracked_source_checkout_
     assert not any(action["kind"] == "removed" for action in apply["actions"])
 
 
+def test_necessary_surface_deletion_impact_fails_closed_when_git_enumeration_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / ".git").mkdir()
+
+    def failed_git(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.CompletedProcess(args[0], 128, stdout=b"", stderr=b"fixture failure")
+
+    monkeypatch.setattr(workspace_runtime_core.subprocess, "run", failed_git)
+    impact = workspace_runtime_core._necessary_surface_deletion_impact(
+        target_root=tmp_path,
+        remove_candidates=[".agentic-workspace/docs"],
+    )
+
+    assert impact["status"] == "review-required"
+    assert impact["tracked_file_enumeration"]["status"] == "failed"
+    assert "tracked-file-enumeration-failed" in impact["review_reasons"]
+
+
+def test_payload_target_read_only_gate_consumes_compiled_drift_triage(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[payload]\n"
+        'target_release = "source-current"\n'
+        'minimum_capabilities = ["installed-state-sync-v2"]\n'
+        'policy = "required-before-work"\n'
+        "dogfood_latest = true\n",
+        encoding="utf-8",
+    )
+    provenance_path = workspace / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance.pop("payload_capabilities", None)
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    unrelated = "Prepare a read-only review of repository issue evidence"
+    assert cli.main(["start", "--target", str(tmp_path), "--task", unrelated, "--format", "json"]) == 0
+    allowed = json.loads(capsys.readouterr().out)
+    assert allowed["installed_state_read_only_scope"]["decision_authority"] == "installed_state_drift_triage.claim_relevant"
+    assert allowed["next_safe_action"]["next_safe_action"] == "continue-read-only-source-evidence-review"
+
+    dependent = "Prepare a read-only review of how the public command behaves after installation"
+    assert cli.main(["start", "--target", str(tmp_path), "--task", dependent, "--format", "json"]) == 0
+    blocked = json.loads(capsys.readouterr().out)
+    assert "installed_state_read_only_scope" not in blocked
+    assert blocked["next_safe_action"]["next_safe_action"] == "run-installed-payload-target-upgrade"
+
+
 def test_upgrade_to_necessary_surfaces_keeps_current_memory_skill_eof_stable(
     tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -6373,6 +6423,7 @@ def test_upgrade_to_necessary_surfaces_keeps_current_memory_skill_eof_stable(
 
 def test_upgrade_to_necessary_surfaces_leaves_doctor_healthy_after_apply(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     workspace = tmp_path / ".agentic-workspace"
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()

@@ -2819,12 +2819,139 @@ _EVALUATION_STATUS_DETAIL_SELECTORS = {
 }
 
 
+def _default_evaluation_status_item(*, target_root: Path, definition: dict[str, Any]) -> dict[str, Any]:
+    """Build only fields that can change the ordinary status decision."""
+    observations = _load_observations(target_root, str(definition["id"]))
+    current_results = current_evaluation_results(definition, observations, target_root=target_root)
+    current_observations = current_results["current_observations"]
+    admitted_observations = current_results["admitted_observations"]
+    legacy_observations = current_results["legacy_unbound_observations"]
+    bound_observations = current_results["bound_observations"]
+    stale_observations = current_results["stale_observations"]
+    historical_observations = current_results["historical_observations"]
+    superseded_ids = set(current_results["superseded_ids"])
+    criteria = _criterion_status(definition, current_observations)
+    required = [item for item in criteria if item["required"]]
+    satisfied = [item for item in required if item["state"] == "satisfied"]
+    contradictions = [item for item in criteria if item["state"] == "contradicted"]
+    minimum_observations = int(definition.get("collection_policy", {}).get("minimum_observations", 1))
+    finding_followup = _material_finding_followup(target_root, definition, current_observations)
+    conclusion_ready = (
+        len(current_observations) >= minimum_observations
+        and (len(satisfied) == len(required) or bool(contradictions) or definition.get("lifecycle") == "enough-signal")
+        and finding_followup["status"] != "unresolved"
+    )
+    freshness_status = (
+        "fresh-bound"
+        if current_observations
+        else "stale-bound"
+        if bound_observations
+        else "legacy-unbound"
+        if legacy_observations
+        else "missing"
+    )
+    not_ready_reason = (
+        "material-finding-followup-unresolved"
+        if finding_followup["status"] == "unresolved"
+        else "requires-bound-current-observation"
+        if historical_observations
+        else "needs-more-observations-or-owner-review"
+    )
+    current_result = current_observations[-1] if current_observations else {}
+    identity = _as_mapping(current_result.get("result_identity"))
+    compact_identity = {
+        "status": "present" if current_result else "missing",
+        "definition_revision": current_results["current_revision"],
+        "criterion": current_result.get("criterion"),
+        **{key: identity[key] for key in ("id", "result") if identity.get(key) not in (None, "", [], {})},
+    }
+    coverage = {
+        "criterion_count": len(criteria),
+        "observed_criterion_count": len([item for item in criteria if item["observation_count"]]),
+        "observation_count": len(admitted_observations),
+        "decision_observation_count": len(current_observations),
+        "historical_observation_count": len(historical_observations),
+        "legacy_unbound_count": len(legacy_observations),
+        "stale_revision_count": len(bound_observations) - len(current_observations),
+        "stale_authority_count": len(stale_observations),
+        "superseded_result_count": len(
+            [item for item in bound_observations if str(_as_mapping(item.get("result_identity")).get("id") or "") in superseded_ids]
+        ),
+        "minimum_observations": minimum_observations,
+    }
+    conclusion = {"ready": conclusion_ready, "reason_code": "ready" if conclusion_ready else not_ready_reason}
+    next_action = (
+        "owner-review-or-conclude"
+        if conclusion_ready
+        else "shape-or-resolve-material-finding-owner"
+        if finding_followup["status"] == "unresolved"
+        else "migrate-or-append-bound-observation"
+        if historical_observations
+        else "append-observation"
+    )
+    authority = _observation_authority_status(target_root=target_root, evaluation_id=str(definition["id"]))
+    operating_loop = _evaluation_operating_loop_projection(
+        definition=definition,
+        summary={
+            "coverage": coverage,
+            "conclusion_readiness": conclusion,
+            "sinks": definition["report_sinks"],
+            "next_collection_action": next_action,
+        },
+        finding_followup=finding_followup,
+    )
+    return {
+        "evaluation_id": definition["id"],
+        "revision": definition["revision"],
+        "lifecycle": definition["lifecycle"],
+        "coverage": coverage,
+        "criterion_status": [
+            {key: criterion[key] for key in ("id", "criterion", "type", "required", "state", "observation_count") if key in criterion}
+            for criterion in criteria
+        ],
+        "contradictions": [
+            {key: contradiction[key] for key in ("id", "criterion", "state", "observation_count") if key in contradiction}
+            for contradiction in contradictions
+        ],
+        "latest_material_changes": [
+            {
+                key: observation[key]
+                for key in ("criterion", "result", "finding", "recommended_action", "recorded_at")
+                if observation.get(key) not in (None, "", [], {})
+            }
+            for observation in current_observations[-3:]
+        ],
+        "fresh_result_admission": {
+            "status": freshness_status,
+            "bound_observation_count": len(current_observations),
+            "historical_observation_count": len(historical_observations),
+            "stale_count": len(stale_observations),
+            "current_result_identity": compact_identity,
+            "finding_followup": {
+                key: finding_followup[key]
+                for key in ("status", "unresolved_count", "required_action")
+                if finding_followup.get(key) not in (None, "", [], {})
+            },
+            "detail_selector": "fresh_result_admission",
+        },
+        "conclusion_readiness": conclusion,
+        "owner": definition["decision_owner"],
+        "sinks": definition["report_sinks"],
+        "observation_authority": {
+            key: authority.get(key)
+            for key in ("status", "evaluation_id", "assignment_revision", "proof_revision", "freshness_reason", "next_action")
+            if authority.get(key) not in (None, "", [], {})
+        },
+        "next_collection_action": next_action,
+        "operating_loop": {"status": operating_loop["status"], "next_action": operating_loop["next_safe_action"]},
+    }
+
+
 def evaluation_status_payload(*, target_root: Path, evaluation_id: str | None = None, select: str | None = None) -> dict[str, Any]:
     """Return the ordinary decision envelope, expanding only exact requested detail."""
-    full = evaluation_summary(target_root=target_root, evaluation_id=evaluation_id)
     selectors = {item.strip() for item in str(select or "").split(",") if item.strip()}
     if selectors == {"full"}:
-        return full
+        return evaluation_summary(target_root=target_root, evaluation_id=evaluation_id)
     unknown = sorted(selectors - _EVALUATION_STATUS_DETAIL_SELECTORS)
     if unknown:
         raise WorkspaceUsageError(
@@ -2835,6 +2962,28 @@ def evaluation_status_payload(*, target_root: Path, evaluation_id: str | None = 
             + "."
         )
 
+    if not selectors:
+        definitions = _definitions_payload(target_root)
+        selected = [
+            item
+            for item in definitions["evaluations"]
+            if isinstance(item, dict) and (evaluation_id is None or item.get("id") == evaluation_id)
+        ]
+        if evaluation_id and not selected:
+            raise WorkspaceUsageError(f"evaluation {evaluation_id!r} is not registered.")
+        summaries = [_default_evaluation_status_item(target_root=target_root, definition=item) for item in selected]
+        return {
+            "kind": EVALUATION_SUMMARY_KIND,
+            "path": WORKSPACE_EVALUATIONS_PATH.as_posix(),
+            "summaries": summaries,
+            "detail_routes": {
+                selector: f"agentic-workspace evaluation status --target . --evaluation-id <id> --select {selector} --format json"
+                for selector in sorted(_EVALUATION_STATUS_DETAIL_SELECTORS)
+            }
+            | {"full": "agentic-workspace evaluation status --target . --evaluation-id <id> --select full --format json"},
+        }
+
+    full = evaluation_summary(target_root=target_root, evaluation_id=evaluation_id)
     summaries: list[dict[str, Any]] = []
     for item in full["summaries"]:
         admission = item["fresh_result_admission"]

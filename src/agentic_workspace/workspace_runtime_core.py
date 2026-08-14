@@ -1111,17 +1111,34 @@ def _necessary_surface_action(kind: str, path: str, detail: str) -> dict[str, st
 def _necessary_surface_deletion_impact(*, target_root: Path, remove_candidates: list[str]) -> dict[str, Any]:
     """Expand removal actions before deciding whether they are safe to apply."""
     tracked_paths: list[str] = []
-    if remove_candidates:
-        completed = subprocess.run(
-            ["git", "ls-files", "-z", "--", *remove_candidates],
-            cwd=target_root,
-            capture_output=True,
-            check=False,
-        )
-        if completed.returncode == 0:
-            tracked_paths = sorted(
-                path.decode("utf-8", errors="replace").replace("\\", "/") for path in completed.stdout.split(b"\0") if path
+    enumeration_error = ""
+    git_metadata_present = _git_metadata_dir(target_root=target_root) is not None
+    if remove_candidates and git_metadata_present:
+        try:
+            completed = subprocess.run(
+                ["git", "ls-files", "-z", "--", *remove_candidates],
+                cwd=target_root,
+                capture_output=True,
+                check=False,
             )
+        except (OSError, subprocess.SubprocessError) as exc:
+            enumeration_error = type(exc).__name__
+        else:
+            if completed.returncode != 0:
+                enumeration_error = f"git-ls-files-exit-{completed.returncode}"
+            else:
+                tracked_paths = sorted(
+                    path.decode("utf-8", errors="replace").replace("\\", "/") for path in completed.stdout.split(b"\0") if path
+                )
+
+    removable_classes = {
+        "removable-package-owned-payload",
+        "local-environment-provenance",
+        "transient-handoff-scratch",
+    }
+    unknown_ownership_paths = sorted(
+        relative for relative in remove_candidates if _necessary_surface_path_class(relative) not in removable_classes
+    )
 
     ambiguous_paths: list[str] = []
     escaped_paths: list[str] = []
@@ -1148,6 +1165,10 @@ def _necessary_surface_deletion_impact(*, target_root: Path, remove_candidates: 
     protected_paths = tracked_paths if source_checkout else []
     broad_threshold = 100
     reasons: list[str] = []
+    if enumeration_error:
+        reasons.append("tracked-file-enumeration-failed")
+    if unknown_ownership_paths:
+        reasons.append("removal-ownership-unresolved")
     if protected_paths:
         reasons.append("source-checkout-protected-surface")
     if len(tracked_paths) >= broad_threshold:
@@ -1163,10 +1184,15 @@ def _necessary_surface_deletion_impact(*, target_root: Path, remove_candidates: 
         "action_path_count": len(remove_candidates),
         "tracked_file_count": len(tracked_paths),
         "tracked_file_sample": tracked_paths[:10],
+        "tracked_file_enumeration": {
+            "status": "failed" if enumeration_error else "current" if git_metadata_present else "not-applicable-non-git-host",
+            "error": enumeration_error or None,
+        },
         "protected_file_count": len(protected_paths),
         "protected_file_sample": protected_paths[:10],
         "ambiguous_path_sample": ambiguous_paths[:10],
         "escaped_path_sample": escaped_paths[:10],
+        "unknown_ownership_path_sample": unknown_ownership_paths[:10],
         "broad_deletion_threshold": broad_threshold,
         "review_reasons": reasons,
         "sample_limit": 10,
@@ -30623,6 +30649,11 @@ def _installed_state_drift_triage_payload(
         "generated artifact",
         "adapter compatibility",
         "source checkout parity",
+        "installed runtime",
+        "installed behavior",
+        "installed command",
+        "public command behavior",
+        "after installation",
     )
     claim_relevant_paths = _installed_state_drift_relevant_changed_paths(changed_paths)
     claim_relevant = bool(claim_relevant_paths) or any(term in task for term in freshness_terms)

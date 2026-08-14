@@ -1964,19 +1964,8 @@ def _apply_required_payload_target_start_gate(
     payload_repair_subflow = _as_dict(installed_state.get("payload_repair_subflow"))
     if payload_repair_subflow:
         payload["payload_repair_subflow"] = payload_repair_subflow
-    normalized_task = " ".join(str(task_text or "").lower().split())
-    installed_payload_dependent = any(
-        signal in normalized_task
-        for signal in (
-            "installed payload",
-            "payload drift",
-            "payload upgrade",
-            "upgrade agentic workspace",
-            "installed agentic workspace",
-            "installed runtime",
-            "payload compatibility",
-        )
-    )
+    drift_triage = _as_dict(payload.get("installed_state_drift_triage"))
+    installed_payload_dependent = drift_triage.get("claim_relevant") is True
     read_only_response = _as_dict(payload.get("read_only_response"))
     if read_only_response.get("status") == "read-only-reporting" and not installed_payload_dependent:
         claim_boundary = {
@@ -1991,6 +1980,7 @@ def _apply_required_payload_target_start_gate(
             "detail_selector": "installed_state_compatibility",
         }
         payload["installed_state_read_only_scope"] = claim_boundary
+        payload["installed_state_read_only_scope"]["decision_authority"] = "installed_state_drift_triage.claim_relevant"
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
             surface="start",
             decision="read-only-source-evidence-allowed-with-stale-installed-payload",
