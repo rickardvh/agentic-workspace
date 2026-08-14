@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 5,
+  "revision": 6,
   "intent": {
     "outcome": "Keep PR #2537 green and prove the correction model-harness actually submits and retrieves an AW correction event instead of merely naming the operation.",
     "non_goals": [
