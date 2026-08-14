@@ -283,6 +283,18 @@ def delegation_outcome_append(values: Mapping[str, Any], *, target: str | Path, 
     )
 
 
+def evaluation_authority_refresh(
+    values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None
+) -> dict[str, Any]:
+    return invoke_operation(
+        "evaluation.authority-refresh",
+        values,
+        target=target,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+
+
 def evaluation_delivery_status(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:
     return invoke_operation(
         "evaluation.delivery-status",

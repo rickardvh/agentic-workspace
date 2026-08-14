@@ -28,6 +28,7 @@ def test_successful_completion_cost_discovers_manifest_indexed_custom_output_roo
     )
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout.strip()
     tree = subprocess.run(["git", "rev-parse", "HEAD^{tree}"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout.strip()
+    repository_identity = "sha256:" + hashlib.sha256(tmp_path.resolve().as_posix().lower().encode()).hexdigest()[:24]
     run_root = tmp_path / ".agentic-workspace" / "local" / "scratch" / "custom-name" / "suite-summary"
     _write(run_root / ".aw-scratch.toml", 'owner = "agentic-workspace"\nproducer = "model-cli-harness.run-suite"\n')
     _write(
@@ -52,7 +53,12 @@ def test_successful_completion_cost_discovers_manifest_indexed_custom_output_roo
                 "producer": "model-cli-harness.run-suite",
                 "summary_ref": run_root.relative_to(tmp_path).as_posix() + "/summary.json",
                 "manifest_ref": run_root.relative_to(tmp_path).as_posix() + "/.aw-scratch.toml",
-                "subject": {"repository_head": head, "repository_tree": tree, "dirty": False},
+                "subject": {
+                    "repository_identity": repository_identity,
+                    "repository_head": head,
+                    "repository_tree": tree,
+                    "dirty": False,
+                },
             }
         )
         + "\n",
@@ -63,6 +69,110 @@ def test_successful_completion_cost_discovers_manifest_indexed_custom_output_roo
     assert payload["status"] == "present"
     assert payload["evidence"]["producer_index"]["admitted_count"] == 1
     assert payload["recent_runs"][0]["adapter"] == "fixture"
+
+
+def test_successful_completion_cost_rejections_have_bounded_examples(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+    index = tmp_path / ".agentic-workspace/local/model-cli-harness/evidence-index.jsonl"
+    _write(
+        index,
+        "".join(
+            json.dumps(
+                {
+                    "kind": "agentic-workspace/model-cli-harness-evidence-index-entry/v1",
+                    "producer": "foreign",
+                    "summary_ref": f"private/run-{number}/summary.json",
+                }
+            )
+            + "\n"
+            for number in range(28)
+        ),
+    )
+
+    _paths, admission = workspace_runtime_core._successful_completion_cost_indexed_summaries(target_root=tmp_path)
+
+    assert admission["rejected_count"] == 28
+    assert len(admission["rejected_examples"]) == 4
+    assert admission["drill_down"]["example_limit"] == 4
+
+
+def test_successful_completion_cost_reports_malformed_foreign_dirty_and_stale_reasons(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
+    _write(tmp_path / "README.md", "fixture\n")
+    subprocess.run(["git", "add", "README.md"], cwd=tmp_path, capture_output=True, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture"],
+        cwd=tmp_path,
+        capture_output=True,
+        check=True,
+    )
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout.strip()
+    tree = subprocess.run(["git", "rev-parse", "HEAD^{tree}"], cwd=tmp_path, capture_output=True, text=True, check=True).stdout.strip()
+    identity = "sha256:" + hashlib.sha256(tmp_path.resolve().as_posix().lower().encode()).hexdigest()[:24]
+    run = tmp_path / ".agentic-workspace/local/scratch/rejections"
+    _write(run / ".aw-scratch.toml", 'owner = "agentic-workspace"\nproducer = "model-cli-harness.run-suite"\n')
+    _write(run / "summary.json", "{}\n")
+    base = {
+        "kind": "agentic-workspace/model-cli-harness-evidence-index-entry/v1",
+        "producer": "model-cli-harness.run-suite",
+        "summary_ref": (run / "summary.json").relative_to(tmp_path).as_posix(),
+        "manifest_ref": (run / ".aw-scratch.toml").relative_to(tmp_path).as_posix(),
+        "subject": {"repository_identity": identity, "repository_head": head, "repository_tree": tree, "dirty": False},
+    }
+    records = [
+        {"invalid": True},
+        {**base, "producer": "foreign"},
+        {**base, "subject": {**base["subject"], "dirty": True}},
+        {**base, "subject": {**base["subject"], "repository_head": "stale"}},
+    ]
+    index = tmp_path / ".agentic-workspace/local/model-cli-harness/evidence-index.jsonl"
+    _write(index, "".join(json.dumps(record) + "\n" for record in records))
+
+    _paths, admission = workspace_runtime_core._successful_completion_cost_indexed_summaries(target_root=tmp_path)
+
+    assert admission["rejection_reasons"] == {
+        "foreign-producer": 1,
+        "invalid-entry": 1,
+        "recorded-subject-dirty": 1,
+        "repository-subject-mismatch": 1,
+    }
+
+
+def test_payload_scratch_exclusion_summary_is_bounded_and_preserves_unowned_scope(tmp_path: Path) -> None:
+    index = tmp_path / ".agentic-workspace/local/model-cli-harness/evidence-index.jsonl"
+    records = []
+    for number in range(7):
+        run = tmp_path / f".agentic-workspace/local/scratch/custom-{number}"
+        _write(run / ".aw-scratch.toml", 'owner = "agentic-workspace"\nproducer = "model-cli-harness.run-suite"\n')
+        records.append(
+            json.dumps(
+                {
+                    "kind": "agentic-workspace/model-cli-harness-evidence-index-entry/v1",
+                    "producer": "model-cli-harness.run-suite",
+                    "manifest_ref": (run / ".aw-scratch.toml").relative_to(tmp_path).as_posix(),
+                }
+            )
+        )
+    _write(index, "\n".join(records) + "\n")
+
+    summary = workspace_runtime_core._local_scratch_exclusion_summary(target_root=tmp_path)
+
+    assert summary["excluded_root_count"] == 7
+    assert len(summary["excluded_root_examples"]) == 4
+    assert "unowned" in summary["preserved_scope"].lower()
+
+
+def test_payload_scratch_nested_repo_scan_prunes_owned_and_preserves_unowned(tmp_path: Path) -> None:
+    owned = tmp_path / ".agentic-workspace/local/scratch/owned"
+    unowned = tmp_path / ".agentic-workspace/local/scratch/unowned"
+    (owned / "repo/.git").mkdir(parents=True)
+    (unowned / "repo/.git").mkdir(parents=True)
+    _write(owned / ".aw-scratch.toml", 'owner = "agentic-workspace"\nproducer = "model-cli-harness.run-suite"\n')
+
+    paths = workspace_runtime_core._local_scratch_nested_repo_paths(target_root=tmp_path)
+
+    assert ".agentic-workspace/local/scratch/owned/repo" not in paths
+    assert ".agentic-workspace/local/scratch/unowned/repo" in paths
 
 
 @pytest.mark.parametrize(

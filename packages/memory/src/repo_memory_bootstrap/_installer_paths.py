@@ -161,14 +161,12 @@ def _is_owned_harness_evidence_root(path: Path, *, target_root: Path) -> bool:
         path.resolve(strict=False).relative_to(scratch_root.resolve(strict=False))
     except ValueError:
         return False
+    is_junction = getattr(os.path, "isjunction", lambda _path: False)
     for candidate in [path, *path.parents]:
         if candidate == target_root:
             break
-        if candidate.is_symlink():
+        if candidate.is_symlink() or is_junction(candidate):
             return False
-    is_junction = getattr(os.path, "isjunction", lambda _path: False)
-    if is_junction(path):
-        return False
     manifest = path / ".aw-scratch.toml"
     if not manifest.is_file() or manifest.is_symlink():
         return False

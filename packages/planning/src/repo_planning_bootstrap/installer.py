@@ -19725,6 +19725,10 @@ def closeout_execplan(
     closure_decision = (
         "archive-but-keep-lane-open" if normalized_intent != "satisfied" or inferred_open_parent_slice else "archive-and-close"
     )
+    if retire_completed_child_continuation:
+        closure_decision = "archive-but-keep-lane-open"
+        continuation_owner = str(existing_required_continuation.get("owner surface") or "").strip() or PLANNING_STATE_PATH.as_posix()
+        inferred_open_parent_slice = True
     intent_satisfied = "no" if closure_decision == "archive-but-keep-lane-open" else "yes"
     if closure_decision == "archive-but-keep-lane-open" and not continuation_owner:
         continuation_owner = PLANNING_STATE_PATH.as_posix()
@@ -19947,20 +19951,18 @@ def closeout_execplan(
         if retire_completed_child_continuation:
             normalized_record["intent_continuity"] = {
                 **(_record_section_dict(normalized_record, "intent_continuity") or {}),
-                "this slice completes the larger intended outcome": "yes",
-                "continuation surface": "none",
+                "this slice completes the larger intended outcome": "no",
             }
-            normalized_record["required_continuation"] = {
-                "required follow-on for the larger intended outcome": "no",
-                "owner surface": "none",
-                "activation trigger": "none",
-            }
-            normalized_record["intent_satisfaction"] = {
-                **(_record_section_dict(normalized_record, "intent_satisfaction") or {}),
-                "was original intent fully satisfied?": "yes",
+            normalized_record["child_intent_satisfaction"] = {
+                "status": "satisfied",
                 "evidence of intent satisfaction": proof,
-                "unsolved intent passed to": "none",
+                "scope": "bounded-child",
+                "parent_intent_effect": "none",
             }
+            parent_continuation = _record_section_dict(normalized_record, "required_continuation") or {}
+            if str(parent_continuation.get("activation trigger", "")).strip().lower() in {"", "none", "n/a"}:
+                parent_continuation["activation trigger"] = "when the parent continuation owner promotes the next slice"
+            normalized_record["required_continuation"] = parent_continuation
         schema_findings = _json_schema_findings(payload=normalized_record, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
         if schema_findings:
             compact_required = (
@@ -20163,21 +20165,20 @@ def closeout_execplan(
             if existing_activation_trigger in {"", "none", "n/a"}:
                 required_continuation["activation trigger"] = "when the continuation owner promotes the next slice"
             record["required_continuation"] = required_continuation
-        elif retire_completed_child_continuation:
+        if retire_completed_child_continuation:
             intent_continuity = _record_section_dict(record, "intent_continuity") or {}
-            intent_continuity["this slice completes the larger intended outcome"] = "yes"
-            intent_continuity["continuation surface"] = "none"
+            intent_continuity["this slice completes the larger intended outcome"] = "no"
             record["intent_continuity"] = intent_continuity
-            record["required_continuation"] = {
-                "required follow-on for the larger intended outcome": "no",
-                "owner surface": "none",
-                "activation trigger": "none",
+            record["child_intent_satisfaction"] = {
+                "status": "satisfied",
+                "evidence of intent satisfaction": proof,
+                "scope": "bounded-child",
+                "parent_intent_effect": "none",
             }
-            intent_satisfaction = _record_section_dict(record, "intent_satisfaction") or {}
-            intent_satisfaction["was original intent fully satisfied?"] = "yes"
-            intent_satisfaction["evidence of intent satisfaction"] = proof
-            intent_satisfaction["unsolved intent passed to"] = "none"
-            record["intent_satisfaction"] = intent_satisfaction
+            parent_continuation = _record_section_dict(record, "required_continuation") or {}
+            if str(parent_continuation.get("activation trigger", "")).strip().lower() in {"", "none", "n/a"}:
+                parent_continuation["activation trigger"] = "when the parent continuation owner promotes the next slice"
+            record["required_continuation"] = parent_continuation
         current_record = _load_execplan_record(record_path) or {}
         current_boundary = _closeout_revision_boundary(
             target_root=target_root,
@@ -21662,6 +21663,8 @@ def _closeout_evidence_record(
     execution_summary = _record_section_dict(closeout_record, "execution_summary") or {}
     execution_run = _record_section_dict(closeout_record, "execution_run") or {}
     intent_satisfaction = _record_section_dict(closeout_record, "intent_satisfaction") or {}
+    intent_continuity = _record_section_dict(closeout_record, "intent_continuity") or {}
+    child_intent_satisfaction = _record_section_dict(closeout_record, "child_intent_satisfaction") or {}
     parent = _record_mapping(closeout_record, "parent")
     continuation = _record_mapping(closeout_record, "continuation")
     required_continuation = _record_section_dict(closeout_record, "required_continuation") or {}
@@ -21711,6 +21714,17 @@ def _closeout_evidence_record(
         "intent_satisfaction": {
             "was original intent fully satisfied?": str(intent_satisfaction.get("was original intent fully satisfied?") or "yes"),
             "unsolved intent passed to": residual_owner,
+        },
+        "intent_continuity": {
+            "this slice completes the larger intended outcome": str(
+                intent_continuity.get("this slice completes the larger intended outcome") or "unknown"
+            ),
+            "continuation surface": str(intent_continuity.get("continuation surface") or residual_owner),
+        },
+        "child_intent_satisfaction": {
+            "status": str(child_intent_satisfaction.get("status") or "not-recorded"),
+            "scope": str(child_intent_satisfaction.get("scope") or "not-recorded"),
+            "parent_intent_effect": str(child_intent_satisfaction.get("parent_intent_effect") or "unknown"),
         },
         "closure_check": {
             "closeout scope": str(closure_check.get("closeout scope") or "slice"),

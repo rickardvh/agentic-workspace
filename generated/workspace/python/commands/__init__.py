@@ -42,6 +42,7 @@ from . import correction_event_withdraw_supersede as _command_correction_event_w
 from . import defaults_report as _command_defaults_report
 from . import delegation_outcome_append as _command_delegation_outcome_append
 from . import doctor_report as _command_doctor_report
+from . import evaluation_authority_refresh as _command_evaluation_authority_refresh
 from . import evaluation_delivery_status as _command_evaluation_delivery_status
 from . import evaluation_external_adapter_receipt as _command_evaluation_external_adapter_receipt
 from . import evaluation_external_delivery as _command_evaluation_external_delivery
@@ -119,6 +120,7 @@ GENERATED_COMMAND_HANDLERS = {
     'defaults.report': _command_defaults_report.run,
     'delegation-outcome.append': _command_delegation_outcome_append.run,
     'doctor.report': _command_doctor_report.run,
+    'evaluation.authority-refresh': _command_evaluation_authority_refresh.run,
     'evaluation.delivery-status': _command_evaluation_delivery_status.run,
     'evaluation.external-adapter-receipt': _command_evaluation_external_adapter_receipt.run,
     'evaluation.external-delivery': _command_evaluation_external_delivery.run,

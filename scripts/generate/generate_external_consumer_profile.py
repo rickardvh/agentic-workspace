@@ -105,6 +105,14 @@ OPERATION_RESOURCE_OUTPUTS = {
     )
 }
 SCHEMA_RESOURCE_OUTPUTS = {
+    REPO_ROOT / "generated/workspace/python/_contracts/evaluation_authority_refresh_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_authority_refresh_input.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/evaluation_authority_refresh_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_authority_refresh_result.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/evaluation_authority_refresh_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_authority_refresh_input.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/evaluation_authority_refresh_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/evaluation_authority_refresh_result.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/operation_failure.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/operation_failure.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/operation_failure.schema.json": REPO_ROOT

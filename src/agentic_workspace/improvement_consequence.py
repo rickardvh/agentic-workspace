@@ -11,12 +11,23 @@ from pathlib import Path
 from typing import Any
 
 IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "improvement-pressure" / "consequence-history.jsonl"
+IMPROVEMENT_CONSEQUENCE_EVENT_KIND = "workspace-improvement-pressure-consequence-event/v1"
+IMPROVEMENT_CONSEQUENCE_PRODUCER = "shared-improvement-consequence-owner"
 CONSEQUENCE_LOCK_WAIT_SECONDS = 5.0
 CONSEQUENCE_LOCK_POLL_SECONDS = 0.05
 
 
 class ConsequenceStoreUnavailable(RuntimeError):
     """Raised when the consequence lifecycle store cannot be safely read or written."""
+
+
+def consequence_receipt_contract() -> dict[str, str]:
+    """Return the producer-owned identity used to admit consequence receipts."""
+    return {
+        "relative_path": IMPROVEMENT_CONSEQUENCE_HISTORY_RELATIVE_PATH.as_posix(),
+        "record_kind": IMPROVEMENT_CONSEQUENCE_EVENT_KIND,
+        "producer": IMPROVEMENT_CONSEQUENCE_PRODUCER,
+    }
 
 
 def _lock_path(target_root: Path) -> Path:
@@ -84,7 +95,7 @@ def record_consequence_event(*, target_root: Path | None, event: dict[str, Any])
     }
     fingerprint = hashlib.sha256(json.dumps(normalized_event, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:16]
     record = {
-        "kind": "workspace-improvement-pressure-consequence-event/v1",
+        "kind": IMPROVEMENT_CONSEQUENCE_EVENT_KIND,
         "fingerprint": fingerprint,
         "recorded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         **normalized_event,

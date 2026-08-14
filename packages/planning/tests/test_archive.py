@@ -2654,9 +2654,12 @@ candidates = []
 
     assert not record_path.exists()
     assert archived["closure_check"]["closeout scope"] == "slice"
-    assert archived["residual"] == {"status": "closed", "owner": "archive"}
-    assert archived["intent_satisfaction"]["unsolved intent passed to"] == "archive"
-    assert archived["execution_summary"]["follow-on routed to"] == "none"
+    assert archived["residual"] == {"status": "open", "owner": "external-review"}
+    assert archived["intent_satisfaction"]["unsolved intent passed to"] == "external-review"
+    assert archived["intent_continuity"]["this slice completes the larger intended outcome"] == "no"
+    assert archived["child_intent_satisfaction"]["status"] == "satisfied"
+    assert archived["child_intent_satisfaction"]["parent_intent_effect"] == "none"
+    assert archived["execution_summary"]["follow-on routed to"] == "external-review"
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     assert "merged-child" not in state_text
     assert '"parent-lane"' in state_text
