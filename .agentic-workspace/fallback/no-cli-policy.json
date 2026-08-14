@@ -1,0 +1,66 @@
+{
+  "kind": "agentic-workspace/degraded-recovery-capsule/v1",
+  "contract_digest": "sha256:d82dde223b5f90071f34898c502902100252d0e858c076d05520b45cff439fe7",
+  "authority": {
+    "decision_source": "planning_safety_gate.route_decision",
+    "action_source": "route_decision.next_safe_action.operation_invocation",
+    "policy_source": "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json"
+  },
+  "invocation_attempts": [
+    "workspace.cli_invoke",
+    "agentic-workspace"
+  ],
+  "required_surfaces": [
+    ".agentic-workspace/config.toml",
+    ".agentic-workspace/skills/workspace-startup/SKILL.md",
+    ".agentic-workspace/docs/module-map.md"
+  ],
+  "forbidden_actions": [
+    "mutate-managed-state-by-hand",
+    "bypass-planning-safety-gate",
+    "claim-completion-without-proof"
+  ],
+  "forbidden_effects": [
+    "managed-state-mutation",
+    "external-write",
+    "destructive-action",
+    "owner-selection"
+  ],
+  "forbidden_claims": [
+    "implementation-authorized",
+    "proof-complete",
+    "issue-closeable",
+    "task-complete"
+  ],
+  "safe_read_only_orientation": [
+    ".agentic-workspace/config.toml",
+    ".agentic-workspace/docs/module-map.md"
+  ],
+  "restoration": {
+    "action": "restore-configured-cli-and-rerun-start",
+    "command": "<workspace.cli_invoke> start --target . --task <task> --format json",
+    "proof": "a current planning_safety_gate.route_decision and typed next_safe_action are emitted"
+  },
+  "drill_down": [
+    ".agentic-workspace/skills/workspace-startup/SKILL.md",
+    ".agentic-workspace/docs/module-map.md"
+  ],
+  "next_safe_action": "continue-from-installed-startup-without-managed-state-mutation",
+  "module_boundaries": {
+    "memory": {
+      "surface": ".agentic-workspace/memory/repo/index.md",
+      "boundary": "durable-anti-rediscovery-knowledge",
+      "required_when_selected": true
+    },
+    "planning": {
+      "surface": ".agentic-workspace/planning/state.toml",
+      "boundary": "checked-in-execution-state-and-closeout",
+      "required_when_selected": true
+    },
+    "verification": {
+      "surface": ".agentic-workspace/verification/manifest.toml",
+      "boundary": "proof-selection-and-evidence",
+      "required_when_selected": false
+    }
+  }
+}

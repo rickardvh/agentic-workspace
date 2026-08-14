@@ -21,6 +21,7 @@ from repo_memory_bootstrap._installer_shared import (
     LEGACY_SHIPPED_SKILLS_ROOT,
     LEGACY_SYSTEM_ROOT,
     LEGACY_UPGRADE_SOURCE_PATH,
+    MANIFEST_PATH,
     OBSOLETE_SHARED_FILES,
     OPTIONAL_APPEND_DESCRIPTIONS,
     OPTIONAL_APPEND_TARGETS,
@@ -174,6 +175,8 @@ def _classify_role(relative_path: Path) -> str:
         return "local-entrypoint"
     if path_str.startswith(".agentic-workspace/memory/repo/templates/"):
         return "shared-template"
+    if relative_path == MANIFEST_PATH:
+        return "managed-file"
     if path_str == ".agentic-workspace/memory/repo/index.md":
         return "seed-note"
     if path_str.startswith(".agentic-workspace/memory/repo/current/"):

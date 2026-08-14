@@ -6168,6 +6168,66 @@ candidates = []
     assert "new-plan --id issue-2044" not in writer["command"]
 
 
+def test_implement_reuses_active_plan_created_for_exact_current_task(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    task = "Run jumpstart and align configurable surfaces with current repo state"
+    plan_ref = ".agentic-workspace/planning/execplans/jumpstart-alignment.plan.json"
+    _write(tmp_path / "docs/note.md", "# Current\n")
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        f'''kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  {{ id = "jumpstart-alignment", status = "active", surface = "{plan_ref}" }},
+]
+queued_items = []
+''',
+    )
+    _write(
+        tmp_path / plan_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "jumpstart-alignment",
+                "title": "Jumpstart alignment",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "intent": {"outcome": task},
+                "scope": {"owned": ["docs/note.md"]},
+            }
+        ),
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/note.md",
+                "--task",
+                task,
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    gate = _implement_context(payload)["planning_safety_gate"]
+    assert gate["implementation_allowed"] is True
+    assert gate["route_decision"]["task_relation"] == "continues-selected-owner"
+    summary = cli._fast_planning_active_summary(target_root=tmp_path)
+    mismatch = cli._task_switch_mismatch_evidence(active_summary=summary, task_text=task)
+    assert mismatch["exact_task_identity_match"] is True
+    assert mismatch["overlap_signal"] == "exact-task-continuation"
+
+
 def test_start_default_output_surfaces_parent_lane_shape_study(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

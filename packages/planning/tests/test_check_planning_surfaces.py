@@ -1159,6 +1159,37 @@ def test_planning_surface_checker_validates_execplan_json_schema(tmp_path: Path)
     )
 
 
+def test_planning_surface_checker_uses_packaged_schema_after_payload_pruning(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_record_schema_package_fallback")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active.plan.json"
+    _write(
+        record_path,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "active",
+                "title": "Active plan",
+                "owner_level": "slice",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "revision": 1,
+                "intent": {"outcome": "Continue the current task"},
+                "parent": {"id": "none"},
+                "scope": {"owned": ["docs/note.md"]},
+                "relationships": {},
+                "next_action": "Continue.",
+                "proof": {},
+                "continuation": {"owner": "active"},
+            }
+        ),
+    )
+
+    warnings = mod._check_planning_record_schemas(tmp_path)
+
+    assert warnings == []
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "schemas").exists()
+
+
 def test_planning_surface_checker_validates_review_json_schema(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_record_schema_review")
     _install_planning_record_schemas(tmp_path)

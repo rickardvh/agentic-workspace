@@ -163,6 +163,37 @@ PROOF_TINY_SEMANTIC_BUDGET_BYTES = 4500
 _PROOF_COMMAND_VALUE_KEYS = frozenset({"command", "run", "template", "detail_command"})
 
 
+def _proof_command_with_invocation_posture(*, command: str, cli_invoke: str) -> tuple[str, dict[str, str]]:
+    configured_active = bool(re.search(r"(?:^|\s)uv\s+run(?:\s+--[^\s]+)*\s+--active(?:\s|$)", cli_invoke))
+    if not configured_active:
+        return command, {
+            "command": command,
+            "status": "not-required",
+            "reason": "the configured Agentic Workspace invocation does not require an active uv environment",
+        }
+    cwd, runnable = _split_validation_command(command)
+    if not runnable.startswith("uv run "):
+        return command, {
+            "command": command,
+            "status": "not-applicable",
+            "reason": "the selected command is not executed through uv",
+        }
+    if re.match(r"^uv\s+run(?:\s+--[^\s]+)*\s+--active(?:\s|$)", runnable):
+        return command, {
+            "command": command,
+            "status": "preserved",
+            "reason": "the selected command already preserves the configured active uv environment",
+        }
+    postured = runnable.replace("uv run ", "uv run --active ", 1)
+    rendered = postured if cwd == "." else f"cd {cwd} && {postured}"
+    return rendered, {
+        "command": rendered,
+        "configured_command": command,
+        "status": "inserted",
+        "reason": "preserve the configured active uv environment for project Python proof",
+    }
+
+
 def _required_runtime_unavailability(command: str) -> dict[str, str] | None:
     """Return a typed gap when a proof command explicitly requires a missing host runtime."""
 
@@ -440,6 +471,8 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                 next_decision["proof_route_selection"] = route_decision
             if answer.get("proof_command_adjustments"):
                 next_decision["proof_command_adjustments"] = answer["proof_command_adjustments"]
+            if answer.get("proof_invocation_posture", {}).get("configured_active_uv"):
+                next_decision["proof_invocation_posture"] = answer["proof_invocation_posture"]
             if answer.get("proof_closeout_summary"):
                 next_decision["proof_closeout_summary"] = _compact_tiny_proof_closeout_summary(answer["proof_closeout_summary"])
             if answer.get("learned_proof_route_model"):
@@ -531,6 +564,11 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
             **(
                 {"proof_command_adjustments": answer["proof_command_adjustments"]}
                 if isinstance(answer, dict) and answer.get("proof_command_adjustments")
+                else {}
+            ),
+            **(
+                {"proof_invocation_posture": answer["proof_invocation_posture"]}
+                if isinstance(answer, dict) and answer.get("proof_invocation_posture", {}).get("configured_active_uv")
                 else {}
             ),
             **(
@@ -8489,6 +8527,7 @@ def _proof_selection_for_changed_paths(
     selection_package_scripts = _package_scripts_without_negative_routes(package_scripts, learned_negative_commands)
     selection_role_commands = target_capabilities.get("role_commands", {})
     proof_command_adjustments: list[dict[str, str]] = []
+    proof_invocation_posture: list[dict[str, str]] = []
     unavailable_proof_commands: list[dict[str, str]] = []
     host_policy_disallowed_commands: dict[str, dict[str, str]] = {}
     for lane in [*concern_lanes, *requirement_lanes]:
@@ -8509,11 +8548,9 @@ def _proof_selection_for_changed_paths(
             if adapted_command is not None:
                 candidate_commands.append(adapted_command)
             for candidate_command in candidate_commands:
-                resolved_command = str(
-                    _command_with_cli_invoke(
-                        command=_proof_command_for_target(command=candidate_command, target_root=target_root), cli_invoke=cli_invoke
-                    )
-                )
+                targeted_command = _proof_command_for_target(command=candidate_command, target_root=target_root)
+                postured_command, _posture = _proof_command_with_invocation_posture(command=targeted_command, cli_invoke=cli_invoke)
+                resolved_command = str(_command_with_cli_invoke(command=postured_command, cli_invoke=cli_invoke))
                 host_policy_disallowed_commands[resolved_command] = {
                     "lane": str(lane.get("id", "")),
                     "proof_profile": str(lane.get("proof_profile", "")),
@@ -8564,11 +8601,11 @@ def _proof_selection_for_changed_paths(
                     }
                 )
                 continue
-            resolved_command = str(
-                _command_with_cli_invoke(
-                    command=_proof_command_for_target(command=adapted_command, target_root=target_root), cli_invoke=cli_invoke
-                )
-            )
+            targeted_command = _proof_command_for_target(command=adapted_command, target_root=target_root)
+            postured_command, posture = _proof_command_with_invocation_posture(command=targeted_command, cli_invoke=cli_invoke)
+            resolved_command = str(_command_with_cli_invoke(command=postured_command, cli_invoke=cli_invoke))
+            posture["command"] = resolved_command
+            proof_invocation_posture.append(posture)
             disallowed = host_policy_disallowed_commands.get(resolved_command)
             if disallowed is not None:
                 host_policy_blocked_commands.append({**disallowed, "selected_by_lane": str(lane.get("id", ""))})
@@ -9219,6 +9256,13 @@ def _proof_selection_for_changed_paths(
         "proof_confidence": proof_confidence,
         "proof_adequacy": proof_adequacy,
         "proof_command_explanations": proof_command_explanations,
+        "proof_invocation_posture": {
+            "configured_active_uv": any(
+                item.get("status") in {"inserted", "preserved", "not-applicable"} for item in proof_invocation_posture
+            ),
+            "commands": proof_invocation_posture,
+            "rule": "Project Python proof preserves the configured active uv environment; non-uv commands expose why the posture is not applicable.",
+        },
         "proof_closeout_summary": proof_closeout_summary,
         "docs_process_route": docs_process_route,
         "requirement_grounding": requirement_grounding,
