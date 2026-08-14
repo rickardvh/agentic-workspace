@@ -3090,6 +3090,27 @@ line-length = 120
     assert payload["manual_verification"] is None
 
 
+def test_proof_changed_preserves_configured_active_uv_posture(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.local.toml",
+        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run --frozen --active python scripts/run_agentic_workspace.py"\n',
+    )
+    _write(
+        tmp_path / "pyproject.toml",
+        '[tool.pytest.ini_options]\ntestpaths = ["tests"]\n\n[tool.ruff]\nline-length = 120\n',
+    )
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["required_commands"] == ["uv run --active pytest", "uv run --active ruff check ."]
+    posture = payload["proof_invocation_posture"]
+    assert posture["configured_active_uv"] is True
+    assert [item["status"] for item in posture["commands"]] == ["inserted", "inserted"]
+    assert all("preserve the configured active uv environment" in item["reason"] for item in posture["commands"])
+
+
 def test_proof_changed_reports_rust_go_and_java_capability_candidates(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "Cargo.toml", '[package]\nname = "demo"\nversion = "0.1.0"\n')

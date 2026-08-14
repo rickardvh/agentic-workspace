@@ -13660,7 +13660,8 @@ def _lazy_report_section_names() -> set[str]:
     return {str(item["section"]) for item in _LAZY_REPORT_SECTION_CATALOG}
 
 
-def _report_section_catalog_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+def _report_section_catalog_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, target_root: Path | None = None) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
     sections = [
         {
             **item,
@@ -13668,6 +13669,7 @@ def _report_section_catalog_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> 
             "command": _command_with_cli_invoke(
                 command=f"agentic-workspace report --target ./repo --section {item['section']} --format json",
                 cli_invoke=cli_invoke,
+                target_arg=target_arg,
             ),
         }
         for item in _LAZY_REPORT_SECTION_CATALOG
@@ -13682,10 +13684,12 @@ def _report_section_catalog_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> 
             "ordinary_entry": _command_with_cli_invoke(
                 command="agentic-workspace report --target ./repo --format json",
                 cli_invoke=cli_invoke,
+                target_arg=target_arg,
             ),
             "catalog_command": _command_with_cli_invoke(
                 command="agentic-workspace report --target ./repo --section section_catalog --format json",
                 cli_invoke=cli_invoke,
+                target_arg=target_arg,
             ),
         },
         "boundary": [
@@ -13696,7 +13700,8 @@ def _report_section_catalog_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> 
     }
 
 
-def _local_overlay_report_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+def _local_overlay_report_payload(*, config: WorkspaceConfig, target_root: Path | None = None) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
     overlay = config.local_override.local_overlay if isinstance(config.local_override.local_overlay, dict) else {}
     if overlay.get("status") != "configured":
         return {
@@ -13727,10 +13732,12 @@ def _local_overlay_report_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "report": _command_with_cli_invoke(
                 command="agentic-workspace report --target ./repo --section local_overlay --format json",
                 cli_invoke=config.cli_invoke,
+                target_arg=target_arg,
             ),
             "match_changed_paths": _command_with_cli_invoke(
                 command="agentic-workspace implement --target ./repo --changed <paths> --format json",
                 cli_invoke=config.cli_invoke,
+                target_arg=target_arg,
             ),
         },
         "matching_rule": "Ordinary guidance and high-risk profile items match changed paths or task markers; no-match work stays quiet.",
@@ -13738,7 +13745,8 @@ def _local_overlay_report_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     }
 
 
-def _local_high_risk_overlay_report_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+def _local_high_risk_overlay_report_payload(*, config: WorkspaceConfig, target_root: Path | None = None) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
     overlay = config.local_override.high_risk_overlay if isinstance(config.local_override.high_risk_overlay, dict) else {}
     if overlay.get("status") != "configured":
         return {
@@ -13761,10 +13769,12 @@ def _local_high_risk_overlay_report_payload(*, config: WorkspaceConfig) -> dict[
             "match_changed_paths": _command_with_cli_invoke(
                 command="agentic-workspace implement --target ./repo --changed <paths> --format json",
                 cli_invoke=config.cli_invoke,
+                target_arg=target_arg,
             ),
             "proof_decision": _command_with_cli_invoke(
                 command="agentic-workspace proof --target ./repo --changed <paths> --format json",
                 cli_invoke=config.cli_invoke,
+                target_arg=target_arg,
             ),
         },
         "matching_rule": "This selector reports configured local overlay items; implement/proof report active matches from changed paths or task markers.",
@@ -16693,7 +16703,7 @@ def _run_lazy_report_section_command(
         config=config,
     )
     if normalized == "section_catalog":
-        payload["section_catalog"] = _report_section_catalog_payload(cli_invoke=config.cli_invoke)
+        payload["section_catalog"] = _report_section_catalog_payload(cli_invoke=config.cli_invoke, target_root=target_root)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     active_planning_record = _active_planning_record_for_report_section(target_root=target_root)
@@ -16816,11 +16826,11 @@ def _run_lazy_report_section_command(
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "local_overlay":
-        payload["local_overlay"] = _local_overlay_report_payload(config=config)
+        payload["local_overlay"] = _local_overlay_report_payload(config=config, target_root=target_root)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "local_high_risk_overlay":
-        payload["local_high_risk_overlay"] = _local_high_risk_overlay_report_payload(config=config)
+        payload["local_high_risk_overlay"] = _local_high_risk_overlay_report_payload(config=config, target_root=target_root)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "local_footprint":
@@ -22298,11 +22308,18 @@ def _terminal_final_response_admission(
     enforcement = _as_dict(terminal.get("final_response_enforcement"))
     state = str(terminal.get("state") or "CONTINUE")
     final_authorized = bool(terminal.get("final_response_authorized"))
+    claim_class = str(attempt.get("claim_class") or "terminal_final").strip().lower().replace("-", "_")
+    bounded_claim_classes = {"partial_progress", "slice_complete"}
+    allowed_claim_classes = {
+        str(item).strip().lower().replace("-", "_") for item in _list_payload(terminal.get("allowed_claim_classes")) if str(item).strip()
+    }
+    bounded_report_authorized = state == "CONTINUE" and claim_class in bounded_claim_classes and claim_class in allowed_claim_classes
+    response_authorized = final_authorized or bounded_report_authorized
     auto_resume_action = str(enforcement.get("auto_resume_action") or terminal.get("required_next_action") or "continue-current-work")
     before_state = _as_dict(resume_state)
     after_state = {
         "terminal_state": state,
-        "required_next_action": auto_resume_action if not final_authorized else "",
+        "required_next_action": auto_resume_action if not response_authorized else "",
         "safe_continuation_option_ids": _list_payload(terminal.get("safe_continuation_option_ids")),
         "blocker_qualification": terminal.get("blocker_qualification", {}),
     }
@@ -22312,38 +22329,51 @@ def _terminal_final_response_admission(
         "source": "host-final-response-admission",
         "terminal_state": state,
         "terminal_final_rejected": not final_authorized,
-        "auto_resume_action": "" if final_authorized else auto_resume_action,
+        "bounded_report_authorized": bounded_report_authorized,
+        "auto_resume_action": "" if response_authorized else auto_resume_action,
         "before_state": before_state,
         "after_compaction": compaction_boundary_crossed,
         "final_response_attempt": {
             "source": str(attempt.get("source") or "model-authored-final-response"),
             "claim": str(attempt.get("claim") or attempt.get("text") or "").strip(),
+            "claim_class": claim_class,
         },
         "multi_slice_continuation": enforcement.get("multi_slice_continuation", {}),
     }
     executor_result: dict[str, Any] = {"status": "not_required"}
-    if not final_authorized:
+    if not response_authorized:
         executor = resume_executor or _terminal_final_response_default_resume_executor
         executor_result = _as_dict(executor(resume_request))
         after_state.update(_as_dict(executor_result.get("after_state_patch")))
     return {
         "kind": "agentic-workspace/final-response-admission/v1",
-        "status": "accepted_terminal_final" if final_authorized else "rejected_auto_resumed",
+        "status": (
+            "accepted_terminal_final"
+            if final_authorized
+            else "accepted_bounded_report"
+            if bounded_report_authorized
+            else "rejected_auto_resumed"
+        ),
         "terminal_final_rejected": not final_authorized,
+        "bounded_report_authorized": bounded_report_authorized,
         "host_admission_boundary": {
-            "status": "accepted" if final_authorized else "rejected-and-resumed",
+            "status": "accepted" if response_authorized else "rejected-and-resumed",
             "source": "host-final-response-admission",
-            "invoked_resume_executor": not final_authorized,
-            "rejects_model_obedience_only": not final_authorized,
-            "rule": "The host admission boundary receives the model-authored final response and owns custody transfer.",
+            "invoked_resume_executor": not response_authorized,
+            "rejects_model_obedience_only": not response_authorized,
+            "rule": (
+                "The host boundary transfers terminal custody only when authorized, and may separately admit an explicitly "
+                "bounded report whose claim class is authorized by closeout."
+            ),
         },
         "attempt": {
             "source": str(attempt.get("source") or "model-authored-final-response"),
             "claim": str(attempt.get("claim") or attempt.get("text") or "").strip(),
+            "claim_class": claim_class,
         },
         "resume_transition": {
-            "status": "not_required" if final_authorized else "executed",
-            "auto_resume_action": "" if final_authorized else auto_resume_action,
+            "status": "not_required" if response_authorized else "executed",
+            "auto_resume_action": "" if response_authorized else auto_resume_action,
             "before_state": before_state,
             "after_state": after_state,
             "compaction_boundary_crossed": compaction_boundary_crossed,
@@ -22351,8 +22381,11 @@ def _terminal_final_response_admission(
             "resume_request": resume_request,
             "executor_result": executor_result,
         },
-        "progress_without_yield": bool(enforcement.get("progress_without_yield")) and not final_authorized,
-        "rule": "A model-authored terminal final is admitted only after the terminal outcome contract authorizes final-response custody transfer.",
+        "progress_without_yield": bool(enforcement.get("progress_without_yield")) and not response_authorized,
+        "rule": (
+            "A terminal final requires terminal custody authorization. An explicitly typed partial_progress or slice_complete "
+            "report may be admitted during CONTINUE only when closeout authorizes that exact bounded claim class."
+        ),
     }
 
 
@@ -33371,6 +33404,9 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
             owner_payload = {}
         if isinstance(owner_payload, dict):
             summary["active_owner_refs"] = _planning_owner_intent_refs(owner_payload)
+            owner_outcome = str(_as_dict(owner_payload.get("intent")).get("outcome") or "").strip()
+            if owner_outcome:
+                summary["active_owner_intent_outcome"] = owner_outcome
     selected_source = str(_as_dict(owner_admission.get("selected_owner")).get("source") or "") if isinstance(owner_admission, dict) else ""
     if isinstance(owner_admission, dict) and (
         owner_admission.get("status") == "rejected"
@@ -49714,12 +49750,7 @@ def _split_validation_command(command: str) -> tuple[str, str]:
 def _proof_target_argument(target_root: Path | None) -> str:
     if target_root is None:
         return "./repo"
-    try:
-        if target_root.resolve() == Path.cwd().resolve():
-            return "."
-    except OSError:
-        pass
-    return _shell_quote(target_root.as_posix())
+    return _shell_quote(_command_target_arg(target_root))
 
 
 def _proof_command_for_target(*, command: str, target_root: Path | None) -> str:
@@ -55809,9 +55840,8 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
     top_score = int(top.get("score", 0) or 0) if top else 0
     tied = [item for item in recommendations if int(item.get("score", 0) or 0) == top_score] if top else []
     low_confidence = bool(top and top_score <= 1)
-    inventory_command = "agentic-workspace skills --target . --select skills,sources --format json"
-    if target_root is not None:
-        inventory_command = f"agentic-workspace skills --target {target_root.as_posix()} --select skills,sources --format json"
+    target_arg = _shell_quote(_command_target_arg(target_root))
+    inventory_command = f"agentic-workspace skills --target {target_arg} --select skills,sources --format json"
     return {
         "target": payload.get("target"),
         "task": task_text,
@@ -58431,6 +58461,7 @@ def _run_final_response_executor_loop(
             final_response_attempt={
                 "source": attempt_source,
                 "claim": result.stdout.strip(),
+                "claim_class": str(getattr(args, "claim_class", "") or "terminal_final"),
                 "after_compaction": bool(getattr(args, "after_compaction", False)) or slice_number > 1,
             },
             resume_state={
@@ -58451,6 +58482,7 @@ def _run_final_response_executor_loop(
             "terminal_state": terminal_outcome_contract.get("state"),
             "attempt_source": attempt_source,
             "attempt_present": bool(result.stdout.strip()),
+            "claim_class": str(getattr(args, "claim_class", "") or "terminal_final"),
             "admission_status": admission.get("status"),
             "continuation_operation": executor_result.get("invoked_operation", ""),
             "continuation_exit_code": executor_result.get("exit_code"),
@@ -58470,7 +58502,7 @@ def _run_final_response_executor_loop(
             last_proof=[continuation_summary],
             next_safe_command=str(executor_result.get("command") or terminal_outcome_contract.get("required_next_action") or ""),
             open_blockers=[]
-            if terminal_outcome_contract.get("final_response_authorized")
+            if admission.get("status") in {"accepted_terminal_final", "accepted_bounded_report"}
             else ["terminal final rejected while CONTINUE remains"],
             dirty_state_summary="final-response admission boundary persisted after ordinary executor slice",
             preserve_existing=True,
@@ -58506,7 +58538,13 @@ def _run_final_response_executor_loop(
             "checkpoint_before": before_state,
             "checkpoint_after": after_state,
             "ordinary_execution_loop": {
-                "status": "completed" if admission.get("status") != "rejected_auto_resumed" else "continued",
+                "status": (
+                    "completed"
+                    if admission.get("status") == "accepted_terminal_final"
+                    else "bounded-report-admitted"
+                    if admission.get("status") == "accepted_bounded_report"
+                    else "continued"
+                ),
                 "vendor_neutral": True,
                 "depends_on_codex_goal_mode": False,
                 "depends_on_model_cli_harness": False,
@@ -58519,7 +58557,13 @@ def _run_final_response_executor_loop(
                     "AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING",
                     "AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL",
                 ],
-                "custody": "agent" if admission.get("status") == "rejected_auto_resumed" else "completed-outcome",
+                "custody": (
+                    "completed-outcome"
+                    if admission.get("status") == "accepted_terminal_final"
+                    else "routed-continuation-owner"
+                    if admission.get("status") == "accepted_bounded_report"
+                    else "agent"
+                ),
                 "slice_count": slice_number,
                 "slices": slices,
                 "latest_executor_binding": executor_binding,
@@ -58539,6 +58583,7 @@ def _run_final_response_admit_adapter(args: argparse.Namespace) -> int:
     if getattr(args, "final_response_command", None) != "admit":
         raise WorkspaceUsageError(f"Unsupported final-response command: {getattr(args, 'final_response_command', None)}")
     attempt_source = str(getattr(args, "source", "") or "model-authored-final-response").strip()
+    claim_class = str(getattr(args, "claim_class", "") or "terminal_final").strip()
     executor_command = str(getattr(args, "executor_command", "") or "").strip()
     if executor_command:
         payload = _run_final_response_executor_loop(
@@ -58576,6 +58621,7 @@ def _run_final_response_admit_adapter(args: argparse.Namespace) -> int:
         final_response_attempt={
             "source": attempt_source,
             "claim": attempt_text,
+            "claim_class": claim_class,
             "after_compaction": bool(getattr(args, "after_compaction", False)),
         },
         resume_state={
@@ -58595,6 +58641,7 @@ def _run_final_response_admit_adapter(args: argparse.Namespace) -> int:
         "terminal_state": terminal_outcome_contract.get("state"),
         "attempt_source": attempt_source,
         "attempt_present": bool(attempt_text),
+        "claim_class": claim_class,
         "admission_status": admission.get("status"),
         "continuation_operation": executor_result.get("invoked_operation", ""),
         "continuation_exit_code": executor_result.get("exit_code"),
@@ -58609,7 +58656,7 @@ def _run_final_response_admit_adapter(args: argparse.Namespace) -> int:
         last_proof=[continuation_summary],
         next_safe_command=str(executor_result.get("command") or terminal_outcome_contract.get("required_next_action") or ""),
         open_blockers=[]
-        if terminal_outcome_contract.get("final_response_authorized")
+        if admission.get("status") in {"accepted_terminal_final", "accepted_bounded_report"}
         else ["terminal final rejected while CONTINUE remains"],
         dirty_state_summary="final-response admission boundary persisted after host continuation",
         preserve_existing=True,

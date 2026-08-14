@@ -4007,6 +4007,19 @@
                 "name": "source"
               },
               {
+                "choices": [
+                  "terminal-final",
+                  "partial-progress",
+                  "slice-complete"
+                ],
+                "default": "terminal-final",
+                "flags": [
+                  "--claim-class"
+                ],
+                "help": "Claim class for admission; bounded classes require matching closeout authorization and never imply parent, lane, or full-intent completion.",
+                "name": "claim_class"
+              },
+              {
                 "action": "store_true",
                 "flags": [
                   "--after-compaction"

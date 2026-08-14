@@ -25,6 +25,7 @@
     "status": {
       "enum": [
         "accepted_terminal_final",
+        "accepted_bounded_report",
         "rejected_auto_resumed"
       ],
       "description": "Whether the host accepted final custody transfer or rejected the attempt and resumed work."

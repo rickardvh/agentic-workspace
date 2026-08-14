@@ -543,6 +543,45 @@ def test_upgrade_preserves_existing_local_source_metadata(tmp_path: Path) -> Non
     )
 
 
+def test_upgrade_preserves_repo_owned_memory_manifest(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    manifest_path = target / ".agentic-workspace/memory/repo/manifest.toml"
+    repo_owned = manifest_path.read_text(encoding="utf-8") + '\n[notes."docs/architecture.md"]\nnote_type = "domain"\n'
+    manifest_path.write_text(repo_owned, encoding="utf-8")
+
+    preview = installer.upgrade_bootstrap(target=target, dry_run=True)
+    applied = installer.upgrade_bootstrap(target=target)
+
+    assert manifest_path.read_text(encoding="utf-8") == repo_owned
+    for result in (preview, applied):
+        action = next(item for item in result.actions if item.path == manifest_path)
+        assert action.kind == "skipped"
+        assert action.role == "managed-file"
+        assert "repo-owned file left untouched" in action.detail
+
+
+def test_upgrade_keeps_current_generated_memory_skills_byte_stable(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    installer.install_bootstrap(target=target)
+    relative_paths = [
+        ".agentic-workspace/memory/skills/REGISTRY.json",
+        ".agentic-workspace/memory/skills/memory-refresh/SKILL.md",
+        ".agentic-workspace/memory/skills/memory-router/SKILL.md",
+        ".agentic-workspace/memory/skills/memory-upgrade/agents/openai.yaml",
+    ]
+    before = {path: (target / path).read_bytes() for path in relative_paths}
+
+    result = installer.upgrade_bootstrap(target=target)
+
+    assert {path: (target / path).read_bytes() for path in relative_paths} == before
+    assert all(not content.endswith(b"\n\n") for content in before.values())
+    actions = {item.path.relative_to(target).as_posix(): item for item in result.actions}
+    assert all(actions[path].kind == "current" for path in relative_paths)
+
+
 def test_upgrade_dry_run_does_not_include_bootstrap_workspace_files(
     tmp_path: Path,
 ) -> None:

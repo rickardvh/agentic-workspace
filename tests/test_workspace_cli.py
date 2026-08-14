@@ -3,6 +3,7 @@ from __future__ import annotations
 # ruff: noqa: F403,F405
 import copy
 import hashlib
+import os
 import re
 import shlex
 import shutil
@@ -2231,6 +2232,9 @@ def test_closeout_claim_boundary_returns_fast_claim_packet(tmp_path: Path, capsy
     catalog = json.loads(capsys.readouterr().out)["answer"]
     section = next(item for item in catalog["lazy_sections"] if item["section"] == "closeout_claim_boundary")
     assert section["payload_is_lazy"] is True
+    expected_target = Path(os.path.relpath(tmp_path.resolve(), Path.cwd().resolve())).as_posix()
+    assert f"--target {expected_target} " in section["command"]
+    assert tmp_path.as_posix() not in section["command"]
 
 
 def test_closeout_trust_does_not_block_on_stale_satisfied_task_posture_residue(tmp_path: Path, capsys) -> None:
@@ -2347,6 +2351,61 @@ def test_final_response_admit_rejects_final_runs_continuation_and_persists_resum
     assert len(admission_checkpoint["slices"]) == 2
     assert {item["continuation_operation"] for item in admission_checkpoint["slices"]} == {"proof.report"}
     assert admission_checkpoint["not_closure_evidence"] is True
+
+
+def test_final_response_admit_accepts_only_authorized_bounded_report_during_continue(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    terminal = {
+        "kind": "agentic-workspace/terminal-outcome-contract/v1",
+        "state": "CONTINUE",
+        "final_response_authorized": False,
+        "allowed_claim_classes": ["partial_progress", "slice_complete"],
+        "required_next_action": "continue-parent-lane",
+        "safe_continuation_option_ids": ["continue-parent-lane"],
+        "blocker_qualification": {"status": "not_required"},
+        "final_response_enforcement": {
+            "status": "rejected_auto_resume",
+            "terminal_final_rejected": True,
+            "auto_resume_action": "continue-parent-lane",
+            "progress_without_yield": True,
+            "multi_slice_continuation": {"status": "preserved"},
+        },
+    }
+
+    monkeypatch.setattr(
+        cli, "_final_response_closeout_trust_for_admission", lambda *, target_root: ({"terminal_outcome_contract": terminal}, object())
+    )
+
+    def fail_continuation(**_kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("an authorized bounded report must not invoke continuation")
+
+    monkeypatch.setattr(cli, "_run_final_response_continuation_operation", fail_continuation)
+    assert (
+        cli.main(
+            [
+                "final-response",
+                "admit",
+                "--target",
+                str(tmp_path),
+                "--attempt",
+                "Upgrade slice complete; package follow-up remains owned by #2371.",
+                "--claim-class",
+                "slice-complete",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "accepted_bounded_report"
+    assert payload["admission"]["bounded_report_authorized"] is True
+    assert payload["admission"]["terminal_final_rejected"] is True
+    assert payload["admission"]["attempt"]["claim_class"] == "slice_complete"
+    assert payload["continuation_operation"]["status"] == "not_required"
+    assert payload["terminal_outcome_contract"]["final_response_authorized"] is False
 
 
 def test_final_response_admit_executor_command_reenters_until_delivered(tmp_path: Path, capsys, monkeypatch) -> None:
