@@ -1248,6 +1248,11 @@ def test_correction_event_generated_operations_store_query_and_preserve_low_auth
         target=tmp_path,
         invocation=invocation,
     )
+    duplicate_low_authority = correction_event_submit(
+        {"event_json": json.dumps({**event, "delivery_id": "delivery-2", "source_ref": "agent-note-1"})},
+        target=tmp_path,
+        invocation=invocation,
+    )
     queried = correction_event_query({}, target=tmp_path, invocation=invocation)
     compacted = correction_event_prune_compact({}, target=tmp_path, invocation=invocation)
 
@@ -1255,6 +1260,9 @@ def test_correction_event_generated_operations_store_query_and_preserve_low_auth
     assert submitted["admitted_event_count"] == 1
     assert low_authority["status"] == "stored"
     assert low_authority["low_authority_event_count"] == 1
+    assert duplicate_low_authority["status"] == "stored"
+    assert duplicate_low_authority["mutation_applied"] is False
+    assert duplicate_low_authority["low_authority_event_count"] == 1
     assert low_authority["admission"]["derived_routes"]["low_authority"]
     low_authority_ids = set(low_authority["admission"]["derived_routes"]["low_authority"])
     assert low_authority_ids.isdisjoint(low_authority["admission"]["derived_routes"]["target_guidance"])

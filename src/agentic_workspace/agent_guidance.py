@@ -619,7 +619,11 @@ def apply_correction_event_operation(
         status = "compacted"
     else:
         event = _operation_event(values=values, operation=operation, target_root=target_root)
-        events = [*existing_events, event]
+        event_id = str(event.get("event_id") or _stable_event_id(event))
+        duplicate_submit = operation == "submit" and any(
+            str(candidate.get("event_id") or _stable_event_id(candidate)) == event_id for candidate in existing_events
+        )
+        events = existing_events if duplicate_submit else [*existing_events, event]
         admission = admit_correction_events(events=events, subjects=subjects, task_class=task_class, scope_class=scope_class)
         accepted_ids = {
             str(candidate.get("event_id"))
@@ -630,7 +634,7 @@ def apply_correction_event_operation(
         retained_events = [
             candidate for candidate in events if str(candidate.get("event_id") or _stable_event_id(candidate)) in accepted_ids
         ][-CORRECTION_EVENT_RETENTION_CAP:]
-        if accepted_ids:
+        if accepted_ids and not duplicate_submit:
             _write_correction_event_store(
                 store_path,
                 {

@@ -17,7 +17,7 @@ import tomllib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 from agentic_workspace.config import DEFAULT_AGENT_INSTRUCTIONS_FILE, WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
@@ -339,7 +339,7 @@ def _startup_instruction_prompt(*, repo_path: Path, prompt: str) -> str:
     )
 
 
-def _prompt_variants(scenario: dict[str, Any], *, requested: str | None = None) -> list[dict[str, str]]:
+def _prompt_variants(scenario: dict[str, Any], *, requested: str | None = None) -> list[dict[str, Any]]:
     raw_variants = scenario.get("prompt_variants")
     if raw_variants is None:
         variants = [{"id": "default", "prompt": str(scenario.get("prompt", ""))}]
@@ -358,7 +358,7 @@ def _prompt_variants(scenario: dict[str, Any], *, requested: str | None = None) 
             prompt_text = raw_variant.get("prompt", raw_variant.get("text"))
             if not isinstance(prompt_text, str):
                 raise ValueError(f"scenario '{scenario.get('id', '<unknown>')}' prompt variant '{variant_id}' needs text")
-            variants.append({"id": variant_id, "prompt": prompt_text})
+            variants.append({**raw_variant, "id": variant_id, "prompt": prompt_text})
     if requested is None:
         return variants[:1]
     if requested == "all":
@@ -1928,6 +1928,131 @@ def _string_list(value: Any, *, field: str, scenario_id: str) -> list[str]:
     return value
 
 
+def _object_list(value: Any, *, field: str, scenario_id: str) -> list[dict[str, Any]]:
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
+        raise ValueError(f"scenario '{scenario_id}' {field} must be an object list")
+    return value
+
+
+def _json_documents_from_text(text: str) -> list[dict[str, Any]]:
+    decoder = json.JSONDecoder()
+    documents: list[dict[str, Any]] = []
+    cursor = 0
+    while cursor < len(text):
+        start = text.find("{", cursor)
+        if start < 0:
+            break
+        try:
+            document, end = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            cursor = start + 1
+            continue
+        if isinstance(document, dict):
+            documents.append(document)
+        cursor = end
+    return documents
+
+
+def _command_execution_records(result: dict[str, Any]) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for source in (result.get("stdout"), result.get("stderr")):
+        if not isinstance(source, str):
+            continue
+        for event in _json_objects_from_lines(source):
+            item = event.get("item")
+            candidate = item if isinstance(item, dict) else event
+            command = candidate.get("command")
+            output = candidate.get("aggregated_output", candidate.get("output", ""))
+            if not isinstance(command, str) or not isinstance(output, str):
+                continue
+            records.append(
+                {
+                    "command": command,
+                    "output": output,
+                    "exit_code": candidate.get("exit_code"),
+                    "documents": _json_documents_from_text(output),
+                }
+            )
+    return records
+
+
+def _nested_value(value: Any, path: str) -> Any:
+    current = value
+    for part in path.split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+    return current
+
+
+def _mapping_contains(actual: Any, expected: dict[str, Any]) -> bool:
+    return isinstance(actual, dict) and all(actual.get(key) == value for key, value in expected.items())
+
+
+def _operation_receipt_warnings(
+    *,
+    requirements: list[dict[str, Any]],
+    result: dict[str, Any],
+    repo_path: Path,
+    add: Callable[..., None],
+) -> None:
+    records = _command_execution_records(result)
+    documents = [
+        document
+        for record in records
+        if record.get("exit_code") in (0, None)
+        for document in record["documents"]
+        if document.get("kind") == "agentic-workspace/correction-event-operation-result/v1"
+    ]
+    for requirement in requirements:
+        operation_id = str(requirement.get("operation_id") or "")
+        if not operation_id:
+            raise ValueError("required_operation_receipts entries need operation_id")
+        matches = [document for document in documents if document.get("operation_id") == operation_id]
+        minimum = int(requirement.get("minimum_result_count", 1))
+        if len(matches) < minimum:
+            add(
+                "The agent did not produce enough successful structured operation receipts.",
+                evidence=f"{operation_id}: expected {minimum}, observed {len(matches)}",
+            )
+            continue
+        required_statuses = requirement.get("required_statuses", [])
+        if required_statuses and not all(document.get("status") in required_statuses for document in matches):
+            add("A structured operation receipt reported an unexpected status.", evidence=operation_id)
+        expected_event = requirement.get("expected_event")
+        bucket_path = str(requirement.get("admission_bucket") or "")
+        if expected_event is not None:
+            if not isinstance(expected_event, dict):
+                raise ValueError("required_operation_receipts expected_event must be an object")
+            bucket_matches = []
+            for document in matches:
+                bucket = _nested_value(document, bucket_path) if bucket_path else []
+                events = bucket if isinstance(bucket, list) else []
+                bucket_matches.extend(event for event in events if _mapping_contains(event, expected_event))
+            if not bucket_matches:
+                add("The structured operation receipt did not admit the expected contextual event.", evidence=operation_id)
+        store_ref = str(requirement.get("store_ref") or "")
+        if not store_ref:
+            continue
+        store_path = repo_path / store_ref
+        try:
+            store = json.loads(store_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            add("The operation's local custody store is missing or unreadable.", evidence=store_ref)
+            continue
+        if expected_event is not None:
+            stored_events = store.get("events", []) if isinstance(store, dict) else []
+            matching_events = [event for event in stored_events if _mapping_contains(event, expected_event)]
+            expected_count = int(requirement.get("expected_store_event_count", 1))
+            if len(matching_events) != expected_count:
+                add(
+                    "The operation's local custody store has the wrong matching event count.",
+                    evidence=f"{store_ref}: expected {expected_count}, observed {len(matching_events)}",
+                )
+
+
 def _metadata_workflow_warnings(
     *,
     scenario: dict[str, Any],
@@ -2041,6 +2166,16 @@ def _metadata_workflow_warnings(
     ):
         if not any(repo_path.glob(pattern)):
             add("The scenario's required artifact pattern was not present after the run.", evidence=pattern)
+    _operation_receipt_warnings(
+        requirements=_object_list(
+            scenario.get("required_operation_receipts"),
+            field="required_operation_receipts",
+            scenario_id=scenario_id,
+        ),
+        result=result,
+        repo_path=repo_path,
+        add=add,
+    )
 
     deduped: list[dict[str, str]] = []
     seen: set[tuple[str, str, str]] = set()
@@ -3386,6 +3521,10 @@ def run_suite(
         scenario_id = str(scenario["id"])
         for variant in _prompt_variants(scenario, requested=prompt_variant):
             prompt_variant_id = variant["id"]
+            evaluation_scenario = {
+                **scenario,
+                **{key: value for key, value in variant.items() if key not in {"id", "prompt", "text"}},
+            }
             paths = _scenario_paths(
                 output_root=output_root,
                 suite_id=suite_id,
@@ -3538,21 +3677,21 @@ def run_suite(
                 )
                 invocation["warnings"].extend(
                     _metadata_workflow_warnings(
-                        scenario=scenario,
+                        scenario=evaluation_scenario,
                         result=result,
                         mutation_summary=mutation_summary,
                         repo_path=paths.repo_path,
                     )
                 )
                 invocation["proportionality_metrics"] = _proportionality_metrics(
-                    scenario=scenario,
+                    scenario=evaluation_scenario,
                     result=result,
                     mutation_summary=mutation_summary,
                     package_read_surface_summary=invocation["package_read_surface_summary"],
                 )
                 invocation["warnings"].extend(
                     _proportionality_warnings(
-                        scenario=scenario,
+                        scenario=evaluation_scenario,
                         result=result,
                         metrics=invocation["proportionality_metrics"],
                     )

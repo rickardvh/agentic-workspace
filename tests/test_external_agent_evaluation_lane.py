@@ -543,6 +543,109 @@ def test_model_cli_harness_allows_repo_relative_final_paths(tmp_path: Path) -> N
     assert not [warning for warning in warnings if warning["warning_class"] == "model_cli_local_path_leak"]
 
 
+def test_model_cli_harness_prompt_variants_preserve_scoring_overrides() -> None:
+    module = _load_harness_module()
+
+    variants = module._prompt_variants(
+        {
+            "id": "receipt-aware",
+            "prompt_variants": [
+                {
+                    "id": "submit",
+                    "prompt": "Submit it.",
+                    "forbidden_write_patterns": [],
+                    "required_operation_receipts": [{"operation_id": "correction-event.submit"}],
+                }
+            ],
+        }
+    )
+
+    assert variants[0]["forbidden_write_patterns"] == []
+    assert variants[0]["required_operation_receipts"] == [{"operation_id": "correction-event.submit"}]
+
+
+def test_model_cli_harness_requires_executed_correction_receipts_and_idempotent_local_custody(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    store_path = repo / ".agentic-workspace/local/correction-events.json"
+    store_path.parent.mkdir(parents=True)
+    expected_event = {
+        "target_identity_ref": "cheap_docs_worker",
+        "target_revision": "rev-b",
+        "task_class": "code-change",
+        "scope_class": "narrow",
+        "phase": "proof",
+        "subsystem": "workspace-runtime",
+        "surface": "final-response",
+    }
+    store_path.write_text(json.dumps({"events": [expected_event]}), encoding="utf-8")
+    requirement = {
+        "operation_id": "correction-event.submit",
+        "minimum_result_count": 2,
+        "required_statuses": ["stored"],
+        "admission_bucket": "admission.low_authority_events",
+        "store_ref": ".agentic-workspace/local/correction-events.json",
+        "expected_store_event_count": 1,
+        "expected_event": expected_event,
+    }
+    receipt = {
+        "kind": "agentic-workspace/correction-event-operation-result/v1",
+        "operation_id": "correction-event.submit",
+        "status": "stored",
+        "mutation_applied": True,
+        "store_ref": ".agentic-workspace/local/correction-events.json",
+        "admission": {"low_authority_events": [expected_event]},
+    }
+    stdout = "\n".join(
+        json.dumps(
+            {
+                "type": "item.completed",
+                "item": {
+                    "type": "command_execution",
+                    "command": "uv run agentic-workspace correction-event submit --format json",
+                    "aggregated_output": json.dumps(receipt),
+                    "exit_code": 0,
+                },
+            }
+        )
+        for _ in range(2)
+    )
+
+    warnings = module._metadata_workflow_warnings(
+        scenario={"id": "receipt-aware", "required_operation_receipts": [requirement]},
+        result={"status": "success", "stdout": stdout, "final_message": "Stored and queried."},
+        mutation_summary={"created": [".agentic-workspace/local/correction-events.json"], "modified": [], "deleted": []},
+        repo_path=repo,
+    )
+
+    assert not [warning for warning in warnings if "operation receipt" in warning["message"].lower()]
+    assert not [warning for warning in warnings if "custody store" in warning["message"].lower()]
+
+
+def test_model_cli_harness_rejects_operation_recognition_without_receipt(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    warnings = module._metadata_workflow_warnings(
+        scenario={
+            "id": "receipt-aware",
+            "required_operation_receipts": [
+                {
+                    "operation_id": "correction-event.submit",
+                    "minimum_result_count": 1,
+                    "store_ref": ".agentic-workspace/local/correction-events.json",
+                }
+            ],
+        },
+        result={"status": "success", "final_message": "Use correction-event.submit."},
+        mutation_summary={"created": [], "modified": [], "deleted": []},
+        repo_path=repo,
+    )
+
+    assert any("structured operation receipts" in warning["message"] for warning in warnings)
+
+
 def test_current_adapter_guidance_live_evidence_is_head_bound_and_honest() -> None:
     evidence_root = REPO_ROOT / "tools" / "model-cli-harness" / "external-agent-evaluation"
     payload = json.loads((evidence_root / "live-results-2026-08-14-adapter-guidance.json").read_text(encoding="utf-8"))

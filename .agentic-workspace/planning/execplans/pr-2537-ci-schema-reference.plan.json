@@ -1,31 +1,42 @@
 {
   "kind": "planning-execplan/v1",
   "id": "pr-2537-ci-schema-reference",
-  "title": "Repair PR 2537 schema reference CI",
+  "title": "Close PR 2537 review and CI blockers",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "closeout",
-  "revision": 3,
+  "phase": "implementation",
+  "revision": 4,
   "intent": {
-    "outcome": "Regenerate the stale correction-event schema reference so PR #2537's Planning package check passes.",
+    "outcome": "Keep PR #2537 green and prove the correction model-harness actually submits and retrieves an AW correction event instead of merely naming the operation.",
     "non_goals": [
-      "Do not change correction-event behavior or schemas.",
+      "Do not weaken correction-event admission, custody, or contextual routing.",
       "Do not address the independent review-approval gate or merge the PR."
     ]
   },
   "parent": {
     "owner_id": "none",
-    "contribution": "Restore generated schema-reference freshness for PR #2537.",
+    "contribution": "Close the current exact-head correction-capture behavioral proof blocker on PR #2537.",
     "closure_boundary": "this slice only"
   },
   "scope": {
     "owned": [
       "docs/reference/correction-event-input.md",
+      "tools/model-cli-harness/suites/copilot-workflow-smoke.json",
+      "tools/model-cli-harness/fixtures/aw-configured-host-repo/.agentic-workspace/config.local.toml",
+      "scripts/model_cli_harness/run_model_cli_harness.py",
+      "src/agentic_workspace/agent_guidance.py",
+      "tests/test_external_agent_evaluation_lane.py",
+      "tests/test_external_operation_clients.py",
+      "tools/model-cli-harness/external-agent-evaluation/live-results-2026-08-14-adapter-guidance.json",
+      "tools/model-cli-harness/external-agent-evaluation/provider-availability-2026-08-14.json",
+      "docs/reviews/adapter-orchestration-correction-evaluation-closure-2026-08-14.md",
       ".agentic-workspace/planning/execplans/pr-2537-ci-schema-reference.plan.json",
       ".agentic-workspace/planning/state.toml"
     ],
     "effects": [
-      "Regenerate the checked-in correction-event input reference from its canonical schema."
+      "Require actual correction-event submit execution and an admitted local receipt in the maintained live scenario.",
+      "Make repeated delivery of one submit event idempotent at the operation boundary.",
+      "Record current first-pass capture, host recovery, idempotent replay, and later retrieval evidence."
     ]
   },
   "relationships": {
@@ -51,17 +62,21 @@
     "GitHub Actions run 31804309764",
     "package-checks (planning, agentic-workspace-planning)"
   ],
-  "next_action": "Push the regenerated reference to PR #2537 and await exact-head CI; the independent review gate remains outside this slice.",
+  "next_action": "Implement receipt-aware harness scoring, run current Codex capture/recovery evidence, and update the closure record.",
   "blockers": [
     "None."
   ],
   "proof": {
     "claims": [
       "docs/reference/correction-event-input.md matches the current canonical schema.",
-      "The Planning schema-reference freshness check passes."
+      "The Planning schema-reference freshness check passes.",
+      "The explicit correction scenario fails when the model only names the operation and passes only after correction-event submit produces structured local custody.",
+      "Current Codex evidence covers compliant first-pass capture, missed-self-capture host recovery, idempotent replay, and later contextual retrieval."
     ],
     "requirements": [
       "make schema-reference-docs",
+      "uv run pytest -q tests/test_external_agent_evaluation_lane.py",
+      "uv run pytest -q tests/test_external_operation_clients.py -k correction_event_generated_operations_store_query_and_preserve_low_authority",
       "git diff --check"
     ],
     "refs": []
