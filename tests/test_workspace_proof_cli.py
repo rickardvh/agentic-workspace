@@ -621,7 +621,7 @@ def test_proof_changed_selector_returns_path_based_validation_lane(tmp_path: Pat
     assert payload["surface"] == "proof"
     assert payload["selector"] == {"changed": [".agentic-workspace/planning/state.toml"]}
     answer = payload["answer"]
-    expected_target = tmp_path.as_posix()
+    expected_target = Path(os.path.relpath(tmp_path, ROOT)).as_posix()
     assert answer["kind"] == "proof-selection/v1"
     assert answer["selected_lanes"][0]["id"] == "planning_surfaces"
     assert answer["required_commands"] == [
@@ -2082,7 +2082,12 @@ def test_proof_changed_selector_does_not_cover_unrelated_workspace_runtime(tmp_p
 
     answer = json.loads(capsys.readouterr().out)["values"]
     assert "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q" not in answer["required_commands"]
-    assert answer["required_commands"] == ["make typecheck"]
+    assert answer["required_commands"] == [
+        "make typecheck",
+        "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
+        "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
+        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
+    ]
     assert "domain:proof_runtime" not in [lane["id"] for lane in answer["selected_lanes"]]
     assert "domain:root_workspace_guidance" not in [lane["id"] for lane in answer["selected_lanes"]]
 
@@ -2111,7 +2116,12 @@ def test_proof_root_workspace_guidance_does_not_claim_unrelated_primitives_witho
 
     answer = json.loads(capsys.readouterr().out)["values"]
     assert "domain:root_workspace_guidance" not in [lane["id"] for lane in answer["selected_lanes"]]
-    assert answer["required_commands"] == ["make typecheck"]
+    assert answer["required_commands"] == [
+        "make typecheck",
+        "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
+        "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
+        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
+    ]
 
 
 def test_proof_changed_selector_domain_route_covers_multi_path_scope(tmp_path: Path, capsys) -> None:
@@ -2574,6 +2584,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
         "detail_command_template",
         "proof_route_selection",
         "proof_closeout_summary",
+        "proof_invocation_posture",
     }
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
     assert payload["proof_narrowness"]["status"] == "broad_required"
