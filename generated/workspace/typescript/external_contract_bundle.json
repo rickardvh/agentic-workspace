@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:12c3ff8cfe643e635a743cfc0fc334e3d8e7175a8d1e31fdff1c9e3314992d3a",
+  "profile_fingerprint": "sha256:b9b0981ee74b57f762664d988662b6bc156424412a820ef0d69dbda97a9073c3",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -17041,8 +17041,8 @@
     "evaluation.authority-refresh": {
       "identity": "evaluation.authority-refresh",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:45ae2780a83177abfed5945474e3f948936dcd1b740274db9450d01dd0fbdbf9",
-      "compatibility_fingerprint": "sha256:b9e8cd2ae5395ca3b07fc2d60215e52241bc1bfe861cd944beb446f98fc79631",
+      "fingerprint": "sha256:0ed5c825d62d0cea1d7053157a6d2959bb78618a9a5dfe430469d369e5d7181d",
+      "compatibility_fingerprint": "sha256:af8bf4e66845c841532ecb0e50175e2ac94e2f9ca7387ba5929be21e7bfdb79f",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.authority-refresh",
@@ -17052,7 +17052,7 @@
           "subcommand": "authority-refresh"
         },
         "summary": "Refresh evaluation observation authority from the single live assignment and admitted public proof receipt.",
-        "classification": "local-state-repair",
+        "classification": "metadata-refresh",
         "inputs": [
           {
             "name": "target",
@@ -17136,7 +17136,7 @@
         ],
         "migration_status": "runtime-consumed",
         "ir_plan": {
-          "status": "representative",
+          "status": "partial",
           "summary": "Generated command packages invoke the runtime-owned authority refresh transition.",
           "steps": [
             {
@@ -17245,7 +17245,7 @@
         "contract": {
           "schema_version": "agentic-workspace/operation/v1",
           "id": "evaluation.authority-refresh",
-          "classification": "local-state-repair",
+          "classification": "metadata-refresh",
           "inputs": [
             {
               "name": "target",

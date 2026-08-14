@@ -1,5 +1,5 @@
 {
-  "classification": "local-state-repair",
+  "classification": "metadata-refresh",
   "command_surface": {
     "command": "evaluation",
     "format_option": "format",
@@ -37,7 +37,7 @@
     }
   ],
   "ir_plan": {
-    "status": "representative",
+    "status": "partial",
     "steps": [
       {
         "description": "Resolve the target root.",

@@ -7,7 +7,7 @@
     "subcommand": "authority-refresh"
   },
   "summary": "Refresh evaluation observation authority from the single live assignment and admitted public proof receipt.",
-  "classification": "local-state-repair",
+  "classification": "metadata-refresh",
   "inputs": [
     {"name": "target", "source": "cli-option", "required": false, "schema_ref": "schemas/evaluation_authority_refresh_input.schema.json"},
     {"name": "evaluation_id", "source": "cli-option", "required": true},
@@ -43,7 +43,7 @@
   "proof": ["evaluation authority tests", "CLI/Python/TypeScript generated client parity"],
   "migration_status": "runtime-consumed",
   "ir_plan": {
-    "status": "representative",
+    "status": "partial",
     "summary": "Generated command packages invoke the runtime-owned authority refresh transition.",
     "steps": [
       {"id": "resolve_root", "uses": "workspace.target-root.resolve", "description": "Resolve the target root."},
