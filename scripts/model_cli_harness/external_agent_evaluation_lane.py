@@ -17,7 +17,7 @@ PACK_FILES = {
     "scenarios": "scenario-probes.json",
     "historical": "historical-failure-fixtures.json",
     "results": "result-records.sample.json",
-    "live_results": "live-results-2026-06-18.json",
+    "live_results": "live-results-2026-08-14-operating-context.json",
     "promotions": "promotion-decisions.sample.json",
     "surfaces": "surface-decisions.sample.json",
 }
@@ -579,6 +579,14 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
         and live_record_ids.intersection({str(item) for item in decision.get("evidence_record_ids", [])})
         for failure_id in decision.get("failure_ids", [])
     )
+    live_admitted_weak_count = sum(
+        1
+        for run in live_runs
+        if run.get("live_outcome") == "weak_noncompliant"
+        and run.get("admission_status") == "admitted_routed_weak_case"
+        and bool(run.get("failure_ids"))
+        and all(live_actionable_failures[str(failure_id)] > 0 for failure_id in run.get("failure_ids", []))
+    )
     operating_loop_records = [record for record in [*records, *live_runs] if isinstance(record.get("operating_loop"), dict)]
     operating_loop_closeout_states = Counter(record["operating_loop"].get("closeout_state") for record in operating_loop_records)
     operating_loop_safe_claims = Counter(record["operating_loop"].get("safe_claim") for record in operating_loop_records)
@@ -611,8 +619,17 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
     fixture_closure_state = "ready_for_fixture_closure" if all(acceptance.values()) else "continued_work"
     live_status = "not-run"
     if live_runs:
-        live_status = "clean" if live_clean_count == len(live_runs) else "unresolved-failures"
-    closure_state = "ready_for_full_closure" if fixture_closure_state == "ready_for_fixture_closure" and live_status == "clean" else "continued_work"
+        if live_clean_count == len(live_runs):
+            live_status = "clean"
+        elif live_clean_count + live_admitted_weak_count == len(live_runs):
+            live_status = "clean-with-admitted-weak-cases"
+        else:
+            live_status = "unresolved-failures"
+    closure_state = (
+        "ready_for_full_closure"
+        if fixture_closure_state == "ready_for_fixture_closure" and live_status in {"clean", "clean-with-admitted-weak-cases"}
+        else "continued_work"
+    )
     if closure_state == "continued_work" and any(acceptance.values()):
         closure_state = "partial_closure"
 
@@ -630,6 +647,7 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
             "status": live_status,
             "run_count": len(live_runs),
             "clean_run_count": live_clean_count,
+            "admitted_weak_run_count": live_admitted_weak_count,
             "failure_counts": dict(sorted(live_failure_counts.items())),
             "warning_counts": dict(sorted(live_warning_counts.items())),
             "promoted_failure_counts": dict(sorted(live_promoted_failures.items())),

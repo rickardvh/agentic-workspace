@@ -926,35 +926,38 @@ def _planning_route_evidence_payload(
     matched_maintenance_markers = [marker for marker in maintenance_markers if marker in text]
     mismatch_evidence = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text)
     shared_refs = [str(ref) for ref in mismatch_evidence.get("shared_refs", []) if str(ref).strip()]
-    if shared_refs:
+    exact_task_identity_match = mismatch_evidence.get("exact_task_identity_match") is True
+    if shared_refs or exact_task_identity_match:
+        continuation_basis = "exact-current-task-owner-intent" if exact_task_identity_match else "shared-structured-reference"
         return {
             "kind": "agentic-workspace/task-switch-reconciliation/v1",
             "status": "issue-matched-continuation",
-            "summary": "Current task shares explicit structured issue or PR refs with the active plan; treat it as active-plan continuation unless other gates name a concrete mismatch.",
+            "summary": "Current task matches the selected plan's intent identity; treat it as active-plan continuation unless another gate names a concrete mismatch.",
             "active_execplan": active_summary.get("active_execplan", ""),
             "intent_conflict_state": "explicit-reference-continuation",
             "mismatch_evidence": mismatch_evidence,
             "current_task_class": "active-plan-continuation",
-            "classification_basis": "shared-structured-reference",
+            "classification_basis": continuation_basis,
             "matched_maintenance_markers": matched_maintenance_markers,
             "classification_inputs": [
                 "active_plan_reliance.status=not-needed-for-current-task",
                 f"shared_refs={','.join(str(ref) for ref in shared_refs[:8])}",
                 f"shared_ref_count={len(shared_refs)}",
                 f"shared_term_count={len(mismatch_evidence.get('shared_terms', []))}",
+                f"exact_task_identity_match={str(exact_task_identity_match).lower()}",
             ],
             "semantic_boundary": (
-                "Only structured issue/PR reference overlap can suppress generic active-plan task-switch pressure here. "
+                "Exact task/owner-intent identity or structured issue/PR reference overlap can suppress generic active-plan task-switch pressure here. "
                 "This does not close the active plan or override other planning, proof, parent-closure, or delegation gates."
             ),
             "recommended_next_action": "continue-active-plan",
             "next_action_packet": {
                 "action": "continue-active-plan",
-                "summary": "The task and active plan share explicit refs; continue through the active plan route unless a concrete structured mismatch appears.",
+                "summary": "The task matches the selected plan identity; continue through that plan unless a concrete structured mismatch appears.",
                 "command": summary_command,
                 "run": summary_command,
                 "risk": "issue-matched-continuation",
-                "required_inputs": ["current task", "active plan boundary", "shared issue/PR refs"],
+                "required_inputs": ["current task", "active plan intent or structured owner refs", "active plan boundary"],
                 "next_proof": "use implement/proof for changed paths and keep active plan closeout separate from task-switch classification",
                 "read_first": [summary_command],
                 "open_execplan_only_when": "the continuation needs active plan contract or proof detail",
@@ -976,7 +979,7 @@ def _planning_route_evidence_payload(
                 "claim_boundary": "The task may continue the active plan but must still satisfy plan proof and closeout before completion claims.",
                 "blocked_claims": ["claim-unrelated-task-complete", "silently-close-active-plan"],
             },
-            "rule": "Structured issue/PR ref overlap is active-plan continuation evidence; arbitrary prose keyword overlap is not.",
+            "rule": "Exact task/owner-intent identity or structured ref overlap is continuation evidence; arbitrary prose keyword overlap is not.",
         }
     configured_target_root = getattr(config, "target_root", None)
     if isinstance(configured_target_root, Path):
@@ -2789,8 +2792,11 @@ def _structured_route_inputs(
             "allowed_effects": ["repo-mutation"],
             "changed_path_count": len(changed_paths),
         }
-    if shared_refs:
+    exact_task_identity_match = mismatch.get("exact_task_identity_match") is True
+    if shared_refs or exact_task_identity_match:
         task_relation, task_basis = "continues-selected-owner", "shared-structured-reference"
+        if exact_task_identity_match:
+            task_basis = "exact-current-task-owner-intent"
     elif bounded_read_only:
         task_relation, task_basis = "bounded-independent", "bounded-read-only-current-work-binding"
     elif bounded_mutation:
@@ -3147,6 +3153,8 @@ def _task_switch_mismatch_evidence(*, active_summary: dict[str, Any], task_text:
         if value
     )
     task = " ".join((task_text or "").split())
+    active_owner_intent = " ".join(str(active_summary.get("active_owner_intent_outcome") or "").split())
+    exact_task_identity_match = bool(task and active_owner_intent and task.casefold() == active_owner_intent.casefold())
     task_terms = _task_switch_terms(task)
     active_terms = _task_switch_terms(active_text)
     task_refs = _task_switch_refs(task)
@@ -3156,7 +3164,13 @@ def _task_switch_mismatch_evidence(*, active_summary: dict[str, Any], task_text:
     )
     shared_terms = [term for term in task_terms if term in set(active_terms)]
     shared_refs = [ref for ref in task_refs if ref in set(active_refs)]
-    overlap_signal = "possible-continuation" if shared_refs or len(shared_terms) >= 2 else "low-overlap-explicit-task"
+    overlap_signal = (
+        "exact-task-continuation"
+        if exact_task_identity_match
+        else "possible-continuation"
+        if shared_refs or len(shared_terms) >= 2
+        else "low-overlap-explicit-task"
+    )
     return {
         "current_task_excerpt": task[:160],
         "active_plan_label": active_plan_label,
@@ -3167,8 +3181,9 @@ def _task_switch_mismatch_evidence(*, active_summary: dict[str, Any], task_text:
         "task_terms": task_terms[:8],
         "active_plan_terms": active_terms[:8],
         "shared_terms": shared_terms[:8],
+        "exact_task_identity_match": exact_task_identity_match,
         "overlap_signal": overlap_signal,
-        "rule": "Structured refs from the current task and selected owner are bounded continuation evidence; they do not close active planning.",
+        "rule": "An exact current-task/owner-intent identity or structured refs are bounded continuation evidence; neither closes active planning.",
     }
 
 

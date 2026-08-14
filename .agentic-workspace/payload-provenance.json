@@ -13,8 +13,8 @@
     "python_executable": ".venv/Scripts/python.exe",
     "source": "local-source",
     "source_class": "source-checkout",
-    "source_identity": "git:45ab121bb242",
-    "version": "0.37.0"
+    "source_identity": "git:30ffa6c9f0f1",
+    "version": "0.40.0"
   },
   "kind": "agentic-workspace/payload-provenance/v1",
   "payload_capabilities": [
@@ -26,6 +26,9 @@
     ".agentic-workspace/docs/jumpstart-contract.md",
     ".agentic-workspace/docs/module-map.md",
     ".agentic-workspace/docs/setup-findings-contract.md",
+    ".agentic-workspace/docs/workspace-config-contract.md",
+    ".agentic-workspace/fallback/no-cli-policy.json",
+    ".agentic-workspace/fallback/no_cli_startup.py",
     ".agentic-workspace/skills/REGISTRY.json",
     ".agentic-workspace/skills/workspace-startup/SKILL.md",
     ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
@@ -40,8 +43,8 @@
   "release_identity": {
     "package": "agentic-workspace",
     "release_model": "coordinated-workspace",
-    "tag": "v0.37.0",
-    "version": "0.37.0"
+    "tag": "v0.40.0",
+    "version": "0.40.0"
   },
   "rule": "Repo payload provenance records the coordinated AW release identity and executable/source identity that installed or last synced the AW payload."
 }

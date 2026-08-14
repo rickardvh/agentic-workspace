@@ -5906,6 +5906,37 @@
                     "name": "target"
                   },
                   {
+                    "flags": [
+                      "--task"
+                    ],
+                    "help": "Exact direct-work task identity used to reconcile bounded closeout proof.",
+                    "name": "task"
+                  },
+                  {
+                    "action": "extend",
+                    "default": [],
+                    "flags": [
+                      "--changed"
+                    ],
+                    "help": "Repo-relative direct-work paths whose selected proof receipts must reconcile before bounded admission.",
+                    "name": "changed",
+                    "nargs": "*"
+                  },
+                  {
+                    "flags": [
+                      "--residue"
+                    ],
+                    "help": "Structured direct-work residue kind: docs, issue, memory, planning, or review.",
+                    "name": "residue"
+                  },
+                  {
+                    "flags": [
+                      "--residue-owner"
+                    ],
+                    "help": "Structured continuation owner for the still-open larger intent.",
+                    "name": "residue_owner"
+                  },
+                  {
                     "default": "",
                     "flags": [
                       "--attempt"
@@ -5936,6 +5967,27 @@
                     ],
                     "help": "Source label for the final response attempt.",
                     "name": "source"
+                  },
+                  {
+                    "choices": [
+                      "terminal-final",
+                      "partial-progress",
+                      "slice-complete"
+                    ],
+                    "default": "terminal-final",
+                    "flags": [
+                      "--claim-class"
+                    ],
+                    "help": "Claim class for admission; bounded classes require matching closeout authorization and never imply parent, lane, or full-intent completion.",
+                    "name": "claim_class"
+                  },
+                  {
+                    "default": "",
+                    "flags": [
+                      "--claim-scope-id"
+                    ],
+                    "help": "Closeout-derived bounded claim-scope identity; required for partial-progress or slice-complete admission.",
+                    "name": "claim_scope_id"
                   },
                   {
                     "action": "store_true",

@@ -370,14 +370,16 @@ def test_external_agent_lane_rejects_promotions_without_actionable_remediation()
 def test_external_agent_lane_records_repaired_live_local_path_leak() -> None:
     module = _load_module()
     pack = module.load_pack(repo_root=REPO_ROOT)
-    live_run = next(item for item in pack["live_results"]["runs"] if item["id"] == "live-memory-consult-20260623T152211Z")
+    live_run = next(item for item in pack["live_results"]["runs"] if item["id"] == "live-memory-trap-aware-20260814T094836Z")
 
-    assert live_run["live_outcome"] == "pass"
-    assert live_run["failure_ids"] == []
+    assert live_run["live_outcome"] == "weak_noncompliant"
+    assert live_run["admission_status"] == "admitted_routed_weak_case"
+    assert live_run["failure_ids"] == ["HARNESS_SCENARIO_AMBIGUOUS"]
     assert live_run["remediated_failure_ids"] == ["LOCAL_ABSOLUTE_PATH_LEAK"]
     assert live_run["raw_warning_classes"] == ["model_cli_local_path_leak"]
     assert live_run["final_message_repair"]["status"] == "repaired"
     assert live_run["final_message_repair"]["repairs"][0]["replacement"] == "README.md"
+    assert live_run["noncompliance"]["disposition"].startswith("retained as current weak-agent evidence")
 
 
 def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None:
@@ -386,11 +388,12 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
 
     assert report["kind"] == "agentic-workspace/external-agent-lane-closure-report/v1"
     assert report["default_external_agent"] == {"adapter": "codex", "model": "gpt-5.3-codex-spark"}
-    assert report["live_evaluation_agent"] == {"adapter": "codex", "model": "gpt-5.4-mini"}
+    assert report["live_evaluation_agent"] == {"adapter": "codex", "model": "gpt-5.3-codex-spark"}
     assert report["fixture_closure_state"] == "ready_for_fixture_closure"
     assert report["closure_state"] == "ready_for_full_closure"
-    assert report["live_evaluation"]["status"] == "clean"
-    assert report["live_evaluation"]["clean_run_count"] == 4
+    assert report["live_evaluation"]["status"] == "clean-with-admitted-weak-cases"
+    assert report["live_evaluation"]["clean_run_count"] == 2
+    assert report["live_evaluation"]["admitted_weak_run_count"] == 1
     assert report["acceptance"]["scenario_probes_cover_major_phases"] is True
     assert report["acceptance"]["artifact_backed_path_defined"] is True
     assert report["acceptance"]["operating_loop_observable"] is True
@@ -398,9 +401,9 @@ def test_external_agent_lane_closure_report_is_ready_from_fixture_pack() -> None
     assert report["acceptance"]["completion_cost_observations_exist"] is True
     assert report["failure_counts"]["PROOF_MISSING_BEFORE_CLAIM"] >= 1
     assert report["failure_counts"]["PARTIAL_PROGRESS_CLAIMED_AS_FULL"] >= 1
-    assert report["live_evaluation"]["failure_counts"] == {}
-    assert report["live_evaluation"]["promoted_failure_counts"] == {}
-    assert report["live_evaluation"]["actionable_remediation_failure_counts"] == {}
+    assert report["live_evaluation"]["failure_counts"] == {"HARNESS_SCENARIO_AMBIGUOUS": 1}
+    assert report["live_evaluation"]["actionable_remediation_failure_counts"]["HARNESS_SCENARIO_AMBIGUOUS"] >= 1
+    assert report["live_evaluation"]["promoted_failure_counts"] == {"HARNESS_SCENARIO_AMBIGUOUS": 1}
     assert report["promotion_count"] >= 1
     loop = report["operating_loop_observability"]
     assert loop["kind"] == "agentic-workspace/external-agent-operating-loop-observability/v1"

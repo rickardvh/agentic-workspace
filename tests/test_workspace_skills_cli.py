@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 # ruff: noqa: F403,F405
+import os
+
 from tests.workspace_cli_support import *
 
 
@@ -1223,6 +1225,20 @@ def test_skills_command_prefers_dogfooding_for_closeout_review(capsys) -> None:
     assert payload["recommendations"][0]["id"] == "self-improvement-dogfooding"
     assert payload["top_recommendations"][0]["id"] == "self-improvement-dogfooding"
     assert "explicit dogfooding task route" in payload["recommendations"][0]["reasons"]
+
+
+def test_skills_inventory_detail_uses_short_relative_target(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_core import _skills_recommendation_first_payload
+
+    payload = _skills_recommendation_first_payload(
+        {"skills": [], "recommendations": [], "blocked_recommendations": [], "warnings": [], "sources": []},
+        target_root=tmp_path,
+        task_text="inspect skills",
+    )
+    expected_target = Path(os.path.relpath(tmp_path.resolve(), Path.cwd().resolve())).as_posix()
+
+    assert f'--target "{expected_target}" ' in payload["inventory_detail"]["command"]
+    assert tmp_path.as_posix() not in payload["inventory_detail"]["command"]
 
 
 def test_skills_command_recommends_self_improvement_for_hyphenated_dogfooding_task(tmp_path: Path, capsys) -> None:

@@ -29,14 +29,14 @@
     {
       "id": "dismiss-harness-specific-phrasing",
       "failure_ids": ["HARNESS_SCENARIO_AMBIGUOUS"],
-      "evidence_record_ids": [],
-      "threshold": "no repeated product signal",
-      "decision": "dismiss",
-      "dismissal_reason": "scenario_ambiguous",
+      "evidence_record_ids": ["live-memory-trap-aware-20260814T094836Z"],
+      "threshold": "current live run showed an AW-owned local consequence receipt scored as an unrelated task mutation",
+      "decision": "promote",
       "owner_surface": "harness",
       "fallback_owner_surface": "no_change",
-      "followup_ref": "",
-      "closure_effect": "accepted"
+      "followup_ref": "#2539",
+      "remediation_kind": "actionable-issue",
+      "closure_effect": "routed"
     },
     {
       "id": "promote-live-local-path-leak",
