@@ -121,7 +121,7 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
                 {
                     "kind": "agentic-workspace/generated-command-semantic-conformance-receipt/v1",
                     "status": "passed",
-                    "subject": {"node_version": f"{major}.0.0"},
+                    "subject": {"node_version": f"v{major}.0.0"},
                 },
             )
         )
@@ -219,6 +219,19 @@ def test_composed_promotion_rejects_missing_runtime_receipt(tmp_path: Path) -> N
     assert PROMOTION.main(args) == 1
     result = json.loads((tmp_path / "dist/support-bearing-promotion.json").read_text(encoding="utf-8"))
     assert any("missing runtime support receipt" in failure for failure in result["failures"])
+
+
+def test_composed_promotion_fails_closed_on_invalid_semantic_runtime(tmp_path: Path) -> None:
+    args = _compose_fixture(tmp_path)
+    receipt = tmp_path / "dist/generated-command-conformance-node20.json"
+    payload = json.loads(receipt.read_text(encoding="utf-8"))
+    payload["subject"]["node_version"] = "20.0.0"
+    _write(receipt, payload)
+
+    assert PROMOTION.main(args) == 1
+    result = json.loads((tmp_path / "dist/support-bearing-promotion.json").read_text(encoding="utf-8"))
+    assert "generated-command-conformance-node20.json has invalid semantic-conformance Node version '20.0.0'" in result["failures"]
+    assert "missing semantic conformance for Node majors: [20]" in result["failures"]
 
 
 def test_composed_promotion_rejects_redistribution_artifact_drift(tmp_path: Path) -> None:

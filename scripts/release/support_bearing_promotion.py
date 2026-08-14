@@ -31,6 +31,11 @@ def _digest(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _node_major(version: object) -> int | None:
+    match = re.fullmatch(r"v(?P<major>[1-9][0-9]*)\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?", str(version or "").strip())
+    return int(match.group("major")) if match else None
+
+
 def python_support_policy_failures(policy: dict[str, Any], root: Path = ROOT) -> list[str]:
     support = policy.get("python_support", {})
     declared = [str(item) for item in support.get("declared", [])]
@@ -174,8 +179,11 @@ def _compose(args: argparse.Namespace) -> int:
     for path in args.semantic_receipt:
         payload = require(path, "agentic-workspace/generated-command-semantic-conformance-receipt/v1", "passed")
         node_version = str(payload.get("subject", {}).get("node_version") or "")
-        if node_version:
-            observed_node_majors.add(int(node_version.split(".", 1)[0]))
+        node_major = _node_major(node_version)
+        if node_major is None:
+            failures.append(f"{path.name} has invalid semantic-conformance Node version {node_version!r}")
+        else:
+            observed_node_majors.add(node_major)
     missing_nodes = sorted(set(policy["semantic_node_majors"]) - observed_node_majors)
     if missing_nodes:
         failures.append(f"missing semantic conformance for Node majors: {missing_nodes}")
