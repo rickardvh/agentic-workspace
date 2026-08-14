@@ -8,7 +8,7 @@
       "status": "available-with-current-evidence",
       "evidence_ref": "live-results-2026-08-14-adapter-guidance.json",
       "covered_tiers": ["codex-spark"],
-      "evaluated_implementation_head": "7bd92773b48cf89679781c80128146cfe04e67ea"
+      "evaluated_implementation_head": "2bfdf2ac3061d531742fbe37657fc8e4142b29fd"
     },
     {
       "family": "distinct-vendor",

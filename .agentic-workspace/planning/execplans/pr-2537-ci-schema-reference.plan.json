@@ -4,8 +4,8 @@
   "title": "Close PR 2537 review and CI blockers",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 7,
+  "phase": "closeout",
+  "revision": 8,
   "intent": {
     "outcome": "Keep PR #2537 green and prove the correction model-harness actually submits and retrieves an AW correction event instead of merely naming the operation.",
     "non_goals": [
@@ -53,9 +53,10 @@
     "proof_posture": {
       "state": "current",
       "refs": [
-        "make schema-reference-docs: passed",
-        "isolated Windows timing regression rerun: passed",
-        "git diff --check: passed"
+        "uv run pytest -q tests/test_external_agent_evaluation_lane.py: passed",
+        "focused correction-event external operation tests: passed",
+        "generated Python/TypeScript static and conformance proof: passed",
+        "current Codex first-request and normalized host-recovery live runs: passed with zero warnings"
       ]
     },
     "external_posture": {
@@ -68,7 +69,7 @@
     "GitHub Actions run 31804309764",
     "package-checks (planning, agentic-workspace-planning)"
   ],
-  "next_action": "Implement receipt-aware harness scoring, run current Codex capture/recovery evidence, and update the closure record.",
+  "next_action": "Commit and push the current evidence head, then monitor PR #2537 checks without merging.",
   "blockers": [
     "None."
   ],
@@ -85,7 +86,13 @@
       "uv run pytest -q tests/test_external_operation_clients.py -k correction_event_generated_operations_store_query_and_preserve_low_authority",
       "git diff --check"
     ],
-    "refs": []
+    "refs": [
+      "implementation head 2bfdf2ac3061d531742fbe37657fc8e4142b29fd",
+      "live explicit capture run 20260814T145559Z",
+      "live normalized host recovery run 20260814T145631Z",
+      "verification_proof_decision_review: retained tests cover new behavior classes at the correction operation and receipt-aware harness boundaries; generated parity remains conformance-owned",
+      "test_evidence_owner_review: root tests own public adapter/harness orchestration while generated Python/TypeScript checks own transport parity; no historical one-off test was added"
+    ]
   },
   "continuation": {
     "owner": "none",

@@ -664,15 +664,25 @@ def test_current_adapter_guidance_live_evidence_is_head_bound_and_honest() -> No
     payload = json.loads((evidence_root / "live-results-2026-08-14-adapter-guidance.json").read_text(encoding="utf-8"))
     availability = json.loads((evidence_root / "provider-availability-2026-08-14.json").read_text(encoding="utf-8"))
 
-    assert payload["evaluated_implementation_head"] == "7bd92773b48cf89679781c80128146cfe04e67ea"
-    outcomes = {run["prompt_variant"]: run["live_outcome"] for run in payload["runs"]}
-    assert outcomes["explicit-correction-capture"] in {"miss", "recovered-on-second-request"}
+    current_head = "2bfdf2ac3061d531742fbe37657fc8e4142b29fd"
+    assert payload["evaluated_implementation_head"] == current_head
+    current_runs = [run for run in payload["runs"] if run.get("evaluated_implementation_head") == current_head]
+    current_outcomes = {run["prompt_variant"]: run["live_outcome"] for run in current_runs}
+    assert current_outcomes["explicit-correction-capture"] == "pass-first-request-executed"
+    assert current_outcomes["missed-correction-host-recovery"] == "pass-host-normalized-recovery-executed"
+    assert all(run["warning_classes"] == [] for run in current_runs)
+    assert all(run["operation_evidence"]["submit_receipt_count"] == 2 for run in current_runs)
+    assert all(run["operation_evidence"]["query_receipt_count"] == 1 for run in current_runs)
+    assert all(run["operation_evidence"]["duplicate_mutation_applied"] is False for run in current_runs)
+    assert all(run["operation_evidence"]["matching_stored_event_count"] == 1 for run in current_runs)
     assert any(run["live_outcome"] == "miss" for run in payload["runs"])
     recovery = next(run for run in payload["runs"] if run["live_outcome"] == "recovered-on-second-request")
     assert recovery["requests_to_completion"] == 2
-    assert outcomes["changed-requirement-negative"].startswith("pass")
-    assert outcomes["later-context-retrieval"].startswith("pass")
-    assert outcomes["violation-recovery-consequence"].startswith("pass")
+    historical_outcomes = {run["prompt_variant"]: run["live_outcome"] for run in payload["runs"] if run not in current_runs}
+    assert historical_outcomes["changed-requirement-negative"].startswith("pass")
+    assert historical_outcomes["later-context-retrieval"].startswith("pass")
+    assert historical_outcomes["violation-recovery-consequence"].startswith("pass")
+    assert availability["routes"][0]["evaluated_implementation_head"] == current_head
 
     evaluation = payload["evaluation_operation"]
     assert evaluation["operation"] == "evaluation.observe"

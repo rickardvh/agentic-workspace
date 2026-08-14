@@ -2,7 +2,8 @@
   "kind": "agentic-workspace/external-agent-live-results/v1",
   "lane": "#2216/#2222/#2224/#2266",
   "executed_at": "2026-08-14",
-  "evaluated_implementation_head": "7bd92773b48cf89679781c80128146cfe04e67ea",
+  "evaluated_implementation_head": "2bfdf2ac3061d531742fbe37657fc8e4142b29fd",
+  "historical_evidence_head": "7bd92773b48cf89679781c80128146cfe04e67ea",
   "agent": {
     "adapter": "codex",
     "model": "gpt-5.3-codex-spark",
@@ -36,6 +37,44 @@
       "requests_to_completion": 2,
       "summary": "After normalized host feedback, the agent identified correction-event.submit, the repo-local correction store, and correction-event.query for later retrieval. The run also exposed Windows source-checkout command friction.",
       "warning_classes": ["model_cli_command_execution_failed"]
+    },
+    {
+      "id": "live-explicit-correction-executed-20260814T145559Z",
+      "harness_scenario": "correction-guidance-operating-loop",
+      "prompt_variant": "explicit-correction-capture",
+      "evaluated_implementation_head": "2bfdf2ac3061d531742fbe37657fc8e4142b29fd",
+      "run_ref": ".agentic-workspace/local/scratch/pr-2537-live-final/20260814T145559Z-correction-guidance-operating-loop-codex-gpt-5.3-codex-spark-27fd81bfa2/run.json",
+      "live_outcome": "pass-first-request-executed",
+      "requests_to_completion": 1,
+      "summary": "The agent executed two correction-event.submit calls and one exact-context query in its first request. Both structured submit receipts admitted the expected low-authority contextual event; the duplicate submit was a no-op and local custody contained exactly one matching event.",
+      "operation_evidence": {
+        "submit_receipt_count": 2,
+        "query_receipt_count": 1,
+        "duplicate_mutation_applied": false,
+        "matching_stored_event_count": 1,
+        "custody_ref": ".agentic-workspace/local/correction-events.json",
+        "checked_in_repo_effect": "none"
+      },
+      "warning_classes": []
+    },
+    {
+      "id": "live-missed-correction-host-recovery-executed-20260814T145631Z",
+      "harness_scenario": "correction-guidance-operating-loop",
+      "prompt_variant": "missed-correction-host-recovery",
+      "evaluated_implementation_head": "2bfdf2ac3061d531742fbe37657fc8e4142b29fd",
+      "run_ref": ".agentic-workspace/local/scratch/pr-2537-live-final/20260814T145631Z-correction-guidance-operating-loop-codex-gpt-5.3-codex-spark-fa443f7c4c/run.json",
+      "live_outcome": "pass-host-normalized-recovery-executed",
+      "requests_to_completion": 1,
+      "summary": "Given a normalized host recovery after a prior self-capture miss, the agent executed the same public submit/query boundary, preserved the full context tuple, proved duplicate-delivery idempotence, and left only ignored local custody.",
+      "operation_evidence": {
+        "submit_receipt_count": 2,
+        "query_receipt_count": 1,
+        "duplicate_mutation_applied": false,
+        "matching_stored_event_count": 1,
+        "custody_ref": ".agentic-workspace/local/correction-events.json",
+        "checked_in_repo_effect": "none"
+      },
+      "warning_classes": []
     },
     {
       "id": "live-changed-requirement-negative-20260814T102017Z",
@@ -96,5 +135,5 @@
     "separate_strong_tier": "unavailable",
     "availability_ref": "provider-availability-2026-08-14.json"
   },
-  "claim_boundary": "These are present-tense Codex results for the evaluated implementation head. Harness command-execution and metadata warnings remain visible and are not promoted into passing proof."
+  "claim_boundary": "The two executed correction-capture runs are present-tense Codex results for the evaluated implementation head and passed the receipt-aware harness with no warnings. Earlier miss, recovery-recognition, changed-requirement, retrieval, consequence, and binding-route runs remain historical evidence at historical_evidence_head; their warnings remain visible and are not promoted into passing proof."
 }
