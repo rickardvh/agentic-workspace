@@ -876,6 +876,14 @@ def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> 
         reason_code="closed-lane-live-reference",
         surface_suffix="closeable-lane.lane.json",
     )
+    assert warning["authority_effect"] == {
+        "classification": "closed-lane-maintenance-residue",
+        "live_owner_admitted": False,
+        "proof_or_claim_authority": "none",
+        "ordinary_decision_effect": "maintenance-signal-only",
+        "blocked_claims": [],
+        "rule": "A closed lane remains repairable and inspectable but cannot re-enter live owner, proof, or claim authority.",
+    }
     assert summary["planning_surface_health"]["live_reference_integrity"]["contracts"] == [warning["repair_affordance"]]
     lane = summary["lanes"]["records"][0]
     assert lane["status"] == "closed"

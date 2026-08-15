@@ -6500,6 +6500,14 @@ def _planning_lane_surface_warnings(*, target_root: Path, lane_projection: dict[
                         "does not treat completed lane evidence as selectable work."
                     ),
                     "suggested_fix": f"Run agentic-planning lane-archive {lane_id} --target . --format json.",
+                    "authority_effect": {
+                        "classification": "closed-lane-maintenance-residue",
+                        "live_owner_admitted": False,
+                        "proof_or_claim_authority": "none",
+                        "ordinary_decision_effect": "maintenance-signal-only",
+                        "blocked_claims": [],
+                        "rule": "A closed lane remains repairable and inspectable but cannot re-enter live owner, proof, or claim authority.",
+                    },
                     "repair_affordance": _planning_live_reference_repair_contract(
                         target_root=target_root,
                         owner_surface=path,
@@ -8610,6 +8618,9 @@ def _planning_surface_health(
         repair_affordance = warning.get("repair_affordance")
         if isinstance(repair_affordance, dict) and repair_affordance:
             health_warning["repair_affordance"] = repair_affordance
+        authority_effect = warning.get("authority_effect")
+        if isinstance(authority_effect, dict) and authority_effect:
+            health_warning["authority_effect"] = authority_effect
         health_warnings.append(health_warning)
     live_reference_contracts = _live_reference_repair_contracts_from_warnings(health_warnings)
     if not health_warnings:
