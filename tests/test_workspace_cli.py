@@ -538,10 +538,15 @@ def test_start_unknown_selector_fails_before_payload_construction(tmp_path: Path
     monkeypatch.setattr(cli, "_selector_first_start_payload", fail_start_payload)
     monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
 
-    assert cli.main(["start", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"]) == 2
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert payload["unknown_selectors"] == ["not_a_selector"]
+    assert (payload["exit_status"], payload["exit_class"], payload["mutation_occurred"]) == (
+        2,
+        "usage-or-validation-error",
+        False,
+    )
     assert (
         payload["selector_inventory"]["inventory_command"] == "agentic-workspace start --target . --select selector_inventory --format json"
     )
@@ -556,7 +561,7 @@ def test_start_nested_unknown_selector_fails_before_payload_construction(tmp_pat
     monkeypatch.setattr(cli, "_selector_first_start_payload", fail_start_payload)
     monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
 
-    assert cli.main(["start", "--target", str(tmp_path), "--select", "context.not_a_real_field", "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "context.not_a_real_field", "--format", "json"]) == 2
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert payload["unknown_selectors"] == ["context.not_a_real_field"]
@@ -572,7 +577,7 @@ def test_start_selector_request_limits_fail_before_payload_construction(tmp_path
     monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
     selectors = ",".join(f"missing_{index}" for index in range(40))
 
-    assert cli.main(["start", "--target", str(tmp_path), "--select", selectors, "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(tmp_path), "--select", selectors, "--format", "json"]) == 2
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert payload["status"] == "invalid-selector-request"
@@ -600,7 +605,7 @@ def test_start_selector_budget_limits_have_bounded_attribution_before_payload_co
     monkeypatch.setattr(cli, "_selector_first_start_payload", fail_start_payload)
     monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
 
-    assert cli.main(["start", "--target", str(tmp_path), "--select", selector, "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(tmp_path), "--select", selector, "--format", "json"]) == 2
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
@@ -681,7 +686,7 @@ def test_implement_unknown_selector_fails_before_payload_construction(tmp_path: 
 
     monkeypatch.setattr(cli, "_implement_payload", fail_implement_payload)
 
-    assert cli.main(["implement", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"]) == 0
+    assert cli.main(["implement", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"]) == 2
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert payload["unknown_selectors"] == ["not_a_selector"]
@@ -695,7 +700,7 @@ def test_implement_nested_unknown_selector_fails_before_payload_construction(tmp
 
     monkeypatch.setattr(cli, "_implement_payload", fail_implement_payload)
 
-    assert cli.main(["implement", "--target", str(tmp_path), "--select", "context.not_a_real_field", "--format", "json"]) == 0
+    assert cli.main(["implement", "--target", str(tmp_path), "--select", "context.not_a_real_field", "--format", "json"]) == 2
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert payload["unknown_selectors"] == ["context.not_a_real_field"]
@@ -738,7 +743,7 @@ def test_selector_contract_has_single_shared_host_authority() -> None:
 def test_deprecated_selector_reports_bounded_replacement_hint_before_projection(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 
-    assert cli.main(["config", "--target", str(tmp_path), "--select", "workspace.feature_tier", "--format", "json"]) == 0
+    assert cli.main(["config", "--target", str(tmp_path), "--select", "workspace.feature_tier", "--format", "json"]) == 2
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
@@ -813,8 +818,9 @@ def _generated_typescript_config_selector_payload(tmp_path: Path, selector: str)
         ],
         cwd=tmp_path,
         capture_output=True,
-        check=True,
+        check=False,
     )
+    assert completed.returncode == 2
     return json.loads(completed.stdout.decode("utf-8"))
 
 
@@ -880,7 +886,7 @@ def test_generated_selector_validation_matches_host_contract_for_canonical_bound
 ) -> None:
     _init_git_repo(tmp_path)
 
-    assert cli.main(["config", "--target", str(tmp_path), "--select", selector, "--format", "json"]) == 0
+    assert cli.main(["config", "--target", str(tmp_path), "--select", selector, "--format", "json"]) == 2
     host_payload = json.loads(capsys.readouterr().out)
     generated_python_payload = _generated_python_config_selector_payload(tmp_path, selector)
     generated_typescript_payload = _generated_typescript_config_selector_payload(tmp_path, selector)
@@ -892,6 +898,9 @@ def test_generated_selector_validation_matches_host_contract_for_canonical_bound
 
     assert host_payload["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert host_payload["source_command"] == "config"
+    assert host_payload["exit_status"] == 2
+    assert host_payload["safe_to_retry"] is True
+    assert host_payload["mutation_occurred"] is False
     assert host_payload["selector_budget"] == {
         "max_selectors": 32,
         "max_selector_bytes": 256,
@@ -933,8 +942,9 @@ def test_generated_typescript_workspace_operations_use_host_selector_prevalidati
         cwd=tmp_path,
         text=True,
         capture_output=True,
-        check=True,
+        check=False,
     )
+    assert completed.returncode == 2
     payload = json.loads(completed.stdout)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert payload["source_command"] == source_command
@@ -957,7 +967,7 @@ def test_start_optional_selector_root_is_exact_before_payload_construction(tmp_p
     monkeypatch.setattr(cli, "_selector_first_start_payload", fail_start_payload)
     monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
 
-    assert cli.main(["start", "--target", str(tmp_path), "--select", "issue_reference_intent.not_a_real_field", "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "issue_reference_intent.not_a_real_field", "--format", "json"]) == 2
     nested_payload = json.loads(capsys.readouterr().out)
     assert nested_payload["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert nested_payload["unknown_selectors"] == ["issue_reference_intent.not_a_real_field"]
@@ -1000,7 +1010,8 @@ def test_command_families_reject_nested_unknown_selectors_before_projection(
     for attr in tripwire_attrs:
         monkeypatch.setattr(cli, attr, fail_payload_construction)
 
-    assert cli.main([*command_argv, "--select", unknown_selector, "--format", "json"]) == 0
+    expected_exit = 0 if source_command == "proof" else 2
+    assert cli.main([*command_argv, "--select", unknown_selector, "--format", "json"]) == expected_exit
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
@@ -1030,13 +1041,14 @@ def test_selector_error_size_measurements_stay_under_budget(tmp_path: Path, caps
     measurements: dict[str, dict[str, int]] = {}
 
     for name, argv in cases.items():
-        assert cli.main(argv) == 0
+        expected_exit = 0 if name == "explicit_inventory" else 2
+        assert cli.main(argv) == expected_exit
         text = capsys.readouterr().out
         measurements[name] = {"bytes": len(text.encode("utf-8")), "lines": len(text.splitlines())}
 
-    assert measurements["ordinary_typo"]["bytes"] < 2000
-    assert measurements["nested_typo"]["bytes"] < 2200
-    assert measurements["oversized_request"]["bytes"] < 1600
+    assert measurements["ordinary_typo"]["bytes"] < 2400
+    assert measurements["nested_typo"]["bytes"] < 2600
+    assert measurements["oversized_request"]["bytes"] < 2000
     assert measurements["explicit_inventory"]["bytes"] > measurements["nested_typo"]["bytes"]
     assert measurements["explicit_inventory"]["bytes"] < 25000
 
@@ -1280,7 +1292,7 @@ def test_report_unknown_selector_fails_before_runtime_context(monkeypatch, capsy
 
     monkeypatch.setattr(cli, "_selected_runtime_context", fail_runtime_context)
 
-    assert cli.main(["report", "--select", "not_a_selector", "--format", "json"]) == 0
+    assert cli.main(["report", "--select", "not_a_selector", "--format", "json"]) == 2
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert payload["unknown_selectors"] == ["not_a_selector"]
@@ -9403,6 +9415,57 @@ def test_every_declared_route_consumer_is_a_no_divergence_projection() -> None:
         planning_route_consumer_projection(route_decision=decision, consumer="parallel-classifier")
 
 
+def test_executable_child_adoption_projects_one_authoritative_route_decision() -> None:
+    from agentic_workspace.workspace_runtime_planning import (
+        _planning_front_door_projection_outcome,
+        _planning_route_decision_payload,
+        planning_route_consumer_projection,
+        validate_planning_route_action_invocation,
+    )
+
+    decision = _planning_route_decision_payload(
+        {
+            "task_relation": "continues-selected-owner",
+            "owner_posture": "current",
+            "active_execplan": ".agentic-workspace/planning/execplans/umbrella.plan.json",
+            "route_inputs": {
+                "owner": {
+                    "ref": ".agentic-workspace/planning/execplans/umbrella.plan.json",
+                    "revision": "owner-revision-a",
+                },
+                "task_binding": {
+                    "identity": "bounded-child:pr-review-fix",
+                    "mode": "mutation",
+                    "relation_source": "explicit-structured-child-adoption",
+                    "parent_owner_ref": ".agentic-workspace/planning/execplans/umbrella.plan.json",
+                },
+            },
+        },
+        planning_revision={"revision_id": "planning-revision-a"},
+    )
+    invocation = decision["next_safe_action"]["operation_invocation"]
+    admission = validate_planning_route_action_invocation(invocation=invocation, live_route_decision=decision)
+    outcome = _planning_front_door_projection_outcome(
+        "continue-active-plan",
+        invocation["input_identity"],
+        target_root=Path(".").resolve(),
+        task_text="Apply the bounded PR review fix",
+        changed_paths=["src/example.py"],
+    )
+
+    assert admission["status"] == "admitted"
+    assert decision["selected_owner"].endswith("umbrella.plan.json")
+    assert decision["task_relation"] == "continues-selected-owner"
+    assert decision["next_safe_action"]["action"] == "continue-active-plan"
+    assert outcome["mutation_outcome"] == "no-op"
+    projections = [
+        planning_route_consumer_projection(route_decision=decision, consumer=consumer)
+        for consumer in ("startup", "implement", "proof", "closeout")
+    ]
+    assert {projection["decision_id"] for projection in projections} == {decision["decision_id"]}
+    assert {projection["action_identity"]["task_binding_identity"] for projection in projections} == {"bounded-child:pr-review-fix"}
+
+
 def test_startup_claim_effect_projection_preserves_canonical_route_identity_and_boundary() -> None:
     from agentic_workspace.operating_decision import project_startup_claim_effect_authority
     from agentic_workspace.workspace_runtime_core import _installed_state_drift_triage_payload
@@ -14439,7 +14502,7 @@ def test_start_missing_selector_returns_bounded_inventory(tmp_path: Path, capsys
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
 
-    assert cli.main(["start", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"]) == 0
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"]) == 2
     payload = json.loads(capsys.readouterr().out)
 
     _assert_json_payload_under(payload, 2_000, label="start missing selector fallback", sort_keys=False)

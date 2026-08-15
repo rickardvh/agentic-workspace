@@ -2828,7 +2828,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     _validate_target_root(command_name="start", target_root=target_root)
     if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command="start"):
         _emit_payload(payload=prevalidation_error, format_name=args.format)
-        return 0
+        return int(prevalidation_error["exit_status"])
     if args.format == "json":
         if recovery_payload := _obsolete_default_preset_start_recovery_payload(target_root=target_root):
             _emit_payload(payload=recovery_payload, format_name=args.format)

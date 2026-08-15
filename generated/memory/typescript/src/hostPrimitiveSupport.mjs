@@ -646,6 +646,10 @@ function workspaceSelectorRequestError(sourceCommand, reason, selectors, request
   const payload = {
     kind: 'agentic-workspace/selector-validation-error/v1',
     status: 'invalid-selector-request',
+    exit_status: 2,
+    exit_class: 'usage-or-validation-error',
+    safe_to_retry: true,
+    mutation_occurred: false,
     reason,
     source_command: sourceCommand,
     requested_selectors: selectors.slice(0, WORKSPACE_SELECTOR_LIMITS.max_error_items),
@@ -660,6 +664,7 @@ function workspaceSelectorRequestError(sourceCommand, reason, selectors, request
     },
     selector_budget: workspaceSelectorBudget(),
     validation_rule: 'Selector requests are bounded before descriptor lookup or payload construction.',
+    corrected_action: inventoryCommand,
   };
   if (selectorIndex !== null) {
     payload.selector_index = selectorIndex;
@@ -713,6 +718,10 @@ function workspaceSelectorPrevalidationError(select, sourceCommand) {
   const payload = {
     kind: 'agentic-workspace/selector-validation-error/v1',
     status: 'invalid-selector',
+    exit_status: 2,
+    exit_class: 'usage-or-validation-error',
+    safe_to_retry: true,
+    mutation_occurred: false,
     source_command: sourceCommand,
     requested_selectors: request.selectors.slice(0, WORKSPACE_SELECTOR_LIMITS.max_error_items),
     requested_selector_count: request.selectors.length,
@@ -733,6 +742,7 @@ function workspaceSelectorPrevalidationError(select, sourceCommand) {
     suggestions,
     selector_budget: workspaceSelectorBudget(),
     validation_rule: 'Selector requests are exact: nested selectors must be declared before payload construction.',
+    corrected_action: inventoryCommand,
   };
   if (Object.keys(replacementSelectors).length) {
     payload.deprecated_selectors = Object.keys(replacementSelectors);
