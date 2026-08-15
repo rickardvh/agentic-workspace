@@ -4,8 +4,8 @@
   "title": "P2 closed lane residue",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "handoff_review",
-  "revision": 2,
+  "phase": "closeout",
+  "revision": 3,
   "intent": {
     "outcome": "Classify closed-lane live references as non-authoritative maintenance residue.",
     "non_goals": [
@@ -28,16 +28,16 @@
   "relationships": {
     "selection": {
       "state": "selected-residual",
-      "owner": "current-work context",
-      "admission": "current-work"
+      "owner": "target-branch integration",
+      "admission": "feature-branch-integration-proposal"
     },
     "proof_posture": {
       "state": "satisfied",
       "refs": ["packages/planning/tests/test_lanes.py focused lane lifecycle proof"]
     },
     "external_posture": {
-      "state": "unobserved",
-      "refs": []
+      "state": "current",
+      "refs": ["https://github.com/rickardvh/agentic-workspace/issues/2560"]
     }
   },
   "references": [
@@ -49,7 +49,7 @@
       "locator": "github:rickardvh/agentic-workspace#2560"
     }
   ],
-  "next_action": "Publish the draft P2 lane PR and retain the separate live-owner problem.",
+  "next_action": "Apply the archive-owner integration proposal on an admitted target branch after merge; retain the separate live-owner problem.",
   "blockers": [
     "None."
   ],
@@ -62,9 +62,14 @@
     ],
     "refs": ["packages/planning/tests/test_lanes.py::test_lane_close_and_archive_preserve_parent_contribution"]
   },
+  "execution_run": {
+    "what_happened": "Classified closed-lane live references as maintenance-only residue with no live-owner, proof, or claim authority.",
+    "validation": "Focused Planning lane lifecycle regression, touched Planning lint/typecheck, and structured-file inventory passed; the broader Planning package check exceeded the local 120-second command window.",
+    "integration": ".agentic-workspace/planning/integration-proposals/p2-closed-lane-residue-archive-owner.integration-proposal.json"
+  },
   "continuation": {
-    "owner": "GitHub #2560",
-    "residual_intent": "The separate live-owner admission problem remains open and is not treated as closed by this lane."
+    "owner": "GitHub #2560 through target-branch integration",
+    "residual_intent": "Apply the checked-in archive-owner proposal after merge. The separate live-owner admission problem remains open and is not treated as closed by this lane."
   },
   "specialist_contracts": []
 }
