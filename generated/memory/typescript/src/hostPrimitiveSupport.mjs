@@ -560,6 +560,41 @@ const WORKSPACE_SELECTOR_DESCRIPTORS = {
     'optimization_bias',
     'selector_inventory',
   ],
+  proof: [
+    'planning_route_decision',
+    'proof_route_strategy_decision',
+    'proof_route_escalation_gate',
+    'proof_route_strategy_preservation',
+    'proof_route_strategy_claim_gate',
+    'proof_route_strategy_consumer_gate',
+    'proof_receipt_reconciliation',
+    'proof_receipt_bridge',
+    'proof_closeout_summary',
+    'proof_narrowness',
+    'proof_decision',
+    'proof_route_maintenance',
+    'proof_next_decision',
+    'proof_obligations',
+    'architecture_principles',
+    'verification',
+    'requirement_grounding',
+    'test_strategy_check',
+    'validation_plan',
+    'generated_cli_freshness',
+    'cli_authority_review',
+    'required_commands',
+    'selected_lanes',
+    'selected_commands',
+    'manual_verification',
+    'next',
+    'sufficiency',
+    'route_refinement_required',
+    'focused_route_coverage_audit',
+    'release_proof_profile',
+    'domain_proof_route_inventory_audit',
+    'completion_options',
+    'selector_inventory',
+  ],
 };
 
 const WORKSPACE_DEPRECATED_SELECTOR_REPLACEMENTS = {
@@ -646,6 +681,10 @@ function workspaceSelectorRequestError(sourceCommand, reason, selectors, request
   const payload = {
     kind: 'agentic-workspace/selector-validation-error/v1',
     status: 'invalid-selector-request',
+    exit_status: 2,
+    exit_class: 'usage-or-validation-error',
+    safe_to_retry: true,
+    mutation_occurred: false,
     reason,
     source_command: sourceCommand,
     requested_selectors: selectors.slice(0, WORKSPACE_SELECTOR_LIMITS.max_error_items),
@@ -660,6 +699,7 @@ function workspaceSelectorRequestError(sourceCommand, reason, selectors, request
     },
     selector_budget: workspaceSelectorBudget(),
     validation_rule: 'Selector requests are bounded before descriptor lookup or payload construction.',
+    corrected_action: inventoryCommand,
   };
   if (selectorIndex !== null) {
     payload.selector_index = selectorIndex;
@@ -713,6 +753,10 @@ function workspaceSelectorPrevalidationError(select, sourceCommand) {
   const payload = {
     kind: 'agentic-workspace/selector-validation-error/v1',
     status: 'invalid-selector',
+    exit_status: 2,
+    exit_class: 'usage-or-validation-error',
+    safe_to_retry: true,
+    mutation_occurred: false,
     source_command: sourceCommand,
     requested_selectors: request.selectors.slice(0, WORKSPACE_SELECTOR_LIMITS.max_error_items),
     requested_selector_count: request.selectors.length,
@@ -733,6 +777,7 @@ function workspaceSelectorPrevalidationError(select, sourceCommand) {
     suggestions,
     selector_budget: workspaceSelectorBudget(),
     validation_rule: 'Selector requests are exact: nested selectors must be declared before payload construction.',
+    corrected_action: inventoryCommand,
   };
   if (Object.keys(replacementSelectors).length) {
     payload.deprecated_selectors = Object.keys(replacementSelectors);
@@ -2263,7 +2308,11 @@ function executeTypescriptDomainOperation(operationId, values) {
   if (operationId === 'summary.report') return { kind: 'planning-summary/v1', profile: values.verbose ? 'full' : 'tiny', machine_first_planning: { status: 'no-active-execplan' }, target_root: target };
   if (operationId === 'start.context') return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory/schemas; use --select or --verbose for detail.' }, context: { proof: { kind: 'proof-selection/v1' } } };
   if (operationId === 'implement.context') return { kind: 'implementer-context-tiny/v1', target_root: target, proof: { kind: 'proof-selection/v1' } };
-  if (operationId === 'proof.report') return { kind: 'proof-next-decision/v1', next: { action: 'manual-verification' }, detail_command: 'agentic-workspace proof --verbose --changed <paths> --format json' };
+  if (operationId === 'proof.report') {
+    const prevalidationError = workspaceSelectorPrevalidationError(values.select, 'proof');
+    if (prevalidationError) return prevalidationError;
+    return { kind: 'proof-next-decision/v1', next: { action: 'manual-verification' }, detail_command: 'agentic-workspace proof --verbose --changed <paths> --format json' };
+  }
   if (operationId === 'setup.guidance') return { kind: 'workspace-setup/v1', command: 'setup', target_root: target };
   if (operationId === 'ownership.report') return { profile: 'compact-contract-answer/v1', surface: 'ownership', matched: false, target_root: target };
   if (operationId === 'skills.report') return { task: values.task ?? '', target_root: target, skills: [] };

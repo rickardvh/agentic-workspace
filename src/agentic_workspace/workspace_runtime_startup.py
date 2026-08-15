@@ -1642,6 +1642,7 @@ def _hydrate_selected_start_advisory_payloads(
     select: str | None,
     target_root: Path,
     task_text: str | None,
+    changed_paths: list[str],
     config: WorkspaceConfig,
 ) -> None:
     state_delta_requested = any(
@@ -1771,7 +1772,9 @@ def _hydrate_selected_start_advisory_payloads(
     if _selector_requests(select, "intent_acknowledgement"):
         if vague_orientation is None:
             vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
-        execution_posture = _execution_posture_payload(config=config, changed_paths=[], task_text=task_text, target_root=target_root)
+        execution_posture = _execution_posture_payload(
+            config=config, changed_paths=changed_paths, task_text=task_text, target_root=target_root
+        )
         payload.setdefault(
             "intent_acknowledgement",
             _intent_acknowledgement_payload(
@@ -1783,11 +1786,13 @@ def _hydrate_selected_start_advisory_payloads(
     if _selector_requests(select, "repo_posture"):
         payload["repo_posture"] = _repo_posture_payload(config=config, surface="start", compact=False)
     if _selector_requests(select, "planning_safety_gate") or _selector_requests(select, "planning_route_decision"):
-        execution_posture = _execution_posture_payload(config=config, changed_paths=[], task_text=task_text, target_root=target_root)
+        execution_posture = _execution_posture_payload(
+            config=config, changed_paths=changed_paths, task_text=task_text, target_root=target_root
+        )
         gate = _planning_safety_gate_payload(
             target_root=target_root,
             config=config,
-            changed_paths=[],
+            changed_paths=changed_paths,
             task_text=task_text,
             execution_posture=execution_posture,
         )
@@ -1808,11 +1813,13 @@ def _hydrate_selected_start_advisory_payloads(
     if _selector_requests(select, "issue_reference_intent"):
         gate = payload.get("planning_safety_gate")
         if not isinstance(gate, dict):
-            execution_posture = _execution_posture_payload(config=config, changed_paths=[], task_text=task_text, target_root=target_root)
+            execution_posture = _execution_posture_payload(
+                config=config, changed_paths=changed_paths, task_text=task_text, target_root=target_root
+            )
             gate = _planning_safety_gate_payload(
                 target_root=target_root,
                 config=config,
-                changed_paths=[],
+                changed_paths=changed_paths,
                 task_text=task_text,
                 execution_posture=execution_posture,
             )
@@ -2874,7 +2881,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     _validate_target_root(command_name="start", target_root=target_root)
     if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command="start"):
         _emit_payload(payload=prevalidation_error, format_name=args.format)
-        return 0
+        return int(prevalidation_error["exit_status"])
     if args.format == "json":
         if recovery_payload := _obsolete_default_preset_start_recovery_payload(target_root=target_root):
             _emit_payload(payload=recovery_payload, format_name=args.format)
@@ -2901,6 +2908,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             select=selected_fields,
             target_root=target_root,
             task_text=task_text,
+            changed_paths=list(getattr(args, "changed", []) or []),
             config=config,
         )
         payload = _select_payload_fields(payload, select=selected_fields, source_command="start")
