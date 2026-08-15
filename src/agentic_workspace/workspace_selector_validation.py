@@ -127,6 +127,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "selector_inventory",
     ),
     "proof": (
+        "planning_route_decision",
         "proof_route_strategy_decision",
         "proof_route_escalation_gate",
         "proof_route_strategy_preservation",
@@ -477,6 +478,10 @@ def _selector_validation_error_from_available(
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/selector-validation-error/v1",
         "status": "invalid-selector",
+        "exit_status": 2,
+        "exit_class": "usage-or-validation-error",
+        "safe_to_retry": True,
+        "mutation_occurred": False,
         "source_command": source_command,
         "requested_selectors": bounded_selectors,
         "requested_selector_count": len(selectors),
@@ -497,6 +502,7 @@ def _selector_validation_error_from_available(
         "suggestions": suggestions,
         "selector_budget": _selector_budget_payload(),
         "validation_rule": "Selector requests are exact: nested selectors must be declared before payload construction.",
+        "corrected_action": inventory_command,
     }
     if replacement_selectors:
         payload["deprecated_selectors"] = list(replacement_selectors)
@@ -530,6 +536,10 @@ def _selector_request_validation_error(
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/selector-validation-error/v1",
         "status": "invalid-selector-request",
+        "exit_status": 2,
+        "exit_class": "usage-or-validation-error",
+        "safe_to_retry": True,
+        "mutation_occurred": False,
         "source_command": source_command,
         "reason": reason,
         "requested_selectors": selectors[:_MAX_SELECTOR_ERROR_ITEMS],
@@ -544,6 +554,7 @@ def _selector_request_validation_error(
         },
         "selector_budget": _selector_budget_payload(),
         "validation_rule": "Selector requests are bounded before descriptor lookup or payload construction.",
+        "corrected_action": inventory_command,
     }
     if selector_index is not None:
         payload["selector_index"] = selector_index

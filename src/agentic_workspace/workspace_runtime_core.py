@@ -48466,18 +48466,18 @@ def _emit_proof(
     route_repair_disposition: str = "",
     route_repair_idempotency_key: str = "",
     dry_run: bool = False,
-) -> None:
+) -> int:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     config = _load_workspace_config(target_root=target_root)
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="proof", config=config):
         _emit_payload(payload=disabled_payload, format_name=format_name)
-        return
+        return 0
     if prevalidation_error := _selector_prevalidation_error(select=select, source_command="proof"):
         _emit_payload(payload=prevalidation_error, format_name=format_name)
-        return
+        return int(prevalidation_error["exit_status"])
     if inventory_payload := _selector_inventory_selected_payload(select=select, source_command="proof"):
         _emit_payload(payload=inventory_payload, format_name=format_name)
-        return
+        return 0
     if route_repair_mode:
         from agentic_workspace.workspace_runtime_proof import _proof_route_repair_operation_payload
 
@@ -48500,7 +48500,7 @@ def _emit_proof(
             print(json.dumps(serialise_value(payload), indent=2))
         else:
             _emit_compact_answer_text(payload)
-        return
+        return 0
     if record_receipt:
         payload = _record_proof_receipt_payload(
             target_root=target_root,
@@ -48529,7 +48529,7 @@ def _emit_proof(
             print(json.dumps(serialise_value(payload), indent=2))
         else:
             _emit_compact_answer_text(payload)
-        return
+        return 0
     if profile == "tiny" and normalized_paths:
         answer = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths,
@@ -48545,6 +48545,12 @@ def _emit_proof(
             "answer": answer,
             **answer,
         }
+        if task_text:
+            full_payload["planning_route_decision"] = _summary_planning_route_decision_payload(
+                target_root=target_root,
+                task_text=task_text,
+                changed_paths=normalized_paths,
+            )
         payload = _tiny_proof_payload(
             full_payload,
             cli_invoke=config.cli_invoke,
@@ -48557,11 +48563,17 @@ def _emit_proof(
             payload = _select_payload_fields(full_payload, select=select, source_command="proof")
         if format_name == "json":
             print(json.dumps(serialise_value(payload), indent=2))
-            return
+            return 0
         _emit_compact_answer_text(payload)
-        return
+        return 0
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
     payload = _select_proof_payload(payload, target_root=target_root, route=route, current_only=current_only, changed_paths=changed_paths)
+    if task_text:
+        payload["planning_route_decision"] = _summary_planning_route_decision_payload(
+            target_root=target_root,
+            task_text=task_text,
+            changed_paths=normalized_paths,
+        )
     if task_text and changed_paths:
         payload["task_context"] = {"status": "applied", "task": task_text}
     if profile == "tiny":
@@ -48570,10 +48582,10 @@ def _emit_proof(
         payload = _select_payload_fields(payload, select=select, source_command="proof")
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
-        return
+        return 0
     if route or current_only or changed_paths:
         _emit_compact_answer_text(payload)
-        return
+        return 0
     print(f"Target: {payload['target']}")
     print(f"Rule: {payload['rule']}")
     print(f"Doc: {payload['canonical_doc']}")
@@ -48597,6 +48609,7 @@ def _emit_proof(
         print("Stale generated surfaces:")
         for item in payload["current"]["stale_generated_surfaces"]:
             print(f"- {item}")
+    return 0
 
 
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
@@ -48604,7 +48617,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     _validate_target_root(command_name="summary", target_root=target_root)
     if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command="summary"):
         _emit_payload(payload=prevalidation_error, format_name=args.format)
-        return 0
+        return int(prevalidation_error["exit_status"])
 
     config = _load_workspace_config(target_root=target_root)
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="summary", config=config):
@@ -48908,7 +48921,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         raise WorkspaceUsageError("report detail selectors are mutually exclusive; use either --verbose or --section.")
     if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command="report"):
         _emit_payload(payload=prevalidation_error, format_name=args.format)
-        return 0
+        return int(prevalidation_error["exit_status"])
     target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="report")
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="report", config=config):
         _emit_payload(payload=disabled_payload, format_name=args.format)
@@ -49254,7 +49267,7 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
     command_name = str(args.command)
     if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command=command_name):
         _emit_payload(payload=prevalidation_error, format_name=args.format)
-        return 0
+        return int(prevalidation_error["exit_status"])
     target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name=command_name)
     select = getattr(args, "select", None)
     detail_selector_requested = any(
@@ -56370,6 +56383,18 @@ def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str |
 def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root: Path | None, task_text: str | None) -> dict[str, Any]:
     recommendations = [item for item in _list_payload(payload.get("recommendations")) if isinstance(item, dict)]
     blocked_recommendations = [item for item in _list_payload(payload.get("blocked_recommendations")) if isinstance(item, dict)]
+
+    def has_intent_level_evidence(item: dict[str, Any]) -> bool:
+        reasons = [str(reason) for reason in _list_payload(item.get("reasons"))]
+        full_id_phrase = " ".join(_skill_match_tokens(str(item.get("id") or "")))
+        return any(reason.startswith("phrase match:") for reason in reasons) or f"id match: {full_id_phrase}" in reasons
+
+    startup_default = next(
+        (item for item in recommendations if item.get("id") == "workspace-startup" and has_intent_level_evidence(item)),
+        None,
+    )
+    if startup_default is not None and recommendations and not has_intent_level_evidence(recommendations[0]):
+        recommendations = [startup_default, *(item for item in recommendations if item is not startup_default)]
     top = recommendations[0] if recommendations else {}
     top_blocked = blocked_recommendations[0] if blocked_recommendations else {}
     top_score = int(top.get("score", 0) or 0) if top else 0
@@ -56377,6 +56402,66 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
     low_confidence = bool(top and top_score <= 1)
     target_arg = _shell_quote(_command_target_arg(target_root))
     inventory_command = f"agentic-workspace skills --target {target_arg} --select skills,sources --format json"
+    compact_route = _as_dict(payload.get("planning_route_decision"))
+    compact_next_action = _as_dict(compact_route.get("next_safe_action"))
+    compact_route_projection = (
+        {
+            key: compact_route.get(key)
+            for key in (
+                "kind",
+                "decision_id",
+                "input_revision",
+                "task_relation",
+                "owner_posture",
+                "required_transition",
+                "implementation_allowed",
+                "mutation_authority",
+                "blocked_claims",
+            )
+            if compact_route.get(key) not in (None, "", [])
+        }
+        if compact_route
+        else {}
+    )
+    if compact_next_action:
+        compact_route_projection["next_safe_action"] = {
+            key: compact_next_action.get(key)
+            for key in ("action", "summary", "risk", "next_proof")
+            if compact_next_action.get(key) not in (None, "", [])
+        }
+    compact_route_projection["detail_command"] = (
+        f"agentic-workspace start --target {target_arg} --select planning_safety_gate --format json"
+    )
+
+    def recommendation_projection(item: dict[str, Any]) -> dict[str, Any]:
+        reasons = [str(reason) for reason in _list_payload(item.get("reasons"))]
+        intent_level = has_intent_level_evidence(item)
+        projection = {
+            key: value
+            for key, value in {
+                "id": item.get("id"),
+                "path": item.get("path"),
+                "score": item.get("score"),
+                "summary": item.get("summary"),
+                "source_kind": item.get("source_kind"),
+                "scope": item.get("scope"),
+                "visibility": item.get("visibility"),
+                "availability": item.get("availability"),
+                "reasons": reasons[:4],
+                "follow_up_guidance": _list_payload(item.get("follow_up_guidance")),
+                "activation_hints": item.get("activation_hints"),
+                "dependency_diagnostics": item.get("dependency_diagnostics"),
+                "blocked_reasons": item.get("blocked_reasons"),
+                "repair_command": item.get("repair_command"),
+                "activation_evidence_class": "intent-level" if intent_level else "lexical-candidate",
+                "recommendation_authority": "admitted" if intent_level else "candidate-only",
+            }.items()
+            if value not in (None, "", []) or key == "repair_command"
+        }
+        return projection
+
+    projected_recommendations = [recommendation_projection(item) for item in recommendations[:5]]
+    projected_blocked = [recommendation_projection(item) for item in blocked_recommendations[:3]]
     return {
         "target": payload.get("target"),
         "task": task_text,
@@ -56398,13 +56483,13 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
             "blocked_reasons": top_blocked.get("blocked_reasons", []) if top_blocked else [],
             "repair_command": top_blocked.get("repair_command", "") if top_blocked else "",
         },
-        "top_recommendations": payload.get("top_recommendations", recommendations[:3]),
-        "recommendations": recommendations,
-        "blocked_recommendations": blocked_recommendations[:3],
-        "agent_aids": payload.get("agent_aids", []),
-        "agent_aid_recommendations": payload.get("agent_aid_recommendations", []),
+        "top_recommendations": projected_recommendations[:3],
+        "recommendations": projected_recommendations,
+        "blocked_recommendations": projected_blocked,
+        "agent_aids": _list_payload(payload.get("agent_aids"))[:5],
+        "agent_aid_recommendations": _list_payload(payload.get("agent_aid_recommendations"))[:3],
         "agent_aid_source": payload.get("agent_aid_source", {}),
-        "planning_route_decision": payload.get("planning_route_decision", {}),
+        "planning_route_decision": compact_route_projection,
         "installed_contract": payload.get("installed_contract", {}),
         "warnings": payload.get("warnings", []),
         "catalog_summary": _skill_catalog_summary_from_payload(payload),
