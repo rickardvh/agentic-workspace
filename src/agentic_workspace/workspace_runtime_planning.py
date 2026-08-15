@@ -1637,6 +1637,7 @@ def _route_decision_next_action_packet(
         owner_facts.get("revision")
         or selected_owner.get("revision")
         or _as_dict(owner_admission.get("selected_owner_identity")).get("revision")
+        or revision
         or ""
     )
     selected_owner_lifecycle = str(owner_facts.get("lifecycle") or selected_owner.get("lifecycle") or "")
@@ -2915,13 +2916,22 @@ def _structured_route_inputs(
         owner_posture = "proof-incomplete"
     else:
         owner_posture = "current"
+    adopted_child = bool(active_owner and shared_refs)
+    task_binding_identity = (
+        f"bounded-child:{_stable_revision({'parent_owner_ref': active_owner, 'task': str(task_text or '').strip()})[7:27]}"
+        if adopted_child
+        else ""
+    )
     return {
         "task_relation": task_relation,
         "owner_posture": owner_posture,
         "route_inputs": {
             "claim_effect_boundary": _route_claim_effect_boundary(task_text=task_text, changed_paths=changed_paths),
             "task_binding": {
+                "identity": task_binding_identity,
                 "basis": task_basis,
+                "relation_source": "explicit-structured-child-adoption" if adopted_child else task_basis,
+                "parent_owner_ref": active_owner if adopted_child else "",
                 "shared_refs": shared_refs,
                 "current_task_class": current_task_class,
                 "changed_path_count": len(changed_paths),
