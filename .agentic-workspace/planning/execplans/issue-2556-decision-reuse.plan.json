@@ -44,7 +44,7 @@
     "proof_posture": {
       "state": "satisfied",
       "refs": [
-        "82 focused projection/decision tests passed",
+        "83 focused projection/decision tests passed",
         "18 closeout/report correctness regressions passed",
         "workspace, Planning, Memory, and Verification typechecks passed",
         "contract tooling and structured-file inventory checks passed"
@@ -89,7 +89,7 @@
   },
   "execution_run": {
     "what_happened": "Replaced broad projection dependency reconstruction with bounded admitted revisions, made ordinary surfaces admit and expose the decision consumed by reuse, enforced semantic serialization limits over the final emitted receipt, added progress heartbeats and acknowledged cooperative cancellation, and kept current-compact closeout inputs.",
-    "validation": "82 focused projection/decision tests, 18 closeout tests, full typecheck, contract tooling, structured inventory, lint, and live five-surface cold/warm benchmark passed.",
+    "validation": "83 focused projection/decision tests, 18 closeout tests, full typecheck, contract tooling, structured inventory, lint, and live five-surface cold/warm benchmark passed.",
     "benchmark": {
       "computation_budget_ms": 10000,
       "serialization_budget_bytes": 65536,

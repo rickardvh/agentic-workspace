@@ -16,7 +16,7 @@
   "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2556",
   "evidence_refs": [
     ".agentic-workspace/local/logs/aw-session-20260814170232-7b3b8508/index.json (local captured replay source; 7 entries before replay)",
-    "uv run --frozen pytest -q tests/test_operating_decision.py tests/test_workspace_projection_reuse.py: 82 passed",
+    "uv run --frozen pytest -q tests/test_operating_decision.py tests/test_workspace_projection_reuse.py: 83 passed",
     "cold/warm start, selected summary, implement, proof, and closeout_trust replay: every warm result was agentic-workspace/unchanged-projection/v1 with the independently exposed cold surface decision identity and no invalidation reason",
     "cancellation-during-work fixture: active worker stopped, later stages skipped, and post-cancellation side effect absent"
   ],

@@ -904,9 +904,48 @@ def enforce_projection_serialization_budget(
     }
     encoded = json.dumps(bounded, sort_keys=True, default=str, indent=2).encode()
     if len(encoded) > budgets.get("serialization_budget_bytes", _DEFAULT_SERIALIZATION_BUDGET_BYTES):
+
+        def _compact_hard(value: Any, *, depth: int = 0) -> Any:
+            if isinstance(value, str):
+                return value if len(value) <= 200 else f"{value[:197]}..."
+            if isinstance(value, list):
+                items = [_compact_hard(item, depth=depth + 1) for item in value[:4]]
+                if len(value) > 4:
+                    items.append({"kind": "agentic-workspace/omitted-items/v1", "omitted_count": len(value) - 4})
+                return items
+            if isinstance(value, dict):
+                if depth >= 5:
+                    return {"kind": "agentic-workspace/omitted-detail/v1", "field_count": len(value)}
+                priority = (
+                    "kind",
+                    "status",
+                    "health",
+                    "trust",
+                    "answer",
+                    "completion_gate",
+                    "terminal_outcome_contract",
+                    "terminal_action",
+                    "summary",
+                    "next_action",
+                    "decision",
+                    "proof_confidence",
+                    "checks",
+                )
+                ordered_keys = [key for key in priority if key in value]
+                ordered_keys.extend(key for key in value if key not in ordered_keys)
+                selected_keys = ordered_keys[:16]
+                compacted = {key: _compact_hard(value[key], depth=depth + 1) for key in selected_keys}
+                if len(value) > len(selected_keys):
+                    compacted["omitted_fields"] = {
+                        "kind": "agentic-workspace/omitted-fields/v1",
+                        "omitted_count": len(value) - len(selected_keys),
+                    }
+                return compacted
+            return value
+
         source_context = payload.get("context", {}) if isinstance(payload.get("context"), dict) else {}
         bounded = {
-            key: _compact(payload[key])
+            key: _compact_hard(payload[key])
             for key in (
                 "kind",
                 "status",
@@ -919,10 +958,13 @@ def enforce_projection_serialization_budget(
                 "decision_packet",
                 "current_decision",
                 "evidence_bundle",
+                "values",
+                "missing",
+                "payload_locations",
             )
             if key in payload
         }
-        bounded["context"] = {"projection_decision_authority": _compact(source_context.get("projection_decision_authority", {}))}
+        bounded["context"] = {"projection_decision_authority": _compact_hard(source_context.get("projection_decision_authority", {}))}
         bounded["projection_reuse"] = reuse_result
         bounded["serialization_budget"] = {
             "status": "detail-withheld",

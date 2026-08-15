@@ -337,6 +337,36 @@ def test_serialization_budget_preserves_semantic_answer_shape_and_bounds_invento
     assert len(json.dumps(bounded, indent=2).encode()) <= 65536
 
 
+def test_serialization_budget_preserves_selected_report_values() -> None:
+    from agentic_workspace.projection_reuse import enforce_projection_serialization_budget
+
+    payload = {
+        "kind": "agentic-workspace/selected-output/v1",
+        "values": {
+            "answer": {
+                "trust": "verified",
+                "inventory": ["x" * 500 for _ in range(1000)],
+            }
+        },
+    }
+    reuse_result = {
+        "status": "rebuilt",
+        "decision_id": "operating-decision:test",
+        "observed_cost": {"serialized_bytes": 500000},
+        "budgets": {"serialization_status": "exceeded", "serialization_budget_bytes": 65536},
+    }
+
+    bounded = enforce_projection_serialization_budget(
+        payload=payload,
+        operation="report",
+        reuse_result=reuse_result,
+        full_detail_command="agentic-workspace report --target . --verbose --format json",
+    )
+
+    assert bounded["values"]["answer"]["trust"] == "verified"
+    assert len(json.dumps(bounded, indent=2).encode()) <= 65536
+
+
 def test_summary_reuses_unchanged_projection_and_preserves_decision_deltas(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     capsys.readouterr()
