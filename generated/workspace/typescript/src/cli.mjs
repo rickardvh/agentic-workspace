@@ -4319,6 +4319,40 @@ const commandDefinitions = [
             },
             {
               "choices": [
+                "summary",
+                "entries",
+                "segments",
+                "episodes",
+                "contexts",
+                "candidates"
+              ],
+              "default": "summary",
+              "flags": [
+                "--detail"
+              ],
+              "help": "Select one pageable detail collection; defaults to the bounded summary.",
+              "name": "detail"
+            },
+            {
+              "default": 1,
+              "flags": [
+                "--page"
+              ],
+              "help": "One-based detail page number.",
+              "name": "page",
+              "type": "integer"
+            },
+            {
+              "default": 25,
+              "flags": [
+                "--page-size"
+              ],
+              "help": "Detail page size, capped at 100.",
+              "name": "page_size",
+              "type": "integer"
+            },
+            {
+              "choices": [
                 "text",
                 "json"
               ],
@@ -4375,7 +4409,7 @@ const commandDefinitions = [
           ]
         },
         {
-          "help": "Export an existing local session log as a local diagnostic bundle with known local paths normalized.",
+          "help": "Create the explicit share-safe session-log export with known local paths normalized; raw local logs remain distinct.",
           "name": "export",
           "operation_ref": {
             "id": "session-log.manage",

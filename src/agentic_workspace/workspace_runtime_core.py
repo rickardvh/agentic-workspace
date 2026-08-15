@@ -7146,6 +7146,31 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
             "claim_boundary": "Session-scoped improvement state is unavailable; do not claim no dogfooding residue from this packet.",
         }
     if not cache:
+        indexed_intake = _session_index_improvement_intake(target_root=target_root, config=config)
+        if indexed_intake is not None:
+            return {
+                "kind": "workspace-session-improvement-intake/v1",
+                "status": "session_observed",
+                "scope": "session_observed",
+                "session_signal_source": indexed_intake["source"],
+                "session_observed_signals": indexed_intake["signals"],
+                "routing_decisions": indexed_intake["routing_decisions"],
+                "capture_routes": capture_routes,
+                "operational_effect": {
+                    "status": "review-required",
+                    "changes": [],
+                    "disposition": "indexed-candidates-await-review",
+                    "durability": "fingerprinted-local-index",
+                },
+                "repo_wide_existing": {
+                    "status": "bounded_index_available",
+                    "command": repo_wide_command,
+                    "full_scan_command": full_repo_wide_command,
+                    "included_by_default": False,
+                    "rule": "Use the bounded defaults selector first; full repo-wide scan can be expensive.",
+                },
+                "claim_boundary": "Indexed candidates are self-admitted for review only; they are not promoted or closeout-authoritative.",
+            }
         return {
             "kind": "workspace-session-improvement-intake/v1",
             "status": "unavailable",
@@ -7217,6 +7242,62 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
             if outcome["closeout_blocked"]
             else "Session improvement signals have an explicit non-blocking outcome."
         ),
+    }
+
+
+def _session_index_improvement_intake(*, target_root: Path, config: WorkspaceConfig) -> dict[str, Any] | None:
+    """Read a complete session index as reviewed-intake candidates without using the dogfooding cache."""
+    from agentic_workspace import session_logging
+
+    state = session_logging.SessionLoggingState(
+        enabled=bool(config.local_override.session_logging.enabled),
+        target_root=target_root,
+        config=config,
+    )
+    analysis = session_logging.analyze_session_log(state=state, detail="candidates", page=1, page_size=5)
+    if analysis.get("status") != "analyzed" or analysis.get("index_status") not in {"complete", "repaired"}:
+        return None
+    detail_page = analysis.get("detail_page", {}) if isinstance(analysis.get("detail_page"), dict) else {}
+    candidates = [item for item in _list_payload(detail_page.get("items")) if isinstance(item, dict)]
+    if not candidates:
+        return None
+    signals = []
+    decisions = []
+    seen_fingerprints: set[str] = set()
+    for candidate in candidates:
+        fingerprint = hashlib.sha256(json.dumps(candidate, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
+        if fingerprint in seen_fingerprints:
+            continue
+        seen_fingerprints.add(fingerprint)
+        signals.append(
+            {
+                "signal": str(candidate.get("summary") or candidate.get("id") or "session-log candidate"),
+                "outcome": "review_required",
+                "routing_decision": "review-before-promotion",
+                "durability": "fingerprinted-local-index",
+                "fingerprint": fingerprint,
+                "reviewed": False,
+            }
+        )
+        decisions.append(
+            {
+                "outcome": "review_required",
+                "decision": "review-before-promotion",
+                "destinations": [],
+                "durable_residue": False,
+                "closeout_blocked": False,
+                "fingerprint": fingerprint,
+            }
+        )
+    return {
+        "source": {
+            "status": "complete-index",
+            "path": str(analysis.get("index_path") or ""),
+            "analysis_kind": str(analysis.get("kind") or ""),
+            "self_admission": "bounded session-log candidates",
+        },
+        "signals": signals,
+        "routing_decisions": decisions,
     }
 
 
