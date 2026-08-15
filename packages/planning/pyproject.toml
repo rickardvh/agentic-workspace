@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-workspace-planning"
-version = "0.40.1"
+version = "0.40.2"
 description = "Install a checked-in planning bootstrap for execution into an existing repository."
 readme = "README.md"
 requires-python = ">=3.11"

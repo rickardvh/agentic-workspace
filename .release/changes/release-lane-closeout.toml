@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Record the successful v0.40.1 public promotion and clean second-process installation rehearsal that closes the release and distribution lanes."
