@@ -10732,7 +10732,10 @@ def test_start_broad_question_words_do_not_trigger_meta_report_compaction(tmp_pa
     payload = json.loads(capsys.readouterr().out)
 
     assert "routine_work_context" in payload["context"]
-    assert "installed_state_drift_triage=waived_for_narrow_work" in payload["action_signals"]["changed_signals"]
+    assert "installed_state_drift_triage=actionable_now" in payload["action_signals"]["changed_signals"]
+    authority = payload["context"]["installed_state_drift_triage"]["claim_effect_authority"]
+    assert authority["effect_class"] == "planned-repo-mutation"
+    assert authority["installed_payload_dependency"] == "dependent"
 
 
 def test_start_narrow_source_work_qualifies_unrelated_installed_state_drift(tmp_path: Path, capsys) -> None:
