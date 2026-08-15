@@ -52463,6 +52463,15 @@ def _proof_command_tiers(*, selected_commands: list[dict[str, Any]], required_co
         evidence_type = _proof_command_evidence_type(str(command), tier=tier)
         obligation = str(selected.get("intent_type", "")) or "prove changed-path behavior or surface"
         duplicate_reason = "" if tier == "must_run" else f"adds {evidence_type} evidence not represented by the minimal command"
+        execution_class = str(selected.get("execution_class") or "").strip()
+        if execution_class not in {"focused-local", "exhaustive-local", "exhaustive-CI-owned"}:
+            execution_class = "exhaustive-local" if tier == "environmental" else "focused-local"
+        execution_owner = "CI" if execution_class == "exhaustive-CI-owned" else "local"
+        duration_class = {
+            "focused-local": "short-or-medium",
+            "exhaustive-local": "long",
+            "exhaustive-CI-owned": "externally-observed",
+        }[execution_class]
         tiers.setdefault(tier, []).append(
             {
                 "command": str(command),
@@ -52472,6 +52481,10 @@ def _proof_command_tiers(*, selected_commands: list[dict[str, Any]], required_co
                 "cost": _proof_command_cost(tier),
                 "evidence_type": evidence_type,
                 "reliability": _proof_command_reliability(tier),
+                "posture": "required",
+                "execution_class": execution_class,
+                "execution_owner": execution_owner,
+                "duration_class": duration_class,
                 **({"duplicates_ok_reason": duplicate_reason} if duplicate_reason else {}),
             }
         )
@@ -52489,6 +52502,14 @@ def _proof_command_tiers(*, selected_commands: list[dict[str, Any]], required_co
             if len(ordered) <= 1
             else "multiple evidence tiers are required; overlap is retained only when it adds distinct evidence",
             "omitted_candidate_state": "not-reported-in-compact-tier-packet",
+        },
+        "execution_contract": {
+            "classes": ["focused-local", "exhaustive-local", "exhaustive-CI-owned"],
+            "progress": "command completion, local heartbeat, or external check observation follows execution_class",
+            "timeout_outcome": "typed-timeout-distinct-from-proof-failure",
+            "cancel_outcome": "typed-cancelled-distinct-from-proof-failure",
+            "receipt_kind": "agentic-workspace/proof-route-execution/v1",
+            "receipt_binds": ["typed operation", "proof subject revision", "run identity", "attempt identity", "elapsed cost", "outcome"],
         },
         "rule": "Tiers explain proof obligation and cost; they do not relax required_commands.",
         "tiers": ordered,

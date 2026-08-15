@@ -1,0 +1,63 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "p1p2-review-proof-continuation",
+  "title": "P1/P2 review and proof continuation",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "handoff_review",
+  "revision": 2,
+  "intent": {
+    "outcome": "Continue #2557 and #2561 through existing review polling and proof-tier contracts without adding broader review or proof concepts.",
+    "non_goals": [
+      "Do not implement stack restacking or close #2557.",
+      "Do not redesign proof receipts, execution identity, or close #2561."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Make existing one-shot review and proportional proof behavior explicit and machine-readable.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "tools/chatgpt_review_loop.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "tests/test_chatgpt_review_loop.py",
+      "tests/test_workspace_implement_cli.py"
+    ],
+    "effects": ["No new mutation authority; existing exact-head and proof requirements remain fail-closed."]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "satisfied",
+      "refs": ["81 review-loop tests passed", "focused proof-tier tests passed", "ruff checks passed"]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": ["GitHub #2557", "GitHub #2561"],
+  "next_action": "Publish the draft lane PR and retain broader issue residue.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Non-watching review polling exposes exact-head one-shot identity and proof tiers expose proportional execution metadata."
+    ],
+    "requirements": [
+      "Run review-loop tests and focused proof-tier tests."
+    ],
+    "refs": ["tests/test_chatgpt_review_loop.py", "tests/test_workspace_implement_cli.py"]
+  },
+  "continuation": {
+    "owner": "GitHub issues #2557 and #2561",
+    "residual_intent": "Stack restacking and full receipt/cost admission remain outside this narrow continuation."
+  },
+  "specialist_contracts": []
+}

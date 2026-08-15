@@ -206,7 +206,7 @@ def _validate_codex_launch_command(command: Sequence[str]) -> None:
         raise LoopError(
             "codex-model-unpinned",
             "refusing to launch review watcher Codex job without an explicit model pin",
-            recovery="Use codex -m gpt-5.5 -c model_reasoning_effort=\"high\" for review watcher jobs.",
+            recovery='Use codex -m gpt-5.5 -c model_reasoning_effort="high" for review watcher jobs.',
         )
 
 
@@ -493,6 +493,7 @@ def report_job_result(
     # owner checkout.
     worktree = cwd.resolve()
     owner_root = Path(os.environ.get(OWNER_ROOT_ENV, root.as_posix())).resolve()
+
     def matching_states(state_root: Path) -> list[dict[str, Any]]:
         matches: list[dict[str, Any]] = []
         for item in _all_states(state_root):
@@ -501,7 +502,11 @@ def report_job_result(
                 continue
             if item.get("session_id") == session_id or attempt.get("session_id") == session_id:
                 matches.append(item)
-            elif item.get("status") in {"fresh-session-in-progress", "resume-in-progress"} and not item.get("session_id") and not attempt.get("session_id"):
+            elif (
+                item.get("status") in {"fresh-session-in-progress", "resume-in-progress"}
+                and not item.get("session_id")
+                and not attempt.get("session_id")
+            ):
                 # This is the first authoritative identity boundary for a launched job.
                 matches.append(item)
         return matches
@@ -555,13 +560,18 @@ def report_job_result(
     attempt["session_id"] = session_id
     state["terminal_result"] = {
         "kind": "agentic-workspace/chatgpt-review-job-result/v1",
-        "pr_number": int(state["pr_number"]), "session_id": session_id,
-        "attempt_id": attempt["id"], "mode": attempt["mode"],
-        "worktree": worktree.as_posix(), "starting_head": attempt["starting_head"],
+        "pr_number": int(state["pr_number"]),
+        "session_id": session_id,
+        "attempt_id": attempt["id"],
+        "mode": attempt["mode"],
+        "worktree": worktree.as_posix(),
+        "starting_head": attempt["starting_head"],
         "ending_head": ending_head,
         "launch_identity": attempt["launch_identity"],
-        "proof_status": proof_status, "proof_commands": [proof_command] if proof_command else [],
-        "proof_exit_code": proof_exit_code, "push_status": push_status,
+        "proof_status": proof_status,
+        "proof_commands": [proof_command] if proof_command else [],
+        "proof_exit_code": proof_exit_code,
+        "push_status": push_status,
         "reported_at": datetime.now(timezone.utc).isoformat(),
         "head_corrections": corrections,
     }
@@ -635,7 +645,17 @@ def _comments_from_pr(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _open_prs(root: Path, runner: CommandRunner) -> list[dict[str, Any]]:
     payload = runner.json(
-        ["gh", "pr", "list", "--state", "open", "--limit", "100", "--json", "number,state,headRefName,headRefOid,body,comments,url,mergeable,mergeStateStatus,statusCheckRollup"],
+        [
+            "gh",
+            "pr",
+            "list",
+            "--state",
+            "open",
+            "--limit",
+            "100",
+            "--json",
+            "number,state,headRefName,headRefOid,body,comments,url,mergeable,mergeStateStatus,statusCheckRollup",
+        ],
         cwd=root,
     )
     if not isinstance(payload, list) or not all(isinstance(item, dict) for item in payload):
@@ -680,11 +700,7 @@ def handoff(
             recovery="run from the PR branch, or pass --pr after pushing HEAD:<the exact PR branch>",
         )
     if existing_only:
-        candidates = [
-            item
-            for item in _all_states(owner_root)
-            if item.get("branch") == branch and item.get("session_id") == session_id
-        ]
+        candidates = [item for item in _all_states(owner_root) if item.get("branch") == branch and item.get("session_id") == session_id]
         if not candidates:
             candidates = [
                 item
@@ -864,7 +880,9 @@ def _system_trigger(payload: dict[str, Any], *, pr: int, head: str) -> Review | 
     """Return one deterministic actionable CI/conflict trigger for this head."""
     findings: list[str] = []
     if str(payload.get("mergeable", "")).upper() == "CONFLICTING" or str(payload.get("mergeStateStatus", "")).upper() == "DIRTY":
-        findings.append("The PR has merge conflicts. Rebase or merge the base branch, resolve the conflicts, run the relevant proof, and push the result.")
+        findings.append(
+            "The PR has merge conflicts. Rebase or merge the base branch, resolve the conflicts, run the relevant proof, and push the result."
+        )
     for check in _current_failed_checks(payload):
         name = str(check.get("name") or check.get("context") or "unnamed check")
         conclusion = str(check.get("conclusion")).lower()
@@ -945,7 +963,7 @@ def _review_prompt(review: Review, *, branch: str = "") -> str:
         f"Source: {review.url or review.comment_id}\n\n"
         f"Required work:\n{review.findings}\n\n"
         f"{'You are on branch ' + branch + '; push with git push origin ' + branch + '. ' if branch else ''}Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook record the next handoff. "
-        "After proof and push, record their exact outcomes with `python tools/chatgpt_review_loop.py job-result --session-id $CODEX_THREAD_ID --proof-status passed|failed --proof-command \"<command>\" --proof-exit-code <exit> --push-status passed|failed`. Do not merge from this continuation."
+        'After proof and push, record their exact outcomes with `python tools/chatgpt_review_loop.py job-result --session-id $CODEX_THREAD_ID --proof-status passed|failed --proof-command "<command>" --proof-exit-code <exit> --push-status passed|failed`. Do not merge from this continuation.'
     )
 
 
@@ -1340,7 +1358,9 @@ def poll_one(
     if payload.get("state") != "OPEN":
         return _recover(state, owner_root, event="pr-closed", recovery="inspect the closed PR, then stop or clean up the local loop")
     if payload.get("headRefName") != state.get("branch"):
-        return _recover(state, owner_root, event="remote-branch-changed", recovery="inspect PR head ownership; do not guess a replacement branch")
+        return _recover(
+            state, owner_root, event="remote-branch-changed", recovery="inspect PR head ownership; do not guess a replacement branch"
+        )
     if payload.get("headRefOid") != state.get("handoff_head"):
         return _recover(
             state, owner_root, event="unrecorded-head", recovery="run handoff from the exact owning Codex session at the new pushed head"
@@ -1385,7 +1405,9 @@ def poll_one(
         _save_state(owner_root, state)
         return {"pr_number": pr, "status": "merge-ready", "merged": False, "review_key": review.key}
     if not review.findings:
-        return _recover(state, owner_root, event="missing-findings", recovery="the reviewer must post actionable findings with a blocked marker")
+        return _recover(
+            state, owner_root, event="missing-findings", recovery="the reviewer must post actionable findings with a blocked marker"
+        )
     if int(state.get("cycles", 0)) >= int(state.get("max_cycles", 3)):
         return _recover(state, owner_root, event="max-cycles-exceeded", recovery="human review is required before another continuation")
 
@@ -1434,8 +1456,14 @@ def poll_one(
             resume_diagnostic=diagnostic,
         )
         _record_job_terminal(
-            latest, mode="resume", worktree=worktree, start_head=review.head,
-            exit_code=completed.returncode, disposition="failed", event="resume-failed", diagnostic=diagnostic,
+            latest,
+            mode="resume",
+            worktree=worktree,
+            start_head=review.head,
+            exit_code=completed.returncode,
+            disposition="failed",
+            event="resume-failed",
+            diagnostic=diagnostic,
         )
         _save_state(owner_root, latest)
         return {
@@ -1453,25 +1481,41 @@ def poll_one(
             recovery_review_key=review.key,
         )
         _record_job_terminal(
-            latest, mode="resume", worktree=worktree, start_head=review.head,
-            exit_code=0, disposition="unreported", event="resume-ended-without-new-handoff",
+            latest,
+            mode="resume",
+            worktree=worktree,
+            start_head=review.head,
+            exit_code=0,
+            disposition="unreported",
+            event="resume-ended-without-new-handoff",
         )
         _save_state(owner_root, latest)
         return {"pr_number": pr, "status": "recovery-required", "event": "resume-ended-without-new-handoff"}
     if not _validated_attempt_result(latest, worktree=worktree, start_head=review.head):
         latest.update(
-            status="recovery-required", last_event="handoff-proof-unreported",
+            status="recovery-required",
+            last_event="handoff-proof-unreported",
             recovery="the job pushed a handoff without a passed proof-and-push result; resume the exact session and report it",
         )
         _record_job_terminal(
-            latest, mode="resume", worktree=worktree, start_head=review.head,
-            exit_code=0, disposition="proof-unreported", event="handoff-proof-unreported",
+            latest,
+            mode="resume",
+            worktree=worktree,
+            start_head=review.head,
+            exit_code=0,
+            disposition="proof-unreported",
+            event="handoff-proof-unreported",
         )
         _save_state(owner_root, latest)
         return {"pr_number": pr, "status": "recovery-required", "event": "handoff-proof-unreported"}
     _record_job_terminal(
-        latest, mode="resume", worktree=worktree, start_head=review.head,
-        exit_code=0, disposition="handoff-recorded", event="resume-completed",
+        latest,
+        mode="resume",
+        worktree=worktree,
+        start_head=review.head,
+        exit_code=0,
+        disposition="handoff-recorded",
+        event="resume-completed",
     )
     _save_state(owner_root, latest)
     return {"pr_number": pr, "status": "resumed", "new_head": latest.get("handoff_head"), "review_key": review.key}
@@ -1559,7 +1603,12 @@ def _dispatch_all_unlocked(
                     retired_attempts = registry.setdefault("retired_attempts", [])
                     if isinstance(retired_attempts, list):
                         retired_attempts.append(
-                            {"pr_number": pr, "old_head": prior_head, "new_head": head, "terminal_result": existing.get("terminal_result", {})}
+                            {
+                                "pr_number": pr,
+                                "old_head": prior_head,
+                                "new_head": head,
+                                "terminal_result": existing.get("terminal_result", {}),
+                            }
                         )
                     _state_path(root, pr).unlink(missing_ok=True)
                     entries.pop(str(pr), None)
@@ -1597,9 +1646,7 @@ def _dispatch_all_unlocked(
                     cycles=0,
                     blocker_fingerprints={},
                     handled_reviews=[item for item in existing.get("handled_reviews", []) if item != review.key],
-                    automatic_recovery_reviews=[
-                        item for item in existing.get("automatic_recovery_reviews", []) if item != review.key
-                    ],
+                    automatic_recovery_reviews=[item for item in existing.get("automatic_recovery_reviews", []) if item != review.key],
                 )
                 _save_state(root, existing)
             if existing.get("status") == "resume-in-progress":
@@ -1613,9 +1660,13 @@ def _dispatch_all_unlocked(
                 )
                 attempt = existing.get("job_attempt") if isinstance(existing.get("job_attempt"), dict) else {}
                 _record_job_terminal(
-                    existing, mode="resume", worktree=Path(str(attempt.get("worktree") or root.as_posix())),
+                    existing,
+                    mode="resume",
+                    worktree=Path(str(attempt.get("worktree") or root.as_posix())),
                     start_head=str(attempt.get("starting_head") or existing.get("handoff_head", "")),
-                    exit_code=-1, disposition="interrupted", event="orphaned-resume",
+                    exit_code=-1,
+                    disposition="interrupted",
+                    event="orphaned-resume",
                     diagnostic="dispatcher lock reclaimed after an interrupted resume",
                 )
                 _save_state(root, existing)
@@ -1641,9 +1692,13 @@ def _dispatch_all_unlocked(
                     )
                 attempt = existing.get("job_attempt") if isinstance(existing.get("job_attempt"), dict) else {}
                 _record_job_terminal(
-                    existing, mode="fresh", worktree=Path(str(attempt.get("worktree") or root.as_posix())),
+                    existing,
+                    mode="fresh",
+                    worktree=Path(str(attempt.get("worktree") or root.as_posix())),
                     start_head=str(attempt.get("starting_head") or existing.get("handoff_head", "")),
-                    exit_code=-1, disposition="interrupted", event=str(existing["last_event"]),
+                    exit_code=-1,
+                    disposition="interrupted",
+                    event=str(existing["last_event"]),
                     diagnostic="dispatcher lock reclaimed after an interrupted fresh launch",
                 )
                 _save_state(root, existing)
@@ -1670,9 +1725,7 @@ def _dispatch_all_unlocked(
         state_path = _state_path(root, pr)
         if state_path.is_file():
             state = _load_state(root, pr)
-            if state.get("status") == "recovery-required" and not _queue_automatic_recovery(
-                state, root, review_key=review.key
-            ):
+            if state.get("status") == "recovery-required" and not _queue_automatic_recovery(state, root, review_key=review.key):
                 return {"status": "no-op", "reason": "automatic-recovery-unavailable", "pr_number": pr}
             state = _load_state(root, pr)
             if state.get("recovery_mode") == "fresh":
@@ -1724,12 +1777,23 @@ def _dispatch_all_unlocked(
     # Bind owner-local state before the fresh session starts. Its Stop
     # hook is the first point at which Codex exposes the session identity.
     fresh_state = {
-        "kind": STATE_KIND, "repo_root": root.as_posix(), "repository": _repo_slug(root, runner),
-        "pr_number": pr, "pr_url": str(payload.get("url", "")), "branch": branch,
-        "handoff_head": review.head, "session_id": "", "max_cycles": max_cycles,
-        "max_repeated_blockers": max_repeated_blockers, "handled_reviews": [],
-        "blocker_fingerprints": {}, "cycles": 0, "status": "fresh-session-in-progress",
-        "last_event": "fresh-session-bound", "recovery": "", "prompt_transport": PROMPT_TRANSPORT,
+        "kind": STATE_KIND,
+        "repo_root": root.as_posix(),
+        "repository": _repo_slug(root, runner),
+        "pr_number": pr,
+        "pr_url": str(payload.get("url", "")),
+        "branch": branch,
+        "handoff_head": review.head,
+        "session_id": "",
+        "max_cycles": max_cycles,
+        "max_repeated_blockers": max_repeated_blockers,
+        "handled_reviews": [],
+        "blocker_fingerprints": {},
+        "cycles": 0,
+        "status": "fresh-session-in-progress",
+        "last_event": "fresh-session-bound",
+        "recovery": "",
+        "prompt_transport": PROMPT_TRANSPORT,
         "automatic_recovery_reviews": fresh_recovery_reviews,
     }
     _begin_job_attempt(fresh_state, mode="fresh", worktree=worktree, start_head=review.head)
@@ -1761,8 +1825,14 @@ def _dispatch_all_unlocked(
             fresh_diagnostic=diagnostic,
         )
         _record_job_terminal(
-            bound, mode="fresh", worktree=worktree, start_head=review.head,
-            exit_code=completed.returncode, disposition="failed", event="fresh-session-failed", diagnostic=diagnostic,
+            bound,
+            mode="fresh",
+            worktree=worktree,
+            start_head=review.head,
+            exit_code=completed.returncode,
+            disposition="failed",
+            event="fresh-session-failed",
+            diagnostic=diagnostic,
         )
         _save_state(root, bound)
         _save_dispatch(root, registry)
@@ -1778,8 +1848,13 @@ def _dispatch_all_unlocked(
             recovery_mode="fresh",
         )
         _record_job_terminal(
-            bound, mode="fresh", worktree=worktree, start_head=review.head,
-            exit_code=0, disposition="unbound", event="fresh-session-unbound",
+            bound,
+            mode="fresh",
+            worktree=worktree,
+            start_head=review.head,
+            exit_code=0,
+            disposition="unbound",
+            event="fresh-session-unbound",
         )
         _save_state(root, bound)
         _save_dispatch(root, registry)
@@ -1791,10 +1866,21 @@ def _dispatch_all_unlocked(
         # session and the reviewed head so the next serial dispatch resumes it
         # instead of suppressing this PR forever.
         state = bound
-        state.update(handoff_head=review.head, session_id=session_id, status="awaiting-review", last_event="fresh-session-awaiting-resume", recovery="")
+        state.update(
+            handoff_head=review.head,
+            session_id=session_id,
+            status="awaiting-review",
+            last_event="fresh-session-awaiting-resume",
+            recovery="",
+        )
         _record_job_terminal(
-            state, mode="fresh", worktree=worktree, start_head=review.head,
-            exit_code=0, disposition="awaiting-resume", event="fresh-session-awaiting-resume",
+            state,
+            mode="fresh",
+            worktree=worktree,
+            start_head=review.head,
+            exit_code=0,
+            disposition="awaiting-resume",
+            event="fresh-session-awaiting-resume",
         )
         _save_state(root, state)
         entries[str(pr)] = {
@@ -1808,15 +1894,40 @@ def _dispatch_all_unlocked(
         return {"status": "dispatched", "pr_number": pr, "mode": "fresh", "session_id": session_id, "awaiting_resume": True}
     state = bound
     if state.get("handoff_head") != new_head or not _validated_attempt_result(state, worktree=worktree, start_head=review.head):
-        state.update(status="recovery-required", last_event="fresh-handoff-proof-unreported", recovery="the fresh job must record one passed proof-and-push result before its handoff can advance")
-        _record_job_terminal(state, mode="fresh", worktree=worktree, start_head=review.head, exit_code=0, disposition="proof-unreported", event="fresh-handoff-proof-unreported")
+        state.update(
+            status="recovery-required",
+            last_event="fresh-handoff-proof-unreported",
+            recovery="the fresh job must record one passed proof-and-push result before its handoff can advance",
+        )
+        _record_job_terminal(
+            state,
+            mode="fresh",
+            worktree=worktree,
+            start_head=review.head,
+            exit_code=0,
+            disposition="proof-unreported",
+            event="fresh-handoff-proof-unreported",
+        )
         _save_state(root, state)
         _save_dispatch(root, registry)
         return {"status": "recovery-required", "pr_number": pr, "event": "fresh-handoff-proof-unreported"}
-    state.update(handoff_head=new_head, session_id=session_id, handled_reviews=[review.key], cycles=1, status="awaiting-review", last_event="fresh-handoff-recorded", recovery="")
+    state.update(
+        handoff_head=new_head,
+        session_id=session_id,
+        handled_reviews=[review.key],
+        cycles=1,
+        status="awaiting-review",
+        last_event="fresh-handoff-recorded",
+        recovery="",
+    )
     _record_job_terminal(
-        state, mode="fresh", worktree=worktree, start_head=review.head,
-        exit_code=0, disposition="handoff-recorded", event="fresh-handoff-recorded",
+        state,
+        mode="fresh",
+        worktree=worktree,
+        start_head=review.head,
+        exit_code=0,
+        disposition="handoff-recorded",
+        event="fresh-handoff-recorded",
     )
     _save_state(root, state)
     entries[str(pr)] = {
@@ -1925,9 +2036,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Repo-local deterministic ChatGPT-review-to-Codex continuation transport.")
     sub = parser.add_subparsers(dest="command", required=True)
     handoff_parser = sub.add_parser("handoff", help="Record one pushed PR head and exact Codex session without waiting.")
-    handoff_parser.add_argument(
-        "--hook", action="store_true", help="Read Stop hook JSON and update only an explicitly enabled loop."
-    )
+    handoff_parser.add_argument("--hook", action="store_true", help="Read Stop hook JSON and update only an explicitly enabled loop.")
     handoff_parser.add_argument("--session-id", default=os.environ.get("CODEX_THREAD_ID", ""))
     handoff_parser.add_argument("--target", type=Path, default=Path.cwd())
     handoff_parser.add_argument("--pr", type=int)
@@ -2037,9 +2146,14 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
             return 0
         if args.command == "job-result":
             result = report_job_result(
-                cwd=args.target.resolve(), session_id=args.session_id.strip(), proof_status=args.proof_status,
-                proof_command=args.proof_command, proof_exit_code=args.proof_exit_code,
-                push_status=args.push_status, runner=runner, supersede=args.supersede,
+                cwd=args.target.resolve(),
+                session_id=args.session_id.strip(),
+                proof_status=args.proof_status,
+                proof_command=args.proof_command,
+                proof_exit_code=args.proof_exit_code,
+                push_status=args.push_status,
+                runner=runner,
+                supersede=args.supersede,
             )
             _emit(result)
             return 0
@@ -2145,7 +2259,21 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                     for state in states
                     if "pr_number" in state
                 ]
-            _emit({"kind": STATE_KIND, "status": "poll-complete", "poll": index + 1, "results": last_results})
+            exact_heads = sorted(
+                {str(state.get("handoff_head")) for state in (states if not args.all_open else []) if str(state.get("handoff_head") or "")}
+            )
+            _emit(
+                {
+                    "kind": STATE_KIND,
+                    "status": "poll-complete",
+                    "mode": "persistent-watch" if args.watch else "one-shot-exact-head-recheck",
+                    "poll": index + 1,
+                    "requested_pr": args.pr,
+                    "requested_heads": exact_heads,
+                    "results": last_results,
+                    "idempotency": "existing exact-head state and handled review keys are reused",
+                }
+            )
             if not args.watch or not _should_keep_watching(last_results):
                 break
             if index + 1 < polls:

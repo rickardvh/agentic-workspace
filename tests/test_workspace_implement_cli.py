@@ -4076,6 +4076,25 @@ def test_implement_tiny_proof_tiers_explain_required_single_tier() -> None:
     assert packet["detail_selector"] == "proof.proof_command_tiers"
 
 
+def test_proof_command_tiers_declare_proportional_execution_and_receipt_contract() -> None:
+    payload = workspace_runtime_core._proof_command_tiers(
+        selected_commands=[
+            {"command": "uv run pytest tests/test_a.py", "lane": "workspace"},
+            {"command": "make integration", "lane": "environmental", "execution_class": "exhaustive-CI-owned"},
+        ],
+        required_commands=["uv run pytest tests/test_a.py", "make integration"],
+    )
+    commands = [command for tier in payload["tiers"] for command in tier["commands"]]
+
+    assert commands[0]["execution_class"] == "focused-local"
+    assert commands[0]["posture"] == "required"
+    ci_owned = next(command for command in commands if command["command"] == "make integration")
+    assert (ci_owned["execution_class"], ci_owned["execution_owner"]) == ("exhaustive-CI-owned", "CI")
+    assert ci_owned["duration_class"] == "externally-observed"
+    assert payload["execution_contract"]["timeout_outcome"] == "typed-timeout-distinct-from-proof-failure"
+    assert "proof subject revision" in payload["execution_contract"]["receipt_binds"]
+
+
 def test_implement_path_authority_warning_is_not_hard_blocker_when_allowed(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
