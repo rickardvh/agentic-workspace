@@ -25,6 +25,24 @@
     "resolver": "uv 0.9.9",
     "isolation": "new ephemeral virtual environment; no source checkout on sys.path"
   },
+  "install_execution": {
+    "run_id": "e784d18f-67c7-4e5b-8860-e737cd573d7d",
+    "started_at": "2026-08-15T08:26:56.897283Z",
+    "finished_at": "2026-08-15T08:26:57.890508Z",
+    "argv": [
+      "uv",
+      "pip",
+      "install",
+      "--python",
+      "venv/Scripts/python.exe",
+      "https://github.com/rickardvh/agentic-workspace/releases/download/v0.40.1/agentic_workspace-0.40.1-py3-none-any.whl#sha256=eeeef5eb22c8fc1bac8c2a9822b700d9b32555bf1395b8c99c1109f50354ee6e"
+    ],
+    "working_directory_role": "new empty temporary rehearsal root",
+    "exit_code": 0,
+    "output_kind": "uv-pip-install-output/v1",
+    "output_sha256": "7b3cb23d50eabc1fc4561d959de2f0b0ae29912fd0e15260dfbddefd2f254760",
+    "resolved_distribution_count": 9
+  },
   "resolution": {
     "status": "passed",
     "resolved_distribution_count": 9,
@@ -71,11 +89,15 @@
   },
   "second_process": {
     "bootstrap_process_exited_before_invocation": true,
-    "invocation": [
-      "<installed-agentic-workspace>",
+    "run_id": "e784d18f-67c7-4e5b-8860-e737cd573d7d",
+    "process_id": 4028,
+    "started_at": "2026-08-15T08:26:57.890815Z",
+    "finished_at": "2026-08-15T08:27:09.034050Z",
+    "argv": [
+      "venv/Scripts/agentic-workspace.exe",
       "start",
       "--target",
-      "<new-empty-host>",
+      "host",
       "--task",
       "Verify the public v0.40.1 second-process startup contract",
       "--format",
@@ -85,16 +107,21 @@
       "entry_point": "agentic-workspace",
       "distribution": "agentic-workspace",
       "version": "0.40.1",
-      "origin": "ephemeral rehearsal environment Scripts directory"
+      "wheel_url": "https://github.com/rickardvh/agentic-workspace/releases/download/v0.40.1/agentic_workspace-0.40.1-py3-none-any.whl",
+      "wheel_sha256": "eeeef5eb22c8fc1bac8c2a9822b700d9b32555bf1395b8c99c1109f50354ee6e",
+      "identity_kind": "canonical-json-sha256/v1",
+      "identity_sha256": "735fc5d889aa3c0c64a50520dbf63405a1bf7e85d8d9f2492b9bf5008a354e64"
     },
-    "target_host": "new empty temporary host directory",
+    "working_directory_role": "new empty temporary rehearsal root",
+    "target_host_role": "new empty temporary host directory",
     "exit_code": 0,
     "result_kind": "startup-context/v1",
     "workflow_status": "mandatory",
-    "output_sha256": "5d9bb31ae9544b643711d9854b35b7096b6af5b7068b862cf8732371e2c2bf84",
+    "stdout_sha256": "9d9d2cf8f7b8fdfce93b4278ae3075214afb5bc15d5b09c37034a3284daf2ae9",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "durable_file_count": 0,
     "durable_machine_local_path_match_count": 0
   },
-  "recorded_at": "2026-08-14T21:27:05.0747106Z",
+  "recorded_at": "2026-08-15T08:27:09.034050Z",
   "claim_boundary": "This retained receipt proves the v0.40.1 public locator and later-process startup rehearsal; release-owned readiness and promotion receipts remain the publication authorities."
 }
