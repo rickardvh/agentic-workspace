@@ -114,8 +114,9 @@ def test_start_implement_and_proof_reuse_the_same_revision_keyed_contract(tmp_pa
             "decision": "reused",
             "enrichment": "reused",
             "invalidation_reasons": [],
-            "authority": "operating_decision.canonical_operating_decision_identity",
+            "authority": "operating_decision.compile_operating_decision",
         }
+        assert warm["decision_id"] == cold["projection_reuse"]["operating_decision"]["decision_id"]
         assert warm["budgets"] == {"computation_budget_ms": 10000, "serialization_budget_bytes": 65536}
         decision_ids.append(warm["decision_id"])
 
@@ -198,6 +199,25 @@ def test_progress_heartbeat_and_cooperative_cancellation_are_bounded(tmp_path: P
     assert heartbeats[0]["status"] == "cancel-requested"
     assert contract["status"] == "cancel-requested"
     assert contract["cancel"]["path"] == ".agentic-workspace/local/cancellation/proof.cancel"
+
+
+def test_selected_summary_and_report_cancellation_return_bounded_envelopes(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    capsys.readouterr()
+    commands = [
+        ("summary", ["summary", "--target", str(target), "--select", "planning_revision", "--format", "json"]),
+        ("report", ["report", "--target", str(target), "--format", "json"]),
+        ("report", ["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]),
+    ]
+    for operation, command in commands:
+        cancel = target / ".agentic-workspace" / "local" / "cancellation" / f"{operation}.cancel"
+        cancel.parent.mkdir(parents=True, exist_ok=True)
+        cancel.write_text("cancel\n", encoding="utf-8")
+        assert cli.main(command) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["kind"] == "agentic-workspace/projection-cancelled/v1"
+        assert payload["status"] == "cancelled"
+        cancel.unlink()
 
 
 def test_serialization_budget_preserves_semantic_answer_shape_and_bounds_inventories() -> None:

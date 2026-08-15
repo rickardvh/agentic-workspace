@@ -1354,6 +1354,45 @@ def canonical_operating_decision_identity(input_revisions: dict[str, Any]) -> tu
     return revision, f"operating-decision:{_digest({'input_revision': revision})[:16]}"
 
 
+def admitted_operating_decision_revisions(
+    *,
+    revisions: dict[str, Any],
+    embedded_action_revision: str = "",
+    live_authority_revision: str = "",
+    status: str,
+    primary_action: dict[str, Any],
+    external_blocker: dict[str, Any],
+    terminal_state: str,
+    blocked_claim_classes: list[str],
+) -> dict[str, Any]:
+    """Resolve the complete minimal revision set consumed by the decision compiler."""
+
+    action_invocation = _as_dict(primary_action.get("operation_invocation"))
+    decision_posture = {
+        "status": status,
+        "action": {
+            "action": str(primary_action.get("action") or ""),
+            "operation_id": str(action_invocation.get("operation_id") or ""),
+            "expected_transition": str(action_invocation.get("expected_transition") or ""),
+            "expected_input_revision": str(action_invocation.get("expected_input_revision") or ""),
+        },
+        "blocker": {
+            "reason_code": str(external_blocker.get("reason_code") or ""),
+            "owner": str(external_blocker.get("owner") or ""),
+            "repair": str(external_blocker.get("repair") or ""),
+        },
+        "terminal_state": terminal_state,
+        "blocked_claim_classes": sorted(blocked_claim_classes),
+    }
+    admitted = dict(revisions)
+    if embedded_action_revision:
+        admitted["embedded_action_revision"] = embedded_action_revision
+    if live_authority_revision:
+        admitted["live_authority_revision"] = live_authority_revision
+    admitted["decision_posture"] = "sha256:" + _digest(decision_posture)
+    return admitted
+
+
 def bind_operation_invocation_to_authorities(*, invocation: dict[str, Any], authorities: dict[str, Any]) -> dict[str, Any]:
     bound = {
         **invocation,
@@ -1699,17 +1738,25 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "owner": "context-authority-registry",
             "repair": "run the typed context-authority repair operation before retrying the decision",
         }
-    input_revisions = {
-        **revisions,
-        **(
-            {
-                "embedded_action_revision": embedded_invocation_revision,
-                "live_authority_revision": invocation_current_revision,
-            }
-            if invocation
-            else {}
-        ),
-    }
+    terminal_state = str(inputs.get("terminal_state") or "CONTINUE")
+    blocked_claim_classes = list(
+        dict.fromkeys(
+            [
+                *[str(item) for item in _as_list(inputs.get("blocked_claim_classes"))],
+                *[str(item) for item in context_effects["blocked_claim_classes"]],
+            ]
+        )
+    )
+    input_revisions = admitted_operating_decision_revisions(
+        revisions=revisions,
+        embedded_action_revision=embedded_invocation_revision if invocation else "",
+        live_authority_revision=invocation_current_revision if invocation else "",
+        status=status,
+        primary_action=primary_action,
+        external_blocker=external_blocker,
+        terminal_state=terminal_state,
+        blocked_claim_classes=blocked_claim_classes,
+    )
     _, decision_id = canonical_operating_decision_identity(input_revisions)
     return {
         "kind": "agentic-workspace/operating-decision/v1",
@@ -1726,7 +1773,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),
-        "terminal_state": str(inputs.get("terminal_state") or "CONTINUE"),
+        "terminal_state": terminal_state,
         "primary_action": primary_action,
         "action_identity": {
             "kind": "agentic-workspace/typed-action-identity/v1",
@@ -1739,14 +1786,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         if invocation
         else {},
         "external_blocker": external_blocker,
-        "blocked_claim_classes": list(
-            dict.fromkeys(
-                [
-                    *[str(item) for item in _as_list(inputs.get("blocked_claim_classes"))],
-                    *[str(item) for item in context_effects["blocked_claim_classes"]],
-                ]
-            )
-        ),
+        "blocked_claim_classes": blocked_claim_classes,
         "provenance": _as_dict(inputs.get("provenance")),
         "replacement_map": {
             "next_action.command": "display rendering only; operation_invocation owns executable identity",

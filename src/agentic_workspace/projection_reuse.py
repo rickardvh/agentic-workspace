@@ -15,10 +15,10 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, Iterator, Literal
 
-from agentic_workspace.operating_decision import canonical_operating_decision_identity
+from agentic_workspace.operating_decision import compile_operating_decision
 
 _CACHE_KIND = "agentic-workspace/projection-reuse-record/v2"
-_CACHE_CONTRACT_VERSION = 4
+_CACHE_CONTRACT_VERSION = 5
 _MAX_CACHE_RECORDS = 32
 _GIT_TIMEOUT_SECONDS = 0.5
 _DEPENDENCY_MAX_ENTRIES = 20_000
@@ -122,6 +122,18 @@ class ProjectionProgress:
     @property
     def cancel_requested(self) -> bool:
         return self.cancel_path.is_file()
+
+    def cancellation_payload(self) -> dict[str, Any] | None:
+        """Return the shared cancellation envelope at a cooperative checkpoint."""
+
+        if not self.cancel_requested:
+            return None
+        return {
+            "kind": "agentic-workspace/projection-cancelled/v1",
+            "status": "cancelled",
+            "operation": self.operation,
+            "next_action": "Remove the cancellation request and rerun the same scoped command when ready.",
+        }
 
     def contract(self) -> dict[str, Any]:
         return {
@@ -529,7 +541,6 @@ def lookup_projection_reuse(
     digest_result = dependency_digest(root=root, operation=operation, query=query)
     digest, dependencies = digest_result
     input_revisions = digest_result.input_revisions or {}
-    canonical_input_revision, decision_id = canonical_operating_decision_identity(input_revisions)
     context = {
         "digest": digest,
         "dependencies": dependencies,
@@ -540,8 +551,8 @@ def lookup_projection_reuse(
         "dependency_status": digest_result.status,
         "degraded_findings": digest_result.findings,
         "input_revisions": input_revisions,
-        "canonical_input_revision": canonical_input_revision,
-        "decision_id": decision_id,
+        "canonical_input_revision": "",
+        "decision_id": "",
         "lookup_started_at": lookup_started_at,
         "invalidation_reasons": [],
     }
@@ -557,8 +568,14 @@ def lookup_projection_reuse(
         record.get("input_revisions", {}) if isinstance(record.get("input_revisions"), dict) else {},
         input_revisions,
     )
-    if record.get("dependency_digest") != digest or record.get("decision_id") != decision_id:
+    if record.get("dependency_digest") != digest:
         return None, context
+    decision_id = str(record.get("decision_id") or "")
+    canonical_input_revision = str(record.get("canonical_decision_input_revision") or "")
+    if not decision_id:
+        return None, context
+    context["decision_id"] = decision_id
+    context["canonical_input_revision"] = canonical_input_revision
     prior = record.get("decision_snapshot", {}) if isinstance(record.get("decision_snapshot"), dict) else {}
     return {
         "kind": "agentic-workspace/unchanged-projection/v1",
@@ -584,7 +601,7 @@ def lookup_projection_reuse(
             "decision": "reused",
             "enrichment": "reused",
             "invalidation_reasons": [],
-            "authority": "operating_decision.canonical_operating_decision_identity",
+            "authority": "operating_decision.compile_operating_decision",
         },
         "budgets": {
             "computation_budget_ms": _DEFAULT_COMPUTATION_BUDGET_MS,
@@ -619,6 +636,17 @@ def record_projection_reuse(
     continuation_view = payload.get("continuation_view", {}) if isinstance(payload.get("continuation_view"), dict) else {}
     proof_state = continuation_view.get("proof_state", {}) if isinstance(continuation_view.get("proof_state"), dict) else {}
     residue_governance = payload.get("residue_governance", {}) if isinstance(payload.get("residue_governance"), dict) else {}
+    projection_decision = compile_operating_decision(
+        inputs={
+            "revisions": context.get("input_revisions", {}),
+            "terminal_state": str(payload.get("status") or payload.get("health") or "CONTINUE"),
+            "blocked_claim_classes": [str(item) for item in payload.get("blocked_claims", [])]
+            if isinstance(payload.get("blocked_claims"), list)
+            else [],
+        }
+    )
+    context["decision_id"] = projection_decision["decision_id"]
+    context["canonical_input_revision"] = projection_decision.get("canonical_decision_input_revision", "")
     serialized_bytes = len(json.dumps(payload, sort_keys=True, default=str, indent=2).encode())
     elapsed_ms = round((time.monotonic() - float(context.get("lookup_started_at") or time.monotonic())) * 1000, 3)
     budget = ProjectionBudget()
@@ -647,7 +675,18 @@ def record_projection_reuse(
             "cancel_path": f".agentic-workspace/local/cancellation/{operation}.cancel",
             "drill_down": f"agentic-workspace {operation} --target . --verbose --format json",
         },
-        "authority": "operating_decision.canonical_operating_decision_identity",
+        "authority": "operating_decision.compile_operating_decision",
+        "operating_decision": {
+            "kind": projection_decision["kind"],
+            "producer_module": projection_decision["producer_module"],
+            "producer_function": projection_decision["producer_function"],
+            "decision_id": projection_decision["decision_id"],
+            "status": projection_decision["status"],
+            "input_revisions": projection_decision["input_revisions"],
+            "terminal_state": projection_decision["terminal_state"],
+            "external_blocker": projection_decision["external_blocker"],
+            "blocked_claim_classes": projection_decision["blocked_claim_classes"],
+        },
     }
     record = {
         "kind": _CACHE_KIND,
@@ -686,6 +725,7 @@ def record_projection_reuse(
             stale.unlink(missing_ok=True)
     except OSError:
         return {}
+    payload["projection_reuse"] = reuse_result
     return reuse_result
 
 

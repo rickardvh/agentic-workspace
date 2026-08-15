@@ -48690,7 +48690,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     cli_invoke=config.cli_invoke,
                 )
             progress_contract = progress.contract()
-        if closeout_inspection["status"] in {"required", "clear"} and "closeout_trust_inspection" in getattr(args, "select"):
+        if closeout_inspection.get("status") in {"required", "clear"} and "closeout_trust_inspection" in getattr(args, "select"):
             payload.setdefault("values", {})
             closeout_source = {"closeout_trust_inspection": closeout_inspection}
             resolved_closeout_selectors: list[str] = []
@@ -49077,10 +49077,10 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             if reused is not None and not select:
                 _emit_payload(payload=reused, format_name=args.format)
                 return 0
-        section_payload: dict[str, Any] | None
+        section_payload: dict[str, Any] | None = None
         with ProjectionProgress(root=target_root, operation="report") as progress:
             if progress.cancel_requested:
-                section_payload = {
+                payload = {
                     "kind": "agentic-workspace/projection-cancelled/v1",
                     "status": "cancelled",
                     "operation": "report",
@@ -49094,6 +49094,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                     descriptors=descriptors,
                     config=config,
                 )
+                payload = progress.cancellation_payload() or payload
             progress_contract = progress.contract()
         if (
             progress_contract["status"] == "cancel-requested"
@@ -49148,9 +49149,10 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             if reused is not None:
                 _emit_payload(payload=reused, format_name=args.format)
                 return 0
+        section_payload = None
         with ProjectionProgress(root=target_root, operation="report") as progress:
             if progress.cancel_requested:
-                payload = {
+                section_payload = {
                     "kind": "agentic-workspace/projection-cancelled/v1",
                     "status": "cancelled",
                     "operation": "report",
@@ -49166,6 +49168,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                     task_text=task_text,
                     changed_paths=changed_paths,
                 )
+                section_payload = progress.cancellation_payload() or section_payload
             progress_contract = progress.contract()
         if section_payload is not None:
             payload = section_payload
