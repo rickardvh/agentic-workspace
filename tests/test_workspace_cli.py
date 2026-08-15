@@ -953,6 +953,30 @@ def test_generated_typescript_workspace_operations_use_host_selector_prevalidati
     assert payload["selector_budget"]["max_error_envelope_bytes"] == 6000
 
 
+def test_invalid_proof_selector_has_generated_exit_two_and_success_remains_zero(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    selector = "proof_obligations.not_a_real_field"
+    assert cli.main(["proof", "--target", str(tmp_path), "--select", selector, "--format", "json"]) == 2
+    host_payload = json.loads(capsys.readouterr().out)
+
+    generated_cli = Path(__file__).resolve().parents[1] / "generated/workspace/typescript/src/cli.mjs"
+    completed = subprocess.run(
+        ["node", str(generated_cli), "proof", "--target", ".", "--select", selector, "--format", "json"],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 2
+    generated_payload = json.loads(completed.stdout)
+    assert generated_payload == host_payload
+    assert (host_payload["exit_status"], host_payload["mutation_occurred"]) == (2, False)
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"]) == 0
+    success_payload = json.loads(capsys.readouterr().out)
+    assert success_payload["kind"] == "agentic-workspace/selected-output/v1"
+
+
 def test_start_optional_selector_root_is_exact_before_payload_construction(tmp_path: Path, monkeypatch, capsys) -> None:
     _init_git_repo(tmp_path)
 
@@ -1010,8 +1034,7 @@ def test_command_families_reject_nested_unknown_selectors_before_projection(
     for attr in tripwire_attrs:
         monkeypatch.setattr(cli, attr, fail_payload_construction)
 
-    expected_exit = 0 if source_command == "proof" else 2
-    assert cli.main([*command_argv, "--select", unknown_selector, "--format", "json"]) == expected_exit
+    assert cli.main([*command_argv, "--select", unknown_selector, "--format", "json"]) == 2
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
@@ -9415,55 +9438,92 @@ def test_every_declared_route_consumer_is_a_no_divergence_projection() -> None:
         planning_route_consumer_projection(route_decision=decision, consumer="parallel-classifier")
 
 
-def test_executable_child_adoption_projects_one_authoritative_route_decision() -> None:
-    from agentic_workspace.workspace_runtime_planning import (
-        _planning_front_door_projection_outcome,
-        _planning_route_decision_payload,
-        planning_route_consumer_projection,
-        validate_planning_route_action_invocation,
-    )
+def test_executable_child_adoption_projects_one_authoritative_route_decision(tmp_path: Path, capsys) -> None:
+    from agentic_workspace.workspace_runtime_planning import validate_planning_route_action_invocation
 
-    decision = _planning_route_decision_payload(
-        {
-            "task_relation": "continues-selected-owner",
-            "owner_posture": "current",
-            "active_execplan": ".agentic-workspace/planning/execplans/umbrella.plan.json",
-            "route_inputs": {
-                "owner": {
-                    "ref": ".agentic-workspace/planning/execplans/umbrella.plan.json",
-                    "revision": "owner-revision-a",
-                },
-                "task_binding": {
-                    "identity": "bounded-child:pr-review-fix",
-                    "mode": "mutation",
-                    "relation_source": "explicit-structured-child-adoption",
-                    "parent_owner_ref": ".agentic-workspace/planning/execplans/umbrella.plan.json",
-                },
-            },
-        },
-        planning_revision={"revision_id": "planning-revision-a"},
-    )
-    invocation = decision["next_safe_action"]["operation_invocation"]
-    admission = validate_planning_route_action_invocation(invocation=invocation, live_route_decision=decision)
-    outcome = _planning_front_door_projection_outcome(
-        "continue-active-plan",
-        invocation["input_identity"],
-        target_root=Path(".").resolve(),
-        task_text="Apply the bounded PR review fix",
-        changed_paths=["src/example.py"],
-    )
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    owner_ref = ".agentic-workspace/planning/execplans/umbrella.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        f'''kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
 
-    assert admission["status"] == "admitted"
-    assert decision["selected_owner"].endswith("umbrella.plan.json")
-    assert decision["task_relation"] == "continues-selected-owner"
-    assert decision["next_safe_action"]["action"] == "continue-active-plan"
-    assert outcome["mutation_outcome"] == "no-op"
-    projections = [
-        planning_route_consumer_projection(route_decision=decision, consumer=consumer)
-        for consumer in ("startup", "implement", "proof", "closeout")
+[todo]
+active_items = [
+  {{ id = "umbrella", title = "Umbrella owner", status = "active", surface = "{owner_ref}" }},
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+''',
+    )
+    _write(
+        tmp_path / owner_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "umbrella",
+                "title": "Umbrella owner",
+                "lifecycle": "live",
+                "revision": 7,
+                "intent": {"outcome": "Deliver the umbrella lane"},
+                "references": [{"role": "intake", "target": "GitHub #4321"}],
+            }
+        ),
+    )
+    _write(tmp_path / "src" / "example.py", "VALUE = 1\n")
+    capsys.readouterr()
+
+    task = "Apply the bounded child fix for GitHub #4321"
+    changed = "src/example.py"
+    commands = [
+        ["start", "--select", "planning_route_decision"],
+        ["implement", "--select", "planning_route_decision"],
+        ["proof", "--select", "planning_route_decision"],
     ]
-    assert {projection["decision_id"] for projection in projections} == {decision["decision_id"]}
-    assert {projection["action_identity"]["task_binding_identity"] for projection in projections} == {"bounded-child:pr-review-fix"}
+    routes: list[dict[str, Any]] = []
+    for command in commands:
+        assert cli.main([*command, "--target", str(tmp_path), "--task", task, "--changed", changed, "--format", "json"]) == 0
+        routes.append(json.loads(capsys.readouterr().out)["values"]["planning_route_decision"])
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "closeout_trust",
+                "--task",
+                task,
+                "--changed",
+                changed,
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    routes.append(json.loads(capsys.readouterr().out)["answer"]["current_task_closeout"]["scope"]["route_decision"])
+
+    decision_ids = {route["decision_id"] for route in routes}
+    input_revisions = {route["input_revision"] for route in routes}
+    owner_revisions = {route["action_identity"]["selected_owner_revision"] for route in routes}
+    task_binding_ids = {route["action_identity"]["task_binding_identity"] for route in routes}
+    admitted_actions = {route["next_safe_action"]["action"] for route in routes}
+    route_identities = [(route["decision_id"], route["input_revision"], route["action_identity"]) for route in routes]
+    assert routes[0]["action_identity"] == routes[1]["action_identity"]
+    assert len(decision_ids) == len(input_revisions) == len(owner_revisions) == len(task_binding_ids) == 1, route_identities
+    assert next(iter(owner_revisions))
+    assert next(iter(task_binding_ids)).startswith("bounded-child:")
+    assert admitted_actions == {"continue-active-plan"}
+    assert all(route["structured_inputs"]["task_binding"]["parent_owner_ref"] == owner_ref for route in routes)
+    for route in routes:
+        invocation = route["next_safe_action"]["operation_invocation"]
+        assert validate_planning_route_action_invocation(invocation=invocation, live_route_decision=route)["status"] == "admitted"
 
 
 def test_startup_claim_effect_projection_preserves_canonical_route_identity_and_boundary() -> None:

@@ -1005,6 +1005,26 @@ def test_implement_open_issues_keeps_startup_authoritative_and_recommendations_b
     assert detail["kind"] == "agentic-workspace/selected-output/v1"
     assert detail["values"]["recommendations"][0]["activation_hints"]
 
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "Create a preliminary GitHub issue for a durable repository finding",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    specialist_payload = json.loads(capsys.readouterr().out)
+    specialist = specialist_payload["recommendations"][0]
+    assert specialist["id"] == "github-issue-creation"
+    assert specialist["activation_evidence_class"] == "intent-level"
+    assert specialist["recommendation_authority"] == "admitted"
+
 
 def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"

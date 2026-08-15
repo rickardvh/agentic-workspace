@@ -4,8 +4,8 @@
   "title": "P1 Planning and skill routing regressions",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "handoff_review",
-  "revision": 2,
+  "phase": "closeout",
+  "revision": 3,
   "intent": {
     "outcome": "Add narrow P1 regressions for executable child adoption, conservative skill routing, compact recommendation payloads, and selector-error exit consistency.",
     "non_goals": [
@@ -35,13 +35,14 @@
   },
   "relationships": {
     "selection": {
-      "state": "unselected",
-      "owner": "current-work context"
+      "state": "selected-residual",
+      "owner": "current-work context",
+      "admission": "feature-branch-integration-proposal"
     },
     "proof_posture": {
       "state": "satisfied",
       "refs": [
-        "pytest: 60 focused Planning/selector tests passed",
+        "pytest: 70 focused Planning/selector tests passed",
         "pytest: 38 skill CLI tests passed",
         "generated command packages: current",
         "ty check src: passed",
@@ -49,18 +50,18 @@
       ]
     },
     "external_posture": {
-      "state": "unobserved",
-      "refs": []
+      "state": "current",
+      "refs": ["https://github.com/rickardvh/agentic-workspace/pull/2575#issuecomment-5302611741"]
     }
   },
   "references": ["GitHub #2566", "GitHub #2567", "GitHub #2564"],
-  "next_action": "Publish the draft lane PR and retain the broader issue residue for later work.",
+  "next_action": "Apply the archive-owner integration proposal on an admitted target branch after merge.",
   "blockers": [
     "None."
   ],
   "proof": {
     "claims": [
-      "One structured child adoption produces one canonical Planning route decision across consumers.",
+      "One revision-bound structured child adoption produces one canonical Planning route decision through the ordinary start, implement, proof, and closeout adapters.",
       "The captured implement-open-issues task does not authoritatively activate issue creation and stays within the compact payload budget.",
       "Invalid selector payloads and process exit status agree."
     ],
@@ -76,8 +77,8 @@
     ]
   },
   "continuation": {
-    "owner": "GitHub issues #2564, #2566, and #2567",
-    "residual_intent": "The issues remain open because this lane implements only the user-requested narrow regressions, not their broader completion rules."
+    "owner": "target-branch integration and GitHub issues #2564, #2566, and #2567",
+    "residual_intent": "Apply the checked-in archive-owner proposal after merge; retain the broader issue completion rules for later bounded work."
   },
   "specialist_contracts": []
 }

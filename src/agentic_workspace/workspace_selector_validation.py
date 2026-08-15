@@ -126,6 +126,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "selector_inventory",
     ),
     "proof": (
+        "planning_route_decision",
         "proof_route_strategy_decision",
         "proof_route_escalation_gate",
         "proof_route_strategy_preservation",

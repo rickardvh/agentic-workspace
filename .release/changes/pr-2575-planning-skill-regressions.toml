@@ -1,0 +1,4 @@
+bump = "patch"
+
+[metadata]
+summary = "Keep Planning child-adoption routes and selector failure exits consistent across ordinary command surfaces."

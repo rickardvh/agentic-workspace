@@ -14212,7 +14212,7 @@
         "handler": "argparse_function_call",
         "import_module": "agentic_workspace.workspace_runtime_primitives",
         "operation_id": "proof.report",
-        "result": "return_zero",
+        "result": "return_int",
         "support_import_module": "agentic_workspace.workspace_runtime_primitives"
       },
       {

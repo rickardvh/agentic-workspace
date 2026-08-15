@@ -48385,18 +48385,18 @@ def _emit_proof(
     route_repair_disposition: str = "",
     route_repair_idempotency_key: str = "",
     dry_run: bool = False,
-) -> None:
+) -> int:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     config = _load_workspace_config(target_root=target_root)
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="proof", config=config):
         _emit_payload(payload=disabled_payload, format_name=format_name)
-        return
+        return 0
     if prevalidation_error := _selector_prevalidation_error(select=select, source_command="proof"):
         _emit_payload(payload=prevalidation_error, format_name=format_name)
-        return
+        return int(prevalidation_error["exit_status"])
     if inventory_payload := _selector_inventory_selected_payload(select=select, source_command="proof"):
         _emit_payload(payload=inventory_payload, format_name=format_name)
-        return
+        return 0
     if route_repair_mode:
         from agentic_workspace.workspace_runtime_proof import _proof_route_repair_operation_payload
 
@@ -48419,7 +48419,7 @@ def _emit_proof(
             print(json.dumps(serialise_value(payload), indent=2))
         else:
             _emit_compact_answer_text(payload)
-        return
+        return 0
     if record_receipt:
         payload = _record_proof_receipt_payload(
             target_root=target_root,
@@ -48448,7 +48448,7 @@ def _emit_proof(
             print(json.dumps(serialise_value(payload), indent=2))
         else:
             _emit_compact_answer_text(payload)
-        return
+        return 0
     if profile == "tiny" and normalized_paths:
         answer = _proof_selection_for_changed_paths(
             changed_paths=normalized_paths,
@@ -48464,6 +48464,12 @@ def _emit_proof(
             "answer": answer,
             **answer,
         }
+        if task_text:
+            full_payload["planning_route_decision"] = _summary_planning_route_decision_payload(
+                target_root=target_root,
+                task_text=task_text,
+                changed_paths=normalized_paths,
+            )
         payload = _tiny_proof_payload(
             full_payload,
             cli_invoke=config.cli_invoke,
@@ -48476,11 +48482,17 @@ def _emit_proof(
             payload = _select_payload_fields(full_payload, select=select, source_command="proof")
         if format_name == "json":
             print(json.dumps(serialise_value(payload), indent=2))
-            return
+            return 0
         _emit_compact_answer_text(payload)
-        return
+        return 0
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
     payload = _select_proof_payload(payload, target_root=target_root, route=route, current_only=current_only, changed_paths=changed_paths)
+    if task_text:
+        payload["planning_route_decision"] = _summary_planning_route_decision_payload(
+            target_root=target_root,
+            task_text=task_text,
+            changed_paths=normalized_paths,
+        )
     if task_text and changed_paths:
         payload["task_context"] = {"status": "applied", "task": task_text}
     if profile == "tiny":
@@ -48489,10 +48501,10 @@ def _emit_proof(
         payload = _select_payload_fields(payload, select=select, source_command="proof")
     if format_name == "json":
         print(json.dumps(serialise_value(payload), indent=2))
-        return
+        return 0
     if route or current_only or changed_paths:
         _emit_compact_answer_text(payload)
-        return
+        return 0
     print(f"Target: {payload['target']}")
     print(f"Rule: {payload['rule']}")
     print(f"Doc: {payload['canonical_doc']}")
@@ -48516,6 +48528,7 @@ def _emit_proof(
         print("Stale generated surfaces:")
         for item in payload["current"]["stale_generated_surfaces"]:
             print(f"- {item}")
+    return 0
 
 
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
