@@ -1360,6 +1360,7 @@ def _planning_route_decision_payload(
         planning_revision=planning_revision,
     )
     action_identity = _as_dict(next_packet.get("operation_invocation")).get("input_identity", {})
+    claim_effect_boundary = copy.deepcopy(_as_dict(_as_dict(action_identity).get("claim_effect_boundary")))
     allowed_claims = (
         ["bounded-task-progress"]
         if transition == "none" and bounded
@@ -1391,7 +1392,7 @@ def _planning_route_decision_payload(
             "required_transition": "route-decision policy; detailed reconciliation remains owned by planning reconcile",
         },
         "structured_inputs": route_inputs,
-        "claim_effect_boundary": copy.deepcopy(_as_dict(route_inputs.get("claim_effect_boundary"))),
+        "claim_effect_boundary": claim_effect_boundary,
         "mutation_baseline_admission": mutation_baseline_admission,
         "reason_codes": [
             code
@@ -1627,6 +1628,7 @@ def _route_decision_next_action_packet(
     risk = "route-authority-incomplete"
     route_inputs = _as_dict(route_evidence.get("route_inputs"))
     task_binding = _as_dict(route_inputs.get("task_binding"))
+    claim_effect_boundary = copy.deepcopy(_as_dict(route_inputs.get("claim_effect_boundary")))
     owner_facts = _as_dict(route_inputs.get("owner"))
     owner_admission = _as_dict(route_evidence.get("owner_admission"))
     selected_owner = _as_dict(owner_admission.get("selected_owner"))
@@ -1791,6 +1793,7 @@ def _route_decision_next_action_packet(
         "state_update_policy": state_update_policy,
         "allowed_claims": allowed_claims,
         "blocked_claims": blocked_claims,
+        "claim_effect_boundary": claim_effect_boundary,
         "reconciliation_proposal_id": str(route_proposal.get("proposal_id") or route_proposal.get("identity") or ""),
         "reconciliation_proposal_revision": str(route_proposal.get("revision") or route_proposal.get("proposal_revision") or ""),
         "expected_claim_effect": {
@@ -1837,6 +1840,7 @@ def _route_decision_next_action_packet(
                     "state_update_policy",
                     "allowed_claims",
                     "blocked_claims",
+                    "claim_effect_boundary",
                     "reconciliation_proposal_id",
                     "reconciliation_proposal_revision",
                 ],

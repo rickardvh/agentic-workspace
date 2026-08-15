@@ -9448,6 +9448,7 @@ def test_startup_claim_effect_projection_preserves_canonical_route_identity_and_
         triage_projection = triage["claim_effect_authority"]
 
         assert decision["claim_effect_boundary"] == boundary
+        assert decision["action_identity"]["claim_effect_boundary"] == boundary
         assert projection["decision_id"] == triage_projection["decision_id"] == decision["decision_id"]
         assert projection["input_revision"] == triage_projection["input_revision"] == decision["input_revision"]
         assert projection["action_identity"] == triage_projection["action_identity"] == decision["action_identity"]
