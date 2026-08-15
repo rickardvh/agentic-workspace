@@ -35,10 +35,15 @@ LOGICAL_SESSION_IDENTITY_ENV = "AW_SESSION_LOGICAL_IDENTITY"
 PYTEST_DETAIL_CAPTURE_ENV = "AW_SESSION_LOG_CAPTURE_DETAIL"
 PYTEST_CAPTURE_MODE_ENV = "AW_SESSION_LOG_PYTEST_CAPTURE"
 SESSION_LOG_KIND = "agentic-workspace/session-log/v1"
-SESSION_LOG_INDEX_KIND = "agentic-workspace/session-log-index/v1"
+SESSION_LOG_INDEX_KIND = "agentic-workspace/session-log-index/v2"
+SESSION_LOG_INDEX_KINDS = {SESSION_LOG_INDEX_KIND, "agentic-workspace/session-log-index/v1"}
 DEFAULT_MAX_INLINE_OUTPUT_BYTES = 64 * 1024
 DEFAULT_SLOW_COMMAND_DURATION_MS = 120000
 LARGE_OUTPUT_SUMMARY_LIMIT = 5
+FRICTION_CANDIDATE_LIMIT = 10
+DEFAULT_ANALYSIS_PAGE_SIZE = 25
+MAX_ANALYSIS_PAGE_SIZE = 100
+DEFAULT_ANALYSIS_SERIALIZATION_BUDGET_BYTES = 64 * 1024
 SESSION_LOG_NON_AUTHORITATIVE_FOR = ("Planning", "Memory", "proof", "closeout")
 SESSION_LOG_LOCAL_BOUNDARY = {
     "scope": "package-owned local diagnostic state",
@@ -257,6 +262,12 @@ def _run_session_log_adapter(args: Any) -> int:
                 session_id=str(getattr(args, "id", "") or ""),
                 segment_id=str(getattr(args, "segment", "") or ""),
                 origin_scope=str(getattr(args, "origin", "agent") or "agent"),
+                detail=str(getattr(args, "detail", "summary") or "summary"),
+                page=max(1, int(getattr(args, "page", 1) or 1)),
+                page_size=max(
+                    1,
+                    min(MAX_ANALYSIS_PAGE_SIZE, int(getattr(args, "page_size", DEFAULT_ANALYSIS_PAGE_SIZE) or DEFAULT_ANALYSIS_PAGE_SIZE)),
+                ),
             )
         elif command == "repair":
             payload = repair_session_log_index(
@@ -1027,6 +1038,7 @@ def _write_index(
     *, state: SessionLoggingState, session: dict[str, str], entries: Iterable[dict[str, Any]], notes: Iterable[dict[str, Any]]
 ) -> None:
     index_path = _index_path_for_session(session)
+    normalized_entries, records = _normalized_index_entries(entries)
     payload = {
         "kind": SESSION_LOG_INDEX_KIND,
         "session_id": session["session_id"],
@@ -1036,7 +1048,13 @@ def _write_index(
         "updated_at": datetime.now(UTC).isoformat(),
         "path_normalization": _path_normalization_payload(state),
         "local_diagnostic_boundary": _session_log_local_boundary(),
-        "entries": list(entries),
+        "session_header": {
+            "session_id": session["session_id"],
+            "log_path": session["log_path"],
+            "created_at": session.get("created_at", ""),
+        },
+        "records": records,
+        "entries": normalized_entries,
         "notes": list(notes),
         "local_only": True,
         "authoritative": False,
@@ -1061,7 +1079,7 @@ def _read_index(*, state: SessionLoggingState, session: dict[str, str]) -> dict[
         payload = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError):
         return None
-    if not isinstance(payload, dict) or payload.get("kind") != SESSION_LOG_INDEX_KIND:
+    if not isinstance(payload, dict) or payload.get("kind") not in SESSION_LOG_INDEX_KINDS:
         return None
     return payload
 
@@ -1151,7 +1169,74 @@ def _append_index_note(*, state: SessionLoggingState, session: dict[str, str], t
 
 def _entries_from_index(index: dict[str, Any]) -> list[dict[str, Any]]:
     entries = index.get("entries", [])
-    return [entry for entry in entries if isinstance(entry, dict)] if isinstance(entries, list) else []
+    if not isinstance(entries, list):
+        return []
+    records = index.get("records", {}) if isinstance(index.get("records"), dict) else {}
+    tables = {
+        name: value if isinstance(value, dict) else {}
+        for name, value in records.items()
+        if name in {"provenance", "contexts", "segments", "invocation_intents"}
+    }
+    hydrated = []
+    for raw_entry in entries:
+        if not isinstance(raw_entry, dict):
+            continue
+        entry = dict(raw_entry)
+        provenance = tables.get("provenance", {}).get(str(entry.get("provenance_ref", "")), {})
+        intent = tables.get("invocation_intents", {}).get(str(entry.get("invocation_intent_ref", "")), {})
+        segment = tables.get("segments", {}).get(str(entry.get("segment_ref", "")), {})
+        if isinstance(segment, dict):
+            segment = dict(segment)
+            context = tables.get("contexts", {}).get(str(segment.pop("context_ref", "")), {})
+            if context:
+                segment["work_context"] = context
+        entry.setdefault("provenance", provenance)
+        entry.setdefault("invocation_intent", intent)
+        entry.setdefault("segment", segment)
+        hydrated.append(entry)
+    return hydrated
+
+
+def _record_identity(prefix: str, payload: dict[str, Any]) -> str:
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
+    raw_revision = payload.get("revision")
+    revision = str(raw_revision if isinstance(raw_revision, (str, int)) else payload.get("head") or "unversioned")[:12]
+    revision = re.sub(r"[^A-Za-z0-9._-]", "-", revision)
+    return f"{prefix}:{revision}:{digest}"
+
+
+def _normalized_index_entries(entries: Iterable[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    records: dict[str, dict[str, Any]] = {
+        "provenance": {},
+        "contexts": {},
+        "segments": {},
+        "invocation_intents": {},
+    }
+    normalized = []
+    for source in entries:
+        entry = dict(source)
+        provenance = entry.pop("provenance", {}) if isinstance(entry.get("provenance"), dict) else {}
+        intent = entry.pop("invocation_intent", {}) if isinstance(entry.get("invocation_intent"), dict) else {}
+        segment = entry.pop("segment", {}) if isinstance(entry.get("segment"), dict) else {}
+        context = segment.pop("work_context", {}) if isinstance(segment.get("work_context"), dict) else {}
+        for field, prefix, payload, table in (
+            ("provenance_ref", "provenance", provenance, "provenance"),
+            ("context_ref", "context", context, "contexts"),
+            ("invocation_intent_ref", "intent", intent, "invocation_intents"),
+        ):
+            if payload:
+                identity = _record_identity(prefix, payload)
+                records[table][identity] = payload
+                if field == "context_ref":
+                    segment[field] = identity
+                else:
+                    entry[field] = identity
+        if segment:
+            segment_ref = _record_identity("segment", segment)
+            records["segments"][segment_ref] = segment
+            entry["segment_ref"] = segment_ref
+        normalized.append(entry)
+    return normalized, records
 
 
 def _normalized_capture(state: SessionLoggingState, capture: CommandCapture) -> CommandCapture:
@@ -1517,7 +1602,7 @@ def _entry_brief(entry: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": entry.get("id", ""),
         "timestamp": entry.get("timestamp", ""),
-        "command": entry.get("command", ""),
+        "command": _bounded_text(str(entry.get("command", ""))),
         "exit_status": entry.get("exit_status", 0),
         "exit_class": entry.get("exit_class", ""),
         "failure_class": entry.get("failure_class", ""),
@@ -1527,11 +1612,34 @@ def _entry_brief(entry: dict[str, Any]) -> dict[str, Any]:
         "origin": entry.get("origin", {}),
         "parent": parent,
         "segment_id": entry.get("segment", {}).get("id", "") if isinstance(entry.get("segment"), dict) else "",
+        "provenance_ref": entry.get("provenance_ref", ""),
+        "segment_ref": entry.get("segment_ref", ""),
+        "invocation_intent_ref": entry.get("invocation_intent_ref", ""),
         "output_bytes": entry.get("output_bytes", 0),
         "artifact_path": artifact.get("path", "") if isinstance(artifact, dict) else "",
         "packet_kinds": entry.get("packet_kinds", []),
         "domain_kinds": entry.get("domain_kinds", []),
     }
+
+
+def _bounded_text(value: str, *, limit: int = 512) -> str:
+    if len(value) <= limit:
+        return value
+    return value[: limit - 18] + "…<truncated>"
+
+
+def _bounded_counter(counter: Counter[str], *, limit: int = 20) -> dict[str, int]:
+    return {_bounded_text(key): count for key, count in counter.most_common(limit)}
+
+
+def _bounded_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return _bounded_text(value)
+    if isinstance(value, dict):
+        return {key: _bounded_value(child) for key, child in value.items()}
+    if isinstance(value, list):
+        return [_bounded_value(child) for child in value[:10]]
+    return value
 
 
 def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1887,6 +1995,8 @@ def export_session_log(
     exported_hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in files.items()}
     manifest = {
         "kind": "agentic-workspace/session-log-export-manifest/v1",
+        "artifact_class": "normalized-share-safe",
+        "source_artifact_class": "raw-local-diagnostic",
         "source_session_id": effective_session["session_id"],
         "source_log_path": effective_session["log_path"],
         "created_at": datetime.now(UTC).isoformat(),
@@ -1896,7 +2006,8 @@ def export_session_log(
         "source_hashes": source_hashes,
         "exported_hashes": exported_hashes,
         "originals_mutated": False,
-        "local_only": True,
+        "local_only": False,
+        "share_action": "Share this generated archive; do not share the raw local session directory.",
         "authoritative": False,
         "local_diagnostic_boundary": _session_log_local_boundary(),
         "limitations": "Known target, home, Python executable, and configured local paths are normalized; export is not a secret scan or transfer approval.",
@@ -1905,7 +2016,9 @@ def export_session_log(
     export_path = (
         SESSION_LOG_ROOT
         / "exports"
-        / (f"aw-session-{effective_session['session_id']}-local-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}.zip")
+        / (
+            f"aw-session-{effective_session['session_id']}-share-safe-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}.zip"
+        )
     )
     absolute_export = state.target_root / export_path
     absolute_export.parent.mkdir(parents=True, exist_ok=True)
@@ -1915,6 +2028,9 @@ def export_session_log(
     return {
         "kind": "agentic-workspace/session-log-export/v1",
         "status": "exported",
+        "artifact_class": "normalized-share-safe",
+        "source_artifact_class": "raw-local-diagnostic",
+        "share_action": "Share path; keep source_log_path and its raw artifact directory local.",
         "path": export_path.as_posix(),
         "source_log_path": effective_session["log_path"],
         "session_id": effective_session["session_id"],
@@ -1922,7 +2038,7 @@ def export_session_log(
         "sha256": hashlib.sha256(absolute_export.read_bytes()).hexdigest(),
         "manifest": manifest,
         "local_diagnostic_boundary": _session_log_local_boundary(),
-        "local_only": True,
+        "local_only": False,
         "authoritative": False,
     }
 
@@ -1943,7 +2059,10 @@ def _segment_summaries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
         segment = members[-1].get("segment", {}) if isinstance(members[-1].get("segment"), dict) else {}
         summaries.append(
             {
-                **segment,
+                **{
+                    key: _bounded_value(segment.get(key))
+                    for key in ("task", "plan_id", "branch", "head", "pr_ref", "closeout_status", "issue_refs")
+                },
                 "id": segment_id,
                 "command_count": len(members),
                 "failure_count": sum(1 for entry in members if int(entry.get("exit_status", 0) or 0) != 0),
@@ -1954,6 +2073,51 @@ def _segment_summaries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return summaries
 
 
+def _episode_summaries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for entry in entries:
+        intent = entry.get("invocation_intent", {}) if isinstance(entry.get("invocation_intent"), dict) else {}
+        segment = entry.get("segment", {}) if isinstance(entry.get("segment"), dict) else {}
+        purpose = str(intent.get("purpose_id", "") or "unknown-purpose")
+        scenario = str(intent.get("scenario_id", "") or "unknown-scenario")
+        segment_id = str(segment.get("id", "") or "unknown-segment")
+        key = f"{purpose}\0{scenario}\0{segment_id}"
+        grouped.setdefault(key, []).append(entry)
+    summaries = []
+    for key, members in grouped.items():
+        purpose, scenario, segment_id = key.split("\0", 2)
+        classes = Counter(
+            str(entry.get("invocation_intent", {}).get("invocation_class", "unknown"))
+            for entry in members
+            if isinstance(entry.get("invocation_intent"), dict)
+        )
+        summaries.append(
+            {
+                "id": _record_identity("episode", {"purpose": purpose, "scenario": scenario, "segment": segment_id}),
+                "purpose_id": purpose,
+                "scenario_id": scenario,
+                "segment_id": segment_id,
+                "command_count": len(members),
+                "failure_count": sum(1 for entry in members if int(entry.get("exit_status", 0) or 0) != 0),
+                "invocation_classes": dict(sorted(classes.items())),
+                "started_at": str(members[0].get("timestamp", "")),
+                "finished_at": str(members[-1].get("timestamp", "")),
+            }
+        )
+    return summaries
+
+
+def _paged_detail(*, values: list[Any], page: int, page_size: int) -> dict[str, Any]:
+    start = (page - 1) * page_size
+    return {
+        "page": page,
+        "page_size": page_size,
+        "total_count": len(values),
+        "has_more": start + page_size < len(values),
+        "items": values[start : start + page_size],
+    }
+
+
 def analyze_session_log(
     *,
     state: SessionLoggingState,
@@ -1961,6 +2125,9 @@ def analyze_session_log(
     session_id: str = "",
     segment_id: str = "",
     origin_scope: str = "agent",
+    detail: str = "summary",
+    page: int = 1,
+    page_size: int = DEFAULT_ANALYSIS_PAGE_SIZE,
 ) -> dict[str, Any]:
     session = _session_for_caller(target_root=state.target_root, logical_identity=_logical_session_identity())
     log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
@@ -1979,6 +2146,7 @@ def analyze_session_log(
     coverage = _coverage_payload(markdown_entries=markdown_entries, index=index)
     all_entries = _entries_from_index(index) if index is not None else markdown_entries
     segment_summaries = _segment_summaries(all_entries)
+    episode_summaries = _episode_summaries(all_entries)
     selected_entries = [
         entry
         for entry in all_entries
@@ -2083,6 +2251,23 @@ def analyze_session_log(
         duplicates=[{"sha256": digest, "count": count} for digest, count in product_digests.most_common() if count > 1],
         index_present=index is not None,
     )
+    index_records = index.get("records", {}) if isinstance(index, dict) and isinstance(index.get("records"), dict) else {}
+    context_records = index_records.get("contexts", {}) if isinstance(index_records.get("contexts"), dict) else {}
+    detail_collections: dict[str, list[Any]] = {
+        "entries": [_entry_brief(entry) for entry in entries],
+        "segments": segment_summaries,
+        "episodes": episode_summaries,
+        "contexts": [{"id": identity, **value} for identity, value in context_records.items() if isinstance(value, dict)],
+        "candidates": friction_candidates,
+    }
+    selected_detail = detail if detail in {*detail_collections, "summary"} else "summary"
+    detail_payload = (
+        _paged_detail(
+            values=detail_collections[selected_detail], page=max(1, page), page_size=max(1, min(MAX_ANALYSIS_PAGE_SIZE, page_size))
+        )
+        if selected_detail != "summary"
+        else None
+    )
     return {
         "kind": "agentic-workspace/session-log-analysis/v1",
         "status": "analyzed",
@@ -2116,7 +2301,7 @@ def analyze_session_log(
             "origin": origin_scope,
             "default": "agent",
             "included_origins": sorted(origin_groups[origin_scope]),
-            "detail_route": "agentic-workspace session-log analyze --origin <agent|all|test|synthetic|unknown> --format json",
+            "detail_route": "agentic-workspace session-log analyze --detail <entries|segments|episodes|contexts|candidates> --page 1 --page-size 25 --format json",
             "rule": "The ordinary packet is live-agent-first; other origins remain available through explicit origin scope.",
         },
         "origin_breakdown": dict(sorted(origin_breakdown.items())),
@@ -2126,30 +2311,54 @@ def analyze_session_log(
             "entries": [_entry_brief(entry) for entry in analyzer_overhead[:LARGE_OUTPUT_SUMMARY_LIMIT]],
             "rule": "session-log analyze traffic is classified separately and cannot become default product-friction evidence.",
         },
-        "failed_commands": [_entry_brief(entry) for entry in (live_failures if origin_scope == "agent" else unexpected_failures)],
-        "observed_nonzero_exits": [_entry_brief(entry) for entry in failures],
-        "unexpected_failed_commands": [_entry_brief(entry) for entry in unexpected_failures],
-        "matched_invocations": [_entry_brief(entry) for entry in matched_expectations],
-        "unmatched_invocations": [_entry_brief(entry) for entry in unmatched_expectations],
-        "expected_success_failed_invocations": [_entry_brief(entry) for entry in expected_success_failures],
-        "expected_failure_succeeded_invocations": [_entry_brief(entry) for entry in expected_failure_successes],
-        "unknown_invocations": [_entry_brief(entry) for entry in unknown_expectations],
+        "failed_commands": [
+            _entry_brief(entry)
+            for entry in (live_failures if origin_scope == "agent" else unexpected_failures)[:LARGE_OUTPUT_SUMMARY_LIMIT]
+        ],
+        "observed_nonzero_exits": [_entry_brief(entry) for entry in failures[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "unexpected_failed_commands": [_entry_brief(entry) for entry in unexpected_failures[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "matched_invocations": [_entry_brief(entry) for entry in matched_expectations[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "unmatched_invocations": [_entry_brief(entry) for entry in unmatched_expectations[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "expected_success_failed_invocations": [_entry_brief(entry) for entry in expected_success_failures[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "expected_failure_succeeded_invocations": [
+            _entry_brief(entry) for entry in expected_failure_successes[:LARGE_OUTPUT_SUMMARY_LIMIT]
+        ],
+        "unknown_invocations": [_entry_brief(entry) for entry in unknown_expectations[:LARGE_OUTPUT_SUMMARY_LIMIT]],
         "unknown_expectation_effect": "inconclusive; raw exit remains observed and a non-zero exit remains in the primary unexpected-failure set",
-        "live_failed_commands": [_entry_brief(entry) for entry in live_failures],
-        "failures_by_origin": dict(sorted(failures_by_origin.items())),
-        "repeated_failures_by_origin": repeated_failures_by_origin,
-        "usage_mistakes": [_entry_brief(entry) for entry in usage_mistakes],
-        "repeated_commands": repeated[:LARGE_OUTPUT_SUMMARY_LIMIT],
-        "repeated_failures": repeated_failures[:LARGE_OUTPUT_SUMMARY_LIMIT],
+        "live_failed_commands": [_entry_brief(entry) for entry in live_failures[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "failures_by_origin": _bounded_counter(failures_by_origin),
+        "repeated_failures_by_origin": {
+            origin: [_bounded_value(value) for value in values[:LARGE_OUTPUT_SUMMARY_LIMIT]]
+            for origin, values in repeated_failures_by_origin.items()
+        },
+        "usage_mistakes": [_entry_brief(entry) for entry in usage_mistakes[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "repeated_commands": [_bounded_value(value) for value in repeated[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "repeated_failures": [_bounded_value(value) for value in repeated_failures[:LARGE_OUTPUT_SUMMARY_LIMIT]],
         "largest_outputs": [_entry_brief(entry) for entry in largest],
         "duplicate_outputs": duplicates[:LARGE_OUTPUT_SUMMARY_LIMIT],
-        "packet_kinds": dict(sorted(packet_kinds.items())),
-        "parsed_packet_kinds": dict(sorted(packet_kinds.items())),
-        "top_level_kinds": dict(sorted(top_level_kinds.items())),
-        "domain_kinds": dict(sorted(domain_kinds.items())),
-        "segments": segment_summaries,
+        "packet_kinds": _bounded_counter(packet_kinds),
+        "parsed_packet_kinds": _bounded_counter(packet_kinds),
+        "top_level_kinds": _bounded_counter(top_level_kinds),
+        "domain_kinds": _bounded_counter(domain_kinds),
+        "segments": segment_summaries[:LARGE_OUTPUT_SUMMARY_LIMIT],
+        "episodes": episode_summaries[:LARGE_OUTPUT_SUMMARY_LIMIT],
+        "detail": selected_detail,
+        "detail_page": detail_payload,
+        "bounded_collections": {
+            "sample_limit": LARGE_OUTPUT_SUMMARY_LIMIT,
+            "candidate_limit": FRICTION_CANDIDATE_LIMIT,
+            "default_serialization_budget_bytes": DEFAULT_ANALYSIS_SERIALIZATION_BUDGET_BYTES,
+            "full_detail_requires_selector": True,
+            "available": sorted(detail_collections),
+        },
         "selected_segment": segment_id,
-        "friction_candidates": friction_candidates,
+        "friction_candidates": [_bounded_value(value) for value in friction_candidates[:FRICTION_CANDIDATE_LIMIT]],
+        "export_routing": {
+            "download_or_share": "agentic-workspace session-log export --target ./repo --format json",
+            "artifact_class": "normalized-share-safe",
+            "raw_local_route": "Keep the source session directory local; it is not the share artifact.",
+            "authority": "session-log export is the sole share/download route for session evidence",
+        },
         "local_diagnostic_boundary": _session_log_local_boundary(),
         "local_only": True,
         "authoritative": False,

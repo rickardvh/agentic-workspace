@@ -193,7 +193,9 @@ def test_session_logging_enabled_reuses_one_session_log_and_records_config_prelu
     assert "`json`" in text
 
     index = json.loads(_current_index(target).read_text(encoding="utf-8"))
-    assert index["kind"] == "agentic-workspace/session-log-index/v1"
+    assert index["kind"] == "agentic-workspace/session-log-index/v2"
+    assert index["session_header"]["session_id"] == index["session_id"]
+    assert set(index["records"]) == {"contexts", "invocation_intents", "provenance", "segments"}
     assert len(index["entries"]) == 2
     assert index["entries"][0]["stdout"]["kind"] == "json"
     assert index["entries"][0]["artifact"]["path"].startswith(str(first_log.parent.relative_to(target)).replace("\\", "/") + "/artifacts/")
@@ -877,7 +879,7 @@ def test_session_log_preserves_producer_invocation_intent_and_matches_observed_o
     assert len(test_analysis["matched_invocations"]) == 1
 
     index = json.loads(_current_index(target).read_text(encoding="utf-8"))
-    negative = index["entries"][0]
+    negative = session_logging._entries_from_index(index)[0]
     assert negative["exit_status"] == 2
     assert negative["exit_class"] == "failure"
     assert negative["invocation_outcome"]["match"] == "matched"
@@ -1045,7 +1047,7 @@ def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tm
     assert repaired_index["entries"][0]["artifact"] == preserved["artifact"]
     assert not any(entry["id"] == "cmd-not-in-markdown" for entry in repaired_index["entries"])
     assert repaired_index["repair"]["quarantined_entry_ids"] == ["cmd-not-in-markdown"]
-    assert repaired_index["repair"]["quarantined_entries"] == [ghost]
+    assert [entry["id"] for entry in repaired_index["repair"]["quarantined_entries"]] == [ghost["id"]]
     assert session_logging.repair_session_log_index(state=state)["status"] == "already-covered"
 
 
@@ -1079,6 +1081,82 @@ def test_session_log_segments_can_be_summarized_and_selected(tmp_path: Path, mon
     assert selected["summary"]["command_count"] == 1
 
 
+def test_session_log_index_deduplicates_metadata_and_analysis_pages_episodes(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    monkeypatch.setenv("AW_SESSION_LOG_PURPOSE_ID", "implement-lane")
+    monkeypatch.setenv("AW_SESSION_LOG_SCENARIO_ID", "focused-proof")
+    monkeypatch.setenv("AW_SESSION_LOG_INVOCATION_CLASS", "product-operation")
+    monkeypatch.setenv("AW_SESSION_LOG_EXPECTED_EXIT", "success")
+
+    for _ in range(3):
+        assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
+
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    assert len(index["entries"]) == 3
+    assert len(index["records"]["provenance"]) == 1
+    assert len(index["records"]["contexts"]) < len(index["entries"])
+    assert len(index["records"]["segments"]) < len(index["entries"])
+    assert len(index["records"]["invocation_intents"]) == 1
+    assert all("provenance" not in entry and "segment" not in entry for entry in index["entries"])
+    assert len({entry["segment_ref"] for entry in index["entries"]}) < len(index["entries"])
+    hydrated = {**index, "records": {}, "entries": session_logging._entries_from_index(index)}
+    assert len(json.dumps(index)) < len(json.dumps(hydrated))
+
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    summary = session_logging.analyze_session_log(state=state)
+    assert summary["episodes"][0]["purpose_id"] == "implement-lane"
+    assert summary["episodes"][0]["scenario_id"] == "focused-proof"
+    assert summary["detail"] == "summary"
+    assert summary["detail_page"] is None
+    page = session_logging.analyze_session_log(state=state, detail="entries", page=2, page_size=2)
+    assert page["detail_page"]["total_count"] == 3
+    assert page["detail_page"]["page"] == 2
+    assert len(page["detail_page"]["items"]) == 1
+    assert page["export_routing"]["artifact_class"] == "normalized-share-safe"
+    assert (
+        source_cli.main(
+            [
+                "session-log",
+                "--target",
+                str(target),
+                "analyze",
+                "--detail",
+                "episodes",
+                "--page-size",
+                "1",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    cli_page = json.loads(capsys.readouterr().out)
+    assert cli_page["detail"] == "episodes"
+    assert cli_page["detail_page"]["page_size"] == 1
+
+
+def test_session_log_default_analysis_stays_bounded_for_long_multitask_session(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    for position in range(80):
+        monkeypatch.setenv("AW_SESSION_LOG_PURPOSE_ID", f"lane-{position % 8}")
+        monkeypatch.setenv("AW_SESSION_LOG_SCENARIO_ID", f"branch-{position % 12}")
+        assert (
+            session_logging.run_with_session_logging(["status", "--target", str(target), "--select", f"agent-{position}"], lambda _argv: 0)
+            == 0
+        )
+
+    payload = session_logging.analyze_session_log(state=session_logging.load_state_for_argv(["--target", str(target)]))
+    assert payload["summary"]["command_count"] == 80
+    assert len(payload["segments"]) <= session_logging.LARGE_OUTPUT_SUMMARY_LIMIT
+    assert len(payload["episodes"]) <= session_logging.LARGE_OUTPUT_SUMMARY_LIMIT
+    assert len(payload["friction_candidates"]) <= session_logging.FRICTION_CANDIDATE_LIMIT
+    assert len(json.dumps(payload).encode("utf-8")) <= session_logging.DEFAULT_ANALYSIS_SERIALIZATION_BUDGET_BYTES
+
+
 def test_session_log_work_context_does_not_carry_stale_pr_across_task_transition(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
@@ -1099,7 +1177,8 @@ def test_session_log_work_context_does_not_carry_stale_pr_across_task_transition
         == 0
     )
 
-    entries = json.loads(_current_index(target).read_text(encoding="utf-8"))["entries"]
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    entries = session_logging._entries_from_index(index)
     assert len(entries) == 3
     assert entries[0]["segment"]["pr_ref"] == "#2144"
     assert entries[1]["segment"]["pr_ref"] == ""
@@ -1595,7 +1674,7 @@ def test_session_log_segments_ignore_closeout_text_without_a_closeout_transition
         assert session_logging.run_with_session_logging(command, lambda _argv: 0) == 0
 
     index = json.loads(_current_index(target).read_text(encoding="utf-8"))
-    assert [entry["segment"]["closeout_status"] for entry in index["entries"]] == ["open", "open", "open"]
+    assert [entry["segment"]["closeout_status"] for entry in session_logging._entries_from_index(index)] == ["open", "open", "open"]
 
 
 def test_session_log_provenance_and_kind_classes_are_recorded(tmp_path: Path, monkeypatch) -> None:
@@ -1617,7 +1696,7 @@ def test_session_log_provenance_and_kind_classes_are_recorded(tmp_path: Path, mo
 
     assert session_logging.run_with_session_logging(["summary", "--target", str(target)], runner) == 0
     index = json.loads(_current_index(target).read_text(encoding="utf-8"))
-    entry = index["entries"][0]
+    entry = session_logging._entries_from_index(index)[0]
     assert entry["provenance"]["aw_version"]
     assert isinstance(entry["provenance"]["dirty"], bool)
     assert entry["duration_ms"] >= 0
@@ -1806,10 +1885,13 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
         assert str(Path.home()) not in combined
         assert sys.executable not in combined
         assert "<target>" in combined
-        assert "share-safe" not in combined
+        assert "normalized-share-safe" in combined
         assert "promotion_boundary" not in combined
         assert "share_safe" not in combined
         manifest = json.loads(archive.read("manifest.json"))
+        assert manifest["artifact_class"] == "normalized-share-safe"
+        assert manifest["source_artifact_class"] == "raw-local-diagnostic"
+        assert manifest["local_only"] is False
         assert manifest["originals_mutated"] is False
         assert manifest["path_normalization_mode"] == "known-local-paths"
         assert "transfer approval" in manifest["limitations"]

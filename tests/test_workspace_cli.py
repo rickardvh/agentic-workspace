@@ -15,6 +15,8 @@ from typing import Any
 
 from tests.workspace_cli_support import *
 
+from agentic_workspace import session_logging
+
 
 def test_successful_completion_cost_discovers_manifest_indexed_custom_output_root(tmp_path: Path) -> None:
     subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True, check=True)
@@ -14269,6 +14271,27 @@ def test_session_improvement_intake_separates_session_and_repo_wide_scopes(tmp_p
     assert decision["routing_decision"]["status"] == "candidate"
     assert decision["routing_decision"]["owner"] == "workspace"
     assert decision["routing_decision"]["confidence"] == "high"
+
+
+def test_session_improvement_intake_self_admits_complete_index_for_review(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(tmp_path / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    for _ in range(2):
+        assert session_logging.run_with_session_logging(["status", "--target", str(tmp_path)], lambda _argv: 0) == 0
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "session_improvement_intake", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+    assert payload["status"] == "session_observed"
+    assert payload["session_signal_source"]["status"] == "complete-index"
+    signal = payload["session_observed_signals"][0]
+    assert signal["outcome"] == "review_required"
+    assert signal["reviewed"] is False
+    assert len(signal["fingerprint"]) == 64
+    assert payload["routing_decisions"][0]["closeout_blocked"] is False
+    assert "not promoted" in payload["claim_boundary"]
 
 
 def test_selected_dogfooding_report_sections_stay_compact(tmp_path: Path, capsys) -> None:
