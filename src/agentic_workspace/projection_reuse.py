@@ -681,7 +681,7 @@ def lookup_projection_reuse(
     full_detail_command: str,
     force_refresh: bool = False,
     context: dict[str, Any] | None = None,
-    operating_decision: dict[str, Any] | None = None,
+    admitted_input: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any] | None, dict[str, Any]]:
     context = context or prepare_projection_reuse(
         root=root,
@@ -696,9 +696,9 @@ def lookup_projection_reuse(
     volatile = bool(context.get("volatile"))
     input_revisions = context.get("input_revisions", {})
     lookup_started_at = float(context.get("lookup_started_at") or time.monotonic())
-    decision = operating_decision if isinstance(operating_decision, dict) else {}
-    if not decision.get("decision_id"):
-        context["invalidation_reasons"] = ["surface-operating-decision-unavailable"]
+    decision_input = admitted_input if isinstance(admitted_input, dict) else {}
+    if decision_input.get("status") != "admitted" or not decision_input.get("admitted_input_revision"):
+        context["invalidation_reasons"] = ["surface-decision-input-unavailable"]
         return None, context
     if forced or volatile or context.get("dependency_status") != "complete" or not path.is_file():
         return None, context
@@ -716,10 +716,10 @@ def lookup_projection_reuse(
         return None, context
     decision_id = str(record.get("decision_id") or "")
     canonical_input_revision = str(record.get("canonical_decision_input_revision") or "")
-    admitted_decision_id = str(decision.get("decision_id") or "")
-    admitted_input_revision = str(decision.get("admitted_input_revision") or "")
-    if not decision_id or decision_id != admitted_decision_id or canonical_input_revision != admitted_input_revision:
-        context["invalidation_reasons"] = ["surface-operating-decision-changed"]
+    projection_input_revision = str(record.get("projection_input_revision") or "")
+    admitted_input_revision = str(decision_input.get("admitted_input_revision") or "")
+    if not decision_id or projection_input_revision != admitted_input_revision:
+        context["invalidation_reasons"] = ["surface-decision-input-changed"]
         return None, context
     context["decision_id"] = decision_id
     context["canonical_input_revision"] = canonical_input_revision
@@ -734,6 +734,7 @@ def lookup_projection_reuse(
         "dependency_digest": digest,
         "decision_id": decision_id,
         "canonical_decision_input_revision": canonical_input_revision,
+        "projection_input_revision": projection_input_revision,
         "actionability_delta": "unchanged",
         "decision_delta": "unchanged",
         "proof_delta": "unchanged",
@@ -798,7 +799,18 @@ def record_projection_reuse(
     continuation_view = payload.get("continuation_view", {}) if isinstance(payload.get("continuation_view"), dict) else {}
     proof_state = continuation_view.get("proof_state", {}) if isinstance(continuation_view.get("proof_state"), dict) else {}
     residue_governance = payload.get("residue_governance", {}) if isinstance(payload.get("residue_governance"), dict) else {}
-    if not operating_decision.get("decision_id"):
+    payload_context = payload.get("context", {}) if isinstance(payload.get("context"), dict) else {}
+    projection_authority = (
+        payload_context.get("projection_decision_authority", {})
+        if isinstance(payload_context.get("projection_decision_authority"), dict)
+        else {}
+    )
+    if (
+        not operating_decision.get("decision_id")
+        or projection_authority.get("status") != "admitted"
+        or projection_authority.get("decision_id") != operating_decision.get("decision_id")
+        or projection_authority.get("projection_input_revision") != operating_decision.get("projection_input_revision")
+    ):
         return {}
     context["decision_id"] = operating_decision["decision_id"]
     context["canonical_input_revision"] = operating_decision.get("admitted_input_revision", "")
@@ -846,6 +858,10 @@ def record_projection_reuse(
                 "terminal_state",
                 "external_blocker",
                 "blocked_claim_classes",
+                "projection_input_id",
+                "projection_input_revision",
+                "projection_posture_revision",
+                "projection_posture",
             )
             if operating_decision.get(key) not in (None, "")
         },
@@ -868,6 +884,7 @@ def record_projection_reuse(
         "dependencies": context["dependencies"],
         "decision_id": context.get("decision_id", ""),
         "canonical_decision_input_revision": context.get("canonical_input_revision", ""),
+        "projection_input_revision": operating_decision.get("projection_input_revision", ""),
         "input_revisions": context.get("input_revisions", {}),
         "authority": "projection index only; operating decision remains authoritative",
         "output_digest": hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()[:20],
@@ -1021,7 +1038,15 @@ def enforce_projection_serialization_budget(
             )
             if key in payload
         }
-        bounded["context"] = {"projection_decision_authority": _compact_hard(source_context.get("projection_decision_authority", {}))}
+        bounded["context"] = {
+            key: _compact_hard(source_context.get(key, {}))
+            for key in (
+                "projection_decision_input",
+                "projection_decision_input_consumption",
+                "projection_decision_authority",
+            )
+            if source_context.get(key)
+        }
         bounded["projection_reuse"] = reuse_result
         bounded["serialization_budget"] = {
             "status": "detail-withheld",

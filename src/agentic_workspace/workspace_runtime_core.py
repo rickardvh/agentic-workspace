@@ -144,9 +144,10 @@ from agentic_workspace.current_work_context import (
 from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
 from agentic_workspace.operating_decision import (
-    admit_projection_surface_operating_decision,
-    bind_projection_surface_operating_decision,
-    materialize_projection_under_operating_decision,
+    admit_projection_surface_decision_input,
+    consume_projection_surface_decision_input,
+    finalize_projection_surface_operating_decision,
+    materialize_projection_under_decision_input,
     project_startup_claim_effect_authority,
 )
 from agentic_workspace.projection_reuse import (
@@ -48533,14 +48534,14 @@ def _emit_proof(
             "current": current_only,
         }
         reuse_context: dict[str, Any] | None = None
-        operating_decision: dict[str, Any] = {}
+        admitted_input: dict[str, Any] = {}
         if format_name == "json" and not select:
             full_detail_command = _command_with_cli_invoke(
                 command="agentic-workspace proof --target . --changed <paths> --verbose --format json",
                 cli_invoke=config.cli_invoke,
             )
             reuse_context = prepare_projection_reuse(root=target_root, operation="proof", query=reuse_query)
-            operating_decision = admit_projection_surface_operating_decision(
+            admitted_input = admit_projection_surface_decision_input(
                 input_revisions=reuse_context.get("decision_input_revisions", {}), consumer="proof"
             )
             reused, reuse_context = lookup_projection_reuse(
@@ -48549,25 +48550,25 @@ def _emit_proof(
                 query=reuse_query,
                 full_detail_command=full_detail_command,
                 context=reuse_context,
-                operating_decision=operating_decision,
+                admitted_input=admitted_input,
             )
             if reused is not None:
                 _emit_payload(payload=reused, format_name=format_name)
                 return
         with ProjectionProgress(root=target_root, operation="proof") as progress:
             answer = progress.run_cancellable(
-                lambda: materialize_projection_under_operating_decision(
-                    builder=lambda admitted_decision: bind_projection_surface_operating_decision(
+                lambda: materialize_projection_under_decision_input(
+                    builder=lambda decision_input: consume_projection_surface_decision_input(
                         payload=_proof_selection_for_changed_paths(
                             changed_paths=normalized_paths,
                             target_root=target_root,
                             include_durable_intent=False,
                             task_text=task_text,
                         ),
-                        operating_decision=admitted_decision,
+                        admitted_input=decision_input,
                         consumer="proof",
                     ),
-                    operating_decision=operating_decision,
+                    admitted_input=admitted_input,
                     consumer="proof",
                 ),
                 stage="select-proof-routes",
@@ -48589,6 +48590,10 @@ def _emit_proof(
             full_payload,
             cli_invoke=config.cli_invoke,
         )
+        answer_context = _as_dict(answer.get("context"))
+        input_consumption = _as_dict(answer_context.get("projection_decision_input_consumption"))
+        if input_consumption:
+            payload.setdefault("context", {})["projection_decision_input_consumption"] = input_consumption
         if task_text:
             payload["task_context"] = {"status": "applied", "task": task_text}
         if select:
@@ -48600,7 +48605,9 @@ def _emit_proof(
             or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
         ):
             payload["projection_progress"] = progress_contract
-        payload = bind_projection_surface_operating_decision(payload=payload, operating_decision=operating_decision, consumer="proof")
+        payload, operating_decision = finalize_projection_surface_operating_decision(
+            payload=payload, admitted_input=admitted_input, consumer="proof"
+        )
         if reuse_context is not None:
             reuse_result = record_projection_reuse(
                 root=target_root,
@@ -48690,10 +48697,10 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             cli_invoke=config.cli_invoke,
         )
         selected_reuse_context: dict[str, Any] | None = None
-        selected_operating_decision: dict[str, Any] = {}
+        selected_admitted_input: dict[str, Any] = {}
         if args.format == "json":
             selected_reuse_context = prepare_projection_reuse(root=target_root, operation="summary", query=selected_query)
-            selected_operating_decision = admit_projection_surface_operating_decision(
+            selected_admitted_input = admit_projection_surface_decision_input(
                 input_revisions=selected_reuse_context.get("decision_input_revisions", {}), consumer="summary"
             )
             reused, selected_reuse_context = lookup_projection_reuse(
@@ -48702,7 +48709,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 query=selected_query,
                 full_detail_command=selected_detail_command,
                 context=selected_reuse_context,
-                operating_decision=selected_operating_decision,
+                admitted_input=selected_admitted_input,
             )
             if reused is not None:
                 _emit_payload(payload=reused, format_name=args.format)
@@ -48719,8 +48726,8 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 )
                 projection_cancellation_checkpoint()
                 return {
-                    "payload": materialize_projection_under_operating_decision(
-                        builder=lambda admitted_decision: bind_projection_surface_operating_decision(
+                    "payload": materialize_projection_under_decision_input(
+                        builder=lambda decision_input: consume_projection_surface_decision_input(
                             payload=_select_summary_payload(
                                 target_root=target_root,
                                 select=getattr(args, "select"),
@@ -48729,10 +48736,10 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                                 planning_summary=planning_summary,
                                 cli_invoke=config.cli_invoke,
                             ),
-                            operating_decision=admitted_decision,
+                            admitted_input=decision_input,
                             consumer="summary",
                         ),
-                        operating_decision=selected_operating_decision,
+                        admitted_input=selected_admitted_input,
                         consumer="summary",
                     ),
                     "closeout_inspection": inspection,
@@ -48772,6 +48779,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
         ):
             payload["projection_progress"] = progress_contract
+        payload, selected_operating_decision = finalize_projection_surface_operating_decision(
+            payload=payload, admitted_input=selected_admitted_input, consumer="summary"
+        )
         if selected_reuse_context is not None:
             reuse_result = record_projection_reuse(
                 root=target_root,
@@ -48799,14 +48809,14 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
         }
         reuse_context: dict[str, Any] | None = None
-        operating_decision: dict[str, Any] = {}
+        admitted_input: dict[str, Any] = {}
         if args.format == "json" and summary_profile == "tiny":
             full_detail_command = _command_with_cli_invoke(
                 command=f"agentic-workspace summary --target {target_root.as_posix()} --verbose --format json",
                 cli_invoke=config.cli_invoke,
             )
             reuse_context = prepare_projection_reuse(root=target_root, operation="summary", query=reuse_query)
-            operating_decision = admit_projection_surface_operating_decision(
+            admitted_input = admit_projection_surface_decision_input(
                 input_revisions=reuse_context.get("decision_input_revisions", {}), consumer="summary"
             )
             reused, reuse_context = lookup_projection_reuse(
@@ -48815,7 +48825,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 query=reuse_query,
                 full_detail_command=full_detail_command,
                 context=reuse_context,
-                operating_decision=operating_decision,
+                admitted_input=admitted_input,
             )
             if reused is not None:
                 _emit_payload(payload=reused, format_name=args.format)
@@ -48823,18 +48833,18 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         summary_started_at = time.perf_counter()
         with ProjectionProgress(root=target_root, operation="summary") as progress:
             summary = progress.run_cancellable(
-                lambda: materialize_projection_under_operating_decision(
-                    builder=lambda admitted_decision: bind_projection_surface_operating_decision(
+                lambda: materialize_projection_under_decision_input(
+                    builder=lambda decision_input: consume_projection_surface_decision_input(
                         payload=planning_summary(
                             target=target_root.as_posix(),
                             profile=summary_profile,
                             task_text=getattr(args, "task", None),
                             changed_paths=changed_paths,
                         ),
-                        operating_decision=admitted_decision,
+                        admitted_input=decision_input,
                         consumer="summary",
                     ),
-                    operating_decision=operating_decision,
+                    admitted_input=admitted_input,
                     consumer="summary",
                 ),
                 stage="build-planning-summary",
@@ -48897,6 +48907,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     cli_invoke=config.cli_invoke,
                 )
         summary = _rewrite_module_cli_commands(summary)
+        summary, operating_decision = finalize_projection_surface_operating_decision(
+            payload=summary, admitted_input=admitted_input, consumer="summary"
+        )
         if reuse_context is not None:
             reuse_result = record_projection_reuse(
                 root=target_root,
@@ -49133,7 +49146,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     if profile == "router" and section is None:
         reuse_query: dict[str, Any] | None = None
         reuse_context: dict[str, Any] | None = None
-        operating_decision: dict[str, Any] = {}
+        admitted_input: dict[str, Any] = {}
         if args.format == "json" and not select:
             reuse_query = {
                 "profile": profile,
@@ -49148,7 +49161,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                 cli_invoke=config.cli_invoke,
             )
             reuse_context = prepare_projection_reuse(root=target_root, operation="report", query=reuse_query)
-            operating_decision = admit_projection_surface_operating_decision(
+            admitted_input = admit_projection_surface_decision_input(
                 input_revisions=reuse_context.get("decision_input_revisions", {}), consumer="report"
             )
             reused, reuse_context = lookup_projection_reuse(
@@ -49157,7 +49170,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                 query=reuse_query,
                 full_detail_command=full_detail_command,
                 context=reuse_context,
-                operating_decision=operating_decision,
+                admitted_input=admitted_input,
             )
             if reused is not None and not select:
                 _emit_payload(payload=reused, format_name=args.format)
@@ -49165,8 +49178,8 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         section_payload: dict[str, Any] | None = None
         with ProjectionProgress(root=target_root, operation="report") as progress:
             payload = progress.run_cancellable(
-                lambda: materialize_projection_under_operating_decision(
-                    builder=lambda admitted_decision: bind_projection_surface_operating_decision(
+                lambda: materialize_projection_under_decision_input(
+                    builder=lambda decision_input: consume_projection_surface_decision_input(
                         payload=_run_report_router_command(
                             target_root=target_root,
                             selected_modules=selected_modules,
@@ -49174,10 +49187,10 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                             descriptors=descriptors,
                             config=config,
                         ),
-                        operating_decision=admitted_decision,
+                        admitted_input=decision_input,
                         consumer="report",
                     ),
-                    operating_decision=operating_decision,
+                    admitted_input=admitted_input,
                     consumer="report",
                 ),
                 stage="build-report-router",
@@ -49197,6 +49210,9 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                 "findings": reuse_context["degraded_findings"],
                 "rule": "Projection reuse was disabled; this compact payload was rebuilt from authoritative sources.",
             }
+        payload, operating_decision = finalize_projection_surface_operating_decision(
+            payload=payload, admitted_input=admitted_input, consumer="report"
+        )
         if not select and reuse_query is not None and reuse_context is not None:
             reuse_result = record_projection_reuse(
                 root=target_root,
@@ -49234,10 +49250,10 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             cli_invoke=config.cli_invoke,
         )
         section_reuse_context: dict[str, Any] | None = None
-        section_operating_decision: dict[str, Any] = {}
+        section_admitted_input: dict[str, Any] = {}
         if args.format == "json":
             section_reuse_context = prepare_projection_reuse(root=target_root, operation="report", query=section_query)
-            section_operating_decision = admit_projection_surface_operating_decision(
+            section_admitted_input = admit_projection_surface_decision_input(
                 input_revisions=section_reuse_context.get("decision_input_revisions", {}), consumer="report"
             )
             reused, section_reuse_context = lookup_projection_reuse(
@@ -49246,7 +49262,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                 query=section_query,
                 full_detail_command=section_detail_command,
                 context=section_reuse_context,
-                operating_decision=section_operating_decision,
+                admitted_input=section_admitted_input,
             )
             if reused is not None:
                 _emit_payload(payload=reused, format_name=args.format)
@@ -49255,7 +49271,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         with ProjectionProgress(root=target_root, operation="report") as progress:
 
             def build_report_section() -> dict[str, Any]:
-                def build_bound_report_section(admitted_decision: dict[str, Any]) -> dict[str, Any]:
+                def build_bound_report_section(decision_input: dict[str, Any]) -> dict[str, Any]:
                     candidate = _run_lazy_report_section_command(
                         target_root=target_root,
                         selected_modules=selected_modules,
@@ -49267,15 +49283,15 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                     )
                     if not isinstance(candidate, dict):
                         return {}
-                    return bind_projection_surface_operating_decision(
+                    return consume_projection_surface_decision_input(
                         payload=candidate,
-                        operating_decision=admitted_decision,
+                        admitted_input=decision_input,
                         consumer="report",
                     )
 
-                section_payload = materialize_projection_under_operating_decision(
+                section_payload = materialize_projection_under_decision_input(
                     builder=build_bound_report_section,
-                    operating_decision=section_operating_decision,
+                    admitted_input=section_admitted_input,
                     consumer="report",
                 )
                 projection_cancellation_checkpoint()
@@ -49305,6 +49321,9 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                 or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
             ):
                 payload["projection_progress"] = progress_contract
+            payload, section_operating_decision = finalize_projection_surface_operating_decision(
+                payload=payload, admitted_input=section_admitted_input, consumer="report"
+            )
             if section_reuse_context is not None:
                 reuse_result = record_projection_reuse(
                     root=target_root,
@@ -49588,14 +49607,14 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
     }
     reuse_context: dict[str, Any] | None = None
-    operating_decision: dict[str, Any] = {}
+    admitted_input: dict[str, Any] = {}
     if command_name == "doctor" and args.format == "json" and not select and profile == "tiny":
         full_detail_command = _command_with_cli_invoke(
             command=f"agentic-workspace doctor --target {target_root.as_posix()} --verbose --format json",
             cli_invoke=config.cli_invoke,
         )
         reuse_context = prepare_projection_reuse(root=target_root, operation="doctor", query=reuse_query)
-        operating_decision = admit_projection_surface_operating_decision(
+        admitted_input = admit_projection_surface_decision_input(
             input_revisions=reuse_context.get("decision_input_revisions", {}), consumer=command_name
         )
         reused, reuse_context = lookup_projection_reuse(
@@ -49604,14 +49623,14 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
             query=reuse_query,
             full_detail_command=full_detail_command,
             context=reuse_context,
-            operating_decision=operating_decision,
+            admitted_input=admitted_input,
         )
         if reused is not None:
             _emit_payload(payload=reused, format_name=args.format)
             return 0
     with ProjectionProgress(root=target_root, operation=command_name) as progress:
 
-        def build_lifecycle_projection(admitted_decision: dict[str, Any]) -> dict[str, Any]:
+        def build_lifecycle_projection(decision_input: dict[str, Any]) -> dict[str, Any]:
             if progress.cancel_requested:
                 lifecycle_payload = {
                     "kind": "agentic-workspace/projection-cancelled/v1",
@@ -49633,15 +49652,15 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
                     compact_status=profile == "tiny" and not detail_selector_requested,
                     module_scope_explicit=bool(getattr(args, "modules", None)),
                 )
-            return bind_projection_surface_operating_decision(
+            return consume_projection_surface_decision_input(
                 payload=lifecycle_payload,
-                operating_decision=admitted_decision,
+                admitted_input=decision_input,
                 consumer=command_name,
             )
 
-        payload = materialize_projection_under_operating_decision(
+        payload = materialize_projection_under_decision_input(
             builder=build_lifecycle_projection,
-            operating_decision=operating_decision,
+            admitted_input=admitted_input,
             consumer=command_name,
         )
         progress_contract = progress.contract()
@@ -49650,6 +49669,9 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
     ):
         payload["projection_progress"] = progress_contract
+    payload, operating_decision = finalize_projection_surface_operating_decision(
+        payload=payload, admitted_input=admitted_input, consumer=command_name
+    )
     if reuse_context is not None:
         reuse_result = record_projection_reuse(
             root=target_root,

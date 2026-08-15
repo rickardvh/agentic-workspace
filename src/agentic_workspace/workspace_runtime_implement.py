@@ -20,10 +20,11 @@ from agentic_workspace.authority_envelope import (
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
 from agentic_workspace.operating_decision import (
-    admit_projection_surface_operating_decision,
-    bind_projection_surface_operating_decision,
+    admit_projection_surface_decision_input,
     compile_implement_context_operating_decision,
-    materialize_projection_under_operating_decision,
+    consume_projection_surface_decision_input,
+    finalize_projection_surface_operating_decision,
+    materialize_projection_under_decision_input,
     resolve_context_authority_projection,
 )
 from agentic_workspace.projection_reuse import (
@@ -229,11 +230,11 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         "changed": changed_paths,
     }
     reuse_context: dict[str, Any] | None = None
-    operating_decision: dict[str, Any] = {}
+    admitted_input: dict[str, Any] = {}
     if args.format == "json" and profile == "tiny" and not selected_fields:
         full_detail_command = f"{config.cli_invoke} implement --target . --changed <paths> --verbose --format json"
         reuse_context = prepare_projection_reuse(root=target_root, operation="implement", query=reuse_query)
-        operating_decision = admit_projection_surface_operating_decision(
+        admitted_input = admit_projection_surface_decision_input(
             input_revisions=reuse_context.get("decision_input_revisions", {}), consumer="implement"
         )
         reused, reuse_context = lookup_projection_reuse(
@@ -242,16 +243,16 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             query=reuse_query,
             full_detail_command=full_detail_command,
             context=reuse_context,
-            operating_decision=operating_decision,
+            admitted_input=admitted_input,
         )
         if reused is not None:
             _emit_payload(payload=reused, format_name=args.format)
             return 0
     with ProjectionProgress(root=target_root, operation="implement") as progress:
 
-        def build_implement_projection(admitted_decision: dict[str, Any]) -> dict[str, Any]:
+        def build_implement_projection(decision_input: dict[str, Any]) -> dict[str, Any]:
             with _planning_revision_payload_cache_scope(), _decision_point_binding_cache_scope(), mutation_baseline_payload_cache_scope():
-                return bind_projection_surface_operating_decision(
+                return consume_projection_surface_decision_input(
                     payload=_implement_payload(
                         target_root=target_root,
                         changed_paths=changed_paths,
@@ -268,14 +269,14 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
                         include_test_strategy_check=(profile != "tiny" or test_strategy_check_selected or not broad_early_scope),
                         startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
                     ),
-                    operating_decision=admitted_decision,
+                    admitted_input=decision_input,
                     consumer="implement",
                 )
 
         full_payload = progress.run_cancellable(
-            lambda: materialize_projection_under_operating_decision(
+            lambda: materialize_projection_under_decision_input(
                 builder=build_implement_projection,
-                operating_decision=operating_decision,
+                admitted_input=admitted_input,
                 consumer="implement",
             ),
             stage="build-implement-projection",
@@ -288,6 +289,10 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     payload: dict[str, Any] = full_payload
     if profile == "tiny":
         payload = _tiny_implement_payload(full_payload)
+        full_context = _as_dict(full_payload.get("context"))
+        input_consumption = _as_dict(full_context.get("projection_decision_input_consumption"))
+        if input_consumption:
+            payload.setdefault("context", {})["projection_decision_input_consumption"] = input_consumption
         if task_contract_selected:
             payload["task_contract"] = full_payload["task_contract"]
         if change_impact_selected:
@@ -341,7 +346,6 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             )
     if getattr(args, "select", None):
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
-        payload = bind_projection_surface_operating_decision(payload=payload, operating_decision=operating_decision, consumer="implement")
     if changed_paths and not getattr(args, "select", None):
         transition = record_review_stack_transition(
             target_root=target_root,
@@ -388,7 +392,9 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
     ):
         payload["projection_progress"] = progress_contract
-    payload = bind_projection_surface_operating_decision(payload=payload, operating_decision=operating_decision, consumer="implement")
+    payload, operating_decision = finalize_projection_surface_operating_decision(
+        payload=payload, admitted_input=admitted_input, consumer="implement"
+    )
     if reuse_context is not None:
         reuse_result = record_projection_reuse(
             root=target_root,

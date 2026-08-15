@@ -12,12 +12,12 @@
     "ordinary_route": "agentic-workspace report --target . --section closeout_trust --format json"
   },
   "claim_level": "slice",
-  "outcome": "The five ordinary projection surfaces admit one canonical operating decision before materialization, bind the cold projection and warm reuse to that exact identity, stay within computation and emitted-serialization budgets, expose state-read counts, and stop active work through acknowledged cooperative cancellation.",
+  "outcome": "The five ordinary projection surfaces consume one immutable admitted decision input before materialization, compile their sole final operating decision from that input plus emitted purpose posture, bind cold output and warm reuse to that identity, stay within computation and serialization budgets, and stop active work through acknowledged cooperative cancellation.",
   "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2556",
   "evidence_refs": [
     ".agentic-workspace/local/logs/aw-session-20260814170232-7b3b8508/index.json (local captured replay source; 7 entries before replay)",
-    "uv run --frozen --active --no-sync pytest -q tests/test_workspace_projection_reuse.py tests/test_operating_decision.py: 84 passed",
-    "cold/warm start, selected summary, implement, proof, and closeout_trust replay: every cold builder was bound to an independently pre-admitted surface decision and every warm result reused that exact identity with no invalidation reason",
+    "uv run --frozen --active --no-sync pytest -q tests/test_workspace_projection_reuse.py tests/test_operating_decision.py: 85 passed",
+    "cold/warm start, selected summary, implement, proof, and closeout_trust replay: every builder consumed the independently admitted snapshot, every final decision derived from that snapshot plus emitted posture, and every warm result reused that exact identity",
     "cancellation-during-work fixture: active worker stopped, later stages skipped, and post-cancellation side effect absent"
   ],
   "residual": {
@@ -29,17 +29,17 @@
     "provenance": "PR #2568 blocker replay on its exact working head",
     "reopen_trigger": "Reopen if a projection cache compiles a second authority decision, cancellation cannot interrupt an active builder, or measured costs exceed the declared budgets."
   },
-  "revision": 3,
+  "revision": 4,
   "execution_run": {
     "captured source": ".agentic-workspace/local/logs/aw-session-20260814170232-7b3b8508; pre-replay index 66,148 bytes and session markdown 1,443,642 bytes",
     "captured command classes": "7 pre-replay entries: implement=2, doctor=1, summary=1, proof=1, skills=1, planning=1",
     "replay command classes": "10 appended invocations: start=2, summary_selected=2, implement=2, proof=2, closeout_trust=2",
-    "cold elapsed ms": "start=2359; summary_selected=953; implement=2145; proof=1956; closeout_trust=3563",
-    "warm elapsed ms": "start=907; summary_selected=926; implement=900; proof=849; closeout_trust=931",
-    "cold output bytes": "start=27370; summary_selected=4507; implement=22822; proof=7579; closeout_trust=62355",
-    "warm output bytes": "start=1779; summary_selected=1827; implement=1873; proof=1785; closeout_trust=1823",
+    "cold elapsed ms": "start=2150; summary_selected=893; implement=2093; proof=1876; closeout_trust=1967",
+    "warm elapsed ms": "start=772; summary_selected=811; implement=822; proof=911; closeout_trust=824",
+    "cold output bytes": "start=31457; summary_selected=6514; implement=27556; proof=10193; closeout_trust=64358",
+    "warm output bytes": "start=1885; summary_selected=1933; implement=1977; proof=1891; closeout_trust=1929",
     "state reads": "cold=35 and warm=35 for every surface; warm receipts also preserve cold_state_read_count=35",
-    "reuse": "all five cold projections matched the independently pre-admitted surface decision; all five warm projections matched the same decision, reused decision and enrichment, skipped the full builder, and reported no invalidation reasons; absence of a surface-admitted decision is covered as fail-open with no cache write",
+    "reuse": "all five cold builders acknowledged the independently admitted decision input; final decisions matched the emitted action/blocker/terminal/claim posture and the admitted input revision; all five warm projections reused the recorded final identity and skipped the full builder; ignored input and mismatched posture are covered as fail-closed, while absent admission fails open without a cache write",
     "cancellation": "the active stage acknowledged cancellation and unwound before the typed cancelled result; later stages and the fixture's post-cancellation side effect did not run",
     "budgets": "computation_budget_ms=10000; serialization_budget_bytes=65536; every measured cold and warm computation remained within budget, and oversized startup detail emitted a bounded 10820-byte detail-withheld envelope"
   }

@@ -1354,63 +1354,205 @@ def canonical_operating_decision_identity(input_revisions: dict[str, Any]) -> tu
     return revision, f"operating-decision:{_digest({'input_revision': revision})[:16]}"
 
 
-def admit_projection_surface_operating_decision(*, input_revisions: dict[str, Any], consumer: str) -> dict[str, Any]:
-    """Admit the canonical surface decision before its projection is built.
-
-    Empty or unavailable admitted inputs deliberately disable reuse.  The
-    projection cache never synthesizes an authority decision of its own.
-    """
+def admit_projection_surface_decision_input(*, input_revisions: dict[str, Any], consumer: str) -> dict[str, Any]:
+    """Admit immutable shared input before purpose-specific materialization."""
 
     if not input_revisions:
         return {}
-    return compile_operating_decision(
+    normalized = json.loads(json.dumps({"consumer": consumer, "revisions": input_revisions}, sort_keys=True, default=str))
+    revision = "sha256:" + _digest(normalized)
+    return {
+        "kind": "agentic-workspace/projection-decision-input/v1",
+        "status": "admitted",
+        "consumer": consumer,
+        "input_id": f"projection-decision-input:{_digest({'revision': revision})[:16]}",
+        "admitted_input_revision": revision,
+        "input_revisions": normalized["revisions"],
+        "selected_owner": str(input_revisions.get("selected_owner") or ""),
+        "rule": "Purpose-specific posture enriches this immutable admitted snapshot before one final operating decision is compiled.",
+    }
+
+
+def _projection_surface_posture(payload: dict[str, Any]) -> dict[str, Any]:
+    context = _as_dict(payload.get("context"))
+    answer = _as_dict(payload.get("answer"))
+    action_signals = _as_dict(payload.get("action_signals")) or _as_dict(context.get("action_signals"))
+    candidates = [
+        payload.get("primary_action"),
+        payload.get("next_action"),
+        payload.get("next"),
+        _as_dict(payload.get("decision_packet")).get("next_action"),
+        _as_dict(answer.get("decision_packet")).get("next_action"),
+    ]
+    primary_action: dict[str, Any] = {}
+    for candidate in candidates:
+        if isinstance(candidate, dict) and candidate:
+            primary_action = copy.deepcopy(candidate)
+            break
+        if isinstance(candidate, str) and candidate.strip():
+            primary_action = {"action": candidate.strip()}
+            break
+    blockers: list[dict[str, Any]] = []
+    for source in (
+        payload.get("blockers"),
+        payload.get("hard_blockers"),
+        payload.get("closure_blockers"),
+        action_signals.get("hard_blockers"),
+    ):
+        for item in _as_list(source):
+            if isinstance(item, dict):
+                blockers.append(copy.deepcopy(item))
+            elif str(item).strip():
+                blockers.append({"reason_code": str(item).strip()})
+    blocked_claim_classes = [
+        str(item)
+        for source in (payload.get("blocked_claims"), action_signals.get("blocked_claims"))
+        for item in _as_list(source)
+        if str(item).strip()
+    ]
+    terminal_state = str(payload.get("status") or payload.get("health") or answer.get("status") or answer.get("health") or "CONTINUE")
+    return {
+        "primary_action": primary_action,
+        "blockers": blockers,
+        "blocked_claim_classes": blocked_claim_classes,
+        "terminal_state": terminal_state,
+    }
+
+
+def compile_projection_surface_operating_decision(
+    *, payload: dict[str, Any], admitted_input: dict[str, Any], consumer: str
+) -> dict[str, Any]:
+    """Compile the final decision from admitted shared input plus surface posture."""
+
+    if admitted_input.get("status") != "admitted" or admitted_input.get("consumer") != consumer:
+        return {}
+    posture = _projection_surface_posture(payload)
+    input_revisions = _as_dict(admitted_input.get("input_revisions"))
+    decision = compile_operating_decision(
         inputs={
             "consumer": consumer,
-            "revisions": input_revisions,
-            "terminal_state": "CONTINUE",
-            "blocked_claim_classes": [],
+            "revisions": {
+                **input_revisions,
+                "projection_input": str(admitted_input.get("admitted_input_revision") or ""),
+            },
+            "selected_owner": {
+                "id": str(admitted_input.get("selected_owner") or ""),
+                "source": "projection-decision-input",
+            },
+            "terminal_state": posture["terminal_state"],
+            "primary_action": posture["primary_action"],
+            "blockers": posture["blockers"],
+            "blocked_claim_classes": posture["blocked_claim_classes"],
         }
     )
+    decision["projection_input_id"] = str(admitted_input.get("input_id") or "")
+    decision["projection_input_revision"] = str(admitted_input.get("admitted_input_revision") or "")
+    decision["projection_posture_revision"] = "sha256:" + _digest(posture)
+    decision["projection_posture"] = posture
+    return decision
 
 
 def bind_projection_surface_operating_decision(
-    *, payload: dict[str, Any], operating_decision: dict[str, Any], consumer: str
+    *, payload: dict[str, Any], admitted_input: dict[str, Any], operating_decision: dict[str, Any], consumer: str
 ) -> dict[str, Any]:
-    """Bind a pre-admitted decision to the projection materialized under it."""
+    """Bind only a final decision compiled from this payload and admitted input."""
 
-    if not operating_decision.get("decision_id"):
+    if not operating_decision.get("decision_id") or admitted_input.get("status") != "admitted":
         return payload
     context = payload.setdefault("context", {})
     if not isinstance(context, dict):
         context = {}
         payload["context"] = context
+    expected_posture_revision = "sha256:" + _digest(_projection_surface_posture(payload))
+    admitted_revision = str(admitted_input.get("admitted_input_revision") or "")
+    valid = (
+        operating_decision.get("projection_input_id") == admitted_input.get("input_id")
+        and operating_decision.get("projection_input_revision") == admitted_revision
+        and operating_decision.get("projection_posture_revision") == expected_posture_revision
+    )
+    context["projection_decision_input"] = {
+        key: admitted_input.get(key)
+        for key in ("kind", "status", "consumer", "input_id", "admitted_input_revision", "selected_owner", "rule")
+    }
     context["projection_decision_authority"] = {
         "kind": "agentic-workspace/projection-decision-authority/v1",
-        "status": "admitted",
+        "status": "admitted" if valid else "rejected",
         "consumer": consumer,
-        "source": f"{consumer}.pre-materialization-admission",
+        "source": f"{consumer}.admitted-input-plus-purpose-posture",
         "decision_id": str(operating_decision.get("decision_id") or ""),
         "admitted_input_revision": str(operating_decision.get("admitted_input_revision") or ""),
+        "projection_input_id": str(operating_decision.get("projection_input_id") or ""),
+        "projection_input_revision": str(operating_decision.get("projection_input_revision") or ""),
+        "projection_posture_revision": str(operating_decision.get("projection_posture_revision") or ""),
         "producer_module": str(operating_decision.get("producer_module") or ""),
         "producer_function": str(operating_decision.get("producer_function") or ""),
-        "rule": "This exact decision was admitted before the ordinary projection builder ran and is reused only by identity.",
+        "mismatch_reason": "" if valid else "decision posture or admitted projection input does not match the materialized payload",
+        "rule": "The final decision is authoritative only when it derives from this pre-admitted input and the materialized purpose posture.",
     }
     return payload
 
 
-def materialize_projection_under_operating_decision(
-    *, builder: Callable[[dict[str, Any]], dict[str, Any]], operating_decision: dict[str, Any], consumer: str
-) -> dict[str, Any]:
-    """Run one purpose-specific builder under an already admitted decision."""
+def consume_projection_surface_decision_input(*, payload: dict[str, Any], admitted_input: dict[str, Any], consumer: str) -> dict[str, Any]:
+    """Record that a purpose-specific builder consumed its admitted snapshot."""
 
-    payload = builder(operating_decision)
+    if admitted_input.get("status") != "admitted" or admitted_input.get("consumer") != consumer:
+        return payload
+    context = payload.setdefault("context", {})
+    if not isinstance(context, dict):
+        context = {}
+        payload["context"] = context
+    context["projection_decision_input_consumption"] = {
+        "kind": "agentic-workspace/projection-decision-input-consumption/v1",
+        "status": "consumed",
+        "consumer": consumer,
+        "input_id": str(admitted_input.get("input_id") or ""),
+        "admitted_input_revision": str(admitted_input.get("admitted_input_revision") or ""),
+        "consumed_fields": ["input_revisions", "selected_owner"],
+        "selected_owner": str(admitted_input.get("selected_owner") or ""),
+        "rule": "Final action, blocker, terminal, and claim posture enrich this consumed snapshot; they cannot replace it.",
+    }
+    return payload
+
+
+def materialize_projection_under_decision_input(
+    *, builder: Callable[[dict[str, Any]], dict[str, Any]], admitted_input: dict[str, Any], consumer: str
+) -> dict[str, Any]:
+    """Build from admitted shared input and require an exact consumption receipt."""
+
+    payload = builder(admitted_input)
     if not isinstance(payload, dict):
         raise TypeError("projection builders must return a dictionary payload")
-    return bind_projection_surface_operating_decision(
+    context = _as_dict(payload.get("context"))
+    consumption = _as_dict(context.get("projection_decision_input_consumption"))
+    if (
+        consumption.get("status") != "consumed"
+        or consumption.get("consumer") != consumer
+        or consumption.get("input_id") != admitted_input.get("input_id")
+        or consumption.get("admitted_input_revision") != admitted_input.get("admitted_input_revision")
+    ):
+        return payload
+    return payload
+
+
+def finalize_projection_surface_operating_decision(
+    *, payload: dict[str, Any], admitted_input: dict[str, Any], consumer: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Compile and bind the sole final decision after surface enrichment."""
+
+    context = _as_dict(payload.get("context"))
+    consumption = _as_dict(context.get("projection_decision_input_consumption"))
+    if consumption.get("input_id") != admitted_input.get("input_id"):
+        return payload, {}
+    operating_decision = compile_projection_surface_operating_decision(
         payload=payload,
-        operating_decision=operating_decision,
+        admitted_input=admitted_input,
         consumer=consumer,
     )
+    bound_payload = bind_projection_surface_operating_decision(
+        payload=payload, admitted_input=admitted_input, operating_decision=operating_decision, consumer=consumer
+    )
+    authority = _as_dict(_as_dict(bound_payload.get("context")).get("projection_decision_authority"))
+    return bound_payload, operating_decision if authority.get("status") == "admitted" else {}
 
 
 def admitted_operating_decision_revisions(

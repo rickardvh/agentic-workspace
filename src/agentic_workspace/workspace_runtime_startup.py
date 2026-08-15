@@ -18,9 +18,10 @@ from typing import Any
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
 from agentic_workspace.operating_decision import (
-    admit_projection_surface_operating_decision,
-    bind_projection_surface_operating_decision,
-    materialize_projection_under_operating_decision,
+    admit_projection_surface_decision_input,
+    consume_projection_surface_decision_input,
+    finalize_projection_surface_operating_decision,
+    materialize_projection_under_decision_input,
     project_startup_claim_effect_authority,
     resolve_context_authority_projection,
 )
@@ -2870,14 +2871,14 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
     }
     reuse_context: dict[str, Any] | None = None
-    operating_decision: dict[str, Any] = {}
+    admitted_input: dict[str, Any] = {}
     payload: dict[str, Any]
     if args.format == "json" and not selected_fields and effective_profile != "full":
         full_detail_command = _command_with_cli_invoke(
             command="agentic-workspace start --target . --verbose --format json", cli_invoke=config.cli_invoke
         )
         reuse_context = prepare_projection_reuse(root=target_root, operation="start", query=reuse_query)
-        operating_decision = admit_projection_surface_operating_decision(
+        admitted_input = admit_projection_surface_decision_input(
             input_revisions=reuse_context.get("decision_input_revisions", {}), consumer="start"
         )
         reused, reuse_context = lookup_projection_reuse(
@@ -2886,25 +2887,25 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             query=reuse_query,
             full_detail_command=full_detail_command,
             context=reuse_context,
-            operating_decision=operating_decision,
+            admitted_input=admitted_input,
         )
         if reused is not None:
             _emit_payload(payload=reused, format_name=args.format)
             return 0
     with ProjectionProgress(root=target_root, operation="start") as progress:
         payload = progress.run_cancellable(
-            lambda: materialize_projection_under_operating_decision(
-                builder=lambda admitted_decision: bind_projection_surface_operating_decision(
+            lambda: materialize_projection_under_decision_input(
+                builder=lambda decision_input: consume_projection_surface_decision_input(
                     payload=_start_payload(
                         target_root=target_root,
                         changed_paths=changed_paths,
                         task_text=task_text,
                         profile=effective_profile,
                     ),
-                    operating_decision=admitted_decision,
+                    admitted_input=decision_input,
                     consumer="start",
                 ),
-                operating_decision=operating_decision,
+                admitted_input=admitted_input,
                 consumer="start",
             ),
             stage="build-start-projection",
@@ -2927,7 +2928,9 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             config=config,
         )
         payload = _select_payload_fields(payload, select=selected_fields, source_command="start")
-        payload = bind_projection_surface_operating_decision(payload=payload, operating_decision=operating_decision, consumer="start")
+    payload, operating_decision = finalize_projection_surface_operating_decision(
+        payload=payload, admitted_input=admitted_input, consumer="start"
+    )
     if reuse_context is not None:
         reuse_result = record_projection_reuse(
             root=target_root,
