@@ -143,6 +143,7 @@ from agentic_workspace.current_work_context import (
 )
 from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
+from agentic_workspace.operating_decision import compile_startup_claim_effect_authority
 from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
@@ -1157,7 +1158,10 @@ def _necessary_surface_deletion_impact(*, target_root: Path, remove_candidates: 
             for child in path.rglob("*"):
                 child_is_junction = bool(getattr(child, "is_junction", lambda: False)())
                 if child.is_symlink() or child_is_junction:
-                    ambiguous_paths.append(_repo_relative_path(child, target_root))
+                    try:
+                        ambiguous_paths.append(child.relative_to(target_root).as_posix())
+                    except ValueError:
+                        ambiguous_paths.append(str(child))
                     if len(ambiguous_paths) >= 10:
                         break
 
@@ -30618,7 +30622,11 @@ def _installed_state_drift_relevant_changed_paths(changed_paths: Sequence[str]) 
 
 
 def _installed_state_drift_triage_payload(
-    *, installed_state: dict[str, Any], task_text: str | None, changed_paths: Sequence[str], cli_invoke: str
+    *,
+    installed_state: dict[str, Any],
+    claim_effect_authority: dict[str, Any],
+    changed_paths: Sequence[str],
+    cli_invoke: str,
 ) -> dict[str, Any]:
     status = str(installed_state.get("status") or "compatible")
     action_state = installed_state.get("action_state", {}) if isinstance(installed_state.get("action_state"), dict) else {}
@@ -30635,35 +30643,16 @@ def _installed_state_drift_triage_payload(
         )
     action_effect = installed_state.get("action_effect", {}) if isinstance(installed_state.get("action_effect"), dict) else {}
     force = str(action_effect.get("force") or "advisory")
-    task = " ".join(str(task_text or "").lower().split())
-    freshness_terms = (
-        "installed state",
-        "payload freshness",
-        "payload fresh",
-        "payload drift",
-        "upgrade",
-        "release",
-        "version",
-        "semver",
-        "generated surface",
-        "generated artifact",
-        "adapter compatibility",
-        "source checkout parity",
-        "installed runtime",
-        "installed behavior",
-        "installed command",
-        "public command behavior",
-        "after installation",
-    )
     claim_relevant_paths = _installed_state_drift_relevant_changed_paths(changed_paths)
-    claim_relevant = bool(claim_relevant_paths) or any(term in task for term in freshness_terms)
+    dependency = str(claim_effect_authority.get("installed_payload_dependency") or "unknown")
+    claim_relevant = bool(claim_relevant_paths) or dependency == "dependent"
     if action_state_name == "no_repair_needed" or status == "compatible":
         triage = "not_applicable"
     elif action_state_name == "blocking_incompatible" or force == "required_before_execution":
         triage = "claim_blocking"
     elif claim_relevant:
         triage = "actionable_now"
-    elif _read_only_meta_task(task_text):
+    elif claim_effect_authority.get("effect_class") == "read-only-inspection" and dependency == "independent":
         triage = "background_advisory"
     else:
         triage = "waived_for_narrow_work"
@@ -30694,6 +30683,20 @@ def _installed_state_drift_triage_payload(
         "force": force,
         "claim_relevant": claim_relevant,
         "claim_relevant_paths": claim_relevant_paths,
+        "claim_effect_authority": {
+            key: claim_effect_authority.get(key)
+            for key in (
+                "kind",
+                "status",
+                "decision_id",
+                "effect_class",
+                "installed_payload_dependency",
+                "claim_classes",
+                "matched_facts",
+                "authority",
+            )
+            if claim_effect_authority.get(key) not in (None, "", [], {})
+        },
         "repair_command": resolution_command,
         "selector": "installed_state_compatibility",
         "claim_boundary": action_effect.get(
@@ -30717,6 +30720,7 @@ def _compact_installed_state_drift_triage(triage: Any) -> dict[str, Any]:
             "force",
             "claim_relevant",
             "claim_relevant_paths",
+            "claim_effect_authority",
             "repair_command",
             "selector",
             "claim_boundary",
@@ -30766,7 +30770,7 @@ def _installed_state_closeout_residue_payload(
     changed_paths = _closeout_changed_surface_paths(active_planning_record)
     triage = _installed_state_drift_triage_payload(
         installed_state=installed_state,
-        task_text=requested_outcome,
+        claim_effect_authority=compile_startup_claim_effect_authority(task=requested_outcome, changed_paths=changed_paths),
         changed_paths=changed_paths,
         cli_invoke=cli_invoke,
     )
@@ -32522,9 +32526,10 @@ def _start_tiny_payload_fast(
         payload["dogfooding_signal_status"] = dogfooding_signal_status
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_compatibility"] = installed_state_compatibility
+        claim_effect_authority = compile_startup_claim_effect_authority(task=task_text or "", changed_paths=changed_paths)
         payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
             installed_state=installed_state_compatibility,
-            task_text=task_text,
+            claim_effect_authority=claim_effect_authority,
             changed_paths=changed_paths,
             cli_invoke=config.cli_invoke,
         )
@@ -32999,6 +33004,17 @@ def _start_tiny_payload_fast(
     )
     if int(assurance_requirements.get("configured_count", 0) or 0) > 0:
         payload["assurance_requirements"] = assurance_requirements
+    if installed_state_compatibility["status"] != "compatible":
+        # Route-specific overlays above may refine the ordinary next action,
+        # but they cannot widen a required installed-payload claim/effect
+        # gate. Recompose it last from the same compiled authority.
+        _apply_installed_state_fast_start_gate(
+            payload=payload,
+            target_root=target_root,
+            config=config,
+            startup_template=startup_template,
+            task_text=task_text,
+        )
     payload["routine_work_context"] = _routine_work_context_payload(
         source_payload=payload,
         surface="start",

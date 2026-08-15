@@ -1396,6 +1396,102 @@ def _scope_fingerprint(paths: list[str]) -> str:
     return "sha256:" + hashlib.sha256(json.dumps(sorted(paths), separators=(",", ":"), ensure_ascii=True).encode()).hexdigest()
 
 
+def compile_startup_claim_effect_authority(*, task: str, changed_paths: list[str] | None = None) -> dict[str, Any]:
+    """Compile the startup task's payload-dependent claim/effect boundary once.
+
+    Startup consumers must use this typed result instead of maintaining their
+    own task-wording classifiers.  The vocabulary here is intentionally owned
+    by the operating-decision compiler and produces a revisioned decision that
+    triage, gating, and compact projections can share mechanically.
+    """
+
+    normalized_task = " ".join(str(task or "").lower().split())
+    paths = [str(path).replace("\\", "/") for path in changed_paths or [] if str(path).strip()]
+    tokens = set(normalized_task.replace("/", " ").replace("-", " ").split())
+    installed_subjects = {
+        "install",
+        "installed",
+        "installation",
+        "payload",
+        "runtime",
+        "wheel",
+        "package",
+        "packaged",
+        "distribution",
+        "executable",
+    }
+    drift_actions = {"drift", "upgrade", "sync", "freshness", "compatibility"}
+    public_behavior_subjects = {"command", "cli", "entrypoint", "behavior", "behaviour"}
+    proof_actions = {"prove", "proof", "verify", "verification", "validate", "validation"}
+    mutation_actions = {"add", "change", "edit", "fix", "implement", "remove", "update", "write"}
+    installed_subject_match = bool(tokens & installed_subjects)
+    explicit_drift_match = bool(tokens & drift_actions) and bool(tokens & (installed_subjects | {"generated"}))
+    public_behavior_match = "public" in tokens and bool(tokens & public_behavior_subjects)
+    payload_proof_match = bool(tokens & proof_actions) and bool(tokens & (installed_subjects | public_behavior_subjects))
+    payload_path_match = any(
+        path
+        in {
+            ".agentic-workspace/config.toml",
+            ".agentic-workspace/payload-provenance.json",
+            "pyproject.toml",
+            "uv.lock",
+            "src/agentic_workspace/workspace_runtime_core.py",
+            "src/agentic_workspace/workspace_runtime_primitives.py",
+            "src/agentic_workspace/workspace_runtime_startup.py",
+        }
+        or path.startswith(("generated/", "scripts/generate/", "scripts/release/", "src/agentic_workspace/contracts/"))
+        or path.endswith(("/pyproject.toml", "/package.json", "/package-lock.json", "/pnpm-lock.yaml"))
+        for path in paths
+    )
+    dependent = payload_path_match or installed_subject_match or explicit_drift_match or public_behavior_match or payload_proof_match
+    dependency = "dependent" if dependent else "independent" if normalized_task else "unknown"
+    effect_class = (
+        "repo-mutation"
+        if paths
+        else "planned-repo-mutation"
+        if tokens & mutation_actions
+        else "read-only-inspection"
+        if normalized_task
+        else "unresolved"
+    )
+    matched_facts = [
+        fact
+        for fact, matched in (
+            ("changed-path-effect", bool(paths)),
+            ("installed-payload-path", payload_path_match),
+            ("installed-artifact-subject", installed_subject_match),
+            ("installed-drift-operation", explicit_drift_match),
+            ("public-command-behavior", public_behavior_match),
+            ("payload-dependent-proof", payload_proof_match),
+        )
+        if matched
+    ]
+    identity = {
+        "effect_class": effect_class,
+        "installed_payload_dependency": dependency,
+        "changed_paths": sorted(paths),
+        "matched_facts": matched_facts,
+    }
+    return {
+        "kind": "agentic-workspace/startup-claim-effect-authority/v1",
+        "status": "compiled",
+        "decision_id": f"startup-claim-effect:{_digest(identity)[:16]}",
+        "effect_class": effect_class,
+        "installed_payload_dependency": dependency,
+        "claim_classes": (
+            ["installed-payload-behavior", "installed-payload-freshness"]
+            if dependency == "dependent"
+            else ["checked-in-source-evidence"]
+            if dependency == "independent"
+            else []
+        ),
+        "matched_facts": matched_facts,
+        "changed_path_count": len(paths),
+        "authority": "agentic_workspace.operating_decision.compile_startup_claim_effect_authority",
+        "rule": "Startup triage and gates consume this compiled claim/effect decision; consumers do not reclassify task wording.",
+    }
+
+
 def compile_implement_context_operating_decision(
     *,
     target: str = "",

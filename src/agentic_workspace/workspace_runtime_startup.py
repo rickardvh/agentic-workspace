@@ -17,7 +17,7 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
-from agentic_workspace.operating_decision import resolve_context_authority_projection
+from agentic_workspace.operating_decision import compile_startup_claim_effect_authority, resolve_context_authority_projection
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -1029,9 +1029,10 @@ def _start_payload(
     )
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_compatibility"] = installed_state_compatibility
+        claim_effect_authority = compile_startup_claim_effect_authority(task=task_text or "", changed_paths=changed_paths)
         payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
             installed_state=installed_state_compatibility,
-            task_text=task_text,
+            claim_effect_authority=claim_effect_authority,
             changed_paths=changed_paths,
             cli_invoke=config.cli_invoke,
         )
@@ -1798,7 +1799,7 @@ def _hydrate_selected_start_advisory_payloads(
         )
         payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
             installed_state=payload["installed_state_compatibility"],
-            task_text=task_text,
+            claim_effect_authority=compile_startup_claim_effect_authority(task=task_text or "", changed_paths=[]),
             changed_paths=[],
             cli_invoke=config.cli_invoke,
         )
@@ -1959,13 +1960,19 @@ def _apply_required_payload_target_start_gate(
     payload_target = _as_dict(action_state.get("payload_target"))
     if action_effect.get("force") != "required_before_execution" or payload_target.get("policy") != "required-before-work":
         return
+    # Tiny startup may already have rendered derived router fields before the
+    # installed-payload gate is composed.  Invalidate those projections so
+    # every consumer re-renders from this authoritative gate decision.
+    for derived_field in ("next_safe_action", "action_signals", "decision_packet"):
+        payload.pop(derived_field, None)
     command = str(action_effect.get("resolution_command") or action_state.get("dry_run_command") or "")
     recheck_command = str(action_state.get("recheck_command") or payload_target.get("recheck_command") or "")
     payload_repair_subflow = _as_dict(installed_state.get("payload_repair_subflow"))
     if payload_repair_subflow:
         payload["payload_repair_subflow"] = payload_repair_subflow
     drift_triage = _as_dict(payload.get("installed_state_drift_triage"))
-    installed_payload_dependent = drift_triage.get("claim_relevant") is True
+    claim_effect_authority = _as_dict(drift_triage.get("claim_effect_authority"))
+    installed_payload_dependent = claim_effect_authority.get("installed_payload_dependency") != "independent"
     read_only_response = _as_dict(payload.get("read_only_response"))
     if read_only_response.get("status") == "read-only-reporting" and not installed_payload_dependent:
         claim_boundary = {
@@ -1980,7 +1987,9 @@ def _apply_required_payload_target_start_gate(
             "detail_selector": "installed_state_compatibility",
         }
         payload["installed_state_read_only_scope"] = claim_boundary
-        payload["installed_state_read_only_scope"]["decision_authority"] = "installed_state_drift_triage.claim_relevant"
+        payload["installed_state_read_only_scope"]["decision_authority"] = (
+            "installed_state_drift_triage.claim_effect_authority.installed_payload_dependency"
+        )
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
             surface="start",
             decision="read-only-source-evidence-allowed-with-stale-installed-payload",

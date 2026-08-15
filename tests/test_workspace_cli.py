@@ -6353,6 +6353,103 @@ def test_necessary_surface_deletion_impact_fails_closed_when_git_enumeration_fai
     assert "tracked-file-enumeration-failed" in impact["review_reasons"]
 
 
+def test_necessary_surface_apply_revalidates_link_state_after_safe_dry_run(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "adoption-receipt.json").unlink()
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--dry-run", "--format", "json"]) == 0
+    dry_run = json.loads(capsys.readouterr().out)["migration"]
+    assert dry_run["status"] == "safe-apply-available"
+    remove_root = next(
+        tmp_path / action["path"]
+        for action in dry_run["actions"]
+        if action["kind"] == "would remove" and (tmp_path / action["path"]).is_dir()
+    )
+
+    outside = tmp_path / "outside-after-dry-run"
+    outside.mkdir()
+    link = remove_root / "late-link"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        if os.name != "nt":
+            pytest.skip(f"directory symlinks unavailable: {exc}")
+        completed = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(outside)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.returncode != 0:
+            pytest.skip(f"directory link creation unavailable: {completed.stderr or completed.stdout}")
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
+    apply = json.loads(capsys.readouterr().out)["migration"]
+    assert apply["status"] == "review-required"
+    assert apply["safe_to_apply"] is False
+    assert "symlink-or-reparse-point-ambiguity" in apply["deletion_impact"]["review_reasons"]
+    assert link.is_symlink() or bool(getattr(link, "is_junction", lambda: False)())
+    assert not any(action["kind"] == "removed" for action in apply["actions"])
+
+
+def test_necessary_surface_deletion_impact_rejects_path_escape(tmp_path: Path) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    impact = workspace_runtime_core._necessary_surface_deletion_impact(
+        target_root=tmp_path,
+        remove_candidates=[".agentic-workspace/../outside"],
+    )
+
+    assert impact["status"] == "review-required"
+    assert impact["escaped_path_sample"] == [".agentic-workspace/../outside"]
+    assert "path-containment-failure" in impact["review_reasons"]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows junction proof")
+def test_necessary_surface_deletion_impact_rejects_junction(tmp_path: Path) -> None:
+    docs = tmp_path / ".agentic-workspace" / "docs"
+    docs.mkdir(parents=True)
+    outside = tmp_path / "junction-target"
+    outside.mkdir()
+    junction = docs / "linked-directory"
+    completed = subprocess.run(
+        ["cmd", "/c", "mklink", "/J", str(junction), str(outside)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        pytest.skip(f"junction creation unavailable: {completed.stderr or completed.stdout}")
+
+    impact = workspace_runtime_core._necessary_surface_deletion_impact(
+        target_root=tmp_path,
+        remove_candidates=[".agentic-workspace/docs"],
+    )
+
+    assert impact["status"] == "review-required"
+    assert ".agentic-workspace/docs/linked-directory" in impact["ambiguous_path_sample"]
+    assert "symlink-or-reparse-point-ambiguity" in impact["review_reasons"]
+
+
+def test_necessary_surface_deletion_impact_rejects_broad_tracked_deletion(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    docs = tmp_path / ".agentic-workspace" / "docs"
+    for index in range(100):
+        _write(docs / f"fixture-{index:03d}.md", "tracked fixture\n")
+    subprocess.run(["git", "add", ".agentic-workspace/docs"], cwd=tmp_path, check=True)
+
+    impact = workspace_runtime_core._necessary_surface_deletion_impact(
+        target_root=tmp_path,
+        remove_candidates=[".agentic-workspace/docs"],
+    )
+
+    assert impact["tracked_file_count"] == impact["broad_deletion_threshold"] == 100
+    assert impact["status"] == "review-required"
+    assert "broad-tracked-deletion-impact" in impact["review_reasons"]
+
+
 def test_payload_target_read_only_gate_consumes_compiled_drift_triage(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     workspace = tmp_path / ".agentic-workspace"
@@ -6372,17 +6469,52 @@ def test_payload_target_read_only_gate_consumes_compiled_drift_triage(tmp_path: 
     provenance.pop("payload_capabilities", None)
     provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    unrelated = "Prepare a read-only review of repository issue evidence"
-    assert cli.main(["start", "--target", str(tmp_path), "--task", unrelated, "--format", "json"]) == 0
-    allowed = json.loads(capsys.readouterr().out)
-    assert allowed["installed_state_read_only_scope"]["decision_authority"] == "installed_state_drift_triage.claim_relevant"
-    assert allowed["next_safe_action"]["next_safe_action"] == "continue-read-only-source-evidence-review"
+    for unrelated in (
+        "Prepare a read-only review of repository issue evidence",
+        "Summarize the current source-owned issue records without changing files",
+        "Give me a status report from checked-in documentation",
+    ):
+        assert cli.main(["start", "--target", str(tmp_path), "--task", unrelated, "--format", "json"]) == 0
+        allowed = json.loads(capsys.readouterr().out)
+        assert allowed["installed_state_read_only_scope"]["decision_authority"] == (
+            "installed_state_drift_triage.claim_effect_authority.installed_payload_dependency"
+        )
+        authority = allowed["context"]["installed_state_drift_triage"]["claim_effect_authority"]
+        assert authority["installed_payload_dependency"] == "independent"
+        assert authority["authority"].endswith("compile_startup_claim_effect_authority")
+        assert allowed["next_safe_action"]["next_safe_action"] == "continue-read-only-source-evidence-review"
 
-    dependent = "Prepare a read-only review of how the public command behaves after installation"
-    assert cli.main(["start", "--target", str(tmp_path), "--task", dependent, "--format", "json"]) == 0
-    blocked = json.loads(capsys.readouterr().out)
-    assert "installed_state_read_only_scope" not in blocked
-    assert blocked["next_safe_action"]["next_safe_action"] == "run-installed-payload-target-upgrade"
+    for dependent in (
+        "Prepare a read-only review of how the public command behaves after installation",
+        "Inspect whether the installed runtime produces the documented result",
+        "Audit payload drift and upgrade readiness",
+        "Verify the packaged CLI behavior as proof for closeout",
+    ):
+        assert cli.main(["start", "--target", str(tmp_path), "--task", dependent, "--format", "json"]) == 0
+        blocked = json.loads(capsys.readouterr().out)
+        assert "installed_state_read_only_scope" not in blocked
+        assert blocked["context"]["installed_state_drift_triage"]["claim_effect_authority"]["installed_payload_dependency"] == "dependent"
+        assert blocked["next_safe_action"]["next_safe_action"] == "run-installed-payload-target-upgrade"
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/change.md",
+                "--task",
+                "Implement the requested documentation change",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    mutation = json.loads(capsys.readouterr().out)
+    assert mutation["context"]["installed_state_drift_triage"]["claim_effect_authority"]["effect_class"] == "repo-mutation"
+    assert mutation["next_safe_action"]["next_safe_action"] == "run-installed-payload-target-upgrade"
 
 
 def test_upgrade_to_necessary_surfaces_keeps_current_memory_skill_eof_stable(
