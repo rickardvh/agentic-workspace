@@ -2919,6 +2919,12 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
                 builder=build_start_projection,
                 admitted_input=admitted_input,
                 consumer="start",
+                revalidate_input_revisions=lambda: prepare_projection_reuse(
+                    root=target_root,
+                    operation="start",
+                    query=reuse_query,
+                    force_refresh=True,
+                ).get("decision_input_revisions", {}),
             ),
             stage="build-start-projection",
         )

@@ -284,6 +284,12 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
                 builder=build_implement_projection,
                 admitted_input=admitted_input,
                 consumer="implement",
+                revalidate_input_revisions=lambda: prepare_projection_reuse(
+                    root=target_root,
+                    operation="implement",
+                    query=reuse_query,
+                    force_refresh=True,
+                ).get("decision_input_revisions", {}),
             ),
             stage="build-implement-projection",
         )
@@ -299,6 +305,9 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         input_consumption = _as_dict(full_context.get("projection_decision_input_consumption"))
         if input_consumption:
             payload.setdefault("context", {})["projection_decision_input_consumption"] = input_consumption
+        input_revalidation = _as_dict(full_context.get("projection_decision_input_revalidation"))
+        if input_revalidation:
+            payload.setdefault("context", {})["projection_decision_input_revalidation"] = input_revalidation
         if task_contract_selected:
             payload["task_contract"] = full_payload["task_contract"]
         if change_impact_selected:

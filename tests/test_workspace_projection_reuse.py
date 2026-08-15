@@ -137,8 +137,11 @@ def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path
         surface_authority = cold["context"]["projection_decision_authority"]
         input_receipt = cold["context"]["projection_decision_input"]
         input_consumption = cold["context"]["projection_decision_input_consumption"]
+        input_revalidation = cold["context"]["projection_decision_input_revalidation"]
         assert input_receipt["input_id"] == independent_input["input_id"]
         assert input_consumption["input_id"] == independent_input["input_id"]
+        assert input_revalidation["status"] == "current"
+        assert input_revalidation["changed_fields"] == []
         assert surface_authority["projection_input_revision"] == independent_input["admitted_input_revision"]
         assert warm["decision_id"] == surface_authority["decision_id"]
         assert warm["projection_input_revision"] == independent_input["admitted_input_revision"]
@@ -358,6 +361,111 @@ def test_builder_material_input_mismatch_rejects_consumption_and_authority() -> 
     assert altered_decision == {}
     assert altered["context"]["projection_decision_input_consumption"]["status"] == "rejected"
     assert "projection_decision_authority" not in altered["context"]
+
+
+def test_each_ordinary_surface_rejects_selected_owner_race_after_builder(tmp_path: Path, capsys, monkeypatch) -> None:
+    from agentic_workspace import workspace_runtime_core, workspace_runtime_implement, workspace_runtime_startup
+
+    target = _target(tmp_path)
+    capsys.readouterr()
+    changed = ".agentic-workspace/config.toml"
+    cases = [
+        (
+            "start",
+            workspace_runtime_startup,
+            ["start", "--target", str(target), "--changed", changed, "--task", "Race proof.", "--format", "json"],
+        ),
+        (
+            "implement",
+            workspace_runtime_implement,
+            ["implement", "--target", str(target), "--changed", changed, "--task", "Race proof.", "--format", "json"],
+        ),
+        (
+            "proof",
+            workspace_runtime_core,
+            ["proof", "--target", str(target), "--changed", changed, "--task", "Race proof.", "--format", "json"],
+        ),
+        (
+            "summary",
+            workspace_runtime_core,
+            ["summary", "--target", str(target), "--select", "planning_revision", "--format", "json"],
+        ),
+        (
+            "report",
+            workspace_runtime_core,
+            ["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"],
+        ),
+    ]
+
+    for operation, runtime_module, command in cases:
+        real_prepare = runtime_module.prepare_projection_reuse
+        matching_calls = 0
+
+        def racing_prepare(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            nonlocal matching_calls
+            context = real_prepare(*args, **kwargs)
+            if kwargs.get("operation") != operation:
+                return context
+            matching_calls += 1
+            revisions = dict(context.get("decision_input_revisions", {}))
+            revisions["selected_owner"] = "owner-before" if matching_calls == 1 else "owner-after"
+            return {**context, "decision_input_revisions": revisions}
+
+        with monkeypatch.context() as scoped:
+            scoped.setattr(runtime_module, "prepare_projection_reuse", racing_prepare)
+            assert cli.main(command) == 0
+        payload = json.loads(capsys.readouterr().out)
+        context = payload["context"]
+        assert context["projection_decision_input_revalidation"]["status"] == "stale"
+        assert context["projection_decision_input_revalidation"]["changed_fields"] == ["selected_owner"]
+        assert context["projection_decision_input_consumption"]["status"] == "rejected"
+        assert "projection_decision_authority" not in context
+
+
+def test_all_admitted_authority_classes_fail_closed_when_they_change_during_materialization() -> None:
+    from agentic_workspace.operating_decision import (
+        admit_projection_surface_decision_input,
+        consume_projection_surface_decision_input,
+        finalize_projection_surface_operating_decision,
+        materialize_projection_under_decision_input,
+    )
+
+    base_revisions = {
+        "branch": "branch-a",
+        "head": "head-a",
+        "task": "task-a",
+        "selected_owner": "owner-a",
+        "planning": "planning-a",
+        "changed_paths": "changed-a",
+        "proof_subject": "proof-a",
+        "runtime_compatibility": "runtime-a",
+    }
+    for consumer in ("start", "summary", "implement", "proof", "report"):
+        for field in base_revisions:
+            admitted_input = admit_projection_surface_decision_input(
+                input_revisions=base_revisions,
+                consumer=consumer,
+            )
+            current_revisions = {**base_revisions, field: f"{field}-b"}
+            payload = materialize_projection_under_decision_input(
+                builder=lambda decision_input: consume_projection_surface_decision_input(
+                    payload={"status": "CONTINUE", "next_action": {"action": "inspect"}},
+                    admitted_input=decision_input,
+                    consumer=consumer,
+                ),
+                admitted_input=admitted_input,
+                consumer=consumer,
+                revalidate_input_revisions=lambda: current_revisions,
+            )
+            payload, operating_decision = finalize_projection_surface_operating_decision(
+                payload=payload,
+                admitted_input=admitted_input,
+                consumer=consumer,
+            )
+            assert operating_decision == {}
+            revalidation = payload["context"]["projection_decision_input_revalidation"]
+            assert revalidation["status"] == "stale"
+            assert revalidation["changed_fields"] == [field]
 
 
 def test_progress_heartbeat_and_cooperative_cancellation_are_bounded(tmp_path: Path, capsys) -> None:

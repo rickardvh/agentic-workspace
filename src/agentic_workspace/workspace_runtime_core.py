@@ -48586,6 +48586,12 @@ def _emit_proof(
                     builder=build_proof_projection,
                     admitted_input=admitted_input,
                     consumer="proof",
+                    revalidate_input_revisions=lambda: prepare_projection_reuse(
+                        root=target_root,
+                        operation="proof",
+                        query=reuse_query,
+                        force_refresh=True,
+                    ).get("decision_input_revisions", {}),
                 ),
                 stage="select-proof-routes",
             )
@@ -48610,6 +48616,9 @@ def _emit_proof(
         input_consumption = _as_dict(answer_context.get("projection_decision_input_consumption"))
         if input_consumption:
             payload.setdefault("context", {})["projection_decision_input_consumption"] = input_consumption
+        input_revalidation = _as_dict(answer_context.get("projection_decision_input_revalidation"))
+        if input_revalidation:
+            payload.setdefault("context", {})["projection_decision_input_revalidation"] = input_revalidation
         if task_text:
             payload["task_context"] = {"status": "applied", "task": task_text}
         if select:
@@ -48771,6 +48780,12 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     builder=build_bound_selected_summary,
                     admitted_input=selected_admitted_input,
                     consumer="summary",
+                    revalidate_input_revisions=lambda: prepare_projection_reuse(
+                        root=target_root,
+                        operation="summary",
+                        query=selected_query,
+                        force_refresh=True,
+                    ).get("decision_input_revisions", {}),
                 )
                 inspection = candidate.pop("_projection_closeout_inspection", {})
                 projection_cancellation_checkpoint()
@@ -48891,6 +48906,12 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     builder=build_planning_summary,
                     admitted_input=admitted_input,
                     consumer="summary",
+                    revalidate_input_revisions=lambda: prepare_projection_reuse(
+                        root=target_root,
+                        operation="summary",
+                        query=reuse_query,
+                        force_refresh=True,
+                    ).get("decision_input_revisions", {}),
                 ),
                 stage="build-planning-summary",
             )
@@ -49250,6 +49271,12 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                     builder=build_report_router_projection,
                     admitted_input=admitted_input,
                     consumer="report",
+                    revalidate_input_revisions=lambda: prepare_projection_reuse(
+                        root=target_root,
+                        operation="report",
+                        query=reuse_query or {},
+                        force_refresh=True,
+                    ).get("decision_input_revisions", {}),
                 ),
                 stage="build-report-router",
             )
@@ -49357,6 +49384,12 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                     builder=build_bound_report_section,
                     admitted_input=section_admitted_input,
                     consumer="report",
+                    revalidate_input_revisions=lambda: prepare_projection_reuse(
+                        root=target_root,
+                        operation="report",
+                        query=section_query,
+                        force_refresh=True,
+                    ).get("decision_input_revisions", {}),
                 )
                 projection_cancellation_checkpoint()
                 return {"section_payload": section_payload}

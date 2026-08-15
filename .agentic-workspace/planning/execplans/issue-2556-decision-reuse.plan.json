@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 6,
+  "revision": 7,
   "intent": {
     "outcome": "Make start, summary, implement, proof, and ordinary report projections reuse the canonical operating-decision revision with bounded computation, serialization, progress, and cancellation behavior.",
     "non_goals": [
@@ -44,7 +44,7 @@
     "proof_posture": {
       "state": "satisfied",
       "refs": [
-        "86 focused projection/decision tests passed",
+        "88 focused projection/decision tests passed",
         "18 closeout/report correctness regressions passed",
         "workspace, Planning, Memory, and Verification typechecks passed",
         "contract tooling and structured-file inventory checks passed"
@@ -82,31 +82,35 @@
       "Run generated-contract checks only if their source contracts change; reserve exhaustive workspace validation for the lane PR boundary."
     ],
     "refs": [
-      ".agentic-workspace/planning/closeout-evidence/issue-2556-projection-reuse.closeout.json preserves the captured command-class counts, exact five-surface elapsed/output/state-read measurements, decision identities, and reuse results",
-      "five-surface regression proves each builder uses the independently admitted task/changed inputs before materialization and compares every warm key with the independently exposed cold surface decision authority",
-      "negative builder-input regression rejects altered material inputs before any final decision authority can be bound",
+      ".agentic-workspace/planning/closeout-evidence/issue-2556-projection-reuse.closeout.json preserves the original 164-command/20-repeated-shape manifest, issue-snapshot aggregates, representative replay mapping, exact five-surface costs, decision identities, and reuse results",
+      "five-surface regression proves each builder uses the independently admitted task/changed inputs before materialization, revalidates admitted authority after work, and compares every warm key with the independently exposed cold surface decision authority",
+      "authority-race regressions reject selected-owner mutation through every real surface and reject every admitted revision class across every consumer before final authority can be bound",
       "cancellation-during-work regression proves the active worker unwinds, later stages are skipped, and a post-cancellation side effect never runs"
     ]
   },
   "execution_run": {
-    "what_happened": "Replaced broad projection dependency reconstruction with bounded admitted revisions, made each ordinary builder derive task and changed-path inputs from the immutable admitted snapshot before materialization, fail closed when the builder-used input witness changes, expose the sole decision consumed by reuse, enforce semantic serialization limits, add progress heartbeats and acknowledged cooperative cancellation, and keep current-compact closeout inputs.",
-    "validation": "86 focused projection/decision tests, workspace typecheck, touched-file lint/format, and a refreshed live five-surface cold/warm benchmark passed; the preserved 18 closeout tests, contract tooling, and structured inventory remain part of the lane proof.",
+    "what_happened": "Replaced broad projection dependency reconstruction with bounded admitted revisions, made each ordinary builder derive task and changed-path inputs from the immutable admitted snapshot before materialization, re-read every admitted authority revision after materialization, fail closed when a builder-used or authority input changes, expose the sole decision consumed by reuse, enforce semantic serialization limits, add progress heartbeats and acknowledged cooperative cancellation, keep current-compact closeout inputs, and preserve the original captured-session manifest.",
+    "validation": "88 focused projection/decision tests, workspace typecheck, touched-file lint/format, and a refreshed live five-surface cold/warm benchmark passed; the preserved 18 closeout tests, contract tooling, and structured inventory remain part of the lane proof.",
     "benchmark": {
       "computation_budget_ms": 10000,
       "serialization_budget_bytes": 65536,
-      "cold_elapsed_ms": {"start": 4204, "summary_selected": 1397, "implement": 2939, "proof": 2218, "closeout_trust": 2121},
-      "warm_elapsed_ms": {"start": 777, "summary_selected": 812, "implement": 884, "proof": 895, "closeout_trust": 987},
-      "cold_output_bytes": {"start": 11881, "summary_selected": 6877, "implement": 39812, "proof": 10860, "closeout_trust": 64721},
-      "warm_output_bytes": {"start": 1892, "summary_selected": 1934, "implement": 1979, "proof": 1892, "closeout_trust": 1930},
-      "cold_state_read_count": {"start": 32, "summary_selected": 32, "implement": 32, "proof": 32, "closeout_trust": 32},
-      "warm_state_read_count": {"start": 32, "summary_selected": 32, "implement": 32, "proof": 32, "closeout_trust": 32},
-      "captured_command_class_counts": {"implement": 2, "doctor": 1, "summary": 1, "proof": 1, "skills": 1, "planning": 1},
-      "captured_entry_count": 7,
-      "captured_index_bytes": 66148,
-      "captured_session_markdown_bytes": 1443642,
+      "cold_elapsed_ms": {"start": 1832, "summary_selected": 211, "implement": 1099, "proof": 907, "closeout_trust": 735},
+      "warm_elapsed_ms": {"start": 165, "summary_selected": 147, "implement": 419, "proof": 372, "closeout_trust": 381},
+      "cold_output_bytes": {"start": 51979, "summary_selected": 7314, "implement": 28333, "proof": 10596, "closeout_trust": 61069},
+      "warm_output_bytes": {"start": 1767, "summary_selected": 1837, "implement": 1865, "proof": 1778, "closeout_trust": 1834},
+      "cold_state_read_count": {"start": 56, "summary_selected": 56, "implement": 56, "proof": 56, "closeout_trust": 56},
+      "warm_state_read_count": {"start": 56, "summary_selected": 56, "implement": 56, "proof": 56, "closeout_trust": 56},
+      "captured_entry_count": 164,
+      "captured_repeated_command_shape_count": 20,
+      "captured_output_approx_mib": 4.48,
+      "captured_duplicated_output_digest_count": 13,
+      "captured_commands_over_10000_ms": 28,
+      "captured_outputs_over_50000_bytes": 28,
+      "captured_manifest": ".agentic-workspace/planning/closeout-evidence/issue-2556-projection-reuse.closeout.json#captured_session_manifest",
       "surface_decision_match": true,
       "builder_material_input_match": true,
       "altered_builder_input_rejected": true,
+      "post_builder_authority_race_rejected": true,
       "warm_builder_skipped": true,
       "start_detail_withheld_to_budget": true,
       "warm_invalidation_reasons": []

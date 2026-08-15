@@ -1432,6 +1432,40 @@ def attach_projection_surface_decision_input_consumption(
     return payload
 
 
+def revalidate_projection_surface_decision_input(
+    *, payload: dict[str, Any], admitted_input: dict[str, Any], current_input_revisions: dict[str, Any], consumer: str
+) -> dict[str, Any]:
+    """Reject authority when any admitted decision input changed during materialization."""
+
+    admitted_revisions = _as_dict(admitted_input.get("input_revisions"))
+    current_revisions = json.loads(json.dumps(current_input_revisions, sort_keys=True, default=str))
+    changed_fields = [
+        field
+        for field in sorted(set(admitted_revisions) | set(current_revisions))
+        if admitted_revisions.get(field) != current_revisions.get(field)
+    ]
+    valid = admitted_input.get("status") == "admitted" and admitted_input.get("consumer") == consumer and not changed_fields
+    context = payload.setdefault("context", {})
+    if not isinstance(context, dict):
+        context = {}
+        payload["context"] = context
+    context["projection_decision_input_revalidation"] = {
+        "kind": "agentic-workspace/projection-decision-input-revalidation/v1",
+        "status": "current" if valid else "stale",
+        "consumer": consumer,
+        "input_id": str(admitted_input.get("input_id") or ""),
+        "admitted_input_revision": str(admitted_input.get("admitted_input_revision") or ""),
+        "changed_fields": changed_fields,
+        "rule": "Every decision-bearing revision is re-read after builder materialization; stale authority cannot be finalized or cached.",
+    }
+    consumption = _as_dict(context.get("projection_decision_input_consumption"))
+    if not valid and consumption:
+        consumption["status"] = "rejected"
+        consumption["mismatch_reason"] = "admitted authority changed during purpose-specific materialization"
+        consumption["changed_authority_fields"] = changed_fields
+    return payload
+
+
 def _projection_surface_posture(payload: dict[str, Any]) -> dict[str, Any]:
     context = _as_dict(payload.get("context"))
     answer = _as_dict(payload.get("answer"))
@@ -1572,15 +1606,27 @@ def consume_projection_surface_decision_input(*, payload: dict[str, Any], admitt
 
 
 def materialize_projection_under_decision_input(
-    *, builder: Callable[[dict[str, Any]], dict[str, Any]], admitted_input: dict[str, Any], consumer: str
+    *,
+    builder: Callable[[dict[str, Any]], dict[str, Any]],
+    admitted_input: dict[str, Any],
+    consumer: str,
+    revalidate_input_revisions: Callable[[], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build from admitted shared input and require an exact consumption receipt."""
 
     payload = builder(admitted_input)
     if not isinstance(payload, dict):
         raise TypeError("projection builders must return a dictionary payload")
+    if revalidate_input_revisions is not None and admitted_input.get("status") == "admitted":
+        payload = revalidate_projection_surface_decision_input(
+            payload=payload,
+            admitted_input=admitted_input,
+            current_input_revisions=revalidate_input_revisions(),
+            consumer=consumer,
+        )
     context = _as_dict(payload.get("context"))
     consumption = _as_dict(context.get("projection_decision_input_consumption"))
+    revalidation = _as_dict(context.get("projection_decision_input_revalidation"))
     if (
         consumption.get("status") != "consumed"
         or consumption.get("consumer") != consumer
@@ -1588,6 +1634,7 @@ def materialize_projection_under_decision_input(
         or consumption.get("admitted_input_revision") != admitted_input.get("admitted_input_revision")
         or consumption.get("material_input_revision") != admitted_input.get("material_input_revision")
         or consumption.get("used_material_input_revision") != admitted_input.get("material_input_revision")
+        or (revalidation and revalidation.get("status") != "current")
     ):
         return payload
     return payload
