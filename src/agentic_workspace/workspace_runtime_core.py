@@ -145,10 +145,12 @@ from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
+    attach_projection_surface_decision_input_consumption,
     consume_projection_surface_decision_input,
     finalize_projection_surface_operating_decision,
     materialize_projection_under_decision_input,
     project_startup_claim_effect_authority,
+    projection_surface_builder_inputs,
 )
 from agentic_workspace.projection_reuse import (
     ProjectionProgress,
@@ -17505,6 +17507,8 @@ def _run_report_router_command(
     resolved_preset: str | None,
     descriptors: dict[str, ModuleDescriptor],
     config: WorkspaceConfig,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     projection_cancellation_checkpoint()
     status_payload = _run_lifecycle_command(
@@ -17581,11 +17585,11 @@ def _run_report_router_command(
             "run": next_command,
         }
     configuration_projection = _configuration_projection_payload(config=config)
-    pr_comment_attention = _pr_comment_attention_payload(target_root=target_root, task_text=None, cli_invoke=config.cli_invoke)
+    pr_comment_attention = _pr_comment_attention_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
     dogfooding_signal_status = _dogfooding_signal_status_payload(
         target_root=target_root,
         config=config,
-        task_text=None,
+        task_text=task_text,
         cli_invoke=config.cli_invoke,
         active_planning_present=bool(active_planning_record),
     )
@@ -17594,6 +17598,7 @@ def _run_report_router_command(
         "schema": _reporting_schema_payload(),
         "command": "report",
         "target": target_root.as_posix(),
+        "decision_input": {"task": str(task_text or ""), "changed": list(changed_paths or [])},
         "selected_modules": selected_modules,
         "installed_modules": installed_modules,
         "feature_tier": _feature_tier_payload(
@@ -48542,7 +48547,9 @@ def _emit_proof(
             )
             reuse_context = prepare_projection_reuse(root=target_root, operation="proof", query=reuse_query)
             admitted_input = admit_projection_surface_decision_input(
-                input_revisions=reuse_context.get("decision_input_revisions", {}), consumer="proof"
+                input_revisions=reuse_context.get("decision_input_revisions", {}),
+                consumer="proof",
+                material_inputs={"task": str(task_text or ""), "changed": normalized_paths},
             )
             reused, reuse_context = lookup_projection_reuse(
                 root=target_root,
@@ -48556,18 +48563,27 @@ def _emit_proof(
                 _emit_payload(payload=reused, format_name=format_name)
                 return
         with ProjectionProgress(root=target_root, operation="proof") as progress:
+
+            def build_proof_projection(decision_input: dict[str, Any]) -> dict[str, Any]:
+                builder_inputs, consumption = projection_surface_builder_inputs(
+                    admitted_input=decision_input,
+                    consumer="proof",
+                    required_fields=("task", "changed"),
+                )
+                builder_inputs = builder_inputs or {"task": str(task_text or ""), "changed": normalized_paths}
+                candidate = _proof_selection_for_changed_paths(
+                    changed_paths=[str(path) for path in builder_inputs.get("changed", [])],
+                    target_root=target_root,
+                    include_durable_intent=False,
+                    task_text=str(builder_inputs.get("task") or "") or None,
+                )
+                return attach_projection_surface_decision_input_consumption(
+                    payload=candidate, consumption=consumption, used_material_inputs=builder_inputs
+                )
+
             answer = progress.run_cancellable(
                 lambda: materialize_projection_under_decision_input(
-                    builder=lambda decision_input: consume_projection_surface_decision_input(
-                        payload=_proof_selection_for_changed_paths(
-                            changed_paths=normalized_paths,
-                            target_root=target_root,
-                            include_durable_intent=False,
-                            task_text=task_text,
-                        ),
-                        admitted_input=decision_input,
-                        consumer="proof",
-                    ),
+                    builder=build_proof_projection,
                     admitted_input=admitted_input,
                     consumer="proof",
                 ),
@@ -48701,7 +48717,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         if args.format == "json":
             selected_reuse_context = prepare_projection_reuse(root=target_root, operation="summary", query=selected_query)
             selected_admitted_input = admit_projection_surface_decision_input(
-                input_revisions=selected_reuse_context.get("decision_input_revisions", {}), consumer="summary"
+                input_revisions=selected_reuse_context.get("decision_input_revisions", {}),
+                consumer="summary",
+                material_inputs={"task": str(getattr(args, "task", None) or ""), "changed": changed_paths},
             )
             reused, selected_reuse_context = lookup_projection_reuse(
                 root=target_root,
@@ -48717,33 +48735,46 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         with ProjectionProgress(root=target_root, operation="summary") as progress:
 
             def build_selected_summary() -> dict[str, Any]:
-                inspection = _completion_closeout_inspection_payload(
-                    target_root=target_root,
-                    config=config,
-                    task_text=getattr(args, "task", None),
-                    explicit_request=_selector_requests(getattr(args, "select", None), "closeout_trust_inspection"),
-                    changed_paths=changed_paths,
-                )
-                projection_cancellation_checkpoint()
-                return {
-                    "payload": materialize_projection_under_decision_input(
-                        builder=lambda decision_input: consume_projection_surface_decision_input(
-                            payload=_select_summary_payload(
-                                target_root=target_root,
-                                select=getattr(args, "select"),
-                                task_text=getattr(args, "task", None),
-                                changed_paths=changed_paths,
-                                planning_summary=planning_summary,
-                                cli_invoke=config.cli_invoke,
-                            ),
-                            admitted_input=decision_input,
-                            consumer="summary",
-                        ),
-                        admitted_input=selected_admitted_input,
+                def build_bound_selected_summary(decision_input: dict[str, Any]) -> dict[str, Any]:
+                    builder_inputs, consumption = projection_surface_builder_inputs(
+                        admitted_input=decision_input,
                         consumer="summary",
-                    ),
-                    "closeout_inspection": inspection,
-                }
+                        required_fields=("task", "changed"),
+                    )
+                    builder_inputs = builder_inputs or {
+                        "task": str(getattr(args, "task", None) or ""),
+                        "changed": changed_paths,
+                    }
+                    bound_task = str(builder_inputs.get("task") or "") or None
+                    bound_changed = [str(path) for path in builder_inputs.get("changed", [])]
+                    inspection = _completion_closeout_inspection_payload(
+                        target_root=target_root,
+                        config=config,
+                        task_text=bound_task,
+                        explicit_request=_selector_requests(getattr(args, "select", None), "closeout_trust_inspection"),
+                        changed_paths=bound_changed,
+                    )
+                    candidate = _select_summary_payload(
+                        target_root=target_root,
+                        select=getattr(args, "select"),
+                        task_text=bound_task,
+                        changed_paths=bound_changed,
+                        planning_summary=planning_summary,
+                        cli_invoke=config.cli_invoke,
+                    )
+                    candidate["_projection_closeout_inspection"] = inspection
+                    return attach_projection_surface_decision_input_consumption(
+                        payload=candidate, consumption=consumption, used_material_inputs=builder_inputs
+                    )
+
+                candidate = materialize_projection_under_decision_input(
+                    builder=build_bound_selected_summary,
+                    admitted_input=selected_admitted_input,
+                    consumer="summary",
+                )
+                inspection = candidate.pop("_projection_closeout_inspection", {})
+                projection_cancellation_checkpoint()
+                return {"payload": candidate, "closeout_inspection": inspection}
 
             selected_result = progress.run_cancellable(build_selected_summary, stage="build-selected-summary")
             if selected_result.get("status") == "cancelled":
@@ -48817,7 +48848,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             )
             reuse_context = prepare_projection_reuse(root=target_root, operation="summary", query=reuse_query)
             admitted_input = admit_projection_surface_decision_input(
-                input_revisions=reuse_context.get("decision_input_revisions", {}), consumer="summary"
+                input_revisions=reuse_context.get("decision_input_revisions", {}),
+                consumer="summary",
+                material_inputs={"task": str(getattr(args, "task", None) or ""), "changed": changed_paths},
             )
             reused, reuse_context = lookup_projection_reuse(
                 root=target_root,
@@ -48832,18 +48865,30 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 return 0
         summary_started_at = time.perf_counter()
         with ProjectionProgress(root=target_root, operation="summary") as progress:
+
+            def build_planning_summary(decision_input: dict[str, Any]) -> dict[str, Any]:
+                builder_inputs, consumption = projection_surface_builder_inputs(
+                    admitted_input=decision_input,
+                    consumer="summary",
+                    required_fields=("task", "changed"),
+                )
+                builder_inputs = builder_inputs or {
+                    "task": str(getattr(args, "task", None) or ""),
+                    "changed": changed_paths,
+                }
+                candidate = planning_summary(
+                    target=target_root.as_posix(),
+                    profile=summary_profile,
+                    task_text=str(builder_inputs.get("task") or "") or None,
+                    changed_paths=[str(path) for path in builder_inputs.get("changed", [])],
+                )
+                return attach_projection_surface_decision_input_consumption(
+                    payload=candidate, consumption=consumption, used_material_inputs=builder_inputs
+                )
+
             summary = progress.run_cancellable(
                 lambda: materialize_projection_under_decision_input(
-                    builder=lambda decision_input: consume_projection_surface_decision_input(
-                        payload=planning_summary(
-                            target=target_root.as_posix(),
-                            profile=summary_profile,
-                            task_text=getattr(args, "task", None),
-                            changed_paths=changed_paths,
-                        ),
-                        admitted_input=decision_input,
-                        consumer="summary",
-                    ),
+                    builder=build_planning_summary,
                     admitted_input=admitted_input,
                     consumer="summary",
                 ),
@@ -49162,7 +49207,9 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             )
             reuse_context = prepare_projection_reuse(root=target_root, operation="report", query=reuse_query)
             admitted_input = admit_projection_surface_decision_input(
-                input_revisions=reuse_context.get("decision_input_revisions", {}), consumer="report"
+                input_revisions=reuse_context.get("decision_input_revisions", {}),
+                consumer="report",
+                material_inputs={"task": str(task_text or ""), "changed": changed_paths},
             )
             reused, reuse_context = lookup_projection_reuse(
                 root=target_root,
@@ -49177,19 +49224,30 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                 return 0
         section_payload: dict[str, Any] | None = None
         with ProjectionProgress(root=target_root, operation="report") as progress:
+
+            def build_report_router_projection(decision_input: dict[str, Any]) -> dict[str, Any]:
+                builder_inputs, consumption = projection_surface_builder_inputs(
+                    admitted_input=decision_input,
+                    consumer="report",
+                    required_fields=("task", "changed"),
+                )
+                builder_inputs = builder_inputs or {"task": str(task_text or ""), "changed": changed_paths}
+                candidate = _run_report_router_command(
+                    target_root=target_root,
+                    selected_modules=selected_modules,
+                    resolved_preset=resolved_preset,
+                    descriptors=descriptors,
+                    config=config,
+                    task_text=str(builder_inputs.get("task") or "") or None,
+                    changed_paths=[str(path) for path in builder_inputs.get("changed", [])],
+                )
+                return attach_projection_surface_decision_input_consumption(
+                    payload=candidate, consumption=consumption, used_material_inputs=builder_inputs
+                )
+
             payload = progress.run_cancellable(
                 lambda: materialize_projection_under_decision_input(
-                    builder=lambda decision_input: consume_projection_surface_decision_input(
-                        payload=_run_report_router_command(
-                            target_root=target_root,
-                            selected_modules=selected_modules,
-                            resolved_preset=resolved_preset,
-                            descriptors=descriptors,
-                            config=config,
-                        ),
-                        admitted_input=decision_input,
-                        consumer="report",
-                    ),
+                    builder=build_report_router_projection,
                     admitted_input=admitted_input,
                     consumer="report",
                 ),
@@ -49254,7 +49312,9 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         if args.format == "json":
             section_reuse_context = prepare_projection_reuse(root=target_root, operation="report", query=section_query)
             section_admitted_input = admit_projection_surface_decision_input(
-                input_revisions=section_reuse_context.get("decision_input_revisions", {}), consumer="report"
+                input_revisions=section_reuse_context.get("decision_input_revisions", {}),
+                consumer="report",
+                material_inputs={"task": str(task_text or ""), "changed": changed_paths},
             )
             reused, section_reuse_context = lookup_projection_reuse(
                 root=target_root,
@@ -49272,21 +49332,25 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
 
             def build_report_section() -> dict[str, Any]:
                 def build_bound_report_section(decision_input: dict[str, Any]) -> dict[str, Any]:
+                    builder_inputs, consumption = projection_surface_builder_inputs(
+                        admitted_input=decision_input,
+                        consumer="report",
+                        required_fields=("task", "changed"),
+                    )
+                    builder_inputs = builder_inputs or {"task": str(task_text or ""), "changed": changed_paths}
                     candidate = _run_lazy_report_section_command(
                         target_root=target_root,
                         selected_modules=selected_modules,
                         resolved_preset=resolved_preset,
                         config=config,
                         section=section,
-                        task_text=task_text,
-                        changed_paths=changed_paths,
+                        task_text=str(builder_inputs.get("task") or "") or None,
+                        changed_paths=[str(path) for path in builder_inputs.get("changed", [])],
                     )
                     if not isinstance(candidate, dict):
                         return {}
-                    return consume_projection_surface_decision_input(
-                        payload=candidate,
-                        admitted_input=decision_input,
-                        consumer="report",
+                    return attach_projection_surface_decision_input_consumption(
+                        payload=candidate, consumption=consumption, used_material_inputs=builder_inputs
                     )
 
                 section_payload = materialize_projection_under_decision_input(

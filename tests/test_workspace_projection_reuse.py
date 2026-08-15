@@ -116,7 +116,9 @@ def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path
         }
         independent_context = prepare_projection_reuse(root=target, operation=operation, query=query)
         independent_input = admit_projection_surface_decision_input(
-            input_revisions=independent_context["decision_input_revisions"], consumer=operation
+            input_revisions=independent_context["decision_input_revisions"],
+            consumer=operation,
+            material_inputs=query,
         )
         assert cli.main(command) == 0
         cold = json.loads(capsys.readouterr().out)
@@ -298,6 +300,8 @@ def test_builder_must_consume_input_and_mismatched_posture_cannot_be_stamped() -
                 "consumer": "proof",
                 "input_id": admitted_input["input_id"],
                 "admitted_input_revision": admitted_input["admitted_input_revision"],
+                "material_input_revision": admitted_input["material_input_revision"],
+                "used_material_input_revision": admitted_input["material_input_revision"],
             }
         },
     }
@@ -318,6 +322,42 @@ def test_builder_must_consume_input_and_mismatched_posture_cannot_be_stamped() -
     )
     assert mismatched["context"]["projection_decision_authority"]["status"] == "rejected"
     assert mismatched["context"]["projection_decision_authority"]["decision_id"] == blocked_decision["decision_id"]
+
+
+def test_builder_material_input_mismatch_rejects_consumption_and_authority() -> None:
+    from agentic_workspace.operating_decision import (
+        admit_projection_surface_decision_input,
+        attach_projection_surface_decision_input_consumption,
+        finalize_projection_surface_operating_decision,
+        projection_surface_builder_inputs,
+    )
+
+    admitted_input = admit_projection_surface_decision_input(
+        input_revisions={"head": "a", "selected_owner": "owner-a"},
+        consumer="start",
+        material_inputs={"task": "admitted task", "changed": ["a.py"]},
+    )
+    builder_inputs, consumption = projection_surface_builder_inputs(
+        admitted_input=admitted_input,
+        consumer="start",
+        required_fields=("task", "changed"),
+    )
+    assert builder_inputs == {"changed": ["a.py"], "task": "admitted task"}
+
+    altered = attach_projection_surface_decision_input_consumption(
+        payload={"status": "CONTINUE", "next_action": {"action": "inspect"}},
+        consumption=consumption,
+        used_material_inputs={"task": "different task", "changed": ["a.py"]},
+    )
+    altered, altered_decision = finalize_projection_surface_operating_decision(
+        payload=altered,
+        admitted_input=admitted_input,
+        consumer="start",
+    )
+
+    assert altered_decision == {}
+    assert altered["context"]["projection_decision_input_consumption"]["status"] == "rejected"
+    assert "projection_decision_authority" not in altered["context"]
 
 
 def test_progress_heartbeat_and_cooperative_cancellation_are_bounded(tmp_path: Path, capsys) -> None:

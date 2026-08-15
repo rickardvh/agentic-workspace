@@ -21,10 +21,11 @@ from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
+    attach_projection_surface_decision_input_consumption,
     compile_implement_context_operating_decision,
-    consume_projection_surface_decision_input,
     finalize_projection_surface_operating_decision,
     materialize_projection_under_decision_input,
+    projection_surface_builder_inputs,
     resolve_context_authority_projection,
 )
 from agentic_workspace.projection_reuse import (
@@ -235,7 +236,9 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         full_detail_command = f"{config.cli_invoke} implement --target . --changed <paths> --verbose --format json"
         reuse_context = prepare_projection_reuse(root=target_root, operation="implement", query=reuse_query)
         admitted_input = admit_projection_surface_decision_input(
-            input_revisions=reuse_context.get("decision_input_revisions", {}), consumer="implement"
+            input_revisions=reuse_context.get("decision_input_revisions", {}),
+            consumer="implement",
+            material_inputs={"task": str(task_text or ""), "changed": changed_paths},
         )
         reused, reuse_context = lookup_projection_reuse(
             root=target_root,
@@ -251,26 +254,29 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     with ProjectionProgress(root=target_root, operation="implement") as progress:
 
         def build_implement_projection(decision_input: dict[str, Any]) -> dict[str, Any]:
+            builder_inputs, consumption = projection_surface_builder_inputs(
+                admitted_input=decision_input,
+                consumer="implement",
+                required_fields=("task", "changed"),
+            )
+            builder_inputs = builder_inputs or {"task": str(task_text or ""), "changed": changed_paths}
             with _planning_revision_payload_cache_scope(), _decision_point_binding_cache_scope(), mutation_baseline_payload_cache_scope():
-                return consume_projection_surface_decision_input(
-                    payload=_implement_payload(
-                        target_root=target_root,
-                        changed_paths=changed_paths,
-                        task_text=task_text,
-                        include_change_impact=(profile != "tiny" or change_impact_selected),
-                        include_task_contract=(profile != "tiny" or task_contract_selected),
-                        include_assurance_requirements=(
-                            profile != "tiny" or assurance_requirements_selected or routine_work_context_selected
-                        ),
-                        include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
-                        include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
-                        include_reuse_pressure=(profile != "tiny" or reuse_pressure_selected),
-                        include_runtime_diagnostics=(profile != "tiny" or runtime_diagnostics_selected or not broad_early_scope),
-                        include_test_strategy_check=(profile != "tiny" or test_strategy_check_selected or not broad_early_scope),
-                        startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
-                    ),
-                    admitted_input=decision_input,
-                    consumer="implement",
+                candidate = _implement_payload(
+                    target_root=target_root,
+                    changed_paths=[str(path) for path in builder_inputs.get("changed", [])],
+                    task_text=str(builder_inputs.get("task") or "") or None,
+                    include_change_impact=(profile != "tiny" or change_impact_selected),
+                    include_task_contract=(profile != "tiny" or task_contract_selected),
+                    include_assurance_requirements=(profile != "tiny" or assurance_requirements_selected or routine_work_context_selected),
+                    include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
+                    include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
+                    include_reuse_pressure=(profile != "tiny" or reuse_pressure_selected),
+                    include_runtime_diagnostics=(profile != "tiny" or runtime_diagnostics_selected or not broad_early_scope),
+                    include_test_strategy_check=(profile != "tiny" or test_strategy_check_selected or not broad_early_scope),
+                    startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
+                )
+                return attach_projection_surface_decision_input_consumption(
+                    payload=candidate, consumption=consumption, used_material_inputs=builder_inputs
                 )
 
         full_payload = progress.run_cancellable(

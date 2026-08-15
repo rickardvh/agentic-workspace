@@ -16,8 +16,9 @@
   "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2556",
   "evidence_refs": [
     ".agentic-workspace/local/logs/aw-session-20260814170232-7b3b8508/index.json (local captured replay source; 7 entries before replay)",
-    "uv run --frozen --active --no-sync pytest -q tests/test_workspace_projection_reuse.py tests/test_operating_decision.py: 85 passed",
-    "cold/warm start, selected summary, implement, proof, and closeout_trust replay: every builder consumed the independently admitted snapshot, every final decision derived from that snapshot plus emitted posture, and every warm result reused that exact identity",
+    "uv run --frozen --active --no-sync pytest -q tests/test_workspace_projection_reuse.py tests/test_operating_decision.py: 86 passed",
+    "cold/warm start, selected summary, implement, proof, and closeout_trust replay: every builder derived task and changed-path inputs from the independently admitted snapshot before materialization, every final decision derived from that snapshot plus emitted posture, and every warm result reused that exact identity",
+    "negative material-input fixture: changing a builder-used task rejects both the consumption witness and final operating-decision authority",
     "cancellation-during-work fixture: active worker stopped, later stages skipped, and post-cancellation side effect absent"
   ],
   "residual": {
@@ -29,17 +30,17 @@
     "provenance": "PR #2568 blocker replay on its exact working head",
     "reopen_trigger": "Reopen if a projection cache compiles a second authority decision, cancellation cannot interrupt an active builder, or measured costs exceed the declared budgets."
   },
-  "revision": 4,
+  "revision": 5,
   "execution_run": {
     "captured source": ".agentic-workspace/local/logs/aw-session-20260814170232-7b3b8508; pre-replay index 66,148 bytes and session markdown 1,443,642 bytes",
     "captured command classes": "7 pre-replay entries: implement=2, doctor=1, summary=1, proof=1, skills=1, planning=1",
     "replay command classes": "10 appended invocations: start=2, summary_selected=2, implement=2, proof=2, closeout_trust=2",
-    "cold elapsed ms": "start=2150; summary_selected=893; implement=2093; proof=1876; closeout_trust=1967",
-    "warm elapsed ms": "start=772; summary_selected=811; implement=822; proof=911; closeout_trust=824",
-    "cold output bytes": "start=31457; summary_selected=6514; implement=27556; proof=10193; closeout_trust=64358",
-    "warm output bytes": "start=1885; summary_selected=1933; implement=1977; proof=1891; closeout_trust=1929",
-    "state reads": "cold=35 and warm=35 for every surface; warm receipts also preserve cold_state_read_count=35",
-    "reuse": "all five cold builders acknowledged the independently admitted decision input; final decisions matched the emitted action/blocker/terminal/claim posture and the admitted input revision; all five warm projections reused the recorded final identity and skipped the full builder; ignored input and mismatched posture are covered as fail-closed, while absent admission fails open without a cache write",
+    "cold elapsed ms": "start=4204; summary_selected=1397; implement=2939; proof=2218; closeout_trust=2121",
+    "warm elapsed ms": "start=777; summary_selected=812; implement=884; proof=895; closeout_trust=987",
+    "cold output bytes": "start=11881; summary_selected=6877; implement=39812; proof=10860; closeout_trust=64721",
+    "warm output bytes": "start=1892; summary_selected=1934; implement=1979; proof=1892; closeout_trust=1930",
+    "state reads": "cold=32 and warm=32 for every surface; warm receipts also preserve cold_state_read_count=32",
+    "reuse": "all five cold builders derived their material task/changed-path inputs from the independently admitted decision snapshot before work and emitted exact used-input witnesses; final decisions matched emitted action/blocker/terminal/claim posture and the admitted input revision; all five warm projections reused the recorded final identity and skipped the full builder; ignored, missing, or altered builder input and mismatched posture fail closed, while absent admission fails open without a cache write",
     "cancellation": "the active stage acknowledged cancellation and unwound before the typed cancelled result; later stages and the fixture's post-cancellation side effect did not run",
     "budgets": "computation_budget_ms=10000; serialization_budget_bytes=65536; every measured cold and warm computation remained within budget, and oversized startup detail emitted a bounded 10820-byte detail-withheld envelope"
   }

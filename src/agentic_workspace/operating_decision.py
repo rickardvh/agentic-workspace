@@ -1354,13 +1354,22 @@ def canonical_operating_decision_identity(input_revisions: dict[str, Any]) -> tu
     return revision, f"operating-decision:{_digest({'input_revision': revision})[:16]}"
 
 
-def admit_projection_surface_decision_input(*, input_revisions: dict[str, Any], consumer: str) -> dict[str, Any]:
+def admit_projection_surface_decision_input(
+    *, input_revisions: dict[str, Any], consumer: str, material_inputs: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Admit immutable shared input before purpose-specific materialization."""
 
     if not input_revisions:
         return {}
-    normalized = json.loads(json.dumps({"consumer": consumer, "revisions": input_revisions}, sort_keys=True, default=str))
+    normalized = json.loads(
+        json.dumps(
+            {"consumer": consumer, "revisions": input_revisions, "material_inputs": material_inputs or {}},
+            sort_keys=True,
+            default=str,
+        )
+    )
     revision = "sha256:" + _digest(normalized)
+    material_input_revision = "sha256:" + _digest(normalized["material_inputs"])
     return {
         "kind": "agentic-workspace/projection-decision-input/v1",
         "status": "admitted",
@@ -1368,9 +1377,59 @@ def admit_projection_surface_decision_input(*, input_revisions: dict[str, Any], 
         "input_id": f"projection-decision-input:{_digest({'revision': revision})[:16]}",
         "admitted_input_revision": revision,
         "input_revisions": normalized["revisions"],
+        "material_inputs": normalized["material_inputs"],
+        "material_input_revision": material_input_revision,
         "selected_owner": str(input_revisions.get("selected_owner") or ""),
         "rule": "Purpose-specific posture enriches this immutable admitted snapshot before one final operating decision is compiled.",
     }
+
+
+def projection_surface_builder_inputs(
+    *, admitted_input: dict[str, Any], consumer: str, required_fields: tuple[str, ...] = ()
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Consume the immutable material inputs before a purpose-specific builder runs."""
+
+    material_inputs = _as_dict(admitted_input.get("material_inputs"))
+    observed_revision = "sha256:" + _digest(material_inputs)
+    missing_fields = [field for field in required_fields if field not in material_inputs]
+    valid = (
+        admitted_input.get("status") == "admitted"
+        and admitted_input.get("consumer") == consumer
+        and observed_revision == admitted_input.get("material_input_revision")
+        and not missing_fields
+    )
+    receipt = {
+        "kind": "agentic-workspace/projection-decision-input-consumption/v1",
+        "status": "consumed" if valid else "rejected",
+        "consumer": consumer,
+        "input_id": str(admitted_input.get("input_id") or ""),
+        "admitted_input_revision": str(admitted_input.get("admitted_input_revision") or ""),
+        "material_input_revision": observed_revision,
+        "consumed_fields": sorted(material_inputs),
+        "missing_fields": missing_fields,
+        "selected_owner": str(admitted_input.get("selected_owner") or ""),
+        "rule": "The purpose-specific builder must consume these admitted material inputs before deriving decision-bearing posture or enrichment.",
+    }
+    return (copy.deepcopy(material_inputs) if valid else {}), receipt
+
+
+def attach_projection_surface_decision_input_consumption(
+    *, payload: dict[str, Any], consumption: dict[str, Any], used_material_inputs: dict[str, Any]
+) -> dict[str, Any]:
+    """Attach a receipt produced before builder materialization."""
+
+    observed_revision = "sha256:" + _digest(used_material_inputs)
+    consumption = copy.deepcopy(consumption)
+    if observed_revision != consumption.get("material_input_revision"):
+        consumption["status"] = "rejected"
+        consumption["mismatch_reason"] = "purpose-specific builder used material inputs outside the admitted snapshot"
+    consumption["used_material_input_revision"] = observed_revision
+    context = payload.setdefault("context", {})
+    if not isinstance(context, dict):
+        context = {}
+        payload["context"] = context
+    context["projection_decision_input_consumption"] = consumption
+    return payload
 
 
 def _projection_surface_posture(payload: dict[str, Any]) -> dict[str, Any]:
@@ -1472,7 +1531,16 @@ def bind_projection_surface_operating_decision(
     )
     context["projection_decision_input"] = {
         key: admitted_input.get(key)
-        for key in ("kind", "status", "consumer", "input_id", "admitted_input_revision", "selected_owner", "rule")
+        for key in (
+            "kind",
+            "status",
+            "consumer",
+            "input_id",
+            "admitted_input_revision",
+            "material_input_revision",
+            "selected_owner",
+            "rule",
+        )
     }
     context["projection_decision_authority"] = {
         "kind": "agentic-workspace/projection-decision-authority/v1",
@@ -1493,25 +1561,14 @@ def bind_projection_surface_operating_decision(
 
 
 def consume_projection_surface_decision_input(*, payload: dict[str, Any], admitted_input: dict[str, Any], consumer: str) -> dict[str, Any]:
-    """Record that a purpose-specific builder consumed its admitted snapshot."""
+    """Compatibility helper for simple builders that consume every admitted material input."""
 
-    if admitted_input.get("status") != "admitted" or admitted_input.get("consumer") != consumer:
-        return payload
-    context = payload.setdefault("context", {})
-    if not isinstance(context, dict):
-        context = {}
-        payload["context"] = context
-    context["projection_decision_input_consumption"] = {
-        "kind": "agentic-workspace/projection-decision-input-consumption/v1",
-        "status": "consumed",
-        "consumer": consumer,
-        "input_id": str(admitted_input.get("input_id") or ""),
-        "admitted_input_revision": str(admitted_input.get("admitted_input_revision") or ""),
-        "consumed_fields": ["input_revisions", "selected_owner"],
-        "selected_owner": str(admitted_input.get("selected_owner") or ""),
-        "rule": "Final action, blocker, terminal, and claim posture enrich this consumed snapshot; they cannot replace it.",
-    }
-    return payload
+    material_inputs, consumption = projection_surface_builder_inputs(admitted_input=admitted_input, consumer=consumer)
+    return attach_projection_surface_decision_input_consumption(
+        payload=payload,
+        consumption=consumption,
+        used_material_inputs=material_inputs,
+    )
 
 
 def materialize_projection_under_decision_input(
@@ -1529,6 +1586,8 @@ def materialize_projection_under_decision_input(
         or consumption.get("consumer") != consumer
         or consumption.get("input_id") != admitted_input.get("input_id")
         or consumption.get("admitted_input_revision") != admitted_input.get("admitted_input_revision")
+        or consumption.get("material_input_revision") != admitted_input.get("material_input_revision")
+        or consumption.get("used_material_input_revision") != admitted_input.get("material_input_revision")
     ):
         return payload
     return payload
@@ -1541,7 +1600,13 @@ def finalize_projection_surface_operating_decision(
 
     context = _as_dict(payload.get("context"))
     consumption = _as_dict(context.get("projection_decision_input_consumption"))
-    if consumption.get("input_id") != admitted_input.get("input_id"):
+    if (
+        consumption.get("status") != "consumed"
+        or consumption.get("consumer") != consumer
+        or consumption.get("input_id") != admitted_input.get("input_id")
+        or consumption.get("admitted_input_revision") != admitted_input.get("admitted_input_revision")
+        or consumption.get("material_input_revision") != admitted_input.get("material_input_revision")
+    ):
         return payload, {}
     operating_decision = compile_projection_surface_operating_decision(
         payload=payload,

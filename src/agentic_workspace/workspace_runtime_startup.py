@@ -19,10 +19,11 @@ from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, 
 from agentic_workspace.current_work_context import startup_route_identity
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
-    consume_projection_surface_decision_input,
+    attach_projection_surface_decision_input_consumption,
     finalize_projection_surface_operating_decision,
     materialize_projection_under_decision_input,
     project_startup_claim_effect_authority,
+    projection_surface_builder_inputs,
     resolve_context_authority_projection,
 )
 from agentic_workspace.projection_reuse import (
@@ -2879,7 +2880,9 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         )
         reuse_context = prepare_projection_reuse(root=target_root, operation="start", query=reuse_query)
         admitted_input = admit_projection_surface_decision_input(
-            input_revisions=reuse_context.get("decision_input_revisions", {}), consumer="start"
+            input_revisions=reuse_context.get("decision_input_revisions", {}),
+            consumer="start",
+            material_inputs={"task": str(task_text or ""), "changed": changed_paths},
         )
         reused, reuse_context = lookup_projection_reuse(
             root=target_root,
@@ -2893,18 +2896,27 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             _emit_payload(payload=reused, format_name=args.format)
             return 0
     with ProjectionProgress(root=target_root, operation="start") as progress:
+
+        def build_start_projection(decision_input: dict[str, Any]) -> dict[str, Any]:
+            builder_inputs, consumption = projection_surface_builder_inputs(
+                admitted_input=decision_input,
+                consumer="start",
+                required_fields=("task", "changed"),
+            )
+            builder_inputs = builder_inputs or {"task": str(task_text or ""), "changed": changed_paths}
+            candidate = _start_payload(
+                target_root=target_root,
+                changed_paths=[str(path) for path in builder_inputs.get("changed", [])],
+                task_text=str(builder_inputs.get("task") or "") or None,
+                profile=effective_profile,
+            )
+            return attach_projection_surface_decision_input_consumption(
+                payload=candidate, consumption=consumption, used_material_inputs=builder_inputs
+            )
+
         payload = progress.run_cancellable(
             lambda: materialize_projection_under_decision_input(
-                builder=lambda decision_input: consume_projection_surface_decision_input(
-                    payload=_start_payload(
-                        target_root=target_root,
-                        changed_paths=changed_paths,
-                        task_text=task_text,
-                        profile=effective_profile,
-                    ),
-                    admitted_input=decision_input,
-                    consumer="start",
-                ),
+                builder=build_start_projection,
                 admitted_input=admitted_input,
                 consumer="start",
             ),
