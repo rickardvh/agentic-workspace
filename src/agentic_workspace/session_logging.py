@@ -40,11 +40,12 @@ SESSION_LOG_INDEX_KINDS = {SESSION_LOG_INDEX_KIND, "agentic-workspace/session-lo
 DEFAULT_MAX_INLINE_OUTPUT_BYTES = 64 * 1024
 DEFAULT_SLOW_COMMAND_DURATION_MS = 120000
 LARGE_OUTPUT_SUMMARY_LIMIT = 5
+DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT = 2
 FRICTION_CANDIDATE_LIMIT = 10
 DEFAULT_ANALYSIS_PAGE_SIZE = 25
 MAX_ANALYSIS_PAGE_SIZE = 100
 DEFAULT_ANALYSIS_SERIALIZATION_BUDGET_BYTES = 64 * 1024
-SESSION_LOG_NON_AUTHORITATIVE_FOR = ("Planning", "Memory", "proof", "closeout")
+SESSION_LOG_NON_AUTHORITATIVE_FOR = ("Planning", "Memory", "current owner", "proof", "closeout")
 SESSION_LOG_LOCAL_BOUNDARY = {
     "scope": "package-owned local diagnostic state",
     "local_only": True,
@@ -2244,7 +2245,7 @@ def analyze_session_log(
             "origins": sorted(origins),
             "command_count": len(members),
             "failure_count": len(partition_failures),
-            "entries": [_entry_brief(entry) for entry in members[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+            "entries": [_entry_brief(entry) for entry in members[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
         }
     analyzer_overhead = [entry for entry in selected_entries if _is_session_log_analyzer_entry(entry)]
     product_entries = [entry for entry in entries if not _is_session_log_analyzer_entry(entry)]
@@ -2314,33 +2315,35 @@ def analyze_session_log(
         "origin_partitions": origin_partitions,
         "analyzer_overhead": {
             "command_count": len(analyzer_overhead),
-            "entries": [_entry_brief(entry) for entry in analyzer_overhead[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+            "entries": [_entry_brief(entry) for entry in analyzer_overhead[:1]],
             "rule": "session-log analyze traffic is classified separately and cannot become default product-friction evidence.",
         },
         "failed_commands": [
             _entry_brief(entry)
-            for entry in (live_failures if origin_scope == "agent" else unexpected_failures)[:LARGE_OUTPUT_SUMMARY_LIMIT]
+            for entry in (live_failures if origin_scope == "agent" else unexpected_failures)[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]
         ],
-        "observed_nonzero_exits": [_entry_brief(entry) for entry in failures[:LARGE_OUTPUT_SUMMARY_LIMIT]],
-        "unexpected_failed_commands": [_entry_brief(entry) for entry in unexpected_failures[:LARGE_OUTPUT_SUMMARY_LIMIT]],
-        "matched_invocations": [_entry_brief(entry) for entry in matched_expectations[:LARGE_OUTPUT_SUMMARY_LIMIT]],
-        "unmatched_invocations": [_entry_brief(entry) for entry in unmatched_expectations[:LARGE_OUTPUT_SUMMARY_LIMIT]],
-        "expected_success_failed_invocations": [_entry_brief(entry) for entry in expected_success_failures[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "observed_nonzero_exits": [_entry_brief(entry) for entry in failures[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
+        "unexpected_failed_commands": [_entry_brief(entry) for entry in unexpected_failures[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
+        "matched_invocations": [_entry_brief(entry) for entry in matched_expectations[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
+        "unmatched_invocations": [_entry_brief(entry) for entry in unmatched_expectations[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
+        "expected_success_failed_invocations": [
+            _entry_brief(entry) for entry in expected_success_failures[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]
+        ],
         "expected_failure_succeeded_invocations": [
-            _entry_brief(entry) for entry in expected_failure_successes[:LARGE_OUTPUT_SUMMARY_LIMIT]
+            _entry_brief(entry) for entry in expected_failure_successes[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]
         ],
-        "unknown_invocations": [_entry_brief(entry) for entry in unknown_expectations[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "unknown_invocations": [_entry_brief(entry) for entry in unknown_expectations[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
         "unknown_expectation_effect": "inconclusive; raw exit remains observed and a non-zero exit remains in the primary unexpected-failure set",
-        "live_failed_commands": [_entry_brief(entry) for entry in live_failures[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "live_failed_commands": [_entry_brief(entry) for entry in live_failures[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
         "failures_by_origin": _bounded_counter(failures_by_origin),
         "repeated_failures_by_origin": {
             origin: [_bounded_value(value) for value in values[:LARGE_OUTPUT_SUMMARY_LIMIT]]
             for origin, values in repeated_failures_by_origin.items()
         },
-        "usage_mistakes": [_entry_brief(entry) for entry in usage_mistakes[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        "usage_mistakes": [_entry_brief(entry) for entry in usage_mistakes[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
         "repeated_commands": [_bounded_value(value) for value in repeated[:LARGE_OUTPUT_SUMMARY_LIMIT]],
         "repeated_failures": [_bounded_value(value) for value in repeated_failures[:LARGE_OUTPUT_SUMMARY_LIMIT]],
-        "largest_outputs": [_entry_brief(entry) for entry in largest],
+        "largest_outputs": [_entry_brief(entry) for entry in largest[:DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT]],
         "duplicate_outputs": duplicates[:LARGE_OUTPUT_SUMMARY_LIMIT],
         "packet_kinds": _bounded_counter(packet_kinds),
         "parsed_packet_kinds": _bounded_counter(packet_kinds),
@@ -2352,6 +2355,7 @@ def analyze_session_log(
         "detail_page": detail_payload,
         "bounded_collections": {
             "sample_limit": LARGE_OUTPUT_SUMMARY_LIMIT,
+            "entry_sample_limit": DEFAULT_ANALYSIS_ENTRY_SAMPLE_LIMIT,
             "candidate_limit": FRICTION_CANDIDATE_LIMIT,
             "default_serialization_budget_bytes": DEFAULT_ANALYSIS_SERIALIZATION_BUDGET_BYTES,
             "full_detail_requires_selector": True,

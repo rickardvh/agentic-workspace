@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 3,
+  "revision": 4,
   "intent": {
     "outcome": "Make long session evidence summary-first, reference-normalized, episode-grouped, self-admitting for reviewed improvement intake, and explicitly routed to share-safe export.",
     "non_goals": [
@@ -76,8 +76,14 @@
     ],
     "refs": [
       "tests/test_workspace_session_logging.py",
-      "tests/test_workspace_cli.py"
+      "tests/test_workspace_cli.py",
+      ".agentic-workspace/planning/closeout-evidence/issue-2555-captured-session-replay.closeout.json"
     ]
+  },
+  "execution_run": {
+    "what_happened": "Replayed the named 1.4 MB local session from its partial v1 index through v2 repair, compact default analysis, exact paged reconstruction, and normalized share-safe export; added a real ordinary-consumer authority regression.",
+    "validation": "Captured replay: 298 entries, 85 logical segments, 85 episodes, exact 12-page reconstruction, 63,522-byte default analysis, 1,314,207-byte normalized export, and unchanged raw source after export.",
+    "evidence": ".agentic-workspace/planning/closeout-evidence/issue-2555-captured-session-replay.closeout.json"
   },
   "continuation": {
     "owner": "target-branch integration",
