@@ -48642,7 +48642,7 @@ def _emit_proof(
             )
             if reused is not None:
                 _emit_payload(payload=reused, format_name=format_name)
-                return
+                return 0
         with ProjectionProgress(root=target_root, operation="proof") as progress:
 
             def build_proof_projection(decision_input: dict[str, Any]) -> dict[str, Any]:
@@ -48680,7 +48680,7 @@ def _emit_proof(
         if progress_contract["status"] == "cancel-requested":
             answer["projection_progress"] = progress_contract
             _emit_payload(payload=answer, format_name=format_name)
-            return
+            return 0
         full_payload = {
             "profile": "compact-contract-answer/v1",
             "surface": "proof",
