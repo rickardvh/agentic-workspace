@@ -1,0 +1,70 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "p2-closed-lane-residue",
+  "title": "P2 closed lane residue",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "handoff_review",
+  "revision": 2,
+  "intent": {
+    "outcome": "Classify closed-lane live references as non-authoritative maintenance residue.",
+    "non_goals": [
+      "Do not change live-owner admission or claim #2560 complete.",
+      "Do not suppress the repair warning or auto-mutate during reads."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Make the existing closed-lane repair signal explicit about its lack of live authority.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "packages/planning/tests/test_lanes.py"
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-residual",
+      "owner": "current-work context",
+      "admission": "current-work"
+    },
+    "proof_posture": {
+      "state": "satisfied",
+      "refs": ["packages/planning/tests/test_lanes.py focused lane lifecycle proof"]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2560",
+      "label": "GitHub issue #2560",
+      "role": "intake",
+      "locator": "github:rickardvh/agentic-workspace#2560"
+    }
+  ],
+  "next_action": "Publish the draft P2 lane PR and retain the separate live-owner problem.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Closed-lane residue remains repairable but declares no live owner, proof, or claim authority."
+    ],
+    "requirements": [
+      "Run the focused Planning lane lifecycle test."
+    ],
+    "refs": ["packages/planning/tests/test_lanes.py::test_lane_close_and_archive_preserve_parent_contribution"]
+  },
+  "continuation": {
+    "owner": "GitHub #2560",
+    "residual_intent": "The separate live-owner admission problem remains open and is not treated as closed by this lane."
+  },
+  "specialist_contracts": []
+}
