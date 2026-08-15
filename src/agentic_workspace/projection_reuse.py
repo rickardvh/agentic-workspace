@@ -552,6 +552,24 @@ def admitted_projection_revisions(
     return revisions, sorted(set(dependencies)), findings
 
 
+_OPERATING_DECISION_REVISION_FIELDS = (
+    "branch",
+    "head",
+    "task",
+    "selected_owner",
+    "planning",
+    "changed_paths",
+    "proof_subject",
+    "runtime_compatibility",
+)
+
+
+def _operating_decision_revisions(input_revisions: dict[str, Any]) -> dict[str, Any]:
+    """Keep enrichment-only freshness outside operating-decision identity."""
+
+    return {field: input_revisions.get(field) for field in _OPERATING_DECISION_REVISION_FIELDS}
+
+
 def _invalidation_reasons(previous: dict[str, Any], current: dict[str, Any]) -> list[str]:
     reason_by_field = {
         "branch": "branch-changed",
@@ -600,9 +618,9 @@ def _cache_path(root: Path, operation: str, query: dict[str, Any]) -> Path:
     return root / ".agentic-workspace" / "local" / "projection-cache" / f"{operation}-{key}.json"
 
 
-def lookup_projection_reuse(
-    *, root: Path, operation: str, query: dict[str, Any], full_detail_command: str, force_refresh: bool = False
-) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+def prepare_projection_reuse(*, root: Path, operation: str, query: dict[str, Any], force_refresh: bool = False) -> dict[str, Any]:
+    """Resolve bounded decision and enrichment inputs before materialization."""
+
     lookup_started_at = time.monotonic()
     forced = force_refresh or os.environ.get("AW_PROJECTION_FORCE_REFRESH", "").lower() in {"1", "true", "yes"}
     volatile = (
@@ -612,7 +630,7 @@ def lookup_projection_reuse(
     )
     path = _cache_path(root, operation, query)
     if volatile:
-        return None, {
+        return {
             "digest": "",
             "dependencies": [],
             "path": path,
@@ -622,6 +640,8 @@ def lookup_projection_reuse(
             "dependency_status": "complete",
             "degraded_findings": [],
             "input_revisions": {},
+            "decision_input_revisions": {},
+            "enrichment_input_revisions": {},
             "canonical_input_revision": "",
             "decision_id": "",
             "lookup_started_at": lookup_started_at,
@@ -640,13 +660,47 @@ def lookup_projection_reuse(
         "dependency_status": digest_result.status,
         "degraded_findings": digest_result.findings,
         "input_revisions": input_revisions,
+        "decision_input_revisions": _operating_decision_revisions(input_revisions),
+        "enrichment_input_revisions": {
+            field: value for field, value in input_revisions.items() if field not in _OPERATING_DECISION_REVISION_FIELDS
+        },
         "canonical_input_revision": "",
         "decision_id": "",
         "lookup_started_at": lookup_started_at,
         "invalidation_reasons": [],
         "state_read_count": digest_result.state_read_count,
     }
-    if forced or volatile or digest_result.status != "complete" or not path.is_file():
+    return context
+
+
+def lookup_projection_reuse(
+    *,
+    root: Path,
+    operation: str,
+    query: dict[str, Any],
+    full_detail_command: str,
+    force_refresh: bool = False,
+    context: dict[str, Any] | None = None,
+    operating_decision: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    context = context or prepare_projection_reuse(
+        root=root,
+        operation=operation,
+        query=query,
+        force_refresh=force_refresh,
+    )
+    path = context["path"]
+    digest = str(context.get("digest") or "")
+    dependencies = list(context.get("dependencies") or [])
+    forced = bool(context.get("forced"))
+    volatile = bool(context.get("volatile"))
+    input_revisions = context.get("input_revisions", {})
+    lookup_started_at = float(context.get("lookup_started_at") or time.monotonic())
+    decision = operating_decision if isinstance(operating_decision, dict) else {}
+    if not decision.get("decision_id"):
+        context["invalidation_reasons"] = ["surface-operating-decision-unavailable"]
+        return None, context
+    if forced or volatile or context.get("dependency_status") != "complete" or not path.is_file():
         return None, context
     try:
         record = json.loads(path.read_text(encoding="utf-8"))
@@ -662,7 +716,10 @@ def lookup_projection_reuse(
         return None, context
     decision_id = str(record.get("decision_id") or "")
     canonical_input_revision = str(record.get("canonical_decision_input_revision") or "")
-    if not decision_id:
+    admitted_decision_id = str(decision.get("decision_id") or "")
+    admitted_input_revision = str(decision.get("admitted_input_revision") or "")
+    if not decision_id or decision_id != admitted_decision_id or canonical_input_revision != admitted_input_revision:
+        context["invalidation_reasons"] = ["surface-operating-decision-changed"]
         return None, context
     context["decision_id"] = decision_id
     context["canonical_input_revision"] = canonical_input_revision

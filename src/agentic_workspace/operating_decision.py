@@ -8,7 +8,7 @@ import hashlib
 import json
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
 from agentic_workspace.context_authority_owner_operations import (
@@ -1354,49 +1354,63 @@ def canonical_operating_decision_identity(input_revisions: dict[str, Any]) -> tu
     return revision, f"operating-decision:{_digest({'input_revision': revision})[:16]}"
 
 
-def admit_projection_surface_operating_decision(
-    *, payload: dict[str, Any], input_revisions: dict[str, Any], consumer: str
-) -> dict[str, Any]:
-    """Admit and expose the ordinary surface decision before cache recording.
+def admit_projection_surface_operating_decision(*, input_revisions: dict[str, Any], consumer: str) -> dict[str, Any]:
+    """Admit the canonical surface decision before its projection is built.
 
-    Projection reuse is deliberately not an authority source.  An ordinary
-    adapter calls this function after producing its payload, exposes the
-    resulting identity on that payload, and passes the same decision to the
-    projection index.  If the surface already admitted an operation decision,
-    that exact decision wins.
+    Empty or unavailable admitted inputs deliberately disable reuse.  The
+    projection cache never synthesizes an authority decision of its own.
     """
 
+    if not input_revisions:
+        return {}
+    return compile_operating_decision(
+        inputs={
+            "consumer": consumer,
+            "revisions": input_revisions,
+            "terminal_state": "CONTINUE",
+            "blocked_claim_classes": [],
+        }
+    )
+
+
+def bind_projection_surface_operating_decision(
+    *, payload: dict[str, Any], operating_decision: dict[str, Any], consumer: str
+) -> dict[str, Any]:
+    """Bind a pre-admitted decision to the projection materialized under it."""
+
+    if not operating_decision.get("decision_id"):
+        return payload
     context = payload.setdefault("context", {})
     if not isinstance(context, dict):
         context = {}
         payload["context"] = context
-    operation_authority = _as_dict(context.get("operation_authority"))
-    decision = _as_dict(operation_authority.get("operating_decision"))
-    source = "context.operation_authority.operating_decision"
-    if not decision.get("decision_id"):
-        decision = compile_operating_decision(
-            inputs={
-                "consumer": consumer,
-                "revisions": input_revisions,
-                "terminal_state": str(payload.get("status") or payload.get("health") or "CONTINUE"),
-                "blocked_claim_classes": [str(item) for item in payload.get("blocked_claims", [])]
-                if isinstance(payload.get("blocked_claims"), list)
-                else [],
-            }
-        )
-        source = f"{consumer}.ordinary-adapter"
     context["projection_decision_authority"] = {
         "kind": "agentic-workspace/projection-decision-authority/v1",
         "status": "admitted",
         "consumer": consumer,
-        "source": source,
-        "decision_id": str(decision.get("decision_id") or ""),
-        "admitted_input_revision": str(decision.get("admitted_input_revision") or ""),
-        "producer_module": str(decision.get("producer_module") or ""),
-        "producer_function": str(decision.get("producer_function") or ""),
-        "rule": "The ordinary surface admits this decision before projection reuse may index it.",
+        "source": f"{consumer}.pre-materialization-admission",
+        "decision_id": str(operating_decision.get("decision_id") or ""),
+        "admitted_input_revision": str(operating_decision.get("admitted_input_revision") or ""),
+        "producer_module": str(operating_decision.get("producer_module") or ""),
+        "producer_function": str(operating_decision.get("producer_function") or ""),
+        "rule": "This exact decision was admitted before the ordinary projection builder ran and is reused only by identity.",
     }
-    return decision
+    return payload
+
+
+def materialize_projection_under_operating_decision(
+    *, builder: Callable[[dict[str, Any]], dict[str, Any]], operating_decision: dict[str, Any], consumer: str
+) -> dict[str, Any]:
+    """Run one purpose-specific builder under an already admitted decision."""
+
+    payload = builder(operating_decision)
+    if not isinstance(payload, dict):
+        raise TypeError("projection builders must return a dictionary payload")
+    return bind_projection_surface_operating_decision(
+        payload=payload,
+        operating_decision=operating_decision,
+        consumer=consumer,
+    )
 
 
 def admitted_operating_decision_revisions(

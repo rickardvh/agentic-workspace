@@ -5,6 +5,7 @@ import subprocess
 import threading
 import time
 from pathlib import Path
+from typing import Any
 
 from tests.workspace_cli_support import cli
 
@@ -93,6 +94,9 @@ def test_report_reuses_equivalent_router_projection_and_verbose_forces_full_deta
 
 
 def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path: Path, capsys) -> None:
+    from agentic_workspace.operating_decision import admit_projection_surface_operating_decision
+    from agentic_workspace.projection_reuse import prepare_projection_reuse
+
     target = _target(tmp_path)
     changed = ".agentic-workspace/config.toml"
     capsys.readouterr()
@@ -105,6 +109,15 @@ def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path
         ["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"],
     ]
     for command in commands:
+        operation = command[0]
+        query = {
+            "task": "Keep the route narrow." if command[0] in {"start", "implement", "proof"} else "",
+            "changed": [changed] if command[0] in {"start", "implement", "proof"} else [],
+        }
+        independent_context = prepare_projection_reuse(root=target, operation=operation, query=query)
+        independent_decision = admit_projection_surface_operating_decision(
+            input_revisions=independent_context["decision_input_revisions"], consumer=operation
+        )
         assert cli.main(command) == 0
         cold = json.loads(capsys.readouterr().out)
         assert cold.get("kind") != "agentic-workspace/unchanged-projection/v1"
@@ -120,6 +133,8 @@ def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path
             "authority": "operating_decision.compile_operating_decision",
         }
         surface_authority = cold["context"]["projection_decision_authority"]
+        assert surface_authority["decision_id"] == independent_decision["decision_id"]
+        assert surface_authority["admitted_input_revision"] == independent_decision["admitted_input_revision"]
         assert warm["decision_id"] == surface_authority["decision_id"]
         cold_decision = cold["projection_reuse"]["operating_decision"]
         assert cold_decision["decision_id"] == surface_authority["decision_id"]
@@ -194,20 +209,39 @@ def test_invalidation_reasons_cover_each_admitted_authority_input_exactly() -> N
 
 def test_cache_record_consumes_surface_decision_without_a_compiler_dependency(tmp_path: Path) -> None:
     from agentic_workspace import projection_reuse
-    from agentic_workspace.operating_decision import admit_projection_surface_operating_decision
+    from agentic_workspace.operating_decision import (
+        admit_projection_surface_operating_decision,
+        materialize_projection_under_operating_decision,
+    )
 
     target = _target(tmp_path)
     query = {"changed": [".agentic-workspace/config.toml"]}
+    context = projection_reuse.prepare_projection_reuse(
+        root=target,
+        operation="report",
+        query=query,
+    )
+    operating_decision = admit_projection_surface_operating_decision(input_revisions=context["decision_input_revisions"], consumer="report")
     _cached, context = projection_reuse.lookup_projection_reuse(
         root=target,
         operation="report",
         query=query,
         full_detail_command="report --verbose",
+        context=context,
+        operating_decision=operating_decision,
     )
-    payload = {"status": "CONTINUE"}
-    operating_decision = admit_projection_surface_operating_decision(
-        payload=payload, input_revisions=context["input_revisions"], consumer="report"
+    builder_decisions: list[dict[str, Any]] = []
+
+    def build_payload(admitted_decision: dict[str, Any]) -> dict[str, Any]:
+        builder_decisions.append(admitted_decision)
+        return {"status": "CONTINUE"}
+
+    payload = materialize_projection_under_operating_decision(
+        builder=build_payload,
+        operating_decision=operating_decision,
+        consumer="report",
     )
+    assert builder_decisions == [operating_decision]
     assert not hasattr(projection_reuse, "compile_operating_decision")
     reuse = projection_reuse.record_projection_reuse(
         root=target,
@@ -529,7 +563,7 @@ def test_report_git_timeout_disables_reuse_and_names_failed_probe(tmp_path: Path
 
 def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> None:
     from agentic_workspace.operating_decision import admit_projection_surface_operating_decision
-    from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
+    from agentic_workspace.projection_reuse import lookup_projection_reuse, prepare_projection_reuse, record_projection_reuse
 
     target = _target(tmp_path)
     cached, context = lookup_projection_reuse(
@@ -537,11 +571,20 @@ def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> 
     )
     assert cached is None and context["volatile"] is True
     for index in range(40):
-        cached, context = lookup_projection_reuse(root=target, operation="doctor", query={"index": index}, full_detail_command="doctor")
-        payload = {"status": "ok"}
+        query = {"index": index}
+        context = prepare_projection_reuse(root=target, operation="doctor", query=query)
         operating_decision = admit_projection_surface_operating_decision(
-            payload=payload, input_revisions=context["input_revisions"], consumer="doctor"
+            input_revisions=context["decision_input_revisions"], consumer="doctor"
         )
+        cached, context = lookup_projection_reuse(
+            root=target,
+            operation="doctor",
+            query=query,
+            full_detail_command="doctor",
+            context=context,
+            operating_decision=operating_decision,
+        )
+        payload = {"status": "ok"}
         record_projection_reuse(
             root=target,
             operation="doctor",
@@ -551,6 +594,39 @@ def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> 
             operating_decision=operating_decision,
         )
     assert len(list((target / ".agentic-workspace/local/projection-cache").glob("*.json"))) <= 32
+
+
+def test_absent_surface_admission_disables_reuse_without_synthesizing_a_decision(tmp_path: Path) -> None:
+    from agentic_workspace.operating_decision import admit_projection_surface_operating_decision
+    from agentic_workspace.projection_reuse import lookup_projection_reuse, prepare_projection_reuse, record_projection_reuse
+
+    target = _target(tmp_path)
+    query = {"profile": "router"}
+    context = prepare_projection_reuse(root=target, operation="report", query=query)
+    operating_decision = admit_projection_surface_operating_decision(input_revisions={}, consumer="report")
+
+    cached, context = lookup_projection_reuse(
+        root=target,
+        operation="report",
+        query=query,
+        full_detail_command="report --verbose",
+        context=context,
+        operating_decision=operating_decision,
+    )
+    assert cached is None
+    assert context["invalidation_reasons"] == ["surface-operating-decision-unavailable"]
+    assert (
+        record_projection_reuse(
+            root=target,
+            operation="report",
+            query=query,
+            context=context,
+            payload={"status": "CONTINUE"},
+            operating_decision=operating_decision,
+        )
+        == {}
+    )
+    assert not context["path"].exists()
 
 
 def test_projection_cache_does_not_bootstrap_workspace_state(tmp_path: Path) -> None:
