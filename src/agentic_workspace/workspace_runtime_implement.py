@@ -180,7 +180,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     _validate_target_root(command_name="implement", target_root=target_root)
     if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command="implement"):
         _emit_payload(payload=prevalidation_error, format_name=args.format)
-        return 0
+        return int(prevalidation_error["exit_status"])
     task_text = getattr(args, "task", None)
     if task_text and getattr(args, "task_file", None):
         raise WorkspaceUsageError("Use either --task or --task-file, not both.")

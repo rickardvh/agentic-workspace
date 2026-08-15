@@ -984,6 +984,48 @@ def test_workspace_skill_hierarchy_activation_matrix(tmp_path: Path, capsys) -> 
         assert "Default visible output is a compact delta" in skill_text
 
 
+def test_implement_open_issues_keeps_startup_authoritative_and_recommendations_bounded(capsys) -> None:
+    target = Path(__file__).resolve().parents[1]
+
+    argv = ["skills", "--target", str(target), "--task", "Implement all open GitHub issues", "--format", "json"]
+    assert cli.main(argv) == 0
+    rendered = capsys.readouterr().out
+    payload = json.loads(rendered)
+
+    assert len(rendered.encode("utf-8")) < 24 * 1024
+    assert payload["recommendations"][0]["id"] == "workspace-startup"
+    issue_creation = next(item for item in payload["recommendations"] if item["id"] == "github-issue-creation")
+    assert issue_creation["activation_evidence_class"] == "lexical-candidate"
+    assert issue_creation["recommendation_authority"] == "candidate-only"
+    assert "consumer_projections" not in payload["planning_route_decision"]
+    assert payload["planning_route_decision"]["detail_command"].endswith("--select planning_safety_gate --format json")
+
+    assert cli.main([*argv[:-2], "--select", "recommendations", "--format", "json"]) == 0
+    detail = json.loads(capsys.readouterr().out)
+    assert detail["kind"] == "agentic-workspace/selected-output/v1"
+    assert detail["values"]["recommendations"][0]["activation_hints"]
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "Create a preliminary GitHub issue for a durable repository finding",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    specialist_payload = json.loads(capsys.readouterr().out)
+    specialist = specialist_payload["recommendations"][0]
+    assert specialist["id"] == "github-issue-creation"
+    assert specialist["activation_evidence_class"] == "intent-level"
+    assert specialist["recommendation_authority"] == "admitted"
+
+
 def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
