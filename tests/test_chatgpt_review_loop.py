@@ -2078,6 +2078,20 @@ def test_watcher_continues_only_for_review_waiting_states() -> None:
     assert loop._should_keep_watching([{"status": "recovery-required", "event": "resume-failed"}]) is True
 
 
+def test_non_watching_poll_reports_one_shot_exact_head_binding(tmp_path: Path, monkeypatch, capsys) -> None:
+    runner = FakeRunner(tmp_path)
+    loop._save_state(tmp_path, state(tmp_path, status="awaiting-review", handoff_head=HEAD_A))
+    monkeypatch.setattr(loop, "poll_one", lambda *args, **kwargs: {"pr_number": 12, "status": "no-op", "reason": "review-pending"})
+
+    assert loop.main(["poll", "--target", str(tmp_path), "--pr", "12"], runner=runner) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mode"] == "one-shot-exact-head-recheck"
+    assert payload["requested_pr"] == 12
+    assert payload["requested_heads"] == [HEAD_A]
+    assert payload["idempotency"] == "existing exact-head state and handled review keys are reused"
+
+
 def test_global_watch_waits_after_empty_scan_then_dispatches(tmp_path: Path, monkeypatch, capsys) -> None:
     runner = FakeRunner(tmp_path)
     results = iter(

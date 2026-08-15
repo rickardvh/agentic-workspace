@@ -41,7 +41,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
         capsys,
         "--changed",
         "generated/workspace/typescript/src/commandPackage.ts",
-        select="selected_lanes,required_commands,validation_plan,generated_cli_freshness,selected_commands,cli_authority_review",
+        select="selected_lanes,required_commands,validation_plan,generated_cli_freshness,selected_commands,cli_authority_review,proof_command_tiers,proof_next_decision",
     )
 
     assert answer["selected_lanes"][0]["id"] == "generated_command_packages"
@@ -89,6 +89,12 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q" in withheld
     assert "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker" in withheld
     assert "tests/test_workspace_proof_cli.py" not in " ".join(answer["required_commands"])
+    tier_commands = [item for tier in answer["proof_command_tiers"]["tiers"] for item in tier["commands"]]
+    focused = next(item for item in tier_commands if item["command"] == domain_commands[0]["command"])
+    assert (focused["execution_class"], focused["posture"]) == ("focused-local", "required")
+    ci_owned = [item for item in tier_commands if item["execution_class"] == "exhaustive-CI-owned"]
+    assert ci_owned and all(item["posture"] == "optional" and item["execution_owner"] == "CI" for item in ci_owned)
+    assert answer["proof_next_decision"]["next"]["command"] not in {item["command"] for item in ci_owned}
     assert answer["validation_plan"]["required_count"] == len(answer["required_commands"])
     assert answer["validation_plan"]["optional"][0]["required"] is False
     review = answer["cli_authority_review"]

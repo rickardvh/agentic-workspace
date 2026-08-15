@@ -5432,6 +5432,8 @@ owner = "workspace-proof-runtime"
                 changed_paths[0],
                 "--changed",
                 changed_paths[1],
+                "--select",
+                "proof_closeout_summary,proof_command_tiers",
                 "--format",
                 "json",
             ]
@@ -5439,9 +5441,11 @@ owner = "workspace-proof-runtime"
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    answer = payload.get("answer", payload)
+    answer = payload.get("values", payload.get("answer", payload))
     assert answer["proof_closeout_summary"]["receipt_bridge"]["status"] == "complete"
     assert answer["proof_closeout_summary"]["status"] == "sufficient-recorded"
+    receipt_tiers = [item for tier in answer["proof_command_tiers"]["tiers"] for item in tier["commands"]]
+    assert next(item for item in receipt_tiers if item["command"] == template_command)["posture"] == "already-satisfied"
 
     config_path = tmp_path / ".agentic-workspace" / "config.toml"
     config_path.write_text(config_path.read_text(encoding="utf-8") + '\nnotes = "registry changed after receipt"\n', encoding="utf-8")
@@ -7175,7 +7179,7 @@ owner = "workspace-cli-runtime"
                 "src/agentic_workspace/workspace_runtime_proof.py",
                 "generated/workspace/python/cli.py",
                 "--select",
-                "proof_route_strategy_decision,required_commands,selected_lanes",
+                "proof_route_strategy_decision,required_commands,selected_lanes,proof_command_tiers",
                 "--format",
                 "json",
             ]
@@ -7201,6 +7205,14 @@ owner = "workspace-cli-runtime"
         assert command in values["required_commands"]
     assert "make test-workspace" not in values["required_commands"]
     assert "domain:workspace_broad_suite" in [lane["id"] for lane in values["selected_lanes"]]
+    tier_commands = [item for tier in values["proof_command_tiers"]["tiers"] for item in tier["commands"]]
+    broad = [item for item in tier_commands if item["command"].startswith("make test-workspace-")]
+    assert broad
+    assert all(
+        (item["execution_class"], item["execution_owner"], item["posture"]) == ("exhaustive-local", "local", "required") for item in broad
+    )
+    lint = next(item for item in tier_commands if item["command"] == "make lint-workspace")
+    assert (lint["execution_class"], lint["execution_owner"], lint["posture"]) == ("focused-local", "local", "required")
 
 
 def test_proof_route_strategy_decision_ignores_untyped_escalation_prose(tmp_path: Path, capsys) -> None:

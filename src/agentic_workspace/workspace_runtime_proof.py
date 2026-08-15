@@ -5225,7 +5225,12 @@ def _proof_narrowness_payload(
 ) -> dict[str, Any]:
     lane_by_id = {str(lane.get("id", "")): lane for lane in selected_lanes}
     broad_acceptance_lanes = {str(lane_id) for lane_id in _list_payload(_PROOF_SELECTION_RULES.get("broad_acceptance_lanes"))}
-    command_tiers = _proof_command_tiers(selected_commands=selected_commands, required_commands=required_commands)
+    command_tiers = _proof_command_tiers(
+        selected_commands=selected_commands,
+        required_commands=required_commands,
+        optional_commands=optional_commands,
+        selected_lanes=selected_lanes,
+    )
     tier_by_command = {
         str(item.get("command", "")): str(tier.get("id", ""))
         for tier in _list_payload(command_tiers.get("tiers"))
@@ -9363,7 +9368,14 @@ def _proof_selection_for_changed_paths(
         "proof_route_explanation": proof_route_explanation,
         "legacy_aliases": {"proof_route_decision": "proof_route_selection"},
         "proof_next_decision": proof_next_decision,
-        "proof_command_tiers": _proof_command_tiers(selected_commands=selected_commands, required_commands=required_commands),
+        "proof_command_tiers": _proof_command_tiers(
+            selected_commands=selected_commands,
+            required_commands=required_commands,
+            optional_commands=optional_commands,
+            selected_lanes=selected_lanes,
+            proof_requirement_tiers=proof_requirement_tiers,
+            proof_receipt_reconciliation=proof_receipt_reconciliation,
+        ),
         "proof_narrowness": proof_narrowness,
         "proof_route_escalation_gate": proof_route_escalation_gate,
         "proof_obligations": proof_obligations,
