@@ -11,6 +11,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import cli
+from agentic_workspace import evaluation as evaluation_module
 from agentic_workspace.client import AWClientError
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.contract_tooling import contract_schema
@@ -1905,14 +1906,88 @@ def test_evaluation_cli_register_observe_status(tmp_path: Path, capsys) -> None:
     status = json.loads(capsys.readouterr().out)
     summary = status["summaries"][0]
     assert summary["fresh_result_admission"]["status"] == "fresh-bound"
+    assert "admission_contract" not in summary["fresh_result_admission"]
     assert summary["conclusion_readiness"]["ready"] is True
     assert summary["next_collection_action"] == "owner-review-or-conclude"
+    assert len(json.dumps(status, separators=(",", ":")).encode()) <= 10_000
+    assert "fresh_result_admission" in status["detail_routes"]
+
+    assert (
+        cli.main(
+            [
+                "evaluation",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+                "status",
+                "--evaluation-id",
+                "eval-cost",
+                "--select",
+                "fresh_result_admission",
+            ]
+        )
+        == 0
+    )
+    detailed = json.loads(capsys.readouterr().out)["summaries"][0]
+    assert detailed["fresh_result_admission"]["current_result_identity"]["id"] == observed["result_identity"]["id"]
+    assert "admission_contract" in detailed["fresh_result_admission"]
 
     assert (
         cli.main(["evaluation", "--target", str(tmp_path), "--format", "json", "prune", "--evaluation-id", "eval-cost", "--dry-run"]) == 0
     )
     prune = json.loads(capsys.readouterr().out)
     assert prune["operation_id"] == "evaluation.prune"
+
+
+def test_default_evaluation_status_does_not_construct_full_summary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+
+    def reject_full_summary(**kwargs: object) -> dict[str, object]:
+        raise AssertionError("default status constructed selector-only full detail")
+
+    monkeypatch.setattr(evaluation_module, "evaluation_summary", reject_full_summary)
+    payload = evaluation_module.evaluation_status_payload(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+    )
+
+    assert payload["summaries"][0]["evaluation_id"] == "eval-1969-operating-loop"
+    assert payload["summaries"][0]["fresh_result_admission"]["status"] == "missing"
+    assert "fresh_result_admission" in payload["detail_routes"]
+
+
+def test_default_evaluation_status_bounds_five_observation_supersession_fixture(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    latest_id = ""
+    for index in range(5):
+        observed = append_observation(
+            target_root=tmp_path,
+            evaluation_id="eval-1969-operating-loop",
+            criterion="reconstruction-cost",
+            result="supports",
+            evidence_refs=[f"proof-receipts/run-{index}.json"],
+            context=_bound_context(tmp_path, proof_revision=f"proof-rev-{index}"),
+        )
+        latest_id = observed["result_identity"]["id"]
+
+    cold = evaluation_module.evaluation_status_payload(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+    )
+    warm = evaluation_module.evaluation_status_payload(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+    )
+
+    item = cold["summaries"][0]
+    assert item["coverage"]["observation_count"] == 5
+    assert item["coverage"]["superseded_result_count"] == 4
+    assert item["fresh_result_admission"]["current_result_identity"]["id"] == latest_id
+    assert item["next_collection_action"] == "owner-review-or-conclude"
+    assert cold == warm
+    assert len(json.dumps(cold, separators=(",", ":")).encode()) <= 10_000
 
 
 def test_evaluation_observe_derives_and_revalidates_authority_from_public_assignment_and_proof(tmp_path: Path, capsys) -> None:

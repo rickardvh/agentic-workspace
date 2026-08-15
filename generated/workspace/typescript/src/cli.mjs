@@ -3057,6 +3057,13 @@ const commandDefinitions = [
                 "--evaluation-id"
               ],
               "name": "evaluation_id"
+            },
+            {
+              "flags": [
+                "--select"
+              ],
+              "help": "Expand one or more comma-separated evaluation status detail fields, or full.",
+              "name": "select"
             }
           ]
         },

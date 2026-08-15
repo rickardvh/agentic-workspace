@@ -475,8 +475,6 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                 next_decision["proof_route_selection"] = route_decision
             if answer.get("proof_command_adjustments"):
                 next_decision["proof_command_adjustments"] = answer["proof_command_adjustments"]
-            if answer.get("proof_invocation_posture", {}).get("configured_active_uv"):
-                next_decision["proof_invocation_posture"] = answer["proof_invocation_posture"]
             if answer.get("proof_closeout_summary"):
                 next_decision["proof_closeout_summary"] = _compact_tiny_proof_closeout_summary(answer["proof_closeout_summary"])
             if answer.get("learned_proof_route_model"):
@@ -568,11 +566,6 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
             **(
                 {"proof_command_adjustments": answer["proof_command_adjustments"]}
                 if isinstance(answer, dict) and answer.get("proof_command_adjustments")
-                else {}
-            ),
-            **(
-                {"proof_invocation_posture": answer["proof_invocation_posture"]}
-                if isinstance(answer, dict) and answer.get("proof_invocation_posture", {}).get("configured_active_uv")
                 else {}
             ),
             **(
@@ -3261,6 +3254,10 @@ def _proof_route_command_is_broad(command: str, *, proof_kind: str = "") -> bool
     return (
         command.startswith("make test-workspace")
         or command == "uv run pytest tests/test_workspace_cli.py -q"
+        or " --docker" in command
+        or " --docker-conformance" in command
+        or "run_operation_conformance_tests.py --target all" in command
+        or ("check_generated_command_packages.py" in command and " --conformance" in command)
         or str(proof_kind or "").strip() == "full-test"
     )
 
@@ -5495,7 +5492,74 @@ def _host_domain_proof_lanes_for_changed_paths(
                 **({"changed_test_owner_route": changed_test_owner_route} if changed_test_owner_route is not None else {}),
             }
         )
-    return lanes
+    return _apply_domain_lane_precedence(lanes)
+
+
+def _domain_lane_precedence_value(lane: dict[str, Any]) -> int | None:
+    raw = str(lane.get("precedence") or _as_dict(lane.get("domain_lane")).get("precedence") or "").strip()
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
+def _apply_domain_lane_precedence(lanes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Let the highest declared behavior precedence own overlapping path matches."""
+    owners_by_path: dict[str, list[dict[str, Any]]] = {}
+    for lane in lanes:
+        if _domain_lane_route_role(lane) != "behavior":
+            continue
+        for path in _list_payload(lane.get("matched_paths")):
+            path_text = str(path).strip()
+            if path_text:
+                owners_by_path.setdefault(path_text, []).append(lane)
+
+    shadowed_by_lane: dict[str, list[dict[str, Any]]] = {}
+    for path, owners in owners_by_path.items():
+        if len(owners) < 2:
+            continue
+        ranked = [(lane, _domain_lane_precedence_value(lane)) for lane in owners]
+        declared = [value for _, value in ranked if value is not None]
+        if not declared:
+            continue
+        highest = max(declared)
+        winners = [lane for lane, value in ranked if value == highest]
+        if len(winners) != 1:
+            continue
+        winner_id = str(winners[0].get("id", ""))
+        for lane, value in ranked:
+            if value == highest:
+                continue
+            shadowed_by_lane.setdefault(str(lane.get("id", "")), []).append(
+                {"path": path, "precedence_owner": winner_id, "precedence": highest}
+            )
+
+    resolved: list[dict[str, Any]] = []
+    for lane in lanes:
+        lane_id = str(lane.get("id", ""))
+        shadowed = shadowed_by_lane.get(lane_id, [])
+        if not shadowed:
+            resolved.append(lane)
+            continue
+        shadowed_paths = {str(item["path"]) for item in shadowed}
+        remaining_paths = [path for path in _list_payload(lane.get("matched_paths")) if str(path) not in shadowed_paths]
+        if not remaining_paths and str(lane.get("matched_scope", "")) == "path-pattern":
+            continue
+        updated = dict(lane)
+        updated["matched_paths"] = remaining_paths
+        updated["precedence_shadowed_paths"] = shadowed
+        domain = dict(_as_dict(updated.get("domain_lane")))
+        domain["matched_paths"] = [
+            match
+            for match in _list_payload(domain.get("matched_paths"))
+            if not isinstance(match, dict) or str(match.get("path", "")) not in shadowed_paths
+        ]
+        domain["precedence_shadowed_paths"] = shadowed
+        updated["domain_lane"] = domain
+        resolved.append(updated)
+    return resolved
 
 
 def _domain_manual_proof_obligations(domain_lanes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -8419,7 +8483,7 @@ def _proof_selection_for_changed_paths(
         focused_route_authority_available=bool(config is not None and config.assurance.domain_proof_lanes),
     )
     broad_acceptance_lanes = {str(lane_id) for lane_id in _list_payload(_PROOF_SELECTION_RULES.get("broad_acceptance_lanes"))}
-    generic_broad_lane_ids = broad_acceptance_lanes - {"generated_command_packages"}
+    generic_broad_lane_ids = broad_acceptance_lanes
     explicit_broad_lane_selected = any(
         str(lane.get("id", "")) == "domain:workspace_broad_suite"
         or str(lane.get("claim_boundary", "")) == "explicit-broad-escalation-required"
@@ -8465,6 +8529,9 @@ def _proof_selection_for_changed_paths(
         generic_broad_without_explicit_escalation=generic_broad_without_explicit_escalation,
     )
     strategy_outcome = str(preliminary_proof_route_strategy_decision["outcome"])
+    focused_evidence_concepts = {
+        str(concept) for lane in focused_domain_lanes for concept in _list_payload(lane.get("evidence_concepts")) if str(concept).strip()
+    }
     if strategy_outcome in {"focused", "route-refinement-required", "broad-escalated", "broad-escalation-required"}:
         for lane in selected_lanes:
             if str(lane.get("id", "")).startswith("domain:"):
@@ -8476,9 +8543,22 @@ def _proof_selection_for_changed_paths(
             lane_is_subsystem_broad = str(lane.get("id", "")).startswith("subsystem:") and any(
                 _proof_route_command_is_broad(command, proof_kind=str(lane.get("proof_kind", ""))) for command in broad_commands
             )
+            lane_is_verification_broad = str(lane.get("id", "")).startswith("verification:") and any(
+                _proof_route_command_is_broad(command, proof_kind=str(lane.get("proof_kind", ""))) for command in broad_commands
+            )
+            lane_is_generated_generic = (
+                str(lane.get("id", "")) == "generated_command_packages" and "generated-package-freshness" in focused_evidence_concepts
+            )
+            lane_contains_broad_command = any(
+                _proof_route_command_is_broad(command, proof_kind=str(lane.get("proof_kind", ""))) for command in broad_commands
+            )
             lane_is_generic_broad_escalation = str(lane.get("id", "")) in generic_broad_lane_ids
             if strategy_outcome in {"focused", "route-refinement-required"}:
-                should_withhold_broad = lane_is_broad_profile or lane_is_subsystem_broad
+                should_withhold_broad = (
+                    lane_is_broad_profile or lane_is_subsystem_broad or lane_is_verification_broad or lane_is_generated_generic
+                )
+            elif strategy_outcome == "broad-escalation-required":
+                should_withhold_broad = lane_is_generic_broad_escalation or lane_contains_broad_command
             else:
                 should_withhold_broad = lane_is_generic_broad_escalation or (
                     bool(lane.get("proof_profile"))

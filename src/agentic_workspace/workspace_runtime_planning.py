@@ -1360,6 +1360,7 @@ def _planning_route_decision_payload(
         planning_revision=planning_revision,
     )
     action_identity = _as_dict(next_packet.get("operation_invocation")).get("input_identity", {})
+    claim_effect_boundary = copy.deepcopy(_as_dict(_as_dict(action_identity).get("claim_effect_boundary")))
     allowed_claims = (
         ["bounded-task-progress"]
         if transition == "none" and bounded
@@ -1391,6 +1392,7 @@ def _planning_route_decision_payload(
             "required_transition": "route-decision policy; detailed reconciliation remains owned by planning reconcile",
         },
         "structured_inputs": route_inputs,
+        "claim_effect_boundary": claim_effect_boundary,
         "mutation_baseline_admission": mutation_baseline_admission,
         "reason_codes": [
             code
@@ -1590,6 +1592,7 @@ def planning_route_consumer_projection(*, route_decision: dict[str, Any], consum
         "decision_id": str(route_decision.get("decision_id") or ""),
         "input_revision": str(route_decision.get("input_revision") or ""),
         "action_identity": copy.deepcopy(_as_dict(route_decision.get("action_identity"))),
+        "claim_effect_boundary": copy.deepcopy(_as_dict(route_decision.get("claim_effect_boundary"))),
         "required_transition": str(route_decision.get("required_transition") or ""),
         "implementation_allowed": bool(route_decision.get("implementation_allowed")),
         "mutation_authority": str(route_decision.get("mutation_authority") or "none"),
@@ -1625,6 +1628,7 @@ def _route_decision_next_action_packet(
     risk = "route-authority-incomplete"
     route_inputs = _as_dict(route_evidence.get("route_inputs"))
     task_binding = _as_dict(route_inputs.get("task_binding"))
+    claim_effect_boundary = copy.deepcopy(_as_dict(route_inputs.get("claim_effect_boundary")))
     owner_facts = _as_dict(route_inputs.get("owner"))
     owner_admission = _as_dict(route_evidence.get("owner_admission"))
     selected_owner = _as_dict(owner_admission.get("selected_owner"))
@@ -1789,6 +1793,7 @@ def _route_decision_next_action_packet(
         "state_update_policy": state_update_policy,
         "allowed_claims": allowed_claims,
         "blocked_claims": blocked_claims,
+        "claim_effect_boundary": claim_effect_boundary,
         "reconciliation_proposal_id": str(route_proposal.get("proposal_id") or route_proposal.get("identity") or ""),
         "reconciliation_proposal_revision": str(route_proposal.get("revision") or route_proposal.get("proposal_revision") or ""),
         "expected_claim_effect": {
@@ -1835,6 +1840,7 @@ def _route_decision_next_action_packet(
                     "state_update_policy",
                     "allowed_claims",
                     "blocked_claims",
+                    "claim_effect_boundary",
                     "reconciliation_proposal_id",
                     "reconciliation_proposal_revision",
                 ],
@@ -2758,6 +2764,90 @@ def _is_bounded_current_task_route(route_decision: Any) -> bool:
     )
 
 
+def _route_claim_effect_boundary(*, task_text: str | None, changed_paths: list[str]) -> dict[str, Any]:
+    """Compile the installed-payload claim boundary as a canonical route fact."""
+
+    normalized_task = " ".join(str(task_text or "").lower().split())
+    paths = [str(path).replace("\\", "/") for path in changed_paths if str(path).strip()]
+    tokens = set(normalized_task.replace("/", " ").replace("-", " ").split())
+    installed_subjects = {
+        "install",
+        "installed",
+        "installation",
+        "payload",
+        "runtime",
+        "wheel",
+        "package",
+        "packaged",
+        "distribution",
+        "executable",
+    }
+    drift_actions = {"drift", "upgrade", "sync", "freshness", "compatibility"}
+    public_behavior_subjects = {"command", "cli", "entrypoint", "behavior", "behaviour"}
+    proof_actions = {"prove", "proof", "verify", "verification", "validate", "validation"}
+    mutation_actions = {"add", "change", "edit", "fix", "implement", "remove", "update", "write"}
+    installed_subject_match = bool(tokens & installed_subjects)
+    explicit_drift_match = bool(tokens & drift_actions) and bool(tokens & (installed_subjects | {"generated"}))
+    public_behavior_match = "public" in tokens and bool(tokens & public_behavior_subjects)
+    payload_proof_match = bool(tokens & proof_actions) and bool(tokens & (installed_subjects | public_behavior_subjects))
+    payload_path_match = any(
+        path
+        in {
+            ".agentic-workspace/config.toml",
+            ".agentic-workspace/payload-provenance.json",
+            "pyproject.toml",
+            "uv.lock",
+            "src/agentic_workspace/workspace_runtime_core.py",
+            "src/agentic_workspace/workspace_runtime_primitives.py",
+            "src/agentic_workspace/workspace_runtime_startup.py",
+        }
+        or path.startswith(("generated/", "scripts/generate/", "scripts/release/", "src/agentic_workspace/contracts/"))
+        or path.endswith(("/pyproject.toml", "/package.json", "/package-lock.json", "/pnpm-lock.yaml"))
+        for path in paths
+    )
+    dependency = (
+        "dependent"
+        if payload_path_match or installed_subject_match or explicit_drift_match or public_behavior_match or payload_proof_match
+        else "independent"
+        if normalized_task
+        else "unknown"
+    )
+    effect_class = (
+        "repo-mutation"
+        if paths
+        else "planned-repo-mutation"
+        if tokens & mutation_actions
+        else "read-only-inspection"
+        if normalized_task
+        else "unresolved"
+    )
+    matched_facts = [
+        fact
+        for fact, matched in (
+            ("changed-path-effect", bool(paths)),
+            ("installed-payload-path", payload_path_match),
+            ("installed-artifact-subject", installed_subject_match),
+            ("installed-drift-operation", explicit_drift_match),
+            ("public-command-behavior", public_behavior_match),
+            ("payload-dependent-proof", payload_proof_match),
+        )
+        if matched
+    ]
+    return {
+        "effect_class": effect_class,
+        "installed_payload_dependency": dependency,
+        "claim_classes": (
+            ["installed-payload-behavior", "installed-payload-freshness"]
+            if dependency == "dependent"
+            else ["checked-in-source-evidence"]
+            if dependency == "independent"
+            else []
+        ),
+        "matched_facts": matched_facts,
+        "changed_path_count": len(paths),
+    }
+
+
 def _structured_route_inputs(
     *,
     target_root: Path,
@@ -2829,6 +2919,7 @@ def _structured_route_inputs(
         "task_relation": task_relation,
         "owner_posture": owner_posture,
         "route_inputs": {
+            "claim_effect_boundary": _route_claim_effect_boundary(task_text=task_text, changed_paths=changed_paths),
             "task_binding": {
                 "basis": task_basis,
                 "shared_refs": shared_refs,

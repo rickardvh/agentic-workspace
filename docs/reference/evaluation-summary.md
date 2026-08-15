@@ -13,4 +13,6 @@ Compact derived status for registered evaluations and local observations.
 | (root) | object | yes |  | Compact derived status for registered evaluations and local observations. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `kind` | const `"agentic-workspace/evaluation-summary/v1"` | yes |  | Discriminator identifying the derived evaluation summary payload. |  |  |
 | `path` | string | yes |  | Definition store used to derive the summary. |  |  |
+| `detail_routes` | object | no |  | Exact selectors that expand compact evaluation status fields on demand. |  |  |
+| `detail_routes.<name>` | string | no |  | Selector for retrieving the named detailed evaluation status field. |  |  |
 | `summaries` | array of object | yes |  | Compact derived status entries for selected evaluations. |  |  |

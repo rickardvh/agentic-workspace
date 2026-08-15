@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "checked_in_justification": "Bounded maintainer evidence retains the exact public release locator, resolver graph, and second-process result required for distribution closure review.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Post-publication rehearsal evidence is diagnostic proof and does not replace release-owned readiness or promotion authority.",
+      "owner": "workspace-release-maintainers",
+      "pattern": "docs/maintainer/public-install-rehearsal-v*.json",
+      "schema_or_validator": "scripts/check/check_package_identity.py::public_install_rehearsal_errors",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
       "editable_by_agents": true,
       "format": "json",

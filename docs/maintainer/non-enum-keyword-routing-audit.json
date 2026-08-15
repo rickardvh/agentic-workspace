@@ -5,15 +5,6 @@
   "entries": [
     {
       "path": "src/agentic_workspace/workspace_runtime_core.py",
-      "function": "_installed_state_drift_triage_payload",
-      "variable": "freshness_terms",
-      "classification": "advisory-diagnostic",
-      "authority": "The table flags task text that may make installed-state freshness relevant to closeout; it does not decide proof, ownership, or workflow state.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface installed-state drift attention; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "src/agentic_workspace/workspace_runtime_core.py",
       "function": "_read_only_meta_task",
       "variable": "meta_terms",
       "classification": "advisory-diagnostic",

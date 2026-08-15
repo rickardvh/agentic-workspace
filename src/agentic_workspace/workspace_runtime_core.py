@@ -143,6 +143,7 @@ from agentic_workspace.current_work_context import (
 )
 from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
+from agentic_workspace.operating_decision import project_startup_claim_effect_authority
 from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
@@ -1108,6 +1109,105 @@ def _necessary_surface_action(kind: str, path: str, detail: str) -> dict[str, st
     }
 
 
+def _necessary_surface_deletion_impact(*, target_root: Path, remove_candidates: list[str]) -> dict[str, Any]:
+    """Expand removal actions before deciding whether they are safe to apply."""
+    tracked_paths: list[str] = []
+    enumeration_error = ""
+    git_metadata_present = _git_metadata_dir(target_root=target_root) is not None
+    if remove_candidates and git_metadata_present:
+        try:
+            completed = subprocess.run(
+                ["git", "ls-files", "-z", "--", *remove_candidates],
+                cwd=target_root,
+                capture_output=True,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            enumeration_error = type(exc).__name__
+        else:
+            if completed.returncode != 0:
+                enumeration_error = f"git-ls-files-exit-{completed.returncode}"
+            else:
+                tracked_paths = sorted(
+                    path.decode("utf-8", errors="replace").replace("\\", "/") for path in completed.stdout.split(b"\0") if path
+                )
+
+    removable_classes = {
+        "removable-package-owned-payload",
+        "local-environment-provenance",
+        "transient-handoff-scratch",
+    }
+    unknown_ownership_paths = sorted(
+        relative for relative in remove_candidates if _necessary_surface_path_class(relative) not in removable_classes
+    )
+
+    ambiguous_paths: list[str] = []
+    escaped_paths: list[str] = []
+    aw_root = (target_root / ".agentic-workspace").resolve(strict=False)
+    for relative in remove_candidates:
+        path = target_root / relative
+        resolved = path.resolve(strict=False)
+        if not _path_under_root(resolved, aw_root):
+            escaped_paths.append(relative)
+            continue
+        is_junction = bool(getattr(path, "is_junction", lambda: False)())
+        if path.is_symlink() or is_junction:
+            ambiguous_paths.append(relative)
+            continue
+        if path.is_dir():
+            for child in path.rglob("*"):
+                child_is_junction = bool(getattr(child, "is_junction", lambda: False)())
+                if child.is_symlink() or child_is_junction:
+                    try:
+                        ambiguous_paths.append(child.relative_to(target_root).as_posix())
+                    except ValueError:
+                        ambiguous_paths.append(str(child))
+                    if len(ambiguous_paths) >= 10:
+                        break
+
+    source_checkout = _is_agentic_workspace_source_checkout(target_root)
+    protected_paths = tracked_paths if source_checkout else []
+    broad_threshold = 100
+    reasons: list[str] = []
+    if enumeration_error:
+        reasons.append("tracked-file-enumeration-failed")
+    if unknown_ownership_paths:
+        reasons.append("removal-ownership-unresolved")
+    if protected_paths:
+        reasons.append("source-checkout-protected-surface")
+    if len(tracked_paths) >= broad_threshold:
+        reasons.append("broad-tracked-deletion-impact")
+    if ambiguous_paths:
+        reasons.append("symlink-or-reparse-point-ambiguity")
+    if escaped_paths:
+        reasons.append("path-containment-failure")
+    return {
+        "kind": "agentic-workspace/necessary-surface-deletion-impact/v1",
+        "status": "review-required" if reasons else "bounded",
+        "source_development_posture": "package-source-checkout" if source_checkout else "downstream-host",
+        "action_path_count": len(remove_candidates),
+        "tracked_file_count": len(tracked_paths),
+        "tracked_file_sample": tracked_paths[:10],
+        "tracked_file_enumeration": {
+            "status": "failed" if enumeration_error else "current" if git_metadata_present else "not-applicable-non-git-host",
+            "error": enumeration_error or None,
+        },
+        "protected_file_count": len(protected_paths),
+        "protected_file_sample": protected_paths[:10],
+        "ambiguous_path_sample": ambiguous_paths[:10],
+        "escaped_path_sample": escaped_paths[:10],
+        "unknown_ownership_path_sample": unknown_ownership_paths[:10],
+        "broad_deletion_threshold": broad_threshold,
+        "review_reasons": reasons,
+        "sample_limit": 10,
+        "detail_command": "git ls-files -- .agentic-workspace",
+        "rule": (
+            "Package source-checkout tracked operating surfaces are maintainer-owned, and broad or ambiguous "
+            "deletion impact must be reviewed before necessary-surface migration can apply."
+        ),
+    }
+
+
 def _remove_necessary_surface_candidate(*, target_root: Path, relative: str) -> tuple[bool, str | None]:
     path = target_root / relative
     if not path.exists() and not path.is_symlink():
@@ -1138,6 +1238,8 @@ def _necessary_surfaces_migration_payload(
     payload_mirror = receipt.get("payload_mirror") if isinstance(receipt, dict) else None
     explicit_mirror = payload_mirror is True
     remove_candidates = _existing_necessary_surface_remove_candidates(target_root)
+    deletion_impact = _necessary_surface_deletion_impact(target_root=target_root, remove_candidates=remove_candidates)
+    impact_review_required = deletion_impact["status"] == "review-required"
     preserve_actions = [
         _necessary_surface_action("preserve", relative, "preserve necessary repo-owned or adopted durable AW state")
         for relative in _necessary_surface_preserve_candidates(target_root)
@@ -1153,17 +1255,33 @@ def _necessary_surfaces_migration_payload(
             }
         )
     else:
+        if impact_review_required:
+            status = "review-required"
+            for reason in deletion_impact["review_reasons"]:
+                warnings.append(
+                    {
+                        "path": ".agentic-workspace",
+                        "message": f"necessary-surface migration requires review: {reason}",
+                        "reason": reason,
+                    }
+                )
+        effective_dry_run = dry_run or impact_review_required
         skill_actions = [
             _necessary_surface_action(action["kind"], action["path"], action["detail"])
-            for action in _required_skill_surface_actions(target_root=target_root, selected_modules=selected_modules, dry_run=dry_run)
+            for action in _required_skill_surface_actions(
+                target_root=target_root,
+                selected_modules=selected_modules,
+                dry_run=effective_dry_run,
+            )
         ]
         skill_write_actions = [action for action in skill_actions if action["kind"] not in {"current"}]
-        status = "safe-apply-available" if remove_candidates or skill_write_actions else "already-necessary-surfaces"
+        if not impact_review_required:
+            status = "safe-apply-available" if remove_candidates or skill_write_actions else "already-necessary-surfaces"
         actions.extend(skill_actions)
         for relative in remove_candidates:
             actions.append(
                 _necessary_surface_action(
-                    "would remove" if dry_run else "remove",
+                    "would remove" if effective_dry_run else "remove",
                     relative,
                     "remove package-owned generic AW payload, transient handoff residue, or local executable provenance",
                 )
@@ -1184,7 +1302,7 @@ def _necessary_surfaces_migration_payload(
                     "write necessary-surfaces adoption receipt after preserving durable state",
                 )
             )
-    if not dry_run and not explicit_mirror:
+    if not dry_run and not explicit_mirror and not impact_review_required:
         applied_actions: list[dict[str, str]] = []
         for action in actions:
             if action["kind"] != "remove":
@@ -1224,9 +1342,18 @@ def _necessary_surfaces_migration_payload(
         else "necessary-surfaces"
         if payload_mirror is False
         else "absent",
-        "safe_to_apply": not explicit_mirror,
+        "safe_to_apply": not explicit_mirror and not impact_review_required,
         "actions": actions,
         "warnings": warnings,
+        "needs_review": [
+            {
+                "reason": reason,
+                "next_action": "inspect-deletion-impact",
+                "detail_selector": "migration.deletion_impact",
+            }
+            for reason in deletion_impact["review_reasons"]
+        ],
+        "deletion_impact": deletion_impact,
         "summary": {
             "preserve_count": len(preserve_actions),
             "remove_count": len(remove_actions),
@@ -1234,6 +1361,7 @@ def _necessary_surfaces_migration_payload(
         },
         "dry_run_command": _necessary_surface_cli_command(cli_invoke=config.cli_invoke, dry_run=True),
         "apply_command": _necessary_surface_cli_command(cli_invoke=config.cli_invoke, dry_run=False),
+        "next_action": "inspect-deletion-impact" if impact_review_required else "apply-reviewed-migration",
         "recheck_command": _command_with_cli_invoke(
             command="agentic-workspace doctor --target . --format json",
             cli_invoke=config.cli_invoke,
@@ -16652,6 +16780,8 @@ def _derived_continuation_projection_payloads(
     installed_state_closeout_residue = _installed_state_closeout_residue_payload(
         installed_state=_as_dict(source_payload.get("installed_state_compatibility")),
         active_planning_record=closeout_planning_record,
+        target_root=target_root,
+        config=config,
         cli_invoke=config.cli_invoke,
     )
     closeout_report = _closeout_report_payload(
@@ -18529,6 +18659,17 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
                 "max_estimated_tokens": 2500,
                 "max_human_lines": 80,
                 "expansion_trigger": "--select or --verbose",
+                "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
+            },
+            {
+                "surface": "evaluation status",
+                "profile": "evaluation-summary/v1",
+                "status": "budget-proven",
+                "max_json_bytes": 10000,
+                "max_field_count": 260,
+                "max_estimated_tokens": 2500,
+                "max_human_lines": 80,
+                "expansion_trigger": "--select",
                 "proof": "test_all_declared_ordinary_profiles_obey_authoritative_output_budgets",
             },
             {
@@ -30424,6 +30565,7 @@ def _read_only_meta_task(task_text: str | None) -> bool:
         "dogfooding report",
         "dogfood report",
         "dogfooding feedback",
+        "dogfooding experience",
         "retrospective",
         "reflection",
         "reflect",
@@ -30482,7 +30624,11 @@ def _installed_state_drift_relevant_changed_paths(changed_paths: Sequence[str]) 
 
 
 def _installed_state_drift_triage_payload(
-    *, installed_state: dict[str, Any], task_text: str | None, changed_paths: Sequence[str], cli_invoke: str
+    *,
+    installed_state: dict[str, Any],
+    claim_effect_authority: dict[str, Any],
+    changed_paths: Sequence[str],
+    cli_invoke: str,
 ) -> dict[str, Any]:
     status = str(installed_state.get("status") or "compatible")
     action_state = installed_state.get("action_state", {}) if isinstance(installed_state.get("action_state"), dict) else {}
@@ -30499,30 +30645,16 @@ def _installed_state_drift_triage_payload(
         )
     action_effect = installed_state.get("action_effect", {}) if isinstance(installed_state.get("action_effect"), dict) else {}
     force = str(action_effect.get("force") or "advisory")
-    task = " ".join(str(task_text or "").lower().split())
-    freshness_terms = (
-        "installed state",
-        "payload freshness",
-        "payload fresh",
-        "payload drift",
-        "upgrade",
-        "release",
-        "version",
-        "semver",
-        "generated surface",
-        "generated artifact",
-        "adapter compatibility",
-        "source checkout parity",
-    )
     claim_relevant_paths = _installed_state_drift_relevant_changed_paths(changed_paths)
-    claim_relevant = bool(claim_relevant_paths) or any(term in task for term in freshness_terms)
+    dependency = str(claim_effect_authority.get("installed_payload_dependency") or "unknown")
+    claim_relevant = bool(claim_relevant_paths) or dependency == "dependent"
     if action_state_name == "no_repair_needed" or status == "compatible":
         triage = "not_applicable"
     elif action_state_name == "blocking_incompatible" or force == "required_before_execution":
         triage = "claim_blocking"
     elif claim_relevant:
         triage = "actionable_now"
-    elif _read_only_meta_task(task_text):
+    elif claim_effect_authority.get("effect_class") == "read-only-inspection" and dependency == "independent":
         triage = "background_advisory"
     else:
         triage = "waived_for_narrow_work"
@@ -30553,6 +30685,22 @@ def _installed_state_drift_triage_payload(
         "force": force,
         "claim_relevant": claim_relevant,
         "claim_relevant_paths": claim_relevant_paths,
+        "claim_effect_authority": {
+            key: claim_effect_authority.get(key)
+            for key in (
+                "kind",
+                "status",
+                "decision_id",
+                "input_revision",
+                "action_identity",
+                "effect_class",
+                "installed_payload_dependency",
+                "claim_classes",
+                "matched_facts",
+                "authority",
+            )
+            if claim_effect_authority.get(key) not in (None, "", [], {})
+        },
         "repair_command": resolution_command,
         "selector": "installed_state_compatibility",
         "claim_boundary": action_effect.get(
@@ -30576,6 +30724,7 @@ def _compact_installed_state_drift_triage(triage: Any) -> dict[str, Any]:
             "force",
             "claim_relevant",
             "claim_relevant_paths",
+            "claim_effect_authority",
             "repair_command",
             "selector",
             "claim_boundary",
@@ -30611,6 +30760,8 @@ def _installed_state_closeout_residue_payload(
     *,
     installed_state: dict[str, Any],
     active_planning_record: dict[str, Any],
+    target_root: Path,
+    config: WorkspaceConfig,
     cli_invoke: str,
 ) -> dict[str, Any]:
     status = str(installed_state.get("status") or "compatible")
@@ -30623,9 +30774,23 @@ def _installed_state_closeout_residue_payload(
     delegated = _as_dict(active_planning_record.get("delegated_judgment"))
     requested_outcome = str(delegated.get("requested outcome") or delegated.get("requested_outcome") or "").strip()
     changed_paths = _closeout_changed_surface_paths(active_planning_record)
+    execution_posture = _execution_posture_payload(
+        config=config,
+        changed_paths=changed_paths,
+        task_text=requested_outcome,
+        target_root=target_root,
+    )
+    planning_gate = _planning_safety_gate_payload(
+        target_root=target_root,
+        config=config,
+        changed_paths=changed_paths,
+        task_text=requested_outcome,
+        execution_posture=execution_posture,
+    )
+    route_decision = _as_dict(planning_gate.get("route_decision"))
     triage = _installed_state_drift_triage_payload(
         installed_state=installed_state,
-        task_text=requested_outcome,
+        claim_effect_authority=project_startup_claim_effect_authority(route_decision=route_decision),
         changed_paths=changed_paths,
         cli_invoke=cli_invoke,
     )
@@ -32138,37 +32303,22 @@ def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke
 
 
 def _apply_installed_state_fast_start_gate(
-    *, payload: dict[str, Any], target_root: Path, config: WorkspaceConfig, startup_template: dict[str, Any]
+    *,
+    payload: dict[str, Any],
+    target_root: Path,
+    config: WorkspaceConfig,
+    startup_template: dict[str, Any],
+    task_text: str | None,
 ) -> None:
-    installed_state = payload.get("installed_state_compatibility")
-    if not isinstance(installed_state, dict):
-        return
-    action_effect = _as_dict(installed_state.get("action_effect"))
-    action_state = _as_dict(installed_state.get("action_state"))
-    payload_target = _as_dict(action_state.get("payload_target"))
-    if action_effect.get("force") != "required_before_execution" or payload_target.get("policy") != "required-before-work":
-        return
-    command = str(action_effect.get("resolution_command") or action_state.get("dry_run_command") or "")
-    recheck_command = str(action_state.get("recheck_command") or payload_target.get("recheck_command") or "")
-    payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
-        surface="start",
-        decision="installed-payload-target-required-before-work",
-        reason="Repo-declared payload target policy requires explicit sync before ordinary workspace work.",
-        required_next_action="run-installed-payload-target-upgrade",
-        evidence_required=["installed payload target recheck"],
-        hard_gate=True,
+    from agentic_workspace.workspace_runtime_startup import _apply_required_payload_target_start_gate as owner
+
+    owner(
+        payload=payload,
+        target_root=target_root,
+        config=config,
+        startup_template=startup_template,
+        task_text=task_text,
     )
-    payload["immediate_next_allowed_action"] = {
-        "action": "run-installed-payload-target-upgrade",
-        "summary": str(installed_state.get("reason") or action_effect.get("claim_boundary") or ""),
-        "command": command,
-        "run": command,
-        "risk": "required-before-work payload target gate",
-        "required_inputs": ["target repo"],
-        "next_proof": recheck_command or f"{config.cli_invoke} start --target {target_root.as_posix()} --format json",
-        "read_first": [command] if command else [],
-        "open_execplan_only_when": startup_template["open_execplan_only_when"],
-    }
 
 
 def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
@@ -32396,18 +32546,6 @@ def _start_tiny_payload_fast(
         payload["dogfooding_signal_status"] = dogfooding_signal_status
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_compatibility"] = installed_state_compatibility
-        payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
-            installed_state=installed_state_compatibility,
-            task_text=task_text,
-            changed_paths=changed_paths,
-            cli_invoke=config.cli_invoke,
-        )
-        _apply_installed_state_fast_start_gate(
-            payload=payload,
-            target_root=target_root,
-            config=config,
-            startup_template=startup_template,
-        )
     sibling_freshness = _sibling_repo_aw_freshness_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
     if sibling_freshness["status"] != "not-referenced":
         payload["sibling_repo_aw_freshness"] = sibling_freshness
@@ -32454,6 +32592,14 @@ def _start_tiny_payload_fast(
     read_only_response = _read_only_response_posture_payload(task_text=task_text, changed_paths=changed_paths)
     if read_only_response["status"] == "read-only-reporting":
         payload["read_only_response"] = read_only_response
+    if installed_state_compatibility["status"] != "compatible":
+        _apply_installed_state_fast_start_gate(
+            payload=payload,
+            target_root=target_root,
+            config=config,
+            startup_template=startup_template,
+            task_text=task_text,
+        )
     task_mentioned_paths = _task_mentioned_existing_paths(task_text=task_text, target_root=target_root)
     task_path_references = _task_path_reference_payload(task_text=task_text, detected_paths=task_mentioned_paths)
     if task_path_references["status"] == "present":
@@ -32533,6 +32679,13 @@ def _start_tiny_payload_fast(
         route_owner_rejected = _as_dict(route_decision.get("owner_admission")).get("status") == "rejected"
         if route_decision.get("task_relation") != "not-applicable" or route_owner_rejected:
             payload["route_decision"] = route_decision
+    if installed_state_compatibility["status"] != "compatible":
+        payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
+            installed_state=installed_state_compatibility,
+            claim_effect_authority=project_startup_claim_effect_authority(route_decision=_as_dict(route_decision)),
+            changed_paths=changed_paths,
+            cli_invoke=config.cli_invoke,
+        )
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
     route_applies = (
@@ -32871,6 +33024,17 @@ def _start_tiny_payload_fast(
     )
     if int(assurance_requirements.get("configured_count", 0) or 0) > 0:
         payload["assurance_requirements"] = assurance_requirements
+    if installed_state_compatibility["status"] != "compatible":
+        # Route-specific overlays above may refine the ordinary next action,
+        # but they cannot widen a required installed-payload claim/effect
+        # gate. Recompose it last from the same compiled authority.
+        _apply_installed_state_fast_start_gate(
+            payload=payload,
+            target_root=target_root,
+            config=config,
+            startup_template=startup_template,
+            task_text=task_text,
+        )
     payload["routine_work_context"] = _routine_work_context_payload(
         source_payload=payload,
         surface="start",

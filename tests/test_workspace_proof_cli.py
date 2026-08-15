@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import os
 import sys
 import tomllib
 from contextlib import contextmanager
@@ -621,7 +622,7 @@ def test_proof_changed_selector_returns_path_based_validation_lane(tmp_path: Pat
     assert payload["surface"] == "proof"
     assert payload["selector"] == {"changed": [".agentic-workspace/planning/state.toml"]}
     answer = payload["answer"]
-    expected_target = Path(os.path.relpath(tmp_path, ROOT)).as_posix()
+    expected_target = Path(os.path.relpath(tmp_path, Path.cwd())).as_posix()
     assert answer["kind"] == "proof-selection/v1"
     assert answer["selected_lanes"][0]["id"] == "planning_surfaces"
     assert answer["required_commands"] == [
@@ -2587,9 +2588,9 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
         "proof_invocation_posture",
     }
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
-    assert payload["proof_narrowness"]["status"] == "broad_required"
+    assert payload["proof_narrowness"]["status"] == "narrow_required"
     assert payload["proof_narrowness"]["broad_suite_boundary_status"] == "explicit-escalation-required"
-    assert payload["proof_narrowness"]["broad_suite_boundary_reason"]
+    assert "broad_suite_boundary_reason" not in payload["proof_narrowness"]
     assert payload["next"]["action"] == "route-refinement-required"
     assert payload["next"]["command"] is None
     assert payload["manual_verification"]["status"] == "route-refinement-required"
@@ -7263,6 +7264,80 @@ owner = "workspace-cli-runtime"
     assert values["proof_route_strategy_decision"]["broad_escalation"]["status"] == "missing"
     assert "make test-workspace" not in values["required_commands"]
     assert "domain:workspace_broad_suite" not in [lane["id"] for lane in values["selected_lanes"]]
+
+
+def test_focused_operation_route_bounds_and_deduplicates_generated_proof(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.generated_command_packages]
+purpose = "Generic generated command package behavior."
+applies_to_paths = ["generated/workspace/python/**", "generated/workspace/typescript/**"]
+commands = ["python -c \\"print('docker --docker')\\"", "python -c \\"print('all operations --target all')\\""]
+evidence_concepts = ["generated-package-freshness"]
+proof_profiles = ["workspace_behavior"]
+claim_boundary = "generic-generated-proof"
+owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "55"
+
+[assurance.domain_proof_lanes.evaluation_operation_runtime]
+purpose = "Exact Evaluation operation behavior and generated projection proof."
+applies_to_paths = ["src/agentic_workspace/evaluation.py", "src/agentic_workspace/contracts/operations/evaluation.*.json", "generated/workspace/python/operations/evaluation.*.json", "generated/workspace/typescript/resources/operations/evaluation.*.json", "tests/test_workspace_evaluation.py"]
+commands = ["python -c \\"print('evaluation behavior')\\"", "python -c \\"print('contract tooling')\\"", "python -c \\"print('smallest generated consumer')\\""]
+evidence_concepts = ["evaluation-operation-runtime", "generated-package-freshness"]
+proof_profiles = ["workspace_behavior"]
+claim_boundary = "focused-evaluation-operation-proof"
+owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "70"
+allowed_composition = ["maintenance", "evidence", "broad"]
+""",
+        encoding="utf-8",
+    )
+    changed_paths = [
+        "src/agentic_workspace/evaluation.py",
+        "src/agentic_workspace/contracts/operations/evaluation.status.json",
+        "generated/workspace/python/operations/evaluation.status.json",
+        "generated/workspace/typescript/resources/operations/evaluation.status.json",
+        "tests/test_workspace_evaluation.py",
+    ]
+    for path in changed_paths:
+        _write(tmp_path / path, "{}\n" if path.endswith(".json") else "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                *changed_paths,
+                "--select",
+                "proof_route_strategy_decision,route_refinement_required,required_commands,selected_commands",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert values["route_refinement_required"]["status"] == "not-required"
+    required_commands = values["required_commands"]
+    assert len(required_commands) == len(set(required_commands))
+    assert len(required_commands) <= 10
+    assert all("--docker" not in command for command in required_commands)
+    assert all("--target all" not in command for command in required_commands)
+    assert all("run_operation_conformance_tests.py" not in command for command in required_commands)
+    assert sum("evaluation behavior" in command for command in required_commands) == 1
+    assert sum("contract tooling" in command for command in required_commands) == 1
+    assert sum("smallest generated consumer" in command for command in required_commands) == 1
+    assert all(command["lane"] != "domain:generated_command_packages" for command in values["selected_commands"])
 
 
 def test_proof_route_strategy_decision_requires_matching_high_risk_requirement_ref(tmp_path: Path, capsys) -> None:

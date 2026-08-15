@@ -31,6 +31,7 @@ Use `implement --changed <paths>` before `start` when the user or current contex
 | `summary` | `summary --format json` | `summary --select <field.path> --format json` or `summary --verbose --format json` |
 | `config` | `config --format json` | `config --select <field.path> --format json` or `config --verbose --format json` |
 | `report` | default router or `--section <name>` | `report --verbose --format json` |
+| `evaluation status` | lifecycle, coverage, criteria, freshness, owner, blockers, and next action | `evaluation status --evaluation-id <id> --select <field-or-full> --format json` |
 
 Commands that do not yet expose `--select` should still follow the same rule: the ordinary output should answer the command's immediate question first, then point to a detail command when more context is needed.
 
@@ -53,7 +54,7 @@ Named ordinary profiles declare four limits in the versioned
 - non-empty human-render lines
 
 The package tests exercise cold and warm `init` plus ordinary `start`, `report`,
-and `doctor` fixtures. A budget increase is a reviewed contract change, not a
+`doctor`, and Evaluation status fixtures. A budget increase is a reviewed contract change, not a
 side effect of adding another default field. Ordinary `init` JSON uses a
 `decision-envelope/v1`; `init --verbose --format json` is the exact expansion
 route for module reports, config, effects, provenance, and the full lifecycle

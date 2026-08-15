@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import fnmatch
 import hashlib
 import json
@@ -1394,6 +1395,22 @@ def _mutation_baseline_is_current(mutation: dict[str, Any]) -> bool:
 
 def _scope_fingerprint(paths: list[str]) -> str:
     return "sha256:" + hashlib.sha256(json.dumps(sorted(paths), separators=(",", ":"), ensure_ascii=True).encode()).hexdigest()
+
+
+def project_startup_claim_effect_authority(*, route_decision: dict[str, Any]) -> dict[str, Any]:
+    """Mechanically project the canonical Planning route claim/effect fact."""
+
+    boundary = _as_dict(route_decision.get("claim_effect_boundary"))
+    return {
+        "kind": "agentic-workspace/startup-claim-effect-projection/v1",
+        "status": "projected",
+        "decision_id": str(route_decision.get("decision_id") or ""),
+        "input_revision": str(route_decision.get("input_revision") or ""),
+        "action_identity": copy.deepcopy(_as_dict(route_decision.get("action_identity"))),
+        **copy.deepcopy(boundary),
+        "authority": "planning_safety_gate.route_decision",
+        "rule": "Startup triage and gates project the canonical route decision; consumers do not reclassify task wording.",
+    }
 
 
 def compile_implement_context_operating_decision(

@@ -361,11 +361,27 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
     assert "--proof-from" in manual[0].detail
     assert (insufficient / ".agentic-workspace/planning/execplans/merged-child.plan.json").exists()
 
-    assert cli.main(["start", "--target", str(insufficient), "--task", "Fix unrelated docs typo", "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(insufficient),
+                "--task",
+                "Fix unrelated docs typo",
+                "--select",
+                "planning_safety_gate,next_safe_action",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
     blocked_start = json.loads(capsys.readouterr().out)
-    assert blocked_start["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
-    assert blocked_start["next_safe_action"]["implementation_allowed"] is False
-    route = blocked_start["context"]["route_decision"]
+    selected = blocked_start["values"]
+    assert selected["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
+    assert selected["next_safe_action"]["implementation_allowed"] is False
+    route = selected["planning_safety_gate"]["route_decision"]
     assert route["selected_owner"].endswith("merged-child.plan.json")
     assert route["owner_admission"]["repair_route"]["status"] == "available"
 
@@ -6029,6 +6045,7 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
     assert attention_plan["action_semantics"]["safe_explicit_apply"] is True
     assert attention_plan["action_semantics"]["manual_review_required"] is False
     assert attention_plan["command_boundary"]["reportable_commands"]["dry_run"].startswith("agentic-workspace upgrade --target .")
+
     assert tmp_path.as_posix() in attention_plan["command_boundary"]["machine_commands"]["dry_run"]
     assert all("release" not in item["required_action"].lower() for item in attention_plan["attention_items"])
     assert compatibility["payload_surface_manifest"]["kind"] == "agentic-workspace/payload-surface-manifest/v1"
@@ -6068,6 +6085,41 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
     assert report_payload["answer"]["payload"]["target"]["status"] == "target-mismatch"
     assert report_payload["answer"]["action_state"]["recheck_command"]
     assert report_payload["answer"]["payload_upgrade_attention_plan"]["status"] == attention_plan["status"]
+
+
+def test_payload_target_drift_keeps_unrelated_read_only_start_actionable(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[payload]\n"
+        'target_release = "source-current"\n'
+        'minimum_capabilities = ["installed-state-sync-v2"]\n'
+        'policy = "required-before-work"\n'
+        "dogfood_latest = true\n",
+        encoding="utf-8",
+    )
+    provenance_path = workspace / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance.pop("payload_capabilities", None)
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    task = "Review recent Agentic Workspace dogfooding experience and identify remaining problems"
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["next_safe_action"]["next_safe_action"] == "continue-read-only-source-evidence-review"
+    assert payload["next_safe_action"]["implementation_allowed"] is False
+    assert payload["next_safe_action"]["read_only_allowed"] is True
+    scope = payload["installed_state_read_only_scope"]
+    assert scope["repair_deferred"] is True
+    assert "--to-payload-target --dry-run" in scope["repair_command"]
+    assert "installed runtime behavior" in scope["blocked_conclusions"]
+    assert "installed_state_compatibility=payload-upgrade-required" in payload["action_signals"]["changed_signals"]
+    assert "installed_state_compatibility" in payload["action_signals"]["advisory_detail"]["selectors"]
+    assert len(json.dumps(payload, separators=(",", ":")).encode()) <= 10_000
 
 
 def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: Path, capsys) -> None:
@@ -6159,6 +6211,7 @@ def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: P
 
 def test_report_bootstrap_footprint_recommends_legacy_payload_migration(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     workspace = tmp_path / ".agentic-workspace"
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
@@ -6190,6 +6243,7 @@ def test_report_bootstrap_footprint_recommends_legacy_payload_migration(tmp_path
 
 def test_upgrade_to_necessary_surfaces_preserves_durable_state_and_uses_package_skills(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     workspace = tmp_path / ".agentic-workspace"
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
@@ -6248,6 +6302,222 @@ def test_upgrade_to_necessary_surfaces_preserves_durable_state_and_uses_package_
     assert "necessary surfaces" not in json.dumps(status_payload).lower()
 
 
+def test_upgrade_to_necessary_surfaces_fails_closed_for_tracked_source_checkout_payload(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    workspace = tmp_path / ".agentic-workspace"
+    (workspace / "adoption-receipt.json").unlink()
+    _write(tmp_path / "pyproject.toml", '[project]\nname = "agentic-workspace"\nversion = "0.0.0"\n')
+    _write(tmp_path / "src" / "agentic_workspace" / "__init__.py", "")
+    _write(tmp_path / "AGENTS.md", "# Source checkout authority\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    protected_path = workspace / "planning" / "schemas"
+    assert protected_path.exists()
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--dry-run", "--format", "json"]) == 0
+    dry_run = json.loads(capsys.readouterr().out)["migration"]
+
+    assert dry_run["status"] == "review-required"
+    assert dry_run["safe_to_apply"] is False
+    assert dry_run["next_action"] == "inspect-deletion-impact"
+    impact = dry_run["deletion_impact"]
+    assert impact["source_development_posture"] == "package-source-checkout"
+    assert impact["tracked_file_count"] > dry_run["summary"]["remove_count"]
+    assert impact["protected_file_count"] == impact["tracked_file_count"]
+    assert "source-checkout-protected-surface" in impact["review_reasons"]
+    assert dry_run["needs_review"][0]["detail_selector"] == "migration.deletion_impact"
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
+    apply = json.loads(capsys.readouterr().out)["migration"]
+    assert apply["status"] == "review-required"
+    assert apply["safe_to_apply"] is False
+    assert protected_path.exists()
+    assert not any(action["kind"] == "removed" for action in apply["actions"])
+
+
+def test_necessary_surface_deletion_impact_fails_closed_when_git_enumeration_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / ".git").mkdir()
+
+    def failed_git(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.CompletedProcess(args[0], 128, stdout=b"", stderr=b"fixture failure")
+
+    monkeypatch.setattr(workspace_runtime_core.subprocess, "run", failed_git)
+    impact = workspace_runtime_core._necessary_surface_deletion_impact(
+        target_root=tmp_path,
+        remove_candidates=[".agentic-workspace/docs"],
+    )
+
+    assert impact["status"] == "review-required"
+    assert impact["tracked_file_enumeration"]["status"] == "failed"
+    assert "tracked-file-enumeration-failed" in impact["review_reasons"]
+
+
+def test_necessary_surface_apply_revalidates_link_state_after_safe_dry_run(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "adoption-receipt.json").unlink()
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--dry-run", "--format", "json"]) == 0
+    dry_run = json.loads(capsys.readouterr().out)["migration"]
+    assert dry_run["status"] == "safe-apply-available"
+    remove_root = next(
+        tmp_path / action["path"]
+        for action in dry_run["actions"]
+        if action["kind"] == "would remove" and (tmp_path / action["path"]).is_dir()
+    )
+
+    outside = tmp_path / "outside-after-dry-run"
+    outside.mkdir()
+    link = remove_root / "late-link"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        if os.name != "nt":
+            pytest.skip(f"directory symlinks unavailable: {exc}")
+        completed = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(outside)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.returncode != 0:
+            pytest.skip(f"directory link creation unavailable: {completed.stderr or completed.stdout}")
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
+    apply = json.loads(capsys.readouterr().out)["migration"]
+    assert apply["status"] == "review-required"
+    assert apply["safe_to_apply"] is False
+    assert "symlink-or-reparse-point-ambiguity" in apply["deletion_impact"]["review_reasons"]
+    assert link.is_symlink() or bool(getattr(link, "is_junction", lambda: False)())
+    assert not any(action["kind"] == "removed" for action in apply["actions"])
+
+
+def test_necessary_surface_deletion_impact_rejects_path_escape(tmp_path: Path) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    impact = workspace_runtime_core._necessary_surface_deletion_impact(
+        target_root=tmp_path,
+        remove_candidates=[".agentic-workspace/../outside"],
+    )
+
+    assert impact["status"] == "review-required"
+    assert impact["escaped_path_sample"] == [".agentic-workspace/../outside"]
+    assert "path-containment-failure" in impact["review_reasons"]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows junction proof")
+def test_necessary_surface_deletion_impact_rejects_junction(tmp_path: Path) -> None:
+    docs = tmp_path / ".agentic-workspace" / "docs"
+    docs.mkdir(parents=True)
+    outside = tmp_path / "junction-target"
+    outside.mkdir()
+    junction = docs / "linked-directory"
+    completed = subprocess.run(
+        ["cmd", "/c", "mklink", "/J", str(junction), str(outside)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        pytest.skip(f"junction creation unavailable: {completed.stderr or completed.stdout}")
+
+    impact = workspace_runtime_core._necessary_surface_deletion_impact(
+        target_root=tmp_path,
+        remove_candidates=[".agentic-workspace/docs"],
+    )
+
+    assert impact["status"] == "review-required"
+    assert ".agentic-workspace/docs/linked-directory" in impact["ambiguous_path_sample"]
+    assert "symlink-or-reparse-point-ambiguity" in impact["review_reasons"]
+
+
+def test_necessary_surface_deletion_impact_rejects_broad_tracked_deletion(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    docs = tmp_path / ".agentic-workspace" / "docs"
+    for index in range(100):
+        _write(docs / f"fixture-{index:03d}.md", "tracked fixture\n")
+    subprocess.run(["git", "add", ".agentic-workspace/docs"], cwd=tmp_path, check=True)
+
+    impact = workspace_runtime_core._necessary_surface_deletion_impact(
+        target_root=tmp_path,
+        remove_candidates=[".agentic-workspace/docs"],
+    )
+
+    assert impact["tracked_file_count"] == impact["broad_deletion_threshold"] == 100
+    assert impact["status"] == "review-required"
+    assert "broad-tracked-deletion-impact" in impact["review_reasons"]
+
+
+def test_payload_target_read_only_gate_consumes_compiled_drift_triage(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[payload]\n"
+        'target_release = "source-current"\n'
+        'minimum_capabilities = ["installed-state-sync-v2"]\n'
+        'policy = "required-before-work"\n'
+        "dogfood_latest = true\n",
+        encoding="utf-8",
+    )
+    provenance_path = workspace / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance.pop("payload_capabilities", None)
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    for unrelated in (
+        "Prepare a read-only review of repository issue evidence",
+        "Summarize the current source-owned issue records without changing files",
+        "Give me a status report from checked-in documentation",
+    ):
+        assert cli.main(["start", "--target", str(tmp_path), "--task", unrelated, "--format", "json"]) == 0
+        allowed = json.loads(capsys.readouterr().out)
+        assert allowed["installed_state_read_only_scope"]["decision_authority"] == (
+            "installed_state_drift_triage.claim_effect_authority.installed_payload_dependency"
+        )
+        authority = allowed["context"]["installed_state_drift_triage"]["claim_effect_authority"]
+        assert authority["installed_payload_dependency"] == "independent"
+        assert authority["authority"] == "planning_safety_gate.route_decision"
+        assert authority["decision_id"].startswith("planning-route:")
+        assert allowed["next_safe_action"]["next_safe_action"] == "continue-read-only-source-evidence-review"
+
+    for dependent in (
+        "Prepare a read-only review of how the public command behaves after installation",
+        "Inspect whether the installed runtime produces the documented result",
+        "Audit payload drift and upgrade readiness",
+        "Verify the packaged CLI behavior as proof for closeout",
+    ):
+        assert cli.main(["start", "--target", str(tmp_path), "--task", dependent, "--format", "json"]) == 0
+        blocked = json.loads(capsys.readouterr().out)
+        assert "installed_state_read_only_scope" not in blocked
+        assert blocked["context"]["installed_state_drift_triage"]["claim_effect_authority"]["installed_payload_dependency"] == "dependent"
+        assert blocked["next_safe_action"]["next_safe_action"] == "run-installed-payload-target-upgrade"
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/change.md",
+                "--task",
+                "Implement the requested documentation change",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    mutation = json.loads(capsys.readouterr().out)
+    assert mutation["context"]["installed_state_drift_triage"]["claim_effect_authority"]["effect_class"] == "repo-mutation"
+    assert mutation["next_safe_action"]["next_safe_action"] == "run-installed-payload-target-upgrade"
+
+
 def test_upgrade_to_necessary_surfaces_keeps_current_memory_skill_eof_stable(
     tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -6303,6 +6573,7 @@ def test_upgrade_to_necessary_surfaces_keeps_current_memory_skill_eof_stable(
 
 def test_upgrade_to_necessary_surfaces_leaves_doctor_healthy_after_apply(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     workspace = tmp_path / ".agentic-workspace"
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
@@ -6321,6 +6592,7 @@ def test_upgrade_to_necessary_surfaces_leaves_doctor_healthy_after_apply(tmp_pat
 
 def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     task = "Upgrade the installed workspace without losing the active task"
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
@@ -6578,7 +6850,8 @@ def test_doctor_surfaces_legacy_bootstrap_footprint_migration(tmp_path: Path, ca
     assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
-    assert any("bootstrap_footprint" in warning for warning in payload["warnings"])
+    assert payload["health"] == "healthy"
+    assert payload["warnings"] == []
 
 
 def test_payload_upgrade_attention_plan_classifies_repo_surfaces(tmp_path: Path, capsys) -> None:
@@ -8167,6 +8440,8 @@ def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp
                 str(tmp_path),
                 "--task",
                 "Estimate AW net effect on this thread",
+                "--select",
+                "planning_safety_gate,next_safe_action",
                 "--format",
                 "json",
             ]
@@ -8174,10 +8449,11 @@ def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    route = payload["context"]["route_decision"]
+    selected = payload["values"]
+    route = selected["planning_safety_gate"]["route_decision"]
     admission = route["owner_admission"]
 
-    assert payload["next_safe_action"]["next_safe_action"] != "archive-or-retire-completed-plan"
+    assert selected["next_safe_action"]["next_safe_action"] != "archive-or-retire-completed-plan"
     assert admission["status"] == "rejected"
     assert admission["rejected_candidates"][0]["ref"] == ".agentic-workspace/planning/execplans/issue-1981.plan.json"
     assert admission["rejected_candidates"][0]["reason"] == "owner-lifecycle-not-live"
@@ -8546,7 +8822,8 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
     )
     default_payload = json.loads(capsys.readouterr().out)
     default_admission = default_payload["context"]["route_decision"]["owner_admission"]
-    assert default_admission["rejected_candidates"][0]["reason"] == route["owner_admission"]["rejected_candidates"][0]["reason"]
+    assert default_admission["status"] == route["owner_admission"]["status"]
+    assert default_admission["rejected_candidate_count"] == 0
 
     assert (
         cli.main(
@@ -9124,6 +9401,60 @@ def test_every_declared_route_consumer_is_a_no_divergence_projection() -> None:
     assert decision["consumer_projections"] == {item["consumer"]: item for item in projections}
     with pytest.raises(ValueError, match="unsupported Planning route consumer"):
         planning_route_consumer_projection(route_decision=decision, consumer="parallel-classifier")
+
+
+def test_startup_claim_effect_projection_preserves_canonical_route_identity_and_boundary() -> None:
+    from agentic_workspace.operating_decision import project_startup_claim_effect_authority
+    from agentic_workspace.workspace_runtime_core import _installed_state_drift_triage_payload
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    boundaries = (
+        {
+            "effect_class": "read-only-inspection",
+            "installed_payload_dependency": "independent",
+            "claim_classes": ["checked-in-source-evidence"],
+        },
+        {
+            "effect_class": "read-only-inspection",
+            "installed_payload_dependency": "dependent",
+            "claim_classes": ["installed-payload-behavior"],
+        },
+        {
+            "effect_class": "planned-repo-mutation",
+            "installed_payload_dependency": "dependent",
+            "claim_classes": ["installed-payload-freshness"],
+        },
+        {"effect_class": "repo-mutation", "installed_payload_dependency": "independent", "claim_classes": ["checked-in-source-evidence"]},
+    )
+    for boundary in boundaries:
+        decision = _planning_route_decision_payload(
+            {
+                "task_relation": "bounded-independent",
+                "owner_posture": "current",
+                "route_inputs": {
+                    "task_binding": {"mode": "read-only"},
+                    "claim_effect_boundary": boundary,
+                },
+            },
+            planning_revision={"revision_id": "planning-current"},
+        )
+        projection = project_startup_claim_effect_authority(route_decision=decision)
+        triage = _installed_state_drift_triage_payload(
+            installed_state={"status": "upgrade-recommended", "action_state": {"state": "manual_review_required"}},
+            claim_effect_authority=projection,
+            changed_paths=[],
+            cli_invoke="agentic-workspace",
+        )
+        triage_projection = triage["claim_effect_authority"]
+
+        assert decision["claim_effect_boundary"] == boundary
+        assert decision["action_identity"]["claim_effect_boundary"] == boundary
+        assert projection["decision_id"] == triage_projection["decision_id"] == decision["decision_id"]
+        assert projection["input_revision"] == triage_projection["input_revision"] == decision["input_revision"]
+        assert projection["action_identity"] == triage_projection["action_identity"] == decision["action_identity"]
+        assert {key: projection[key] for key in boundary} == boundary
+        assert {key: triage_projection[key] for key in boundary} == boundary
+        assert projection["authority"] == triage_projection["authority"] == "planning_safety_gate.route_decision"
 
 
 def test_route_decision_fails_closed_for_genuine_ambiguity() -> None:
@@ -9932,7 +10263,9 @@ def test_ordinary_planning_consumers_project_one_route_authority_without_orienta
     assert len({route["decision_id"] for route in routes}) == 1
     assert len({route["input_revision"] for route in routes}) == 1
     assert len({json.dumps(route["action_identity"], sort_keys=True) for route in routes}) == 1
-    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in routes)
+    expanded_routes = [route for route in routes if "consumer_contract" in route]
+    assert expanded_routes
+    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in expanded_routes)
     for route in routes:
         assert set(route["consumer_projections"]) == set(route["consumer_contract"]["ordinary_consumers"])
         assert {
@@ -10055,7 +10388,9 @@ candidates = []
     dimensions = [(route["task_relation"], route["owner_posture"], route["required_transition"]) for route in routes]
     assert len(set(dimensions)) == 1
     assert dimensions[0] == ("continues-selected-owner", "current", "none")
-    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in routes)
+    expanded_routes = [route for route in routes if "consumer_contract" in route]
+    assert expanded_routes
+    assert all(route["consumer_contract"]["authority"] == "planning_safety_gate.route_decision" for route in expanded_routes)
 
 
 def test_decision_point_carry_rejects_stale_startup_route_before_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -10452,7 +10787,10 @@ def test_start_broad_question_words_do_not_trigger_meta_report_compaction(tmp_pa
     payload = json.loads(capsys.readouterr().out)
 
     assert "routine_work_context" in payload["context"]
-    assert "installed_state_drift_triage=waived_for_narrow_work" in payload["action_signals"]["changed_signals"]
+    assert "installed_state_drift_triage=actionable_now" in payload["action_signals"]["changed_signals"]
+    authority = payload["context"]["installed_state_drift_triage"]["claim_effect_authority"]
+    assert authority["effect_class"] == "planned-repo-mutation"
+    assert authority["installed_payload_dependency"] == "dependent"
 
 
 def test_start_narrow_source_work_qualifies_unrelated_installed_state_drift(tmp_path: Path, capsys) -> None:
@@ -14327,7 +14665,7 @@ def test_proof_narrowness_marks_generated_surface_broad_proof_required(tmp_path:
 
     payload = json.loads(capsys.readouterr().out)
     narrowness = payload["values"]["proof_narrowness"]
-    assert narrowness["status"] == "broad_required"
+    assert narrowness["status"] == "narrow_required"
     assert narrowness["broad_suite_boundary"]["status"] == "explicit-escalation-required"
     assert narrowness["broad_suite_boundary"]["requires_explicit_escalation"] is True
     assert narrowness["broad_suite_boundary"]["withheld_generic_broad_lanes"][0]["lane"] == "workspace_cli"

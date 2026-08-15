@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Bound startup migration and proof routing behavior for current-work reconciliation."

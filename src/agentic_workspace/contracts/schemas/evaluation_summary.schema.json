@@ -9,6 +9,14 @@
   "properties": {
     "kind": {"const": "agentic-workspace/evaluation-summary/v1", "description": "Discriminator identifying the derived evaluation summary payload."},
     "path": {"type": "string", "minLength": 1, "description": "Definition store used to derive the summary."},
+    "detail_routes": {
+      "type": "object",
+      "description": "Exact selectors that expand compact evaluation status fields on demand.",
+      "additionalProperties": {
+        "type": "string",
+        "description": "Selector for retrieving the named detailed evaluation status field."
+      }
+    },
     "summaries": {
       "type": "array",
       "description": "Compact derived status entries for selected evaluations.",

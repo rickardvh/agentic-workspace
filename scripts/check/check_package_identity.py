@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import tarfile
 import tomllib
 from pathlib import Path
@@ -12,6 +13,7 @@ from zipfile import ZipFile
 ROOT = Path(__file__).resolve().parents[2]
 OWNERSHIP_PATH = Path(".github/release-ownership.json")
 FORBIDDEN_DISTRIBUTIONS = {"agentic-memory", "agentic-planning"}
+PUBLIC_REHEARSAL_PATH = Path("docs/maintainer/public-install-rehearsal-v0.40.1.json")
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -27,6 +29,94 @@ def _load_pyproject(path: Path) -> dict[str, Any]:
 
 def _dependency_name(requirement: str) -> str:
     return requirement.split("@", 1)[0].split(";", 1)[0].strip().split()[0]
+
+
+def public_install_rehearsal_errors(root: Path = ROOT) -> list[str]:
+    path = root / PUBLIC_REHEARSAL_PATH
+    if not path.is_file():
+        return []
+    receipt = _load_json(path)
+    controlled = receipt.get("resolution", {}).get("controlled_distributions", [])
+    names = {str(item.get("name")) for item in controlled if isinstance(item, dict)}
+    expected = {
+        "agentic-workspace",
+        "agentic-workspace-memory",
+        "agentic-workspace-planning",
+        "agentic-workspace-verification",
+    }
+    second_process = receipt.get("second_process", {})
+    install_execution = receipt.get("install_execution", {})
+    root_requirement = receipt.get("root_requirement", {})
+    errors: list[str] = []
+    if receipt.get("kind") != "agentic-workspace/public-install-rehearsal/v1" or receipt.get("status") != "passed":
+        errors.append(f"{PUBLIC_REHEARSAL_PATH.as_posix()} has the wrong kind or status")
+    if names != expected or any(item.get("version") != "0.40.1" for item in controlled if isinstance(item, dict)):
+        errors.append(f"{PUBLIC_REHEARSAL_PATH.as_posix()} does not retain the exact four controlled 0.40.1 distributions")
+    if receipt.get("resolution", {}).get("forbidden_identity_match_count") != 0:
+        errors.append(f"{PUBLIC_REHEARSAL_PATH.as_posix()} does not prove forbidden distribution identities absent")
+    expected_install_argv = [
+        "uv",
+        "pip",
+        "install",
+        "--python",
+        "venv/Scripts/python.exe",
+        f"{root_requirement.get('url')}#sha256={root_requirement.get('sha256')}",
+    ]
+    if (
+        install_execution.get("argv") != expected_install_argv
+        or install_execution.get("exit_code") != 0
+        or install_execution.get("output_kind") != "uv-pip-install-output/v1"
+        or not re.fullmatch(r"[0-9a-f]{64}", str(install_execution.get("output_sha256", "")))
+        or install_execution.get("resolved_distribution_count") != 9
+        or not install_execution.get("run_id")
+        or not install_execution.get("started_at")
+        or not install_execution.get("finished_at")
+    ):
+        errors.append(f"{PUBLIC_REHEARSAL_PATH.as_posix()} does not retain exact successful public install execution proof")
+    executable_identity = second_process.get("installed_executable_identity", {})
+    executable_identity_payload = {
+        "distribution": executable_identity.get("distribution"),
+        "entry_point": executable_identity.get("entry_point"),
+        "version": executable_identity.get("version"),
+        "wheel_sha256": executable_identity.get("wheel_sha256"),
+        "wheel_url": executable_identity.get("wheel_url"),
+    }
+    expected_executable_identity_sha256 = hashlib.sha256(
+        json.dumps(executable_identity_payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    expected_process_argv = [
+        "venv/Scripts/agentic-workspace.exe",
+        "start",
+        "--target",
+        "host",
+        "--task",
+        "Verify the public v0.40.1 second-process startup contract",
+        "--format",
+        "json",
+    ]
+    if (
+        second_process.get("bootstrap_process_exited_before_invocation") is not True
+        or second_process.get("argv") != expected_process_argv
+        or second_process.get("exit_code") != 0
+        or second_process.get("result_kind") != "startup-context/v1"
+        or second_process.get("run_id") != install_execution.get("run_id")
+        or not isinstance(second_process.get("process_id"), int)
+        or not second_process.get("started_at")
+        or not second_process.get("finished_at")
+        or not re.fullmatch(r"[0-9a-f]{64}", str(second_process.get("stdout_sha256", "")))
+        or not re.fullmatch(r"[0-9a-f]{64}", str(second_process.get("stderr_sha256", "")))
+        or executable_identity.get("entry_point") != "agentic-workspace"
+        or executable_identity.get("distribution") != "agentic-workspace"
+        or executable_identity.get("version") != "0.40.1"
+        or executable_identity.get("wheel_url") != root_requirement.get("url")
+        or executable_identity.get("wheel_sha256") != root_requirement.get("sha256")
+        or executable_identity.get("identity_kind") != "canonical-json-sha256/v1"
+        or executable_identity.get("identity_sha256") != expected_executable_identity_sha256
+    ):
+        errors.append(f"{PUBLIC_REHEARSAL_PATH.as_posix()} does not retain exact successful separate-process startup proof")
+    if second_process.get("durable_machine_local_path_match_count") != 0 or re.search(r"[A-Za-z]:\\\\", json.dumps(receipt)):
+        errors.append(f"{PUBLIC_REHEARSAL_PATH.as_posix()} retains a machine-local durable path")
+    return errors
 
 
 def source_identity_errors(root: Path = ROOT) -> list[str]:
@@ -122,6 +212,7 @@ def source_identity_errors(root: Path = ROOT) -> list[str]:
         generated_license = package_path.parent / "LICENSE"
         if not generated_license.is_file() or generated_license.read_text(encoding="utf-8") != license_text:
             errors.append(f"{prefix} does not carry the canonical LICENSE")
+    errors.extend(public_install_rehearsal_errors(root))
     return errors
 
 

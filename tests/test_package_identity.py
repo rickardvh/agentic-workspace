@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -10,6 +11,104 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_public_install_rehearsal_receipt_retains_exact_resolution_and_second_process_proof() -> None:
+    path = ROOT / "docs" / "maintainer" / "public-install-rehearsal-v0.40.1.json"
+    receipt = json.loads(path.read_text(encoding="utf-8"))
+
+    assert receipt["kind"] == "agentic-workspace/public-install-rehearsal/v1"
+    assert receipt["status"] == "passed"
+    assert receipt["readiness_receipt"]["sha256"] == "174ef14c13edf9a5757ef10fe91aa5a9095928a13f5386338e055d6790b177e6"
+    controlled = receipt["resolution"]["controlled_distributions"]
+    assert {item["name"] for item in controlled} == {
+        "agentic-workspace",
+        "agentic-workspace-memory",
+        "agentic-workspace-planning",
+        "agentic-workspace-verification",
+    }
+    assert {item["version"] for item in controlled} == {"0.40.1"}
+    assert all(item["url"].startswith("https://github.com/rickardvh/agentic-workspace/releases/download/v0.40.1/") for item in controlled)
+    assert all(len(item["sha256"]) == 64 for item in controlled)
+    assert receipt["resolution"]["forbidden_identity_match_count"] == 0
+    assert receipt["resolution"]["registry_resolution_used_for_controlled_distributions"] is False
+    install_execution = receipt["install_execution"]
+    assert install_execution["argv"] == [
+        "uv",
+        "pip",
+        "install",
+        "--python",
+        "venv/Scripts/python.exe",
+        f"{receipt['root_requirement']['url']}#sha256={receipt['root_requirement']['sha256']}",
+    ]
+    assert install_execution["exit_code"] == 0
+    assert install_execution["output_kind"] == "uv-pip-install-output/v1"
+    assert len(install_execution["output_sha256"]) == 64
+    second_process = receipt["second_process"]
+    assert second_process["bootstrap_process_exited_before_invocation"] is True
+    assert second_process["run_id"] == install_execution["run_id"]
+    assert second_process["argv"] == [
+        "venv/Scripts/agentic-workspace.exe",
+        "start",
+        "--target",
+        "host",
+        "--task",
+        "Verify the public v0.40.1 second-process startup contract",
+        "--format",
+        "json",
+    ]
+    assert second_process["installed_executable_identity"] == {
+        "entry_point": "agentic-workspace",
+        "distribution": "agentic-workspace",
+        "version": "0.40.1",
+        "wheel_url": receipt["root_requirement"]["url"],
+        "wheel_sha256": receipt["root_requirement"]["sha256"],
+        "identity_kind": "canonical-json-sha256/v1",
+        "identity_sha256": "735fc5d889aa3c0c64a50520dbf63405a1bf7e85d8d9f2492b9bf5008a354e64",
+    }
+    assert second_process["exit_code"] == 0
+    assert second_process["result_kind"] == "startup-context/v1"
+    assert len(second_process["stdout_sha256"]) == 64
+    assert second_process["durable_machine_local_path_match_count"] == 0
+    assert re.search(r"[A-Za-z]:\\\\", json.dumps(receipt)) is None
+
+
+@pytest.mark.parametrize(
+    ("section", "field", "value", "expected"),
+    [
+        ("install_execution", "argv", ["uv", "pip", "install", "unbound.whl"], "public install execution proof"),
+        ("install_execution", "exit_code", 1, "public install execution proof"),
+        ("second_process", "argv", ["agentic-workspace", "start"], "separate-process startup proof"),
+        ("second_process", "stdout_sha256", "missing", "separate-process startup proof"),
+        ("second_process", "installed_executable_identity", {}, "separate-process startup proof"),
+        (
+            "second_process",
+            "installed_executable_identity",
+            {
+                "entry_point": "agentic-workspace",
+                "distribution": "agentic-workspace",
+                "version": "0.40.1",
+                "wheel_url": "https://example.invalid/substituted.whl",
+                "wheel_sha256": "0" * 64,
+                "identity_kind": "canonical-json-sha256/v1",
+                "identity_sha256": "0" * 64,
+            },
+            "separate-process startup proof",
+        ),
+    ],
+)
+def test_public_install_rehearsal_checker_rejects_tampered_execution_proof(
+    tmp_path: Path, section: str, field: str, value: object, expected: str
+) -> None:
+    destination = tmp_path / "docs" / "maintainer"
+    destination.mkdir(parents=True)
+    receipt = json.loads((ROOT / CHECKER.PUBLIC_REHEARSAL_PATH).read_text(encoding="utf-8"))
+    receipt[section][field] = value
+    (tmp_path / CHECKER.PUBLIC_REHEARSAL_PATH).write_text(json.dumps(receipt), encoding="utf-8")
+
+    assert any(expected in error for error in CHECKER.public_install_rehearsal_errors(tmp_path))
+
+
 UV = shutil.which("uv") or "uv"
 NPM = shutil.which("npm") or "npm"
 
