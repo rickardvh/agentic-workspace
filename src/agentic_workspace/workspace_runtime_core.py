@@ -52454,18 +52454,53 @@ def _proof_command_reliability(tier: str) -> str:
     return "authoritative"
 
 
-def _proof_command_tiers(*, selected_commands: list[dict[str, Any]], required_commands: list[str]) -> dict[str, Any]:
+def _proof_command_tiers(
+    *,
+    selected_commands: list[dict[str, Any]],
+    required_commands: list[str],
+    optional_commands: list[str] | None = None,
+    selected_lanes: list[dict[str, Any]] | None = None,
+    proof_requirement_tiers: dict[str, Any] | None = None,
+    proof_receipt_reconciliation: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    optional_commands = optional_commands or []
     commands_by_text = {str(command.get("command", "")): command for command in selected_commands}
+    for lane in selected_lanes or []:
+        lane_metadata = {"lane": str(lane.get("id", "")), **_lane_execution_metadata(lane)}
+        for command in [*_list_payload(lane.get("enough_proof")), *_list_payload(lane.get("optional_commands"))]:
+            commands_by_text.setdefault(str(command), lane_metadata)
+    posture_by_command: dict[str, str] = {}
+    categories = _as_dict(_as_dict(proof_requirement_tiers).get("categories"))
+    for category, posture in (
+        ("selected_required", "required"),
+        ("manual_required", "required"),
+        ("recommended_confidence", "optional"),
+        ("optional_environmental", "optional"),
+    ):
+        for item in _list_payload(categories.get(category)):
+            if isinstance(item, dict) and str(item.get("command", "")).strip():
+                posture_by_command[str(item["command"])] = posture
+    for item in _list_payload(_as_dict(proof_receipt_reconciliation).get("commands")):
+        if isinstance(item, dict) and item.get("evidence_state") == "accepted":
+            posture_by_command[str(item.get("command", ""))] = "already-satisfied"
     tiers: dict[str, list[dict[str, Any]]] = {}
-    for command in required_commands:
+    for command in _dedupe([*required_commands, *optional_commands]):
         selected = commands_by_text.get(str(command), {})
         tier = _proof_command_tier(str(command), lane=str(selected.get("lane", "")))
         evidence_type = _proof_command_evidence_type(str(command), tier=tier)
         obligation = str(selected.get("intent_type", "")) or "prove changed-path behavior or surface"
         duplicate_reason = "" if tier == "must_run" else f"adds {evidence_type} evidence not represented by the minimal command"
-        execution_class = str(selected.get("execution_class") or "").strip()
-        if execution_class not in {"focused-local", "exhaustive-local", "exhaustive-CI-owned"}:
-            execution_class = "exhaustive-local" if tier == "environmental" else "focused-local"
+        posture = posture_by_command.get(str(command), "required" if command in required_commands else "optional")
+        command_text = str(command).lower()
+        exhaustive = tier == "environmental" or any(
+            marker in command_text for marker in ("make test", "test-workspace", "--conformance", "tests/test_workspace_cli.py")
+        )
+        ci_relationship = str(selected.get("ci_relationship", "")).lower()
+        proof_responsibility = str(selected.get("proof_responsibility", "")).lower()
+        ci_owns = "ci-owned" in proof_responsibility or "ci owned" in proof_responsibility or "owned by ci" in ci_relationship
+        if posture == "optional" and exhaustive and "ci may repeat" in ci_relationship:
+            ci_owns = True
+        execution_class = "exhaustive-CI-owned" if exhaustive and ci_owns else "exhaustive-local" if exhaustive else "focused-local"
         execution_owner = "CI" if execution_class == "exhaustive-CI-owned" else "local"
         duration_class = {
             "focused-local": "short-or-medium",
@@ -52481,7 +52516,7 @@ def _proof_command_tiers(*, selected_commands: list[dict[str, Any]], required_co
                 "cost": _proof_command_cost(tier),
                 "evidence_type": evidence_type,
                 "reliability": _proof_command_reliability(tier),
-                "posture": "required",
+                "posture": posture,
                 "execution_class": execution_class,
                 "execution_owner": execution_owner,
                 "duration_class": duration_class,
@@ -52511,7 +52546,7 @@ def _proof_command_tiers(*, selected_commands: list[dict[str, Any]], required_co
             "receipt_kind": "agentic-workspace/proof-route-execution/v1",
             "receipt_binds": ["typed operation", "proof subject revision", "run identity", "attempt identity", "elapsed cost", "outcome"],
         },
-        "rule": "Tiers explain proof obligation and cost; they do not relax required_commands.",
+        "rule": "Tiers derive required, optional, and already-satisfied posture from proof selection and fresh receipt reconciliation; execution ownership does not relax required commands.",
         "tiers": ordered,
     }
 

@@ -4,8 +4,8 @@
   "title": "P1/P2 review and proof continuation",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "handoff_review",
-  "revision": 2,
+  "phase": "closeout",
+  "revision": 3,
   "intent": {
     "outcome": "Continue #2557 and #2561 through existing review polling and proof-tier contracts without adding broader review or proof concepts.",
     "non_goals": [
@@ -29,20 +29,24 @@
   },
   "relationships": {
     "selection": {
-      "state": "unselected",
-      "owner": "current-work context"
+      "state": "selected-residual",
+      "owner": "target-branch integration",
+      "admission": "feature-branch-integration-proposal"
     },
     "proof_posture": {
       "state": "satisfied",
       "refs": ["81 review-loop tests passed", "focused proof-tier tests passed", "ruff checks passed"]
     },
     "external_posture": {
-      "state": "unobserved",
-      "refs": []
+      "state": "current",
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/issues/2557",
+        "https://github.com/rickardvh/agentic-workspace/issues/2561"
+      ]
     }
   },
-  "references": ["GitHub #2557", "GitHub #2561"],
-  "next_action": "Publish the draft lane PR and retain broader issue residue.",
+  "references": ["https://github.com/rickardvh/agentic-workspace/issues/2557", "https://github.com/rickardvh/agentic-workspace/issues/2561"],
+  "next_action": "Apply the archive-owner integration proposal on an admitted target branch after merge; retain broader issue residue.",
   "blockers": [
     "None."
   ],
@@ -55,9 +59,14 @@
     ],
     "refs": ["tests/test_chatgpt_review_loop.py", "tests/test_workspace_implement_cli.py"]
   },
+  "execution_run": {
+    "what_happened": "Kept exact-head one-shot review polling narrow and derived focused-local, exhaustive-local, exhaustive-CI-owned, optional, required, and already-satisfied proof posture from ordinary route metadata and receipt reconciliation.",
+    "validation": "81 review-loop regressions plus focused ordinary proof-route, receipt, selector, and implement-tier regressions.",
+    "integration": ".agentic-workspace/planning/integration-proposals/p1p2-review-proof-continuation-archive-owner.integration-proposal.json"
+  },
   "continuation": {
-    "owner": "GitHub issues #2557 and #2561",
-    "residual_intent": "Stack restacking and full receipt/cost admission remain outside this narrow continuation."
+    "owner": "GitHub issues #2557 and #2561 through target-branch integration",
+    "residual_intent": "Apply the checked-in archive-owner proposal after merge. Stack restacking and broader receipt/cost admission remain outside this narrow continuation."
   },
   "specialist_contracts": []
 }

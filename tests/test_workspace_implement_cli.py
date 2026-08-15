@@ -4079,17 +4079,27 @@ def test_implement_tiny_proof_tiers_explain_required_single_tier() -> None:
 def test_proof_command_tiers_declare_proportional_execution_and_receipt_contract() -> None:
     payload = workspace_runtime_core._proof_command_tiers(
         selected_commands=[
-            {"command": "uv run pytest tests/test_a.py", "lane": "workspace"},
-            {"command": "make integration", "lane": "environmental", "execution_class": "exhaustive-CI-owned"},
+            {"command": "uv run pytest tests/test_a.py", "lane": "workspace", "proof_responsibility": "local-closeout"},
         ],
-        required_commands=["uv run pytest tests/test_a.py", "make integration"],
+        required_commands=["uv run pytest tests/test_a.py"],
+        optional_commands=["make test-workspace"],
+        selected_lanes=[
+            {
+                "id": "workspace",
+                "optional_commands": ["make test-workspace"],
+                "proof_responsibility": "local-closeout",
+                "ci_relationship": "CI may repeat broad tests; focused local proof owns closeout.",
+            }
+        ],
+        proof_receipt_reconciliation={"commands": [{"command": "uv run pytest tests/test_a.py", "evidence_state": "accepted"}]},
     )
     commands = [command for tier in payload["tiers"] for command in tier["commands"]]
 
     assert commands[0]["execution_class"] == "focused-local"
-    assert commands[0]["posture"] == "required"
-    ci_owned = next(command for command in commands if command["command"] == "make integration")
+    assert commands[0]["posture"] == "already-satisfied"
+    ci_owned = next(command for command in commands if command["command"] == "make test-workspace")
     assert (ci_owned["execution_class"], ci_owned["execution_owner"]) == ("exhaustive-CI-owned", "CI")
+    assert ci_owned["posture"] == "optional"
     assert ci_owned["duration_class"] == "externally-observed"
     assert payload["execution_contract"]["timeout_outcome"] == "typed-timeout-distinct-from-proof-failure"
     assert "proof subject revision" in payload["execution_contract"]["receipt_binds"]
