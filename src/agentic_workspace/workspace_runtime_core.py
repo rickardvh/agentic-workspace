@@ -49427,6 +49427,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                 "external_work_reconciliation",
                 "external_work_delta",
                 "proof_reuse_guidance",
+                "release_recovery",
                 "runtime_mirror_consistency",
             },
         }
