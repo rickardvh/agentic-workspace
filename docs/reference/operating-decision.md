@@ -15,6 +15,7 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `producer_module` | string | no |  | Canonical module that produced the operating decision. |  |  |
 | `producer_function` | string | no |  | Canonical function that produced the operating decision. |  |  |
 | `decision_id` | string | yes |  | Stable identity derived from input revisions, action, blocker, and terminal state. |  |  |
+| `admitted_input_revision` | string | no |  | Canonical revision of the complete admitted input set from which decision_id is derived. |  |  |
 | `status` | enum `"actionable"`, `"blocked"`, `"terminal"` | yes |  | Whether the composed decision exposes an action, a blocker, or no immediate action. |  |  |
 | `input_revisions` | object | yes |  | Revision or freshness identifiers supplied by specialist authority inputs. |  |  |
 | `canonical_decision_input_revision` | string | no |  | Canonical revision of the typed action's current owner, context, authority, proof, mutation, evaluation, and executor inputs. |  |  |

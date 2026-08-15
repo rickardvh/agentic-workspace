@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 3,
+  "revision": 4,
   "intent": {
     "outcome": "Make start, summary, implement, proof, and ordinary report projections reuse the canonical operating-decision revision with bounded computation, serialization, progress, and cancellation behavior.",
     "non_goals": [
@@ -44,7 +44,7 @@
     "proof_posture": {
       "state": "satisfied",
       "refs": [
-        "77 focused projection/decision tests passed",
+        "82 focused projection/decision tests passed",
         "18 closeout/report correctness regressions passed",
         "workspace, Planning, Memory, and Verification typechecks passed",
         "contract tooling and structured-file inventory checks passed"
@@ -82,20 +82,29 @@
       "Run generated-contract checks only if their source contracts change; reserve exhaustive workspace validation for the lane PR boundary."
     ],
     "refs": [
-      "issue-2556-final-c2ee931f cold/warm benchmark: cold 0.97-3.13s except closeout 1.90s; warm 0.87-1.03s; all outputs <= 64 KiB",
-      "warm start/implement/proof shared operating-decision:4cf72090130493c0 with builders skipped",
-      "warm selected-summary/closeout shared operating-decision:53af84d54e0252d4 with builders skipped"
+      ".agentic-workspace/planning/closeout-evidence/issue-2556-projection-reuse.closeout.json preserves the captured command-class counts, exact five-surface elapsed/output/state-read measurements, decision identities, and reuse results",
+      "warm start/implement/proof shared operating-decision:d414c5a6d75430da with builders skipped",
+      "warm selected-summary/closeout shared operating-decision:547d7fb2fa976883 with builders skipped"
     ]
   },
   "execution_run": {
     "what_happened": "Replaced broad projection dependency reconstruction with bounded admitted revisions, keyed reuse through the canonical operating-decision identity, semantic serialization limits, progress heartbeats, cooperative cancellation, and current-compact closeout inputs.",
-    "validation": "77 focused tests, 18 closeout tests, full typecheck, contract tooling, structured inventory, lint, and live five-surface cold/warm benchmark passed.",
+    "validation": "82 focused projection/decision tests, 18 closeout tests, full typecheck, contract tooling, structured inventory, lint, and live five-surface cold/warm benchmark passed.",
     "benchmark": {
       "computation_budget_ms": 10000,
       "serialization_budget_bytes": 65536,
-      "cold_elapsed_ms": {"start": 3131.9, "summary_selected": 969.6, "implement": 2058.5, "proof": 1853.7, "closeout_trust": 1900.0},
-      "warm_elapsed_ms": {"start": 902.3, "summary_selected": 1027.0, "implement": 870.8, "proof": 938.3, "closeout_trust": 1001.8},
-      "warm_builder_skipped": true
+      "cold_elapsed_ms": {"start": 3244.1, "summary_selected": 1337.0, "implement": 2488.4, "proof": 1870.5, "closeout_trust": 1956.5},
+      "warm_elapsed_ms": {"start": 805.8, "summary_selected": 1335.1, "implement": 891.2, "proof": 1000.8, "closeout_trust": 823.6},
+      "cold_output_bytes": {"start": 51090, "summary_selected": 3670, "implement": 22274, "proof": 7013, "closeout_trust": 61794},
+      "warm_output_bytes": {"start": 1774, "summary_selected": 1827, "implement": 1873, "proof": 1785, "closeout_trust": 1823},
+      "cold_state_read_count": {"start": 36, "summary_selected": 36, "implement": 36, "proof": 36, "closeout_trust": 36},
+      "warm_state_read_count": {"start": 36, "summary_selected": 36, "implement": 36, "proof": 36, "closeout_trust": 36},
+      "captured_command_class_counts": {"implement": 2, "doctor": 1, "summary": 1, "proof": 1, "skills": 1, "planning": 1},
+      "captured_entry_count": 7,
+      "captured_index_bytes": 66148,
+      "captured_session_markdown_bytes": 1443642,
+      "warm_builder_skipped": true,
+      "warm_invalidation_reasons": []
     }
   },
   "continuation": {

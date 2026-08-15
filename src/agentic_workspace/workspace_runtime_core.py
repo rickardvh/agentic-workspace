@@ -149,6 +149,7 @@ from agentic_workspace.projection_reuse import (
     enforce_projection_serialization_budget,
     lookup_projection_reuse,
     record_projection_reuse,
+    resolve_projection_operating_decision,
 )
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
@@ -48528,20 +48529,15 @@ def _emit_proof(
                 _emit_payload(payload=reused, format_name=format_name)
                 return
         with ProjectionProgress(root=target_root, operation="proof") as progress:
-            if progress.cancel_requested:
-                answer = {
-                    "kind": "agentic-workspace/projection-cancelled/v1",
-                    "status": "cancelled",
-                    "operation": "proof",
-                    "next_action": "Remove the cancellation request and rerun the same scoped command when ready.",
-                }
-            else:
-                answer = _proof_selection_for_changed_paths(
+            answer = progress.run_cancellable(
+                lambda: _proof_selection_for_changed_paths(
                     changed_paths=normalized_paths,
                     target_root=target_root,
                     include_durable_intent=False,
                     task_text=task_text,
-                )
+                ),
+                stage="select-proof-routes",
+            )
             progress_contract = progress.contract()
         if progress_contract["status"] == "cancel-requested":
             answer["projection_progress"] = progress_contract
@@ -48572,7 +48568,12 @@ def _emit_proof(
             payload["projection_progress"] = progress_contract
         if reuse_context is not None:
             reuse_result = record_projection_reuse(
-                root=target_root, operation="proof", query=reuse_query, context=reuse_context, payload=payload
+                root=target_root,
+                operation="proof",
+                query=reuse_query,
+                context=reuse_context,
+                payload=payload,
+                operating_decision=resolve_projection_operating_decision(payload=payload, context=reuse_context),
             )
             if reuse_result:
                 payload = enforce_projection_serialization_budget(
@@ -48665,31 +48666,39 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 _emit_payload(payload=reused, format_name=args.format)
                 return 0
         with ProjectionProgress(root=target_root, operation="summary") as progress:
-            if progress.cancel_requested:
-                payload = {
-                    "kind": "agentic-workspace/projection-cancelled/v1",
-                    "status": "cancelled",
-                    "operation": "summary",
-                    "next_action": "Remove the cancellation request and rerun the same scoped command when ready.",
-                }
-                closeout_inspection = {}
-            else:
-                closeout_inspection = _completion_closeout_inspection_payload(
+
+            def build_selected_summary() -> dict[str, Any]:
+                inspection = _completion_closeout_inspection_payload(
                     target_root=target_root,
                     config=config,
                     task_text=getattr(args, "task", None),
                     explicit_request=_selector_requests(getattr(args, "select", None), "closeout_trust_inspection"),
                     changed_paths=changed_paths,
                 )
-                payload = _select_summary_payload(
-                    target_root=target_root,
-                    select=getattr(args, "select"),
-                    task_text=getattr(args, "task", None),
-                    changed_paths=changed_paths,
-                    planning_summary=planning_summary,
-                    cli_invoke=config.cli_invoke,
-                )
+                return {
+                    "payload": _select_summary_payload(
+                        target_root=target_root,
+                        select=getattr(args, "select"),
+                        task_text=getattr(args, "task", None),
+                        changed_paths=changed_paths,
+                        planning_summary=planning_summary,
+                        cli_invoke=config.cli_invoke,
+                    ),
+                    "closeout_inspection": inspection,
+                }
+
+            selected_result = progress.run_cancellable(build_selected_summary, stage="build-selected-summary")
+            if selected_result.get("status") == "cancelled":
+                payload = selected_result
+                closeout_inspection = {}
+            else:
+                payload = selected_result["payload"]
+                closeout_inspection = selected_result["closeout_inspection"]
             progress_contract = progress.contract()
+        if payload.get("status") == "cancelled":
+            payload["projection_progress"] = progress_contract
+            _emit_payload(payload=payload, format_name=args.format)
+            return 0
         if closeout_inspection.get("status") in {"required", "clear"} and "closeout_trust_inspection" in getattr(args, "select"):
             payload.setdefault("values", {})
             closeout_source = {"closeout_trust_inspection": closeout_inspection}
@@ -48719,6 +48728,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 query=selected_query,
                 context=selected_reuse_context,
                 payload=payload,
+                operating_decision=resolve_projection_operating_decision(payload=payload, context=selected_reuse_context),
             )
             if reuse_result:
                 payload = enforce_projection_serialization_budget(
@@ -48754,26 +48764,23 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 return 0
         summary_started_at = time.perf_counter()
         with ProjectionProgress(root=target_root, operation="summary") as progress:
-            if progress.cancel_requested:
-                summary = {
-                    "kind": "agentic-workspace/projection-cancelled/v1",
-                    "status": "cancelled",
-                    "operation": "summary",
-                    "progress": progress.contract(),
-                    "next_action": "Remove the cancellation request and rerun the same scoped command when ready.",
-                }
-            else:
-                summary = planning_summary(
+            summary = progress.run_cancellable(
+                lambda: planning_summary(
                     target=target_root.as_posix(),
                     profile=summary_profile,
                     task_text=getattr(args, "task", None),
                     changed_paths=changed_paths,
-                )
+                ),
+                stage="build-planning-summary",
+            )
             progress_contract = progress.contract()
         summary_elapsed_ms = round((time.perf_counter() - summary_started_at) * 1000, 3)
         if isinstance(summary, dict):
             if progress_contract["status"] == "cancel-requested" or summary_elapsed_ms > progress_contract["long_command_threshold_ms"]:
                 summary["projection_progress"] = progress_contract
+            if summary.get("status") == "cancelled":
+                _emit_payload(payload=summary, format_name=args.format)
+                return 0
             if summary_elapsed_ms > 2_000:
                 summary["summary_runtime"] = {
                     "kind": "agentic-workspace/summary-runtime/v1",
@@ -48826,7 +48833,12 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         summary = _rewrite_module_cli_commands(summary)
         if reuse_context is not None:
             reuse_result = record_projection_reuse(
-                root=target_root, operation="summary", query=reuse_query, context=reuse_context, payload=summary
+                root=target_root,
+                operation="summary",
+                query=reuse_query,
+                context=reuse_context,
+                payload=summary,
+                operating_decision=resolve_projection_operating_decision(payload=summary, context=reuse_context),
             )
             if reuse_result and isinstance(summary, dict):
                 summary = enforce_projection_serialization_budget(
@@ -49079,28 +49091,25 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                 return 0
         section_payload: dict[str, Any] | None = None
         with ProjectionProgress(root=target_root, operation="report") as progress:
-            if progress.cancel_requested:
-                payload = {
-                    "kind": "agentic-workspace/projection-cancelled/v1",
-                    "status": "cancelled",
-                    "operation": "report",
-                    "next_action": "Remove the cancellation request and rerun the same scoped command when ready.",
-                }
-            else:
-                payload = _run_report_router_command(
+            payload = progress.run_cancellable(
+                lambda: _run_report_router_command(
                     target_root=target_root,
                     selected_modules=selected_modules,
                     resolved_preset=resolved_preset,
                     descriptors=descriptors,
                     config=config,
-                )
-                payload = progress.cancellation_payload() or payload
+                ),
+                stage="build-report-router",
+            )
             progress_contract = progress.contract()
         if (
             progress_contract["status"] == "cancel-requested"
             or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
         ):
             payload["projection_progress"] = progress_contract
+        if payload.get("status") == "cancelled":
+            _emit_payload(payload=payload, format_name=args.format)
+            return 0
         if reuse_context and reuse_context.get("degraded_findings"):
             payload["projection_reuse"] = {
                 "status": "degraded",
@@ -49109,7 +49118,12 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             }
         if not select and reuse_query is not None and reuse_context is not None:
             reuse_result = record_projection_reuse(
-                root=target_root, operation="report", query=reuse_query, context=reuse_context, payload=payload
+                root=target_root,
+                operation="report",
+                query=reuse_query,
+                context=reuse_context,
+                payload=payload,
+                operating_decision=resolve_projection_operating_decision(payload=payload, context=reuse_context),
             )
             if reuse_result:
                 payload = enforce_projection_serialization_budget(
@@ -49151,27 +49165,36 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                 return 0
         section_payload = None
         with ProjectionProgress(root=target_root, operation="report") as progress:
-            if progress.cancel_requested:
-                section_payload = {
-                    "kind": "agentic-workspace/projection-cancelled/v1",
-                    "status": "cancelled",
-                    "operation": "report",
-                    "next_action": "Remove the cancellation request and rerun the same scoped command when ready.",
+
+            def build_report_section() -> dict[str, Any]:
+                return {
+                    "section_payload": _run_lazy_report_section_command(
+                        target_root=target_root,
+                        selected_modules=selected_modules,
+                        resolved_preset=resolved_preset,
+                        config=config,
+                        section=section,
+                        task_text=task_text,
+                        changed_paths=changed_paths,
+                    )
                 }
+
+            section_result = progress.run_cancellable(
+                build_report_section,
+                stage=f"build-report-section:{section}",
+            )
+            if section_result.get("status") == "cancelled":
+                section_payload = section_result
             else:
-                section_payload = _run_lazy_report_section_command(
-                    target_root=target_root,
-                    selected_modules=selected_modules,
-                    resolved_preset=resolved_preset,
-                    config=config,
-                    section=section,
-                    task_text=task_text,
-                    changed_paths=changed_paths,
-                )
-                section_payload = progress.cancellation_payload() or section_payload
+                candidate = section_result.get("section_payload")
+                section_payload = candidate if isinstance(candidate, dict) else None
             progress_contract = progress.contract()
         if section_payload is not None:
             payload = section_payload
+            if payload.get("status") == "cancelled":
+                payload["projection_progress"] = progress_contract
+                _emit_payload(payload=payload, format_name=args.format)
+                return 0
             if select:
                 payload = _select_payload_fields(payload, select=select, source_command="report")
             payload = _rewrite_module_cli_commands(payload)
@@ -49187,6 +49210,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                     query=section_query,
                     context=section_reuse_context,
                     payload=payload,
+                    operating_decision=resolve_projection_operating_decision(payload=payload, context=section_reuse_context),
                 )
                 if reuse_result:
                     payload = enforce_projection_serialization_budget(
@@ -49506,7 +49530,12 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         payload["projection_progress"] = progress_contract
     if reuse_context is not None:
         reuse_result = record_projection_reuse(
-            root=target_root, operation="doctor", query=reuse_query, context=reuse_context, payload=payload
+            root=target_root,
+            operation="doctor",
+            query=reuse_query,
+            context=reuse_context,
+            payload=payload,
+            operating_decision=resolve_projection_operating_decision(payload=payload, context=reuse_context),
         )
         if reuse_result:
             payload = enforce_projection_serialization_budget(

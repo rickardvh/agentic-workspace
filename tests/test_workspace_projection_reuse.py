@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -117,6 +118,13 @@ def test_start_implement_and_proof_reuse_the_same_revision_keyed_contract(tmp_pa
             "authority": "operating_decision.compile_operating_decision",
         }
         assert warm["decision_id"] == cold["projection_reuse"]["operating_decision"]["decision_id"]
+        cold_decision = cold["projection_reuse"]["operating_decision"]
+        assert cold_decision["producer_function"] == "compile_operating_decision"
+        assert cold_decision["admitted_input_revision"]
+        assert warm["canonical_decision_input_revision"] == cold_decision["admitted_input_revision"]
+        assert cold["projection_reuse"]["observed_cost"]["state_read_count"] > 0
+        assert warm["observed_cost"]["state_read_count"] > 0
+        assert warm["observed_cost"]["cold_state_read_count"] == cold["projection_reuse"]["observed_cost"]["state_read_count"]
         assert warm["budgets"] == {"computation_budget_ms": 10000, "serialization_budget_bytes": 65536}
         decision_ids.append(warm["decision_id"])
 
@@ -182,6 +190,36 @@ def test_invalidation_reasons_cover_each_admitted_authority_input_exactly() -> N
         assert _invalidation_reasons(previous, current) == [reason]
 
 
+def test_cache_record_consumes_surface_decision_without_recompiling(tmp_path: Path, monkeypatch) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+    query = {"changed": [".agentic-workspace/config.toml"]}
+    _cached, context = projection_reuse.lookup_projection_reuse(
+        root=target,
+        operation="report",
+        query=query,
+        full_detail_command="report --verbose",
+    )
+    payload = {"status": "CONTINUE"}
+    operating_decision = projection_reuse.resolve_projection_operating_decision(payload=payload, context=context)
+
+    def unexpected_recompile(**_kwargs):
+        raise AssertionError("the cache must consume the ordinary surface decision")
+
+    monkeypatch.setattr(projection_reuse, "compile_operating_decision", unexpected_recompile)
+    reuse = projection_reuse.record_projection_reuse(
+        root=target,
+        operation="report",
+        query=query,
+        context=context,
+        payload=payload,
+        operating_decision=operating_decision,
+    )
+
+    assert reuse["operating_decision"]["decision_id"] == operating_decision["decision_id"]
+
+
 def test_progress_heartbeat_and_cooperative_cancellation_are_bounded(tmp_path: Path, capsys) -> None:
     from agentic_workspace.projection_reuse import ProjectionBudget, ProjectionProgress
 
@@ -199,6 +237,45 @@ def test_progress_heartbeat_and_cooperative_cancellation_are_bounded(tmp_path: P
     assert heartbeats[0]["status"] == "cancel-requested"
     assert contract["status"] == "cancel-requested"
     assert contract["cancel"]["path"] == ".agentic-workspace/local/cancellation/proof.cancel"
+
+
+def test_start_observes_cancellation_after_builder_begins_and_skips_later_stages(tmp_path: Path, capsys, monkeypatch) -> None:
+    import agentic_workspace.workspace_runtime_startup as startup_runtime
+
+    target = _target(tmp_path)
+    capsys.readouterr()
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow_start_payload(**_kwargs):
+        started.set()
+        release.wait(timeout=2)
+        return {"kind": "late-start-projection/v1", "status": "complete"}
+
+    monkeypatch.setattr(startup_runtime, "_start_payload", slow_start_payload)
+    cancel = target / ".agentic-workspace/local/cancellation/start.cancel"
+
+    def request_cancel() -> None:
+        assert started.wait(timeout=1)
+        cancel.parent.mkdir(parents=True, exist_ok=True)
+        cancel.write_text("cancel\n", encoding="utf-8")
+
+    requester = threading.Thread(target=request_cancel)
+    requester.start()
+    before = time.perf_counter()
+    try:
+        assert cli.main(["start", "--target", str(target), "--format", "json"]) == 0
+        elapsed = time.perf_counter() - before
+        payload = json.loads(capsys.readouterr().out)
+    finally:
+        release.set()
+        requester.join(timeout=1)
+
+    assert elapsed < 1
+    assert payload["kind"] == "agentic-workspace/projection-cancelled/v1"
+    assert payload["cancelled_stage"] == "build-start-projection"
+    assert payload["cancellation_observed_during_work"] is True
+    assert payload["later_stages_skipped"] is True
 
 
 def test_selected_summary_and_report_cancellation_return_bounded_envelopes(tmp_path: Path, capsys) -> None:
@@ -378,7 +455,12 @@ def test_admitted_revision_computation_fails_open_above_content_read_budget(tmp_
     assert context["dependency_status"] == "unavailable"
     assert context["degraded_findings"][-1]["section"] == "projection_changed_path_revision"
     result = projection_reuse.record_projection_reuse(
-        root=target, operation="report", query={"changed": changed}, context=context, payload={"status": "ok"}
+        root=target,
+        operation="report",
+        query={"changed": changed},
+        context=context,
+        payload={"status": "ok"},
+        operating_decision={},
     )
     assert result == {}
 
@@ -406,6 +488,7 @@ def test_report_git_timeout_disables_reuse_and_names_failed_probe(tmp_path: Path
 
 
 def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> None:
+    from agentic_workspace import projection_reuse
     from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 
     target = _target(tmp_path)
@@ -415,7 +498,15 @@ def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> 
     assert cached is None and context["volatile"] is True
     for index in range(40):
         cached, context = lookup_projection_reuse(root=target, operation="doctor", query={"index": index}, full_detail_command="doctor")
-        record_projection_reuse(root=target, operation="doctor", query={"index": index}, context=context, payload={"status": "ok"})
+        payload = {"status": "ok"}
+        record_projection_reuse(
+            root=target,
+            operation="doctor",
+            query={"index": index},
+            context=context,
+            payload=payload,
+            operating_decision=projection_reuse.resolve_projection_operating_decision(payload=payload, context=context),
+        )
     assert len(list((target / ".agentic-workspace/local/projection-cache").glob("*.json"))) <= 32
 
 
@@ -424,7 +515,14 @@ def test_projection_cache_does_not_bootstrap_workspace_state(tmp_path: Path) -> 
 
     cached, context = lookup_projection_reuse(root=tmp_path, operation="report", query={}, full_detail_command="report")
     assert cached is None
-    record_projection_reuse(root=tmp_path, operation="report", query={}, context=context, payload={"status": "ok"})
+    record_projection_reuse(
+        root=tmp_path,
+        operation="report",
+        query={},
+        context=context,
+        payload={"status": "ok"},
+        operating_decision={},
+    )
 
     assert not (tmp_path / ".agentic-workspace").exists()
 

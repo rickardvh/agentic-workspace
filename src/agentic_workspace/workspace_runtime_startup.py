@@ -23,6 +23,7 @@ from agentic_workspace.projection_reuse import (
     enforce_projection_serialization_budget,
     lookup_projection_reuse,
     record_projection_reuse,
+    resolve_projection_operating_decision,
 )
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
@@ -2871,26 +2872,24 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             _emit_payload(payload=reused, format_name=args.format)
             return 0
     with ProjectionProgress(root=target_root, operation="start") as progress:
-        if progress.cancel_requested:
-            payload = {
-                "kind": "agentic-workspace/projection-cancelled/v1",
-                "status": "cancelled",
-                "operation": "start",
-                "next_action": "Remove the cancellation request and rerun the same scoped command when ready.",
-            }
-        else:
-            payload = _start_payload(
+        payload = progress.run_cancellable(
+            lambda: _start_payload(
                 target_root=target_root,
                 changed_paths=changed_paths,
                 task_text=task_text,
                 profile=effective_profile,
-            )
+            ),
+            stage="build-start-projection",
+        )
         progress_contract = progress.contract()
     if (
         progress_contract["status"] == "cancel-requested"
         or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
     ):
         payload["projection_progress"] = progress_contract
+    if payload.get("status") == "cancelled":
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
     if selected_fields:
         _hydrate_selected_start_advisory_payloads(
             payload=payload,
@@ -2902,7 +2901,12 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         payload = _select_payload_fields(payload, select=selected_fields, source_command="start")
     if reuse_context is not None:
         reuse_result = record_projection_reuse(
-            root=target_root, operation="start", query=reuse_query, context=reuse_context, payload=payload
+            root=target_root,
+            operation="start",
+            query=reuse_query,
+            context=reuse_context,
+            payload=payload,
+            operating_decision=resolve_projection_operating_decision(payload=payload, context=reuse_context),
         )
         if reuse_result:
             payload = enforce_projection_serialization_budget(

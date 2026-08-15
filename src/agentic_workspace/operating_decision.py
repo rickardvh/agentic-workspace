@@ -1757,12 +1757,13 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         terminal_state=terminal_state,
         blocked_claim_classes=blocked_claim_classes,
     )
-    _, decision_id = canonical_operating_decision_identity(input_revisions)
+    admitted_input_revision, decision_id = canonical_operating_decision_identity(input_revisions)
     return {
         "kind": "agentic-workspace/operating-decision/v1",
         "producer_module": "agentic_workspace.operating_decision",
         "producer_function": "compile_operating_decision",
         "decision_id": decision_id,
+        "admitted_input_revision": admitted_input_revision,
         "status": status,
         "input_revisions": input_revisions,
         "canonical_decision_input_revision": invocation_current_revision,

@@ -25,6 +25,7 @@ from agentic_workspace.projection_reuse import (
     enforce_projection_serialization_budget,
     lookup_projection_reuse,
     record_projection_reuse,
+    resolve_projection_operating_decision,
 )
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
@@ -230,16 +231,10 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             _emit_payload(payload=reused, format_name=args.format)
             return 0
     with ProjectionProgress(root=target_root, operation="implement") as progress:
-        if progress.cancel_requested:
-            full_payload = {
-                "kind": "agentic-workspace/projection-cancelled/v1",
-                "status": "cancelled",
-                "operation": "implement",
-                "next_action": "Remove the cancellation request and rerun the same scoped command when ready.",
-            }
-        else:
+
+        def build_implement_projection() -> dict[str, Any]:
             with _planning_revision_payload_cache_scope(), _decision_point_binding_cache_scope(), mutation_baseline_payload_cache_scope():
-                full_payload = _implement_payload(
+                return _implement_payload(
                     target_root=target_root,
                     changed_paths=changed_paths,
                     task_text=task_text,
@@ -253,6 +248,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
                     include_test_strategy_check=(profile != "tiny" or test_strategy_check_selected or not broad_early_scope),
                     startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
                 )
+
+        full_payload = progress.run_cancellable(build_implement_projection, stage="build-implement-projection")
         progress_contract = progress.contract()
     if progress_contract["status"] == "cancel-requested":
         full_payload["projection_progress"] = progress_contract
@@ -362,7 +359,12 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         payload["projection_progress"] = progress_contract
     if reuse_context is not None:
         reuse_result = record_projection_reuse(
-            root=target_root, operation="implement", query=reuse_query, context=reuse_context, payload=payload
+            root=target_root,
+            operation="implement",
+            query=reuse_query,
+            context=reuse_context,
+            payload=payload,
+            operating_decision=resolve_projection_operating_decision(payload=payload, context=reuse_context),
         )
         if reuse_result:
             payload = enforce_projection_serialization_budget(

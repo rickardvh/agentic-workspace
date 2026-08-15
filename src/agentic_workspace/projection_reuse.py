@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any, Iterator, Literal
+from typing import Any, Callable, Iterator, Literal
 
 from agentic_workspace.operating_decision import compile_operating_decision
 
@@ -82,6 +82,7 @@ class DependencyDigestResult:
     status: Literal["complete", "truncated", "unavailable"]
     findings: list[dict[str, Any]]
     input_revisions: dict[str, Any] | None = None
+    state_read_count: int = 0
 
     def __iter__(self) -> Iterator[Any]:
         """Keep the historical two-value unpacking contract for direct callers."""
@@ -134,6 +135,35 @@ class ProjectionProgress:
             "operation": self.operation,
             "next_action": "Remove the cancellation request and rerun the same scoped command when ready.",
         }
+
+    def run_cancellable(self, builder: Callable[[], dict[str, Any]], *, stage: str) -> dict[str, Any]:
+        """Run one projection stage while observing cancellation at the adapter boundary."""
+
+        cancelled = self.cancellation_payload()
+        if cancelled is not None:
+            return cancelled
+        result: list[dict[str, Any]] = []
+        failure: list[BaseException] = []
+
+        def run() -> None:
+            try:
+                result.append(builder())
+            except BaseException as exc:  # pragma: no cover - re-raised on the caller thread
+                failure.append(exc)
+
+        worker = threading.Thread(target=run, daemon=True, name=f"aw-{self.operation}-{stage}")
+        worker.start()
+        while worker.is_alive():
+            worker.join(timeout=min(0.025, self.budget.progress_interval_seconds))
+            if self.cancel_requested:
+                payload = self.cancellation_payload() or {}
+                payload["cancelled_stage"] = stage
+                payload["later_stages_skipped"] = True
+                payload["cancellation_observed_during_work"] = True
+                return payload
+        if failure:
+            raise failure[0]
+        return result[0]
 
     def contract(self) -> dict[str, Any]:
         return {
@@ -503,7 +533,14 @@ def dependency_digest(
     digest.update(str(_CACHE_CONTRACT_VERSION).encode())
     digest.update(json.dumps(revisions, sort_keys=True, ensure_ascii=True).encode())
     status: Literal["complete", "truncated", "unavailable"] = "unavailable" if findings else "complete"
-    return DependencyDigestResult(digest.hexdigest()[:20], dependencies, status, findings, revisions)
+    return DependencyDigestResult(
+        digest.hexdigest()[:20],
+        dependencies,
+        status,
+        findings,
+        revisions,
+        state_read_count=len(dependencies) + 3,
+    )
 
 
 def _cache_path(root: Path, operation: str, query: dict[str, Any]) -> Path:
@@ -555,6 +592,7 @@ def lookup_projection_reuse(
         "decision_id": "",
         "lookup_started_at": lookup_started_at,
         "invalidation_reasons": [],
+        "state_read_count": digest_result.state_read_count,
     }
     if forced or volatile or digest_result.status != "complete" or not path.is_file():
         return None, context
@@ -577,6 +615,9 @@ def lookup_projection_reuse(
     context["decision_id"] = decision_id
     context["canonical_input_revision"] = canonical_input_revision
     prior = record.get("decision_snapshot", {}) if isinstance(record.get("decision_snapshot"), dict) else {}
+    prior_cost = record.get("observed_cost", {}) if isinstance(record.get("observed_cost"), dict) else {}
+    warm_state_reads = context.get("state_read_count", 0)
+    cold_state_reads = prior_cost.get("state_read_count", 0)
     return {
         "kind": "agentic-workspace/unchanged-projection/v1",
         "status": "unchanged",
@@ -597,6 +638,12 @@ def lookup_projection_reuse(
             "decision_reused": True,
             "enrichment_reused": True,
         },
+        "observed_cost": {
+            "elapsed_ms": round((time.monotonic() - lookup_started_at) * 1000, 3),
+            "serialized_bytes": 0,
+            "state_read_count": warm_state_reads if isinstance(warm_state_reads, int) else 0,
+            "cold_state_read_count": cold_state_reads if isinstance(cold_state_reads, int) else 0,
+        },
         "reuse": {
             "decision": "reused",
             "enrichment": "reused",
@@ -616,8 +663,35 @@ def lookup_projection_reuse(
     }, context
 
 
+def resolve_projection_operating_decision(*, payload: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    """Resolve the ordinary surface decision once, before projection cache recording."""
+
+    operation_authority = payload.get("context", {}) if isinstance(payload.get("context"), dict) else {}
+    operation_authority = (
+        operation_authority.get("operation_authority", {}) if isinstance(operation_authority.get("operation_authority"), dict) else {}
+    )
+    existing = operation_authority.get("operating_decision", {}) if isinstance(operation_authority, dict) else {}
+    if isinstance(existing, dict) and existing.get("decision_id"):
+        return existing
+    return compile_operating_decision(
+        inputs={
+            "revisions": context.get("input_revisions", {}),
+            "terminal_state": str(payload.get("status") or payload.get("health") or "CONTINUE"),
+            "blocked_claim_classes": [str(item) for item in payload.get("blocked_claims", [])]
+            if isinstance(payload.get("blocked_claims"), list)
+            else [],
+        }
+    )
+
+
 def record_projection_reuse(
-    *, root: Path, operation: str, query: dict[str, Any], context: dict[str, Any], payload: dict[str, Any]
+    *,
+    root: Path,
+    operation: str,
+    query: dict[str, Any],
+    context: dict[str, Any],
+    payload: dict[str, Any],
+    operating_decision: dict[str, Any],
 ) -> dict[str, Any]:
     if (
         context.get("volatile")
@@ -636,17 +710,10 @@ def record_projection_reuse(
     continuation_view = payload.get("continuation_view", {}) if isinstance(payload.get("continuation_view"), dict) else {}
     proof_state = continuation_view.get("proof_state", {}) if isinstance(continuation_view.get("proof_state"), dict) else {}
     residue_governance = payload.get("residue_governance", {}) if isinstance(payload.get("residue_governance"), dict) else {}
-    projection_decision = compile_operating_decision(
-        inputs={
-            "revisions": context.get("input_revisions", {}),
-            "terminal_state": str(payload.get("status") or payload.get("health") or "CONTINUE"),
-            "blocked_claim_classes": [str(item) for item in payload.get("blocked_claims", [])]
-            if isinstance(payload.get("blocked_claims"), list)
-            else [],
-        }
-    )
-    context["decision_id"] = projection_decision["decision_id"]
-    context["canonical_input_revision"] = projection_decision.get("canonical_decision_input_revision", "")
+    if not operating_decision.get("decision_id"):
+        return {}
+    context["decision_id"] = operating_decision["decision_id"]
+    context["canonical_input_revision"] = operating_decision.get("admitted_input_revision", "")
     serialized_bytes = len(json.dumps(payload, sort_keys=True, default=str, indent=2).encode())
     elapsed_ms = round((time.monotonic() - float(context.get("lookup_started_at") or time.monotonic())) * 1000, 3)
     budget = ProjectionBudget()
@@ -662,6 +729,7 @@ def record_projection_reuse(
             "elapsed_ms": elapsed_ms,
             "serialized_bytes": serialized_bytes,
             "dependency_count": len(context.get("dependencies", [])),
+            "state_read_count": int(context.get("state_read_count", 0) or 0),
         },
         "budgets": {
             "computation_budget_ms": budget.computation_budget_ms,
@@ -677,15 +745,21 @@ def record_projection_reuse(
         },
         "authority": "operating_decision.compile_operating_decision",
         "operating_decision": {
-            "kind": projection_decision["kind"],
-            "producer_module": projection_decision["producer_module"],
-            "producer_function": projection_decision["producer_function"],
-            "decision_id": projection_decision["decision_id"],
-            "status": projection_decision["status"],
-            "input_revisions": projection_decision["input_revisions"],
-            "terminal_state": projection_decision["terminal_state"],
-            "external_blocker": projection_decision["external_blocker"],
-            "blocked_claim_classes": projection_decision["blocked_claim_classes"],
+            key: operating_decision.get(key)
+            for key in (
+                "kind",
+                "producer_module",
+                "producer_function",
+                "decision_id",
+                "admitted_input_revision",
+                "status",
+                "input_revisions",
+                "canonical_decision_input_revision",
+                "terminal_state",
+                "external_blocker",
+                "blocked_claim_classes",
+            )
+            if operating_decision.get(key) not in (None, "")
         },
     }
     record = {
