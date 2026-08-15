@@ -1150,11 +1150,23 @@ def test_session_log_default_analysis_stays_bounded_for_long_multitask_session(t
         )
 
     payload = session_logging.analyze_session_log(state=session_logging.load_state_for_argv(["--target", str(target)]))
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    hydrated_entries = session_logging._entries_from_index(index)
+    hydrated_index = {**index, "records": {}, "entries": hydrated_entries}
     assert payload["summary"]["command_count"] == 80
+    assert len(index["records"]["provenance"]) < len(index["entries"])
+    assert len(index["records"]["contexts"]) < len(index["entries"])
+    assert len(json.dumps(index).encode("utf-8")) < len(json.dumps(hydrated_index).encode("utf-8"))
     assert len(payload["segments"]) <= session_logging.LARGE_OUTPUT_SUMMARY_LIMIT
     assert len(payload["episodes"]) <= session_logging.LARGE_OUTPUT_SUMMARY_LIMIT
     assert len(payload["friction_candidates"]) <= session_logging.FRICTION_CANDIDATE_LIMIT
     assert len(json.dumps(payload).encode("utf-8")) <= session_logging.DEFAULT_ANALYSIS_SERIALIZATION_BUDGET_BYTES
+    reconstructed = []
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    for page in range(1, 5):
+        detail = session_logging.analyze_session_log(state=state, detail="entries", page=page, page_size=25)
+        reconstructed.extend(detail["detail_page"]["items"])
+    assert [item["id"] for item in reconstructed] == [item["id"] for item in hydrated_entries]
 
 
 def test_session_log_work_context_does_not_carry_stale_pr_across_task_transition(tmp_path: Path, monkeypatch) -> None:
@@ -1895,7 +1907,12 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
         assert manifest["originals_mutated"] is False
         assert manifest["path_normalization_mode"] == "known-local-paths"
         assert "transfer approval" in manifest["limitations"]
+        assert manifest["transfer_review"]["status"] == "required"
+        assert manifest["transfer_review"]["approval"] == "not-granted"
+        assert "Share this generated archive" not in combined
         assert manifest["local_diagnostic_boundary"]["manual_handoff"] == "outside-aw-logger-responsibility"
+    assert payload["transfer_approval"] == "not-granted"
+    assert "Share path" not in json.dumps(payload)
     assert log_path.read_bytes() == original_log
     assert index_path.read_bytes() == original_index
 

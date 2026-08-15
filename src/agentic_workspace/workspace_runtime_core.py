@@ -7248,8 +7248,12 @@ def _session_index_improvement_intake(*, target_root: Path, config: WorkspaceCon
         return None
     signals = []
     decisions = []
+    seen_fingerprints: set[str] = set()
     for candidate in candidates:
         fingerprint = hashlib.sha256(json.dumps(candidate, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
+        if fingerprint in seen_fingerprints:
+            continue
+        seen_fingerprints.add(fingerprint)
         signals.append(
             {
                 "signal": str(candidate.get("summary") or candidate.get("id") or "session-log candidate"),

@@ -14294,6 +14294,60 @@ def test_session_improvement_intake_self_admits_complete_index_for_review(tmp_pa
     assert "not promoted" in payload["claim_boundary"]
 
 
+def test_session_log_download_intent_routes_to_export_without_transfer_approval(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Package the current AW session logs for download",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    route = payload["session_log_export_route"]
+    assert route["operation"] == "session-log.export"
+    assert route["command"].endswith("session-log export --target . --format json")
+    assert route["result_path"] == "session-log export result.path"
+    assert route["transfer_approval"] == "not-granted"
+    assert payload["next_safe_action"]["next_safe_action"] == "run-session-log-export"
+
+
+def test_session_index_intake_deduplicates_stable_candidates_before_review(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
+    candidate = {"id": "same", "summary": "Repeated session signal", "count": 2}
+    monkeypatch.setattr(
+        session_logging,
+        "analyze_session_log",
+        lambda **_kwargs: {
+            "kind": "agentic-workspace/session-log-analysis/v1",
+            "status": "analyzed",
+            "index_status": "complete",
+            "index_path": ".agentic-workspace/local/session-logging/index.json",
+            "detail_page": {"items": [candidate, copy.deepcopy(candidate)]},
+        },
+    )
+
+    first = workspace_runtime_core._session_index_improvement_intake(target_root=tmp_path, config=config)
+    second = workspace_runtime_core._session_index_improvement_intake(target_root=tmp_path, config=config)
+    assert first is not None and second is not None
+    assert len(first["signals"]) == len(first["routing_decisions"]) == 1
+    assert first["signals"][0]["fingerprint"] == second["signals"][0]["fingerprint"]
+    assert first["signals"][0]["reviewed"] is False
+    assert first["routing_decisions"][0]["destinations"] == []
+
+
 def test_selected_dogfooding_report_sections_stay_compact(tmp_path: Path, capsys) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

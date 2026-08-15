@@ -4,8 +4,8 @@
   "title": "Issue 2555 compact normalized session evidence",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 2,
+  "phase": "closeout",
+  "revision": 3,
   "intent": {
     "outcome": "Make long session evidence summary-first, reference-normalized, episode-grouped, self-admitting for reviewed improvement intake, and explicitly routed to share-safe export.",
     "non_goals": [
@@ -35,12 +35,17 @@
   },
   "relationships": {
     "selection": {
-      "state": "selected",
-      "owner": "issue-2555-session-evidence"
+      "state": "selected-residual",
+      "owner": "current-work context",
+      "admission": "feature-branch-integration-proposal"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "satisfied",
+      "refs": [
+        "focused session logging and routing tests",
+        "generated command checks",
+        "bounded long-session replay"
+      ]
     },
     "external_posture": {
       "state": "current",
@@ -56,7 +61,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Normalize repeated index records behind revision references, bound default analysis with episode summaries and paged detail, then wire reviewed intake and share-safe routing regressions.",
+  "next_action": "Apply the archive-owner integration proposal on an admitted target branch after merge.",
   "blockers": [
     "None."
   ],
@@ -69,11 +74,14 @@
       "Run generated command contract checks and structured-file inventory checks for touched command surfaces.",
       "Record before/after index and analysis sizes for a long multi-context fixture."
     ],
-    "refs": []
+    "refs": [
+      "tests/test_workspace_session_logging.py",
+      "tests/test_workspace_cli.py"
+    ]
   },
   "continuation": {
-    "owner": "issue-2555-session-evidence",
-    "residual_intent": "Close #2555 only after bounded analysis, normalized reconstruction, reviewed intake, and share-safe export compose in one lane PR."
+    "owner": "target-branch integration",
+    "residual_intent": "Apply the checked-in archive-owner proposal after merge; the feature branch does not select current work or rewrite aggregate Planning indexes."
   },
   "specialist_contracts": []
 }
