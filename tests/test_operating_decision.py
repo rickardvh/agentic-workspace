@@ -1846,3 +1846,21 @@ def test_context_authority_coverage_fails_closed_for_duplicate_canonical_owner()
 
     assert coverage["status"] == "coverage-gap"
     assert coverage["duplicate_canonical_owners"] == ["system-intent resolver"]
+
+
+def test_operating_decision_identity_changes_with_terminal_blocker_and_claim_posture() -> None:
+    base = compile_operating_decision(inputs={"revisions": {"planning": "same"}, "terminal_state": "continue"})
+    terminal = compile_operating_decision(inputs={"revisions": {"planning": "same"}, "terminal_state": "complete"})
+    blocked = compile_operating_decision(
+        inputs={
+            "revisions": {"planning": "same"},
+            "terminal_state": "continue",
+            "blockers": [{"reason_code": "missing-authority", "owner": "planning", "repair": "select owner"}],
+        }
+    )
+    claims = compile_operating_decision(
+        inputs={"revisions": {"planning": "same"}, "terminal_state": "continue", "blocked_claim_classes": ["completion"]}
+    )
+
+    assert len({base["decision_id"], terminal["decision_id"], blocked["decision_id"], claims["decision_id"]}) == 4
+    assert all("decision_posture" in decision["input_revisions"] for decision in (base, terminal, blocked, claims))

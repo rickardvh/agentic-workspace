@@ -8,7 +8,7 @@ import hashlib
 import json
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
 from agentic_workspace.context_authority_owner_operations import (
@@ -1340,6 +1340,372 @@ def live_decision_input_revision(*, invocation: dict[str, Any], authorities: dic
     )
 
 
+def canonical_operating_decision_identity(input_revisions: dict[str, Any]) -> tuple[str, str]:
+    """Return the canonical revision and identity for one admitted input state.
+
+    Consumers may use this before materializing a purpose-specific projection.
+    Decision-shaped output must still come from ``compile_operating_decision``;
+    this helper only makes its revision boundary reusable without rebuilding the
+    projection that consumes it.
+    """
+
+    normalized = json.loads(json.dumps(input_revisions, sort_keys=True, default=str))
+    revision = "sha256:" + _digest(normalized)
+    return revision, f"operating-decision:{_digest({'input_revision': revision})[:16]}"
+
+
+def admit_projection_surface_decision_input(
+    *, input_revisions: dict[str, Any], consumer: str, material_inputs: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Admit immutable shared input before purpose-specific materialization."""
+
+    if not input_revisions:
+        return {}
+    normalized = json.loads(
+        json.dumps(
+            {"consumer": consumer, "revisions": input_revisions, "material_inputs": material_inputs or {}},
+            sort_keys=True,
+            default=str,
+        )
+    )
+    revision = "sha256:" + _digest(normalized)
+    material_input_revision = "sha256:" + _digest(normalized["material_inputs"])
+    return {
+        "kind": "agentic-workspace/projection-decision-input/v1",
+        "status": "admitted",
+        "consumer": consumer,
+        "input_id": f"projection-decision-input:{_digest({'revision': revision})[:16]}",
+        "admitted_input_revision": revision,
+        "input_revisions": normalized["revisions"],
+        "material_inputs": normalized["material_inputs"],
+        "material_input_revision": material_input_revision,
+        "selected_owner": str(input_revisions.get("selected_owner") or ""),
+        "rule": "Purpose-specific posture enriches this immutable admitted snapshot before one final operating decision is compiled.",
+    }
+
+
+def projection_surface_builder_inputs(
+    *, admitted_input: dict[str, Any], consumer: str, required_fields: tuple[str, ...] = ()
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Consume the immutable material inputs before a purpose-specific builder runs."""
+
+    material_inputs = _as_dict(admitted_input.get("material_inputs"))
+    observed_revision = "sha256:" + _digest(material_inputs)
+    missing_fields = [field for field in required_fields if field not in material_inputs]
+    valid = (
+        admitted_input.get("status") == "admitted"
+        and admitted_input.get("consumer") == consumer
+        and observed_revision == admitted_input.get("material_input_revision")
+        and not missing_fields
+    )
+    receipt = {
+        "kind": "agentic-workspace/projection-decision-input-consumption/v1",
+        "status": "consumed" if valid else "rejected",
+        "consumer": consumer,
+        "input_id": str(admitted_input.get("input_id") or ""),
+        "admitted_input_revision": str(admitted_input.get("admitted_input_revision") or ""),
+        "material_input_revision": observed_revision,
+        "consumed_fields": sorted(material_inputs),
+        "missing_fields": missing_fields,
+        "selected_owner": str(admitted_input.get("selected_owner") or ""),
+        "rule": "The purpose-specific builder must consume these admitted material inputs before deriving decision-bearing posture or enrichment.",
+    }
+    return (copy.deepcopy(material_inputs) if valid else {}), receipt
+
+
+def attach_projection_surface_decision_input_consumption(
+    *, payload: dict[str, Any], consumption: dict[str, Any], used_material_inputs: dict[str, Any]
+) -> dict[str, Any]:
+    """Attach a receipt produced before builder materialization."""
+
+    observed_revision = "sha256:" + _digest(used_material_inputs)
+    consumption = copy.deepcopy(consumption)
+    if observed_revision != consumption.get("material_input_revision"):
+        consumption["status"] = "rejected"
+        consumption["mismatch_reason"] = "purpose-specific builder used material inputs outside the admitted snapshot"
+    consumption["used_material_input_revision"] = observed_revision
+    context = payload.setdefault("context", {})
+    if not isinstance(context, dict):
+        context = {}
+        payload["context"] = context
+    context["projection_decision_input_consumption"] = consumption
+    return payload
+
+
+def revalidate_projection_surface_decision_input(
+    *, payload: dict[str, Any], admitted_input: dict[str, Any], current_input_revisions: dict[str, Any], consumer: str
+) -> dict[str, Any]:
+    """Reject authority when any admitted decision input changed during materialization."""
+
+    admitted_revisions = _as_dict(admitted_input.get("input_revisions"))
+    current_revisions = json.loads(json.dumps(current_input_revisions, sort_keys=True, default=str))
+    changed_fields = [
+        field
+        for field in sorted(set(admitted_revisions) | set(current_revisions))
+        if admitted_revisions.get(field) != current_revisions.get(field)
+    ]
+    valid = admitted_input.get("status") == "admitted" and admitted_input.get("consumer") == consumer and not changed_fields
+    context = payload.setdefault("context", {})
+    if not isinstance(context, dict):
+        context = {}
+        payload["context"] = context
+    context["projection_decision_input_revalidation"] = {
+        "kind": "agentic-workspace/projection-decision-input-revalidation/v1",
+        "status": "current" if valid else "stale",
+        "consumer": consumer,
+        "input_id": str(admitted_input.get("input_id") or ""),
+        "admitted_input_revision": str(admitted_input.get("admitted_input_revision") or ""),
+        "changed_fields": changed_fields,
+        "rule": "Every decision-bearing revision is re-read after builder materialization; stale authority cannot be finalized or cached.",
+    }
+    consumption = _as_dict(context.get("projection_decision_input_consumption"))
+    if not valid and consumption:
+        consumption["status"] = "rejected"
+        consumption["mismatch_reason"] = "admitted authority changed during purpose-specific materialization"
+        consumption["changed_authority_fields"] = changed_fields
+    return payload
+
+
+def _projection_surface_posture(payload: dict[str, Any]) -> dict[str, Any]:
+    context = _as_dict(payload.get("context"))
+    answer = _as_dict(payload.get("answer"))
+    action_signals = _as_dict(payload.get("action_signals")) or _as_dict(context.get("action_signals"))
+    candidates = [
+        payload.get("primary_action"),
+        payload.get("next_action"),
+        payload.get("next"),
+        _as_dict(payload.get("decision_packet")).get("next_action"),
+        _as_dict(answer.get("decision_packet")).get("next_action"),
+    ]
+    primary_action: dict[str, Any] = {}
+    for candidate in candidates:
+        if isinstance(candidate, dict) and candidate:
+            primary_action = copy.deepcopy(candidate)
+            break
+        if isinstance(candidate, str) and candidate.strip():
+            primary_action = {"action": candidate.strip()}
+            break
+    blockers: list[dict[str, Any]] = []
+    for source in (
+        payload.get("blockers"),
+        payload.get("hard_blockers"),
+        payload.get("closure_blockers"),
+        action_signals.get("hard_blockers"),
+    ):
+        for item in _as_list(source):
+            if isinstance(item, dict):
+                blockers.append(copy.deepcopy(item))
+            elif str(item).strip():
+                blockers.append({"reason_code": str(item).strip()})
+    blocked_claim_classes = [
+        str(item)
+        for source in (payload.get("blocked_claims"), action_signals.get("blocked_claims"))
+        for item in _as_list(source)
+        if str(item).strip()
+    ]
+    terminal_state = str(payload.get("status") or payload.get("health") or answer.get("status") or answer.get("health") or "CONTINUE")
+    return {
+        "primary_action": primary_action,
+        "blockers": blockers,
+        "blocked_claim_classes": blocked_claim_classes,
+        "terminal_state": terminal_state,
+    }
+
+
+def compile_projection_surface_operating_decision(
+    *, payload: dict[str, Any], admitted_input: dict[str, Any], consumer: str
+) -> dict[str, Any]:
+    """Compile the final decision from admitted shared input plus surface posture."""
+
+    if admitted_input.get("status") != "admitted" or admitted_input.get("consumer") != consumer:
+        return {}
+    posture = _projection_surface_posture(payload)
+    input_revisions = _as_dict(admitted_input.get("input_revisions"))
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": consumer,
+            "revisions": {
+                **input_revisions,
+                "projection_input": str(admitted_input.get("admitted_input_revision") or ""),
+            },
+            "selected_owner": {
+                "id": str(admitted_input.get("selected_owner") or ""),
+                "source": "projection-decision-input",
+            },
+            "terminal_state": posture["terminal_state"],
+            "primary_action": posture["primary_action"],
+            "blockers": posture["blockers"],
+            "blocked_claim_classes": posture["blocked_claim_classes"],
+        }
+    )
+    decision["projection_input_id"] = str(admitted_input.get("input_id") or "")
+    decision["projection_input_revision"] = str(admitted_input.get("admitted_input_revision") or "")
+    decision["projection_posture_revision"] = "sha256:" + _digest(posture)
+    decision["projection_posture"] = posture
+    return decision
+
+
+def bind_projection_surface_operating_decision(
+    *, payload: dict[str, Any], admitted_input: dict[str, Any], operating_decision: dict[str, Any], consumer: str
+) -> dict[str, Any]:
+    """Bind only a final decision compiled from this payload and admitted input."""
+
+    if not operating_decision.get("decision_id") or admitted_input.get("status") != "admitted":
+        return payload
+    context = payload.setdefault("context", {})
+    if not isinstance(context, dict):
+        context = {}
+        payload["context"] = context
+    expected_posture_revision = "sha256:" + _digest(_projection_surface_posture(payload))
+    admitted_revision = str(admitted_input.get("admitted_input_revision") or "")
+    valid = (
+        operating_decision.get("projection_input_id") == admitted_input.get("input_id")
+        and operating_decision.get("projection_input_revision") == admitted_revision
+        and operating_decision.get("projection_posture_revision") == expected_posture_revision
+    )
+    context["projection_decision_input"] = {
+        key: admitted_input.get(key)
+        for key in (
+            "kind",
+            "status",
+            "consumer",
+            "input_id",
+            "admitted_input_revision",
+            "material_input_revision",
+            "selected_owner",
+            "rule",
+        )
+    }
+    context["projection_decision_authority"] = {
+        "kind": "agentic-workspace/projection-decision-authority/v1",
+        "status": "admitted" if valid else "rejected",
+        "consumer": consumer,
+        "source": f"{consumer}.admitted-input-plus-purpose-posture",
+        "decision_id": str(operating_decision.get("decision_id") or ""),
+        "admitted_input_revision": str(operating_decision.get("admitted_input_revision") or ""),
+        "projection_input_id": str(operating_decision.get("projection_input_id") or ""),
+        "projection_input_revision": str(operating_decision.get("projection_input_revision") or ""),
+        "projection_posture_revision": str(operating_decision.get("projection_posture_revision") or ""),
+        "producer_module": str(operating_decision.get("producer_module") or ""),
+        "producer_function": str(operating_decision.get("producer_function") or ""),
+        "mismatch_reason": "" if valid else "decision posture or admitted projection input does not match the materialized payload",
+        "rule": "The final decision is authoritative only when it derives from this pre-admitted input and the materialized purpose posture.",
+    }
+    return payload
+
+
+def consume_projection_surface_decision_input(*, payload: dict[str, Any], admitted_input: dict[str, Any], consumer: str) -> dict[str, Any]:
+    """Compatibility helper for simple builders that consume every admitted material input."""
+
+    material_inputs, consumption = projection_surface_builder_inputs(admitted_input=admitted_input, consumer=consumer)
+    return attach_projection_surface_decision_input_consumption(
+        payload=payload,
+        consumption=consumption,
+        used_material_inputs=material_inputs,
+    )
+
+
+def materialize_projection_under_decision_input(
+    *,
+    builder: Callable[[dict[str, Any]], dict[str, Any]],
+    admitted_input: dict[str, Any],
+    consumer: str,
+    revalidate_input_revisions: Callable[[], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Build from admitted shared input and require an exact consumption receipt."""
+
+    payload = builder(admitted_input)
+    if not isinstance(payload, dict):
+        raise TypeError("projection builders must return a dictionary payload")
+    if revalidate_input_revisions is not None and admitted_input.get("status") == "admitted":
+        payload = revalidate_projection_surface_decision_input(
+            payload=payload,
+            admitted_input=admitted_input,
+            current_input_revisions=revalidate_input_revisions(),
+            consumer=consumer,
+        )
+    context = _as_dict(payload.get("context"))
+    consumption = _as_dict(context.get("projection_decision_input_consumption"))
+    revalidation = _as_dict(context.get("projection_decision_input_revalidation"))
+    if (
+        consumption.get("status") != "consumed"
+        or consumption.get("consumer") != consumer
+        or consumption.get("input_id") != admitted_input.get("input_id")
+        or consumption.get("admitted_input_revision") != admitted_input.get("admitted_input_revision")
+        or consumption.get("material_input_revision") != admitted_input.get("material_input_revision")
+        or consumption.get("used_material_input_revision") != admitted_input.get("material_input_revision")
+        or (revalidation and revalidation.get("status") != "current")
+    ):
+        return payload
+    return payload
+
+
+def finalize_projection_surface_operating_decision(
+    *, payload: dict[str, Any], admitted_input: dict[str, Any], consumer: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Compile and bind the sole final decision after surface enrichment."""
+
+    context = _as_dict(payload.get("context"))
+    consumption = _as_dict(context.get("projection_decision_input_consumption"))
+    if (
+        consumption.get("status") != "consumed"
+        or consumption.get("consumer") != consumer
+        or consumption.get("input_id") != admitted_input.get("input_id")
+        or consumption.get("admitted_input_revision") != admitted_input.get("admitted_input_revision")
+        or consumption.get("material_input_revision") != admitted_input.get("material_input_revision")
+    ):
+        return payload, {}
+    operating_decision = compile_projection_surface_operating_decision(
+        payload=payload,
+        admitted_input=admitted_input,
+        consumer=consumer,
+    )
+    bound_payload = bind_projection_surface_operating_decision(
+        payload=payload, admitted_input=admitted_input, operating_decision=operating_decision, consumer=consumer
+    )
+    authority = _as_dict(_as_dict(bound_payload.get("context")).get("projection_decision_authority"))
+    return bound_payload, operating_decision if authority.get("status") == "admitted" else {}
+
+
+def admitted_operating_decision_revisions(
+    *,
+    revisions: dict[str, Any],
+    embedded_action_revision: str = "",
+    live_authority_revision: str = "",
+    status: str,
+    primary_action: dict[str, Any],
+    external_blocker: dict[str, Any],
+    terminal_state: str,
+    blocked_claim_classes: list[str],
+) -> dict[str, Any]:
+    """Resolve the complete minimal revision set consumed by the decision compiler."""
+
+    action_invocation = _as_dict(primary_action.get("operation_invocation"))
+    decision_posture = {
+        "status": status,
+        "action": {
+            "action": str(primary_action.get("action") or ""),
+            "operation_id": str(action_invocation.get("operation_id") or ""),
+            "expected_transition": str(action_invocation.get("expected_transition") or ""),
+            "expected_input_revision": str(action_invocation.get("expected_input_revision") or ""),
+        },
+        "blocker": {
+            "reason_code": str(external_blocker.get("reason_code") or ""),
+            "owner": str(external_blocker.get("owner") or ""),
+            "repair": str(external_blocker.get("repair") or ""),
+        },
+        "terminal_state": terminal_state,
+        "blocked_claim_classes": sorted(blocked_claim_classes),
+    }
+    admitted = dict(revisions)
+    if embedded_action_revision:
+        admitted["embedded_action_revision"] = embedded_action_revision
+    if live_authority_revision:
+        admitted["live_authority_revision"] = live_authority_revision
+    admitted["decision_posture"] = "sha256:" + _digest(decision_posture)
+    return admitted
+
+
 def bind_operation_invocation_to_authorities(*, invocation: dict[str, Any], authorities: dict[str, Any]) -> dict[str, Any]:
     bound = {
         **invocation,
@@ -1664,13 +2030,6 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             **primary_action,
             "context_constraint": context_effects["action_narrowing"],
         }
-    identity_input = {
-        "revisions": revisions,
-        "action": invocation,
-        "blocker": external_blocker,
-        "terminal_state": inputs.get("terminal_state", ""),
-        "live_decision_input_revision": invocation_current_revision,
-    }
     coverage = context_authority_coverage()
     requested_consumer = str(inputs.get("consumer") or "operating-decision")
     context_authority_projection = resolve_context_authority_projection(
@@ -1692,23 +2051,32 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "owner": "context-authority-registry",
             "repair": "run the typed context-authority repair operation before retrying the decision",
         }
-        identity_input["blocker"] = external_blocker
-    input_revisions = {
-        **revisions,
-        **(
-            {
-                "embedded_action_revision": embedded_invocation_revision,
-                "live_authority_revision": invocation_current_revision,
-            }
-            if invocation
-            else {}
-        ),
-    }
+    terminal_state = str(inputs.get("terminal_state") or "CONTINUE")
+    blocked_claim_classes = list(
+        dict.fromkeys(
+            [
+                *[str(item) for item in _as_list(inputs.get("blocked_claim_classes"))],
+                *[str(item) for item in context_effects["blocked_claim_classes"]],
+            ]
+        )
+    )
+    input_revisions = admitted_operating_decision_revisions(
+        revisions=revisions,
+        embedded_action_revision=embedded_invocation_revision if invocation else "",
+        live_authority_revision=invocation_current_revision if invocation else "",
+        status=status,
+        primary_action=primary_action,
+        external_blocker=external_blocker,
+        terminal_state=terminal_state,
+        blocked_claim_classes=blocked_claim_classes,
+    )
+    admitted_input_revision, decision_id = canonical_operating_decision_identity(input_revisions)
     return {
         "kind": "agentic-workspace/operating-decision/v1",
         "producer_module": "agentic_workspace.operating_decision",
         "producer_function": "compile_operating_decision",
-        "decision_id": f"operating-decision:{_digest(identity_input)[:16]}",
+        "decision_id": decision_id,
+        "admitted_input_revision": admitted_input_revision,
         "status": status,
         "input_revisions": input_revisions,
         "canonical_decision_input_revision": invocation_current_revision,
@@ -1719,7 +2087,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),
-        "terminal_state": str(inputs.get("terminal_state") or "CONTINUE"),
+        "terminal_state": terminal_state,
         "primary_action": primary_action,
         "action_identity": {
             "kind": "agentic-workspace/typed-action-identity/v1",
@@ -1732,14 +2100,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         if invocation
         else {},
         "external_blocker": external_blocker,
-        "blocked_claim_classes": list(
-            dict.fromkeys(
-                [
-                    *[str(item) for item in _as_list(inputs.get("blocked_claim_classes"))],
-                    *[str(item) for item in context_effects["blocked_claim_classes"]],
-                ]
-            )
-        ),
+        "blocked_claim_classes": blocked_claim_classes,
         "provenance": _as_dict(inputs.get("provenance")),
         "replacement_map": {
             "next_action.command": "display rendering only; operation_invocation owns executable identity",

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import subprocess
+import threading
+import time
 from pathlib import Path
+from typing import Any
 
 from tests.workspace_cli_support import cli
 
@@ -76,18 +79,509 @@ def test_report_reuses_equivalent_router_projection_and_verbose_forces_full_deta
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
     first_text = capsys.readouterr().out
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
-    unchanged_text = capsys.readouterr().out
-    unchanged = json.loads(unchanged_text)
+    reused_text = capsys.readouterr().out
+    reused = json.loads(reused_text)
 
-    assert unchanged["kind"] == "agentic-workspace/unchanged-projection/v1"
-    assert unchanged["operation"] == "report"
-    assert unchanged["work_avoided"]["serialization_of_full_projection_skipped"] is True
-    assert len(unchanged_text) < len(first_text) / 2
-    assert "--verbose" in unchanged["full_detail"]["command"]
+    assert reused["kind"] == "workspace-report-router/v1"
+    assert reused["projection_reuse"]["status"] == "decision+enrichment-reused"
+    assert reused["projection_reuse"]["decision_id"]
+    assert len(reused_text) <= len(first_text) + 64
 
     assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
     verbose = json.loads(capsys.readouterr().out)
     assert verbose["kind"] != "agentic-workspace/unchanged-projection/v1"
+
+
+def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    changed = ".agentic-workspace/config.toml"
+    capsys.readouterr()
+
+    commands = [
+        ["start", "--target", str(target), "--changed", changed, "--task", "Keep the route narrow.", "--format", "json"],
+        ["implement", "--target", str(target), "--changed", changed, "--task", "Keep the route narrow.", "--format", "json"],
+        ["proof", "--target", str(target), "--changed", changed, "--task", "Keep the route narrow.", "--format", "json"],
+        ["summary", "--target", str(target), "--select", "planning_revision", "--format", "json"],
+        ["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"],
+    ]
+    for command in commands:
+        assert cli.main(command) == 0
+        cold = json.loads(capsys.readouterr().out)
+        assert cold.get("kind") != "agentic-workspace/unchanged-projection/v1"
+        assert len(json.dumps(cold, indent=2).encode()) <= 65536
+
+        assert cli.main(command) == 0
+        warm = json.loads(capsys.readouterr().out)
+        assert warm["kind"] == cold["kind"]
+        compact_receipt = cold["projection_reuse"]
+        assert compact_receipt == {
+            "decision_id": compact_receipt["decision_id"],
+            "status": "decision+enrichment-rebuilt",
+            "freshness": "current",
+        }
+        assert compact_receipt["decision_id"]
+        assert not any(field.startswith("projection_decision_") for field in cold.get("context", {}))
+        assert warm["projection_reuse"] == {
+            "decision_id": compact_receipt["decision_id"],
+            "status": "decision+enrichment-reused",
+            "freshness": "current",
+        }
+
+
+def test_selected_closeout_and_planning_projections_are_bounded_and_warm_reused(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    capsys.readouterr()
+    commands = [
+        ["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"],
+        ["summary", "--target", str(target), "--select", "planning_revision", "--format", "json"],
+    ]
+    for command in commands:
+        started = time.perf_counter()
+        assert cli.main(command) == 0
+        cold_text = capsys.readouterr().out
+        cold_elapsed = time.perf_counter() - started
+        assert len(cold_text.encode()) <= 65536
+
+        started = time.perf_counter()
+        assert cli.main(command) == 0
+        warm_text = capsys.readouterr().out
+        warm_elapsed = time.perf_counter() - started
+        warm = json.loads(warm_text)
+        assert warm["projection_reuse"]["status"] == "decision+enrichment-reused"
+        assert len(warm_text.encode()) <= 65536
+        assert cold_elapsed < 2.0
+        assert warm_elapsed < 2.0
+
+
+def test_invalidation_reasons_cover_each_admitted_authority_input_exactly() -> None:
+    from agentic_workspace.projection_reuse import _invalidation_reasons
+
+    previous = {
+        "branch": "main",
+        "head": "a",
+        "task": "a",
+        "selected_owner": "a",
+        "planning": "a",
+        "changed_paths": "a",
+        "proof_subject": "a",
+        "runtime_compatibility": "a",
+        "external_freshness": "a",
+        "worktree": "a",
+    }
+    expected = {
+        "branch": "branch-changed",
+        "head": "head-changed",
+        "task": "task-changed",
+        "selected_owner": "selected-owner-changed",
+        "planning": "planning-revision-changed",
+        "changed_paths": "changed-paths-changed",
+        "proof_subject": "proof-subject-changed",
+        "runtime_compatibility": "runtime-compatibility-changed",
+        "external_freshness": "external-freshness-changed",
+        "worktree": "admitted-worktree-changed",
+    }
+    for field, reason in expected.items():
+        current = dict(previous)
+        current[field] = "b"
+        assert _invalidation_reasons(previous, current) == [reason]
+
+
+def test_cache_record_consumes_surface_decision_without_a_compiler_dependency(tmp_path: Path) -> None:
+    from agentic_workspace import projection_reuse
+    from agentic_workspace.operating_decision import (
+        admit_projection_surface_decision_input,
+        consume_projection_surface_decision_input,
+        finalize_projection_surface_operating_decision,
+        materialize_projection_under_decision_input,
+    )
+
+    target = _target(tmp_path)
+    query = {"changed": [".agentic-workspace/config.toml"]}
+    context = projection_reuse.prepare_projection_reuse(
+        root=target,
+        operation="report",
+        query=query,
+    )
+    admitted_input = admit_projection_surface_decision_input(input_revisions=context["decision_input_revisions"], consumer="report")
+    _cached, context = projection_reuse.lookup_projection_reuse(
+        root=target,
+        operation="report",
+        query=query,
+        full_detail_command="report --verbose",
+        context=context,
+        admitted_input=admitted_input,
+    )
+    builder_decisions: list[dict[str, Any]] = []
+
+    def build_payload(decision_input: dict[str, Any]) -> dict[str, Any]:
+        builder_decisions.append(decision_input)
+        return consume_projection_surface_decision_input(
+            payload={"status": "CONTINUE", "next_action": {"action": "inspect"}},
+            admitted_input=decision_input,
+            consumer="report",
+        )
+
+    payload = materialize_projection_under_decision_input(
+        builder=build_payload,
+        admitted_input=admitted_input,
+        consumer="report",
+    )
+    payload, operating_decision = finalize_projection_surface_operating_decision(
+        payload=payload, admitted_input=admitted_input, consumer="report"
+    )
+    assert builder_decisions == [admitted_input]
+    assert not hasattr(projection_reuse, "compile_operating_decision")
+    reuse = projection_reuse.record_projection_reuse(
+        root=target,
+        operation="report",
+        query=query,
+        context=context,
+        payload=payload,
+        operating_decision=operating_decision,
+    )
+
+    assert reuse["operating_decision"]["decision_id"] == operating_decision["decision_id"]
+
+
+def test_builder_must_consume_input_and_mismatched_posture_cannot_be_stamped() -> None:
+    from agentic_workspace.operating_decision import (
+        admit_projection_surface_decision_input,
+        bind_projection_surface_operating_decision,
+        compile_projection_surface_operating_decision,
+        finalize_projection_surface_operating_decision,
+        materialize_projection_under_decision_input,
+    )
+
+    admitted_input = admit_projection_surface_decision_input(input_revisions={"head": "a", "selected_owner": "owner-a"}, consumer="proof")
+    ignored = materialize_projection_under_decision_input(
+        builder=lambda _decision_input: {"status": "BLOCKED", "next_action": {"action": "repair"}},
+        admitted_input=admitted_input,
+        consumer="proof",
+    )
+    ignored, ignored_decision = finalize_projection_surface_operating_decision(
+        payload=ignored, admitted_input=admitted_input, consumer="proof"
+    )
+    assert ignored_decision == {}
+    assert "projection_decision_authority" not in ignored.get("context", {})
+
+    blocked_payload = {
+        "status": "BLOCKED",
+        "next_action": {"action": "repair"},
+        "context": {
+            "projection_decision_input_consumption": {
+                "status": "consumed",
+                "consumer": "proof",
+                "input_id": admitted_input["input_id"],
+                "admitted_input_revision": admitted_input["admitted_input_revision"],
+                "material_input_revision": admitted_input["material_input_revision"],
+                "used_material_input_revision": admitted_input["material_input_revision"],
+            }
+        },
+    }
+    blocked_decision = compile_projection_surface_operating_decision(
+        payload=blocked_payload, admitted_input=admitted_input, consumer="proof"
+    )
+    mismatched = {
+        **blocked_payload,
+        "status": "CONTINUE",
+        "next_action": {"action": "implement"},
+        "context": dict(blocked_payload["context"]),
+    }
+    mismatched = bind_projection_surface_operating_decision(
+        payload=mismatched,
+        admitted_input=admitted_input,
+        operating_decision=blocked_decision,
+        consumer="proof",
+    )
+    assert mismatched["context"]["projection_decision_authority"]["status"] == "rejected"
+    assert mismatched["context"]["projection_decision_authority"]["decision_id"] == blocked_decision["decision_id"]
+
+
+def test_builder_material_input_mismatch_rejects_consumption_and_authority() -> None:
+    from agentic_workspace.operating_decision import (
+        admit_projection_surface_decision_input,
+        attach_projection_surface_decision_input_consumption,
+        finalize_projection_surface_operating_decision,
+        projection_surface_builder_inputs,
+    )
+
+    admitted_input = admit_projection_surface_decision_input(
+        input_revisions={"head": "a", "selected_owner": "owner-a"},
+        consumer="start",
+        material_inputs={"task": "admitted task", "changed": ["a.py"]},
+    )
+    builder_inputs, consumption = projection_surface_builder_inputs(
+        admitted_input=admitted_input,
+        consumer="start",
+        required_fields=("task", "changed"),
+    )
+    assert builder_inputs == {"changed": ["a.py"], "task": "admitted task"}
+
+    altered = attach_projection_surface_decision_input_consumption(
+        payload={"status": "CONTINUE", "next_action": {"action": "inspect"}},
+        consumption=consumption,
+        used_material_inputs={"task": "different task", "changed": ["a.py"]},
+    )
+    altered, altered_decision = finalize_projection_surface_operating_decision(
+        payload=altered,
+        admitted_input=admitted_input,
+        consumer="start",
+    )
+
+    assert altered_decision == {}
+    assert altered["context"]["projection_decision_input_consumption"]["status"] == "rejected"
+    assert "projection_decision_authority" not in altered["context"]
+
+
+def test_each_ordinary_surface_rejects_selected_owner_race_after_builder(tmp_path: Path, capsys, monkeypatch) -> None:
+    from agentic_workspace import workspace_runtime_core, workspace_runtime_implement, workspace_runtime_startup
+
+    target = _target(tmp_path)
+    capsys.readouterr()
+    changed = ".agentic-workspace/config.toml"
+    cases = [
+        (
+            "start",
+            workspace_runtime_startup,
+            ["start", "--target", str(target), "--changed", changed, "--task", "Race proof.", "--format", "json"],
+        ),
+        (
+            "implement",
+            workspace_runtime_implement,
+            ["implement", "--target", str(target), "--changed", changed, "--task", "Race proof.", "--format", "json"],
+        ),
+        (
+            "proof",
+            workspace_runtime_core,
+            ["proof", "--target", str(target), "--changed", changed, "--task", "Race proof.", "--format", "json"],
+        ),
+        (
+            "summary",
+            workspace_runtime_core,
+            ["summary", "--target", str(target), "--select", "planning_revision", "--format", "json"],
+        ),
+        (
+            "report",
+            workspace_runtime_core,
+            ["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"],
+        ),
+    ]
+
+    for operation, runtime_module, command in cases:
+        real_prepare = runtime_module.prepare_projection_reuse
+        matching_calls = 0
+
+        def racing_prepare(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            nonlocal matching_calls
+            context = real_prepare(*args, **kwargs)
+            if kwargs.get("operation") != operation:
+                return context
+            matching_calls += 1
+            revisions = dict(context.get("decision_input_revisions", {}))
+            revisions["selected_owner"] = "owner-before" if matching_calls == 1 else "owner-after"
+            return {**context, "decision_input_revisions": revisions}
+
+        with monkeypatch.context() as scoped:
+            scoped.setattr(runtime_module, "prepare_projection_reuse", racing_prepare)
+            assert cli.main(command) == 0
+        payload = json.loads(capsys.readouterr().out)
+        context = payload["context"]
+        assert context["projection_decision_input_revalidation"]["status"] == "stale"
+        assert context["projection_decision_input_revalidation"]["changed_fields"] == ["selected_owner"]
+        assert context["projection_decision_input_consumption"]["status"] == "rejected"
+        assert "projection_decision_authority" not in context
+
+
+def test_all_admitted_authority_classes_fail_closed_when_they_change_during_materialization() -> None:
+    from agentic_workspace.operating_decision import (
+        admit_projection_surface_decision_input,
+        consume_projection_surface_decision_input,
+        finalize_projection_surface_operating_decision,
+        materialize_projection_under_decision_input,
+    )
+
+    base_revisions = {
+        "branch": "branch-a",
+        "head": "head-a",
+        "task": "task-a",
+        "selected_owner": "owner-a",
+        "planning": "planning-a",
+        "changed_paths": "changed-a",
+        "proof_subject": "proof-a",
+        "runtime_compatibility": "runtime-a",
+    }
+    for consumer in ("start", "summary", "implement", "proof", "report"):
+        for field in base_revisions:
+            admitted_input = admit_projection_surface_decision_input(
+                input_revisions=base_revisions,
+                consumer=consumer,
+            )
+            current_revisions = {**base_revisions, field: f"{field}-b"}
+            payload = materialize_projection_under_decision_input(
+                builder=lambda decision_input: consume_projection_surface_decision_input(
+                    payload={"status": "CONTINUE", "next_action": {"action": "inspect"}},
+                    admitted_input=decision_input,
+                    consumer=consumer,
+                ),
+                admitted_input=admitted_input,
+                consumer=consumer,
+                revalidate_input_revisions=lambda: current_revisions,
+            )
+            payload, operating_decision = finalize_projection_surface_operating_decision(
+                payload=payload,
+                admitted_input=admitted_input,
+                consumer=consumer,
+            )
+            assert operating_decision == {}
+            revalidation = payload["context"]["projection_decision_input_revalidation"]
+            assert revalidation["status"] == "stale"
+            assert revalidation["changed_fields"] == [field]
+
+
+def test_progress_heartbeat_and_cooperative_cancellation_are_bounded(tmp_path: Path, capsys) -> None:
+    from agentic_workspace.projection_reuse import ProjectionBudget, ProjectionProgress
+
+    target = _target(tmp_path)
+    capsys.readouterr()
+    cancel = target / ".agentic-workspace/local/cancellation/proof.cancel"
+    cancel.parent.mkdir(parents=True, exist_ok=True)
+    cancel.write_text("cancel\n", encoding="utf-8")
+    budget = ProjectionBudget(long_command_threshold_seconds=0.0, progress_interval_seconds=0.01)
+    with ProjectionProgress(root=target, operation="proof", budget=budget) as progress:
+        time.sleep(0.03)
+        contract = progress.contract()
+    heartbeats = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
+    assert 1 <= len(heartbeats) <= 5
+    assert heartbeats[0]["status"] == "cancel-requested"
+    assert contract["status"] == "cancel-requested"
+    assert contract["cancel"]["path"] == ".agentic-workspace/local/cancellation/proof.cancel"
+
+
+def test_start_stops_active_builder_after_cancellation_and_skips_later_stages(tmp_path: Path, capsys, monkeypatch) -> None:
+    import agentic_workspace.workspace_runtime_startup as startup_runtime
+
+    target = _target(tmp_path)
+    capsys.readouterr()
+    started = threading.Event()
+    stopped = threading.Event()
+    side_effect_ran = threading.Event()
+
+    def slow_start_payload(**_kwargs):
+        from agentic_workspace.projection_reuse import projection_cancellation_checkpoint
+
+        started.set()
+        try:
+            while True:
+                projection_cancellation_checkpoint()
+        finally:
+            stopped.set()
+        side_effect_ran.set()  # pragma: no cover - cancellation must unwind first
+        return {"kind": "late-start-projection/v1", "status": "complete"}  # pragma: no cover
+
+    monkeypatch.setattr(startup_runtime, "_start_payload", slow_start_payload)
+    cancel = target / ".agentic-workspace/local/cancellation/start.cancel"
+
+    def request_cancel() -> None:
+        assert started.wait(timeout=1)
+        cancel.parent.mkdir(parents=True, exist_ok=True)
+        cancel.write_text("cancel\n", encoding="utf-8")
+
+    requester = threading.Thread(target=request_cancel)
+    requester.start()
+    before = time.perf_counter()
+    assert cli.main(["start", "--target", str(target), "--format", "json"]) == 0
+    elapsed = time.perf_counter() - before
+    payload = json.loads(capsys.readouterr().out)
+    requester.join(timeout=1)
+
+    assert elapsed < 1
+    assert stopped.wait(timeout=0.2)
+    assert side_effect_ran.is_set() is False
+    assert not any(thread.name == "aw-start-build-start-projection" for thread in threading.enumerate())
+    assert payload["kind"] == "agentic-workspace/projection-cancelled/v1"
+    assert payload["cancelled_stage"] == "build-start-projection"
+    assert payload["cancellation_observed_during_work"] is True
+    assert payload["later_stages_skipped"] is True
+    assert payload["active_stage_stopped"] is True
+
+
+def test_selected_summary_and_report_cancellation_return_bounded_envelopes(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    capsys.readouterr()
+    commands = [
+        ("summary", ["summary", "--target", str(target), "--select", "planning_revision", "--format", "json"]),
+        ("report", ["report", "--target", str(target), "--format", "json"]),
+        ("report", ["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]),
+    ]
+    for operation, command in commands:
+        cancel = target / ".agentic-workspace" / "local" / "cancellation" / f"{operation}.cancel"
+        cancel.parent.mkdir(parents=True, exist_ok=True)
+        cancel.write_text("cancel\n", encoding="utf-8")
+        assert cli.main(command) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["kind"] == "agentic-workspace/projection-cancelled/v1"
+        assert payload["status"] == "cancelled"
+        cancel.unlink()
+
+
+def test_serialization_budget_preserves_semantic_answer_shape_and_bounds_inventories() -> None:
+    from agentic_workspace.projection_reuse import enforce_projection_serialization_budget
+
+    payload = {
+        "kind": "workspace-report-answer/v1",
+        "answer": {
+            "installed_state_residue": {"status": "separate_maintenance_residue"},
+            "inventory": ["x" * 500 for _ in range(1000)],
+        },
+    }
+    reuse_result = {
+        "status": "rebuilt",
+        "decision_id": "operating-decision:test",
+        "observed_cost": {"serialized_bytes": 500000},
+        "budgets": {"serialization_status": "exceeded", "serialization_budget_bytes": 65536},
+    }
+
+    bounded = enforce_projection_serialization_budget(
+        payload=payload,
+        operation="report",
+        reuse_result=reuse_result,
+        full_detail_command="agentic-workspace report --target . --verbose --format json",
+    )
+
+    assert bounded["kind"] == payload["kind"]
+    assert bounded["answer"]["installed_state_residue"] == payload["answer"]["installed_state_residue"]
+    assert bounded["serialization_budget"]["inventories_materialized_in_response"] is False
+    assert len(json.dumps(bounded, indent=2).encode()) <= 65536
+
+
+def test_serialization_budget_preserves_selected_report_values() -> None:
+    from agentic_workspace.projection_reuse import enforce_projection_serialization_budget
+
+    payload = {
+        "kind": "agentic-workspace/selected-output/v1",
+        "values": {
+            "answer": {
+                "trust": "verified",
+                "inventory": ["x" * 500 for _ in range(1000)],
+            }
+        },
+    }
+    reuse_result = {
+        "status": "rebuilt",
+        "decision_id": "operating-decision:test",
+        "observed_cost": {"serialized_bytes": 500000},
+        "budgets": {"serialization_status": "exceeded", "serialization_budget_bytes": 65536},
+    }
+
+    bounded = enforce_projection_serialization_budget(
+        payload=payload,
+        operation="report",
+        reuse_result=reuse_result,
+        full_detail_command="agentic-workspace report --target . --verbose --format json",
+    )
+
+    assert bounded["values"]["answer"]["trust"] == "verified"
+    assert len(json.dumps(bounded, indent=2).encode()) <= 65536
 
 
 def test_summary_reuses_unchanged_projection_and_preserves_decision_deltas(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -97,21 +591,13 @@ def test_summary_reuses_unchanged_projection_and_preserves_decision_deltas(tmp_p
     assert cli.main(["summary", "--target", str(target), "--format", "json"]) == 0
     first_text = capsys.readouterr().out
     assert cli.main(["summary", "--target", str(target), "--format", "json"]) == 0
-    unchanged_text = capsys.readouterr().out
-    unchanged = json.loads(unchanged_text)
+    reused_text = capsys.readouterr().out
+    reused = json.loads(reused_text)
 
-    assert unchanged["kind"] == "agentic-workspace/unchanged-projection/v1"
-    assert unchanged["operation"] == "summary"
-    assert unchanged["decision_delta"] == "unchanged"
-    assert unchanged["proof_delta"] == "unchanged"
-    assert unchanged["residue_delta"] == "unchanged"
-    assert unchanged["next_action_delta"] == "unchanged"
-    assert unchanged["prior_decision"]["health"]
-    assert unchanged["prior_decision"]["next_action"]
-    assert unchanged["work_avoided"]["full_projection_builder_skipped"] is True
-    assert unchanged["work_avoided"]["serialization_of_full_projection_skipped"] is True
-    assert len(unchanged_text) < len(first_text) / 2
-    assert "--verbose" in unchanged["full_detail"]["command"]
+    assert reused["kind"] == "planning-summary/v1"
+    assert reused["projection_reuse"]["status"] == "decision+enrichment-reused"
+    assert reused["projection_reuse"]["decision_id"]
+    assert len(reused_text) <= len(first_text) + 64
 
     planning_state = target / ".agentic-workspace" / "planning" / "state.toml"
     planning_state.write_text(planning_state.read_text(encoding="utf-8") + "\n# decision relevant planning change\n", encoding="utf-8")
@@ -144,16 +630,16 @@ def test_dependency_digest_tracks_commit_relevant_worktree_and_contract_but_igno
     assert contract != relevant
 
 
-def test_dependency_digest_ignores_revision_only_changes_for_declared_dependencies(tmp_path: Path) -> None:
+def test_dependency_digest_invalidates_when_branch_revision_changes(tmp_path: Path) -> None:
     from agentic_workspace import projection_reuse
 
     target = _target(tmp_path)
     first, _ = projection_reuse.dependency_digest(root=target, operation="summary", query={})
     (target / ".git" / "HEAD").write_text("ref: refs/heads/feature\n", encoding="utf-8")
     (target / "notes.txt").write_text("not summary relevant\n", encoding="utf-8")
-    unchanged, _ = projection_reuse.dependency_digest(root=target, operation="summary", query={})
+    changed, _ = projection_reuse.dependency_digest(root=target, operation="summary", query={})
 
-    assert unchanged == first
+    assert changed != first
 
 
 def test_dependency_digest_excludes_crash_recovery_worktrees_and_virtualenvs(tmp_path: Path) -> None:
@@ -187,10 +673,10 @@ def test_dependency_digest_fails_open_when_git_probe_times_out(tmp_path: Path, m
 
     target = _target(tmp_path)
 
-    def _timeout(*args, **kwargs):
-        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs["timeout"])
+    def _timeout(*_args, **_kwargs):
+        return projection_reuse.GitProbeResult("unavailable", reason="Git revision probe timed out")
 
-    monkeypatch.setattr(projection_reuse.subprocess, "run", _timeout)
+    monkeypatch.setattr(projection_reuse, "_git", _timeout)
 
     result = projection_reuse.dependency_digest(root=target, operation="report", query={})
     digest, dependencies = result
@@ -198,29 +684,34 @@ def test_dependency_digest_fails_open_when_git_probe_times_out(tmp_path: Path, m
     assert digest
     assert ".agentic-workspace/config.toml" in dependencies
     assert result.status == "unavailable"
-    assert result.findings[0]["section"] == "projection_dependency_git_probe"
+    assert result.findings[0]["section"] == "projection_branch_revision"
 
 
-def test_report_dependency_budget_exhaustion_returns_degraded_compact_payload(tmp_path: Path, capsys, monkeypatch) -> None:
+def test_admitted_revision_computation_fails_open_above_content_read_budget(tmp_path: Path) -> None:
     from agentic_workspace import projection_reuse
 
     target = _target(tmp_path)
-    capsys.readouterr()
-    budget_type = projection_reuse.DependencyScanBudget
-    monkeypatch.setattr(
-        projection_reuse,
-        "DependencyScanBudget",
-        lambda: budget_type(max_entries=1, time_budget_seconds=1.0),
+    changed = [f"src/agentic_workspace/generated_{index}.py" for index in range(100)]
+    cached, context = projection_reuse.lookup_projection_reuse(
+        root=target,
+        operation="report",
+        query={"changed": changed},
+        full_detail_command="agentic-workspace report --target . --verbose --format json",
     )
 
-    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
-
-    assert payload.get("kind") != "agentic-workspace/unchanged-projection/v1"
-    degradation = payload["projection_reuse"]
-    assert degradation["status"] == "degraded"
-    assert degradation["findings"][0]["section"] == "projection_dependency_discovery"
-    assert degradation["findings"][0]["status"] == "truncated"
+    assert cached is None
+    assert len(context["dependencies"]) <= 64 + 32
+    assert context["dependency_status"] == "unavailable"
+    assert context["degraded_findings"][-1]["section"] == "projection_changed_path_revision"
+    result = projection_reuse.record_projection_reuse(
+        root=target,
+        operation="report",
+        query={"changed": changed},
+        context=context,
+        payload={"status": "ok"},
+        operating_decision={},
+    )
+    assert result == {}
 
 
 def test_report_git_timeout_disables_reuse_and_names_failed_probe(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -231,22 +722,27 @@ def test_report_git_timeout_disables_reuse_and_names_failed_probe(tmp_path: Path
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
     capsys.readouterr()
 
-    def _timeout(*args, **kwargs):
-        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs["timeout"])
+    def _timeout(*_args, **_kwargs):
+        return projection_reuse.GitProbeResult("unavailable", reason="Git revision probe timed out")
 
-    monkeypatch.setattr(projection_reuse.subprocess, "run", _timeout)
+    monkeypatch.setattr(projection_reuse, "_git", _timeout)
 
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
 
     assert payload.get("kind") != "agentic-workspace/unchanged-projection/v1"
     finding = payload["projection_reuse"]["findings"][0]
-    assert finding["section"] == "projection_dependency_git_probe"
+    assert finding["section"] == "projection_branch_revision"
     assert finding["status"] == "unavailable"
 
 
 def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> None:
-    from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
+    from agentic_workspace.operating_decision import (
+        admit_projection_surface_decision_input,
+        consume_projection_surface_decision_input,
+        finalize_projection_surface_operating_decision,
+    )
+    from agentic_workspace.projection_reuse import lookup_projection_reuse, prepare_projection_reuse, record_projection_reuse
 
     target = _target(tmp_path)
     cached, context = lookup_projection_reuse(
@@ -254,9 +750,63 @@ def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> 
     )
     assert cached is None and context["volatile"] is True
     for index in range(40):
-        cached, context = lookup_projection_reuse(root=target, operation="doctor", query={"index": index}, full_detail_command="doctor")
-        record_projection_reuse(root=target, operation="doctor", query={"index": index}, context=context, payload={"status": "ok"})
+        query = {"index": index}
+        context = prepare_projection_reuse(root=target, operation="doctor", query=query)
+        admitted_input = admit_projection_surface_decision_input(input_revisions=context["decision_input_revisions"], consumer="doctor")
+        cached, context = lookup_projection_reuse(
+            root=target,
+            operation="doctor",
+            query=query,
+            full_detail_command="doctor",
+            context=context,
+            admitted_input=admitted_input,
+        )
+        payload = consume_projection_surface_decision_input(payload={"status": "ok"}, admitted_input=admitted_input, consumer="doctor")
+        payload, operating_decision = finalize_projection_surface_operating_decision(
+            payload=payload, admitted_input=admitted_input, consumer="doctor"
+        )
+        record_projection_reuse(
+            root=target,
+            operation="doctor",
+            query={"index": index},
+            context=context,
+            payload=payload,
+            operating_decision=operating_decision,
+        )
     assert len(list((target / ".agentic-workspace/local/projection-cache").glob("*.json"))) <= 32
+
+
+def test_absent_surface_admission_disables_reuse_without_synthesizing_a_decision(tmp_path: Path) -> None:
+    from agentic_workspace.operating_decision import admit_projection_surface_decision_input
+    from agentic_workspace.projection_reuse import lookup_projection_reuse, prepare_projection_reuse, record_projection_reuse
+
+    target = _target(tmp_path)
+    query = {"profile": "router"}
+    context = prepare_projection_reuse(root=target, operation="report", query=query)
+    admitted_input = admit_projection_surface_decision_input(input_revisions={}, consumer="report")
+
+    cached, context = lookup_projection_reuse(
+        root=target,
+        operation="report",
+        query=query,
+        full_detail_command="report --verbose",
+        context=context,
+        admitted_input=admitted_input,
+    )
+    assert cached is None
+    assert context["invalidation_reasons"] == ["surface-decision-input-unavailable"]
+    assert (
+        record_projection_reuse(
+            root=target,
+            operation="report",
+            query=query,
+            context=context,
+            payload={"status": "CONTINUE"},
+            operating_decision={},
+        )
+        == {}
+    )
+    assert not context["path"].exists()
 
 
 def test_projection_cache_does_not_bootstrap_workspace_state(tmp_path: Path) -> None:
@@ -264,7 +814,14 @@ def test_projection_cache_does_not_bootstrap_workspace_state(tmp_path: Path) -> 
 
     cached, context = lookup_projection_reuse(root=tmp_path, operation="report", query={}, full_detail_command="report")
     assert cached is None
-    record_projection_reuse(root=tmp_path, operation="report", query={}, context=context, payload={"status": "ok"})
+    record_projection_reuse(
+        root=tmp_path,
+        operation="report",
+        query={},
+        context=context,
+        payload={"status": "ok"},
+        operating_decision={},
+    )
 
     assert not (tmp_path / ".agentic-workspace").exists()
 

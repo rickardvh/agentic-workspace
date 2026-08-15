@@ -17,7 +17,23 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
-from agentic_workspace.operating_decision import project_startup_claim_effect_authority, resolve_context_authority_projection
+from agentic_workspace.operating_decision import (
+    admit_projection_surface_decision_input,
+    attach_projection_surface_decision_input_consumption,
+    finalize_projection_surface_operating_decision,
+    materialize_projection_under_decision_input,
+    project_startup_claim_effect_authority,
+    projection_surface_builder_inputs,
+    resolve_context_authority_projection,
+)
+from agentic_workspace.projection_reuse import (
+    ProjectionProgress,
+    enforce_projection_serialization_budget,
+    lookup_projection_reuse,
+    prepare_projection_reuse,
+    projection_cancellation_checkpoint,
+    record_projection_reuse,
+)
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -814,12 +830,14 @@ def _apply_session_log_export_intent_route(*, payload: dict[str, Any], task_text
 def _start_payload(
     *, target_root: Path, changed_paths: list[str], task_text: str | None = None, profile: str | None = None
 ) -> dict[str, Any]:
+    projection_cancellation_checkpoint()
     startup_template = _CONTEXT_TEMPLATES["startup_context"]
     config = _load_workspace_config(target_root=target_root)
     if profile in {None, "tiny"}:
         payload = _start_tiny_payload_fast(
             target_root=target_root, changed_paths=changed_paths, task_text=task_text, config=config, startup_template=startup_template
         )
+        projection_cancellation_checkpoint()
         normalized_paths = _normalize_changed_paths(changed_paths)
         payload["context_authority_projection"] = resolve_context_authority_projection(
             consumer="start",
@@ -861,6 +879,7 @@ def _start_payload(
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     installed_modules = [entry.name for entry in registry if entry.installed]
     preflight = _run_preflight_command(target_root=target_root, task_text=task_text, changed_paths=changed_paths, profile="full")
+    projection_cancellation_checkpoint()
     active_state = preflight.get("active_planning_state", {})
     selected_modules = list(config.enabled_modules)
     if not installed_modules and isinstance(active_state, dict):
@@ -2635,13 +2654,13 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             {
                 "kind": "agentic-workspace/startup-skills-projection/v1",
                 "status": "selector-only",
-                "rule": "Read-only compact startup omits skill packet detail; use the catalog selector only when needed.",
+                "rule": "Use skills selector.",
                 "required": [],
                 "recommended": [],
                 "catalog": {
                     "available": True,
                     "detail_selector": "skills",
-                    "command": f'{cli_invoke} skills --target "{target_root or Path(".")}" --task "<task>" --format json',
+                    "command": f'{cli_invoke} skills --target . --task "<task>" --format json',
                 },
             }
             if read_only_compact_default
@@ -2896,12 +2915,81 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     if inventory_payload := _selector_inventory_selected_payload(select=selected_fields, source_command="start"):
         _emit_payload(payload=inventory_payload, format_name=args.format)
         return 0
-    payload = _start_payload(
-        target_root=target_root,
-        changed_paths=list(getattr(args, "changed", []) or []),
-        task_text=task_text,
-        profile=_start_profile_for_select(requested_profile=start_profile, select=selected_fields),
-    )
+    changed_paths = list(getattr(args, "changed", []) or [])
+    effective_profile = _start_profile_for_select(requested_profile=start_profile, select=selected_fields)
+    reuse_query = {
+        "profile": effective_profile,
+        "format": str(args.format),
+        "task": str(task_text or ""),
+        "changed": changed_paths,
+        "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
+    }
+    reuse_context: dict[str, Any] | None = None
+    admitted_input: dict[str, Any] = {}
+    payload: dict[str, Any]
+    if args.format == "json" and not selected_fields and effective_profile != "full":
+        full_detail_command = _command_with_cli_invoke(
+            command="agentic-workspace start --target . --verbose --format json", cli_invoke=config.cli_invoke
+        )
+        reuse_context = prepare_projection_reuse(root=target_root, operation="start", query=reuse_query)
+        admitted_input = admit_projection_surface_decision_input(
+            input_revisions=reuse_context.get("decision_input_revisions", {}),
+            consumer="start",
+            material_inputs={"task": str(task_text or ""), "changed": changed_paths},
+        )
+        reused, reuse_context = lookup_projection_reuse(
+            root=target_root,
+            operation="start",
+            query=reuse_query,
+            full_detail_command=full_detail_command,
+            context=reuse_context,
+            admitted_input=admitted_input,
+        )
+        if reused is not None:
+            _emit_payload(payload=reused, format_name=args.format)
+            return 0
+    with ProjectionProgress(root=target_root, operation="start") as progress:
+
+        def build_start_projection(decision_input: dict[str, Any]) -> dict[str, Any]:
+            builder_inputs, consumption = projection_surface_builder_inputs(
+                admitted_input=decision_input,
+                consumer="start",
+                required_fields=("task", "changed"),
+            )
+            builder_inputs = builder_inputs or {"task": str(task_text or ""), "changed": changed_paths}
+            candidate = _start_payload(
+                target_root=target_root,
+                changed_paths=[str(path) for path in builder_inputs.get("changed", [])],
+                task_text=str(builder_inputs.get("task") or "") or None,
+                profile=effective_profile,
+            )
+            return attach_projection_surface_decision_input_consumption(
+                payload=candidate, consumption=consumption, used_material_inputs=builder_inputs
+            )
+
+        payload = progress.run_cancellable(
+            lambda: materialize_projection_under_decision_input(
+                builder=build_start_projection,
+                admitted_input=admitted_input,
+                consumer="start",
+                revalidate_input_revisions=lambda: prepare_projection_reuse(
+                    root=target_root,
+                    operation="start",
+                    query=reuse_query,
+                    force_refresh=True,
+                ).get("decision_input_revisions", {}),
+            ),
+            stage="build-start-projection",
+        )
+        progress_contract = progress.contract()
+    if (
+        progress_contract["status"] == "cancel-requested"
+        or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
+    ):
+        payload["projection_progress"] = progress_contract
+    if payload.get("status") == "cancelled":
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
     if selected_fields:
         _hydrate_selected_start_advisory_payloads(
             payload=payload,
@@ -2912,6 +3000,25 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             config=config,
         )
         payload = _select_payload_fields(payload, select=selected_fields, source_command="start")
+    payload, operating_decision = finalize_projection_surface_operating_decision(
+        payload=payload, admitted_input=admitted_input, consumer="start"
+    )
+    if reuse_context is not None:
+        reuse_result = record_projection_reuse(
+            root=target_root,
+            operation="start",
+            query=reuse_query,
+            context=reuse_context,
+            payload=payload,
+            operating_decision=operating_decision,
+        )
+        if reuse_result:
+            payload = enforce_projection_serialization_budget(
+                payload=payload,
+                operation="start",
+                reuse_result=reuse_result,
+                full_detail_command=full_detail_command,
+            )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 
