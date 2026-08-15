@@ -15,8 +15,6 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any, Callable, Iterator, Literal
 
-from agentic_workspace.operating_decision import compile_operating_decision
-
 _CACHE_KIND = "agentic-workspace/projection-reuse-record/v2"
 _CACHE_CONTRACT_VERSION = 5
 _MAX_CACHE_RECORDS = 32
@@ -98,6 +96,48 @@ class ProjectionBudget:
     progress_interval_seconds: float = _PROGRESS_INTERVAL_SECONDS
 
 
+class ProjectionCancelled(RuntimeError):
+    """Internal cooperative unwind raised only at Python execution checkpoints."""
+
+
+class ProjectionCancellationToken:
+    """Coordinate cancellation between the adapter and its active projection stage."""
+
+    def __init__(self) -> None:
+        self._requested = threading.Event()
+        self._acknowledged = threading.Event()
+
+    @property
+    def requested(self) -> bool:
+        return self._requested.is_set()
+
+    @property
+    def acknowledged(self) -> bool:
+        return self._acknowledged.is_set()
+
+    def request(self) -> None:
+        self._requested.set()
+
+    def acknowledge(self) -> None:
+        self._acknowledged.set()
+
+    def checkpoint(self) -> None:
+        if self.requested:
+            self.acknowledge()
+            raise ProjectionCancelled
+
+
+_ACTIVE_CANCELLATION = threading.local()
+
+
+def projection_cancellation_checkpoint() -> None:
+    """Acknowledge cancellation from a safe boundary inside an active builder."""
+
+    token = getattr(_ACTIVE_CANCELLATION, "token", None)
+    if isinstance(token, ProjectionCancellationToken):
+        token.checkpoint()
+
+
 class ProjectionProgress:
     """Bounded stderr heartbeat and cooperative cancel contract for long work."""
 
@@ -137,30 +177,42 @@ class ProjectionProgress:
         }
 
     def run_cancellable(self, builder: Callable[[], dict[str, Any]], *, stage: str) -> dict[str, Any]:
-        """Run one projection stage while observing cancellation at the adapter boundary."""
+        """Run one stage until it completes or acknowledges cooperative cancellation."""
 
         cancelled = self.cancellation_payload()
         if cancelled is not None:
             return cancelled
         result: list[dict[str, Any]] = []
         failure: list[BaseException] = []
+        token = ProjectionCancellationToken()
 
         def run() -> None:
             try:
-                result.append(builder())
+                _ACTIVE_CANCELLATION.token = token
+                projection_cancellation_checkpoint()
+                built = builder()
+                projection_cancellation_checkpoint()
+                result.append(built)
+            except ProjectionCancelled:
+                token.acknowledge()
             except BaseException as exc:  # pragma: no cover - re-raised on the caller thread
                 failure.append(exc)
+            finally:
+                _ACTIVE_CANCELLATION.token = None
 
-        worker = threading.Thread(target=run, daemon=True, name=f"aw-{self.operation}-{stage}")
+        worker = threading.Thread(target=run, name=f"aw-{self.operation}-{stage}")
         worker.start()
         while worker.is_alive():
             worker.join(timeout=min(0.025, self.budget.progress_interval_seconds))
             if self.cancel_requested:
-                payload = self.cancellation_payload() or {}
-                payload["cancelled_stage"] = stage
-                payload["later_stages_skipped"] = True
-                payload["cancellation_observed_during_work"] = True
-                return payload
+                token.request()
+        if token.acknowledged:
+            payload = self.cancellation_payload() or {}
+            payload["cancelled_stage"] = stage
+            payload["later_stages_skipped"] = True
+            payload["cancellation_observed_during_work"] = True
+            payload["active_stage_stopped"] = True
+            return payload
         if failure:
             raise failure[0]
         return result[0]
@@ -663,27 +715,6 @@ def lookup_projection_reuse(
     }, context
 
 
-def resolve_projection_operating_decision(*, payload: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
-    """Resolve the ordinary surface decision once, before projection cache recording."""
-
-    operation_authority = payload.get("context", {}) if isinstance(payload.get("context"), dict) else {}
-    operation_authority = (
-        operation_authority.get("operation_authority", {}) if isinstance(operation_authority.get("operation_authority"), dict) else {}
-    )
-    existing = operation_authority.get("operating_decision", {}) if isinstance(operation_authority, dict) else {}
-    if isinstance(existing, dict) and existing.get("decision_id"):
-        return existing
-    return compile_operating_decision(
-        inputs={
-            "revisions": context.get("input_revisions", {}),
-            "terminal_state": str(payload.get("status") or payload.get("health") or "CONTINUE"),
-            "blocked_claim_classes": [str(item) for item in payload.get("blocked_claims", [])]
-            if isinstance(payload.get("blocked_claims"), list)
-            else [],
-        }
-    )
-
-
 def record_projection_reuse(
     *,
     root: Path,
@@ -762,6 +793,15 @@ def record_projection_reuse(
             if operating_decision.get(key) not in (None, "")
         },
     }
+    # The budget governs the emitted projection, including its reuse receipt.
+    # Recalculate twice so the byte-count field's own width is reflected.
+    for _iteration in range(2):
+        projected_payload = {**payload, "projection_reuse": reuse_result}
+        emitted_bytes = len(json.dumps(projected_payload, sort_keys=True, default=str, indent=2).encode())
+        reuse_result["observed_cost"]["serialized_bytes"] = emitted_bytes
+        reuse_result["budgets"]["serialization_status"] = (
+            "within-budget" if emitted_bytes <= budget.serialization_budget_bytes else "exceeded"
+        )
     record = {
         "kind": _CACHE_KIND,
         "contract_version": _CACHE_CONTRACT_VERSION,
@@ -862,4 +902,39 @@ def enforce_projection_serialization_budget(
         "inventories_materialized_in_response": False,
         "detail_command": full_detail_command,
     }
+    encoded = json.dumps(bounded, sort_keys=True, default=str, indent=2).encode()
+    if len(encoded) > budgets.get("serialization_budget_bytes", _DEFAULT_SERIALIZATION_BUDGET_BYTES):
+        source_context = payload.get("context", {}) if isinstance(payload.get("context"), dict) else {}
+        bounded = {
+            key: _compact(payload[key])
+            for key in (
+                "kind",
+                "status",
+                "health",
+                "target",
+                "communication_contract",
+                "action_signals",
+                "next",
+                "next_action",
+                "decision_packet",
+                "current_decision",
+                "evidence_bundle",
+            )
+            if key in payload
+        }
+        bounded["context"] = {"projection_decision_authority": _compact(source_context.get("projection_decision_authority", {}))}
+        bounded["projection_reuse"] = reuse_result
+        bounded["serialization_budget"] = {
+            "status": "detail-withheld",
+            "operation": operation,
+            "reason": "serialization-budget-exceeded",
+            "serialized_bytes": reuse_result.get("observed_cost", {}).get("serialized_bytes", 0),
+            "serialization_budget_bytes": budgets.get("serialization_budget_bytes", _DEFAULT_SERIALIZATION_BUDGET_BYTES),
+            "inventories_materialized_in_response": False,
+            "detail_command": full_detail_command,
+        }
+        bounded["omitted_detail"] = {
+            "kind": "agentic-workspace/omitted-detail/v1",
+            "reason": "Use the explicit full-detail command for fields withheld by the serialization budget.",
+        }
     return bounded

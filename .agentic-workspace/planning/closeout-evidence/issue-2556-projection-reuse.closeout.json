@@ -12,12 +12,13 @@
     "ordinary_route": "agentic-workspace report --target . --section closeout_trust --format json"
   },
   "claim_level": "slice",
-  "outcome": "The five admitted projection surfaces reuse their surface operating decision within computation and serialization budgets, expose state-read counts, and observe cancellation after work begins.",
+  "outcome": "The five ordinary projection surfaces expose and reuse their admitted operating decision within computation and emitted-serialization budgets, expose state-read counts, and stop active work through acknowledged cooperative cancellation.",
   "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2556",
   "evidence_refs": [
     ".agentic-workspace/local/logs/aw-session-20260814170232-7b3b8508/index.json (local captured replay source; 7 entries before replay)",
     "uv run --frozen pytest -q tests/test_operating_decision.py tests/test_workspace_projection_reuse.py: 82 passed",
-    "cold/warm start, selected summary, implement, proof, and closeout_trust replay: every warm result was agentic-workspace/unchanged-projection/v1 with the cold decision identity and no invalidation reason"
+    "cold/warm start, selected summary, implement, proof, and closeout_trust replay: every warm result was agentic-workspace/unchanged-projection/v1 with the independently exposed cold surface decision identity and no invalidation reason",
+    "cancellation-during-work fixture: active worker stopped, later stages skipped, and post-cancellation side effect absent"
   ],
   "residual": {
     "status": "closed",
@@ -28,17 +29,18 @@
     "provenance": "PR #2568 blocker replay on its exact working head",
     "reopen_trigger": "Reopen if a projection cache compiles a second authority decision, cancellation cannot interrupt an active builder, or measured costs exceed the declared budgets."
   },
-  "revision": 1,
+  "revision": 2,
   "execution_run": {
     "captured source": ".agentic-workspace/local/logs/aw-session-20260814170232-7b3b8508; pre-replay index 66,148 bytes and session markdown 1,443,642 bytes",
     "captured command classes": "7 pre-replay entries: implement=2, doctor=1, summary=1, proof=1, skills=1, planning=1",
     "replay command classes": "10 appended invocations: start=2, summary_selected=2, implement=2, proof=2, closeout_trust=2",
-    "cold elapsed ms": "start=3244.1; summary_selected=1337.0; implement=2488.4; proof=1870.5; closeout_trust=1956.5",
-    "warm elapsed ms": "start=805.8; summary_selected=1335.1; implement=891.2; proof=1000.8; closeout_trust=823.6",
-    "cold output bytes": "start=51090; summary_selected=3670; implement=22274; proof=7013; closeout_trust=61794",
-    "warm output bytes": "start=1774; summary_selected=1827; implement=1873; proof=1785; closeout_trust=1823",
-    "state reads": "cold=36 and warm=36 for every surface; warm receipts also preserve cold_state_read_count=36",
-    "reuse": "all five warm projections reused decision and enrichment, skipped the full builder, and reported no invalidation reasons",
-    "budgets": "computation_budget_ms=10000; serialization_budget_bytes=65536; every measured cold and warm projection remained within both"
+    "cold elapsed ms": "start=3525.4; summary_selected=902.5; implement=2907.5; proof=2125.4; closeout_trust=2120.5",
+    "warm elapsed ms": "start=743.2; summary_selected=824.5; implement=837.9; proof=903.8; closeout_trust=870.6",
+    "cold output bytes": "start=10820 detail-withheld envelope; summary_selected=4674; implement=36071; proof=8093; closeout_trust=63736",
+    "warm output bytes": "start=1829; summary_selected=1882; implement=1856; proof=1840; closeout_trust=1878",
+    "state reads": "cold=35 and warm=35 for every surface; warm receipts also preserve cold_state_read_count=35",
+    "reuse": "all five warm projections matched the independently exposed surface decision, reused decision and enrichment, skipped the full builder, and reported no invalidation reasons",
+    "cancellation": "the active stage acknowledged cancellation and unwound before the typed cancelled result; later stages and the fixture's post-cancellation side effect did not run",
+    "budgets": "computation_budget_ms=10000; serialization_budget_bytes=65536; every measured cold and warm computation remained within budget, and oversized startup detail emitted a bounded 10820-byte detail-withheld envelope"
   }
 }

@@ -17,13 +17,17 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
-from agentic_workspace.operating_decision import project_startup_claim_effect_authority, resolve_context_authority_projection
+from agentic_workspace.operating_decision import (
+    admit_projection_surface_operating_decision,
+    project_startup_claim_effect_authority,
+    resolve_context_authority_projection,
+)
 from agentic_workspace.projection_reuse import (
     ProjectionProgress,
     enforce_projection_serialization_budget,
     lookup_projection_reuse,
+    projection_cancellation_checkpoint,
     record_projection_reuse,
-    resolve_projection_operating_decision,
 )
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
@@ -779,12 +783,14 @@ def _local_chat_checkpoint_default_visible(local_checkpoint: dict[str, Any], *, 
 def _start_payload(
     *, target_root: Path, changed_paths: list[str], task_text: str | None = None, profile: str | None = None
 ) -> dict[str, Any]:
+    projection_cancellation_checkpoint()
     startup_template = _CONTEXT_TEMPLATES["startup_context"]
     config = _load_workspace_config(target_root=target_root)
     if profile in {None, "tiny"}:
         payload = _start_tiny_payload_fast(
             target_root=target_root, changed_paths=changed_paths, task_text=task_text, config=config, startup_template=startup_template
         )
+        projection_cancellation_checkpoint()
         normalized_paths = _normalize_changed_paths(changed_paths)
         payload["context_authority_projection"] = resolve_context_authority_projection(
             consumer="start",
@@ -825,6 +831,7 @@ def _start_payload(
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     installed_modules = [entry.name for entry in registry if entry.installed]
     preflight = _run_preflight_command(target_root=target_root, task_text=task_text, changed_paths=changed_paths, profile="full")
+    projection_cancellation_checkpoint()
     active_state = preflight.get("active_planning_state", {})
     selected_modules = list(config.enabled_modules)
     if not installed_modules and isinstance(active_state, dict):
@@ -2900,13 +2907,18 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         )
         payload = _select_payload_fields(payload, select=selected_fields, source_command="start")
     if reuse_context is not None:
+        operating_decision = admit_projection_surface_operating_decision(
+            payload=payload,
+            input_revisions=reuse_context.get("input_revisions", {}),
+            consumer="start",
+        )
         reuse_result = record_projection_reuse(
             root=target_root,
             operation="start",
             query=reuse_query,
             context=reuse_context,
             payload=payload,
-            operating_decision=resolve_projection_operating_decision(payload=payload, context=reuse_context),
+            operating_decision=operating_decision,
         )
         if reuse_result:
             payload = enforce_projection_serialization_budget(

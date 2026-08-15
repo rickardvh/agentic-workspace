@@ -19,13 +19,17 @@ from agentic_workspace.authority_envelope import (
 )
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
-from agentic_workspace.operating_decision import compile_implement_context_operating_decision, resolve_context_authority_projection
+from agentic_workspace.operating_decision import (
+    admit_projection_surface_operating_decision,
+    compile_implement_context_operating_decision,
+    resolve_context_authority_projection,
+)
 from agentic_workspace.projection_reuse import (
     ProjectionProgress,
     enforce_projection_serialization_budget,
     lookup_projection_reuse,
+    projection_cancellation_checkpoint,
     record_projection_reuse,
-    resolve_projection_operating_decision,
 )
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
@@ -358,13 +362,18 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     ):
         payload["projection_progress"] = progress_contract
     if reuse_context is not None:
+        operating_decision = admit_projection_surface_operating_decision(
+            payload=payload,
+            input_revisions=reuse_context.get("input_revisions", {}),
+            consumer="implement",
+        )
         reuse_result = record_projection_reuse(
             root=target_root,
             operation="implement",
             query=reuse_query,
             context=reuse_context,
             payload=payload,
-            operating_decision=resolve_projection_operating_decision(payload=payload, context=reuse_context),
+            operating_decision=operating_decision,
         )
         if reuse_result:
             payload = enforce_projection_serialization_budget(
@@ -385,6 +394,7 @@ def _implement_next_selected_payload(
     config: Any,
     startup_route_fingerprint: str = "",
 ) -> dict[str, Any]:
+    projection_cancellation_checkpoint()
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
     proof = (
@@ -402,6 +412,7 @@ def _implement_next_selected_payload(
         if normalized_paths
         else copy.deepcopy(implementer_template["unknown_scope_proof"])
     )
+    projection_cancellation_checkpoint()
     path_boundaries = [
         _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
     ]
@@ -416,6 +427,7 @@ def _implement_next_selected_payload(
         task_text=task_text,
         execution_posture=execution_posture,
     )
+    projection_cancellation_checkpoint()
     durable_intent = _intent_decision_projection(target_root=target_root, config=config, changed_paths=normalized_paths, compact=True)
     architecture_principles = _architecture_principles_payload(
         target_root=target_root,
@@ -1029,6 +1041,7 @@ def _implement_payload(
         intent_check={},
         parent_intent_status=parent_intent_status,
     )
+    projection_cancellation_checkpoint()
     implement_current_need = "changed-path-implementation" if normalized_paths else "unknown-scope-routing"
     payload = {
         "kind": "implementer-context/v1",
@@ -1457,6 +1470,7 @@ def _implement_payload(
         task_text=task_text,
         changed_paths=normalized_paths,
     )
+    projection_cancellation_checkpoint()
     improvement_pressure = _session_improvement_pressure_payload(
         target_root=target_root,
         config=config,
@@ -1492,6 +1506,7 @@ def _implement_payload(
             task_text=task_text,
             compact=False,
         )
+    projection_cancellation_checkpoint()
     return payload
 
 

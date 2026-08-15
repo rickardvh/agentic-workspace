@@ -1354,6 +1354,51 @@ def canonical_operating_decision_identity(input_revisions: dict[str, Any]) -> tu
     return revision, f"operating-decision:{_digest({'input_revision': revision})[:16]}"
 
 
+def admit_projection_surface_operating_decision(
+    *, payload: dict[str, Any], input_revisions: dict[str, Any], consumer: str
+) -> dict[str, Any]:
+    """Admit and expose the ordinary surface decision before cache recording.
+
+    Projection reuse is deliberately not an authority source.  An ordinary
+    adapter calls this function after producing its payload, exposes the
+    resulting identity on that payload, and passes the same decision to the
+    projection index.  If the surface already admitted an operation decision,
+    that exact decision wins.
+    """
+
+    context = payload.setdefault("context", {})
+    if not isinstance(context, dict):
+        context = {}
+        payload["context"] = context
+    operation_authority = _as_dict(context.get("operation_authority"))
+    decision = _as_dict(operation_authority.get("operating_decision"))
+    source = "context.operation_authority.operating_decision"
+    if not decision.get("decision_id"):
+        decision = compile_operating_decision(
+            inputs={
+                "consumer": consumer,
+                "revisions": input_revisions,
+                "terminal_state": str(payload.get("status") or payload.get("health") or "CONTINUE"),
+                "blocked_claim_classes": [str(item) for item in payload.get("blocked_claims", [])]
+                if isinstance(payload.get("blocked_claims"), list)
+                else [],
+            }
+        )
+        source = f"{consumer}.ordinary-adapter"
+    context["projection_decision_authority"] = {
+        "kind": "agentic-workspace/projection-decision-authority/v1",
+        "status": "admitted",
+        "consumer": consumer,
+        "source": source,
+        "decision_id": str(decision.get("decision_id") or ""),
+        "admitted_input_revision": str(decision.get("admitted_input_revision") or ""),
+        "producer_module": str(decision.get("producer_module") or ""),
+        "producer_function": str(decision.get("producer_function") or ""),
+        "rule": "The ordinary surface admits this decision before projection reuse may index it.",
+    }
+    return decision
+
+
 def admitted_operating_decision_revisions(
     *,
     revisions: dict[str, Any],

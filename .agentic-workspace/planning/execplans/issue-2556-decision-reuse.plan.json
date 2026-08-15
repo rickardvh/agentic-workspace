@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 4,
+  "revision": 5,
   "intent": {
     "outcome": "Make start, summary, implement, proof, and ordinary report projections reuse the canonical operating-decision revision with bounded computation, serialization, progress, and cancellation behavior.",
     "non_goals": [
@@ -72,7 +72,7 @@
   ],
   "proof": {
     "claims": [
-      "Unchanged admitted inputs reuse the same canonical decision across start, summary, implement, proof, and ordinary report projections.",
+      "Each unchanged start, summary, implement, proof, and ordinary report projection reuses the exact canonical decision admitted and exposed by that ordinary surface.",
       "Changed authority inputs invalidate with exact reason codes while unrelated diagnostics do not.",
       "Cold/warm computation and serialized output stay within declared budgets, and long work exposes progress plus cancellation/drill-down guidance."
     ],
@@ -83,27 +83,29 @@
     ],
     "refs": [
       ".agentic-workspace/planning/closeout-evidence/issue-2556-projection-reuse.closeout.json preserves the captured command-class counts, exact five-surface elapsed/output/state-read measurements, decision identities, and reuse results",
-      "warm start/implement/proof shared operating-decision:d414c5a6d75430da with builders skipped",
-      "warm selected-summary/closeout shared operating-decision:547d7fb2fa976883 with builders skipped"
+      "five-surface regression compares every warm key with the independently exposed cold surface decision authority",
+      "cancellation-during-work regression proves the active worker unwinds, later stages are skipped, and a post-cancellation side effect never runs"
     ]
   },
   "execution_run": {
-    "what_happened": "Replaced broad projection dependency reconstruction with bounded admitted revisions, keyed reuse through the canonical operating-decision identity, semantic serialization limits, progress heartbeats, cooperative cancellation, and current-compact closeout inputs.",
+    "what_happened": "Replaced broad projection dependency reconstruction with bounded admitted revisions, made ordinary surfaces admit and expose the decision consumed by reuse, enforced semantic serialization limits over the final emitted receipt, added progress heartbeats and acknowledged cooperative cancellation, and kept current-compact closeout inputs.",
     "validation": "82 focused projection/decision tests, 18 closeout tests, full typecheck, contract tooling, structured inventory, lint, and live five-surface cold/warm benchmark passed.",
     "benchmark": {
       "computation_budget_ms": 10000,
       "serialization_budget_bytes": 65536,
-      "cold_elapsed_ms": {"start": 3244.1, "summary_selected": 1337.0, "implement": 2488.4, "proof": 1870.5, "closeout_trust": 1956.5},
-      "warm_elapsed_ms": {"start": 805.8, "summary_selected": 1335.1, "implement": 891.2, "proof": 1000.8, "closeout_trust": 823.6},
-      "cold_output_bytes": {"start": 51090, "summary_selected": 3670, "implement": 22274, "proof": 7013, "closeout_trust": 61794},
-      "warm_output_bytes": {"start": 1774, "summary_selected": 1827, "implement": 1873, "proof": 1785, "closeout_trust": 1823},
-      "cold_state_read_count": {"start": 36, "summary_selected": 36, "implement": 36, "proof": 36, "closeout_trust": 36},
-      "warm_state_read_count": {"start": 36, "summary_selected": 36, "implement": 36, "proof": 36, "closeout_trust": 36},
+      "cold_elapsed_ms": {"start": 3525.4, "summary_selected": 902.5, "implement": 2907.5, "proof": 2125.4, "closeout_trust": 2120.5},
+      "warm_elapsed_ms": {"start": 743.2, "summary_selected": 824.5, "implement": 837.9, "proof": 903.8, "closeout_trust": 870.6},
+      "cold_output_bytes": {"start": 10820, "summary_selected": 4674, "implement": 36071, "proof": 8093, "closeout_trust": 63736},
+      "warm_output_bytes": {"start": 1829, "summary_selected": 1882, "implement": 1856, "proof": 1840, "closeout_trust": 1878},
+      "cold_state_read_count": {"start": 35, "summary_selected": 35, "implement": 35, "proof": 35, "closeout_trust": 35},
+      "warm_state_read_count": {"start": 35, "summary_selected": 35, "implement": 35, "proof": 35, "closeout_trust": 35},
       "captured_command_class_counts": {"implement": 2, "doctor": 1, "summary": 1, "proof": 1, "skills": 1, "planning": 1},
       "captured_entry_count": 7,
       "captured_index_bytes": 66148,
       "captured_session_markdown_bytes": 1443642,
+      "surface_decision_match": true,
       "warm_builder_skipped": true,
+      "start_detail_withheld_to_budget": true,
       "warm_invalidation_reasons": []
     }
   },

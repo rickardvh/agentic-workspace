@@ -143,13 +143,13 @@ from agentic_workspace.current_work_context import (
 )
 from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
-from agentic_workspace.operating_decision import project_startup_claim_effect_authority
+from agentic_workspace.operating_decision import admit_projection_surface_operating_decision, project_startup_claim_effect_authority
 from agentic_workspace.projection_reuse import (
     ProjectionProgress,
     enforce_projection_serialization_budget,
     lookup_projection_reuse,
+    projection_cancellation_checkpoint,
     record_projection_reuse,
-    resolve_projection_operating_decision,
 )
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
@@ -17407,6 +17407,7 @@ def _decision_command_placeholder_payload() -> dict[str, Any]:
 def _decision_pressure_payload(
     *, target_root: Path, config: WorkspaceConfig, module_reports: list[dict[str, Any]], cli_invoke: str = DEFAULT_CLI_INVOKE
 ) -> dict[str, Any]:
+    projection_cancellation_checkpoint()
     config_info = _decision_target_info(target_root=target_root, config=config)
     index = _decision_record_index(target_root=target_root, config=config)
     planning_record = _active_planning_record(module_reports=module_reports)
@@ -17498,6 +17499,7 @@ def _run_report_router_command(
     descriptors: dict[str, ModuleDescriptor],
     config: WorkspaceConfig,
 ) -> dict[str, Any]:
+    projection_cancellation_checkpoint()
     status_payload = _run_lifecycle_command(
         command_name="status",
         target_root=target_root,
@@ -29625,6 +29627,7 @@ def _summary_planning_route_decision_payload(*, target_root: Path, task_text: st
 def _select_summary_payload(
     *, target_root: Path, select: str, task_text: str | None, changed_paths: list[str], planning_summary: Any, cli_invoke: str
 ) -> dict[str, Any]:
+    projection_cancellation_checkpoint()
     requested_fields = [field.strip() for field in select.split(",") if field.strip()]
     if requested_fields and set(requested_fields) <= {"planning_revision"}:
         from repo_planning_bootstrap.installer import planning_revision
@@ -32420,6 +32423,7 @@ def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path,
 def _start_tiny_payload_fast(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, config: WorkspaceConfig, startup_template: dict[str, Any]
 ) -> dict[str, Any]:
+    projection_cancellation_checkpoint()
     active_summary = _fast_planning_active_summary(target_root=target_root)
     active_planning_present = bool(active_summary["todo_active_count"] or active_summary["active_execplan"])
     next_action_summary = (
@@ -32457,6 +32461,7 @@ def _start_tiny_payload_fast(
         cli_compatibility=startup_cli_compatibility,
         compact=True,
     )
+    projection_cancellation_checkpoint()
     target_arg = _command_target_arg(target_root)
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
@@ -32570,6 +32575,7 @@ def _start_tiny_payload_fast(
             cli_invoke=config.cli_invoke,
         ),
     }
+    projection_cancellation_checkpoint()
     local_footprint = _deferred_start_local_footprint_advisory(cli_invoke=config.cli_invoke, target_root=target_root)
     if local_footprint.get("status") == "attention":
         payload["local_footprint"] = local_footprint
@@ -32599,6 +32605,7 @@ def _start_tiny_payload_fast(
         cli_invoke=config.cli_invoke,
         active_planning_present=active_planning_present,
     )
+    projection_cancellation_checkpoint()
     if dogfooding_signal_status.get("status") != "not_applicable":
         payload["dogfooding_signal_status"] = dogfooding_signal_status
     if installed_state_compatibility["status"] != "compatible":
@@ -33026,6 +33033,7 @@ def _start_tiny_payload_fast(
     )
     normalized_paths = _normalize_changed_paths(changed_paths)
     if normalized_paths and not active_planning_present:
+        projection_cancellation_checkpoint()
         proof_command = str(
             _command_with_cli_invoke(
                 command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
@@ -33079,6 +33087,7 @@ def _start_tiny_payload_fast(
         task_text=task_text,
         changed_paths=changed_paths,
     )
+    projection_cancellation_checkpoint()
     if int(assurance_requirements.get("configured_count", 0) or 0) > 0:
         payload["assurance_requirements"] = assurance_requirements
     if installed_state_compatibility["status"] != "compatible":
@@ -33101,6 +33110,7 @@ def _start_tiny_payload_fast(
         task_text=task_text,
         compact=True,
     )
+    projection_cancellation_checkpoint()
     return _tiny_start_payload(payload)
 
 
@@ -48573,7 +48583,9 @@ def _emit_proof(
                 query=reuse_query,
                 context=reuse_context,
                 payload=payload,
-                operating_decision=resolve_projection_operating_decision(payload=payload, context=reuse_context),
+                operating_decision=admit_projection_surface_operating_decision(
+                    payload=payload, input_revisions=reuse_context.get("input_revisions", {}), consumer="proof"
+                ),
             )
             if reuse_result:
                 payload = enforce_projection_serialization_budget(
@@ -48675,6 +48687,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     explicit_request=_selector_requests(getattr(args, "select", None), "closeout_trust_inspection"),
                     changed_paths=changed_paths,
                 )
+                projection_cancellation_checkpoint()
                 return {
                     "payload": _select_summary_payload(
                         target_root=target_root,
@@ -48728,7 +48741,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 query=selected_query,
                 context=selected_reuse_context,
                 payload=payload,
-                operating_decision=resolve_projection_operating_decision(payload=payload, context=selected_reuse_context),
+                operating_decision=admit_projection_surface_operating_decision(
+                    payload=payload, input_revisions=selected_reuse_context.get("input_revisions", {}), consumer="summary"
+                ),
             )
             if reuse_result:
                 payload = enforce_projection_serialization_budget(
@@ -48838,7 +48853,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 query=reuse_query,
                 context=reuse_context,
                 payload=summary,
-                operating_decision=resolve_projection_operating_decision(payload=summary, context=reuse_context),
+                operating_decision=admit_projection_surface_operating_decision(
+                    payload=summary, input_revisions=reuse_context.get("input_revisions", {}), consumer="summary"
+                ),
             )
             if reuse_result and isinstance(summary, dict):
                 summary = enforce_projection_serialization_budget(
@@ -49123,7 +49140,9 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                 query=reuse_query,
                 context=reuse_context,
                 payload=payload,
-                operating_decision=resolve_projection_operating_decision(payload=payload, context=reuse_context),
+                operating_decision=admit_projection_surface_operating_decision(
+                    payload=payload, input_revisions=reuse_context.get("input_revisions", {}), consumer="report"
+                ),
             )
             if reuse_result:
                 payload = enforce_projection_serialization_budget(
@@ -49167,17 +49186,17 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         with ProjectionProgress(root=target_root, operation="report") as progress:
 
             def build_report_section() -> dict[str, Any]:
-                return {
-                    "section_payload": _run_lazy_report_section_command(
-                        target_root=target_root,
-                        selected_modules=selected_modules,
-                        resolved_preset=resolved_preset,
-                        config=config,
-                        section=section,
-                        task_text=task_text,
-                        changed_paths=changed_paths,
-                    )
-                }
+                section_payload = _run_lazy_report_section_command(
+                    target_root=target_root,
+                    selected_modules=selected_modules,
+                    resolved_preset=resolved_preset,
+                    config=config,
+                    section=section,
+                    task_text=task_text,
+                    changed_paths=changed_paths,
+                )
+                projection_cancellation_checkpoint()
+                return {"section_payload": section_payload}
 
             section_result = progress.run_cancellable(
                 build_report_section,
@@ -49210,7 +49229,11 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
                     query=section_query,
                     context=section_reuse_context,
                     payload=payload,
-                    operating_decision=resolve_projection_operating_decision(payload=payload, context=section_reuse_context),
+                    operating_decision=admit_projection_surface_operating_decision(
+                        payload=payload,
+                        input_revisions=section_reuse_context.get("input_revisions", {}),
+                        consumer="report",
+                    ),
                 )
                 if reuse_result:
                     payload = enforce_projection_serialization_budget(
@@ -49535,7 +49558,9 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
             query=reuse_query,
             context=reuse_context,
             payload=payload,
-            operating_decision=resolve_projection_operating_decision(payload=payload, context=reuse_context),
+            operating_decision=admit_projection_surface_operating_decision(
+                payload=payload, input_revisions=reuse_context.get("input_revisions", {}), consumer=command_name
+            ),
         )
         if reuse_result:
             payload = enforce_projection_serialization_budget(

@@ -42,6 +42,7 @@ from agentic_workspace.improvement_consequence import (
     read_consequence_history,
     record_consequence_event,
 )
+from agentic_workspace.projection_reuse import projection_cancellation_checkpoint
 from agentic_workspace.proof_receipt_admission import (
     PROOF_RECEIPT_RESULT_OPTIONS,
     proof_command_admission,
@@ -2387,6 +2388,7 @@ def _closeout_report_payload(
 
 
 def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor]) -> dict[str, Any]:
+    projection_cancellation_checkpoint()
     defaults = _defaults_payload()["proof_surfaces"]
     installed_modules = [
         module_name for module_name in _ordered_module_names(descriptors) if descriptors[module_name].detector(target_root)
@@ -2415,6 +2417,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
             non_interactive=False,
             config=config,
         )
+        projection_cancellation_checkpoint()
         doctor_payload = _proof_lifecycle_command(
             command_name="doctor",
             target_root=target_root,
@@ -2426,6 +2429,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
             non_interactive=False,
             config=config,
         )
+        projection_cancellation_checkpoint()
         current = {
             "installed_modules": installed_modules,
             "status_health": status_payload["health"],
@@ -2434,6 +2438,7 @@ def _proof_payload(*, target_root: Path, descriptors: dict[str, ModuleDescriptor
             "needs_review": _dedupe([*status_payload["needs_review"], *doctor_payload["needs_review"]]),
             "stale_generated_surfaces": _dedupe([*status_payload["stale_generated_surfaces"], *doctor_payload["stale_generated_surfaces"]]),
         }
+    projection_cancellation_checkpoint()
     return {
         "target": target_root.as_posix(),
         "canonical_doc": defaults["canonical_doc"],
