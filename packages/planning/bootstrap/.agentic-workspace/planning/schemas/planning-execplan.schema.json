@@ -170,6 +170,7 @@
     "delegation_outcome_feedback": { "$ref": "#/$defs/string_map" },
     "proof_report": { "$ref": "#/$defs/string_map" },
     "intent_satisfaction": { "$ref": "#/$defs/string_map" },
+    "child_intent_satisfaction": { "$ref": "#/$defs/string_map" },
     "system_intent_alignment": { "$ref": "#/$defs/string_map" },
     "closure_check": { "$ref": "#/$defs/string_map" },
     "completion_gate": { "$ref": "#/$defs/completion_gate" },

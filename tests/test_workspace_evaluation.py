@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -1305,19 +1306,6 @@ def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path
     Draft202012Validator(contract_schema("evaluation_definition.schema.json")).validate(definitions)
     _bound_context(tmp_path)
 
-    with pytest.raises(WorkspaceUsageError, match="missing-bound-context"):
-        append_observation(
-            target_root=tmp_path,
-            evaluation_id="eval-1969-operating-loop",
-            criterion="reconstruction-cost",
-            result="supports",
-            evidence_refs=["docs/reviews/session-1.md#turn-3"],
-            confidence="high",
-            burden="low",
-            finding="Startup routed directly to current-decision evidence.",
-            recommended_action="Continue collection.",
-        )
-
     observed = append_observation(
         target_root=tmp_path,
         evaluation_id="eval-1969-operating-loop",
@@ -1326,7 +1314,6 @@ def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path
         evidence_refs=["docs/reviews/session-1.md#turn-3"],
         confidence="high",
         burden="low",
-        context=_bound_context(tmp_path),
         finding="Startup routed directly to current-decision evidence.",
         recommended_action="Continue collection.",
     )
@@ -1926,6 +1913,180 @@ def test_evaluation_cli_register_observe_status(tmp_path: Path, capsys) -> None:
     )
     prune = json.loads(capsys.readouterr().out)
     assert prune["operation_id"] == "evaluation.prune"
+
+
+def test_evaluation_observe_derives_and_revalidates_authority_from_public_assignment_and_proof(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    config_path = tmp_path / ".agentic-workspace/config.toml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text("schema_version = 1\n\n[workspace]\nenabled = true\n", encoding="utf-8")
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    assignment_path = tmp_path / ".agentic-workspace" / "planning" / "assignments" / "current.assignment.json"
+    assignment_path.parent.mkdir(parents=True)
+    assignment_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/planning-assignment/v1",
+                "status": "current",
+                "current_revision": "assignment-public-rev-1",
+                "assignment_gate": {
+                    "target_identity_ref": "target:worker@1",
+                    "task_class": "mechanical-follow-through",
+                    "scope_class": "narrow-code-change",
+                    "allowed_paths": ["src/feature.py"],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    proof_path = tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
+    proof_path.parent.mkdir(parents=True)
+    proof_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "result": "passed",
+                "changed_paths": ["src/feature.py"],
+                "proof_subject": {
+                    "repository_head": subprocess.run(
+                        ["git", "rev-parse", "HEAD"], cwd=tmp_path, capture_output=True, text=True
+                    ).stdout.strip()
+                },
+                "admission": {"admitted": True, "proof_sufficient": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    observed = append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="supports",
+        evidence_refs=[".agentic-workspace/local/proof-receipts/last.json"],
+    )
+
+    assert observed["outcome"] == "appended"
+    authority = json.loads(
+        (tmp_path / ".agentic-workspace" / "local" / "evaluations" / "eval-1969-operating-loop.authority.json").read_text()
+    )
+    assert authority["producer_resolution"]["status"] == "resolved"
+    assert authority["assignment"]["target_identity_ref"] == "target:worker@1"
+    summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+    assert summary["summaries"][0]["observation_authority"]["status"] == "current"
+
+    assignment = json.loads(assignment_path.read_text(encoding="utf-8"))
+    assignment["current_revision"] = "assignment-public-rev-2"
+    assignment_path.write_text(json.dumps(assignment), encoding="utf-8")
+    stale = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+    stale_authority = stale["summaries"][0]["observation_authority"]
+    assert stale_authority["status"] == "stale"
+    assert stale_authority["freshness_reason"] == "stale-assignment-authority"
+    assert "authority-refresh" in stale_authority["repair_command"]
+
+    assert (
+        cli.main(
+            [
+                "evaluation",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+                "authority-refresh",
+                "--evaluation-id",
+                "eval-1969-operating-loop",
+            ]
+        )
+        == 0
+    )
+    refreshed = json.loads(capsys.readouterr().out)
+    assert refreshed["outcome"] == "refreshed"
+    assert refreshed["authority"]["status"] == "current"
+
+    from agentic_workspace.client import invoke_operation
+
+    invocation = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
+    python_result = invoke_operation(
+        "evaluation.authority-refresh",
+        {"evaluation_id": "eval-1969-operating-loop"},
+        target=tmp_path,
+        invocation=invocation,
+        allow_runtime_backed=True,
+    )
+    assert python_result["authority"]["status"] == "current"
+
+    if shutil.which("node"):
+        client_url = (ROOT / "generated/workspace/typescript/src/client.mjs").resolve().as_uri()
+        script = (
+            f"import {{invokeOperation}} from {json.dumps(client_url)};"
+            f"const result=invokeOperation('evaluation.authority-refresh',"
+            f"{{evaluation_id:'eval-1969-operating-loop'}},"
+            f"{{target:{json.dumps(str(tmp_path))},invocation:{json.dumps(invocation)},allowRuntimeBacked:true}});"
+            "console.log(JSON.stringify(result));"
+        )
+        completed = subprocess.run(["node", "--input-type=module", "-e", script], capture_output=True, text=True, check=True)
+        typescript_result = json.loads(completed.stdout)
+        assert typescript_result["authority"]["status"] == "current"
+
+    changed_path = tmp_path / "src/feature.py"
+    changed_path.parent.mkdir(parents=True, exist_ok=True)
+    changed_path.write_text("changed after authority refresh\n", encoding="utf-8")
+    mutation_stale = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+    assert mutation_stale["summaries"][0]["observation_authority"]["freshness_reason"] == "stale-mutation-baseline"
+
+    from agentic_workspace.evaluation import refresh_observation_authority
+
+    refresh_observation_authority(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["producer_nonce"] = "forged-after-refresh"
+    proof_path.write_text(json.dumps(proof), encoding="utf-8")
+    proof_stale = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+    assert proof_stale["summaries"][0]["observation_authority"]["freshness_reason"] == "stale-proof-authority"
+
+
+def test_evaluation_authority_refresh_fails_closed_for_ambiguous_assignment_and_forged_proof(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    assignments = tmp_path / ".agentic-workspace/planning/assignments"
+    assignments.mkdir(parents=True)
+    assignment = {
+        "kind": "agentic-workspace/planning-assignment/v1",
+        "status": "current",
+        "current_revision": "rev-1",
+        "assignment_gate": {"target_identity_ref": "target:worker@1"},
+    }
+    (assignments / "one.assignment.json").write_text(json.dumps(assignment), encoding="utf-8")
+    (assignments / "two.assignment.json").write_text(json.dumps(assignment), encoding="utf-8")
+    with pytest.raises(WorkspaceUsageError, match="ambiguous-current-assignment"):
+        append_observation(
+            target_root=tmp_path,
+            evaluation_id="eval-1969-operating-loop",
+            criterion="reconstruction-cost",
+            result="supports",
+            evidence_refs=["proof"],
+        )
+
+    (assignments / "two.assignment.json").unlink()
+    proof_path = tmp_path / ".agentic-workspace/local/proof-receipts/last.json"
+    proof_path.parent.mkdir(parents=True)
+    proof_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "result": "passed",
+                "admission": {"admitted": False},
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(WorkspaceUsageError, match="missing-current-admitted-proof"):
+        append_observation(
+            target_root=tmp_path,
+            evaluation_id="eval-1969-operating-loop",
+            criterion="reconstruction-cost",
+            result="supports",
+            evidence_refs=["forged-proof"],
+        )
 
 
 def test_evaluation_report_delivery_generated_operation_family_fails_closed_without_host_trust(tmp_path: Path) -> None:

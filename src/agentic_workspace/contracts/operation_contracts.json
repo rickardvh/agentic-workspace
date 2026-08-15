@@ -156,6 +156,12 @@
     },
     {
       "command": "evaluation",
+      "id": "evaluation.authority-refresh",
+      "migration_status": "runtime-consumed",
+      "path": "operations/evaluation.authority-refresh.json"
+    },
+    {
+      "command": "evaluation",
       "id": "evaluation.status",
       "migration_status": "runtime-consumed",
       "path": "operations/evaluation.status.json"

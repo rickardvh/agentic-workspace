@@ -40,6 +40,7 @@
           "conclusion_readiness": {"type": "object", "required": ["ready", "reason_code"], "additionalProperties": true},
           "owner": {"type": "object", "additionalProperties": true},
           "sinks": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+          "observation_authority": {"type": "object", "additionalProperties": true},
           "next_collection_action": {"type": "string", "minLength": 1},
           "operating_loop": {"type": "object", "additionalProperties": true}
         },

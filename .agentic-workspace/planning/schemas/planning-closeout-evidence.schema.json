@@ -57,6 +57,12 @@
     "intent_satisfaction": {
       "$ref": "#/$defs/string_map"
     },
+    "intent_continuity": {
+      "$ref": "#/$defs/string_map"
+    },
+    "child_intent_satisfaction": {
+      "$ref": "#/$defs/string_map"
+    },
     "closure_check": {
       "$ref": "#/$defs/string_map"
     },

@@ -21,6 +21,7 @@ from typing import Any, Callable, Iterable
 
 from agentic_workspace.config import DEFAULT_AGENT_INSTRUCTIONS_FILE, WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
+from agentic_workspace.improvement_consequence import consequence_receipt_contract
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SUITE = REPO_ROOT / "tools" / "model-cli-harness" / "suites" / "copilot-workflow-smoke.json"
@@ -107,7 +108,7 @@ def _write_scratch_run_manifest(
     retention: str = "ephemeral",
     aw_runs_root: Path | None = None,
 ) -> Path | None:
-    aw_runs_root = (aw_runs_root or REPO_ROOT / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "runs").resolve()
+    aw_runs_root = (aw_runs_root or REPO_ROOT / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH).resolve()
     try:
         run_root.resolve().relative_to(aw_runs_root)
     except ValueError:
@@ -128,6 +129,58 @@ def _write_scratch_run_manifest(
         encoding="utf-8",
     )
     return manifest
+
+
+def _register_harness_evidence(*, summary_path: Path, manifest_path: Path | None) -> None:
+    """Publish a bounded producer index so consumers never need to scan scratch."""
+    if manifest_path is None:
+        return
+    try:
+        summary_ref = summary_path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+        manifest_ref = manifest_path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        return
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True, check=False
+    ).stdout.strip()
+    tree = subprocess.run(
+        ["git", "rev-parse", "HEAD^{tree}"], cwd=REPO_ROOT, capture_output=True, text=True, check=False
+    ).stdout.strip()
+    dirty = bool(
+        subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout.strip()
+    )
+    repository_identity = _repository_identity(REPO_ROOT)
+    record = {
+        "kind": "agentic-workspace/model-cli-harness-evidence-index-entry/v1",
+        "producer": "model-cli-harness.run-suite",
+        "summary_ref": summary_ref,
+        "manifest_ref": manifest_ref,
+        "subject": {
+            "repository_identity": repository_identity,
+            "repository_head": head,
+            "repository_tree": tree,
+            "dirty": dirty,
+        },
+        "recorded_at": datetime.now(UTC).isoformat(),
+    }
+    index = REPO_ROOT / ".agentic-workspace" / "local" / "model-cli-harness" / "evidence-index.jsonl"
+    index.parent.mkdir(parents=True, exist_ok=True)
+    with index.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(record, sort_keys=True) + "\n")
+
+
+def _repository_identity(root: Path) -> str:
+    remote = subprocess.run(
+        ["git", "config", "--get", "remote.origin.url"], cwd=root, capture_output=True, text=True, check=False
+    ).stdout.strip()
+    source = remote or root.resolve().as_posix().lower()
+    return "sha256:" + hashlib.sha256(source.encode("utf-8")).hexdigest()[:24]
 
 
 def _replace_placeholders(value: str, *, replacements: dict[str, str]) -> str:
@@ -914,6 +967,8 @@ def _snapshot_diff(
     after: dict[str, dict[str, Any]],
     *,
     harness_setup_patterns: Iterable[str] | None = None,
+    allowed_write_patterns: Iterable[str] | None = None,
+    root: Path | None = None,
 ) -> dict[str, Any]:
     before_paths = set(before)
     after_paths = set(after)
@@ -927,13 +982,18 @@ def _snapshot_diff(
         for path in changed_paths
         if path not in ignored_paths and _is_harness_setup_mutation_path(path, patterns=harness_setup_patterns)
     ]
-    source_paths = [path for path in changed_paths if path not in set(ignored_paths) and path not in set(setup_paths)]
-    source_changes = _path_changes(before, after, paths=source_paths)
+    candidate_source_paths = [path for path in changed_paths if path not in set(ignored_paths) and path not in set(setup_paths)]
+    runtime_receipt_paths = [path for path in candidate_source_paths if root is not None and _is_admitted_aw_runtime_receipt(root, path)]
+    non_receipt_paths = [path for path in candidate_source_paths if path not in set(runtime_receipt_paths)]
+    allowed_patterns = list(allowed_write_patterns or [])
+    expected_paths = [path for path in non_receipt_paths if allowed_patterns and _matches_any(path, allowed_patterns)]
+    forbidden_paths = [path for path in non_receipt_paths if path not in set(expected_paths)]
+    source_changes = _path_changes(before, after, paths=non_receipt_paths)
     ignored_changes = _path_changes(before, after, paths=ignored_paths)
     setup_changes = _path_changes(before, after, paths=setup_paths)
     raw_status = "changed" if changed_paths else "clean"
     return {
-        "status": "changed" if source_paths else "clean",
+        "status": "changed" if forbidden_paths else "clean",
         "raw_status": raw_status,
         "created_count": len(source_changes["created"]),
         "modified_count": len(source_changes["modified"]),
@@ -958,7 +1018,36 @@ def _snapshot_diff(
         "harness_setup_created": setup_changes["created"],
         "harness_setup_modified": setup_changes["modified"],
         "harness_setup_deleted": setup_changes["deleted"],
+        "mutation_classes": {
+            "expected_task_or_product_mutations": expected_paths,
+            "admitted_runtime_receipts": runtime_receipt_paths,
+            "forbidden_or_unclassified_mutations": forbidden_paths,
+            "ignored_environment_noise": ignored_paths,
+            "harness_setup_mutations": setup_paths,
+        },
+        "runtime_receipt_count": len(runtime_receipt_paths),
+        "runtime_receipt_refs": runtime_receipt_paths[:8],
     }
+
+
+def _is_admitted_aw_runtime_receipt(root: Path, relative_path: str) -> bool:
+    """Admit only producer-owned AW receipts with their expected record identity."""
+    contract = consequence_receipt_contract()
+    normalized = relative_path.replace("\\", "/")
+    if normalized != contract["relative_path"]:
+        return False
+    path = root / normalized
+    try:
+        records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    except (OSError, json.JSONDecodeError):
+        return False
+    return bool(records) and all(
+        isinstance(record, dict)
+        and record.get("kind") == contract["record_kind"]
+        and record.get("source")
+        and record.get("owner_kind") == "workspace-improvement-pressure/v1"
+        for record in records
+    )
 
 
 def _candidate_path(value: str, *, replacements: dict[str, str]) -> str:
@@ -1190,6 +1279,108 @@ def _adapter_environment(
             str(adapter.get("provider_home_path", "{run_root}/provider-home")), replacements=replacements
         )
     return env
+
+
+def _fixture_runtime_environment(env: dict[str, str], *, repo_path: Path) -> dict[str, str]:
+    """Bind local-wheelhouse runs to the fixture instead of an ambient checkout venv."""
+    isolated = dict(env)
+    isolated.pop("VIRTUAL_ENV", None)
+    isolated["UV_PROJECT_ENVIRONMENT"] = str(repo_path / ".venv")
+    return isolated
+
+
+def _fixture_runtime_provenance(
+    *, repo_path: Path, env: dict[str, str], timeout_seconds: int
+) -> dict[str, Any]:
+    """Black-box the wheel-installed fixture runtime before model execution."""
+    identity = _run_command(
+        [
+            "uv",
+            "run",
+            "--offline",
+            "python",
+            "-c",
+            (
+                "import agentic_workspace,json,sys;"
+                "print(json.dumps({'executable':sys.executable,'package':agentic_workspace.__file__}))"
+            ),
+        ],
+        cwd=repo_path,
+        timeout_seconds=timeout_seconds,
+        env=env,
+    )
+    identity_payload = _json_document(str(identity.get("stdout") or "")) or {}
+    fixture_venv = (repo_path / ".venv").resolve()
+
+    def in_fixture(value: Any) -> bool:
+        try:
+            Path(str(value)).resolve().relative_to(fixture_venv)
+            return True
+        except (OSError, ValueError):
+            return False
+
+    startup = _run_command(
+        [
+            "uv",
+            "run",
+            "--offline",
+            "python",
+            "scripts/run_agentic_workspace.py",
+            "start",
+            "--target",
+            ".",
+            "--task",
+            "Verify local-wheelhouse fixture provenance",
+            "--format",
+            "json",
+        ],
+        cwd=repo_path,
+        timeout_seconds=timeout_seconds,
+        env=env,
+    )
+    evaluation = _run_command(
+        [
+            "uv",
+            "run",
+            "--offline",
+            "python",
+            "scripts/run_agentic_workspace.py",
+            "evaluation",
+            "status",
+            "--target",
+            ".",
+            "--format",
+            "json",
+        ],
+        cwd=repo_path,
+        timeout_seconds=timeout_seconds,
+        env=env,
+    )
+    pyproject_text = (repo_path / "pyproject.toml").read_text(encoding="utf-8")
+    checks = {
+        "executable_from_fixture_venv": in_fixture(identity_payload.get("executable")),
+        "package_from_fixture_venv": in_fixture(identity_payload.get("package")),
+        "source_checkout_retarget_absent": REPO_ROOT.resolve().as_posix().lower()
+        not in pyproject_text.replace("\\", "/").lower(),
+        "startup_succeeded": startup.get("returncode") == 0 and _json_document(str(startup.get("stdout") or "")) is not None,
+        "evaluation_operation_succeeded": evaluation.get("returncode") == 0
+        and _json_document(str(evaluation.get("stdout") or "")) is not None,
+    }
+    verified = all(checks.values())
+    return {
+        "kind": "agentic-workspace/model-cli-fixture-runtime-provenance/v1",
+        "status": "verified" if verified else "blocked-mismatch-or-unavailable",
+        "proof_class": "ordinary" if verified else "degraded-fallback-only",
+        "checks": checks,
+        "identity": identity_payload,
+        "commands": {
+            "identity_returncode": identity.get("returncode"),
+            "startup_returncode": startup.get("returncode"),
+            "evaluation_returncode": evaluation.get("returncode"),
+        },
+        "recovery_command": "uv sync --offline --reinstall && rerun local-wheelhouse provenance preflight",
+        "rule": "Fallback or degraded execution cannot satisfy ordinary fixture provenance proof.",
+    }
 
 
 def _prepend_env_path(env: dict[str, str], entries: list[str]) -> dict[str, str]:
@@ -3615,6 +3806,8 @@ def run_suite(
                 replacements=command_replacements,
                 isolate_provider_home=isolate_provider_home,
             )
+            if local_aw_wheelhouse is not None:
+                adapter_env = _fixture_runtime_environment(adapter_env, repo_path=paths.repo_path)
             adapter_env = _prepend_env_path(adapter_env, preflight["path_prepend"])
             adapter_env = _with_git_ceiling(adapter_env, run_root=paths.run_root)
             provider_home_env = adapter.get("provider_home_env")
@@ -3659,6 +3852,25 @@ def run_suite(
                 "expected_signals": scenario.get("expected_signals", []),
                 "score_notes": scenario.get("score_notes", []),
             }
+            if execute and local_aw_wheelhouse is not None:
+                invocation["fixture_runtime_provenance"] = _fixture_runtime_provenance(
+                    repo_path=paths.repo_path,
+                    env=adapter_env,
+                    timeout_seconds=effective_timeout,
+                )
+                if invocation["fixture_runtime_provenance"]["status"] != "verified":
+                    preflight = {
+                        **preflight,
+                        "status": "environment-blocked",
+                        "missing": [
+                            {
+                                "kind": "fixture_runtime_provenance",
+                                "name": "local-wheelhouse-runtime",
+                                "status": "mismatch-or-unavailable",
+                            }
+                        ],
+                    }
+                    invocation["preflight"] = preflight
             if execute and preflight["status"] == "environment-blocked" and not allow_environment_blocked:
                 invocation["result"] = {
                     "status": "environment-blocked",
@@ -3686,7 +3898,16 @@ def run_suite(
                 result["status"] = _classify_result_status(result)
                 invocation["sandbox"] = _sandbox_runtime_report(sandbox_report, result) or {"enabled": False}
                 _copy_transcript(str(result.get("stdout", "")), paths.transcript_path)
-                mutation_summary = _snapshot_diff(baseline_snapshot, _file_snapshot(paths.repo_path, include_ignored=True))
+                mutation_summary = _snapshot_diff(
+                    baseline_snapshot,
+                    _file_snapshot(paths.repo_path, include_ignored=True),
+                    root=paths.repo_path,
+                    allowed_write_patterns=_string_list(
+                        evaluation_scenario.get("allowed_write_patterns"),
+                        field="allowed_write_patterns",
+                        scenario_id=scenario_id,
+                    ),
+                )
                 invocation["usage_summary"] = _usage_summary_from_stdout(str(result.get("stdout", "")))
                 invocation["package_read_surface_summary"] = _package_read_surface_summary_from_stdout(str(result.get("stdout", "")))
                 invocation["result"] = result
@@ -3966,11 +4187,14 @@ def run_suite(
     )
     summary_root = output_root / f"{_now_id()}-{suite_id}-{adapter_id}-summary"
     summary_root.mkdir(parents=True, exist_ok=False)
-    _write_scratch_run_manifest(
+    summary_manifest = _write_scratch_run_manifest(
         summary_root,
         purpose=f"model CLI harness suite summary: {suite_id}/{adapter_id}/{resolved_model}",
+        producer="model-cli-harness.run-suite",
     )
-    _write_json(summary_root / "summary.json", payload)
+    summary_path = summary_root / "summary.json"
+    _write_json(summary_path, payload)
+    _register_harness_evidence(summary_path=summary_path, manifest_path=summary_manifest)
     return payload
 
 

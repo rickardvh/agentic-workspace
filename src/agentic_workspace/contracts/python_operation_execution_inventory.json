@@ -233,6 +233,28 @@
       ]
     },
     {
+      "operation_id": "evaluation.authority-refresh",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.authority-refresh.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.authority.refresh",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns public assignment/proof authority resolution and the local authority repair transition.",
+      "what_would_make_portable_later": "Represent evaluation authority refresh as portable schema-backed owner-receipt and mutation-baseline primitives once those package policies stabilize across domains.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions resolve exactly one live assignment, one admitted proof receipt, and the current mutation baseline before persisting repaired authority.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.authority-refresh"
+      ]
+    },
+    {
       "operation_id": "evaluation.status",
       "program": "agentic-workspace",
       "command": "evaluation",

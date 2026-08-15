@@ -3314,6 +3314,42 @@
             ]
           },
           {
+            "help": "Refresh observation authority from live public assignment and proof state.",
+            "name": "authority-refresh",
+            "operation_ref": {
+              "id": "evaluation.authority-refresh",
+              "path": "operations/evaluation.authority-refresh.json"
+            },
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Repository path.",
+                "name": "target"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              },
+              {
+                "flags": [
+                  "--evaluation-id"
+                ],
+                "name": "evaluation_id",
+                "required": true
+              }
+            ]
+          },
+          {
             "help": "Compile the current evaluation report authority without claiming external delivery.",
             "name": "report-preview",
             "operation_ref": {
@@ -13153,6 +13189,11 @@
         "function": "_run_evaluation_adapter",
         "import_module": "agentic_workspace.evaluation",
         "operation_id": "evaluation.observe"
+      },
+      {
+        "function": "_run_evaluation_adapter",
+        "import_module": "agentic_workspace.evaluation",
+        "operation_id": "evaluation.authority-refresh"
       },
       {
         "function": "_run_evaluation_adapter",

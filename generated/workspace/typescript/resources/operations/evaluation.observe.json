@@ -16,6 +16,7 @@
     "Observation criterion must exist in the registered definition.",
     "Terminal evaluations reject additional observations.",
     "Observation context is comparison evidence only; assignment, mutation baseline, and AW proof authority resolve from the local authority receipt and live Git.",
+    "When no authority receipt exists, observe derives and records it from the single current public assignment and admitted public proof receipt; caller dictionaries cannot create authority.",
     "Concurrent/retried observations use a local lock, store revision, and idempotency key.",
     "Each admitted observation/result carries a stable identity and supersedes previous current results for the same criterion.",
     "External evidence is referenced, not copied, unless separately promoted."
@@ -60,7 +61,7 @@
     },
     {
       "name": "context",
-      "required": true,
+      "required": false,
       "source": "cli-option"
     },
     {

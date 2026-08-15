@@ -198,6 +198,18 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "The repository fallback policy is the source example and dogfood surface for CLI-free installed-workspace recovery behavior.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The source/payload operational-install checker keeps this repository policy aligned with the packaged fallback contract.",
+      "owner": "workspace-payload",
+      "pattern": ".agentic-workspace/fallback/no-cli-policy.json",
+      "schema_or_validator": "scripts/check/check_source_payload_operational_install.py",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
       "checked_in_justification": "The installed no-CLI fallback must retain an auditable fail-closed policy after source packaging and workspace installation.",
       "editable_by_agents": true,
       "format": "json",
@@ -2285,7 +2297,7 @@
     {
       "checked_in_justification": "Generated TypeScript command-package resources are kept as files so executable adapter source stays thin and does not embed large JSON blocks.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "max_bytes": 380000,
+      "max_bytes": 400000,
       "named_consumer": "generated TypeScript command-package resource loader",
       "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "pattern": "generated/*/typescript/resources/command_package.json",

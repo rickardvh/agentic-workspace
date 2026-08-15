@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import os
 import posixpath
 import shutil
 import subprocess
@@ -1228,6 +1229,153 @@ def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tm
     assert pyproject["project"]["dependencies"] == ["agentic-workspace"]
     assert pyproject["tool"]["uv"]["sources"]["agentic-workspace"]["path"] == "fixture-wheelhouse/agentic_workspace.whl"
     assert "releases/download/v0.4.3" not in pyproject_text
+
+
+def test_model_cli_harness_classifies_owned_runtime_receipt_without_weakening_mutation_checks(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    receipt = tmp_path / ".agentic-workspace" / "local" / "improvement-pressure" / "consequence-history.jsonl"
+    receipt.parent.mkdir(parents=True)
+    receipt.write_text(
+        json.dumps(
+            {
+                "kind": "workspace-improvement-pressure-consequence-event/v1",
+                "owner_kind": "workspace-improvement-pressure/v1",
+                "source": "workspace.start",
+                "event": "observed",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    after = {
+        "README.md": {"size": 1, "sha256": "changed"},
+        receipt.relative_to(tmp_path).as_posix(): {"size": receipt.stat().st_size, "sha256": "receipt"},
+        "src/unexpected.py": {"size": 1, "sha256": "unexpected"},
+    }
+
+    result = module._snapshot_diff(
+        {"README.md": {"size": 1, "sha256": "before"}},
+        after,
+        root=tmp_path,
+        allowed_write_patterns=["README.md"],
+    )
+
+    assert result["mutation_classes"]["expected_task_or_product_mutations"] == ["README.md"]
+    assert result["mutation_classes"]["admitted_runtime_receipts"] == [
+        ".agentic-workspace/local/improvement-pressure/consequence-history.jsonl"
+    ]
+    assert result["runtime_receipt_count"] == 1
+    assert result["mutation_classes"]["forbidden_or_unclassified_mutations"] == ["src/unexpected.py"]
+
+
+def test_model_cli_harness_does_not_admit_unowned_local_mutation(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    random_path = ".agentic-workspace/local/random.json"
+    result = module._snapshot_diff({}, {random_path: {"size": 1, "sha256": "random"}}, root=tmp_path)
+
+    assert result["mutation_classes"]["admitted_runtime_receipts"] == []
+    assert result["mutation_classes"]["expected_task_or_product_mutations"] == []
+    assert result["mutation_classes"]["forbidden_or_unclassified_mutations"] == [random_path]
+
+
+def test_model_cli_harness_runtime_receipt_path_comes_from_owner_contract(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_harness_module()
+    receipt = tmp_path / ".agentic-workspace" / "local" / "alternate" / "events.jsonl"
+    receipt.parent.mkdir(parents=True)
+    receipt.write_text(
+        json.dumps(
+            {
+                "kind": "owner-event/v1",
+                "owner_kind": "workspace-improvement-pressure/v1",
+                "source": "fixture-owner",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        module,
+        "consequence_receipt_contract",
+        lambda: {
+            "relative_path": ".agentic-workspace/local/alternate/events.jsonl",
+            "record_kind": "owner-event/v1",
+            "producer": "fixture-owner",
+        },
+    )
+
+    assert module._is_admitted_aw_runtime_receipt(tmp_path, receipt.relative_to(tmp_path).as_posix()) is True
+
+
+def test_model_cli_harness_local_wheelhouse_environment_is_fixture_bound(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    source_environment = str(tmp_path / "source" / ".venv")
+
+    result = module._fixture_runtime_environment(
+        {"VIRTUAL_ENV": source_environment, "UV_PROJECT_ENVIRONMENT": source_environment, "PATH": "bin"},
+        repo_path=tmp_path / "fixture",
+    )
+
+    assert "VIRTUAL_ENV" not in result
+    assert Path(result["UV_PROJECT_ENVIRONMENT"]) == tmp_path / "fixture" / ".venv"
+    assert result["PATH"] == "bin"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows-specific local-wheelhouse black-box")
+def test_model_cli_harness_windows_local_wheelhouse_black_box_uses_fixture_runtime(tmp_path: Path) -> None:
+    module = _load_harness_module()
+    output_root = tmp_path / "runs"
+    wheelhouse = module._build_local_aw_wheelhouse(output_root)
+    paths = module._scenario_paths(
+        output_root=output_root,
+        suite_id="fixture-provenance",
+        scenario_id="startup",
+        adapter_id="fixture",
+        model="local",
+        prompt_variant_id="default",
+    )
+    module._prepare_fixture(
+        suite_path=REPO_ROOT / "tools/model-cli-harness/suites/copilot-workflow-smoke.json",
+        scenario={"id": "startup", "fixture": "aw-minimal-host-repo"},
+        paths=paths,
+        adapter={},
+        local_aw_wheelhouse=wheelhouse,
+    )
+    env = module._fixture_runtime_environment(dict(os.environ), repo_path=paths.repo_path)
+
+    result = module._fixture_runtime_provenance(repo_path=paths.repo_path, env=env, timeout_seconds=120)
+
+    assert result["status"] == "verified", result
+    assert result["proof_class"] == "ordinary"
+    assert all(result["checks"].values())
+    assert Path(result["identity"]["executable"]).resolve().is_relative_to((paths.repo_path / ".venv").resolve())
+    assert Path(result["identity"]["package"]).resolve().is_relative_to((paths.repo_path / ".venv").resolve())
+
+
+def test_model_cli_harness_fixture_runtime_mismatch_is_fallback_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_harness_module()
+    repo = tmp_path / "fixture"
+    repo.mkdir()
+    (repo / "pyproject.toml").write_text("[project]\nname='fixture'\nversion='0'\n", encoding="utf-8")
+    responses = iter(
+        [
+            {
+                "returncode": 0,
+                "stdout": json.dumps(
+                    {"executable": str(tmp_path / "ambient/python.exe"), "package": str(REPO_ROOT / "src/agentic_workspace/__init__.py")}
+                ),
+            },
+            {"returncode": 0, "stdout": "{}"},
+            {"returncode": 0, "stdout": "{}"},
+        ]
+    )
+    monkeypatch.setattr(module, "_run_command", lambda *args, **kwargs: next(responses))
+
+    result = module._fixture_runtime_provenance(repo_path=repo, env={}, timeout_seconds=10)
+
+    assert result["status"] == "blocked-mismatch-or-unavailable"
+    assert result["proof_class"] == "degraded-fallback-only"
+    assert result["checks"]["package_from_fixture_venv"] is False
+    assert result["recovery_command"]
 
 
 def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_sources(

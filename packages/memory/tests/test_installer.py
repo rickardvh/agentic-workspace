@@ -7,6 +7,55 @@ from pathlib import Path as _Path
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from memory_test_support import *
+from repo_memory_bootstrap import _installer_paths as installer_paths
+from repo_memory_bootstrap._installer_paths import _find_nested_repo_roots
+
+
+def test_nested_repo_scan_excludes_only_manifest_owned_harness_evidence(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    owned = target / ".agentic-workspace" / "local" / "scratch" / "owned-run"
+    unowned = target / ".agentic-workspace" / "local" / "scratch" / "unowned-run"
+    (owned / "repo" / ".git").mkdir(parents=True)
+    (unowned / "repo" / ".git").mkdir(parents=True)
+    (owned / ".aw-scratch.toml").write_text(
+        'owner = "agentic-workspace"\nproducer = "model-cli-harness"\n',
+        encoding="utf-8",
+    )
+
+    found = _find_nested_repo_roots(target)
+
+    assert owned / "repo" not in found
+    assert unowned / "repo" in found
+
+
+def test_nested_repo_scan_fails_closed_for_junction_like_owned_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    target = tmp_path / "repo"
+    owned = target / ".agentic-workspace/local/scratch/owned-run"
+    (owned / "repo/.git").mkdir(parents=True)
+    (owned / ".aw-scratch.toml").write_text('owner = "agentic-workspace"\nproducer = "model-cli-harness"\n', encoding="utf-8")
+    original = getattr(installer_paths.os.path, "isjunction", lambda _path: False)
+    monkeypatch.setattr(
+        installer_paths.os.path,
+        "isjunction",
+        lambda path: Path(path) == owned or original(path),
+        raising=False,
+    )
+
+    assert owned / "repo" in _find_nested_repo_roots(target)
+
+
+def test_nested_repo_scan_does_not_trust_linked_manifest(tmp_path: Path) -> None:
+    target = tmp_path / "repo"
+    owned = target / ".agentic-workspace/local/scratch/owned-run"
+    (owned / "repo/.git").mkdir(parents=True)
+    source = tmp_path / "manifest.toml"
+    source.write_text('owner = "agentic-workspace"\nproducer = "model-cli-harness"\n', encoding="utf-8")
+    try:
+        (owned / ".aw-scratch.toml").symlink_to(source)
+    except OSError:
+        pytest.skip("symlink creation is unavailable")
+
+    assert owned / "repo" in _find_nested_repo_roots(target)
 
 
 def test_memory_doctor_does_not_flag_absent_optional_append_targets_in_clean_repo(tmp_path: Path) -> None:

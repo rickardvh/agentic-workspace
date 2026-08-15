@@ -811,6 +811,11 @@
             "function": "_run_evaluation_adapter"
           },
           {
+            "operation_id": "evaluation.authority-refresh",
+            "import_module": "agentic_workspace.evaluation",
+            "function": "_run_evaluation_adapter"
+          },
+          {
             "operation_id": "evaluation.prune",
             "import_module": "agentic_workspace.evaluation",
             "function": "_run_evaluation_adapter"
@@ -5256,6 +5261,33 @@
                       "--evaluation-id"
                     ],
                     "name": "evaluation_id"
+                  }
+                ]
+              },
+              {
+                "help": "Refresh observation authority from live public assignment and proof state.",
+                "name": "authority-refresh",
+                "operation_ref": {
+                  "id": "evaluation.authority-refresh",
+                  "path": "operations/evaluation.authority-refresh.json"
+                },
+                "options": [
+                  {
+                    "flags": ["--target"],
+                    "help": "Repository path.",
+                    "name": "target"
+                  },
+                  {
+                    "choices": ["text", "json"],
+                    "default": "text",
+                    "flags": ["--format"],
+                    "help": "Output format.",
+                    "name": "format"
+                  },
+                  {
+                    "flags": ["--evaluation-id"],
+                    "name": "evaluation_id",
+                    "required": true
                   }
                 ]
               },
@@ -15084,6 +15116,11 @@
             "function": "_run_evaluation_adapter",
             "import_module": "agentic_workspace.evaluation",
             "operation_id": "evaluation.observe"
+          },
+          {
+            "function": "_run_evaluation_adapter",
+            "import_module": "agentic_workspace.evaluation",
+            "operation_id": "evaluation.authority-refresh"
           },
           {
             "function": "_run_evaluation_adapter",

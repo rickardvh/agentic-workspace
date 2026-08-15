@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import tomllib
 from pathlib import Path
 
 from repo_memory_bootstrap._installer_shared import (
@@ -134,8 +136,15 @@ def _has_git_boundary(path: Path) -> bool:
 def _find_nested_repo_roots(target_root: Path) -> list[Path]:
     nested: list[Path] = []
     seen: set[Path] = set()
-    for candidate in target_root.rglob(".git"):
-        repo_root = candidate.parent
+    for current, directory_names, _file_names in os.walk(target_root, topdown=True, followlinks=False):
+        current_path = Path(current)
+        if current_path != target_root and _is_owned_harness_evidence_root(current_path, target_root=target_root):
+            directory_names[:] = []
+            continue
+        if ".git" not in directory_names:
+            continue
+        repo_root = current_path
+        directory_names.remove(".git")
         if _is_generated_dependency_cache(repo_root=repo_root, target_root=target_root):
             continue
         if repo_root == target_root or repo_root in seen:
@@ -143,6 +152,32 @@ def _find_nested_repo_roots(target_root: Path) -> list[Path]:
         nested.append(repo_root)
         seen.add(repo_root)
     return sorted(nested)
+
+
+def _is_owned_harness_evidence_root(path: Path, *, target_root: Path) -> bool:
+    """Trust only contained, non-linked scratch roots with an AW producer manifest."""
+    scratch_root = target_root / ".agentic-workspace" / "local" / "scratch"
+    try:
+        path.resolve(strict=False).relative_to(scratch_root.resolve(strict=False))
+    except ValueError:
+        return False
+    is_junction = getattr(os.path, "isjunction", lambda _path: False)
+    for candidate in [path, *path.parents]:
+        if candidate == target_root:
+            break
+        if candidate.is_symlink() or is_junction(candidate):
+            return False
+    manifest = path / ".aw-scratch.toml"
+    if not manifest.is_file() or manifest.is_symlink():
+        return False
+    try:
+        payload = tomllib.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
+        return False
+    return payload.get("owner") == "agentic-workspace" and payload.get("producer") in {
+        "model-cli-harness",
+        "model-cli-harness.run-suite",
+    }
 
 
 def _is_generated_dependency_cache(*, repo_root: Path, target_root: Path) -> bool:

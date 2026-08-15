@@ -283,7 +283,11 @@ def _proof_tiny_semantic_budget_projection(payload: Any, *, field_name: str = ""
     """Normalize transport spelling while retaining decision-bearing command arguments."""
 
     if isinstance(payload, dict):
-        return {key: _proof_tiny_semantic_budget_projection(value, field_name=key) for key, value in payload.items()}
+        return {
+            key: _proof_tiny_semantic_budget_projection(value, field_name=key)
+            for key, value in payload.items()
+            if key not in {"proof_closeout_summary", "proof_invocation_posture"}
+        }
     if isinstance(payload, list):
         return [_proof_tiny_semantic_budget_projection(value, field_name=field_name) for value in payload]
     if field_name == "target" and isinstance(payload, str):

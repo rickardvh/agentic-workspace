@@ -1,19 +1,19 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:3c84c4b39898caf0dd40e67699ab8e8ae48d7779e47748da57c9e961b5d6a26b",
+  "profile_fingerprint": "sha256:b9b0981ee74b57f762664d988662b6bc156424412a820ef0d69dbda97a9073c3",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.40.0",
+    "client_package": "0.40.1",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.40.0"
+      "version": "0.40.1"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.40.0"
+      "version": "0.40.1"
     }
   },
   "operations": {
@@ -17038,6 +17038,343 @@
         }
       }
     },
+    "evaluation.authority-refresh": {
+      "identity": "evaluation.authority-refresh",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:0ed5c825d62d0cea1d7053157a6d2959bb78618a9a5dfe430469d369e5d7181d",
+      "compatibility_fingerprint": "sha256:af8bf4e66845c841532ecb0e50175e2ac94e2f9ca7387ba5929be21e7bfdb79f",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "evaluation.authority-refresh",
+        "command_surface": {
+          "command": "evaluation",
+          "format_option": "format",
+          "subcommand": "authority-refresh"
+        },
+        "summary": "Refresh evaluation observation authority from the single live assignment and admitted public proof receipt.",
+        "classification": "metadata-refresh",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false,
+            "schema_ref": "schemas/evaluation_authority_refresh_input.schema.json"
+          },
+          {
+            "name": "evaluation_id",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "json",
+          "schema_ref": "schemas/evaluation_authority_refresh_result.schema.json"
+        },
+        "effects": {
+          "read_only": false,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": true,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/planning/assignments/*.assignment.json",
+            "required": true
+          },
+          {
+            "surface": ".agentic-workspace/local/proof-receipts/last.json",
+            "required": true
+          },
+          {
+            "surface": "git HEAD and scoped status",
+            "required": true
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.authority.json",
+            "required": true,
+            "when": "live authority is unambiguous and current"
+          }
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "refresh",
+            "uses": "evaluation.observation.append",
+            "description": "Resolve and persist the authority phase used by observation append."
+          },
+          {
+            "id": "emit_output",
+            "uses": "output.emit",
+            "description": "Emit refresh result."
+          }
+        ],
+        "guards": [
+          "Exactly one current assignment is required.",
+          "The public proof receipt must be admitted and passed.",
+          "Caller dictionaries cannot create or override authority."
+        ],
+        "proof": [
+          "evaluation authority tests",
+          "CLI/Python/TypeScript generated client parity"
+        ],
+        "migration_status": "runtime-consumed",
+        "ir_plan": {
+          "status": "partial",
+          "summary": "Generated command packages invoke the runtime-owned authority refresh transition.",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "Resolve the target root."
+            },
+            {
+              "id": "refresh",
+              "uses": "evaluation.observation.append",
+              "description": "Refresh the authority phase used by observation append."
+            },
+            {
+              "id": "emit_output",
+              "uses": "output.emit",
+              "description": "Emit refresh result."
+            }
+          ]
+        }
+      },
+      "schemas": [
+        "evaluation_authority_refresh_input.schema.json",
+        "evaluation_authority_refresh_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "evaluation definition validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local observation append policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "derived status projection",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "evaluation.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "evaluation_authority_refresh_input.schema.json"
+        ],
+        "output": [
+          "evaluation_authority_refresh_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "evaluation.authority-refresh",
+          "classification": "metadata-refresh",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false,
+              "schema_ref": "schemas/evaluation_authority_refresh_input.schema.json"
+            },
+            {
+              "name": "evaluation_id",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "json",
+            "schema_ref": "schemas/evaluation_authority_refresh_result.schema.json"
+          },
+          "effects": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Exactly one current assignment is required.",
+            "The public proof receipt must be admitted and passed.",
+            "Caller dictionaries cannot create or override authority."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "evaluation_authority_refresh_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "schema-reference",
+              "type": "object",
+              "required": [
+                "evaluation_id"
+              ],
+              "properties": {
+                "evaluation_id": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "output": {
+            "evaluation_authority_refresh_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "schema-reference",
+              "type": "object",
+              "required": [
+                "kind",
+                "operation_id",
+                "outcome",
+                "evaluation_id",
+                "authority",
+                "authority_revision"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/evaluation-observation-authority-refresh/v1"
+                },
+                "operation_id": {
+                  "const": "evaluation.authority-refresh"
+                },
+                "outcome": {
+                  "const": "refreshed"
+                },
+                "evaluation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "authority": {
+                  "type": "object"
+                },
+                "authority_revision": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed",
+                    "retryable"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
     "evaluation.delivery-status": {
       "identity": "evaluation.delivery-status",
       "version": "agentic-workspace/operation/v1",
@@ -18918,8 +19255,8 @@
     "evaluation.observe": {
       "identity": "evaluation.observe",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:681326cc8aa88bdd086e780bd8c6cd054844f3a8c693691dfaf6d4eab9c6db6d",
-      "compatibility_fingerprint": "sha256:bbb855cd3f8e352c3583156848ecbeb77db79937b78edc5f99cf38704dd0c71f",
+      "fingerprint": "sha256:e3355d074f714ee74947948184a8eee7129a1aec291a5f4536a9d1389f6bed94",
+      "compatibility_fingerprint": "sha256:dbc2bb661eef18d44404bc000828908057b8928ebe6a550ca97823fa8857d073",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "evaluation.observe",
@@ -18970,7 +19307,7 @@
           {
             "name": "context",
             "source": "cli-option",
-            "required": true
+            "required": false
           },
           {
             "name": "finding",
@@ -19046,6 +19383,7 @@
           "Observation criterion must exist in the registered definition.",
           "Terminal evaluations reject additional observations.",
           "Observation context is comparison evidence only; assignment, mutation baseline, and AW proof authority resolve from the local authority receipt and live Git.",
+          "When no authority receipt exists, observe derives and records it from the single current public assignment and admitted public proof receipt; caller dictionaries cannot create authority.",
           "Concurrent/retried observations use a local lock, store revision, and idempotency key.",
           "Each admitted observation/result carries a stable identity and supersedes previous current results for the same criterion.",
           "External evidence is referenced, not copied, unless separately promoted."
@@ -19206,7 +19544,7 @@
             {
               "name": "context",
               "source": "cli-option",
-              "required": true
+              "required": false
             },
             {
               "name": "finding",
@@ -19239,6 +19577,7 @@
             "Observation criterion must exist in the registered definition.",
             "Terminal evaluations reject additional observations.",
             "Observation context is comparison evidence only; assignment, mutation baseline, and AW proof authority resolve from the local authority receipt and live Git.",
+            "When no authority receipt exists, observe derives and records it from the single current public assignment and admitted public proof receipt; caller dictionaries cannot create authority.",
             "Concurrent/retried observations use a local lock, store revision, and idempotency key.",
             "Each admitted observation/result carries a stable identity and supersedes previous current results for the same criterion.",
             "External evidence is referenced, not copied, unless separately promoted."
@@ -20693,6 +21032,76 @@
           "recorded": {
             "type": "object",
             "description": "The newly recorded delegation outcome."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "evaluation_authority_refresh_input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/evaluation_authority_refresh_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/evaluation-authority-refresh-input/v1",
+        "title": "Agentic Workspace Evaluation Authority Refresh Input",
+        "description": "Input accepted by the generated evaluation.authority-refresh operation.",
+        "x-agentic-workspace-doc-role": "schema-reference",
+        "type": "object",
+        "required": [
+          "evaluation_id"
+        ],
+        "properties": {
+          "evaluation_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered evaluation whose observation authority will be refreshed."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "evaluation_authority_refresh_result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/evaluation_authority_refresh_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/evaluation-authority-refresh-result/v1",
+        "title": "Agentic Workspace Evaluation Authority Refresh Result",
+        "description": "Result returned after refreshing observation authority from live public state.",
+        "x-agentic-workspace-doc-role": "schema-reference",
+        "type": "object",
+        "required": [
+          "kind",
+          "operation_id",
+          "outcome",
+          "evaluation_id",
+          "authority",
+          "authority_revision"
+        ],
+        "properties": {
+          "kind": {
+            "const": "agentic-workspace/evaluation-observation-authority-refresh/v1",
+            "description": "Discriminator for an authority refresh result."
+          },
+          "operation_id": {
+            "const": "evaluation.authority-refresh",
+            "description": "Public operation that performed the refresh."
+          },
+          "outcome": {
+            "const": "refreshed",
+            "description": "Successful refresh outcome."
+          },
+          "evaluation_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Registered evaluation whose authority was refreshed."
+          },
+          "authority": {
+            "type": "object",
+            "description": "Live freshness status after the refresh."
+          },
+          "authority_revision": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Fingerprint of the persisted authority receipt."
           }
         },
         "additionalProperties": true

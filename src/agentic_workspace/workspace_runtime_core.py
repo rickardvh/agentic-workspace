@@ -17706,10 +17706,8 @@ def _final_report_budget_payload() -> dict[str, Any]:
 
 def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
     summary_dir_relative = WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "model-cli-harness"
-    summary_dir = target_root / summary_dir_relative
-    summary_files = sorted(
-        summary_dir.glob("*summary.json") if summary_dir.exists() else [], key=lambda path: (path.stat().st_mtime, path.name), reverse=True
-    )
+    indexed_summary_files, index_admission = _successful_completion_cost_indexed_summaries(target_root=target_root)
+    summary_files = indexed_summary_files
     summaries: list[dict[str, Any]] = []
     skipped_count = 0
     for path in summary_files[:8]:
@@ -17763,6 +17761,7 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
         "rule": "Use this as maintainer evidence for surface-cost tradeoffs. It is not a formal benchmark, CI gate, or model leaderboard.",
         "evidence": {
             "summary_dir": summary_dir_relative.as_posix(),
+            "producer_index": index_admission,
             "summary_count": len(summaries),
             "total_observation_count": evidence_count,
             "skipped_summary_count": skipped_count,
@@ -17786,6 +17785,85 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
         "section_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section successful_completion_cost --format json", cli_invoke=cli_invoke
         ),
+    }
+
+
+def _successful_completion_cost_indexed_summaries(*, target_root: Path) -> tuple[list[Path], dict[str, Any]]:
+    index_path = target_root / ".agentic-workspace" / "local" / "model-cli-harness" / "evidence-index.jsonl"
+    if not index_path.is_file() or index_path.is_symlink():
+        return [], {"status": "absent", "admitted_count": 0, "rejected_count": 0, "rejection_reasons": {}}
+    try:
+        records = [json.loads(line) for line in index_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    except (OSError, json.JSONDecodeError):
+        return [], {"status": "invalid", "admitted_count": 0, "rejected_count": 1, "rejection_reasons": {"invalid-index": 1}}
+    current_head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=target_root, capture_output=True, text=True, check=False).stdout.strip()
+    current_tree = subprocess.run(
+        ["git", "rev-parse", "HEAD^{tree}"], cwd=target_root, capture_output=True, text=True, check=False
+    ).stdout.strip()
+    remote = subprocess.run(
+        ["git", "config", "--get", "remote.origin.url"], cwd=target_root, capture_output=True, text=True, check=False
+    ).stdout.strip()
+    repository_identity = "sha256:" + hashlib.sha256((remote or target_root.resolve().as_posix().lower()).encode("utf-8")).hexdigest()[:24]
+    admitted: list[Path] = []
+    reasons: dict[str, int] = {}
+    rejected_examples: list[dict[str, str]] = []
+    target_resolved = target_root.resolve()
+
+    def reject(reason: str, *, summary_ref: str = "") -> None:
+        reasons[reason] = reasons.get(reason, 0) + 1
+        if len(rejected_examples) < 4:
+            rejected_examples.append({"reason": reason, "summary_ref": summary_ref[:240]})
+
+    for record in reversed(records):
+        if not isinstance(record, dict) or record.get("kind") != "agentic-workspace/model-cli-harness-evidence-index-entry/v1":
+            reject("invalid-entry")
+            continue
+        if record.get("producer") != "model-cli-harness.run-suite":
+            reject("foreign-producer", summary_ref=str(record.get("summary_ref") or ""))
+            continue
+        try:
+            summary_path = (target_root / str(record.get("summary_ref") or "")).resolve()
+            manifest_path = (target_root / str(record.get("manifest_ref") or "")).resolve()
+            summary_path.relative_to(target_resolved)
+            manifest_path.relative_to(target_resolved)
+        except (OSError, ValueError):
+            reject("path-outside-target", summary_ref=str(record.get("summary_ref") or ""))
+            continue
+        if summary_path.is_symlink() or manifest_path.is_symlink() or not summary_path.is_file() or not manifest_path.is_file():
+            reject("missing-or-linked-evidence", summary_ref=str(record.get("summary_ref") or ""))
+            continue
+        try:
+            manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
+            reject("invalid-producer-manifest", summary_ref=str(record.get("summary_ref") or ""))
+            continue
+        if manifest.get("owner") != "agentic-workspace" or manifest.get("producer") != "model-cli-harness.run-suite":
+            reject("producer-manifest-mismatch", summary_ref=str(record.get("summary_ref") or ""))
+            continue
+        subject = _as_dict(record.get("subject"))
+        if str(subject.get("repository_identity") or "") != repository_identity:
+            reject("repository-identity-mismatch", summary_ref=str(record.get("summary_ref") or ""))
+            continue
+        if subject.get("dirty") is True:
+            reject("recorded-subject-dirty", summary_ref=str(record.get("summary_ref") or ""))
+            continue
+        if str(subject.get("repository_head") or "") != current_head or str(subject.get("repository_tree") or "") != current_tree:
+            reject("repository-subject-mismatch", summary_ref=str(record.get("summary_ref") or ""))
+            continue
+        admitted.append(summary_path)
+        if len(admitted) >= 8:
+            break
+    return admitted, {
+        "status": "present" if admitted else "no-current-evidence",
+        "admitted_count": len(admitted),
+        "rejected_count": sum(reasons.values()),
+        "rejection_reasons": dict(sorted(reasons.items())),
+        "rejected_examples": rejected_examples,
+        "drill_down": {
+            "index_ref": ".agentic-workspace/local/model-cli-harness/evidence-index.jsonl",
+            "example_limit": 4,
+        },
+        "privacy": "producer index references compact summaries only; raw transcripts are not read",
     }
 
 
@@ -32870,6 +32948,12 @@ def _planning_owner_admission_contract() -> dict[str, Any]:
 
 
 def _planning_owner_action_effect(*, accepted: bool, rejected: bool) -> dict[str, Any]:
+    if not accepted and not rejected:
+        return {
+            "force": "none",
+            "consumers": _PLANNING_OWNER_ADMISSION_CONSUMERS,
+            "rule": "No live Planning owner is selected; unrelated work may use the ordinary no-owner route.",
+        }
     if accepted and not rejected:
         return {
             "force": "none",
@@ -33324,7 +33408,7 @@ def _planning_owner_admission_candidate(
         selection_revision = str(selection_payload.get("planning_revision") or "").strip()
         if not selection_revision:
             return {**candidate, "status": "rejected", "reason": "local-selection-missing-planning-revision"}
-        if expected_planning_revision and selection_revision != expected_planning_revision:
+        if expected_planning_revision and selection_revision != expected_planning_revision and not explicit_residual:
             return {
                 **candidate,
                 "status": "rejected",
@@ -33396,6 +33480,28 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
     live_entries = _planning_owner_live_graph_entries(data=state_data)
     live_refs = {entry["ref"] for entry in live_entries if entry.get("ref")}
     rejected: list[dict[str, Any]] = []
+    stale: list[dict[str, Any]] = []
+    pending_integrations = _pending_feature_integrations(target_root=target_root)
+
+    def classify_nonblocking(candidate: dict[str, Any]) -> bool:
+        ref = str(candidate.get("ref") or "").replace("\\", "/")
+        reason = str(candidate.get("reason") or "")
+        proposal = pending_integrations.get(ref, {})
+        if reason in {"owner-phase-terminal", "owner-lifecycle-not-live"} and proposal:
+            stale.append(
+                {
+                    **candidate,
+                    "status": "integration-pending",
+                    "reason": "completed-owner-integration-pending",
+                    "integration_proposal_id": proposal.get("proposal_id", ""),
+                }
+            )
+            return True
+        if reason == "owner-record-missing" and str(candidate.get("source") or "").endswith(":active.execplans"):
+            stale.append({**candidate, "status": "stale-projection", "reason": "missing-owner-stale-projection"})
+            return True
+        return False
+
     selected = _selected_planning_owner_payload(target_root)
     if selected:
         admitted = _planning_owner_admission_candidate(
@@ -33420,7 +33526,8 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
                 "action_effect": _planning_owner_action_effect(accepted=True, rejected=False),
                 "rule": "Startup routing may rely only on a currently admitted Planning/current-work owner.",
             }
-        rejected.append(admitted)
+        if not classify_nonblocking(admitted):
+            rejected.append(admitted)
     for entry in live_entries:
         admitted = _planning_owner_admission_candidate(
             target_root=target_root,
@@ -33443,16 +33550,21 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
                 "action_effect": _planning_owner_action_effect(accepted=True, rejected=bool(rejected)),
                 "rule": "Startup routing may rely only on a currently admitted Planning/current-work owner.",
             }
-        rejected.append(admitted)
+        if not classify_nonblocking(admitted):
+            rejected.append(admitted)
     return {
         "kind": "agentic-workspace/planning-owner-admission/v1",
         "status": "rejected" if rejected else "none",
         "selected_owner": {},
         "rejected_candidates": rejected,
-        "repair_route": _planning_owner_repair_route(target_root=target_root) if rejected else {},
+        "stale_candidates": stale,
+        "repair_route": _planning_owner_repair_route(target_root=target_root) if rejected or stale else {},
         "admission_contract": admission_contract,
         "action_effect": _planning_owner_action_effect(accepted=False, rejected=bool(rejected)),
-        "rule": "Rejected Planning owners are diagnostics only and must not affect task relation, claims, proof, or next action.",
+        "rule": (
+            "Rejected Planning owners block lifecycle action; completed owners with a matching feature integration proposal "
+            "and missing legacy projections remain non-blocking diagnostics."
+        ),
     }
 
 
@@ -33499,7 +33611,10 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     active_execplan = selected_owner.get("ref") if isinstance(selected_owner, dict) else None
     rejected_candidates = _list_payload(owner_admission.get("rejected_candidates")) if isinstance(owner_admission, dict) else []
     rejected_reasons = {str(_as_dict(candidate).get("reason") or "") for candidate in rejected_candidates}
-    raw_state_fallback_allowed = owner_admission.get("status") != "rejected" or rejected_reasons == {"owner-identity-mismatch"}
+    stale_candidates = _list_payload(owner_admission.get("stale_candidates")) if isinstance(owner_admission, dict) else []
+    raw_state_fallback_allowed = not stale_candidates and (
+        owner_admission.get("status") != "rejected" or rejected_reasons == {"owner-identity-mismatch"}
+    )
     if active_execplan is None and raw_state_fallback_allowed and active_items and isinstance(active_items[0], dict):
         active_execplan = active_items[0].get("surface")
     if active_execplan is None and raw_state_fallback_allowed and active_execplans and isinstance(active_execplans[0], dict):
@@ -33529,6 +33644,7 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     if isinstance(owner_admission, dict) and (
         owner_admission.get("status") == "rejected"
         or owner_admission.get("rejected_candidates")
+        or owner_admission.get("stale_candidates")
         or selected_source.endswith("owner-selection.json")
         or selected_source.endswith(":active.execplans")
     ):
@@ -56946,7 +57062,101 @@ def _local_scratch_nested_repo_paths(*, target_root: Path) -> list[str]:
     scratch_root = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
     if not scratch_root.is_dir():
         return []
-    return []
+    found: list[str] = []
+    scratch_resolved = scratch_root.resolve()
+    is_junction = getattr(os.path, "isjunction", lambda _path: False)
+    for current, directory_names, file_names in os.walk(scratch_root, topdown=True, followlinks=False):
+        current_path = Path(current)
+        manifest = current_path / ".aw-scratch.toml"
+        owned = False
+        if manifest.is_file() and not manifest.is_symlink():
+            try:
+                current_path.resolve().relative_to(scratch_resolved)
+                linked_boundary = any(
+                    candidate.is_symlink() or is_junction(candidate)
+                    for candidate in [current_path, *current_path.parents]
+                    if candidate != target_root
+                )
+                manifest_payload = tomllib.loads(manifest.read_text(encoding="utf-8"))
+                owned = (
+                    not linked_boundary
+                    and manifest_payload.get("owner") == "agentic-workspace"
+                    and manifest_payload.get("producer") in {"model-cli-harness", "model-cli-harness.run-suite"}
+                )
+            except (OSError, ValueError, tomllib.TOMLDecodeError, UnicodeDecodeError):
+                owned = False
+        if owned:
+            directory_names[:] = []
+            continue
+        if ".git" in directory_names or ".git" in file_names:
+            found.append(current_path.relative_to(target_root).as_posix())
+            if ".git" in directory_names:
+                directory_names.remove(".git")
+    return found[:8]
+
+
+def _local_scratch_exclusion_summary(*, target_root: Path) -> dict[str, Any]:
+    """Describe producer-indexed exclusions without traversing their payloads."""
+    index_path = target_root / ".agentic-workspace" / "local" / "model-cli-harness" / "evidence-index.jsonl"
+    scratch_root = (target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH).resolve()
+    if not index_path.is_file() or index_path.is_symlink():
+        return {
+            "status": "absent",
+            "excluded_root_count": 0,
+            "excluded_root_examples": [],
+            "example_limit": 4,
+            "preserved_scope": "All unindexed, unowned, linked, or out-of-root content remains eligible for ordinary diagnostics.",
+        }
+    excluded: list[str] = []
+    rejected = 0
+    try:
+        lines = index_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        lines = []
+        rejected = 1
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            rejected += 1
+            continue
+        if not isinstance(record, dict) or record.get("producer") != "model-cli-harness.run-suite":
+            rejected += 1
+            continue
+        manifest_ref = str(record.get("manifest_ref") or "")
+        try:
+            raw_manifest = target_root / manifest_ref
+            raw_manifest.relative_to(target_root)
+            raw_manifest.parent.relative_to(target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH)
+            linked_boundary = any(
+                candidate.is_symlink() or bool(getattr(candidate, "is_junction", lambda: False)())
+                for candidate in (raw_manifest, raw_manifest.parent, *raw_manifest.parent.parents)
+                if candidate != target_root
+            )
+            if linked_boundary:
+                raise ValueError("linked scratch boundary")
+            manifest = raw_manifest.resolve(strict=True)
+            manifest.parent.relative_to(scratch_root)
+        except (OSError, ValueError):
+            rejected += 1
+            continue
+        if manifest.is_symlink() or manifest.name != ".aw-scratch.toml":
+            rejected += 1
+            continue
+        relative = manifest.parent.relative_to(target_root.resolve()).as_posix()
+        if relative not in excluded:
+            excluded.append(relative)
+    return {
+        "status": "bounded-exclusion" if excluded else "no-admitted-exclusions",
+        "excluded_root_count": len(excluded),
+        "excluded_root_examples": excluded[:4],
+        "rejected_index_entry_count": rejected,
+        "example_limit": 4,
+        "index_ref": ".agentic-workspace/local/model-cli-harness/evidence-index.jsonl",
+        "preserved_scope": "All unindexed, unowned, linked, or out-of-root content remains eligible for ordinary diagnostics.",
+    }
 
 
 def _payload_doctor_closure_plan(
@@ -56973,6 +57183,7 @@ def _payload_doctor_closure_plan(
     provenance_drift = str(payload_state.get("provenance_drift", "unknown"))
     installed_payload_needs_sync = action_state_name == "safe_payload_sync_available" or payload_status == "sync-required"
     scratch_repos = _local_scratch_nested_repo_paths(target_root=target_root)
+    scratch_exclusion = _local_scratch_exclusion_summary(target_root=target_root)
     installed_lane_proof_commands = [
         _command_with_cli_invoke(command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke),
         _command_with_cli_invoke(command=f"agentic-workspace status --target {target} --format json", cli_invoke=cli_invoke),
@@ -57032,11 +57243,15 @@ def _payload_doctor_closure_plan(
         },
         {
             "id": "local_scratch_blockers",
-            "status": "ignored-local-only" if scratch_roots else "clear",
+            "status": "attention-unowned-nested-repositories" if scratch_repos else "ignored-local-only" if scratch_roots else "clear",
             "nested_repo_paths": scratch_repos,
+            "exclusion_summary": scratch_exclusion,
             "dry_run_command": scratch_dry_run_command,
             "cleanup_command_after_review": scratch_cleanup_command,
-            "rule": "Ignore AW local scratch contents for payload closure; cleanup remains explicitly scoped to local scratch roots.",
+            "rule": (
+                "Exclude only producer-owned harness roots; unowned nested repositories remain explicit attention. "
+                "Cleanup remains scoped to reviewed local scratch roots."
+            ),
         },
         {
             "id": "provenance",

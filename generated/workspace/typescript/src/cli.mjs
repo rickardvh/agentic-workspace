@@ -9,7 +9,7 @@ import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
 const supportedCommands = new Set(["agent-guidance", "assignment", "autopilot", "checkpoint", "config", "correction-event", "defaults", "doctor", "evaluation", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["agent-guidance.delete", "agent-guidance.edit", "agent-guidance.merge", "agent-guidance.promote", "agent-guidance.retire", "agent-guidance.revalidate", "agent-guidance.split", "agent-guidance.supersede", "agent-guidance.suppress", "agent-guidance.weaken", "assignment.admit", "assignment.cleanup", "assignment.close", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.report", "correction-event.correct-dispute", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.delivery-status", "evaluation.external-adapter-receipt", "evaluation.external-delivery", "evaluation.external-host-result-import", "evaluation.external-request", "evaluation.local-delivery", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.report-preview", "evaluation.retry", "evaluation.status", "evaluation.transition", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
+const nativeOperationIds = new Set(["agent-guidance.delete", "agent-guidance.edit", "agent-guidance.merge", "agent-guidance.promote", "agent-guidance.retire", "agent-guidance.revalidate", "agent-guidance.split", "agent-guidance.supersede", "agent-guidance.suppress", "agent-guidance.weaken", "assignment.admit", "assignment.cleanup", "assignment.close", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.report", "correction-event.correct-dispute", "correction-event.prune-compact", "correction-event.query", "correction-event.submit", "correction-event.withdraw-supersede", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.authority-refresh", "evaluation.delivery-status", "evaluation.external-adapter-receipt", "evaluation.external-delivery", "evaluation.external-host-result-import", "evaluation.external-request", "evaluation.local-delivery", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.report-preview", "evaluation.retry", "evaluation.status", "evaluation.transition", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -3057,6 +3057,42 @@ const commandDefinitions = [
                 "--evaluation-id"
               ],
               "name": "evaluation_id"
+            }
+          ]
+        },
+        {
+          "help": "Refresh observation authority from live public assignment and proof state.",
+          "name": "authority-refresh",
+          "operation_ref": {
+            "id": "evaluation.authority-refresh",
+            "path": "operations/evaluation.authority-refresh.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
             }
           ]
         },
