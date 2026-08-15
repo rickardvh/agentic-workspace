@@ -48876,7 +48876,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 admitted_input=admitted_input,
             )
             if reused is not None:
-                _emit_payload(payload=reused, format_name=args.format)
+                print(format_summary_json(reused))
                 return 0
         summary_started_at = time.perf_counter()
         with ProjectionProgress(root=target_root, operation="summary") as progress:
@@ -49319,7 +49319,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         payload = _rewrite_module_cli_commands(payload)
         _emit_payload(payload=payload, format_name=args.format)
         return 0
-    if profile == "router" and section is not None:
+    if profile == "router" and section is not None and section.strip() in _lazy_report_section_names():
         section_query = {
             "profile": profile,
             "section": section,
@@ -49328,7 +49328,13 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             "preset": resolved_preset or "",
             "task": str(task_text or ""),
             "changed": changed_paths,
-            "external_freshness_required": section in {"external_work_reconciliation", "external_work_delta"},
+            "external_freshness_required": section
+            in {
+                "external_work_reconciliation",
+                "external_work_delta",
+                "proof_reuse_guidance",
+                "runtime_mirror_consistency",
+            },
         }
         section_detail_command = _command_with_cli_invoke(
             command=f"agentic-workspace report --target {target_root.as_posix()} --verbose --format json",
@@ -49406,6 +49412,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             progress_contract = progress.contract()
         if section_payload is not None:
             payload = section_payload
+            payload.setdefault("kind", "workspace-report-answer/v1")
             if payload.get("status") == "cancelled":
                 payload["projection_progress"] = progress_contract
                 _emit_payload(payload=payload, format_name=args.format)

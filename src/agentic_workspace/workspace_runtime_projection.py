@@ -34,7 +34,7 @@ def _workflow_participation_payload(*, surface: str, compact: bool = False) -> d
     if compact:
         return {
             "status": payload["status"],
-            "rule": "AW mandatory; advisory guidance and implementation_allowed cannot bypass workflow.",
+            "rule": "AW mandatory; advisory guidance and implementation_allowed cannot bypass workflow",
         }
     return payload
 

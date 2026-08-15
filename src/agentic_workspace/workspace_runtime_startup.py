@@ -2603,13 +2603,13 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             {
                 "kind": "agentic-workspace/startup-skills-projection/v1",
                 "status": "selector-only",
-                "rule": "Read-only compact startup omits skill packet detail; use the catalog selector only when needed.",
+                "rule": "Use skills selector.",
                 "required": [],
                 "recommended": [],
                 "catalog": {
                     "available": True,
                     "detail_selector": "skills",
-                    "command": f'{cli_invoke} skills --target "{target_root or Path(".")}" --task "<task>" --format json',
+                    "command": f'{cli_invoke} skills --target . --task "<task>" --format json',
                 },
             }
             if read_only_compact_default

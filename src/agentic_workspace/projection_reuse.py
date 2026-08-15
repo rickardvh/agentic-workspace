@@ -727,6 +727,15 @@ def lookup_projection_reuse(
     prior_cost = record.get("observed_cost", {}) if isinstance(record.get("observed_cost"), dict) else {}
     warm_state_reads = context.get("state_read_count", 0)
     cold_state_reads = prior_cost.get("state_read_count", 0)
+    cached_projection = record.get("projection") if isinstance(record.get("projection"), dict) else None
+    if cached_projection is not None and operation in {"start", "summary", "implement", "proof", "report"}:
+        reused_projection = json.loads(json.dumps(cached_projection, sort_keys=True, default=str))
+        reused_projection["projection_reuse"] = {
+            "decision_id": decision_id,
+            "status": "decision+enrichment-reused",
+            "freshness": "current",
+        }
+        return reused_projection, context
     return {
         "kind": "agentic-workspace/unchanged-projection/v1",
         "status": "unchanged",
@@ -782,12 +791,7 @@ def record_projection_reuse(
     payload: dict[str, Any],
     operating_decision: dict[str, Any],
 ) -> dict[str, Any]:
-    if (
-        context.get("volatile")
-        or context.get("dependency_status") != "complete"
-        or payload.get("status") == "cancelled"
-        or not (root / ".agentic-workspace").is_dir()
-    ):
+    if payload.get("status") == "cancelled":
         return {}
     path = context["path"]
     actionability = payload.get("actionability", {}) if isinstance(payload.get("actionability"), dict) else {}
@@ -811,6 +815,21 @@ def record_projection_reuse(
         or projection_authority.get("decision_id") != operating_decision.get("decision_id")
         or projection_authority.get("projection_input_revision") != operating_decision.get("projection_input_revision")
     ):
+        return {}
+    revalidation = (
+        payload_context.get("projection_decision_input_revalidation", {})
+        if isinstance(payload_context.get("projection_decision_input_revalidation"), dict)
+        else {}
+    )
+    cache_disabled = context.get("volatile") or context.get("dependency_status") != "complete" or not (root / ".agentic-workspace").is_dir()
+    if cache_disabled:
+        for field in (
+            "projection_decision_input",
+            "projection_decision_input_consumption",
+            "projection_decision_input_revalidation",
+            "projection_decision_authority",
+        ):
+            payload_context.pop(field, None)
         return {}
     context["decision_id"] = operating_decision["decision_id"]
     context["canonical_input_revision"] = operating_decision.get("admitted_input_revision", "")
@@ -866,15 +885,38 @@ def record_projection_reuse(
             if operating_decision.get(key) not in (None, "")
         },
     }
+    compact_receipt = {
+        "decision_id": context.get("decision_id", ""),
+        "status": "decision+enrichment-rebuilt",
+        "freshness": str(revalidation.get("status") or "unavailable"),
+    }
+    for field in (
+        "projection_decision_input",
+        "projection_decision_input_consumption",
+        "projection_decision_input_revalidation",
+        "projection_decision_authority",
+    ):
+        payload_context.pop(field, None)
+    payload["projection_reuse"] = compact_receipt
     # The budget governs the emitted projection, including its reuse receipt.
     # Recalculate twice so the byte-count field's own width is reflected.
     for _iteration in range(2):
-        projected_payload = {**payload, "projection_reuse": reuse_result}
-        emitted_bytes = len(json.dumps(projected_payload, sort_keys=True, default=str, indent=2).encode())
+        emitted_bytes = len(json.dumps(payload, sort_keys=True, default=str, indent=2).encode())
         reuse_result["observed_cost"]["serialized_bytes"] = emitted_bytes
         reuse_result["budgets"]["serialization_status"] = (
             "within-budget" if emitted_bytes <= budget.serialization_budget_bytes else "exceeded"
         )
+    if reuse_result["budgets"]["serialization_status"] == "exceeded":
+        bounded_payload = enforce_projection_serialization_budget(
+            payload=payload,
+            operation=operation,
+            reuse_result=reuse_result,
+            full_detail_command=str(reuse_result["progress"]["drill_down"]),
+        )
+        payload.clear()
+        payload.update(bounded_payload)
+        emitted_bytes = len(json.dumps(payload, sort_keys=True, default=str, indent=2).encode())
+        reuse_result["observed_cost"]["serialized_bytes"] = emitted_bytes
     record = {
         "kind": _CACHE_KIND,
         "contract_version": _CACHE_CONTRACT_VERSION,
@@ -887,6 +929,7 @@ def record_projection_reuse(
         "projection_input_revision": operating_decision.get("projection_input_revision", ""),
         "input_revisions": context.get("input_revisions", {}),
         "authority": "projection index only; operating decision remains authoritative",
+        "projection": payload,
         "output_digest": hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()[:20],
         "observed_cost": reuse_result["observed_cost"],
         "decision_snapshot": {
@@ -913,7 +956,6 @@ def record_projection_reuse(
             stale.unlink(missing_ok=True)
     except OSError:
         return {}
-    payload["projection_reuse"] = reuse_result
     return reuse_result
 
 
@@ -931,12 +973,14 @@ def enforce_projection_serialization_budget(
             return value if len(value) <= 320 else f"{value[:317]}..."
         if isinstance(value, list):
             ordered = value
+            item_limit = 8
             if value and all(isinstance(item, str) for item in value):
                 critical = [item for item in value if "terminal final response" in item.lower()]
                 ordered = [*critical, *(item for item in value if item not in critical)]
-            items = [_compact(item, depth=depth + 1) for item in ordered[:8]]
-            if len(value) > 8:
-                items.append({"kind": "agentic-workspace/omitted-items/v1", "omitted_count": len(value) - 8})
+                item_limit = 32
+            items = [_compact(item, depth=depth + 1) for item in ordered[:item_limit]]
+            if len(value) > item_limit:
+                items.append({"kind": "agentic-workspace/omitted-items/v1", "omitted_count": len(value) - item_limit})
             return items
         if isinstance(value, dict):
             if depth >= 8:
@@ -966,7 +1010,7 @@ def enforce_projection_serialization_budget(
         return value
 
     bounded = _compact(payload)
-    bounded["projection_reuse"] = reuse_result
+    bounded["projection_reuse"] = payload.get("projection_reuse", {})
     bounded["serialization_budget"] = {
         "status": "detail-withheld",
         "operation": operation,
@@ -983,12 +1027,13 @@ def enforce_projection_serialization_budget(
             if isinstance(value, str):
                 return value if len(value) <= 200 else f"{value[:197]}..."
             if isinstance(value, list):
-                items = [_compact_hard(item, depth=depth + 1) for item in value[:4]]
-                if len(value) > 4:
-                    items.append({"kind": "agentic-workspace/omitted-items/v1", "omitted_count": len(value) - 4})
+                item_limit = 32 if value and all(isinstance(item, str) for item in value) else 12
+                items = [_compact_hard(item, depth=depth + 1) for item in value[:item_limit]]
+                if len(value) > item_limit:
+                    items.append({"kind": "agentic-workspace/omitted-items/v1", "omitted_count": len(value) - item_limit})
                 return items
             if isinstance(value, dict):
-                if depth >= 5:
+                if depth >= 8:
                     return {"kind": "agentic-workspace/omitted-detail/v1", "field_count": len(value)}
                 priority = (
                     "kind",
@@ -1007,7 +1052,7 @@ def enforce_projection_serialization_budget(
                 )
                 ordered_keys = [key for key in priority if key in value]
                 ordered_keys.extend(key for key in value if key not in ordered_keys)
-                selected_keys = ordered_keys[:16]
+                selected_keys = ordered_keys[:32]
                 compacted = {key: _compact_hard(value[key], depth=depth + 1) for key in selected_keys}
                 if len(value) > len(selected_keys):
                     compacted["omitted_fields"] = {
@@ -1035,6 +1080,7 @@ def enforce_projection_serialization_budget(
                 "values",
                 "missing",
                 "payload_locations",
+                "answer",
             )
             if key in payload
         }
@@ -1047,7 +1093,7 @@ def enforce_projection_serialization_budget(
             )
             if source_context.get(key)
         }
-        bounded["projection_reuse"] = reuse_result
+        bounded["projection_reuse"] = payload.get("projection_reuse", {})
         bounded["serialization_budget"] = {
             "status": "detail-withheld",
             "operation": operation,

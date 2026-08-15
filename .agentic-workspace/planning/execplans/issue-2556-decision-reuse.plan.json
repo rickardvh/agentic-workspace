@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "closeout",
-  "revision": 7,
+  "revision": 8,
   "intent": {
     "outcome": "Make start, summary, implement, proof, and ordinary report projections reuse the canonical operating-decision revision with bounded computation, serialization, progress, and cancellation behavior.",
     "non_goals": [
@@ -44,7 +44,8 @@
     "proof_posture": {
       "state": "satisfied",
       "refs": [
-        "88 focused projection/decision tests passed",
+        "91 focused projection/decision and startup-boundary tests passed",
+        "39 exact prior workspace-checks failure nodes passed",
         "18 closeout/report correctness regressions passed",
         "workspace, Planning, Memory, and Verification typechecks passed",
         "contract tooling and structured-file inventory checks passed"
@@ -90,14 +91,14 @@
   },
   "execution_run": {
     "what_happened": "Replaced broad projection dependency reconstruction with bounded admitted revisions, made each ordinary builder derive task and changed-path inputs from the immutable admitted snapshot before materialization, re-read every admitted authority revision after materialization, fail closed when a builder-used or authority input changes, expose the sole decision consumed by reuse, enforce semantic serialization limits, add progress heartbeats and acknowledged cooperative cancellation, keep current-compact closeout inputs, and preserve the original captured-session manifest.",
-    "validation": "88 focused projection/decision tests, workspace typecheck, touched-file lint/format, and a refreshed live five-surface cold/warm benchmark passed; the preserved 18 closeout tests, contract tooling, and structured inventory remain part of the lane proof.",
+    "validation": "91 focused projection/decision and restored startup-boundary tests plus all 39 exact prior workspace-checks failure nodes passed locally; workspace typecheck, touched-file lint/format, contract tooling, structured inventory, and the refreshed five-surface benchmark complete the lane proof.",
     "benchmark": {
       "computation_budget_ms": 10000,
       "serialization_budget_bytes": 65536,
-      "cold_elapsed_ms": {"start": 1832, "summary_selected": 211, "implement": 1099, "proof": 907, "closeout_trust": 735},
-      "warm_elapsed_ms": {"start": 165, "summary_selected": 147, "implement": 419, "proof": 372, "closeout_trust": 381},
-      "cold_output_bytes": {"start": 51979, "summary_selected": 7314, "implement": 28333, "proof": 10596, "closeout_trust": 61069},
-      "warm_output_bytes": {"start": 1767, "summary_selected": 1837, "implement": 1865, "proof": 1778, "closeout_trust": 1834},
+      "cold_elapsed_ms": {"start": 1671, "summary_selected": 251, "implement": 952, "proof": 871, "closeout_trust": 685},
+      "warm_elapsed_ms": {"start": 157, "summary_selected": 158, "implement": 391, "proof": 235, "closeout_trust": 375},
+      "cold_output_bytes": {"start": 46210, "summary_selected": 1599, "implement": 22261, "proof": 4617, "closeout_trust": 55676},
+      "warm_output_bytes": {"start": 46224, "summary_selected": 1598, "implement": 22260, "proof": 4616, "closeout_trust": 55675},
       "cold_state_read_count": {"start": 56, "summary_selected": 56, "implement": 56, "proof": 56, "closeout_trust": 56},
       "warm_state_read_count": {"start": 56, "summary_selected": 56, "implement": 56, "proof": 56, "closeout_trust": 56},
       "captured_entry_count": 164,

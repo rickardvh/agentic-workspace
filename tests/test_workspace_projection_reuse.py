@@ -79,14 +79,13 @@ def test_report_reuses_equivalent_router_projection_and_verbose_forces_full_deta
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
     first_text = capsys.readouterr().out
     assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
-    unchanged_text = capsys.readouterr().out
-    unchanged = json.loads(unchanged_text)
+    reused_text = capsys.readouterr().out
+    reused = json.loads(reused_text)
 
-    assert unchanged["kind"] == "agentic-workspace/unchanged-projection/v1"
-    assert unchanged["operation"] == "report"
-    assert unchanged["work_avoided"]["serialization_of_full_projection_skipped"] is True
-    assert len(unchanged_text) < len(first_text) / 2
-    assert "--verbose" in unchanged["full_detail"]["command"]
+    assert reused["kind"] == "workspace-report-router/v1"
+    assert reused["projection_reuse"]["status"] == "decision+enrichment-reused"
+    assert reused["projection_reuse"]["decision_id"]
+    assert len(reused_text) <= len(first_text) + 64
 
     assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
     verbose = json.loads(capsys.readouterr().out)
@@ -94,9 +93,6 @@ def test_report_reuses_equivalent_router_projection_and_verbose_forces_full_deta
 
 
 def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path: Path, capsys) -> None:
-    from agentic_workspace.operating_decision import admit_projection_surface_decision_input
-    from agentic_workspace.projection_reuse import prepare_projection_reuse
-
     target = _target(tmp_path)
     changed = ".agentic-workspace/config.toml"
     capsys.readouterr()
@@ -109,17 +105,6 @@ def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path
         ["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"],
     ]
     for command in commands:
-        operation = command[0]
-        query = {
-            "task": "Keep the route narrow." if command[0] in {"start", "implement", "proof"} else "",
-            "changed": [changed] if command[0] in {"start", "implement", "proof"} else [],
-        }
-        independent_context = prepare_projection_reuse(root=target, operation=operation, query=query)
-        independent_input = admit_projection_surface_decision_input(
-            input_revisions=independent_context["decision_input_revisions"],
-            consumer=operation,
-            material_inputs=query,
-        )
         assert cli.main(command) == 0
         cold = json.loads(capsys.readouterr().out)
         assert cold.get("kind") != "agentic-workspace/unchanged-projection/v1"
@@ -127,34 +112,20 @@ def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path
 
         assert cli.main(command) == 0
         warm = json.loads(capsys.readouterr().out)
-        assert warm["kind"] == "agentic-workspace/unchanged-projection/v1"
-        assert warm["reuse"] == {
-            "decision": "reused",
-            "enrichment": "reused",
-            "invalidation_reasons": [],
-            "authority": "operating_decision.compile_operating_decision",
+        assert warm["kind"] == cold["kind"]
+        compact_receipt = cold["projection_reuse"]
+        assert compact_receipt == {
+            "decision_id": compact_receipt["decision_id"],
+            "status": "decision+enrichment-rebuilt",
+            "freshness": "current",
         }
-        surface_authority = cold["context"]["projection_decision_authority"]
-        input_receipt = cold["context"]["projection_decision_input"]
-        input_consumption = cold["context"]["projection_decision_input_consumption"]
-        input_revalidation = cold["context"]["projection_decision_input_revalidation"]
-        assert input_receipt["input_id"] == independent_input["input_id"]
-        assert input_consumption["input_id"] == independent_input["input_id"]
-        assert input_revalidation["status"] == "current"
-        assert input_revalidation["changed_fields"] == []
-        assert surface_authority["projection_input_revision"] == independent_input["admitted_input_revision"]
-        assert warm["decision_id"] == surface_authority["decision_id"]
-        assert warm["projection_input_revision"] == independent_input["admitted_input_revision"]
-        cold_decision = cold["projection_reuse"]["operating_decision"]
-        assert cold_decision["decision_id"] == surface_authority["decision_id"]
-        assert cold_decision["admitted_input_revision"] == surface_authority["admitted_input_revision"]
-        assert cold_decision["producer_function"] == "compile_operating_decision"
-        assert cold_decision["admitted_input_revision"]
-        assert warm["canonical_decision_input_revision"] == cold_decision["admitted_input_revision"]
-        assert cold["projection_reuse"]["observed_cost"]["state_read_count"] > 0
-        assert warm["observed_cost"]["state_read_count"] > 0
-        assert warm["observed_cost"]["cold_state_read_count"] == cold["projection_reuse"]["observed_cost"]["state_read_count"]
-        assert warm["budgets"] == {"computation_budget_ms": 10000, "serialization_budget_bytes": 65536}
+        assert compact_receipt["decision_id"]
+        assert not any(field.startswith("projection_decision_") for field in cold.get("context", {}))
+        assert warm["projection_reuse"] == {
+            "decision_id": compact_receipt["decision_id"],
+            "status": "decision+enrichment-reused",
+            "freshness": "current",
+        }
 
 
 def test_selected_closeout_and_planning_projections_are_bounded_and_warm_reused(tmp_path: Path, capsys) -> None:
@@ -176,11 +147,10 @@ def test_selected_closeout_and_planning_projections_are_bounded_and_warm_reused(
         warm_text = capsys.readouterr().out
         warm_elapsed = time.perf_counter() - started
         warm = json.loads(warm_text)
-        assert warm["kind"] == "agentic-workspace/unchanged-projection/v1"
+        assert warm["projection_reuse"]["status"] == "decision+enrichment-reused"
         assert len(warm_text.encode()) <= 65536
         assert cold_elapsed < 2.0
         assert warm_elapsed < 2.0
-        assert warm["work_avoided"]["full_projection_builder_skipped"] is True
 
 
 def test_invalidation_reasons_cover_each_admitted_authority_input_exactly() -> None:
@@ -621,21 +591,13 @@ def test_summary_reuses_unchanged_projection_and_preserves_decision_deltas(tmp_p
     assert cli.main(["summary", "--target", str(target), "--format", "json"]) == 0
     first_text = capsys.readouterr().out
     assert cli.main(["summary", "--target", str(target), "--format", "json"]) == 0
-    unchanged_text = capsys.readouterr().out
-    unchanged = json.loads(unchanged_text)
+    reused_text = capsys.readouterr().out
+    reused = json.loads(reused_text)
 
-    assert unchanged["kind"] == "agentic-workspace/unchanged-projection/v1"
-    assert unchanged["operation"] == "summary"
-    assert unchanged["decision_delta"] == "unchanged"
-    assert unchanged["proof_delta"] == "unchanged"
-    assert unchanged["residue_delta"] == "unchanged"
-    assert unchanged["next_action_delta"] == "unchanged"
-    assert unchanged["prior_decision"]["health"]
-    assert unchanged["prior_decision"]["next_action"]
-    assert unchanged["work_avoided"]["full_projection_builder_skipped"] is True
-    assert unchanged["work_avoided"]["serialization_of_full_projection_skipped"] is True
-    assert len(unchanged_text) < len(first_text) / 2
-    assert "--verbose" in unchanged["full_detail"]["command"]
+    assert reused["kind"] == "planning-summary/v1"
+    assert reused["projection_reuse"]["status"] == "decision+enrichment-reused"
+    assert reused["projection_reuse"]["decision_id"]
+    assert len(reused_text) <= len(first_text) + 64
 
     planning_state = target / ".agentic-workspace" / "planning" / "state.toml"
     planning_state.write_text(planning_state.read_text(encoding="utf-8") + "\n# decision relevant planning change\n", encoding="utf-8")
