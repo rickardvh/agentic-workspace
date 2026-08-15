@@ -569,6 +569,7 @@ const WORKSPACE_SELECTOR_DESCRIPTORS = {
     'proof_route_maintenance',
     'proof_next_decision',
     'proof_obligations',
+    'proof_command_tiers',
     'architecture_principles',
     'verification',
     'requirement_grounding',
