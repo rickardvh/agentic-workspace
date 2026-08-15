@@ -1,4 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
 bump = "patch"
-
-[metadata]
 summary = "Keep Planning child-adoption routes and selector failure exits consistent across ordinary command surfaces."

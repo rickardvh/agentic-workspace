@@ -36,7 +36,7 @@
   "relationships": {
     "selection": {
       "state": "selected-residual",
-      "owner": "current-work context",
+      "owner": "target-branch integration",
       "admission": "feature-branch-integration-proposal"
     },
     "proof_posture": {
