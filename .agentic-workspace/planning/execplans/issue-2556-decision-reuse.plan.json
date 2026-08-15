@@ -1,0 +1,106 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2556-decision-reuse",
+  "title": "Issue 2556 revision-keyed projection reuse and budgets",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 3,
+  "intent": {
+    "outcome": "Make start, summary, implement, proof, and ordinary report projections reuse the canonical operating-decision revision with bounded computation, serialization, progress, and cancellation behavior.",
+    "non_goals": [
+      "Do not create a report-local or command-local authority beside the canonical operating decision.",
+      "Do not absorb closeout-subject correctness (#2563), compatibility admission (#2558), closed-lane residue (#2560), or proportional proof receipts (#2561) beyond interfaces required for reuse.",
+      "Do not precompute universal workspace history or inventories for compact selectors."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2562-operating-decision",
+    "contribution": "Establish the revision-keyed reuse and budget substrate for the #2562 operating-decision lane.",
+    "closure_boundary": "#2556 only; later lane slices retain their own acceptance and proof."
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/projection_reuse.py",
+      "src/agentic_workspace/operating_decision.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "src/agentic_workspace/workspace_runtime_implement.py",
+      "src/agentic_workspace/workspace_runtime_proof.py",
+      "tests/test_workspace_projection_reuse.py",
+      "focused start/summary/implement/proof/report regression tests",
+      "generated or contract mirrors only when source-owned schema/IR changes require regeneration"
+    ],
+    "effects": [
+      "Projection cache records and compact output contracts may change version.",
+      "Long-running projection commands gain bounded progress/cancel metadata without changing authority."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected",
+      "owner": "issue-2562-operating-decision"
+    },
+    "proof_posture": {
+      "state": "satisfied",
+      "refs": [
+        "77 focused projection/decision tests passed",
+        "18 closeout/report correctness regressions passed",
+        "workspace, Planning, Memory, and Verification typechecks passed",
+        "contract tooling and structured-file inventory checks passed"
+      ]
+    },
+    "external_posture": {
+      "state": "current",
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/issues/2556"
+      ]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2556",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2556",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Publish the #2556 slice in the operating-decision lane PR, then continue only through the parent lane's next explicitly selected slice.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Unchanged admitted inputs reuse the same canonical decision across start, summary, implement, proof, and ordinary report projections.",
+      "Changed authority inputs invalidate with exact reason codes while unrelated diagnostics do not.",
+      "Cold/warm computation and serialized output stay within declared budgets, and long work exposes progress plus cancellation/drill-down guidance."
+    ],
+    "requirements": [
+      "Run focused projection-reuse and operating-decision tests, plus representative cross-surface CLI fixtures.",
+      "Record elapsed time, output bytes, decision reuse, enrichment reuse, and invalidation reason for cold/warm representative commands.",
+      "Run generated-contract checks only if their source contracts change; reserve exhaustive workspace validation for the lane PR boundary."
+    ],
+    "refs": [
+      "issue-2556-final-c2ee931f cold/warm benchmark: cold 0.97-3.13s except closeout 1.90s; warm 0.87-1.03s; all outputs <= 64 KiB",
+      "warm start/implement/proof shared operating-decision:4cf72090130493c0 with builders skipped",
+      "warm selected-summary/closeout shared operating-decision:53af84d54e0252d4 with builders skipped"
+    ]
+  },
+  "execution_run": {
+    "what_happened": "Replaced broad projection dependency reconstruction with bounded admitted revisions, keyed reuse through the canonical operating-decision identity, semantic serialization limits, progress heartbeats, cooperative cancellation, and current-compact closeout inputs.",
+    "validation": "77 focused tests, 18 closeout tests, full typecheck, contract tooling, structured inventory, lint, and live five-surface cold/warm benchmark passed.",
+    "benchmark": {
+      "computation_budget_ms": 10000,
+      "serialization_budget_bytes": 65536,
+      "cold_elapsed_ms": {"start": 3131.9, "summary_selected": 969.6, "implement": 2058.5, "proof": 1853.7, "closeout_trust": 1900.0},
+      "warm_elapsed_ms": {"start": 902.3, "summary_selected": 1027.0, "implement": 870.8, "proof": 938.3, "closeout_trust": 1001.8},
+      "warm_builder_skipped": true
+    }
+  },
+  "continuation": {
+    "owner": "issue-2562-operating-decision",
+    "residual_intent": "Continue #2558 and #2563 as later bounded slices; retain #2560 for the closed-residue slice."
+  },
+  "specialist_contracts": []
+}

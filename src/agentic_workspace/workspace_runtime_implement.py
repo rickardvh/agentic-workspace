@@ -20,6 +20,12 @@ from agentic_workspace.authority_envelope import (
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
 from agentic_workspace.operating_decision import compile_implement_context_operating_decision, resolve_context_authority_projection
+from agentic_workspace.projection_reuse import (
+    ProjectionProgress,
+    enforce_projection_serialization_budget,
+    lookup_projection_reuse,
+    record_projection_reuse,
+)
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -207,22 +213,52 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         selected_fields, "proof.runtime_symbol_working_set"
     )
     broad_early_scope = _broad_implement_early_decision_required(changed_paths)
-    with _planning_revision_payload_cache_scope(), _decision_point_binding_cache_scope(), mutation_baseline_payload_cache_scope():
-        full_payload = _implement_payload(
-            target_root=target_root,
-            changed_paths=changed_paths,
-            task_text=task_text,
-            include_change_impact=(profile != "tiny" or change_impact_selected),
-            include_task_contract=(profile != "tiny" or task_contract_selected),
-            include_assurance_requirements=(profile != "tiny" or assurance_requirements_selected or routine_work_context_selected),
-            include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
-            include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
-            include_reuse_pressure=(profile != "tiny" or reuse_pressure_selected),
-            include_runtime_diagnostics=(profile != "tiny" or runtime_diagnostics_selected or not broad_early_scope),
-            include_test_strategy_check=(profile != "tiny" or test_strategy_check_selected or not broad_early_scope),
-            startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
+    full_payload: dict[str, Any]
+    reuse_query = {
+        "profile": profile,
+        "format": str(args.format),
+        "task": str(task_text or ""),
+        "changed": changed_paths,
+    }
+    reuse_context: dict[str, Any] | None = None
+    if args.format == "json" and profile == "tiny" and not selected_fields:
+        full_detail_command = f"{config.cli_invoke} implement --target . --changed <paths> --verbose --format json"
+        reused, reuse_context = lookup_projection_reuse(
+            root=target_root, operation="implement", query=reuse_query, full_detail_command=full_detail_command
         )
-    payload = full_payload
+        if reused is not None:
+            _emit_payload(payload=reused, format_name=args.format)
+            return 0
+    with ProjectionProgress(root=target_root, operation="implement") as progress:
+        if progress.cancel_requested:
+            full_payload = {
+                "kind": "agentic-workspace/projection-cancelled/v1",
+                "status": "cancelled",
+                "operation": "implement",
+                "next_action": "Remove the cancellation request and rerun the same scoped command when ready.",
+            }
+        else:
+            with _planning_revision_payload_cache_scope(), _decision_point_binding_cache_scope(), mutation_baseline_payload_cache_scope():
+                full_payload = _implement_payload(
+                    target_root=target_root,
+                    changed_paths=changed_paths,
+                    task_text=task_text,
+                    include_change_impact=(profile != "tiny" or change_impact_selected),
+                    include_task_contract=(profile != "tiny" or task_contract_selected),
+                    include_assurance_requirements=(profile != "tiny" or assurance_requirements_selected or routine_work_context_selected),
+                    include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
+                    include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
+                    include_reuse_pressure=(profile != "tiny" or reuse_pressure_selected),
+                    include_runtime_diagnostics=(profile != "tiny" or runtime_diagnostics_selected or not broad_early_scope),
+                    include_test_strategy_check=(profile != "tiny" or test_strategy_check_selected or not broad_early_scope),
+                    startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
+                )
+        progress_contract = progress.contract()
+    if progress_contract["status"] == "cancel-requested":
+        full_payload["projection_progress"] = progress_contract
+        _emit_payload(payload=full_payload, format_name=args.format)
+        return 0
+    payload: dict[str, Any] = full_payload
     if profile == "tiny":
         payload = _tiny_implement_payload(full_payload)
         if task_contract_selected:
@@ -319,6 +355,22 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
                     escalation_required=False,
                 ),
             ]
+    if (
+        progress_contract["status"] == "cancel-requested"
+        or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
+    ):
+        payload["projection_progress"] = progress_contract
+    if reuse_context is not None:
+        reuse_result = record_projection_reuse(
+            root=target_root, operation="implement", query=reuse_query, context=reuse_context, payload=payload
+        )
+        if reuse_result:
+            payload = enforce_projection_serialization_budget(
+                payload=payload,
+                operation="implement",
+                reuse_result=reuse_result,
+                full_detail_command=full_detail_command,
+            )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 

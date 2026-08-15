@@ -18,6 +18,12 @@ from typing import Any
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
 from agentic_workspace.operating_decision import project_startup_claim_effect_authority, resolve_context_authority_projection
+from agentic_workspace.projection_reuse import (
+    ProjectionProgress,
+    enforce_projection_serialization_budget,
+    lookup_projection_reuse,
+    record_projection_reuse,
+)
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -2843,12 +2849,48 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     if inventory_payload := _selector_inventory_selected_payload(select=selected_fields, source_command="start"):
         _emit_payload(payload=inventory_payload, format_name=args.format)
         return 0
-    payload = _start_payload(
-        target_root=target_root,
-        changed_paths=list(getattr(args, "changed", []) or []),
-        task_text=task_text,
-        profile=_start_profile_for_select(requested_profile=start_profile, select=selected_fields),
-    )
+    changed_paths = list(getattr(args, "changed", []) or [])
+    effective_profile = _start_profile_for_select(requested_profile=start_profile, select=selected_fields)
+    reuse_query = {
+        "profile": effective_profile,
+        "format": str(args.format),
+        "task": str(task_text or ""),
+        "changed": changed_paths,
+        "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
+    }
+    reuse_context: dict[str, Any] | None = None
+    payload: dict[str, Any]
+    if args.format == "json" and not selected_fields and effective_profile != "full":
+        full_detail_command = _command_with_cli_invoke(
+            command="agentic-workspace start --target . --verbose --format json", cli_invoke=config.cli_invoke
+        )
+        reused, reuse_context = lookup_projection_reuse(
+            root=target_root, operation="start", query=reuse_query, full_detail_command=full_detail_command
+        )
+        if reused is not None:
+            _emit_payload(payload=reused, format_name=args.format)
+            return 0
+    with ProjectionProgress(root=target_root, operation="start") as progress:
+        if progress.cancel_requested:
+            payload = {
+                "kind": "agentic-workspace/projection-cancelled/v1",
+                "status": "cancelled",
+                "operation": "start",
+                "next_action": "Remove the cancellation request and rerun the same scoped command when ready.",
+            }
+        else:
+            payload = _start_payload(
+                target_root=target_root,
+                changed_paths=changed_paths,
+                task_text=task_text,
+                profile=effective_profile,
+            )
+        progress_contract = progress.contract()
+    if (
+        progress_contract["status"] == "cancel-requested"
+        or progress_contract["elapsed_ms"] > progress_contract["long_command_threshold_ms"]
+    ):
+        payload["projection_progress"] = progress_contract
     if selected_fields:
         _hydrate_selected_start_advisory_payloads(
             payload=payload,
@@ -2858,6 +2900,17 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             config=config,
         )
         payload = _select_payload_fields(payload, select=selected_fields, source_command="start")
+    if reuse_context is not None:
+        reuse_result = record_projection_reuse(
+            root=target_root, operation="start", query=reuse_query, context=reuse_context, payload=payload
+        )
+        if reuse_result:
+            payload = enforce_projection_serialization_budget(
+                payload=payload,
+                operation="start",
+                reuse_result=reuse_result,
+                full_detail_command=full_detail_command,
+            )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 

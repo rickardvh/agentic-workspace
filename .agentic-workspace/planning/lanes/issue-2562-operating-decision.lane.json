@@ -1,0 +1,45 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "issue-2562-operating-decision",
+  "title": "Issue 2562 operating decision admission and projections",
+  "status": "active",
+  "parent_decomposition_ref": "",
+  "lane_outcome": "Make ordinary operating decisions revision-bound, projection-only, compatibility-admitted, current-subject scoped, and cheaply reusable.",
+  "purpose_for_parent": "Own the cohesive P0 operating-decision children #2556, #2558, and #2563 while preserving #2560 closed-residue work as a later bounded slice.",
+  "subsystems": [],
+  "technical_strategy": "Tighten the lane strategy before the first slice starts.",
+  "technology_choices": [],
+  "slice_sequence": [
+    {
+      "id": "issue-2556-decision-reuse",
+      "title": "Issue 2556 revision-keyed projection reuse and budgets",
+      "status": "completed",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2556-decision-reuse.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Own the cohesive P0 operating-decision children #2556, #2558, and #2563 while preserving #2560 closed-residue work as a later bounded slice."
+    }
+  ],
+  "current_slice": "issue-2556-decision-reuse",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Focused per-child regression plus cross-surface identity, invalidation, compatibility, closeout consistency, output-budget, and performance evidence.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      "#2556 revision-keyed reuse and budget proof passed across start, selected summary, implement, proof, and closeout_trust."
+    ],
+    "known_gaps": [
+      "Parent lane remains open; this slice does not claim the separate compatibility, scoped-closeout, runtime-owner, or closed-residue outcomes complete."
+    ]
+  },
+  "residual_lane_work": "Continue only through separately selected parent-lane slices; do not infer parent closure from #2556.",
+  "lane_to_epic_contribution": "#2556 establishes bounded revision-keyed reuse and current-compact closeout input loading for the operating-decision lane.",
+  "parent_close_permission": "not-evaluated",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [],
+  "notes": ""
+}

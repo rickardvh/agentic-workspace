@@ -1340,6 +1340,20 @@ def live_decision_input_revision(*, invocation: dict[str, Any], authorities: dic
     )
 
 
+def canonical_operating_decision_identity(input_revisions: dict[str, Any]) -> tuple[str, str]:
+    """Return the canonical revision and identity for one admitted input state.
+
+    Consumers may use this before materializing a purpose-specific projection.
+    Decision-shaped output must still come from ``compile_operating_decision``;
+    this helper only makes its revision boundary reusable without rebuilding the
+    projection that consumes it.
+    """
+
+    normalized = json.loads(json.dumps(input_revisions, sort_keys=True, default=str))
+    revision = "sha256:" + _digest(normalized)
+    return revision, f"operating-decision:{_digest({'input_revision': revision})[:16]}"
+
+
 def bind_operation_invocation_to_authorities(*, invocation: dict[str, Any], authorities: dict[str, Any]) -> dict[str, Any]:
     bound = {
         **invocation,
@@ -1664,13 +1678,6 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             **primary_action,
             "context_constraint": context_effects["action_narrowing"],
         }
-    identity_input = {
-        "revisions": revisions,
-        "action": invocation,
-        "blocker": external_blocker,
-        "terminal_state": inputs.get("terminal_state", ""),
-        "live_decision_input_revision": invocation_current_revision,
-    }
     coverage = context_authority_coverage()
     requested_consumer = str(inputs.get("consumer") or "operating-decision")
     context_authority_projection = resolve_context_authority_projection(
@@ -1692,7 +1699,6 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "owner": "context-authority-registry",
             "repair": "run the typed context-authority repair operation before retrying the decision",
         }
-        identity_input["blocker"] = external_blocker
     input_revisions = {
         **revisions,
         **(
@@ -1704,11 +1710,12 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             else {}
         ),
     }
+    _, decision_id = canonical_operating_decision_identity(input_revisions)
     return {
         "kind": "agentic-workspace/operating-decision/v1",
         "producer_module": "agentic_workspace.operating_decision",
         "producer_function": "compile_operating_decision",
-        "decision_id": f"operating-decision:{_digest(identity_input)[:16]}",
+        "decision_id": decision_id,
         "status": status,
         "input_revisions": input_revisions,
         "canonical_decision_input_revision": invocation_current_revision,
