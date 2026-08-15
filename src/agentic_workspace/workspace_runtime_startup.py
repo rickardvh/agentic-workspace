@@ -769,6 +769,48 @@ def _local_chat_checkpoint_default_visible(local_checkpoint: dict[str, Any], *, 
     return any(token in task_text for token in ("resume", "checkpoint", "continue", "handoff", "takeover"))
 
 
+def _session_log_export_intent_route(*, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
+    normalized = " ".join(str(task_text or "").lower().split())
+    names_session_logs = "session log" in normalized or "aw session" in normalized
+    requests_artifact = any(token in normalized for token in ("package", "download", "export", "share"))
+    if not (names_session_logs and requests_artifact):
+        return {}
+    command = f"{cli_invoke} session-log export --target . --format json"
+    return {
+        "kind": "agentic-workspace/session-log-export-route/v1",
+        "status": "routed",
+        "operation": "session-log.export",
+        "command": command,
+        "run": command,
+        "result_path": "session-log export result.path",
+        "artifact_class": "normalized-share-safe",
+        "source_artifact_class": "raw-local-diagnostic",
+        "transfer_approval": "not-granted",
+        "review_required": "Review the normalized archive for secrets and external-transfer policy before sharing.",
+        "rule": "The export operation creates the normalized artifact; it does not approve external transfer.",
+    }
+
+
+def _apply_session_log_export_intent_route(*, payload: dict[str, Any], task_text: str | None, cli_invoke: str) -> None:
+    route = _session_log_export_intent_route(task_text=task_text, cli_invoke=cli_invoke)
+    if not route:
+        return
+    payload["session_log_export_route"] = route
+    installed_state = payload.get("installed_state_compatibility", {})
+    if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
+        return
+    payload["immediate_next_allowed_action"] = {
+        "action": "run-session-log-export",
+        "summary": "Create the normalized session-log export candidate, then review it before any external transfer.",
+        "command": route["command"],
+        "run": route["run"],
+        "risk": "local artifact creation; external transfer is not approved",
+        "required_inputs": ["current AW session logs"],
+        "next_proof": "Inspect the returned path and manifest transfer_review boundary.",
+        "read_first": [],
+    }
+
+
 def _start_payload(
     *, target_root: Path, changed_paths: list[str], task_text: str | None = None, profile: str | None = None
 ) -> dict[str, Any]:
@@ -811,6 +853,7 @@ def _start_payload(
             )
             if _task_posture_packet_changes_routing(task_posture_packet):
                 payload["task_posture_packet"] = task_posture_packet
+        _apply_session_log_export_intent_route(payload=payload, task_text=task_text, cli_invoke=config.cli_invoke)
         if profile is None:
             return _selector_first_start_payload(payload, cli_invoke=config.cli_invoke, target_root=target_root)
         return payload
@@ -1577,6 +1620,7 @@ def _start_payload(
         startup_template=startup_template,
         task_text=task_text,
     )
+    _apply_session_log_export_intent_route(payload=payload, task_text=task_text, cli_invoke=config.cli_invoke)
     if profile == "tiny":
         payload["routine_work_context"] = _routine_work_context_payload(
             source_payload=payload,
@@ -2614,6 +2658,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             },
         },
     }
+    if isinstance(payload.get("session_log_export_route"), dict):
+        selected["session_log_export_route"] = payload["session_log_export_route"]
     if isinstance(payload.get("decision_point_intent_carry"), dict):
         selected["decision_point_intent_carry"] = payload["decision_point_intent_carry"]
     if read_only_compact_default:

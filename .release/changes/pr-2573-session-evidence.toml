@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Normalize and compact session evidence with bounded analysis, reviewed intake, and an explicit export transfer-review boundary."
