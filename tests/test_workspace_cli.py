@@ -6481,7 +6481,8 @@ def test_payload_target_read_only_gate_consumes_compiled_drift_triage(tmp_path: 
         )
         authority = allowed["context"]["installed_state_drift_triage"]["claim_effect_authority"]
         assert authority["installed_payload_dependency"] == "independent"
-        assert authority["authority"].endswith("compile_startup_claim_effect_authority")
+        assert authority["authority"] == "planning_safety_gate.route_decision"
+        assert authority["decision_id"].startswith("planning-route:")
         assert allowed["next_safe_action"]["next_safe_action"] == "continue-read-only-source-evidence-review"
 
     for dependent in (
@@ -9400,6 +9401,59 @@ def test_every_declared_route_consumer_is_a_no_divergence_projection() -> None:
     assert decision["consumer_projections"] == {item["consumer"]: item for item in projections}
     with pytest.raises(ValueError, match="unsupported Planning route consumer"):
         planning_route_consumer_projection(route_decision=decision, consumer="parallel-classifier")
+
+
+def test_startup_claim_effect_projection_preserves_canonical_route_identity_and_boundary() -> None:
+    from agentic_workspace.operating_decision import project_startup_claim_effect_authority
+    from agentic_workspace.workspace_runtime_core import _installed_state_drift_triage_payload
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    boundaries = (
+        {
+            "effect_class": "read-only-inspection",
+            "installed_payload_dependency": "independent",
+            "claim_classes": ["checked-in-source-evidence"],
+        },
+        {
+            "effect_class": "read-only-inspection",
+            "installed_payload_dependency": "dependent",
+            "claim_classes": ["installed-payload-behavior"],
+        },
+        {
+            "effect_class": "planned-repo-mutation",
+            "installed_payload_dependency": "dependent",
+            "claim_classes": ["installed-payload-freshness"],
+        },
+        {"effect_class": "repo-mutation", "installed_payload_dependency": "independent", "claim_classes": ["checked-in-source-evidence"]},
+    )
+    for boundary in boundaries:
+        decision = _planning_route_decision_payload(
+            {
+                "task_relation": "bounded-independent",
+                "owner_posture": "current",
+                "route_inputs": {
+                    "task_binding": {"mode": "read-only"},
+                    "claim_effect_boundary": boundary,
+                },
+            },
+            planning_revision={"revision_id": "planning-current"},
+        )
+        projection = project_startup_claim_effect_authority(route_decision=decision)
+        triage = _installed_state_drift_triage_payload(
+            installed_state={"status": "upgrade-recommended", "action_state": {"state": "manual_review_required"}},
+            claim_effect_authority=projection,
+            changed_paths=[],
+            cli_invoke="agentic-workspace",
+        )
+        triage_projection = triage["claim_effect_authority"]
+
+        assert decision["claim_effect_boundary"] == boundary
+        assert projection["decision_id"] == triage_projection["decision_id"] == decision["decision_id"]
+        assert projection["input_revision"] == triage_projection["input_revision"] == decision["input_revision"]
+        assert projection["action_identity"] == triage_projection["action_identity"] == decision["action_identity"]
+        assert {key: projection[key] for key in boundary} == boundary
+        assert {key: triage_projection[key] for key in boundary} == boundary
+        assert projection["authority"] == triage_projection["authority"] == "planning_safety_gate.route_decision"
 
 
 def test_route_decision_fails_closed_for_genuine_ambiguity() -> None:

@@ -143,7 +143,7 @@ from agentic_workspace.current_work_context import (
 )
 from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
-from agentic_workspace.operating_decision import compile_startup_claim_effect_authority
+from agentic_workspace.operating_decision import project_startup_claim_effect_authority
 from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
@@ -16780,6 +16780,8 @@ def _derived_continuation_projection_payloads(
     installed_state_closeout_residue = _installed_state_closeout_residue_payload(
         installed_state=_as_dict(source_payload.get("installed_state_compatibility")),
         active_planning_record=closeout_planning_record,
+        target_root=target_root,
+        config=config,
         cli_invoke=config.cli_invoke,
     )
     closeout_report = _closeout_report_payload(
@@ -30689,6 +30691,8 @@ def _installed_state_drift_triage_payload(
                 "kind",
                 "status",
                 "decision_id",
+                "input_revision",
+                "action_identity",
                 "effect_class",
                 "installed_payload_dependency",
                 "claim_classes",
@@ -30756,6 +30760,8 @@ def _installed_state_closeout_residue_payload(
     *,
     installed_state: dict[str, Any],
     active_planning_record: dict[str, Any],
+    target_root: Path,
+    config: WorkspaceConfig,
     cli_invoke: str,
 ) -> dict[str, Any]:
     status = str(installed_state.get("status") or "compatible")
@@ -30768,9 +30774,23 @@ def _installed_state_closeout_residue_payload(
     delegated = _as_dict(active_planning_record.get("delegated_judgment"))
     requested_outcome = str(delegated.get("requested outcome") or delegated.get("requested_outcome") or "").strip()
     changed_paths = _closeout_changed_surface_paths(active_planning_record)
+    execution_posture = _execution_posture_payload(
+        config=config,
+        changed_paths=changed_paths,
+        task_text=requested_outcome,
+        target_root=target_root,
+    )
+    planning_gate = _planning_safety_gate_payload(
+        target_root=target_root,
+        config=config,
+        changed_paths=changed_paths,
+        task_text=requested_outcome,
+        execution_posture=execution_posture,
+    )
+    route_decision = _as_dict(planning_gate.get("route_decision"))
     triage = _installed_state_drift_triage_payload(
         installed_state=installed_state,
-        claim_effect_authority=compile_startup_claim_effect_authority(task=requested_outcome, changed_paths=changed_paths),
+        claim_effect_authority=project_startup_claim_effect_authority(route_decision=route_decision),
         changed_paths=changed_paths,
         cli_invoke=cli_invoke,
     )
@@ -32526,13 +32546,6 @@ def _start_tiny_payload_fast(
         payload["dogfooding_signal_status"] = dogfooding_signal_status
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_compatibility"] = installed_state_compatibility
-        claim_effect_authority = compile_startup_claim_effect_authority(task=task_text or "", changed_paths=changed_paths)
-        payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
-            installed_state=installed_state_compatibility,
-            claim_effect_authority=claim_effect_authority,
-            changed_paths=changed_paths,
-            cli_invoke=config.cli_invoke,
-        )
     sibling_freshness = _sibling_repo_aw_freshness_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
     if sibling_freshness["status"] != "not-referenced":
         payload["sibling_repo_aw_freshness"] = sibling_freshness
@@ -32666,6 +32679,13 @@ def _start_tiny_payload_fast(
         route_owner_rejected = _as_dict(route_decision.get("owner_admission")).get("status") == "rejected"
         if route_decision.get("task_relation") != "not-applicable" or route_owner_rejected:
             payload["route_decision"] = route_decision
+    if installed_state_compatibility["status"] != "compatible":
+        payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
+            installed_state=installed_state_compatibility,
+            claim_effect_authority=project_startup_claim_effect_authority(route_decision=_as_dict(route_decision)),
+            changed_paths=changed_paths,
+            cli_invoke=config.cli_invoke,
+        )
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
     route_applies = (

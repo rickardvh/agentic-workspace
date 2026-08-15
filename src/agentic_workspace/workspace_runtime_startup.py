@@ -17,7 +17,7 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
-from agentic_workspace.operating_decision import compile_startup_claim_effect_authority, resolve_context_authority_projection
+from agentic_workspace.operating_decision import project_startup_claim_effect_authority, resolve_context_authority_projection
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -1029,13 +1029,6 @@ def _start_payload(
     )
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_compatibility"] = installed_state_compatibility
-        claim_effect_authority = compile_startup_claim_effect_authority(task=task_text or "", changed_paths=changed_paths)
-        payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
-            installed_state=installed_state_compatibility,
-            claim_effect_authority=claim_effect_authority,
-            changed_paths=changed_paths,
-            cli_invoke=config.cli_invoke,
-        )
     if parent_intent_status.get("status") != "guidance-only":
         payload["parent_intent_status"] = parent_intent_status
     if applicable_intent_status.get("status") != "guidance-only":
@@ -1161,6 +1154,13 @@ def _start_payload(
             payload["route_decision"] = route_decision
         else:
             payload.pop("route_decision", None)
+    if installed_state_compatibility["status"] != "compatible":
+        payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
+            installed_state=installed_state_compatibility,
+            claim_effect_authority=project_startup_claim_effect_authority(route_decision=_as_dict(route_decision)),
+            changed_paths=changed_paths,
+            cli_invoke=config.cli_invoke,
+        )
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
     task_switch_visible_by_default = route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"}
@@ -1790,6 +1790,15 @@ def _hydrate_selected_start_advisory_payloads(
     if _selector_requests(select, "installed_state_compatibility") or _selector_requests(select, "installed_state_drift_triage"):
         installed_modules = _fast_installed_modules(target_root=target_root)
         selected_modules = list(config.enabled_modules)
+        execution_posture = _execution_posture_payload(config=config, changed_paths=[], task_text=task_text, target_root=target_root)
+        installed_state_gate = _planning_safety_gate_payload(
+            target_root=target_root,
+            config=config,
+            changed_paths=[],
+            task_text=task_text,
+            execution_posture=execution_posture,
+        )
+        installed_state_route = _as_dict(installed_state_gate.get("route_decision"))
         payload["installed_state_compatibility"] = _installed_state_compatibility_payload(
             config=config,
             selected_modules=selected_modules,
@@ -1799,7 +1808,7 @@ def _hydrate_selected_start_advisory_payloads(
         )
         payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
             installed_state=payload["installed_state_compatibility"],
-            claim_effect_authority=compile_startup_claim_effect_authority(task=task_text or "", changed_paths=[]),
+            claim_effect_authority=project_startup_claim_effect_authority(route_decision=installed_state_route),
             changed_paths=[],
             cli_invoke=config.cli_invoke,
         )
