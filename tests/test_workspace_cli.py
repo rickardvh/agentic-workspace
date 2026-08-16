@@ -2144,6 +2144,99 @@ def test_closeout_trust_accepts_command_writer_compact_tombstone(tmp_path: Path,
     assert evidence["retention_state"] == "cleanup-distilled-without-full-archive"
 
 
+def test_closeout_trust_authorizes_explicit_issue_refs_from_satisfied_retained_slice(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "lane-create",
+                "--id",
+                "unrelated-live-lane",
+                "--title",
+                "Unrelated live lane",
+                "--target",
+                str(target),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    evidence_path = ".agentic-workspace/planning/closeout-evidence/issue-batch.closeout.json"
+    _write(
+        target / evidence_path,
+        json.dumps(
+            {
+                "kind": "planning-closeout-evidence/v1",
+                "title": "Completed issue batch",
+                "plan_id": "issue-batch",
+                "source_plan": ".agentic-workspace/planning/execplans/issue-batch.plan.json",
+                "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-batch.plan.json",
+                "retention": {"state": "cleanup-distilled-without-full-archive"},
+                "outcome": "Issues #3101 and #3102 acceptance criteria are implemented and verified",
+                "evidence_refs": ["sha256:fixture-proof"],
+                "active_milestone": {"status": "completed"},
+                "proof_report": {"validation proof": "sha256:fixture-proof"},
+                "intent_satisfaction": {
+                    "was original intent fully satisfied?": "yes",
+                    "unsolved intent passed to": "archive",
+                },
+                "closure_check": {
+                    "slice status": "completed",
+                    "larger-intent status": "closed",
+                    "closure decision": "archive-and-close",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(target),
+                "--section",
+                "closeout_trust",
+                "--task",
+                "issue-batch",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    gate = answer["completion_gate"]
+    assert gate["status"] == "allowed"
+    assert gate["active_intent_satisfied"] is True
+    assert "issue_closure" in gate["claim_authorization"]["allowed_claim_classes"]
+    assert "lane_complete" in gate["claim_authorization"]["blocked_claim_classes"]
+    assert "parent_complete" in gate["claim_authorization"]["blocked_claim_classes"]
+    assert gate["claim_authorization"]["closure_actions"] == [
+        {
+            "kind": "issue_closure",
+            "target": "#3101",
+            "authorized": True,
+            "reason": "issue closure requires full-intent completion authorization from the completion gate",
+        },
+        {
+            "kind": "issue_closure",
+            "target": "#3102",
+            "authorized": True,
+            "reason": "issue closure requires full-intent completion authorization from the completion gate",
+        },
+    ]
+
+
 def test_closeout_trust_prefers_relevant_closeout_evidence_over_newer_unrelated_record(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

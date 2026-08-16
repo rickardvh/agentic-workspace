@@ -1031,7 +1031,7 @@ def test_defaults_supports_selector_drilldown_for_section_payload(capsys) -> Non
 
 
 def test_defaults_selector_reports_available_fields_for_missing_selector(capsys) -> None:
-    assert cli.main(["defaults", "--section", "root_cli_authority", "--select", "answer.nope", "--format", "json"]) == 0
+    assert cli.main(["defaults", "--section", "root_cli_authority", "--select", "answer.nope", "--format", "json"]) == 2
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"

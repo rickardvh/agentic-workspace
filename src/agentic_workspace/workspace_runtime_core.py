@@ -24008,6 +24008,11 @@ def _report_closeout_trust_payload(
             marker in proof_text for marker in ("passed", "yes", "satisfied", "achieved", "complete")
         )
         active_milestone = _as_dict(archived_record.get("active_milestone"))
+        intent_satisfaction = _as_dict(archived_record.get("intent_satisfaction"))
+        intent_satisfied = str(intent_satisfaction.get("was original intent fully satisfied?") or "").strip().lower() in {
+            "yes",
+            "true",
+        }
         slice_status = str(closure_check.get("slice status") or active_milestone.get("status") or "").strip().lower()
         closure_decision = str(closure_check.get("closure decision") or "").strip().lower()
         slice_completed = slice_status in {"complete", "completed", "done", "closed", "satisfied"}
@@ -24019,6 +24024,16 @@ def _report_closeout_trust_payload(
         parent_status = str(closure_check.get("larger-intent status") or "").strip().lower()
         parent_closure_blocked = parent_status not in {"closed", "complete", "completed", "done"}
         residual = _as_dict(archived_record.get("residual"))
+        issue_refs: set[str] = set()
+        for value in (
+            archived_record.get("title"),
+            archived_record.get("outcome"),
+            archived_record.get("contribution"),
+            intent_satisfaction.get("original intent"),
+            closure_check.get("closure target"),
+            closure_check.get("closure_target"),
+        ):
+            issue_refs.update(_issue_refs_from_text(str(value or "")))
         return {
             "status": "present",
             "trust": "normal" if slice_trusted else "lower-trust",
@@ -24046,6 +24061,8 @@ def _report_closeout_trust_payload(
             },
             "source": evidence_source,
             "proof_recorded": proof_recorded,
+            "intent_satisfied": intent_satisfied,
+            "issue_refs": sorted(issue_refs),
             "slice_completed": slice_completed,
             "slice_status": slice_status,
             "closure_decision": closure_check.get("closure decision", ""),
@@ -24058,6 +24075,62 @@ def _report_closeout_trust_payload(
                 "planning state or authorize parent/epic closure."
             ),
         }
+
+    def authorize_archived_slice_completion(completion_gate: dict[str, Any], slice_evidence: dict[str, Any]) -> dict[str, Any]:
+        issue_refs = {str(ref).strip() for ref in _list_payload(slice_evidence.get("issue_refs")) if str(ref).strip()}
+        if not (
+            slice_evidence.get("trust") == "normal"
+            and slice_evidence.get("slice_completed") is True
+            and slice_evidence.get("intent_satisfied") is True
+            and str(slice_evidence.get("closure_decision") or "").strip().lower() == "archive-and-close"
+            and slice_evidence.get("parent_closure_blocked") is False
+            and issue_refs
+        ):
+            return completion_gate
+        authorization = _completion_gate_claim_authorization(
+            status="allowed",
+            active_intent_satisfied=True,
+            human_accepted_partial=False,
+            claim_level_requested="full-intent-complete",
+            proof_status="representative",
+            issue_refs=issue_refs,
+        )
+        authorization["allowed_claim_classes"] = [
+            claim
+            for claim in _list_payload(authorization.get("allowed_claim_classes"))
+            if claim not in {"lane_complete", "parent_complete"}
+        ]
+        authorization["blocked_claim_classes"] = _dedupe(
+            [*_list_payload(authorization.get("blocked_claim_classes")), "lane_complete", "parent_complete"]
+        )
+        updated = copy.deepcopy(completion_gate)
+        updated.update(
+            {
+                "status": "allowed",
+                "active_intent_satisfied": True,
+                "human_accepted_partial": False,
+                "claim_level_requested": "full-intent-complete",
+                "claim_level_allowed": "full-intent-complete",
+                "required_next_action": "close-complete",
+                "claim_authorization": authorization,
+                "residual_intent": "",
+                "self_review": {
+                    "question": "Does the delivered work satisfy the selected archived slice intent?",
+                    "answer": "yes",
+                    "reason": "Command-owned retained closeout evidence records satisfied intent, proof, and archive-and-close.",
+                },
+                "continuation": {"owner_surface": "", "created_or_required": False, "reason": ""},
+                "authority_boundary": {
+                    **_as_dict(updated.get("authority_boundary")),
+                    "retained_evidence_owner": slice_evidence.get("owner_surface", ""),
+                    "retained_evidence_rule": (
+                        "Retained evidence authorizes only its explicit issue refs and completed slice intent; "
+                        "lane and parent completion remain blocked."
+                    ),
+                },
+            }
+        )
+        return updated
 
     def allow_archived_slice_claim(options: list[dict[str, Any]], slice_evidence: dict[str, Any]) -> list[dict[str, Any]]:
         if slice_evidence.get("trust") != "normal":
@@ -24391,9 +24464,13 @@ def _report_closeout_trust_payload(
     live_planning_continuation = (
         _as_int(planning_status.get("roadmap_lane_count")) + _as_int(planning_status.get("roadmap_candidate_count")) > 0
     )
+    explicit_retained_selection = (
+        slice_closeout_evidence.get("evidence_source_class") == "explicit-task-selection"
+        and _as_dict(slice_closeout_evidence.get("relevance")).get("status") == "relevant"
+    )
     retained_evidence_controls = (
         not raw_active_planning_record
-        and not live_planning_continuation
+        and (not live_planning_continuation or explicit_retained_selection)
         and retained_resolution_status
         in {
             "present",
@@ -24453,6 +24530,8 @@ def _report_closeout_trust_payload(
         applicable_intent_status=applicable_intent_status,
         durable_residue_action=residue_action,
     )
+    if retained_evidence_controls and retained_resolution_status == "present":
+        completion_gate = authorize_archived_slice_completion(completion_gate, slice_closeout_evidence)
     if retained_evidence_controls and retained_resolution_status in {"ambiguous", "no-relevant-evidence"}:
         completion_gate = copy.deepcopy(completion_gate)
         completion_gate.update(

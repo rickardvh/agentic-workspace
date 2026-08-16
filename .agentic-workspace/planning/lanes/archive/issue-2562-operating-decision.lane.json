@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "issue-2562-operating-decision",
   "title": "Issue 2562 operating decision admission and projections",
-  "status": "active",
+  "status": "archived",
   "parent_decomposition_ref": "",
   "lane_outcome": "Make ordinary operating decisions revision-bound, projection-only, compatibility-admitted, current-subject scoped, and cheaply reusable.",
   "purpose_for_parent": "Integrate the cohesive operating-decision authority issues #2558, #2559, #2560, #2562, #2563, #2565, #2566, and #2567 after the completed #2556 prerequisite.",
@@ -36,19 +36,76 @@
       "#2556 revision-keyed reuse and budget proof passed across start, selected summary, implement, proof, and closeout_trust.",
       "Pre-state runtime compatibility rejects unsupported epochs/capabilities before generated runtime loading and preserves exact configured recovery.",
       "Canonical decision projection, live closed-state exclusion, closeout subject trust, task relation/adoption, and conservative skill activation pass focused and cross-surface fixtures.",
-      "Runtime/Planning/CLI hotspots have maintained candidate inventory plus line, symbol, procedure, and direct-fan-out non-growth ratchets."
+      "Runtime/Planning/CLI hotspots have maintained candidate inventory plus line, symbol, procedure, and direct-fan-out non-growth ratchets.",
+      "PR #2583 merged; exact-head review passed; owner integration receipt recorded"
     ],
     "known_gaps": []
   },
-  "residual_lane_work": "No remaining work inside this lane; system-intent and memory outcomes remain in their separately decomposed dependent lanes.",
-  "lane_to_epic_contribution": "The lane establishes one admitted, revision-bound ordinary decision from root reader compatibility through current-state projection and closeout.",
-  "parent_close_permission": "not-evaluated",
+  "residual_lane_work": "none",
+  "lane_to_epic_contribution": "Issues #2558, #2559, #2560, #2562, #2563, #2565, #2566, and #2567 are implemented and verified",
+  "parent_close_permission": "may-advance-parent",
   "closeout_state": {
-    "status": "open",
-    "summary": "",
-    "residual_work": "",
-    "next_owner": ""
+    "status": "closed",
+    "summary": "Issues #2558, #2559, #2560, #2562, #2563, #2565, #2566, and #2567 are implemented and verified",
+    "residual_work": "none",
+    "next_owner": "none"
   },
   "references": [],
-  "notes": ""
+  "notes": "",
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "lane-complete",
+    "claim_level_allowed": "lane-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete"
+      ],
+      "blocked_claim_classes": [
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  }
 }

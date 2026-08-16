@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2569-system-intent-drift-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2569-system-intent-drift",
@@ -21,10 +21,10 @@
     "existing consequence ownership",
     "quiet aligned path"
   ],
-  "expected_subject_revision": "5",
-  "expected_planning_revision": "d769ef6310749426",
+  "expected_subject_revision": "d3486e75af4a7563",
+  "expected_planning_revision": "a41d65b3431cfc5e",
   "created_at": "2026-08-16T12:37:18.452831Z",
-  "updated_at": "2026-08-16T12:37:18.452831Z",
+  "updated_at": "2026-08-16T16:27:36.952714Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -40,5 +40,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "bf1d8ea2216f7d6c"
+  "proposal_revision": "30a2e27c100e76ba",
+  "integrated_at": "2026-08-16T16:27:36.952714Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2569-system-intent-drift-archive-owner.integration-receipt.json"
 }
