@@ -1035,8 +1035,10 @@ def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: P
     assert packet["pull"]["status"] == "baseline_only"
     assert "--stage implement" in packet["pull"]["recommended_command"]
     assert "docs/package/knowledge-routing.md" in packet["pull"]["recommended_command"]
-    assert packet["pull"]["route_count"] >= 1
+    assert packet["pull"]["route_count"] == 0
     assert packet["pull"]["relevant_route_count"] == 0
+    assert packet["use"]["status"] == "no-match"
+    assert "contributions" not in packet["use"]
     assert packet["capture"]["candidate_owner_surface_count"] >= 3
     assert packet["capture"]["outcome_count"] == 5
     assert "candidate_owner_surfaces" not in packet["capture"]
@@ -6820,6 +6822,10 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
     assert payload["context"]["absence_states"]["architecture_principles"] == "present"
     compact_packet = payload["context"]["architecture_principles"]
     assert compact_packet["matched_count"] == 1
+    expectation = compact_packet["intent_expectations"][0]
+    assert expectation["status"] == "applicable"
+    assert expectation["intent_revision"] == compact_packet["intent_revision"]
+    assert "routing" in expectation["affected_decisions"]
     compact_principle = compact_packet["matched_principles"][0]
     assert compact_principle["guardrails"][0]["id"] == "non-enum-keyword-routing"
     assert "explicit structured facts" in compact_principle["allowed_sources"]

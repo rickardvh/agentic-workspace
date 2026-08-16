@@ -1,0 +1,52 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "open-issues-system-intent-loop",
+  "title": "Closed-loop system intent drift (#2569)",
+  "status": "active",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/open-issues-2026-08-16.decomposition.json",
+  "lane_outcome": "Make explicit system intent a revision-bound constraint whose drift against operating reality is observable and actionable.",
+  "purpose_for_parent": "Close the system-intent direction using the admitted operating-decision contract.",
+  "subsystems": [],
+  "technical_strategy": "Derive expectations only from explicit intent identities plus structured applicability; evaluate the same revision against typed evidence; feed material findings into the canonical context-consequence compiler; keep aligned and unrelated paths quiet.",
+  "technology_choices": [],
+  "slice_sequence": [
+    {
+      "id": "issue-2569-system-intent-drift",
+      "title": "Implement closed-loop system intent drift",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2569-system-intent-drift.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Close the system-intent direction using the admitted operating-decision contract."
+    }
+  ],
+  "current_slice": "issue-2569-system-intent-drift",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Declared/compiled/effective intent identity, drift classification, consequence routing, rescope, recurrence promotion, quiet-path relevance, and cross-surface identity fixtures.",
+  "proof_aggregation": {
+    "status": "satisfied",
+    "evidence": [
+      "Intent expectation, drift/rescope, coverage-gap, recurrence, and quiet-path fixtures passed.",
+      "Canonical operating-decision and projection-reuse regression suites passed.",
+      "Contract tooling, structured inventory, schema reference, lint, type, and runtime ownership checks passed."
+    ],
+    "known_gaps": []
+  },
+  "residual_lane_work": "Target-branch integration proposal must archive the slice after merge.",
+  "lane_to_epic_contribution": "Closed-loop system intent is available to the dependent Memory effectiveness lane.",
+  "parent_close_permission": "not-evaluated",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/open-issues-2026-08-16.decomposition.json",
+      "label": ".agentic-workspace/planning/decompositions/open-issues-2026-08-16.decomposition.json",
+      "role": "parent"
+    }
+  ],
+  "notes": ""
+}

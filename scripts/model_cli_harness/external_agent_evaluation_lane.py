@@ -39,9 +39,11 @@ OPERATING_LOOP_REQUIRED_ACTIONS = {
     "route_memory_residue",
     "route_external_residue",
 }
-OPERATING_LOOP_MEMORY_STATES = {"pulled", "dismissed", "not_applicable"}
+OPERATING_LOOP_MEMORY_STATES = {"candidate", "projected", "stale", "unavailable", "dismissed", "not_applicable"}
 OPERATING_LOOP_MEMORY_REASONS = {
-    "matched_route",
+    "candidate_only",
+    "decision_contribution_projected",
+    "stale_contribution",
     "no_relevant_route",
     "not_requested",
     "unavailable",
@@ -200,18 +202,28 @@ def _validate_operating_loop_packet(
     _require(isinstance(verification, dict), f"{prefix} operating_loop verification must be an object", errors)
     if isinstance(memory, dict):
         _require(memory.get("state") in OPERATING_LOOP_MEMORY_STATES, f"{prefix} operating_loop memory.state is invalid", errors)
-        _require(memory.get("reason_code") in OPERATING_LOOP_MEMORY_REASONS, f"{prefix} operating_loop memory.reason_code is invalid", errors)
+        _require(
+            memory.get("reason_code") in OPERATING_LOOP_MEMORY_REASONS, f"{prefix} operating_loop memory.reason_code is invalid", errors
+        )
         _require(memory.get("capture") in OPERATING_LOOP_MEMORY_CAPTURE, f"{prefix} operating_loop memory.capture is invalid", errors)
     if isinstance(planning, dict):
         _require(planning.get("state") in OPERATING_LOOP_PLANNING_STATES, f"{prefix} operating_loop planning.state is invalid", errors)
-        _require(isinstance(planning.get("blocks_full_closure"), bool), f"{prefix} operating_loop planning.blocks_full_closure is invalid", errors)
+        _require(
+            isinstance(planning.get("blocks_full_closure"), bool),
+            f"{prefix} operating_loop planning.blocks_full_closure is invalid",
+            errors,
+        )
     if isinstance(verification, dict):
         _require(
             verification.get("state") in OPERATING_LOOP_VERIFICATION_STATES,
             f"{prefix} operating_loop verification.state is invalid",
             errors,
         )
-        _require(isinstance(verification.get("blocks_full_closure"), bool), f"{prefix} operating_loop verification.blocks_full_closure is invalid", errors)
+        _require(
+            isinstance(verification.get("blocks_full_closure"), bool),
+            f"{prefix} operating_loop verification.blocks_full_closure is invalid",
+            errors,
+        )
     for reason in packet.get("reasons", []):
         _require(isinstance(reason, dict), f"{prefix} operating_loop reason must be an object", errors)
         if isinstance(reason, dict):
@@ -236,7 +248,9 @@ def _validate_completion_cost_observations(
     _require(not missing_fields, f"{prefix} completion_cost_observations missing fields: {', '.join(sorted(missing_fields))}", errors)
     for field in COMPLETION_COST_NUMERIC_FIELDS:
         value = observations.get(field)
-        _require(isinstance(value, int) and value >= 0, f"{prefix} completion_cost_observations {field} must be a non-negative integer", errors)
+        _require(
+            isinstance(value, int) and value >= 0, f"{prefix} completion_cost_observations {field} must be a non-negative integer", errors
+        )
     _require(
         observations.get("handoff_recovery_status") in COMPLETION_COST_HANDOFF_STATUSES,
         f"{prefix} completion_cost_observations handoff_recovery_status is invalid",
@@ -244,8 +258,12 @@ def _validate_completion_cost_observations(
     )
     sections = observations.get("aw_sections_used", [])
     _require(isinstance(sections, list), f"{prefix} completion_cost_observations aw_sections_used must be a list", errors)
-    for section in (sections if isinstance(sections, list) else []):
-        _require(isinstance(section, str) and bool(section.strip()), f"{prefix} completion_cost_observations aw_sections_used entry is invalid", errors)
+    for section in sections if isinstance(sections, list) else []:
+        _require(
+            isinstance(section, str) and bool(section.strip()),
+            f"{prefix} completion_cost_observations aw_sections_used entry is invalid",
+            errors,
+        )
     _require(
         isinstance(observations.get("surface_causing_overhead"), str) and bool(observations.get("surface_causing_overhead", "").strip()),
         f"{prefix} completion_cost_observations surface_causing_overhead must be a non-empty string",
@@ -261,7 +279,9 @@ def _validate_completion_cost_observations(
         for field in ("source", "signal", "owner_surface", "classification"):
             _require(bool(str(driver.get(field) or "").strip()), f"{driver_prefix} must include {field}", errors)
         _require(driver.get("owner_surface") in owner_surfaces, f"{driver_prefix} owner_surface is invalid", errors)
-        _require(driver.get("classification") in COMPLETION_COST_DRIVER_CLASSIFICATIONS, f"{driver_prefix} classification is invalid", errors)
+        _require(
+            driver.get("classification") in COMPLETION_COST_DRIVER_CLASSIFICATIONS, f"{driver_prefix} classification is invalid", errors
+        )
 
 
 def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
@@ -413,9 +433,7 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
         if scenario_id in artifact_backed_scenarios:
             identity = record.get("aw_identity", {})
             _require(
-                isinstance(identity, dict)
-                and bool(str(identity.get("source") or "").strip())
-                and "artifact_checksum" in identity,
+                isinstance(identity, dict) and bool(str(identity.get("source") or "").strip()) and "artifact_checksum" in identity,
                 f"record {record.get('id')} must include artifact source and checksum evidence",
                 errors,
             )
@@ -520,7 +538,9 @@ def validate_pack(pack: dict[str, dict[str, Any]]) -> list[str]:
 
 
 def _completion_cost_observability(records: list[dict[str, Any]]) -> dict[str, Any]:
-    observed = [record["completion_cost_observations"] for record in records if isinstance(record.get("completion_cost_observations"), dict)]
+    observed = [
+        record["completion_cost_observations"] for record in records if isinstance(record.get("completion_cost_observations"), dict)
+    ]
     totals = {field: sum(int(item.get(field, 0) or 0) for item in observed) for field in sorted(COMPLETION_COST_NUMERIC_FIELDS)}
     driver_counts = Counter(
         driver.get("classification")
@@ -569,7 +589,8 @@ def build_closure_report(pack: dict[str, dict[str, Any]]) -> dict[str, Any]:
     live_promoted_failures = Counter(
         failure_id
         for decision in promotions
-        if decision.get("decision") == "promote" and live_record_ids.intersection({str(item) for item in decision.get("evidence_record_ids", [])})
+        if decision.get("decision") == "promote"
+        and live_record_ids.intersection({str(item) for item in decision.get("evidence_record_ids", [])})
         for failure_id in decision.get("failure_ids", [])
     )
     live_actionable_failures = Counter(
@@ -699,7 +720,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"- {error}")
     else:
         print(f"external-agent evaluation lane: {payload['closure_state']}")
-        print(f"scenarios: {payload['scenario_probe_count']}; records: {payload['result_record_count']}; failures: {len(payload['failure_counts'])}")
+        print(
+            f"scenarios: {payload['scenario_probe_count']}; records: {payload['result_record_count']}; failures: {len(payload['failure_counts'])}"
+        )
     return 0 if not errors else 1
 
 

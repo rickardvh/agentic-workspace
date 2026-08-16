@@ -1385,6 +1385,15 @@ def _implement_payload(
             "planning safety gate requires active planning ownership",
             *payload["handoff_requirements"]["stop_when"],
         ]
+    route_relation = str(_as_dict(planning_safety_gate.get("route_decision")).get("task_relation") or "")
+    if route_relation in {"continues-selected-owner", "independent-pending-scope"}:
+        payload["memory_consult"] = _memory_consult_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            structured_surfaces=["planning"],
+            compact=True,
+            cli_invoke=config.cli_invoke,
+        )
     memory_consult = _memory_consult_from_payload(payload)
     payload["memory_decision_packet"] = _memory_decision_packet_payload(
         stage="implement",

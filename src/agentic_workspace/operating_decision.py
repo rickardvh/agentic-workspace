@@ -16,6 +16,8 @@ from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_receipt_status,
     registered_context_owner_result_status,
 )
+from agentic_workspace.intent_feedback import compile_intent_feedback, intent_evidence_from_observed_behavior
+from agentic_workspace.memory_effectiveness import compile_memory_effectiveness
 
 BLOCKER_PRECEDENCE = [
     "missing-authority",
@@ -1530,6 +1532,32 @@ def compile_projection_surface_operating_decision(
         return {}
     posture = _projection_surface_posture(payload)
     input_revisions = _as_dict(admitted_input.get("input_revisions"))
+    payload_context = _as_dict(payload.get("context"))
+    architecture_principles = _as_dict(payload.get("architecture_principles")) or _as_dict(payload_context.get("architecture_principles"))
+    forecast = _as_dict(payload.get("architecture_principles_forecast")) or _as_dict(
+        payload_context.get("architecture_principles_forecast")
+    )
+    forecast_principles = _as_dict(forecast.get("architecture_principles"))
+    intent_expectations = [
+        item
+        for source in (
+            payload.get("intent_expectations"),
+            architecture_principles.get("intent_expectations"),
+            forecast_principles.get("intent_expectations"),
+        )
+        for item in _as_list(source)
+        if isinstance(item, dict)
+    ]
+    supplied_intent_evidence = [item for item in _as_list(payload.get("intent_evidence")) if isinstance(item, dict)]
+    observed_intent_evidence = intent_evidence_from_observed_behavior(expectations=intent_expectations, payload=payload)
+    memory_packet = _as_dict(payload.get("memory_decision_packet")) or _as_dict(payload_context.get("memory_decision_packet"))
+    memory_use = _as_dict(memory_packet.get("use"))
+    memory_contributions = [
+        item
+        for source in (payload.get("memory_contributions"), memory_use.get("contributions"))
+        for item in _as_list(source)
+        if isinstance(item, dict)
+    ]
     decision = compile_operating_decision(
         inputs={
             "consumer": consumer,
@@ -1545,6 +1573,11 @@ def compile_projection_surface_operating_decision(
             "primary_action": posture["primary_action"],
             "blockers": posture["blockers"],
             "blocked_claim_classes": posture["blocked_claim_classes"],
+            "intent_expectations": intent_expectations,
+            "intent_evidence": [*supplied_intent_evidence, *observed_intent_evidence],
+            "intent_resolutions": [item for item in _as_list(payload.get("intent_resolutions")) if isinstance(item, dict)],
+            "memory_contributions": memory_contributions,
+            "memory_outcomes": [item for item in _as_list(payload.get("memory_outcomes")) if isinstance(item, dict)],
         }
     )
     decision["projection_input_id"] = str(admitted_input.get("input_id") or "")
@@ -1597,6 +1630,12 @@ def bind_projection_surface_operating_decision(
         "projection_posture_revision": str(operating_decision.get("projection_posture_revision") or ""),
         "producer_module": str(operating_decision.get("producer_module") or ""),
         "producer_function": str(operating_decision.get("producer_function") or ""),
+        "intent_feedback_revision": str(_as_dict(operating_decision.get("intent_feedback")).get("input_revision") or ""),
+        "intent_expectation_revisions": [
+            str(item.get("expectation_revision") or "")
+            for item in _as_list(_as_dict(operating_decision.get("intent_feedback")).get("applicable_expectations"))
+            if isinstance(item, dict) and str(item.get("expectation_revision") or "")
+        ],
         "mismatch_reason": "" if valid else "decision posture or admitted projection input does not match the materialized payload",
         "rule": "The final decision is authoritative only when it derives from this pre-admitted input and the materialized purpose posture.",
     }
@@ -1914,7 +1953,20 @@ def compile_implement_context_operating_decision(
 def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     """Return one primary typed action or one typed external blocker."""
 
+    intent_feedback = compile_intent_feedback(
+        expectations=[item for item in _as_list(inputs.get("intent_expectations")) if isinstance(item, dict)],
+        evidence=[item for item in _as_list(inputs.get("intent_evidence")) if isinstance(item, dict)],
+        resolutions=[item for item in _as_list(inputs.get("intent_resolutions")) if isinstance(item, dict)],
+    )
+    memory_effectiveness = compile_memory_effectiveness(
+        contributions=[item for item in _as_list(inputs.get("memory_contributions")) if isinstance(item, dict)],
+        outcomes=[item for item in _as_list(inputs.get("memory_outcomes")) if isinstance(item, dict)],
+    )
     revisions = _as_dict(inputs.get("revisions"))
+    if intent_feedback["applicable_expectations"]:
+        revisions = {**revisions, "intent_feedback_revision": intent_feedback["input_revision"]}
+    if memory_effectiveness["projected_contributions"]:
+        revisions = {**revisions, "memory_effectiveness_revision": memory_effectiveness["input_revision"]}
     authorities = _as_dict(inputs.get("authorities"))
     actionability = _as_dict(inputs.get("actionability"))
     action = _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
@@ -1944,7 +1996,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             }
         )
     context_findings = [
-        item for item in [*_as_list(inputs.get("context_gaps")), *_as_list(inputs.get("context_findings"))] if isinstance(item, dict)
+        item
+        for item in [
+            *_as_list(inputs.get("context_gaps")),
+            *_as_list(inputs.get("context_findings")),
+            *_as_list(intent_feedback.get("findings")),
+            *_as_list(memory_effectiveness.get("findings")),
+        ]
+        if isinstance(item, dict)
     ]
     context_consequences = derive_context_consequences(
         findings=context_findings,
@@ -2093,6 +2152,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "context_authority_projection": context_authority_projection,
         "context_consequences": context_consequences,
         "context_effects": context_effects,
+        "intent_feedback": intent_feedback,
+        "memory_effectiveness": memory_effectiveness,
         "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),

@@ -143,6 +143,8 @@ from agentic_workspace.current_work_context import (
 )
 from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
+from agentic_workspace.intent_feedback import architecture_principles_intent_context
+from agentic_workspace.memory_effectiveness import memory_effectiveness_operation
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     attach_projection_surface_decision_input_consumption,
@@ -19046,7 +19048,7 @@ def _memory_consultation_protocol_payload(
             "not_checked": "no Memory route, index, or structured memory surface was inspected",
             "checked_none": "Memory routing was inspected and no relevant note was found",
             "baseline_only": "only the Memory routing baseline or index matched; no task-relevant durable note was found",
-            "relevant_notes_found": "existing notes or routes informed the work",
+            "relevant_notes_found": "task-relevant note or fact candidates were discovered; this does not prove decision use",
             "capture_candidate": "a durable anti-rediscovery lesson may belong in Memory",
             "routed_elsewhere": "residue belongs in Planning, docs, tests, contracts, config, review, or an issue",
             "dismissed": "the signal is one-off or too weak to keep",
@@ -19082,21 +19084,13 @@ def _memory_consultation_protocol_payload(
     }
 
 
-def _compact_memory_consultation_protocol(value: dict[str, Any]) -> dict[str, Any]:
-    return {
-        key: value.get(key)
-        for key in (
-            "protocol",
-            "consultation_state",
-            "durable_residue_decision",
-            "evidence",
-        )
-        if key in value
-    }
-
-
 def _memory_consult_payload(
-    *, target_root: Path, changed_paths: list[str] | None = None, compact: bool = False, cli_invoke: str = DEFAULT_CLI_INVOKE
+    *,
+    target_root: Path,
+    changed_paths: list[str] | None = None,
+    structured_surfaces: list[str] | None = None,
+    compact: bool = False,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
 ) -> dict[str, Any]:
     try:
         from repo_memory_bootstrap.installer import memory_report, route_memory
@@ -19127,18 +19121,26 @@ def _memory_consult_payload(
         route_actions: list[dict[str, Any]] = []
         route_inspection_state = "not_checked"
         route_signal_count = 0
-        if normalized_paths:
+        if normalized_paths or structured_surfaces:
             route_inspection_state = "checked"
             try:
-                route_result = route_memory(target=target_root, files=normalized_paths)
+                route_result = route_memory(target=target_root, files=normalized_paths, surfaces=structured_surfaces or [])
                 for action in route_result.actions:
-                    if action.role != "memory-route" or action.kind not in {"required", "optional"}:
+                    if action.role == "memory-route" and action.kind not in {"required", "optional"}:
+                        continue
+                    if action.role not in {"memory-route", "memory-durable-fact"}:
                         continue
                     source = action.source or action.path.as_posix()
                     if source not in read_first:
                         read_first.append(source)
                     route_actions.append(
-                        {"kind": action.kind, "path": source, "reason": action.detail, "match_source": action.match_source}
+                        {
+                            "kind": action.kind,
+                            "path": source,
+                            "source": source,
+                            "reason": action.detail,
+                            "match_source": action.match_source,
+                        }
                     )
                     if action.match_source != "routing-baseline":
                         route_signal_count += 1
@@ -19165,8 +19167,10 @@ def _memory_consult_payload(
             "route_inspection_state": route_inspection_state,
             "route_signal_count": route_signal_count,
             "route_matches": route_actions[:3],
-            "consultation_protocol": _compact_memory_consultation_protocol(
-                _memory_consultation_protocol_payload(
+            "memory_use": memory_effectiveness_operation(operation="project-use", target_root=target_root, route_matches=route_actions),
+            "consultation_protocol": {
+                key: value
+                for key, value in _memory_consultation_protocol_payload(
                     consultation_state=consultation_state,
                     read_first=read_first[:3],
                     route_actions=route_actions,
@@ -19178,8 +19182,9 @@ def _memory_consult_payload(
                         ),
                         workspace_cli_invoke=cli_invoke,
                     ),
-                )
-            ),
+                ).items()
+                if key in {"protocol", "consultation_state", "durable_residue_decision", "evidence"}
+            },
         }
     try:
         report = memory_report(target=target_root)
@@ -19214,17 +19219,27 @@ def _memory_consult_payload(
     route_actions: list[dict[str, Any]] = []
     route_inspection_state = "not_checked"
     route_signal_count = 0
-    if normalized_paths:
+    if normalized_paths or structured_surfaces:
         route_inspection_state = "checked"
         try:
-            route_result = route_memory(target=target_root, files=normalized_paths)
+            route_result = route_memory(target=target_root, files=normalized_paths, surfaces=structured_surfaces or [])
             for action in route_result.actions:
-                if action.role != "memory-route" or action.kind not in {"required", "optional"}:
+                if action.role == "memory-route" and action.kind not in {"required", "optional"}:
+                    continue
+                if action.role not in {"memory-route", "memory-durable-fact"}:
                     continue
                 source = action.source or action.path.as_posix()
                 if source not in read_first:
                     read_first.append(source)
-                route_actions.append({"kind": action.kind, "path": source, "reason": action.detail, "match_source": action.match_source})
+                route_actions.append(
+                    {
+                        "kind": action.kind,
+                        "path": source,
+                        "source": source,
+                        "reason": action.detail,
+                        "match_source": action.match_source,
+                    }
+                )
                 if action.match_source != "routing-baseline":
                     route_signal_count += 1
         except Exception:
@@ -19277,13 +19292,18 @@ def _memory_consult_payload(
         "route_inspection_state": route_inspection_state,
         "route_signal_count": route_signal_count,
         "route_matches": route_actions[:max_notes],
+        "memory_use": memory_effectiveness_operation(operation="project-use", target_root=target_root, route_matches=route_actions),
         "evidence": evidence if isinstance(evidence, dict) else {},
         "capture_helper": capture_helper,
         "promotion_pressure": _memory_payload_commands_with_invoke(value=promotion_pressure, workspace_cli_invoke=cli_invoke),
         "consultation_protocol": consultation_protocol,
     }
     if compact:
-        payload["consultation_protocol"] = _compact_memory_consultation_protocol(consultation_protocol)
+        payload["consultation_protocol"] = {
+            key: value
+            for key, value in consultation_protocol.items()
+            if key in {"protocol", "consultation_state", "durable_residue_decision", "evidence"}
+        }
         if consult_status != "recommended":
             return {
                 "kind": payload["kind"],
@@ -19302,6 +19322,7 @@ def _memory_consult_payload(
             "route_inspection_state",
             "route_signal_count",
             "route_matches",
+            "memory_use",
             "consultation_protocol",
         )
         keys = (*keys, "why", "selection_rule")
@@ -19346,15 +19367,6 @@ _OPERATING_LOOP_REQUIRED_ACTIONS = {
     "route_memory_residue",
     "route_external_residue",
 }
-_OPERATING_LOOP_MEMORY_STATES = {"pulled", "dismissed", "not_applicable"}
-_OPERATING_LOOP_MEMORY_REASONS = {
-    "matched_route",
-    "no_relevant_route",
-    "not_requested",
-    "unavailable",
-    "explicitly_dismissed",
-}
-_OPERATING_LOOP_MEMORY_CAPTURE = {"none", "recommended", "required"}
 _OPERATING_LOOP_PLANNING_STATES = {"none", "active", "continuation", "closeout_required", "unrelated_active_plan"}
 _OPERATING_LOOP_VERIFICATION_STATES = {
     "proof_not_required",
@@ -19394,40 +19406,7 @@ def _first_ref(*values: Any) -> str | None:
 
 
 def _operating_loop_memory_state(memory_decision_packet: dict[str, Any] | None) -> dict[str, Any]:
-    packet = _as_dict(memory_decision_packet)
-    pull = _as_dict(packet.get("pull"))
-    capture = _as_dict(packet.get("capture"))
-    pull_status = str(pull.get("status") or "").strip()
-    if pull_status == "relevant_notes_found":
-        memory_state = "pulled"
-        reason_code = "matched_route"
-    elif pull_status in {"checked_none", "baseline_only"}:
-        memory_state = "dismissed"
-        reason_code = "no_relevant_route"
-    elif pull_status in {"stale", "unavailable"}:
-        memory_state = "dismissed"
-        reason_code = "unavailable"
-    elif pull_status == "dismissed":
-        memory_state = "dismissed"
-        reason_code = "explicitly_dismissed"
-    else:
-        memory_state = "not_applicable"
-        reason_code = "not_requested"
-
-    capture_status = str(capture.get("status") or "").strip()
-    if capture_status == "follow_up_required":
-        capture_state = "required"
-    elif capture_status == "capture_candidate":
-        capture_state = "recommended"
-    else:
-        capture_state = "none"
-
-    return {
-        "state": memory_state,
-        "reason_code": reason_code,
-        "route_ref": _first_ref(pull.get("candidate_routes")),
-        "capture": capture_state,
-    }
+    return memory_effectiveness_operation(operation="operating-loop-state", packet=_as_dict(memory_decision_packet))
 
 
 def _operating_loop_planning_state(
@@ -19708,6 +19687,7 @@ def _memory_decision_packet_payload(
 ) -> dict[str, Any]:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     consult = _as_dict(memory_consult)
+    memory_use = _as_dict(consult.get("memory_use"))
     closeout = _as_dict(closeout_trust)
     routine = _as_dict(routine_work_context)
     observed: list[str] = []
@@ -19780,7 +19760,9 @@ def _memory_decision_packet_payload(
     elif pull_status == "not_checked" and route_inspection_state == "checked" and (route_signal_count > 0 or relevant_route_matches):
         pull_status = "relevant_notes_found"
     elif pull_status == "not_checked" and (
-        route_inspection_state == "baseline_only" or (route_inspection_state == "checked" and route_matches and not relevant_route_matches)
+        route_inspection_state == "baseline_only"
+        or consult.get("consultation_state") == "baseline_only"
+        or (route_inspection_state == "checked" and route_matches and not relevant_route_matches)
     ):
         pull_status = "baseline_only"
     elif pull_status == "not_checked" and route_inspection_state == "checked":
@@ -19831,6 +19813,15 @@ def _memory_decision_packet_payload(
             "read_budget": "selector",
             "agent_decision_required": force != "not_applicable",
         },
+        "use": memory_use
+        if memory_use
+        else {
+            "kind": "agentic-workspace/memory-use/v1",
+            "status": "candidate-only" if pull_status == "relevant_notes_found" else "no-match",
+            "contributions": [],
+            "agent_decision_required": pull_status == "relevant_notes_found",
+            "rule": "Candidate discovery is not consultation or application.",
+        },
         "capture": {
             "status": capture_status,
             "allowed_outcomes": [
@@ -19865,41 +19856,7 @@ def _memory_decision_packet_payload(
 
 
 def _compact_memory_decision_packet(packet: Any) -> dict[str, Any]:
-    full = _as_dict(packet)
-    pull = _as_dict(full.get("pull"))
-    capture = _as_dict(full.get("capture"))
-    candidate_routes = _list_payload(pull.get("candidate_routes"))
-    relevant_routes = [
-        item for item in candidate_routes if isinstance(item, dict) and str(item.get("match_source") or "").strip() != "routing-baseline"
-    ]
-    compact_pull: dict[str, Any] = {
-        "status": pull.get("status"),
-        "recommended_command": pull.get("recommended_command"),
-        "route_count": len(candidate_routes),
-        "relevant_route_count": len(relevant_routes),
-        "read_budget": pull.get("read_budget"),
-        "agent_decision_required": pull.get("agent_decision_required"),
-    }
-    if relevant_routes:
-        compact_pull["candidate_routes"] = relevant_routes
-    compact_capture: dict[str, Any] = {
-        "status": capture.get("status"),
-        "outcome_count": len(_list_payload(capture.get("allowed_outcomes"))),
-        "recommended_commands": capture.get("recommended_commands", []),
-        "candidate_owner_surface_count": len(_list_payload(capture.get("candidate_owner_surfaces"))),
-        "agent_decision_required": capture.get("agent_decision_required"),
-    }
-    return {
-        "kind": full.get("kind"),
-        "label": "knowledge",
-        "provenance": "memory",
-        "stage": full.get("stage"),
-        "force": full.get("force"),
-        "why_visible": "Explicit agent-owned Memory pull/capture decision.",
-        "pull": {key: value for key, value in compact_pull.items() if value is not None},
-        "capture": {key: value for key, value in compact_capture.items() if value is not None},
-        "detail_visibility": "details stay behind verbose implement context",
-    }
+    return memory_effectiveness_operation(operation="compact-packet", packet=_as_dict(packet))
 
 
 def _memory_consult_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -20793,6 +20750,11 @@ def _architecture_principles_payload(
             }
         )
     status = "attention" if matched else "clear" if normalized_paths else "available"
+    intent_revision = "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+    intent_expectations = architecture_principles_intent_context(
+        principles=matched,
+        intent_revision=intent_revision,
+    )["expectations"]
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/architecture-principles-status/v1",
         "status": status,
@@ -20802,6 +20764,8 @@ def _architecture_principles_payload(
         "relationship_to_system_intent": "Architecture principles are typed subsections of the normalized system-intent record.",
         "matched_count": len(matched),
         "matched_principles": matched,
+        "intent_revision": intent_revision,
+        "intent_expectations": intent_expectations,
         "closeout": {
             "status": "explicit-claim-required" if matched else "not-applicable",
             "required_claim": "preserved|re-scoped-by-human|unresolved" if matched else "",
@@ -20862,25 +20826,11 @@ def _architecture_principles_payload(
                 }
                 for item in matched
             ],
+            "intent_revision": intent_revision,
+            "intent_expectations": intent_expectations,
             "closeout": payload["closeout"],
         }
     return payload
-
-
-def _architecture_principles_configured(target_root: Path | None) -> bool:
-    if target_root is None:
-        return False
-    path = target_root / ".agentic-workspace/system-intent/intent.toml"
-    if not path.is_file():
-        return False
-    try:
-        document = tomllib.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
-        return False
-    return any(
-        isinstance(principle, dict) and str(principle.get("id", "")).strip()
-        for principle in _list_payload(document.get("architecture_principles"))
-    )
 
 
 def _architecture_principles_forecast_payload(
@@ -20892,7 +20842,12 @@ def _architecture_principles_forecast_payload(
 ) -> dict[str, Any]:
     normalized_paths = _normalize_changed_paths(planned_paths or [])
     if not normalized_paths:
-        if not _architecture_principles_configured(target_root):
+        if (
+            target_root is None
+            or not architecture_principles_intent_context(source_path=target_root / ".agentic-workspace/system-intent/intent.toml")[
+                "configured"
+            ]
+        ):
             return {
                 "kind": "agentic-workspace/architecture-principles-forecast/v1",
                 "status": "not-configured",
@@ -29805,10 +29760,34 @@ def _select_summary_payload(
             return selected
     tiny_summary = planning_summary(target=target_root.as_posix(), profile="tiny", task_text=task_text, changed_paths=changed_paths)
     if isinstance(tiny_summary, dict):
+        summary_route_decision = (
+            _summary_planning_route_decision_payload(
+                target_root=target_root,
+                task_text=task_text,
+                changed_paths=changed_paths,
+            )
+            if str(task_text or "").strip()
+            else {}
+        )
+        route_relation = str(summary_route_decision.get("task_relation") or "")
+        memory_surfaces = ["planning"] if route_relation in {"continues-selected-owner", "independent-pending-scope"} else []
         tiny_summary["memory_consult"] = (
-            _memory_consult_payload(target_root=target_root, changed_paths=changed_paths, compact=True, cli_invoke=cli_invoke)
-            if changed_paths
+            _memory_consult_payload(
+                target_root=target_root,
+                changed_paths=changed_paths,
+                structured_surfaces=memory_surfaces,
+                compact=True,
+                cli_invoke=cli_invoke,
+            )
+            if changed_paths or memory_surfaces
             else _tiny_memory_consult_payload(config=_load_workspace_config(target_root=target_root))
+        )
+        tiny_summary["memory_decision_packet"] = _memory_decision_packet_payload(
+            stage="summary",
+            cli_invoke=cli_invoke,
+            memory_consult=_as_dict(tiny_summary.get("memory_consult")),
+            changed_paths=changed_paths,
+            task_text=task_text,
         )
         _attach_summary_task_posture_packet(
             summary=tiny_summary,
@@ -29818,11 +29797,7 @@ def _select_summary_payload(
             cli_invoke=cli_invoke,
         )
         if _selector_requests(select, "planning_route_decision"):
-            tiny_summary["planning_route_decision"] = _summary_planning_route_decision_payload(
-                target_root=target_root,
-                task_text=task_text,
-                changed_paths=changed_paths,
-            )
+            tiny_summary["planning_route_decision"] = summary_route_decision
         if _selector_requests(select, "fresh_session_digest"):
             tiny_summary["fresh_session_digest"] = _fresh_session_digest_payload(
                 target_root=target_root,
@@ -29841,7 +29816,25 @@ def _select_summary_payload(
         return selected
     full_summary = planning_summary(target=target_root.as_posix(), profile="full", task_text=task_text, changed_paths=changed_paths)
     if isinstance(full_summary, dict):
-        full_summary["memory_consult"] = _memory_consult_payload(target_root=target_root, compact=False, cli_invoke=cli_invoke)
+        full_route_decision = _summary_planning_route_decision_payload(
+            target_root=target_root, task_text=task_text, changed_paths=changed_paths
+        )
+        full_route_relation = str(full_route_decision.get("task_relation") or "")
+        full_memory_surfaces = ["planning"] if full_route_relation in {"continues-selected-owner", "independent-pending-scope"} else []
+        full_summary["memory_consult"] = _memory_consult_payload(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            structured_surfaces=full_memory_surfaces,
+            compact=False,
+            cli_invoke=cli_invoke,
+        )
+        full_summary["memory_decision_packet"] = _memory_decision_packet_payload(
+            stage="summary",
+            cli_invoke=cli_invoke,
+            memory_consult=_as_dict(full_summary.get("memory_consult")),
+            changed_paths=changed_paths,
+            task_text=task_text,
+        )
         _attach_summary_task_posture_packet(
             summary=full_summary,
             target_root=target_root,
@@ -29850,11 +29843,7 @@ def _select_summary_payload(
             cli_invoke=cli_invoke,
         )
         if _selector_requests(select, "planning_route_decision"):
-            full_summary["planning_route_decision"] = _summary_planning_route_decision_payload(
-                target_root=target_root,
-                task_text=task_text,
-                changed_paths=changed_paths,
-            )
+            full_summary["planning_route_decision"] = full_route_decision
         if _selector_requests(select, "fresh_session_digest"):
             full_summary["fresh_session_digest"] = _fresh_session_digest_payload(
                 target_root=target_root,
@@ -40915,6 +40904,8 @@ def _active_plan_delegation_requirement(
         return {"required": False, "status": "active-plan-unreadable", "path": active_surface}
     delegation = record.get("post_decomposition_delegation")
     delegation = delegation if isinstance(delegation, dict) else {}
+    if not delegation:
+        delegation = memory_effectiveness_operation(operation="canonical-planning-delegation", packet=record)
     status = str(delegation.get("status", "")).strip().lower()
     normalized_task = " ".join((task_text or "").lower().split())
     capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
@@ -40928,7 +40919,7 @@ def _active_plan_delegation_requirement(
         return {"required": False, "status": "delegation-decision-not-needed-for-direct-task", "path": active_surface}
     recorded_statuses = {"recorded", "evaluated", "completed", "not-needed", "keep-local", "delegated"}
     decision_recorded = status in recorded_statuses or bool(delegation.get("route chosen"))
-    if decision_recorded and _delegation_decision_has_command_provenance(delegation):
+    if decision_recorded and (_delegation_decision_has_command_provenance(delegation) or delegation.get("canonical contract") is True):
         return {"required": False, "status": "delegation-decision-recorded", "path": active_surface}
     if decision_recorded:
         planning_revision = _planning_revision_payload(target_root=target_root)

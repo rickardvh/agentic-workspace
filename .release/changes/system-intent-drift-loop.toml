@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Project revision-bound system-intent expectations into operating decisions and route evidence-backed drift through existing consequences."

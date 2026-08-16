@@ -88,3 +88,21 @@ subsystems = ["workspace-runtime", "planning-system"]
 surfaces = ["routing", "planning", "recovery"]
 routes_from = ["src/agentic_workspace/workspace_runtime_*.py", ".agentic-workspace/planning/**"]
 stale_when = ["src/agentic_workspace/workspace_runtime_planning.py", "src/agentic_workspace/workspace_runtime_startup.py"]
+
+[durable_facts."selected-plan-owned-next-task"]
+summary = "When current work belongs to the selected Planning owner, rebind from that owner and task; preserve older closeout residue separately instead of classifying the owned task as unrelated."
+owner = "planning-route-decision"
+authority_class = "advisory"
+route_keys = ["planning", "workspace-runtime"]
+touched_surfaces = ["planning", "workspace-runtime"]
+evidence = [".agentic-workspace/memory/repo/mistakes/recurring-failures.md", "src/agentic_workspace/workspace_runtime_planning.py"]
+affected_decisions = ["planning-route"]
+note_ref = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md#failure-selected-plan-blocks-its-next-owned-task"
+promotion = "Promote when the route classifier can mechanically preserve the owner/task relation."
+demotion_or_expiry = "Retire after the stronger Planning owner prevents the recurrence and regression proof remains stable."
+promotion_target = "planning-route-decision / issue #2566 or successor"
+promotion_trigger = "The same owner/task relation is classified independent-pending-scope after this fact was projected."
+preferred_remediation = "Make the structured Planning route classifier preserve selected-owner task relations."
+elimination_target = "selected plan blocks its next owned task"
+retention_after_promotion = "stub"
+status = "active"
