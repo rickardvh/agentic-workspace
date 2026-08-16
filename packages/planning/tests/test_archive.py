@@ -1071,6 +1071,7 @@ candidates = []
     )
     payload = json.loads(capsys.readouterr().out)
     archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json"
+    assert archived_path.exists(), payload
     archived = json.loads(archived_path.read_text(encoding="utf-8"))
 
     assert any(action["kind"] == "archived" for action in payload["actions"])
@@ -1088,6 +1089,71 @@ candidates = []
     retry = json.loads(capsys.readouterr().out)
     assert any(action["kind"] in {"already-current", "current"} for action in retry["actions"])
     assert _closeout_persistent_snapshot(tmp_path) == after_first
+
+
+def test_archive_owner_integration_preserves_explicit_unresolved_continuation(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["intent_continuity"]["continuation surface"] = "#stale-continuation"
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": "#stale-continuation",
+        "activation trigger": "after integration",
+    }
+    record["closure_check"]["closeout scope"] = "slice"
+    record["continuation"] = {"owner": "#stale-continuation", "residual_intent": "stale"}
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+    installer_mod.propose_integration_transition(
+        proposal_id="plan-alpha-archive",
+        owner="plan-alpha",
+        owner_ref=".agentic-workspace/planning/execplans/plan-alpha.plan.json",
+        requested_transition="archive-owner",
+        proof="sha256:admitted-integration-proof",
+        target=tmp_path,
+    )
+    applied = installer_mod.apply_integration_proposal(proposal="plan-alpha-archive", target=tmp_path)
+    assert applied.reason_code == ""
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--closure-decision",
+                "archive-and-close",
+                "--unsolved-intent",
+                "GitHub #1556",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    detail = next(action["detail"] for action in payload["actions"] if "prepared closeout patch: " in action["detail"])
+    patch = json.loads(detail.split("prepared closeout patch: ", 1)[1])
+
+    assert patch["proof_report"]["proof achieved now"] == "yes; admitted archive-owner integration receipt"
+    assert patch["intent_satisfaction"]["unsolved intent passed to"] == "GitHub #1556"
+    assert patch["intent_continuity"]["continuation surface"] == "GitHub #1556"
+    assert patch["intent_continuity"]["this slice completes the larger intended outcome"] == "no"
+    assert patch["required_continuation"] == {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": "GitHub #1556",
+        "activation trigger": "when the continuation owner promotes the next slice",
+    }
+    assert patch["continuation"] == {
+        "owner": "GitHub #1556",
+        "residual_intent": "Unsolved larger intent continues in GitHub #1556.",
+    }
+    assert patch["canonical_core"]["continuation_owner"] == "GitHub #1556"
+    assert patch["closure_check"]["larger-intent status"] == "open"
 
 
 def test_archive_owner_integration_rejects_insufficient_receipt_without_mutation(tmp_path: Path) -> None:

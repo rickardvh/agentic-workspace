@@ -18594,13 +18594,15 @@ def _prepare_execplan_closeout(
         result.add("manual review", record_path, "--closure-decision must be one of archive-and-close or archive-but-keep-lane-open")
         return False
 
-    explicit_continuation_retirement = normalized_closure == "archive-and-close" and (
-        integration_evidence.get("status") == "admitted"
-        or str(unsolved_intent or "").strip().lower() in {"none", "n/a", "no further action"}
-    )
+    explicit_continuation_retirement = normalized_closure == "archive-and-close" and str(unsolved_intent or "").strip().lower() in {
+        "none",
+        "n/a",
+        "no further action",
+    }
     if explicit_continuation_retirement:
         required_follow_on = "no"
         continuation_owner = ""
+    retained_continuation_owner = "" if explicit_continuation_retirement else explicit_continuation_owner
 
     existing_intent_satisfaction = _record_section_dict(record, "intent_satisfaction") or {}
     normalized_intent_satisfied = (intent_satisfied or "").strip().lower()
@@ -18647,7 +18649,11 @@ def _prepare_execplan_closeout(
         )
         return False
     slice_status = existing_slice_status or "completed"
-    larger_status = "open" if normalized_closure == "archive-but-keep-lane-open" else (existing_larger_status or "closed")
+    larger_status = (
+        "open"
+        if normalized_closure == "archive-but-keep-lane-open" or retained_continuation_owner
+        else (existing_larger_status or "closed")
+    )
     routed_unsolved_intent = (
         continuation_owner
         if normalized_closure == "archive-but-keep-lane-open"
@@ -18670,7 +18676,7 @@ def _prepare_execplan_closeout(
         or existing_closure_check.get("why this decision is honest")
         or (
             "The bounded slice is complete and remaining intent is routed to a checked-in continuation owner."
-            if normalized_closure == "archive-but-keep-lane-open"
+            if normalized_closure == "archive-but-keep-lane-open" or retained_continuation_owner
             else "The bounded slice and larger intent are both complete."
         )
     )
@@ -18684,7 +18690,7 @@ def _prepare_execplan_closeout(
         or existing_closure_check.get("reopen trigger")
         or (
             f"Reopen when {routed_unsolved_intent} activates a fresh bounded slice."
-            if normalized_closure == "archive-but-keep-lane-open"
+            if normalized_closure == "archive-but-keep-lane-open" or retained_continuation_owner
             else "None unless new evidence shows the bounded closure was incomplete."
         )
     )
@@ -18759,7 +18765,7 @@ def _prepare_execplan_closeout(
     prepared_intent_continuity = dict(intent_continuity)
     if _closeout_sequence_needs_normalization(prepared_intent_continuity.get("larger intended outcome")):
         prepared_intent_continuity["larger intended outcome"] = outcome_delivered
-    if normalized_closure == "archive-but-keep-lane-open":
+    if normalized_closure == "archive-but-keep-lane-open" or retained_continuation_owner:
         prepared_intent_continuity["this slice completes the larger intended outcome"] = "no"
         prepared_intent_continuity["continuation surface"] = routed_unsolved_intent
         patch["required_continuation"] = {
@@ -18777,12 +18783,12 @@ def _prepare_execplan_closeout(
         }
     if prepared_intent_continuity:
         patch["intent_continuity"] = prepared_intent_continuity
-    if normalized_closure == "archive-but-keep-lane-open" or explicit_continuation_retirement:
+    if normalized_closure == "archive-but-keep-lane-open" or retained_continuation_owner or explicit_continuation_retirement:
         compact_continuation = copy.deepcopy(_record_mapping(record, "continuation"))
         compact_continuation["owner"] = routed_unsolved_intent
         compact_continuation["residual_intent"] = (
             f"Unsolved larger intent continues in {routed_unsolved_intent}."
-            if normalized_closure == "archive-but-keep-lane-open"
+            if normalized_closure == "archive-but-keep-lane-open" or retained_continuation_owner
             else "none"
         )
         patch["continuation"] = compact_continuation
@@ -18837,7 +18843,7 @@ def _prepare_execplan_closeout(
                 "source": "archive-plan --prepare-closeout",
             }
         )
-    if normalized_closure == "archive-but-keep-lane-open" and not buckets["continuation"]:
+    if (normalized_closure == "archive-but-keep-lane-open" or retained_continuation_owner) and not buckets["continuation"]:
         buckets["continuation"].append(
             {
                 "summary": continuation_summary or f"Unsolved larger intent continues in {routed_unsolved_intent}.",
