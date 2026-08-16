@@ -18,6 +18,7 @@
   ],
   "docs_only_reducer": {
     "lane": "repo_docs_review",
+    "eligibility": "whole-source-lane",
     "source_lanes": [
       "planning_package",
       "memory_package"

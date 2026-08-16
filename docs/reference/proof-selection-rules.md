@@ -18,6 +18,7 @@ Rules for selecting validation lanes from changed paths and task scope.
 | `broad_acceptance_lanes` | array of string | no |  | Lanes where broad proof is required when selected, even if the lane remains a targeted-test kind. |  |  |
 | `docs_only_reducer` | object | no |  | Second-stage classifier that can downgrade docs-only path-prefix matches to review proof. |  |  |
 | `docs_only_reducer.lane` | string | yes |  | Lane to use after reducing an eligible docs-only match. |  |  |
+| `docs_only_reducer.eligibility` | const `"whole-source-lane"` | yes |  | Require every changed path in the matched source lane to be reducer-eligible before replacing executable proof with docs review. |  |  |
 | `docs_only_reducer.source_lanes` | array of string | yes |  | Matched lanes that may be reduced when the changed path is docs-only. |  |  |
 | `docs_only_reducer.extensions` | array of string | yes |  | File extensions eligible for docs-only reduction. |  |  |
 | `docs_only_reducer.exact` | array of string | no |  | Exact repo-relative paths eligible for docs-only reduction. |  |  |

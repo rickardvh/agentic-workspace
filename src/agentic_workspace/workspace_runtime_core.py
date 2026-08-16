@@ -38250,13 +38250,10 @@ def _change_impact_lane_ids_for_path(*, path: str, proof: dict[str, Any]) -> lis
     cli_classification = _cli_authority_classification_for_path(path)
     if cli_classification:
         add(str(_PROOF_SELECTION_RULES.get("cli_authority", {}).get("lane", "")))
-    for rule in _PROOF_SELECTION_RULES.get("rules", []):
-        exact_matches = set(rule.get("exact", []))
-        prefixes = tuple(rule.get("prefixes", []))
-        if path in exact_matches or path.startswith(prefixes):
-            matched_lane = str(rule.get("lane", ""))
-            add(_docs_only_reduction_lane(changed_path=path, matched_lane=matched_lane) or matched_lane)
-            break
+    matching_rules = _matching_proof_rules_for_path(changed_path=path)
+    if matching_rules:
+        matched_lane = str(matching_rules[0].get("lane", ""))
+        add(_docs_only_reduction_lane(changed_path=path, matched_lane=matched_lane) or matched_lane)
     if not lane_ids:
         add(str(_PROOF_SELECTION_RULES.get("fallback_lane", "")))
     return lane_ids
@@ -51018,7 +51015,7 @@ def _proof_kind_for_lane(lane: dict[str, Any]) -> str:
     return "targeted-test"
 
 
-def _docs_only_reduction_lane(*, changed_path: str, matched_lane: str) -> str | None:
+def _docs_only_path_reduction_lane(*, changed_path: str, matched_lane: str) -> str | None:
     reducer = _PROOF_SELECTION_RULES.get("docs_only_reducer", {})
     if not isinstance(reducer, dict):
         return None
@@ -51034,6 +51031,49 @@ def _docs_only_reduction_lane(*, changed_path: str, matched_lane: str) -> str | 
         reduced_lane = str(reducer.get("lane", "")).strip()
         return reduced_lane or None
     return None
+
+
+def _proof_rule_matches_path(*, rule: dict[str, Any], changed_path: str) -> bool:
+    exact_matches = set(rule.get("exact", []))
+    prefixes = tuple(rule.get("prefixes", []))
+    return changed_path in exact_matches or (bool(prefixes) and changed_path.startswith(prefixes))
+
+
+def _matching_proof_rules_for_path(*, changed_path: str) -> list[dict[str, Any]]:
+    def rank(rule: dict[str, Any]) -> tuple[int, int, str]:
+        exact_matches = {str(item) for item in rule.get("exact", [])}
+        if changed_path in exact_matches:
+            return (2, len(changed_path), str(rule.get("id", "")))
+        matching_prefixes = [str(prefix) for prefix in rule.get("prefixes", []) if changed_path.startswith(str(prefix))]
+        return (1, max((len(prefix) for prefix in matching_prefixes), default=0), str(rule.get("id", "")))
+
+    matches = [
+        rule
+        for rule in _PROOF_SELECTION_RULES.get("rules", [])
+        if isinstance(rule, dict) and _proof_rule_matches_path(rule=rule, changed_path=changed_path)
+    ]
+    return sorted(matches, key=rank, reverse=True)
+
+
+def _changed_path_matches_proof_lane(*, changed_path: str, lane_id: str) -> bool:
+    return any(
+        str(rule.get("lane", "")) == lane_id and _proof_rule_matches_path(rule=rule, changed_path=changed_path)
+        for rule in _PROOF_SELECTION_RULES.get("rules", [])
+        if isinstance(rule, dict)
+    )
+
+
+def _docs_only_reduction_lane(*, changed_path: str, matched_lane: str, changed_paths: list[str] | None = None) -> str | None:
+    reduced_lane = _docs_only_path_reduction_lane(changed_path=changed_path, matched_lane=matched_lane)
+    if reduced_lane is None or not changed_paths:
+        return reduced_lane
+    reducer = _PROOF_SELECTION_RULES.get("docs_only_reducer", {})
+    if not isinstance(reducer, dict) or str(reducer.get("eligibility", "")) != "whole-source-lane":
+        return reduced_lane
+    owner_slice = [path for path in changed_paths if _changed_path_matches_proof_lane(changed_path=path, lane_id=matched_lane)]
+    if any(_docs_only_path_reduction_lane(changed_path=path, matched_lane=matched_lane) is None for path in owner_slice):
+        return None
+    return reduced_lane
 
 
 def _changed_paths_matching_contract_path_match(*, changed_paths: list[str], path_match: dict[str, Any]) -> list[str]:

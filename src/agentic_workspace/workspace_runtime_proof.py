@@ -87,6 +87,7 @@ from agentic_workspace.workspace_runtime_core import (
     _dedupe,
     _defaults_payload,
     _direct_cli_edit_review_for_changed_paths,
+    _docs_only_path_reduction_lane,
     _docs_only_reduction_lane,
     _guidance_with_cli_invoke,
     _host_repo_learning_posture_payload,
@@ -102,6 +103,7 @@ from agentic_workspace.workspace_runtime_core import (
     _make_targets_without_negative_routes,
     _makefile_targets,
     _manual_verification_templates_for_intents,
+    _matching_proof_rules_for_path,
     _missing_repo_path_references_in_command,
     _ordered_module_names,
     _package_json_scripts,
@@ -5413,35 +5415,48 @@ def _proof_narrowness_payload(
 
 
 def _changed_test_owner_route(*, lane_id: str, commands: list[str], changed_paths: list[str]) -> tuple[list[str], dict[str, Any] | None]:
-    """Replace a package-wide Planning test with co-changed stable test owners."""
+    """Replace a broad lane test with co-changed stable test owners."""
 
-    if lane_id not in {"planning_package", "planning_package_behavior"}:
+    if lane_id not in {"planning_package", "planning_package_behavior", "workspace_cli"}:
         return commands, None
-    planning_paths = [path for path in changed_paths if path.startswith("packages/planning/")]
-    if not planning_paths:
+    is_workspace = lane_id == "workspace_cli"
+    lane_paths = (
+        [path for path in changed_paths if path.startswith(("src/agentic_workspace/", "tests/", "scripts/")) or path == "pyproject.toml"]
+        if is_workspace
+        else [path for path in changed_paths if path.startswith("packages/planning/")]
+    )
+    if not lane_paths:
         return commands, None
     owner_paths = sorted(
         path
-        for path in planning_paths
-        if path.startswith("packages/planning/tests/") and Path(path).name.startswith("test_") and path.endswith(".py")
+        for path in lane_paths
+        if path.startswith("tests/" if is_workspace else "packages/planning/tests/")
+        and Path(path).name.startswith("test_")
+        and path.endswith(".py")
     )
+    fallback_command = "make test-workspace" if is_workspace else "make test-planning"
     if not owner_paths:
         return commands, {
             "kind": "changed-test-owner-route/v1",
             "status": "full-package-fallback",
             "owner_paths": [],
-            "fallback_command": "make test-planning",
-            "reason": "no stable changed Planning test owner was supplied for the changed package scope",
+            "fallback_command": fallback_command,
+            "reason": f"no stable changed {'Workspace' if is_workspace else 'Planning'} test owner was supplied for the changed scope",
         }
 
     focused_test_command = f"uv run pytest {shlex.join(owner_paths)} -q"
-    narrowed_commands = [focused_test_command if command == "make test-planning" else command for command in commands]
-    narrowed_commands.extend(["make lint-planning", "make typecheck-planning"])
+    narrowed_commands = [focused_test_command if command == fallback_command else command for command in commands]
+    narrowed_commands.extend(
+        ["make lint-workspace", "make typecheck"] if is_workspace else ["make lint-planning", "make typecheck-planning"]
+    )
     generated_contract_paths = [
         path
-        for path in planning_paths
-        if path.startswith("packages/planning/src/repo_planning_bootstrap/contracts/operations/")
-        or path == "packages/planning/src/repo_planning_bootstrap/runtime_projection.py"
+        for path in lane_paths
+        if (not is_workspace)
+        and (
+            path.startswith("packages/planning/src/repo_planning_bootstrap/contracts/operations/")
+            or path == "packages/planning/src/repo_planning_bootstrap/runtime_projection.py"
+        )
     ]
     if generated_contract_paths:
         narrowed_commands.extend(
@@ -5454,9 +5469,9 @@ def _changed_test_owner_route(*, lane_id: str, commands: list[str], changed_path
         "kind": "changed-test-owner-route/v1",
         "status": "focused-owner-selected",
         "owner_paths": owner_paths,
-        "fallback_command": "make test-planning",
+        "fallback_command": fallback_command,
         "generated_contract_paths": generated_contract_paths,
-        "reason": "co-changed Planning test files are the stable behavior evidence owners",
+        "reason": f"co-changed {'Workspace' if is_workspace else 'Planning'} test files are the stable behavior evidence owners",
     }
 
 
@@ -5751,6 +5766,7 @@ def _route_refinement_required_payload(
                 and str(lane["focused_route_reduction"].get("status", "")) == broad_refinement_reduction
             )
         )
+        and str(_as_dict(lane.get("changed_test_owner_route")).get("status", "")) != "focused-owner-selected"
     ]
     status = (
         "required"
@@ -8224,10 +8240,14 @@ def _proof_selection_for_changed_paths(
 
     selected_ids: list[str] = []
     routing_reductions: list[dict[str, str]] = []
+    routing_compositions: list[dict[str, Any]] = []
+    lane_matched_paths: dict[str, list[str]] = {}
 
-    def _select(lane_id: str) -> None:
+    def _select(lane_id: str, *, matched_path: str | None = None) -> None:
         if lane_id not in selected_ids:
             selected_ids.append(lane_id)
+        if matched_path and matched_path not in lane_matched_paths.setdefault(lane_id, []):
+            lane_matched_paths[lane_id].append(matched_path)
 
     def generated_command_package_scope() -> str | None:
         has_python = any(
@@ -8264,12 +8284,20 @@ def _proof_selection_for_changed_paths(
 
     for changed_path in changed_paths:
         matched_rule = False
-        for rule in _PROOF_SELECTION_RULES["rules"]:
+        for rule in _matching_proof_rules_for_path(changed_path=changed_path)[:1]:
             exact_matches = set(rule.get("exact", []))
             prefixes = tuple(rule.get("prefixes", []))
-            if changed_path in exact_matches or changed_path.startswith(prefixes):
+            if changed_path in exact_matches or (bool(prefixes) and changed_path.startswith(prefixes)):
                 matched_lane = str(rule["lane"])
-                selected_lane = _docs_only_reduction_lane(changed_path=changed_path, matched_lane=matched_lane) or matched_lane
+                path_reduction_lane = _docs_only_path_reduction_lane(changed_path=changed_path, matched_lane=matched_lane)
+                selected_lane = (
+                    _docs_only_reduction_lane(
+                        changed_path=changed_path,
+                        matched_lane=matched_lane,
+                        changed_paths=changed_paths,
+                    )
+                    or matched_lane
+                )
                 if selected_lane != matched_lane:
                     routing_reductions.append(
                         {
@@ -8279,17 +8307,38 @@ def _proof_selection_for_changed_paths(
                             "reason": str(_PROOF_SELECTION_RULES.get("docs_only_reducer", {}).get("rule", "")),
                         }
                     )
-                _select(selected_lane)
+                elif path_reduction_lane is not None:
+                    _select(path_reduction_lane, matched_path=changed_path)
+                    routing_compositions.append(
+                        {
+                            "paths": [changed_path],
+                            "primary_lane": matched_lane,
+                            "complementary_lanes": [path_reduction_lane],
+                            "reason": "Docs review complements executable proof because the matched source lane is not documentation-only.",
+                        }
+                    )
+                _select(selected_lane, matched_path=changed_path)
                 matched_rule = True
                 break
         if not matched_rule:
-            _select(str(_PROOF_SELECTION_RULES["fallback_lane"]))
+            _select(str(_PROOF_SELECTION_RULES["fallback_lane"]), matched_path=changed_path)
         cli_authority_classification = _cli_authority_classification_for_path(changed_path)
         if cli_authority_lane and cli_authority_classification:
-            _select(str(cli_authority_lane))
+            _select(str(cli_authority_lane), matched_path=changed_path)
             if cli_authority_classification.get("id") in {"root-workspace-cli-runtime", "package-cli-runtime"}:
-                _select("generated_command_packages")
+                _select("generated_command_packages", matched_path=changed_path)
     selected_lanes = [copy.deepcopy(_lane(lane_id)) for lane_id in selected_ids]
+    behavior_lane_present = any(str(lane.get("proof_kind", "targeted-test")) != "diff-review" for lane in selected_lanes)
+    for lane in selected_lanes:
+        lane_id = str(lane.get("id", ""))
+        lane["matched_paths"] = list(lane_matched_paths.get(lane_id, []))
+        lane["obligation_role"] = (
+            "complementary-review"
+            if str(lane.get("proof_kind", "targeted-test")) == "diff-review" and behavior_lane_present
+            else "primary-review"
+            if str(lane.get("proof_kind", "targeted-test")) == "diff-review"
+            else "primary-executable"
+        )
     generated_scope = generated_command_package_scope()
     if generated_scope == "python-only":
         for lane in selected_lanes:
@@ -8554,12 +8603,16 @@ def _proof_selection_for_changed_paths(
     generic_broad_commands = {
         str(command).strip()
         for lane in selected_lanes
-        if not str(lane.get("id", "")).startswith("domain:") and str(lane.get("id", "")) in generic_broad_lane_ids
+        if not str(lane.get("id", "")).startswith("domain:")
+        and str(lane.get("id", "")) in generic_broad_lane_ids
+        and str(_as_dict(lane.get("changed_test_owner_route")).get("status", "")) != "focused-owner-selected"
         for command in _list_payload(lane.get("enough_proof"))
         if str(command).strip()
     }
     generic_broad_escalation_scope = any(
-        str(lane.get("id", "")) in {"cli_authority", "generated_command_packages"} for lane in selected_lanes
+        str(lane.get("id", "")) in {"cli_authority", "generated_command_packages"}
+        and str(_as_dict(lane.get("changed_test_owner_route")).get("status", "")) != "focused-owner-selected"
+        for lane in selected_lanes
     )
     generic_broad_without_explicit_escalation = (
         not explicit_broad_lane_selected and generic_broad_escalation_scope and bool(generic_broad_commands)
@@ -9467,6 +9520,7 @@ def _proof_selection_for_changed_paths(
                 **({"applies_because": lane["applies_because"]} if lane.get("applies_because") else {}),
                 **({"review_aids": lane["review_aids"]} if lane.get("review_aids") else {}),
                 **({"matched_paths": lane["matched_paths"]} if lane.get("matched_paths") else {}),
+                **({"obligation_role": lane["obligation_role"]} if lane.get("obligation_role") else {}),
                 **({"escalate_when": lane["escalate_when"]} if lane.get("escalate_when") else {}),
                 **({"coverage": lane["coverage"]} if lane.get("coverage") else {}),
                 **({"changed_test_owner_route": lane["changed_test_owner_route"]} if lane.get("changed_test_owner_route") else {}),
@@ -9503,6 +9557,8 @@ def _proof_selection_for_changed_paths(
     }
     if routing_reductions:
         proof_selection["routing_reductions"] = routing_reductions
+    if routing_compositions:
+        proof_selection["routing_compositions"] = routing_compositions
     if generated_cli_freshness is not None:
         proof_selection["generated_cli_freshness"] = generated_cli_freshness
     if release_proof_profile is not None:
