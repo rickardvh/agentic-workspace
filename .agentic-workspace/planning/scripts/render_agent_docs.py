@@ -43,6 +43,8 @@ def render_quickstart(_manifest: dict) -> str:
     lines.append("- Run `uv run agentic-workspace summary --format json` only when active planning or roadmap state matters.")
     lines.append("- Run `uv run agentic-workspace preflight --format json` only when you need bundled takeover or recovery context.")
     lines.append("- Run `uv run agentic-workspace report --target . --format json` when you need health, warnings, or section hints.")
+    lines.append("- For nontrivial GitHub issue work, follow `tools/skills/github-issue-shaping/SKILL.md`, then `tools/skills/github-issue-creation/SKILL.md` only when creation is required.")
+    lines.append("- For PR review or recheck, follow `tools/skills/pr-review-recheck/SKILL.md`.")
     lines.append("")
     lines.append("## Constraints")
     lines.append("")
@@ -71,6 +73,8 @@ def render_routing(_manifest: dict) -> str:
         'otherwise run `uv run agentic-workspace start --task "<task>" --format json`.'
     )
     lines.append("- Run `uv run agentic-workspace summary --format json` when active planning state matters.")
+    lines.append("- Route issue shaping to `tools/skills/github-issue-shaping/SKILL.md` before issue creation.")
+    lines.append("- Route PR review and recheck to `tools/skills/pr-review-recheck/SKILL.md`.")
     lines.append("")
     lines.append("## Boundary")
     lines.append("")

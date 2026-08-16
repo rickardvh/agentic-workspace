@@ -13,32 +13,44 @@ Use this repo-owned skill when refining an existing issue, turning a finding int
    - what is missing, mis-shaped, noisy, unsafe, or too costly today;
    - why it matters beyond the local symptom;
    - who owns the final intended outcome.
-2. Choose the issue shape:
+2. Run a bounded assumption audit before committing the issue shape:
+   - separate directly observed evidence from inferred diagnosis, intended invariant, and proposed mechanism;
+   - treat an example or reproduction as evidence unless the issue justifies it as a durable contract fixture;
+   - name the owning domain, portability boundary (generic package versus repo/provider/dogfooding case), and any intentionally agent- or human-owned judgment;
+   - ask whether the mechanism creates avoidable framework, registry, durable-state, or event-ledger growth when an existing owner could satisfy the outcome more cheaply;
+   - test whether the invariant is feasible and no stronger or more absolute than the actual need;
+   - remove the proposed mechanism from the wording and verify that the problem, owner, and acceptance boundary still make sense.
+3. Choose the issue shape:
    - `bug` for correctness, reliability, regression, or broken behavior;
    - `direction` for product direction, architecture, lanes, or bounded planning slices;
    - `review` for dogfooding friction, trust gaps, continuation gaps, and review findings.
-3. Decide hierarchy:
+4. Decide hierarchy:
    - parent direction / lane;
    - child slice / bounded follow-on;
    - cross-cutting proposal;
    - no new issue, only a comment or direct fix.
-4. Preserve closure boundaries:
+5. Preserve closure boundaries:
    - intended final outcome;
    - observable acceptance criteria;
    - non-solutions;
    - evidence required for final completion;
    - completion rule for whether a PR may close the issue.
-5. If the issue depends on future or repeated evidence, shape the proof/evaluation split explicitly:
+6. If the issue depends on future or repeated evidence, shape the proof/evaluation split explicitly:
    - present-tense implementation proof remains required for deterministic behavior that should work now;
    - a longitudinal evaluation must name owner, criteria, evidence sources, report sinks, collection policy, and conclusion policy;
    - known defects, vague "collect more evidence" text, missing present proof, or unimplemented behavior are non-solutions and must not authorize closure;
    - the completion rule may reference a longitudinal evaluation only when the ordinary closure authority has a valid active evaluation owner and fresh/current result, or when the issue is explicitly only about creating that evaluation definition.
-6. Keep useful slices honest:
+7. Keep useful slices honest:
    - name a useful first slice only if it does not imply final closure;
    - route residual intent to a clear owner;
    - avoid creating follow-up issues as a substitute for completing the stated outcome.
-7. If creating the issue, hand off to `github-issue-creation` so the template, labels, and refresh/reconcile steps are preserved.
-8. If updating an issue, preserve the existing template headings unless a human asks to reshape the issue format.
+8. If creating the issue, hand off to `github-issue-creation` so the template, labels, and refresh/reconcile steps are preserved.
+9. If updating an issue, preserve the existing template headings unless a human asks to reshape the issue format.
+
+## Assumption Audit Examples
+
+- Over-assumed issue: a one-off static comparison reveals missing relevant guidance. Keep the comparison as evidence and require the material effect to reach the existing canonical decision; do not require a permanent comparison manifest or new instruction registry.
+- Owner-boundary issue: Memory describes a repeatable Planning trap. Require Planning to fix its deterministic relation resolver; let Memory warn while that defect exists, then re-evaluate the note instead of making Memory the resolver.
 
 ## Output
 
@@ -64,4 +76,5 @@ Report the shaped issue in this form:
 - Do not make a parent direction issue closable by a single useful slice unless final satisfaction is truly delivered.
 - Do not use longitudinal evaluation language to relabel unfinished implementation, known defects, missing present-tense proof, or vague future evidence as closure-ready.
 - Do not preserve history for its own sake; preserve only future-useful intent, proof, and continuation context.
+- Do not generalize repo/provider/dogfooding evidence into package policy without an explicit portability argument.
 - Keep repo-specific maintainer expectations here, not in shipped installed AW skills.
