@@ -8,6 +8,8 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from agentic_workspace.proof_receipt_admission import proof_receipt_admission
+
 
 def canonical_planning_delegation(record: dict[str, Any]) -> dict[str, Any]:
     relationships = record.get("relationships")
@@ -60,7 +62,59 @@ def memory_effectiveness_operation(
         return _compact_memory_decision_packet(packet or {})
     if operation == "canonical-planning-delegation":
         return canonical_planning_delegation(packet or {})
+    if operation == "prove-stronger-owner-resolution":
+        return prove_stronger_owner_resolution(packet or {})
     raise ValueError(f"unsupported Memory effectiveness operation: {operation}")
+
+
+def prove_stronger_owner_resolution(packet: dict[str, Any]) -> dict[str, Any]:
+    """Bind one durable fact to an admitted stronger-owner decision and proof receipt."""
+
+    contribution = _as_dict(packet.get("contribution"))
+    owner_surface = _as_dict(packet.get("owner_surface"))
+    receipt = _as_dict(packet.get("proof_receipt"))
+    selected_identity = _as_dict(owner_surface.get("selected_owner_identity"))
+    owner_ref = str(owner_surface.get("selected_owner") or selected_identity.get("ref") or "")
+    owner_revision = str(selected_identity.get("revision") or "")
+    expected_plan_id = Path(owner_ref).name.removesuffix(".plan.json") if owner_ref else ""
+    admission = proof_receipt_admission(receipt)
+    affected_decision = "planning-route" if owner_surface.get("kind") == "agentic-planning/route-decision/v1" else ""
+    checks = {
+        "owner_surface_current": owner_surface.get("task_relation") == "continues-selected-owner"
+        and owner_surface.get("owner_posture") == "current"
+        and owner_surface.get("required_transition") == "none",
+        "owner_revision_bound": bool(owner_revision) and receipt.get("subject_revision") == owner_revision,
+        "owner_identity_bound": bool(expected_plan_id) and receipt.get("plan_id") == expected_plan_id,
+        "affected_decision_bound": affected_decision in _as_list(contribution.get("affected_decisions")),
+        "proof_admitted": admission.get("proof_sufficient") is True,
+    }
+    status = "passed" if all(checks.values()) else "incomplete"
+    identity = {
+        "fact_id": str(contribution.get("fact_id") or ""),
+        "fact_revision": str(contribution.get("fact_revision") or ""),
+        "owner": "planning-route-decision" if affected_decision else "",
+        "owner_ref": owner_ref,
+        "owner_revision": owner_revision,
+        "affected_decision": affected_decision,
+        "proof_command": str(receipt.get("command") or ""),
+    }
+    return {
+        "kind": "agentic-memory/stronger-owner-resolution/v1",
+        "status": status,
+        **identity,
+        "resolution_id": f"memory-resolution:{_digest(identity)[:16]}",
+        "checks": checks,
+        "proof_receipt_admission": {
+            "status": admission.get("status"),
+            "result_class": admission.get("result_class"),
+            "reason": admission.get("reason"),
+        },
+        "evidence_refs": [
+            owner_ref,
+            *[str(path) for path in _as_list(receipt.get("changed_paths")) if str(path)],
+        ],
+        "rule": "Memory may change shape only when an admitted proof receipt is revision-bound to the current stronger-owner decision that absorbed the same fact.",
+    }
 
 
 def _fact_id_from_route(route: dict[str, Any]) -> str:
@@ -372,17 +426,42 @@ def _lifecycle_review(*, evaluation: dict[str, Any], contribution: dict[str, Any
         "resolved_by_stronger_owner",
     }:
         return {}
-    proof_passed = str(outcome.get("stronger_owner_proof_status") or "") in {"passed", "satisfied"}
+    resolution = _as_dict(outcome.get("stronger_owner_resolution"))
+    resolution_identity = {
+        key: resolution.get(key)
+        for key in ("fact_id", "fact_revision", "owner", "owner_ref", "owner_revision", "affected_decision", "proof_command")
+    }
+    resolution_checks = _as_dict(resolution.get("checks"))
+    resolution_admission = _as_dict(resolution.get("proof_receipt_admission"))
+    owner = str(resolution.get("owner") or "")
+    promotion_target = str(lifecycle.get("promotion_target") or outcome.get("product_owner") or "")
+    proof_passed = (
+        resolution.get("kind") == "agentic-memory/stronger-owner-resolution/v1"
+        and resolution.get("status") == "passed"
+        and bool(resolution_checks)
+        and all(value is True for value in resolution_checks.values())
+        and resolution_admission.get("status") == "admitted"
+        and resolution_admission.get("result_class") == "passed"
+        and resolution.get("resolution_id") == f"memory-resolution:{_digest(resolution_identity)[:16]}"
+        and resolution.get("fact_id") == contribution.get("fact_id")
+        and resolution.get("fact_revision") == contribution.get("fact_revision")
+        and resolution.get("affected_decision") in _as_list(contribution.get("affected_decisions"))
+        and bool(owner)
+        and (owner == contribution.get("owner") or owner in promotion_target)
+        and bool(_as_list(resolution.get("evidence_refs")))
+    )
     requested = str(lifecycle.get("retention_after_promotion") or "retain")
     disposition = requested if evaluation.get("classification") == "resolved_by_stronger_owner" and proof_passed else "retain"
     return {
         "kind": "agentic-memory/lifecycle-review/v1",
         "fact_id": str(contribution.get("fact_id") or ""),
         "fact_revision": str(contribution.get("fact_revision") or ""),
-        "promotion_target": str(lifecycle.get("promotion_target") or outcome.get("product_owner") or ""),
+        "promotion_target": promotion_target,
         "promotion_proof_status": "passed" if proof_passed else "required",
+        "stronger_owner_resolution_id": str(resolution.get("resolution_id") or ""),
         "disposition": disposition,
         "requested_post_promotion_shape": requested,
+        "retention_basis": "declared-durable-after-remediation" if requested == "retain" else "stronger-owner-proof-required",
         "status": "ready" if proof_passed else "pending-stronger-owner-proof",
-        "rule": "A stronger owner changes Memory shape only after its own proof passes.",
+        "rule": "A stronger owner changes Memory shape only after an admitted, revision-bound resolution proves it absorbed this exact fact; declared durable rationale remains retained.",
     }

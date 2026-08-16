@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -10,6 +11,7 @@ from agentic_workspace.memory_effectiveness import (
     project_memory_use,
 )
 from agentic_workspace.operating_decision import compile_operating_decision
+from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload, _task_switch_reconciliation_payload
 from agentic_workspace.workspace_runtime_primitives import _memory_consult_payload, _memory_decision_packet_payload
 
 
@@ -37,23 +39,74 @@ preferred_remediation = "repair the structured route classifier"
 elimination_target = "selected plan blocks its next owned task"
 retention_after_promotion = "stub"
 status = "{status}"
+
+[durable_facts."selected-owner-rationale"]
+summary = "Keep the rationale for structured selected-owner identity because reconstructing it requires expensive failure analysis."
+owner = "planning-route-decision"
+authority_class = "advisory"
+route_keys = ["planning"]
+touched_surfaces = ["planning"]
+evidence = ["planning-contract.md"]
+affected_decisions = ["planning-route"]
+note_ref = "recurring-failures.md#selected-owner-rationale"
+promotion = "Keep after the related route implementation is repaired because the rationale is not mechanically replaceable."
+demotion_or_expiry = "Retire only if a stronger owner makes the rationale cheap to rediscover."
+promotion_target = "planning-route-decision"
+promotion_trigger = "related route implementation is repaired"
+preferred_remediation = "preserve the rationale beside the structured contract"
+elimination_target = "expensive reconstruction of selected-owner identity rationale"
+retention_after_promotion = "retain"
+status = "{status}"
 ''',
         encoding="utf-8",
     )
 
 
-def _route(*, durable: bool = True) -> dict[str, str]:
+def _route(*, durable: bool = True, fact_id: str = "selected-plan-owned-next-task") -> dict[str, str]:
     return {
-        "path": ".agentic-workspace/memory/repo/manifest.toml#durable_facts.selected-plan-owned-next-task"
+        "path": f".agentic-workspace/memory/repo/manifest.toml#durable_facts.{fact_id}"
         if durable
         else ".agentic-workspace/memory/repo/mistakes/recurring-failures.md",
         "match_source": "durable-fact" if durable else "routes_from",
     }
 
 
-def _projected(root: Path) -> dict:
+def _projected(root: Path, *, fact_id: str = "selected-plan-owned-next-task") -> dict:
     _manifest(root)
-    return project_memory_use(target_root=root, route_matches=[_route()])
+    return project_memory_use(target_root=root, route_matches=[_route(fact_id=fact_id)])
+
+
+def _proved_planning_resolution(contribution: dict, *, proof: bool = True) -> dict:
+    planning_revision = {"status": "clean", "revision_id": "planning-route-r2"}
+    switch = _task_switch_reconciliation_payload(
+        active_planning_present=True,
+        active_plan_reliance={"status": "not-needed-for-current-task"},
+        active_summary={
+            "active_execplan": ".agentic-workspace/planning/execplans/issue-2570-memory-effectiveness.plan.json",
+            "active_item_id": "issue-2570-memory-effectiveness",
+            "planning_status": "active",
+        },
+        task_text="Continue #2570 Memory effectiveness",
+        config=SimpleNamespace(cli_invoke="agentic-workspace"),
+        planning_revision=planning_revision,
+    )
+    route_decision = _planning_route_decision_payload(switch, planning_revision=planning_revision)
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": "pytest -q tests/test_workspace_cli.py -k selected_owner",
+        "result": "passed" if proof else "failed",
+        "recorded_at": "2026-08-16T13:00:00+00:00",
+        "changed_paths": [
+            "src/agentic_workspace/workspace_runtime_planning.py",
+            "tests/test_workspace_cli.py",
+        ],
+        "plan_id": "issue-2570-memory-effectiveness",
+        "subject_revision": route_decision["selected_owner_identity"]["revision"],
+    }
+    return memory_effectiveness_operation(
+        operation="prove-stronger-owner-resolution",
+        packet={"contribution": contribution, "owner_surface": route_decision, "proof_receipt": receipt},
+    )
 
 
 def test_memory_use_distinguishes_no_match_candidate_and_projected(tmp_path: Path) -> None:
@@ -243,10 +296,87 @@ def test_stronger_owner_requires_proof_before_memory_stub(tmp_path: Path) -> Non
         "evidence_authority": "verification-receipt",
     }
     pending = compile_memory_effectiveness(contributions=[contribution], outcomes=[base])
-    ready = compile_memory_effectiveness(contributions=[contribution], outcomes=[{**base, "stronger_owner_proof_status": "passed"}])
+    synthetic_flag = compile_memory_effectiveness(
+        contributions=[contribution], outcomes=[{**base, "stronger_owner_proof_status": "passed"}]
+    )
     assert pending["lifecycle_reviews"][0]["disposition"] == "retain"
-    assert ready["lifecycle_reviews"][0]["disposition"] == "stub"
-    assert ready["lifecycle_reviews"][0]["status"] == "ready"
+    assert synthetic_flag["lifecycle_reviews"][0]["disposition"] == "retain"
+    assert synthetic_flag["lifecycle_reviews"][0]["status"] == "pending-stronger-owner-proof"
+
+
+def test_selected_plan_recurrence_closes_through_real_planning_owner_and_proof() -> None:
+    root = Path(__file__).resolve().parents[1]
+    contribution = _memory_consult_payload(
+        target_root=root,
+        structured_surfaces=["planning"],
+        compact=True,
+    )["memory_use"]["contributions"][0]
+    initial = compile_operating_decision(inputs={"revisions": {"planning": "r1"}, "memory_contributions": [contribution]})
+    failure = {
+        "fact_id": contribution["fact_id"],
+        "fact_revision": contribution["fact_revision"],
+        "decision_id": initial["decision_id"],
+        "failure_identity": "selected-owner-route-recurrence",
+        "outcome": "product-defect",
+        "evidence_authority": "planning-route-receipt",
+        "product_owner": "planning-route-decision",
+    }
+    failed = compile_operating_decision(
+        inputs={
+            "revisions": {"planning": "r1"},
+            "memory_contributions": [contribution],
+            "memory_outcomes": [failure],
+        }
+    )
+    assert failed["memory_effectiveness"]["evaluations"][0]["decision_id"] == initial["decision_id"]
+    assert failed["memory_effectiveness"]["evaluations"][0]["classification"] == "product_or_infrastructure_defect"
+    assert failed["context_consequences"][0]["owner"] == "planning-route-decision"
+    assert failed["memory_effectiveness"]["lifecycle_reviews"][0]["disposition"] == "retain"
+
+    resolution = _proved_planning_resolution(contribution)
+    assert resolution["status"] == "passed"
+    resolved = compile_operating_decision(
+        inputs={
+            "revisions": {"planning": "r2"},
+            "memory_contributions": [contribution],
+            "memory_outcomes": [
+                {
+                    **failure,
+                    "outcome": "resolved-by-stronger-owner",
+                    "evidence_authority": "planning-route-receipt",
+                    "stronger_owner_resolution": resolution,
+                }
+            ],
+        }
+    )
+    review = resolved["memory_effectiveness"]["lifecycle_reviews"][0]
+    assert review["stronger_owner_resolution_id"] == resolution["resolution_id"]
+    assert review["status"] == "ready"
+    assert review["disposition"] == "stub"
+
+
+def test_durable_advisory_rationale_remains_after_related_owner_fix(tmp_path: Path) -> None:
+    contribution = _projected(tmp_path, fact_id="selected-owner-rationale")["contributions"][0]
+    resolution = _proved_planning_resolution(contribution)
+    feedback = compile_memory_effectiveness(
+        contributions=[contribution],
+        outcomes=[
+            {
+                "fact_id": contribution["fact_id"],
+                "fact_revision": contribution["fact_revision"],
+                "decision_id": "operating-decision:rationale",
+                "outcome": "resolved-by-stronger-owner",
+                "evidence_authority": "planning-route-receipt",
+                "stronger_owner_resolution": resolution,
+            }
+        ],
+    )
+    review = feedback["lifecycle_reviews"][0]
+    assert resolution["status"] == "passed"
+    assert review["status"] == "ready"
+    assert review["requested_post_promotion_shape"] == "retain"
+    assert review["disposition"] == "retain"
+    assert review["retention_basis"] == "declared-durable-after-remediation"
 
 
 def test_same_memory_input_has_same_canonical_decision_identity(tmp_path: Path) -> None:

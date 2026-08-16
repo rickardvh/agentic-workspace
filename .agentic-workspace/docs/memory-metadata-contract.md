@@ -68,6 +68,8 @@ Compact durable facts live under `[durable_facts."<id>"]`. Use them only when a 
 | `retention_after_promotion` | string | Post-proof shape: `retain`, `shrink`, `stub`, or `delete`. |
 | `status` | string | `active`, `candidate`, or `deprecated`. |
 
+Post-promotion shape is not selected from a caller-supplied pass flag. A non-`retain` disposition requires a typed stronger-owner resolution that binds the exact fact and revision to the current owner decision plus an admitted, passing `agentic-workspace/proof-receipt/v1`. `retention_after_promotion = "retain"` remains meaningful after remediation: use it when the implementation fix does not make the durable rationale cheap or mechanically equivalent to rediscover.
+
 ## Validation Contract
 
 `agentic-workspace doctor --target <repo> --modules memory` validates `manifest.toml` as a typed TOML contract. Invalid TOML, malformed tables, scalar values where arrays are required, non-boolean booleans, invalid enum values, incomplete improvement-signal lifecycle metadata, and incomplete durable facts produce `memory-manifest` diagnostics.

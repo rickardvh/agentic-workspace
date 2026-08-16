@@ -379,6 +379,7 @@ The installed `WORKFLOW.md` under `.agentic-workspace/memory/` is the full refer
 - **Keep the working set small.** Memory saves tokens only when the notes you load are cheaper than rediscovering the same facts from code.
 - **Promote when stable.** If a note matures into general guidance, move it into canonical docs and leave memory as a stub.
 - **Do not make memory the default answer to repo complexity.** Durable truth may stay or grow when justified, but improvement-signal notes should push agents toward clearer docs, safer tests, stronger tooling, or simpler structure when those fixes are feasible.
+- **Retire only after proven absorption.** Shrinking, stubbing, or deleting a fact requires a revision-bound stronger-owner decision and an admitted passing proof receipt for that exact fact. A related implementation fix does not retire rationale declared `retention_after_promotion = "retain"` when it remains expensive to reconstruct.
 
 Starter note templates are part of that installed contract too. Use `.agentic-workspace/memory/repo/templates/memory-note.template.md`, `.agentic-workspace/memory/repo/templates/invariant.template.md`, and `.agentic-workspace/memory/repo/templates/runbook.template.md` when you add the first real repo-specific notes for those classes.
 
