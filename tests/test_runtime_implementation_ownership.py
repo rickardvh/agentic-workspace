@@ -48,6 +48,14 @@ def test_current_runtime_has_one_implementation_owner() -> None:
     assert working_set["after"]["runtime_owner_files"] < working_set["before"]["runtime_owner_files"]
     assert working_set["after"]["shared_symbols"] < working_set["before"]["shared_symbols"]
     assert working_set["after"]["largest_audited_segment_lines"] <= 320
+    extraction = report["metrics"]["candidate_extraction"]
+    assert extraction["before"]["authority_owner_files"] == 2
+    assert extraction["after"] == {
+        "authority_owner_files": 1,
+        "facade_imported_owner_symbols": 7,
+        "facade_alternate_assembler_symbols": 0,
+    }
+    assert extraction["alternate_assembler_symbols"] == []
 
     policy = json.loads((ROOT / "src/agentic_workspace/contracts/runtime_implementation_ownership.json").read_text(encoding="utf-8"))
     decompositions = policy["review_scale"]["representative_decompositions"]
@@ -148,3 +156,21 @@ def test_hotspot_file_ratchets_reject_line_symbol_and_fan_out_growth(tmp_path: P
     assert any("lines grew" in detail for detail in details)
     assert any("top_level_symbols grew" in detail for detail in details)
     assert any("direct_policy_fan_out grew" in detail for detail in details)
+
+
+def test_extracted_authority_cannot_regrow_an_alternate_facade_assembler(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    facade = root / "src/agentic_workspace/workspace_runtime_core.py"
+    facade.write_text(
+        facade.read_text(encoding="utf-8")
+        + "\ndef alternate_decision_assembler():\n"
+        + "    return {'decision_id': 'alternate', 'projection_input_revision': 'alternate'}\n",
+        encoding="utf-8",
+    )
+
+    report = _checker().ownership_report(root)
+
+    assert report["status"] == "blocked"
+    assert any(
+        item["control"] == "candidate-extraction-proof" and "alternate_decision_assembler" in item["detail"] for item in report["findings"]
+    )

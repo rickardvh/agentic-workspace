@@ -31,6 +31,31 @@
         "facade": "src/agentic_workspace/workspace_runtime_core.py",
         "owner_aligned_tests": ["tests/test_operating_decision.py", "tests/test_workspace_projection_reuse.py"],
         "selection_basis": {"authority_clarity": "high", "churn": "high", "fan_out": "high", "procedure_size": "high", "review_working_set_cost": "high"},
+        "extraction_proof": {
+          "baseline_ref": "migration_baseline.ast_identical_shared_bodies",
+          "owner_module": "agentic_workspace.operating_decision",
+          "before": {"authority_owner_files": 2, "shared_authority_symbols": 967, "facade_alternate_assembler_symbols": 967},
+          "after": {"authority_owner_files": 1, "facade_imported_owner_symbols": 7, "facade_alternate_assembler_symbols": 0},
+          "facade_imports": [
+            "admit_projection_surface_decision_input",
+            "attach_projection_surface_decision_input_consumption",
+            "consume_projection_surface_decision_input",
+            "finalize_projection_surface_operating_decision",
+            "materialize_projection_under_decision_input",
+            "project_startup_claim_effect_authority",
+            "projection_surface_builder_inputs"
+          ],
+          "decision_shaped_fields": [
+            "admitted_input_revision",
+            "decision_id",
+            "producer_function",
+            "producer_module",
+            "projection_input_id",
+            "projection_input_revision",
+            "projection_posture_revision"
+          ],
+          "alternate_assembler_minimum_fields": 2
+        },
         "status": "extracted"
       },
       {
