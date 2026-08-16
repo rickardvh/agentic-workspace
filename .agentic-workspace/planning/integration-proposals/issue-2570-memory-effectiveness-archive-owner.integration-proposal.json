@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "issue-2570-memory-effectiveness-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "issue-2570-memory-effectiveness",
@@ -26,10 +26,10 @@
     "existing consequence ownership",
     "proof-bound lifecycle review"
   ],
-  "expected_subject_revision": "4",
-  "expected_planning_revision": "716a237fb94db700",
+  "expected_subject_revision": "1056fb0a97535fba",
+  "expected_planning_revision": "8135d49b6cd59a59",
   "created_at": "2026-08-16T13:07:38.146685Z",
-  "updated_at": "2026-08-16T13:07:38.146685Z",
+  "updated_at": "2026-08-16T16:28:12.208755Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -45,5 +45,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "6379218995a4a1a4"
+  "proposal_revision": "5a13177eccbc382e",
+  "integrated_at": "2026-08-16T16:28:12.208755Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/issue-2570-memory-effectiveness-archive-owner.integration-receipt.json"
 }

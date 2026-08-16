@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve explicit issue-closure authorization when satisfied slice closeout is distilled into retained evidence."

@@ -1,8 +1,8 @@
 {
   "kind": "planning-integration-proposal/v1",
   "id": "open-issues-cli-contract-fix-archive-owner",
-  "status": "pending",
-  "phase": "integration-pending",
+  "status": "integrated",
+  "phase": "integrated-lifecycle-truth",
   "requested_transition": "archive-owner",
   "owner": {
     "id": "open-issues-cli-contract-fix",
@@ -18,9 +18,9 @@
     "integration apply is target-branch authoritative"
   ],
   "expected_subject_revision": "1a3f9b9bc94508e2",
-  "expected_planning_revision": "1bb51761a3fbea10",
+  "expected_planning_revision": "2e9cb50ea4f93946",
   "created_at": "2026-08-16T10:48:39.030065Z",
-  "updated_at": "2026-08-16T10:48:39.030065Z",
+  "updated_at": "2026-08-16T16:26:03.484443Z",
   "authority_boundary": {
     "proposal": "feature-branch declaration",
     "integrated_truth": "integration receipt after apply",
@@ -36,5 +36,7 @@
       "phase": "feature"
     }
   },
-  "proposal_revision": "5726183aabdb458c"
+  "proposal_revision": "8fa8488eaf18ac9c",
+  "integrated_at": "2026-08-16T16:26:03.484443Z",
+  "integration_receipt_ref": ".agentic-workspace/planning/integration-receipts/open-issues-cli-contract-fix-archive-owner.integration-receipt.json"
 }
