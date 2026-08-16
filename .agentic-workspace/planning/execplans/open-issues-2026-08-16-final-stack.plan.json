@@ -4,8 +4,8 @@
   "title": "Close all remaining open issue lanes",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "shaping",
-  "revision": 1,
+  "phase": "review",
+  "revision": 2,
   "intent": {
     "outcome": "Close every currently open GitHub issue through three reviewable stacked lanes: agent and skill guidance, lifecycle evidence, and canonical operating-decision composition.",
     "non_goals": [
@@ -39,8 +39,12 @@
       "owner": "current-work context"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "ready",
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/pull/2596",
+        "https://github.com/rickardvh/agentic-workspace/pull/2600",
+        "https://github.com/rickardvh/agentic-workspace/pull/2601"
+      ]
     },
     "external_posture": {
       "state": "observed",
@@ -59,7 +63,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Finish and prove the #2594/#2599 guidance lane on draft PR #2596, then stack lifecycle evidence and canonical decision composition branches in that order.",
+  "next_action": "Review and merge draft PRs #2596, #2600, and #2601 in stack order, then allow their closing keywords to close the listed issues.",
   "blockers": [
     "None."
   ],
@@ -76,7 +80,11 @@
       "Run operating-decision behavioral integration, relevance, reuse, compatibility, Planning relation, and Memory authority fixtures for lane 3.",
       "Inspect each PR base/head, diff boundary, and live checks after publishing."
     ],
-    "refs": []
+    "refs": [
+      "https://github.com/rickardvh/agentic-workspace/pull/2596",
+      "https://github.com/rickardvh/agentic-workspace/pull/2600",
+      "https://github.com/rickardvh/agentic-workspace/pull/2601"
+    ]
   },
   "continuation": {
     "owner": "none",
