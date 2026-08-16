@@ -201,6 +201,47 @@
       ],
       "recorded_by": "agent",
       "notes": "The compact runner and Make/hook suites own execution identity and retry behavior; proof CLI tests own pre-launch proportional metadata; Verification runtime tests own freshness admission; workspace cost tests own downstream receipt consumption. No existing evidence was pruned."
+    },
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "verification_proof_decision_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "uv run pytest tests/test_chatgpt_review_loop.py tests/test_review_stack_ops.py -q; uv run ruff check tools/chatgpt_review_loop.py tools/review_stack_ops.py tests/test_chatgpt_review_loop.py tests/test_review_stack_ops.py",
+      "changed_paths": [
+        "tests/test_chatgpt_review_loop.py",
+        "tests/test_review_stack_ops.py",
+        "tests/test_workspace_proof_cli.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Issue #2557 adds permanent regression evidence for stopped-watcher exact-head requests, duplicate reuse, stale review races, explicit full-SHA stack declarations, patch and ancestry preservation, exact force-with-lease publication, and bounded partial-write receipts."
+    },
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "test_evidence_owner_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "focused review-loop fixtures and temporary-bare-remote stack integration fixtures",
+      "changed_paths": [
+        "tests/test_chatgpt_review_loop.py",
+        "tests/test_review_stack_ops.py",
+        "tests/test_workspace_proof_cli.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "The review-loop suite owns exact-head reviewer request lifecycle; the stack-operations suite owns declaration validation, real Git rewrite equivalence, CAS remote mutation, and PR metadata sequencing. No existing evidence was pruned."
+    },
+    {
+      "requirement_id": "domain:proof_route_authority",
+      "evidence_label": "proof_route_authority_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "inspect .agentic-workspace/config.toml, .agentic-workspace/verification/manifest.toml, docs/maintainer/testing-strategy.md; run the selected focused proof-route and tooling checks",
+      "changed_paths": [
+        ".agentic-workspace/planning/state.toml",
+        ".release/changes/review-stack-operations.toml"
+      ],
+      "recorded_by": "agent",
+      "notes": "The selected route is the existing repo-owned proof_route_authority maintenance lane composed with test_evidence_decision. This lane does not add a parallel proof matrix or change route authority; focused proof-router, contract-tooling, structured-inventory, and maintainer-surface checks remain the declared evidence."
     }
   ]
 }

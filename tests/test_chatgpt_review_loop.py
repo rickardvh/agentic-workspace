@@ -2092,6 +2092,96 @@ def test_non_watching_poll_reports_one_shot_exact_head_binding(tmp_path: Path, m
     assert payload["idempotency"] == "existing exact-head state and handled review keys are reused"
 
 
+def test_exact_head_recheck_runs_once_while_watcher_state_is_stopped(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    state(tmp_path, status="stopped")
+
+    def review_once(command, *, cwd, env=None, input_text=""):
+        runner.commands.append(list(command))
+        runner.interactive_inputs.append(input_text)
+        runner.comments.append(
+            {"databaseId": 501, "body": f"No blockers.\n{marker(decision='merge-ready')}", "url": "https://example.test/c/501"}
+        )
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    runner.run_interactive = review_once
+    result = loop.request_exact_head_review(
+        tmp_path,
+        pr=12,
+        head=HEAD_A,
+        runner=runner,
+        codex_command=loop.DEFAULT_CODEX_COMMAND,
+    )
+
+    assert result["status"] == "result-recorded"
+    assert result["review"]["decision"] == "merge-ready"
+    assert loop._load_state(tmp_path, 12)["status"] == "stopped"
+    assert len(runner.interactive_inputs) == 1
+
+    duplicate = loop.request_exact_head_review(
+        tmp_path,
+        pr=12,
+        head=HEAD_A,
+        runner=runner,
+        codex_command=loop.DEFAULT_CODEX_COMMAND,
+    )
+    assert duplicate["status"] == "existing-result"
+    assert len(runner.interactive_inputs) == 1
+
+
+def test_exact_head_recheck_rejects_stale_request_with_current_action(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    runner.pr_head = HEAD_B
+
+    result = loop.request_exact_head_review(
+        tmp_path,
+        pr=12,
+        head=HEAD_A,
+        runner=runner,
+        codex_command=loop.DEFAULT_CODEX_COMMAND,
+    )
+
+    assert result["status"] == "stale-request"
+    assert result["current_head"] == HEAD_B
+    assert f"--head {HEAD_B}" in result["next_action"]
+    assert runner.interactive_inputs == []
+
+
+def test_exact_head_recheck_classifies_review_race_and_points_to_new_head(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    runner.pr_heads = [HEAD_A, HEAD_B]
+    runner.run_interactive = lambda command, **kwargs: subprocess.CompletedProcess(command, 0, "", "")
+
+    result = loop.request_exact_head_review(
+        tmp_path,
+        pr=12,
+        head=HEAD_A,
+        runner=runner,
+        codex_command=loop.DEFAULT_CODEX_COMMAND,
+    )
+
+    assert result["status"] == "stale-result"
+    assert result["current_head"] == HEAD_B
+    assert result["next_action"].endswith(f"--head {HEAD_B}")
+
+
+def test_exact_head_recheck_atomic_claim_reuses_concurrent_request(tmp_path: Path, monkeypatch) -> None:
+    runner = FakeRunner(tmp_path)
+    monkeypatch.setattr(loop, "_claim_recheck_receipt", lambda path, receipt: False)
+
+    result = loop.request_exact_head_review(
+        tmp_path,
+        pr=12,
+        head=HEAD_A,
+        runner=runner,
+        codex_command=loop.DEFAULT_CODEX_COMMAND,
+    )
+
+    assert result["status"] == "existing-request"
+    assert result["existing_status"] == "claim-in-progress"
+    assert runner.interactive_inputs == []
+
+
 def test_global_watch_waits_after_empty_scan_then_dispatches(tmp_path: Path, monkeypatch, capsys) -> None:
     runner = FakeRunner(tmp_path)
     results = iter(

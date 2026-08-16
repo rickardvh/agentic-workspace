@@ -99,6 +99,22 @@ precedence = "60"
 allowed_composition = ["maintenance", "evidence"]
 notes = "This lane is the first focused replacement for generic workspace_behavior proof on proof-router changes."
 
+[assurance.domain_proof_lanes.review_stack_operations]
+purpose = "Focused exact-head review request and declared PR-stack publication behavior."
+applies_to_paths = ["tools/chatgpt_review_loop.py", "tools/review_stack_ops.py", "tests/test_chatgpt_review_loop.py", "tests/test_review_stack_ops.py", "docs/maintainer/chatgpt-review-continuation.md"]
+commands = ["uv run pytest tests/test_chatgpt_review_loop.py tests/test_review_stack_ops.py -q", "uv run ruff check tools/chatgpt_review_loop.py tools/review_stack_ops.py tests/test_chatgpt_review_loop.py tests/test_review_stack_ops.py"]
+review_aids = ["Confirm requests remain bound to a PR/full SHA without watcher state, and stack publication remains declaration-driven, patch-preserving, receipt-backed, and force-with-lease protected."]
+evidence_concepts = ["regression_prevention", "scenario_coverage"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = ["docs/maintainer/chatgpt-review-continuation.md", "tools/skills/pr-review-recheck/SKILL.md"]
+escalation = ["the change alters the merge gate, autonomous merge authority, arbitrary branch mutation, or shipped runtime behavior"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "focused-route-insufficient"]
+claim_boundary = "focused-review-stack-proof-required-before-review-publication-claim"
+owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "70"
+allowed_composition = ["maintenance", "evidence"]
+
 [assurance.domain_proof_lanes.proof_route_authority]
 purpose = "Focused maintenance route for repo-owned proof-routing authority."
 applies_to_paths = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", ".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/closeout-evidence/issue-2333-serial-focused-proof.closeout.json", ".agentic-workspace/planning/execplans/archive/issue-2334-proof-friction-escalation.plan.json", ".release/changes/*.toml", "Makefile", "docs/reference/implementer-context.md", "docs/reference/workspace-config.md", "src/agentic_workspace/contract_tooling.py", "src/agentic_workspace/contracts/python_contract_consumption.json", "src/agentic_workspace/contracts/schemas/implementer_context.schema.json", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/workspace_runtime_implement.py", "src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_selector_validation.py", "tests/test_workspace_makefile_targets.py", "tests/test_workspace_proof_cli.py"]
