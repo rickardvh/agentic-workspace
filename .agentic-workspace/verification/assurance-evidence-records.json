@@ -139,6 +139,32 @@
       ],
       "recorded_by": "agent",
       "notes": "Exact carry status is nested under existing current-work/work-thread projections and detailed recovery stays behind work-thread carry-inspect/select/prune. Default start remains forecast-only and does not persist carries; compact start, implement, summary, status, and doctor contracts remain covered by the full workspace suite."
+    },
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "verification_proof_decision_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "focused workspace, implement, and session selector tests; generated command conformance; make typecheck; structured inventory",
+      "changed_paths": [
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_implement_cli.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Issues #2564 and #2574 add permanent behavior-class evidence for typed exit-2 selector failures, successful inventory projection, and executable advertised selectors. The tests extend existing root CLI and generated conformance ownership without replacing other evidence."
+    },
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "test_evidence_owner_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "focused workspace, implement, and session selector tests; generated command conformance",
+      "changed_paths": [
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_implement_cli.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Root workspace CLI tests own command-facing selector semantics; generated command conformance owns cross-target adapter parity. Session logging retains its existing process-outcome coverage and exposed the enabled_source descriptor gap fixed in this lane."
     }
   ]
 }

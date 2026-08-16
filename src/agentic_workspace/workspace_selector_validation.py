@@ -80,6 +80,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "context.workflow_sufficiency",
         "context.scope",
         "context.guidance",
+        "context.requirement_grounding",
         "context_authority_projection",
         "task_contract",
         "change_impact",
@@ -176,6 +177,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
     "config": (
         "workspace",
         "workspace.enabled",
+        "workspace.enabled_source",
         "workspace.enabled_modules",
         "workspace.improvement_latitude",
         "workspace.optimization_bias",

@@ -932,6 +932,8 @@ def test_generated_selector_validation_matches_host_contract_for_canonical_bound
     ("argv", "source_command"),
     [
         (["defaults", "--select", "workspace.not_a_real_field", "--format", "json"], "defaults"),
+        (["config", "--select", "workspace.not_a_real_field", "--format", "json"], "config"),
+        (["summary", "--select", "planning_record.not_a_real_field", "--format", "json"], "summary"),
     ],
 )
 def test_generated_typescript_workspace_operations_use_host_selector_prevalidation(
@@ -953,6 +955,31 @@ def test_generated_typescript_workspace_operations_use_host_selector_prevalidati
     assert payload["selector_budget"]["max_selector_bytes"] == 256
     assert payload["selector_budget"]["max_selector_request_bytes"] == 512
     assert payload["selector_budget"]["max_error_envelope_bytes"] == 6000
+
+
+def test_generated_typescript_summary_selector_inventory_is_successful(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+
+    completed = subprocess.run(
+        [
+            "node",
+            str(Path(__file__).resolve().parents[1] / "generated/workspace/typescript/src/cli.mjs"),
+            "summary",
+            "--select",
+            "selector_inventory",
+            "--format",
+            "json",
+        ],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0
+    payload = json.loads(completed.stdout)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["values"]["selector_inventory"]["source_command"] == "summary"
 
 
 def test_invalid_proof_selector_has_generated_exit_two_and_success_remains_zero(tmp_path: Path, capsys) -> None:

@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "issue-1969-state-delta-loop",
   "title": "Issue 1969 state-delta-first operating loop",
-  "status": "closed",
+  "status": "archived",
   "parent_decomposition_ref": "",
   "lane_outcome": "Make ordinary AW operating-loop packets state-delta-first for issue #1969 across startup, implementation, report/continuation, and shipped skill adoption.",
   "purpose_for_parent": "Close the #1969 parent by landing all child slices #1970-#1974 as an ordered stack, with proof that the loop exposes current decision, message economy, continuation capsule, evidence bundle, and skill guidance without prompt-prose classifiers.",

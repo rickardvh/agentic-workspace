@@ -527,6 +527,7 @@ const WORKSPACE_SELECTOR_DESCRIPTORS = {
   config: [
     'workspace',
     'workspace.enabled',
+    'workspace.enabled_source',
     'workspace.enabled_modules',
     'workspace.improvement_latitude',
     'workspace.optimization_bias',
@@ -558,6 +559,31 @@ const WORKSPACE_SELECTOR_DESCRIPTORS = {
     'proof_selection',
     'improvement_intake',
     'optimization_bias',
+    'selector_inventory',
+  ],
+  summary: [
+    'todo',
+    'todo.active_count',
+    'target_root',
+    'planning_revision',
+    'planning_record',
+    'execplans',
+    'planning_surface_health',
+    'execution_readiness',
+    'current_execution_pressure',
+    'continuation_view',
+    'fresh_session_digest',
+    'decision_packet',
+    'decision_point_carry_status',
+    'planning_route_decision',
+    'closeout_trust_inspection',
+    'decomposition',
+    'lanes',
+    'residue_governance',
+    'roadmap',
+    'detail_commands',
+    'warning_count',
+    'memory_consult',
     'selector_inventory',
   ],
   proof: [
@@ -786,6 +812,38 @@ function workspaceSelectorPrevalidationError(select, sourceCommand) {
     payload.replacement_rule = 'Deprecated selectors are rejected atomically with a bounded replacement hint.';
   }
   return fitWorkspaceSelectorError(payload);
+}
+
+function selectWorkspacePayload(payload, values, sourceCommand) {
+  const request = workspaceSelectorRequest(values.select, sourceCommand);
+  if (!request.selectors.length) return payload;
+  if (request.selectors.length === 1 && request.selectors[0] === 'selector_inventory') {
+    const selectors = WORKSPACE_SELECTOR_DESCRIPTORS[sourceCommand] ?? [];
+    return {
+      kind: 'agentic-workspace/selected-output/v1',
+      source_command: sourceCommand,
+      values: {
+        selector_inventory: {
+          kind: 'agentic-workspace/selector-inventory/v1',
+          source_command: sourceCommand,
+          available_count: selectors.length,
+          selectors,
+          rule: 'Explicit selector inventory is available through --select selector_inventory; validation errors include only a bounded sample.',
+        },
+      },
+    };
+  }
+  const valuesBySelector = {};
+  const missing = [];
+  for (const selector of request.selectors) {
+    let current = payload;
+    for (const part of selector.split('.').filter(Boolean)) current = isObject(current) ? current[part] : undefined;
+    if (current === undefined) missing.push(selector);
+    else valuesBySelector[selector] = current;
+  }
+  const selected = { kind: 'agentic-workspace/selected-output/v1', source_command: sourceCommand, values: valuesBySelector };
+  if (missing.length) selected.missing = missing;
+  return selected;
 }
 
 function workspaceDefaultsSelect(payload, values) {
@@ -1652,7 +1710,12 @@ function domainPrimitive(primitive, values, args, operationId) {
   }
   if (primitive.startsWith('planning.') && primitive.endsWith('.apply')) return unsupportedMutationResult(values, operationId);
   if (primitive === 'planning.reconcile.load') return { kind: 'planning-reconcile/v1', status: 'clean', target_root: resolve(String(values.target ?? '.')) };
-  if (primitive === 'planning.summary.load') return { ...reportPlanning(values, operationId), kind: 'planning-summary/v1' };
+  if (primitive === 'planning.summary.load') {
+    const prevalidationError = workspaceSelectorPrevalidationError(values.select, 'summary');
+    if (prevalidationError) return prevalidationError;
+    const payload = { ...reportPlanning(values, operationId), kind: 'planning-summary/v1' };
+    return selectWorkspacePayload(payload, values, 'summary');
+  }
   if (primitive === 'planning.report.load') return reportPlanning(values, operationId);
   if (['memory.install.apply', 'memory.init.apply', 'memory.adopt.apply', 'memory.upgrade.apply'].includes(primitive)) {
     const result = lifecycleResult(values, operationId);
@@ -2306,7 +2369,12 @@ function executeTypescriptDomainOperation(operationId, values) {
       detail_commands: { full: 'agentic-workspace modules --target . --verbose --format json' },
     };
   }
-  if (operationId === 'summary.report') return { kind: 'planning-summary/v1', profile: values.verbose ? 'full' : 'tiny', machine_first_planning: { status: 'no-active-execplan' }, target_root: target };
+  if (operationId === 'summary.report') {
+    const prevalidationError = workspaceSelectorPrevalidationError(values.select, 'summary');
+    if (prevalidationError) return prevalidationError;
+    const payload = { kind: 'planning-summary/v1', profile: values.verbose ? 'full' : 'tiny', machine_first_planning: { status: 'no-active-execplan' }, target_root: target };
+    return selectWorkspacePayload(payload, values, 'summary');
+  }
   if (operationId === 'start.context') return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory/schemas; use --select or --verbose for detail.' }, context: { proof: { kind: 'proof-selection/v1' } } };
   if (operationId === 'implement.context') return { kind: 'implementer-context-tiny/v1', target_root: target, proof: { kind: 'proof-selection/v1' } };
   if (operationId === 'proof.report') {
