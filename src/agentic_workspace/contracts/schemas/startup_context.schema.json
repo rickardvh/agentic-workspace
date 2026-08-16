@@ -1380,7 +1380,9 @@
             "resolution_posture",
             "contract_schema",
             "required_capabilities",
-            "required_resources"
+            "required_resources",
+            "minimum_reader_epoch",
+            "required_reader_capabilities"
           ],
           "description": "Human-readable or lookup name for this entry."
         },
@@ -1391,6 +1393,7 @@
         "expected": {
           "type": [
             "array",
+            "integer",
             "string",
             "null"
           ],
@@ -1401,7 +1404,7 @@
           "description": "Expected contract value used by this contract."
         },
         "actual": {
-          "type": ["array", "object", "string", "null"],
+          "type": ["array", "integer", "object", "string", "null"],
           "description": "Actual text value used by this contract."
         },
         "satisfied": {
@@ -1477,6 +1480,11 @@
           "items": { "type": "object", "additionalProperties": true },
           "description": "Availability results for required package resources."
         },
+        "pre_state_admission": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Compact root-reader admission provenance established before managed state interpretation."
+        },
         "invocation_confidence": {
           "enum": [
             "high",
@@ -1516,7 +1524,9 @@
               "resolution_posture",
               "contract_schema",
               "required_capabilities",
-              "required_resources"
+              "required_resources",
+              "minimum_reader_epoch",
+              "required_reader_capabilities"
             ],
             "description": "One entry in the failed checks list."
           },

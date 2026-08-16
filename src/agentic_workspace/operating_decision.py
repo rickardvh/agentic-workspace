@@ -1389,6 +1389,13 @@ def projection_surface_builder_inputs(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Consume the immutable material inputs before a purpose-specific builder runs."""
 
+    if admitted_input.get("status") != "admitted":
+        return {}, {
+            "kind": "agentic-workspace/projection-decision-input-consumption/v1",
+            "status": "unavailable",
+            "consumer": consumer,
+            "reason": "No shared decision input was admitted; the surface may render non-authoritative detail but cannot bind a decision.",
+        }
     material_inputs = _as_dict(admitted_input.get("material_inputs"))
     observed_revision = "sha256:" + _digest(material_inputs)
     missing_fields = [field for field in required_fields if field not in material_inputs]
@@ -1418,6 +1425,8 @@ def attach_projection_surface_decision_input_consumption(
 ) -> dict[str, Any]:
     """Attach a receipt produced before builder materialization."""
 
+    if consumption.get("status") == "unavailable":
+        return payload
     observed_revision = "sha256:" + _digest(used_material_inputs)
     consumption = copy.deepcopy(consumption)
     if observed_revision != consumption.get("material_input_revision"):

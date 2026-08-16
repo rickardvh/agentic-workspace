@@ -32,13 +32,50 @@ def _metrics(node: ast.AST) -> tuple[int, int, int, int]:
     return lines, branches, max(segments, default=lines), fan_out
 
 
+def _file_metrics(source: str) -> dict[str, int]:
+    tree = ast.parse(source)
+    direct_calls = {
+        child.func.id if isinstance(child.func, ast.Name) else child.func.attr
+        for child in ast.walk(tree)
+        if isinstance(child, ast.Call) and isinstance(child.func, ast.Name | ast.Attribute)
+    }
+    return {
+        "lines": len(source.splitlines()),
+        "top_level_symbols": len(_definitions(tree)),
+        "direct_policy_fan_out": len(direct_calls),
+    }
+
+
+def _imported_symbols(tree: ast.Module, module: str) -> set[str]:
+    return {
+        alias.name
+        for node in tree.body
+        if isinstance(node, ast.ImportFrom) and node.module == module
+        for alias in node.names
+    }
+
+
+def _alternate_assembler_symbols(tree: ast.Module, decision_fields: set[str], minimum_fields: int) -> list[str]:
+    symbols: list[str] = []
+    for symbol, node in _definitions(tree).items():
+        for child in ast.walk(node):
+            if not isinstance(child, ast.Dict):
+                continue
+            keys = {key.value for key in child.keys if isinstance(key, ast.Constant) and isinstance(key.value, str)}
+            if len(keys & decision_fields) >= minimum_fields:
+                symbols.append(symbol)
+                break
+    return sorted(symbols)
+
+
 def ownership_report(root: Path = REPO_ROOT, *, today: date | None = None) -> dict[str, Any]:
     policy = json.loads((root / POLICY_PATH).read_text(encoding="utf-8"))
     core_path = root / policy["canonical_owner"]
     facade_path = root / policy["compatibility_facade"]
     core_source = core_path.read_text(encoding="utf-8")
     facade_source = facade_path.read_text(encoding="utf-8")
-    core_defs = _definitions(ast.parse(core_source))
+    core_tree = ast.parse(core_source)
+    core_defs = _definitions(core_tree)
     facade_defs = _definitions(ast.parse(facade_source))
     findings: list[dict[str, str]] = []
     facade_contract = policy["facade_contract"]
@@ -57,8 +94,65 @@ def ownership_report(root: Path = REPO_ROOT, *, today: date | None = None) -> di
 
     review = policy["review_scale"]
     lifecycle = review.get("exception_lifecycle", {})
-    if lifecycle.get("supersedes_tracking_issue") != "#2455" or lifecycle.get("removal_owner") != "#2480" or not lifecycle.get("reason"):
+    if lifecycle.get("supersedes_tracking_issue") != "#2455" or not lifecycle.get("removal_owner") or not lifecycle.get("reason"):
         findings.append({"control": "review-scale", "detail": "review-scale exceptions lack a durable post-#2455 removal owner and reason"})
+    candidate_inventory = review.get("candidate_inventory", [])
+    ranks = [item.get("rank") for item in candidate_inventory]
+    if ranks != list(range(1, len(candidate_inventory) + 1)) or not any(item.get("status") == "extracted" for item in candidate_inventory):
+        findings.append({"control": "candidate-inventory", "detail": "ranked extraction candidates must include one extracted authority family"})
+    extracted = next((item for item in candidate_inventory if item.get("status") == "extracted"), {})
+    extracted_owner = root / str(extracted.get("canonical_owner") or "")
+    if not extracted_owner.is_file() or str(extracted.get("canonical_owner") or "") not in core_source.replace(".", "/"):
+        # Import spelling is checked separately below because paths and module names use different separators.
+        if "from agentic_workspace.operating_decision import" not in core_source:
+            findings.append({"control": "candidate-inventory", "detail": "extracted operating-decision owner lacks a narrow runtime facade import"})
+    extraction_proof = extracted.get("extraction_proof", {})
+    owner_module = str(extraction_proof.get("owner_module") or "")
+    allowed_imports = set(extraction_proof.get("facade_imports") or [])
+    observed_imports = _imported_symbols(core_tree, owner_module)
+    if not allowed_imports or observed_imports != allowed_imports:
+        findings.append(
+            {
+                "control": "candidate-extraction-proof",
+                "detail": "operating-decision facade imports differ from the recorded canonical-owner boundary",
+            }
+        )
+    decision_fields = set(extraction_proof.get("decision_shaped_fields") or [])
+    minimum_fields = int(extraction_proof.get("alternate_assembler_minimum_fields") or 2)
+    alternate_assemblers = _alternate_assembler_symbols(core_tree, decision_fields, minimum_fields)
+    if alternate_assemblers:
+        findings.append(
+            {
+                "control": "candidate-extraction-proof",
+                "detail": f"runtime facade can independently assemble decision authority: {', '.join(alternate_assemblers)}",
+            }
+        )
+    recorded_after = extraction_proof.get("after", {})
+    observed_after = {
+        "authority_owner_files": 1 if extracted_owner.is_file() else 0,
+        "facade_imported_owner_symbols": len(observed_imports),
+        "facade_alternate_assembler_symbols": len(alternate_assemblers),
+    }
+    if recorded_after != observed_after:
+        findings.append(
+            {
+                "control": "candidate-extraction-proof",
+                "detail": "recorded operating-decision after-metrics do not match the reachable facade boundary",
+            }
+        )
+
+    file_metric_records: list[dict[str, Any]] = []
+    for ratchet in review.get("file_ratchets", []):
+        relative_path = str(ratchet["path"])
+        metrics = _file_metrics((root / relative_path).read_text(encoding="utf-8"))
+        file_metric_records.append({"path": relative_path, **metrics})
+        for metric, limit_key in (
+            ("lines", "max_lines"),
+            ("top_level_symbols", "max_top_level_symbols"),
+            ("direct_policy_fan_out", "max_direct_policy_fan_out"),
+        ):
+            if metrics[metric] > int(ratchet[limit_key]):
+                findings.append({"control": "file-ratchet", "detail": f"{relative_path} {metric} grew beyond its ratchet"})
     exception_map = {(item["path"], item["symbol"]): item for item in review["exceptions"]}
     metric_records: list[dict[str, Any]] = []
     current_day = today or date.today()
@@ -106,6 +200,7 @@ def ownership_report(root: Path = REPO_ROOT, *, today: date | None = None) -> di
                 "canonical_top_level_definitions": len(core_defs),
             },
             "review_scale_exceptions": metric_records,
+            "file_ratchets": file_metric_records,
             "representative_working_set": {
                 "before": review["representative_working_set"]["before"],
                 "after": {
@@ -116,6 +211,13 @@ def ownership_report(root: Path = REPO_ROOT, *, today: date | None = None) -> di
                     ),
                     "max_direct_fan_out": max((item["direct_fan_out"] for item in metric_records), default=0),
                 },
+            },
+            "candidate_extraction": {
+                "authority_family": extracted.get("authority_family"),
+                "before": extraction_proof.get("before", {}),
+                "after": observed_after,
+                "facade_imports": sorted(observed_imports),
+                "alternate_assembler_symbols": alternate_assemblers,
             },
         },
         "findings": findings,

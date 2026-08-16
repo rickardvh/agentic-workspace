@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Admit repository reader compatibility before managed-state interpretation and enforce canonical operating-decision ownership ratchets."

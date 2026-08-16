@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from agentic_workspace.runtime_compatibility import admit_runtime_compatibility, target_root_from_argv
 from agentic_workspace.session_logging import run_with_session_logging
 
 
@@ -21,6 +22,20 @@ def _load_main():
 
 def _run_cli(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
+    compatibility = admit_runtime_compatibility(target_root_from_argv(args))
+    if compatibility["status"] != "admitted":
+        json_mode = any(token == "--format=json" for token in args) or any(
+            token == "--format" and index + 1 < len(args) and args[index + 1] == "json" for index, token in enumerate(args)
+        )
+        if json_mode:
+            print(json.dumps(compatibility, indent=2))
+        else:
+            print(
+                "agentic-workspace cannot interpret this repository with the active runtime.\n"
+                f"Recovery: {compatibility['recovery_command']}",
+                file=sys.stderr,
+            )
+        return 2
     generated_main = _load_main()
     try:
         return run_with_session_logging(args, generated_main)

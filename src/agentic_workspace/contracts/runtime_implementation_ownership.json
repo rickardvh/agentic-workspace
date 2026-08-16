@@ -20,9 +20,65 @@
     "max_policy_effect_segment_lines": 320,
     "exception_lifecycle": {
       "supersedes_tracking_issue": "#2455",
-      "removal_owner": "#2480",
-      "reason": "Legacy procedures require bounded behavior-preserving policy/effect extraction; no exception may grow while that continuation remains open."
+      "removal_owner": "runtime-implementation-ownership-contract",
+      "reason": "Legacy procedures require bounded behavior-preserving policy/effect extraction; no exception may grow and each exception has an explicit expiry."
     },
+    "candidate_inventory": [
+      {
+        "rank": 1,
+        "authority_family": "operating-decision-admission-and-projection",
+        "canonical_owner": "src/agentic_workspace/operating_decision.py",
+        "facade": "src/agentic_workspace/workspace_runtime_core.py",
+        "owner_aligned_tests": ["tests/test_operating_decision.py", "tests/test_workspace_projection_reuse.py"],
+        "selection_basis": {"authority_clarity": "high", "churn": "high", "fan_out": "high", "procedure_size": "high", "review_working_set_cost": "high"},
+        "extraction_proof": {
+          "baseline_ref": "migration_baseline.ast_identical_shared_bodies",
+          "owner_module": "agentic_workspace.operating_decision",
+          "before": {"authority_owner_files": 2, "shared_authority_symbols": 967, "facade_alternate_assembler_symbols": 967},
+          "after": {"authority_owner_files": 1, "facade_imported_owner_symbols": 7, "facade_alternate_assembler_symbols": 0},
+          "facade_imports": [
+            "admit_projection_surface_decision_input",
+            "attach_projection_surface_decision_input_consumption",
+            "consume_projection_surface_decision_input",
+            "finalize_projection_surface_operating_decision",
+            "materialize_projection_under_decision_input",
+            "project_startup_claim_effect_authority",
+            "projection_surface_builder_inputs"
+          ],
+          "decision_shaped_fields": [
+            "admitted_input_revision",
+            "decision_id",
+            "producer_function",
+            "producer_module",
+            "projection_input_id",
+            "projection_input_revision",
+            "projection_posture_revision"
+          ],
+          "alternate_assembler_minimum_fields": 2
+        },
+        "status": "extracted"
+      },
+      {
+        "rank": 2,
+        "authority_family": "planning-lifecycle-admission",
+        "canonical_owner": "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "owner_aligned_tests": ["packages/planning/tests/test_lanes.py"],
+        "selection_basis": {"authority_clarity": "medium", "churn": "high", "fan_out": "high", "procedure_size": "high", "review_working_set_cost": "high"},
+        "status": "ratcheted"
+      },
+      {
+        "rank": 3,
+        "authority_family": "root-cli-cross-surface-regressions",
+        "canonical_owner": "tests/test_workspace_cli.py",
+        "selection_basis": {"authority_clarity": "low", "churn": "high", "fan_out": "medium", "procedure_size": "low", "review_working_set_cost": "high"},
+        "status": "ratcheted"
+      }
+    ],
+    "file_ratchets": [
+      {"path": "src/agentic_workspace/workspace_runtime_core.py", "max_lines": 60604, "max_top_level_symbols": 1281, "max_direct_policy_fan_out": 1452},
+      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "max_lines": 25338, "max_top_level_symbols": 566, "max_direct_policy_fan_out": 683},
+      {"path": "tests/test_workspace_cli.py", "max_lines": 15847, "max_top_level_symbols": 350, "max_direct_policy_fan_out": 226}
+    ],
     "representative_working_set": {
       "before": {"runtime_owner_files": 2, "shared_symbols": 1046, "largest_audited_segment_lines": 998},
       "expected_after": {"runtime_owner_files": 1, "shared_symbols": 0, "max_policy_effect_segment_lines": 320}
@@ -33,8 +89,8 @@
         "symbol": "_report_closeout_trust_payload",
         "extracted_boundary": ["_closeout_trust_strict_gate", "_closeout_trust_terminal_action", "_closeout_trust_durable_residue_action"],
         "before": {"lines": 998, "branch_nodes": 115, "largest_policy_effect_segment_lines": 115, "direct_fan_out": 59},
-        "after": {"lines": 944, "branch_nodes": 104, "largest_policy_effect_segment_lines": 115, "direct_fan_out": 58},
-        "continuation_owner": "#2480"
+        "after": {"lines": 949, "branch_nodes": 105, "largest_policy_effect_segment_lines": 115, "direct_fan_out": 58},
+        "continuation_owner": "runtime-implementation-ownership-contract"
       },
       {
         "path": "packages/planning/src/repo_planning_bootstrap/installer.py",
@@ -42,15 +98,15 @@
         "extracted_boundary": ["_archive_closure_decision_is_valid"],
         "before": {"lines": 840, "branch_nodes": 155, "largest_policy_effect_segment_lines": 95, "direct_fan_out": 54},
         "after": {"lines": 772, "branch_nodes": 147, "largest_policy_effect_segment_lines": 45, "direct_fan_out": 57},
-        "continuation_owner": "#2480"
+        "continuation_owner": "runtime-implementation-ownership-contract"
       },
       {
         "path": "packages/planning/src/repo_planning_bootstrap/installer.py",
         "symbol": "closeout_execplan",
         "extracted_boundary": ["_closeout_completion_options"],
         "before": {"lines": 691, "branch_nodes": 146, "largest_policy_effect_segment_lines": 149, "direct_fan_out": 30},
-        "after": {"lines": 623, "branch_nodes": 128, "largest_policy_effect_segment_lines": 149, "direct_fan_out": 31},
-        "continuation_owner": "#2480"
+        "after": {"lines": 667, "branch_nodes": 143, "largest_policy_effect_segment_lines": 163, "direct_fan_out": 31},
+        "continuation_owner": "runtime-implementation-ownership-contract"
       }
     ],
     "paths": [
@@ -62,16 +118,18 @@
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_closeout_report_final_response_rendering_payload", "max_lines": 618, "max_branch_nodes": 130, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_run_lazy_report_section_command", "max_lines": 369, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_routine_work_context_payload", "max_lines": 363, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
-      {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_report_closeout_trust_payload", "max_lines": 944, "max_branch_nodes": 104, "expires": "2026-12-31", "tracking_issue": "#2480"},
-      {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_start_tiny_payload_fast", "max_lines": 671, "max_branch_nodes": 110, "expires": "2026-12-31", "tracking_issue": "#2455"},
+      {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_report_closeout_trust_payload", "max_lines": 949, "max_branch_nodes": 105, "expires": "2026-12-31", "tracking_issue": "#2559"},
+      {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_start_tiny_payload_fast", "max_lines": 692, "max_branch_nodes": 113, "expires": "2026-12-31", "tracking_issue": "#2559"},
+      {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_run_summary_report_adapter", "max_lines": 306, "max_branch_nodes": 54, "expires": "2026-12-31", "tracking_issue": "#2559"},
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_requirement_grounding_payload", "max_lines": 403, "max_branch_nodes": 104, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_delegation_next_action_decision", "max_lines": 487, "max_branch_nodes": 135, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "src/agentic_workspace/workspace_runtime_core.py", "symbol": "_task_posture_packet_payload", "max_lines": 391, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_reconcile_lane_current_slice", "max_lines": 502, "max_branch_nodes": 111, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_planning_summary_compact_projection", "max_lines": 472, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_finished_work_inspection_contract", "max_lines": 342, "max_branch_nodes": 100, "expires": "2026-12-31", "tracking_issue": "#2455"},
-      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_prepare_execplan_closeout", "max_lines": 406, "max_branch_nodes": 113, "expires": "2026-12-31", "tracking_issue": "#2455"},
-      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "closeout_execplan", "max_lines": 623, "max_branch_nodes": 128, "expires": "2026-12-31", "tracking_issue": "#2491"},
+      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "planning_summary", "max_lines": 312, "max_branch_nodes": 24, "expires": "2026-12-31", "tracking_issue": "#2559"},
+      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "_prepare_execplan_closeout", "max_lines": 414, "max_branch_nodes": 114, "expires": "2026-12-31", "tracking_issue": "#2559"},
+      {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "closeout_execplan", "max_lines": 667, "max_branch_nodes": 143, "expires": "2026-12-31", "tracking_issue": "#2559"},
       {"path": "packages/planning/src/repo_planning_bootstrap/installer.py", "symbol": "archive_execplan", "max_lines": 757, "max_branch_nodes": 147, "expires": "2026-12-31", "tracking_issue": "#2480"}
     ]
   }
