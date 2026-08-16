@@ -165,6 +165,42 @@
       ],
       "recorded_by": "agent",
       "notes": "Root workspace CLI tests own command-facing selector semantics; generated command conformance owns cross-target adapter parity. Session logging retains its existing process-outcome coverage and exposed the enabled_source descriptor gap fixed in this lane."
+    },
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "verification_proof_decision_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "focused validation-runtime tests; complete Verification suite; real stale-transport Make replay; successful_completion_cost report; typecheck; maintainer and contract checks",
+      "changed_paths": [
+        "tests/test_compact_command_runner.py",
+        "tests/test_git_hooks.py",
+        "tests/test_validation_runtime_plan.py",
+        "tests/test_workspace_makefile_targets.py",
+        "tests/test_workspace_proof_cli.py",
+        "tests/test_workspace_cli.py",
+        "packages/verification/tests/test_runtime_primitives.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Issues #2553 and #2561 add permanent behavior-class evidence for semantic run ownership, explicit child joins, preserved retry attempts, true conflicts, cancellation, proportional proof metadata, bounded dirty subjects, and typed completion-cost consumption. The evidence extends the validation runtime and Verification admission owners."
+    },
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "test_evidence_owner_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "validation-runtime focused suites plus real Make replay and successful_completion_cost report",
+      "changed_paths": [
+        "tests/test_compact_command_runner.py",
+        "tests/test_git_hooks.py",
+        "tests/test_validation_runtime_plan.py",
+        "tests/test_workspace_makefile_targets.py",
+        "tests/test_workspace_proof_cli.py",
+        "tests/test_workspace_cli.py",
+        "packages/verification/tests/test_runtime_primitives.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "The compact runner and Make/hook suites own execution identity and retry behavior; proof CLI tests own pre-launch proportional metadata; Verification runtime tests own freshness admission; workspace cost tests own downstream receipt consumption. No existing evidence was pruned."
     }
   ]
 }

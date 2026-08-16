@@ -27,7 +27,15 @@ def _validation_result(*, head: str = "head-a", outcome: str = "passed") -> dict
             "tracked_dirty": False,
             "runtime": {"status": "matched", "executable": str(Path(sys.executable).resolve())},
         },
+        "repository_post": {"head": head, "tree": "tree-a", "tracked_dirty": False, "tracked_paths": []},
         "run_id": "run-1",
+        "run_identity": {"provenance": "allocated-here"},
+        "attempt_identity": {"attempt_id": "run-1:test.workspace-integration:attempt-1", "attempt_index": 1},
+        "proof_operation": {
+            "operation_id": "operation-1",
+            "execution_class": "focused-local",
+            "subject_paths": [],
+        },
         "started_at": "2026-08-11T10:00:00+00:00",
         "ended_at": "2026-08-11T10:00:04+00:00",
         "duration_seconds": 4.0,
@@ -56,7 +64,13 @@ def test_validation_result_admission_binds_exact_subject_route_and_cost() -> Non
     bundle = decision["bundle"]
     assert bundle["proof_route_id"] == "test.workspace-integration"
     assert bundle["freshness"]["bound_head"] == "head-a"
-    assert bundle["completion_cost"] == {"duration_seconds": 4.0, "rerun": False, "outcome": "passed"}
+    assert bundle["completion_cost"] == {
+        "duration_seconds": 4.0,
+        "rerun": False,
+        "outcome": "passed",
+        "execution_class": "focused-local",
+    }
+    assert bundle["provenance"]["attempt_identity"]["attempt_index"] == 1
     assert bundle["transcript_refs"] == []
 
 
@@ -100,6 +114,35 @@ def test_validation_result_admission_rejects_authority_mismatches(mutation, reas
 
     assert decision["status"] == "rejected"
     assert reason in decision["reason_codes"]
+
+
+def test_validation_result_admission_accepts_declared_bounded_dirty_transition() -> None:
+    record = _validation_result()
+    record["repository"].update({"tracked_dirty": True, "tracked_paths": ["src/example.py"], "tracked_diff_sha256": "pre"})
+    record["repository_post"].update({"tracked_dirty": True, "tracked_paths": ["src/example.py"], "tracked_diff_sha256": "post"})
+    record["proof_operation"]["subject_paths"] = ["src/example.py"]
+    authority = _validation_authority()
+    authority.update({"tracked_dirty": True, "tracked_paths": ["src/example.py"]})
+
+    decision = validation_result_admission(record=record, current_head="head-a", authority=authority)
+
+    assert decision["status"] == "admitted"
+    assert decision["bundle"]["freshness"]["pre_subject_revision"] == "pre"
+    assert decision["bundle"]["freshness"]["post_subject_revision"] == "post"
+
+
+def test_validation_result_admission_rejects_dirty_path_outside_declared_transition() -> None:
+    record = _validation_result()
+    record["repository"].update({"tracked_dirty": True, "tracked_paths": ["src/example.py", "README.md"]})
+    record["repository_post"].update({"tracked_dirty": True, "tracked_paths": ["src/example.py", "README.md"]})
+    record["proof_operation"]["subject_paths"] = ["src/example.py"]
+    authority = _validation_authority()
+    authority.update({"tracked_dirty": True, "tracked_paths": ["src/example.py", "README.md"]})
+
+    decision = validation_result_admission(record=record, current_head="head-a", authority=authority)
+
+    assert decision["status"] == "rejected"
+    assert "dirty-repository-subject" in decision["reason_codes"]
 
 
 def test_verification_report_absent_manifest(tmp_path: Path) -> None:

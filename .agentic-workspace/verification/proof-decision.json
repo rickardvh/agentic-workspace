@@ -2,14 +2,14 @@
   "kind": "agentic-workspace/verification-proof-decision/v1",
   "proof_decision": {
     "selected_decision": "add-regression-evidence",
-    "trust_question": "Do Python and generated TypeScript command surfaces reject invalid selectors with the same typed exit-2 contract while every advertised selector remains executable?",
+    "trust_question": "Do independent, composed, retried, cancelled, and dirty-work validation operations preserve semantic identity and produce proportional freshness-correct proof receipts?",
     "host_strategy_source": ".agentic-workspace/verification/manifest.toml#scenarios.test_evidence_decision_review",
-    "proof_owner": "root-workspace-cli-and-generated-conformance",
-    "proof_intent": "contract-regression",
+    "proof_owner": "validation-runtime-and-verification-admission",
+    "proof_intent": "execution-identity-and-receipt-contract",
     "evidence_durability": "permanent",
-    "narrowest_evidence": "Focused root CLI tests cover invalid config and summary selectors, selector inventory success, advertised implement selector execution, and session-log process outcomes; generated command conformance covers adapter parity.",
-    "prune_or_replacement_condition": "Replace only when selector descriptors and process exits are generated from one executable cross-target contract that covers the same negative, inventory, advertisement, and session-outcome cases.",
+    "narrowest_evidence": "Compact-runner, Git-hook, real Make, validation-plan, Verification admission, proof-selection, and completion-cost cases cover allocation, explicit join, transported children, ordered retries, true conflicts, cancellation, bounded subjects, and receipt consumption.",
+    "prune_or_replacement_condition": "Replace only when a narrower contract-owned scenario suite proves the same run/join/attempt, proportional selection, progress/outcome, subject freshness, and cost-consumption boundaries.",
     "confidence": "high",
-    "residual_risk": "The full workspace and implement suites contain pre-existing compact-projection expectation failures unrelated to this selector diff; focused contract cases, static checks, typecheck, and generated conformance pass."
+    "residual_risk": "Historical untyped receipts remain rejected with bounded reason codes. The full proof suite retains twelve pre-existing invocation, compact-budget, and receipt-history expectation failures unrelated to this lane; all affected cases and the complete Verification suite pass."
   }
 }

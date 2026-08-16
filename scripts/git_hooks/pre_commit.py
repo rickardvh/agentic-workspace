@@ -55,7 +55,9 @@ def _partial_stage_conflicts(format_candidates: list[Path]) -> list[Path]:
 
 def _validation_environment() -> dict[str, str]:
     environment = os.environ.copy()
-    if environment.get("VALIDATION_RUN_ID"):
+    run_id = environment.get("VALIDATION_RUN_ID", "")
+    if run_id and environment.get("VALIDATION_JOIN_TOKEN") == f"join:{run_id}":
+        environment["VALIDATION_RUN_PROVENANCE"] = "transported-child"
         return environment
     result = subprocess.run(
         [sys.executable, "scripts/check/allocate_validation_run_id.py"],
@@ -65,6 +67,8 @@ def _validation_environment() -> dict[str, str]:
         text=True,
     )
     environment["VALIDATION_RUN_ID"] = result.stdout.strip()
+    environment["VALIDATION_JOIN_TOKEN"] = f"join:{environment['VALIDATION_RUN_ID']}"
+    environment["VALIDATION_RUN_PROVENANCE"] = "allocated-here"
     return environment
 
 

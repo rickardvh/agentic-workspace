@@ -2909,6 +2909,23 @@ def test_proof_changed_uses_subrepo_makefile_for_package_paths(tmp_path: Path, c
         }.items()
     )
     assert answer["selected_commands"][0]["execution_mode"] == "parallel-ok"
+    assert answer["selected_commands"][0]["execution_class"] == "focused-local"
+    assert answer["selected_commands"][0]["execution_owner"] == "local"
+    assert answer["selected_commands"][0]["requirement_posture"] == "required"
+    assert answer["selected_commands"][0]["proof_requirement"]
+    assert answer["selected_commands"][0]["subject_contract"]["changed_paths"] == [
+        "packages/planning/src/repo_planning_bootstrap/installer.py"
+    ]
+    assert answer["selected_commands"][0]["duration_class"] == "medium"
+    assert answer["selected_commands"][0]["progress_contract"]["timeout_outcome"] == "timeout"
+    assert answer["selected_commands"][0]["receipt_contract"]["binds"] == [
+        "operation",
+        "proof-subject-revision",
+        "run-identity",
+        "attempt-identity",
+        "elapsed-cost",
+        "outcome",
+    ]
     assert answer["proof_route_selection"]["selected_command"] == {
         "command": "cd packages/planning && make test",
         "lane": "planning_package",

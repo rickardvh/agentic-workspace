@@ -58,6 +58,39 @@ def test_compact_runner_timeout_writes_tailed_log(tmp_path, capsys) -> None:
     assert result["log_path"].startswith("scratch/command-logs/")
 
 
+def test_compact_runner_records_cancellation_separately_from_timeout_and_failure(tmp_path, capsys) -> None:
+    runner = _load_runner()
+    runner.REPO_ROOT = tmp_path
+    runner.LOG_ROOT = tmp_path / "scratch" / "command-logs"
+    runner.RESULT_ROOT = tmp_path / "scratch" / "validation-results"
+    cancel_file = tmp_path / "scratch" / "cancel" / "proof.cancel"
+    cancel_file.parent.mkdir(parents=True)
+    cancel_file.write_text("cancel\n", encoding="utf-8")
+
+    returncode = runner.main(
+        [
+            "--label",
+            "cancel test",
+            "--run-id",
+            "cancel-run",
+            "--cancel-file",
+            "scratch/cancel/proof.cancel",
+            "--",
+            sys.executable,
+            "-c",
+            "import time; time.sleep(30)",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    result = json.loads((runner.RESULT_ROOT / "cancel-run" / "cancel-test.json").read_text(encoding="utf-8"))
+    assert returncode == runner.CANCELLED_EXIT_CODE
+    assert "[cancelled] cancel test" in captured.err
+    assert result["outcome"] == "cancelled"
+    assert result["timed_out"] is False
+    assert result["heartbeat"]["cancelled"] is True
+
+
 def test_compact_runner_success_writes_machine_readable_result(tmp_path, capsys) -> None:
     runner = _load_runner()
     runner.REPO_ROOT = tmp_path
@@ -112,6 +145,8 @@ def test_compact_runner_records_no_heartbeat_for_short_success(tmp_path, capsys)
         [
             "--label",
             "short proof",
+            "--run-id",
+            "local",
             "--",
             sys.executable,
             "-c",
@@ -200,6 +235,39 @@ def test_compact_runner_rejects_duplicate_constituent_in_same_run(tmp_path, caps
     captured = capsys.readouterr()
     assert "[duplicate] workspace lint (lint.workspace)" in captured.err
     assert "scratch/validation-results/same-run/lint.workspace.json" in captured.err
+    conflict = json.loads(captured.err.splitlines()[0])
+    assert conflict["status"] == "already-completed"
+    assert "--retry-reason" in conflict["next_action"]
+
+
+def test_compact_runner_rejects_concurrent_writer_for_same_attempt(tmp_path, capsys) -> None:
+    runner = _load_runner()
+    runner.REPO_ROOT = tmp_path
+    runner.LOG_ROOT = tmp_path / "scratch" / "command-logs"
+    runner.RESULT_ROOT = tmp_path / "scratch" / "validation-results"
+    lock = runner.RESULT_ROOT / "same-run" / "lint.workspace.lock"
+    lock.parent.mkdir(parents=True)
+    lock.write_text("owned\n", encoding="utf-8")
+
+    returncode = runner.main(
+        [
+            "--label",
+            "workspace lint",
+            "--id",
+            "lint.workspace",
+            "--run-id",
+            "same-run",
+            "--",
+            sys.executable,
+            "-c",
+            "print('should not run')",
+        ]
+    )
+
+    conflict = json.loads(capsys.readouterr().err.splitlines()[0])
+    assert returncode == runner.DUPLICATE_EXIT_CODE
+    assert conflict["status"] == "running-conflict"
+    assert conflict["next_action"] == "wait for the running attempt or allocate a new top-level run"
 
 
 def test_compact_runner_uses_plan_metadata_and_keeps_repeat_attempts(tmp_path, capsys) -> None:
@@ -224,20 +292,32 @@ def test_compact_runner_uses_plan_metadata_and_keeps_repeat_attempts(tmp_path, c
         encoding="utf-8",
     )
 
-    args = [
+    first_args = [
         "--label",
         "workspace lint",
         "--run-id",
         "same-run",
-        "--allow-repeat",
+        "--",
+        sys.executable,
+        "-c",
+        "print('ok')",
+    ]
+    retry_args = [
+        "--label",
+        "workspace lint",
+        "--join-run-id",
+        "same-run",
+        "--retry",
+        "--retry-reason",
+        "rerun after relevant input change",
         "--",
         sys.executable,
         "-c",
         "print('ok')",
     ]
 
-    assert runner.main(args) == 0
-    assert runner.main(args) == 0
+    assert runner.main(first_args) == 0
+    assert runner.main(retry_args) == 0
     captured = capsys.readouterr()
     assert "[run] workspace lint (lint.workspace)" in captured.out
     first = json.loads((tmp_path / "scratch" / "validation-results" / "same-run" / "lint.workspace.json").read_text(encoding="utf-8"))
@@ -249,4 +329,72 @@ def test_compact_runner_uses_plan_metadata_and_keeps_repeat_attempts(tmp_path, c
     manifest = json.loads((tmp_path / "scratch" / "validation-results" / "same-run" / "manifest.json").read_text(encoding="utf-8"))
     assert first["dependencies"] == ["sync.all"]
     assert second["proof_purpose"] == "workspace lint proof from plan"
+    assert first["run_identity"]["provenance"] == "allocated-here"
+    assert second["attempt_identity"]["attempt_index"] == 2
+    assert second["attempt_identity"]["retry_reason"] == "rerun after relevant input change"
+    assert second["run_identity"]["provenance"] == "explicitly-joined"
+    assert second["proof_operation"]["execution_class"] == "focused-local"
     assert manifest["result_count"] == 2
+
+
+def test_compact_runner_ignores_unadmitted_ambient_transport(tmp_path, capsys, monkeypatch) -> None:
+    runner = _load_runner()
+    runner.REPO_ROOT = tmp_path
+    runner.LOG_ROOT = tmp_path / "scratch" / "command-logs"
+    runner.RESULT_ROOT = tmp_path / "scratch" / "validation-results"
+    monkeypatch.setenv("VALIDATION_RUN_ID", "stale-run")
+    monkeypatch.delenv("VALIDATION_JOIN_TOKEN", raising=False)
+
+    assert runner.main(["--label", "fresh proof", "--", sys.executable, "-c", "print('ok')"]) == 0
+
+    run_dirs = [path for path in runner.RESULT_ROOT.iterdir() if path.is_dir()]
+    assert len(run_dirs) == 1
+    assert run_dirs[0].name != "stale-run"
+    record = json.loads((run_dirs[0] / "fresh-proof.json").read_text(encoding="utf-8"))
+    assert record["run_identity"] == {
+        "join_authority": "local-allocation",
+        "provenance": "allocated-here",
+        "run_id": record["run_id"],
+        "transport_run_id_ignored": True,
+    }
+    assert "[ok] fresh proof" in capsys.readouterr().out
+
+
+def test_compact_runner_distinguishes_explicit_join_and_transported_child(tmp_path, monkeypatch) -> None:
+    runner = _load_runner()
+    runner.REPO_ROOT = tmp_path
+    runner.LOG_ROOT = tmp_path / "scratch" / "command-logs"
+    runner.RESULT_ROOT = tmp_path / "scratch" / "validation-results"
+
+    assert runner.main(["--label", "explicit join", "--join-run-id", "shared", "--", sys.executable, "-c", "print('ok')"]) == 0
+    monkeypatch.setenv("VALIDATION_RUN_ID", "transported")
+    monkeypatch.setenv("VALIDATION_JOIN_TOKEN", "join:transported")
+    assert runner.main(["--label", "child", "--", sys.executable, "-c", "print('ok')"]) == 0
+
+    explicit = json.loads((runner.RESULT_ROOT / "shared" / "explicit-join.json").read_text(encoding="utf-8"))
+    child = json.loads((runner.RESULT_ROOT / "transported" / "child.json").read_text(encoding="utf-8"))
+    assert explicit["run_identity"]["provenance"] == "explicitly-joined"
+    assert child["run_identity"]["provenance"] == "transported-child"
+
+
+def test_compact_runner_captures_bounded_dirty_subject_at_launch(tmp_path) -> None:
+    runner = _load_runner()
+    runner.REPO_ROOT = tmp_path
+    runner.LOG_ROOT = tmp_path / "scratch" / "command-logs"
+    runner.RESULT_ROOT = tmp_path / "scratch" / "validation-results"
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Fixture"], cwd=tmp_path, check=True)
+    source = tmp_path / "src" / "example.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    subprocess.run(["git", "add", "src/example.py"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "-m", "fixture"], cwd=tmp_path, check=True, capture_output=True)
+    source.write_text("VALUE = 2\n", encoding="utf-8")
+
+    assert runner.main(["--label", "dirty proof", "--run-id", "dirty-run", "--", sys.executable, "-c", "print('ok')"]) == 0
+
+    record = json.loads((runner.RESULT_ROOT / "dirty-run" / "dirty-proof.json").read_text(encoding="utf-8"))
+    assert record["proof_operation"]["subject_paths"] == ["src/example.py"]
+    assert record["proof_operation"]["subject_declaration"] == "captured-tracked-working-set-at-launch"
+    assert record["repository"]["tracked_diff_sha256"] == record["repository_post"]["tracked_diff_sha256"]

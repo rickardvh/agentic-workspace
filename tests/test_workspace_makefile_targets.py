@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import re
+import subprocess
 import tomllib
 from collections import Counter
 from pathlib import Path
@@ -101,6 +103,49 @@ def test_makefile_exposes_setup_free_aggregate_targets() -> None:
     assert "verify-nosync: verify-workspace verify-memory verify-planning verify-verification" in text
     assert "verify: sync-all verify-nosync" in text
     assert "check: sync-all check-nosync" in text
+
+
+def test_makefile_allocates_fresh_top_level_run_and_preserves_admitted_child_join(tmp_path: Path) -> None:
+    fixture = tmp_path / "validation-context.mk"
+    fixture.write_text(
+        f"include {(WORKSPACE_ROOT / 'Makefile').as_posix()}\n"
+        "print-validation-context:\n"
+        '\t@echo "$(VALIDATION_RUN_ID)|$(VALIDATION_JOIN_TOKEN)|$(VALIDATION_RUN_PROVENANCE)"\n',
+        encoding="utf-8",
+    )
+    stale_environment = {**os.environ, "VALIDATION_RUN_ID": "stale-run"}
+    stale_environment.pop("VALIDATION_JOIN_TOKEN", None)
+
+    allocated = (
+        subprocess.run(
+            ["make", "-f", str(fixture), "print-validation-context"],
+            cwd=WORKSPACE_ROOT,
+            env=stale_environment,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        .stdout.strip()
+        .strip('"')
+    )
+    allocated_run, allocated_token, provenance = allocated.split("|")
+    assert allocated_run != "stale-run"
+    assert allocated_token == f"join:{allocated_run}"
+    assert provenance == "allocated-here"
+
+    joined = (
+        subprocess.run(
+            ["make", "-f", str(fixture), "print-validation-context"],
+            cwd=WORKSPACE_ROOT,
+            env={**os.environ, "VALIDATION_RUN_ID": allocated_run, "VALIDATION_JOIN_TOKEN": allocated_token},
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        .stdout.strip()
+        .strip('"')
+    )
+    assert joined == f"{allocated_run}|{allocated_token}|transported-child"
 
 
 def test_root_check_does_not_expand_nested_sync_aggregates() -> None:

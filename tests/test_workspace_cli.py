@@ -13,6 +13,7 @@ import tomllib
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
+from repo_verification_bootstrap import runtime_primitives as verification_runtime_primitives
 from tests.workspace_cli_support import *
 
 from agentic_workspace import session_logging
@@ -137,6 +138,53 @@ def test_successful_completion_cost_reports_malformed_foreign_dirty_and_stale_re
         "invalid-entry": 1,
         "recorded-subject-dirty": 1,
         "repository-subject-mismatch": 1,
+    }
+
+
+def test_successful_completion_cost_consumes_typed_run_attempt_and_subject_transition(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(
+        verification_runtime_primitives,
+        "validation_evidence_admissions",
+        lambda _target: [
+            {
+                "admitted": True,
+                "bundle": {
+                    "proof_route_id": "test.workspace",
+                    "executed_at": "2026-08-16T10:00:04+00:00",
+                    "provenance": {
+                        "result_path": "scratch/validation-results/run-1/test.workspace.json",
+                        "run_id": "run-1",
+                        "run_identity": {"provenance": "transported-child"},
+                        "attempt_identity": {"attempt_id": "run-1:test.workspace:attempt-2", "attempt_index": 2},
+                        "proof_operation": {"operation_id": "proof-op-1", "execution_class": "focused-local"},
+                        "repository_head": "head-a",
+                        "repository_tree": "tree-a",
+                        "plan_graph": "plan-a",
+                    },
+                    "freshness": {
+                        "subject_paths": ["src/example.py"],
+                        "pre_subject_revision": "pre",
+                        "post_subject_revision": "post",
+                    },
+                    "completion_cost": {"outcome": "passed", "duration_seconds": 4.5, "rerun": True},
+                },
+            }
+        ],
+    )
+
+    observations = workspace_runtime_core._successful_completion_cost_validation_observations(target_root=tmp_path)
+
+    assert observations["status"] == "present"
+    run = observations["runs"][0]
+    assert (run["run_id"], run["run_provenance"], run["attempt_index"]) == ("run-1", "transported-child", 2)
+    assert (run["proof_operation_id"], run["execution_class"]) == ("proof-op-1", "focused-local")
+    assert run["subject"] == {
+        "repository_head": "head-a",
+        "repository_tree": "tree-a",
+        "plan_graph": "plan-a",
+        "subject_paths": ["src/example.py"],
+        "pre_subject_revision": "pre",
+        "post_subject_revision": "post",
     }
 
 

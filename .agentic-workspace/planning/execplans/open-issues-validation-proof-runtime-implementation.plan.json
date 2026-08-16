@@ -1,0 +1,138 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "open-issues-validation-proof-runtime-implementation",
+  "title": "Implement validation identity and proportional proof receipts",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Close GitHub #2553 and #2561 by separating semantic validation run/join/attempt identity and binding proportional proof selection, progress, subject freshness, outcomes, and cost into typed receipts.",
+    "non_goals": [
+      "Do not weaken true duplicate or concurrent-writer rejection.",
+      "Do not redesign the validation graph or accept stale unrelated tree changes.",
+      "Do not make exhaustive proof CI-owned in every case."
+    ]
+  },
+  "parent": {
+    "owner_id": "open-issues-validation-proof-runtime",
+    "contribution": "Complete the validation identity and proportional proof receipt lane.",
+    "closure_boundary": "Close the lane only when new-run, admitted join, same-run retry, true duplicate, proportional selection, cancel/timeout, bounded dirty subject, and completion-cost evidence pass."
+  },
+  "scope": {
+    "owned": [
+      "Makefile and scripts/git_hooks/pre_commit.py run ownership",
+      "scripts/check/run_compact_command.py run, attempt, progress, and receipt identity",
+      "src/agentic_workspace/workspace_runtime_core.py and workspace_runtime_proof.py proportional proof projection and cost consumption",
+      "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py receipt admission",
+      "validation runtime contract documentation and focused regression tests"
+    ],
+    "effects": [
+      "Bare ambient VALIDATION_RUN_ID is transport residue, not join authority.",
+      "Make and pre-commit allocate fresh top-level runs while admitted children share one run.",
+      "Retries create ordered preserved attempts with reasons; true duplicates remain exit 125.",
+      "Proof actions expose execution class, owner, duration/progress/cancel contract, claim, subject, and receipt identity before launch.",
+      "Completion cost consumes admitted bounded dirty-work receipts with run and attempt identity."
+    ]
+  },
+  "intent_interpretation": {
+    "literal request": "Implement GitHub #2553 and #2561 as one cohesive validation/proof runtime lane.",
+    "inferred intended outcome": "Validation identity follows semantic caller intent, and proportional proof work produces freshness-correct, observable receipts consumable by completion-cost reporting.",
+    "chosen concrete what": "Separate allocation, explicit join, transported child, and retry attempt identity; attach execution class, progress, subject transition, outcome, and cost to the same receipt."
+  },
+  "execution_bounds": {
+    "allowed paths": [
+      "Makefile",
+      "scripts/check/run_compact_command.py",
+      "scripts/git_hooks/pre_commit.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_proof.py",
+      "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
+      "docs/maintainer/validation-runtime-2435/validation-plan.json",
+      "focused tests, release note, and lane planning records"
+    ],
+    "stop before touching": [
+      "Do not weaken duplicate/concurrent conflict rejection.",
+      "Stop if admission would accept paths outside the launch-time bounded subject.",
+      "Do not widen into canonical operating-decision ownership from #2562."
+    ]
+  },
+  "contract_decisions_to_freeze": [
+    "VALIDATION_RUN_ID is transport only; join authority is explicit and run-bound.",
+    "Retries are new ordered attempts with reasons and never overwrite prior evidence.",
+    "Timeout, cancellation, assertion failure, completed duplicate, and running conflict are distinct outcomes.",
+    "Dirty-work proof is admitted only across a bounded pre/post subject path transition."
+  ],
+  "validation_commands": [
+    "focused compact runner, hook, Make, proof route, cost, and Verification admission tests",
+    "uv run python scripts/check/check_validation_runtime_plan.py --quiet-success",
+    "make typecheck",
+    "ruff and structured inventory checks"
+  ],
+  "completion_criteria": [
+    "Stale ambient transport no longer blocks independent top-level Make or pre-commit retries.",
+    "Composed children share one admitted run and same-run retries preserve attempt history.",
+    "Proof selection exposes proportional execution metadata before launch.",
+    "successful_completion_cost admits real typed receipts from the dirty working workflow."
+  ],
+  "relationships": {
+    "selection": {
+        "state": "selected",
+        "owner": "open-issues-validation-proof-runtime"
+    },
+    "proof_posture": {
+        "state": "satisfied",
+        "refs": [
+          "tests/test_compact_command_runner.py",
+          "tests/test_git_hooks.py",
+          "tests/test_workspace_makefile_targets.py",
+          "packages/verification/tests/test_runtime_primitives.py",
+          "tests/test_workspace_proof_cli.py",
+          "tests/test_workspace_cli.py"
+        ]
+    },
+    "external_posture": {
+        "state": "current",
+        "refs": ["GitHub #2553", "GitHub #2561"]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #2553 and #2561",
+      "label": "GitHub #2553 and #2561",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Create the feature-branch integration proposal and publish the lane PR stacked on #2580.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Run metadata distinguishes allocated-here, explicitly-joined, and transported-child provenance.",
+      "Independent top-level invocations ignore stale transport, while declared Make/pre-commit children share one run.",
+      "Intentional retries preserve earlier attempts and true duplicate/concurrent conflicts remain fail-closed with typed recovery.",
+      "Selected proof commands expose proportional execution ownership, duration/progress/cancel, served claim, subject, and receipt contracts.",
+      "Validation receipts bind subject pre/post transition, run/attempt identity, elapsed cost, and outcome for successful-completion-cost admission."
+    ],
+    "requirements": [
+      "Run compact runner, Git hook, Make composition, Verification admission, proof routing, and completion-cost focused tests.",
+      "Run validation-runtime plan check, typecheck, ruff, structured inventory, and changed-path proof selection."
+    ],
+    "refs": [
+      "32 focused validation runtime cases passed",
+      "50 Verification package cases passed",
+      "real stale-transport typecheck-nosync then sync-all replay passed",
+      "successful_completion_cost admitted eight typed dirty-work receipts",
+      "typecheck, ruff, maintainer surfaces, contract tooling, validation plan, and structured inventory passed",
+      ".agentic-workspace/verification/proof-decision.json"
+    ]
+  },
+  "continuation": {
+    "owner": ".agentic-workspace/planning/decompositions/open-issues-2026-08-16.decomposition.json",
+    "residual_intent": "Four other subsystem lanes and two decision-dependent lanes remain after this PR."
+  },
+  "specialist_contracts": []
+}

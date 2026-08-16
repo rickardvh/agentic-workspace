@@ -11,6 +11,43 @@
       "aggregation": "pytest result aggregation; Make target order remains deterministic"
     }
   ],
+  "execution_identity_contract": {
+    "kind": "agentic-workspace/validation-execution-identity-contract/v1",
+    "run_provenance": [
+      "allocated-here",
+      "explicitly-joined",
+      "transported-child"
+    ],
+    "transport_rule": "VALIDATION_RUN_ID transports identity only; a matching explicit join token or --join-run-id grants join authority.",
+    "top_level_rule": "A top-level Make or pre-commit invocation allocates a fresh run when ambient transport lacks admitted join authority.",
+    "retry_rule": "An intentional same-run retry requires a reason and creates a monotonically ordered attempt without replacing prior evidence.",
+    "conflict_rule": "An already completed constituent or concurrent writer for the same run and attempt fails closed with a typed next action."
+  },
+  "proof_receipt_contract": {
+    "kind": "agentic-workspace/proof-operation-receipt-contract/v1",
+    "execution_classes": [
+      "focused-local",
+      "exhaustive-local",
+      "exhaustive-ci-owned"
+    ],
+    "required_identity": [
+      "proof operation",
+      "proof subject pre/post revision",
+      "run provenance",
+      "attempt identity",
+      "elapsed cost",
+      "outcome"
+    ],
+    "outcomes": [
+      "passed",
+      "failed",
+      "timeout",
+      "cancelled",
+      "already-completed",
+      "running-conflict"
+    ],
+    "dirty_work_rule": "A receipt may admit the tracked working set captured at launch or explicit subject paths; any observed path outside that bounded transition remains stale/unadmitted."
+  },
   "compact_label_map": {
     "sync-all": {
       "id": "sync.all",

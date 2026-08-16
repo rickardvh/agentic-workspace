@@ -30,7 +30,7 @@
     {
       "id": "open-issues-validation-proof-runtime",
       "title": "Validation identity and proportional proof receipts (#2553, #2561)",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Separate validation run/join/attempt identity and bind proportional proof selection, progress, cost, and freshness to typed receipts.",
       "owner_surface": ".agentic-workspace/planning/lanes/open-issues-validation-proof-runtime.lane.json",
       "proof": "Real Make/pre-commit composition, retry, duplicate, focused-proof, progress, cancellation, and receipt fixtures.",
