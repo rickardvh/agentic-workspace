@@ -490,8 +490,15 @@ class DurableFactRecord:
     route_keys: tuple[str, ...] = ()
     touched_surfaces: tuple[str, ...] = ()
     evidence: tuple[str, ...] = ()
+    affected_decisions: tuple[str, ...] = ()
+    note_ref: str = ""
     promotion: str = ""
     demotion_or_expiry: str = ""
+    promotion_target: str = ""
+    promotion_trigger: str = ""
+    preferred_remediation: str = ""
+    elimination_target: str = ""
+    retention_after_promotion: str = ""
     status: str = "active"
 
 

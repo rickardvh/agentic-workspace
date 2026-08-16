@@ -13244,7 +13244,7 @@ def test_start_select_surfaces_memory_decision_packet(tmp_path: Path, capsys) ->
 
     assert packet["kind"] == "agentic-workspace/memory-decision-packet/v1"
     assert packet["stage"] == "startup"
-    assert packet["pull"]["status"] == "not_checked"
+    assert packet["pull"]["status"] in {"not_checked", "baseline_only"}
     assert "memory route" in packet["pull"]["recommended_command"]
     assert "--stage startup" in packet["pull"]["recommended_command"]
     assert packet["authority_boundary"]["agent_owns"]

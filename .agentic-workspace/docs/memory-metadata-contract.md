@@ -57,8 +57,15 @@ Compact durable facts live under `[durable_facts."<id>"]`. Use them only when a 
 | `route_keys` | list[string] | Query/surface terms that should pull this fact. |
 | `touched_surfaces` | list[string] | File patterns that should pull this fact. |
 | `evidence` | list[string] | Required anchors proving the fact. |
+| `affected_decisions` | list[string] | Decision dimensions this fact can inform. |
+| `note_ref` | string | Optional larger note or section for bounded drill-down. |
 | `promotion` | string | Required rule for promoting the fact to stronger authority. |
 | `demotion_or_expiry` | string | Required rule for retiring or demoting the fact. |
+| `promotion_target` | string | Existing stronger owner for deterministic recurrence. |
+| `promotion_trigger` | string | Evidence threshold that activates promotion review. |
+| `preferred_remediation` | string | Smallest correct-by-design remediation. |
+| `elimination_target` | string | Condition the stronger owner should eliminate. |
+| `retention_after_promotion` | string | Post-proof shape: `retain`, `shrink`, `stub`, or `delete`. |
 | `status` | string | `active`, `candidate`, or `deprecated`. |
 
 ## Validation Contract
@@ -89,4 +96,3 @@ Use `agentic-workspace memory sync-memory --files <paths>` to see which notes mi
 - **No Overlap**: One fact has one primary home.
 - **Residue Only**: Memory stores what is expensive to rediscover. If it's in the code or canonical docs, don't duplicate it in memory.
 - **Weak Authority for Current**: Notes in `.agentic-workspace/memory/repo/current/` are for orientation and continuation, not durable facts.
-

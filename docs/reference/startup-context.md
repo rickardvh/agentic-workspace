@@ -99,6 +99,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `memory_decision_packet.force` | string | yes |  | Whether Memory pull/capture is not applicable, recommended, or required before a claim. |  |  |
 | `memory_decision_packet.why_visible` | string | no |  | Short reason this packet is visible to the agent. |  |  |
 | `memory_decision_packet.pull` | object | yes |  | Memory pull status, route command, route candidates, and read budget. |  |  |
+| `memory_decision_packet.use` | object | yes |  | Truthful current-decision Memory use state and compact projected contributions. |  |  |
 | `memory_decision_packet.capture` | object | yes |  | Durable-learning capture status, candidate owner surfaces, and capture commands. |  |  |
 | `memory_decision_packet.authority_boundary` | object | yes |  | Boundary separating what AW observes and recommends from agent and human decisions. |  |  |
 | `memory_decision_packet.limits` | array of string | no |  | Guardrails preventing keyword-triggered policy, hidden writes, or bulk-read diligence claims. |  |  |

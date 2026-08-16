@@ -1216,6 +1216,22 @@ def _start_payload(
             payload["route_decision"] = route_decision
         else:
             payload.pop("route_decision", None)
+    route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
+    if route_relation in {"continues-selected-owner", "independent-pending-scope"}:
+        payload["memory_consult"] = _memory_consult_payload(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            structured_surfaces=["planning"],
+            compact=True,
+            cli_invoke=config.cli_invoke,
+        )
+        payload["memory_decision_packet"] = _memory_decision_packet_payload(
+            stage="startup",
+            cli_invoke=config.cli_invoke,
+            memory_consult=_memory_consult_from_payload(payload),
+            changed_paths=changed_paths,
+            task_text=task_text,
+        )
     if installed_state_compatibility["status"] != "compatible":
         payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
             installed_state=installed_state_compatibility,
@@ -1224,7 +1240,6 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
         )
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
-    route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
     task_switch_visible_by_default = route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"}
     if (
         planning_safety_gate["status"] not in {"satisfied", "clear"}

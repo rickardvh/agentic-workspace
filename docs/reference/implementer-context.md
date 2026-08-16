@@ -46,6 +46,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `memory_decision_packet.force` | string | yes |  | Whether Memory pull/capture is not applicable, recommended, or required before a claim. |  |  |
 | `memory_decision_packet.why_visible` | string | no |  | Short reason this packet is visible to the agent. |  |  |
 | `memory_decision_packet.pull` | object | yes |  | Memory pull status, route command, route candidates, and read budget. |  |  |
+| `memory_decision_packet.use` | object | yes |  | Truthful current-decision Memory use state and compact projected contributions. |  |  |
 | `memory_decision_packet.capture` | object | yes |  | Durable-learning capture status, candidate owner surfaces, and capture commands. |  |  |
 | `memory_decision_packet.authority_boundary` | object | yes |  | Boundary separating what AW observes and recommends from agent and human decisions. |  |  |
 | `memory_decision_packet.limits` | array of string | no |  | Guardrails preventing keyword-triggered policy, hidden writes, or bulk-read diligence claims. |  |  |
@@ -56,9 +57,11 @@ Cheap implementer context for a bounded changed-path scope.
 | `operating_loop.residue_owner` | enum `"memory"`, `"planning"`, `"verification"`, `"docs"`, `"issue"`, `"config"`, `"none"` | yes |  | Primary owner surface for unresolved residue or blockers. |  |  |
 | `operating_loop.required_before_full_closure` | array of enum `"run_or_refresh_proof"`, `"continue_or_close_plan"`, `"route_memory_residue"`, `"route_external_residue"` | yes |  | Structured action codes required before full closure is structurally safe. |  |  |
 | `operating_loop.memory` | object | yes |  | Memory pull and capture state projected from the Memory decision packet. |  |  |
-| `operating_loop.memory.state` | enum `"pulled"`, `"dismissed"`, `"not_applicable"` | yes |  | Whether relevant Memory was pulled, structurally dismissed, or not applicable. |  |  |
-| `operating_loop.memory.reason_code` | enum `"matched_route"`, `"no_relevant_route"`, `"not_requested"`, `"unavailable"`, `"explicitly_dismissed"` | yes |  | Structured reason for the Memory pull state. |  |  |
-| `operating_loop.memory.route_ref` | string \| null | yes |  | Selector or route reference for pulled Memory, when available. |  |  |
+| `operating_loop.memory.state` | enum `"candidate"`, `"projected"`, `"stale"`, `"unavailable"`, `"dismissed"`, `"not_applicable"` | yes |  | Truthful Memory state: candidate discovery, projected contribution, stale/unavailable, dismissed, or not applicable. |  |  |
+| `operating_loop.memory.reason_code` | enum `"candidate_only"`, `"decision_contribution_projected"`, `"stale_contribution"`, `"no_relevant_route"`, `"not_requested"`, `"unavailable"`, `"explicitly_dismissed"` | yes |  | Structured reason for the Memory pull state. |  |  |
+| `operating_loop.memory.route_ref` | string \| null | yes |  | Selector or route reference for discovered Memory, when available. |  |  |
+| `operating_loop.memory.contribution_ids` | array of string | yes |  | Stable Memory fact identities projected into this operating decision. |  |  |
+| `operating_loop.memory.use_revision` | string | yes |  | Revision of the truthful Memory use projection. |  |  |
 | `operating_loop.memory.capture` | enum `"none"`, `"recommended"`, `"required"` | yes |  | Whether reusable learning capture is absent, recommended, or required. |  |  |
 | `operating_loop.planning` | object | yes |  | Planning state relevant to full closure safety. |  |  |
 | `operating_loop.planning.state` | enum `"none"`, `"active"`, `"continuation"`, `"closeout_required"`, `"unrelated_active_plan"` | yes |  | Active, continuation, closeout-required, or absent Planning state. |  |  |

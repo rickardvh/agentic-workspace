@@ -181,7 +181,7 @@ candidates = []
     assert packet["capture"]["agent_decision_required"] is False
     loop = closeout["operating_loop"]
     assert loop["kind"] == "agentic-workspace/operating-loop-decision/v1"
-    assert loop["memory"]["state"] in {"dismissed", "not_applicable", "pulled"}
+    assert loop["memory"]["state"] in {"dismissed", "not_applicable", "candidate", "projected", "unavailable"}
     assert loop["verification"]["state"] in {"proof_not_required", "proof_passed"}
     assert loop["safe_claim"] in {"full", "partial", "blocked", "none"}
 

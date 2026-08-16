@@ -310,6 +310,11 @@
           "description": "Memory pull status, route command, route candidates, and read budget.",
           "type": "object"
         },
+        "use": {
+          "additionalProperties": true,
+          "description": "Truthful current-decision Memory use state and compact projected contributions.",
+          "type": "object"
+        },
         "stage": {
           "description": "Workflow stage that produced the packet.",
           "type": "string"
@@ -324,6 +329,7 @@
         "stage",
         "force",
         "pull",
+        "use",
         "capture",
         "authority_boundary"
       ],
@@ -362,7 +368,9 @@
             "reason_code": {
               "description": "Structured reason for the Memory pull state.",
               "enum": [
-                "matched_route",
+                "candidate_only",
+                "decision_contribution_projected",
+                "stale_contribution",
                 "no_relevant_route",
                 "not_requested",
                 "unavailable",
@@ -370,16 +378,28 @@
               ]
             },
             "route_ref": {
-              "description": "Selector or route reference for pulled Memory, when available.",
+              "description": "Selector or route reference for discovered Memory, when available.",
               "type": [
                 "string",
                 "null"
               ]
             },
+            "contribution_ids": {
+              "description": "Stable Memory fact identities projected into this operating decision.",
+              "items": {"type": "string"},
+              "type": "array"
+            },
+            "use_revision": {
+              "description": "Revision of the truthful Memory use projection.",
+              "type": "string"
+            },
             "state": {
-              "description": "Whether relevant Memory was pulled, structurally dismissed, or not applicable.",
+              "description": "Truthful Memory state: candidate discovery, projected contribution, stale/unavailable, dismissed, or not applicable.",
               "enum": [
-                "pulled",
+                "candidate",
+                "projected",
+                "stale",
+                "unavailable",
                 "dismissed",
                 "not_applicable"
               ]
@@ -389,6 +409,8 @@
             "state",
             "reason_code",
             "route_ref",
+            "contribution_ids",
+            "use_revision",
             "capture"
           ],
           "type": "object"
@@ -2920,6 +2942,7 @@
         "stage",
         "force",
         "pull",
+        "use",
         "capture",
         "authority_boundary"
       ],
@@ -2944,6 +2967,11 @@
           "type": "object",
           "additionalProperties": true,
           "description": "Memory pull status, route command, route candidates, and read budget."
+        },
+        "use": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Truthful current-decision Memory use state and compact projected contributions."
         },
         "capture": {
           "type": "object",
@@ -3036,13 +3064,18 @@
             "state",
             "reason_code",
             "route_ref",
+            "contribution_ids",
+            "use_revision",
             "capture"
           ],
           "properties": {
             "state": {
-              "description": "Whether relevant Memory was pulled, structurally dismissed, or not applicable.",
+              "description": "Truthful Memory state: candidate discovery, projected contribution, stale/unavailable, dismissed, or not applicable.",
               "enum": [
-                "pulled",
+                "candidate",
+                "projected",
+                "stale",
+                "unavailable",
                 "dismissed",
                 "not_applicable"
               ]
@@ -3050,7 +3083,9 @@
             "reason_code": {
               "description": "Structured reason for the Memory pull state.",
               "enum": [
-                "matched_route",
+                "candidate_only",
+                "decision_contribution_projected",
+                "stale_contribution",
                 "no_relevant_route",
                 "not_requested",
                 "unavailable",
@@ -3062,7 +3097,16 @@
                 "string",
                 "null"
               ],
-              "description": "Selector or route reference for pulled Memory, when available."
+              "description": "Selector or route reference for discovered Memory, when available."
+            },
+            "contribution_ids": {
+              "description": "Stable Memory fact identities projected into this operating decision.",
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "use_revision": {
+              "description": "Revision of the truthful Memory use projection.",
+              "type": "string"
             },
             "capture": {
               "description": "Whether reusable learning capture is absent, recommended, or required.",

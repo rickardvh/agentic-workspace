@@ -813,6 +813,7 @@
         "stage",
         "force",
         "pull",
+        "use",
         "capture",
         "authority_boundary"
       ],
@@ -837,6 +838,11 @@
           "type": "object",
           "additionalProperties": true,
           "description": "Memory pull status, route command, route candidates, and read budget."
+        },
+        "use": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Truthful current-decision Memory use state and compact projected contributions."
         },
         "capture": {
           "type": "object",

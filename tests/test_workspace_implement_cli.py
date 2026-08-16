@@ -1035,8 +1035,10 @@ def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: P
     assert packet["pull"]["status"] == "baseline_only"
     assert "--stage implement" in packet["pull"]["recommended_command"]
     assert "docs/package/knowledge-routing.md" in packet["pull"]["recommended_command"]
-    assert packet["pull"]["route_count"] >= 1
+    assert packet["pull"]["route_count"] == 0
     assert packet["pull"]["relevant_route_count"] == 0
+    assert packet["use"]["status"] == "no-match"
+    assert "contributions" not in packet["use"]
     assert packet["capture"]["candidate_owner_surface_count"] >= 3
     assert packet["capture"]["outcome_count"] == 5
     assert "candidate_owner_surfaces" not in packet["capture"]

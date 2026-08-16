@@ -162,8 +162,15 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 route_keys=tuple(_normalise_surface_name(value) for value in _string_list(raw.get("route_keys"))),
                 touched_surfaces=tuple(_normalise_surface_name(value) for value in _string_list(raw.get("touched_surfaces"))),
                 evidence=tuple(_string_list(raw.get("evidence"))),
+                affected_decisions=tuple(_string_list(raw.get("affected_decisions"))),
+                note_ref=str(raw.get("note_ref", "") or "").strip(),
                 promotion=str(raw.get("promotion", "") or "").strip(),
                 demotion_or_expiry=str(raw.get("demotion_or_expiry", "") or "").strip(),
+                promotion_target=str(raw.get("promotion_target", "") or "").strip(),
+                promotion_trigger=str(raw.get("promotion_trigger", "") or "").strip(),
+                preferred_remediation=str(raw.get("preferred_remediation", "") or "").strip(),
+                elimination_target=str(raw.get("elimination_target", "") or "").strip(),
+                retention_after_promotion=str(raw.get("retention_after_promotion", "") or "").strip(),
                 status=str(raw.get("status", "active") or "").strip(),
             )
         )
@@ -254,9 +261,19 @@ def _memory_manifest_typed_validator_findings(path: Path) -> list[str]:
             if not isinstance(raw, dict):
                 findings.append(f"manifest durable_facts.{fact_id} must be a table")
                 continue
-            for field in ("route_keys", "touched_surfaces", "evidence"):
+            for field in ("route_keys", "touched_surfaces", "evidence", "affected_decisions"):
                 if field in raw and not _is_string_array(raw[field]):
                     findings.append(f"manifest durable_facts.{fact_id}.{field} must be an array of strings")
+            for field in (
+                "note_ref",
+                "promotion_target",
+                "promotion_trigger",
+                "preferred_remediation",
+                "elimination_target",
+                "retention_after_promotion",
+            ):
+                if field in raw and (not isinstance(raw[field], str) or not raw[field].strip()):
+                    findings.append(f"manifest durable_facts.{fact_id}.{field} must be a non-empty string when present")
 
     return findings
 
@@ -2853,6 +2870,10 @@ def _infer_surfaces_from_paths(paths: list[str]) -> set[str]:
             surfaces.add("retrieval")
         if any(token in path for token in ("schema", "model", "architect", "design", "invariant")):
             surfaces.add("architecture")
+        if "planning" in path:
+            surfaces.add("planning")
+        if "workspace_runtime" in path or "workspace-runtime" in path:
+            surfaces.add("workspace-runtime")
     return surfaces
 
 

@@ -2860,8 +2860,15 @@ def _durable_fact_record_view(fact: DurableFactRecord, *, target_root: Path) -> 
         "touched_surfaces": list(fact.touched_surfaces),
         "evidence": list(fact.evidence),
         "matched_evidence": matched_evidence,
+        "affected_decisions": list(fact.affected_decisions),
+        "note_ref": fact.note_ref,
         "promotion": fact.promotion,
         "demotion_or_expiry": fact.demotion_or_expiry,
+        "promotion_target": fact.promotion_target,
+        "promotion_trigger": fact.promotion_trigger,
+        "preferred_remediation": fact.preferred_remediation,
+        "elimination_target": fact.elimination_target,
+        "retention_after_promotion": fact.retention_after_promotion,
         "status": fact.status,
     }
 
@@ -2911,6 +2918,7 @@ def _durable_fact_routing_view(
                 "route_keys",
                 "touched_surfaces",
                 "evidence",
+                "affected_decisions",
                 "promotion",
                 "demotion_or_expiry",
             ],

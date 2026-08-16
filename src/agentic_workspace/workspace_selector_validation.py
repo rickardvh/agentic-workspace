@@ -125,6 +125,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "detail_commands",
         "warning_count",
         "memory_consult",
+        "memory_decision_packet",
         "selector_inventory",
     ),
     "proof": (
