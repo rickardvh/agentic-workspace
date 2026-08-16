@@ -258,20 +258,108 @@ def compile_intent_feedback(
     }
 
 
+def intent_recurrence_evidence(*, finding: dict[str, Any], observations: list[dict[str, Any]], deterministic: bool) -> dict[str, Any]:
+    """Bind repeated observations to one exact drift finding."""
+
+    finding_id = str(finding.get("id") or "")
+    admitted = [
+        item
+        for item in observations
+        if isinstance(item, dict) and item.get("finding_id") == finding_id and str(item.get("observation_ref") or "").strip()
+    ]
+    identity = {
+        "finding_id": finding_id,
+        "observation_refs": sorted({str(item["observation_ref"]) for item in admitted}),
+        "deterministic": deterministic,
+    }
+    return {
+        "kind": "agentic-workspace/intent-drift-recurrence/v1",
+        "status": "admitted" if finding_id and len(identity["observation_refs"]) >= 2 else "insufficient",
+        **identity,
+        "occurrence_count": len(identity["observation_refs"]),
+        "recurrence_revision": "sha256:" + _digest(identity),
+        "rule": "Recurrence is derived from distinct observations bound to the exact finding; caller counters are not proof.",
+    }
+
+
+def stronger_owner_correction_resolution(
+    *,
+    finding: dict[str, Any],
+    promotion: dict[str, Any],
+    owner_proof: dict[str, Any],
+    replay: dict[str, Any],
+) -> dict[str, Any]:
+    """Bind a real stronger-owner proof and same-class replay to the promoted finding."""
+
+    owner = str(_as_dict(promotion.get("stronger_owner")).get("owner") or "")
+    proof_ready = owner_proof.get("status") in {"ready", "passed", "admitted"}
+    replay_status = str(replay.get("status") or "")
+    replay_control = str(replay.get("control") or "")
+    replay_effective = replay_status in {"prevented", "detected-earlier"} or (replay_status == "blocked" and bool(replay_control))
+    valid = (
+        promotion.get("status") == "promote-to-stronger-owner"
+        and promotion.get("finding_id") == finding.get("id")
+        and owner
+        and str(owner_proof.get("owner") or "") == owner
+        and proof_ready
+        and replay_effective
+    )
+    identity = {
+        "finding_id": str(finding.get("id") or ""),
+        "promotion_revision": str(promotion.get("promotion_revision") or ""),
+        "owner": owner,
+        "owner_proof_revision": str(owner_proof.get("proof_revision") or owner_proof.get("revision") or ""),
+        "replay_status": replay_status,
+        "replay_control": replay_control,
+    }
+    return {
+        "kind": "agentic-workspace/stronger-owner-correction/v1",
+        "status": "proven" if valid else "unproven",
+        **identity,
+        "resolution_revision": "sha256:" + _digest(identity),
+        "rule": "Resolution requires the promoted existing owner to pass its proof and prevent or detect the same class earlier.",
+    }
+
+
 def recurrence_promotion(
-    *, finding: dict[str, Any], recurrence_count: int, deterministic: bool, promotion_target: dict[str, Any] | None = None
+    *,
+    finding: dict[str, Any],
+    recurrence: dict[str, Any] | None = None,
+    promotion_target: dict[str, Any] | None = None,
+    correction_resolution: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     target = _as_dict(promotion_target)
+    recurrence = _as_dict(recurrence)
+    resolution = _as_dict(correction_resolution)
     eligible = finding.get("lifecycle", "unresolved") not in {"fixed", "dismissed", "resolved", "superseded"}
-    promote = eligible and deterministic and recurrence_count >= 2 and bool(target.get("owner") and target.get("proof_route"))
-    return {
+    recurrence_admitted = (
+        recurrence.get("kind") == "agentic-workspace/intent-drift-recurrence/v1"
+        and recurrence.get("status") == "admitted"
+        and recurrence.get("finding_id") == finding.get("id")
+        and recurrence.get("deterministic") is True
+        and int(recurrence.get("occurrence_count") or 0) >= 2
+    )
+    promote = eligible and recurrence_admitted and bool(target.get("owner") and target.get("proof_route"))
+    promoted = {
         "kind": "agentic-workspace/intent-drift-promotion/v1",
         "status": "promote-to-stronger-owner" if promote else "retain-existing-disposition",
         "finding_id": str(finding.get("id") or ""),
-        "recurrence_count": max(0, recurrence_count),
-        "deterministic": deterministic,
+        "recurrence_revision": str(recurrence.get("recurrence_revision") or ""),
+        "recurrence_count": int(recurrence.get("occurrence_count") or 0),
+        "deterministic": recurrence.get("deterministic") is True,
         "stronger_owner": target if promote else {},
         "required_proof": str(target.get("proof_route") or "") if promote else "",
         "memory_or_issue_spam_allowed": False,
         "rule": "Repeated deterministic drift strengthens an existing enforceable owner; it does not create a parallel drift ledger.",
     }
+    promoted["promotion_revision"] = "sha256:" + _digest(promoted)
+    if (
+        resolution.get("kind") == "agentic-workspace/stronger-owner-correction/v1"
+        and resolution.get("status") == "proven"
+        and resolution.get("finding_id") == finding.get("id")
+        and resolution.get("promotion_revision") == promoted["promotion_revision"]
+        and resolution.get("owner") == _as_dict(promoted.get("stronger_owner")).get("owner")
+    ):
+        promoted["status"] = "resolved-by-stronger-owner"
+        promoted["correction_resolution"] = resolution
+    return promoted

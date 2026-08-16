@@ -1617,6 +1617,12 @@ def bind_projection_surface_operating_decision(
         "projection_posture_revision": str(operating_decision.get("projection_posture_revision") or ""),
         "producer_module": str(operating_decision.get("producer_module") or ""),
         "producer_function": str(operating_decision.get("producer_function") or ""),
+        "intent_feedback_revision": str(_as_dict(operating_decision.get("intent_feedback")).get("input_revision") or ""),
+        "intent_expectation_revisions": [
+            str(item.get("expectation_revision") or "")
+            for item in _as_list(_as_dict(operating_decision.get("intent_feedback")).get("applicable_expectations"))
+            if isinstance(item, dict) and str(item.get("expectation_revision") or "")
+        ],
         "mismatch_reason": "" if valid else "decision posture or admitted projection input does not match the materialized payload",
         "rule": "The final decision is authoritative only when it derives from this pre-admitted input and the materialized purpose posture.",
     }

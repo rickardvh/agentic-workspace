@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "validation",
-  "revision": 3,
+  "revision": 4,
   "intent": {
     "outcome": "Compose explicit applicable system intent into revision-bound pre-decision expectations, evidence-backed drift/rescope evaluation, existing context consequences, and stronger-owner recurrence promotion.",
     "non_goals": [
@@ -30,7 +30,7 @@
     "effects": [
       "Applicable explicit intent is visible before the constrained decision and carries the same revision through later evaluation.",
       "Material drift becomes an existing context consequence while authorized rescope and mature aligned paths become quiet.",
-      "Repeated deterministic drift points to an existing stronger owner without creating a new persistent ledger."
+      "Repeated deterministic drift is bound to distinct observations, corrected through an existing stronger owner, and resolved only after owner proof plus same-class replay prevention or earlier detection."
     ]
   },
   "relationships": {
@@ -41,8 +41,9 @@
     "proof_posture": {
         "state": "satisfied",
         "refs": [
-          "79 focused intent/operating-decision tests passed",
-          "26 projection-reuse tests passed",
+          "Ordinary start, summary, implement, proof, and report consumers bind the same intent expectation revision into the canonical projection-decision authority.",
+          "Captured routing, completion-cost, and lexical skill regressions replay through canonical decisions and the existing context-consequence path.",
+          "The runtime implementation ownership contract proves a real stronger-owner correction and catches the same alternate-assembler recurrence on replay.",
           "contract tooling, structured inventory, schema references, Ruff, typecheck, and runtime ownership checks passed"
         ]
     },
@@ -77,6 +78,7 @@
       "tests/test_operating_decision.py",
       "tests/test_workspace_projection_reuse.py",
       "tests/test_workspace_implement_cli.py",
+      "tests/test_runtime_implementation_ownership.py::test_extracted_authority_closes_recurrence_through_existing_checker",
       "Runtime implementation ownership: ready (duplicates=0, facade_lines=61)"
     ]
   },

@@ -27,6 +27,7 @@ def _fixture(tmp_path: Path) -> Path:
     for relative in (
         "src/agentic_workspace/workspace_runtime_core.py",
         "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/operating_decision.py",
         "src/agentic_workspace/contracts/runtime_implementation_ownership.json",
         "packages/planning/src/repo_planning_bootstrap/installer.py",
         "tests/test_workspace_cli.py",
@@ -158,19 +159,91 @@ def test_hotspot_file_ratchets_reject_line_symbol_and_fan_out_growth(tmp_path: P
     assert any("direct_policy_fan_out grew" in detail for detail in details)
 
 
-def test_extracted_authority_cannot_regrow_an_alternate_facade_assembler(tmp_path: Path) -> None:
+def test_extracted_authority_closes_recurrence_through_existing_checker(tmp_path: Path) -> None:
+    from agentic_workspace.intent_feedback import (
+        compile_intent_feedback,
+        intent_expectation_from_principle,
+        intent_recurrence_evidence,
+        recurrence_promotion,
+        stronger_owner_correction_resolution,
+    )
+
     root = _fixture(tmp_path)
     facade = root / "src/agentic_workspace/workspace_runtime_core.py"
-    facade.write_text(
-        facade.read_text(encoding="utf-8")
+    original = facade.read_text(encoding="utf-8")
+    alternate = (
+        original
         + "\ndef alternate_decision_assembler():\n"
-        + "    return {'decision_id': 'alternate', 'projection_input_revision': 'alternate'}\n",
-        encoding="utf-8",
+        + "    return {'decision_id': 'alternate', 'projection_input_revision': 'alternate'}\n"
     )
+    facade.write_text(alternate, encoding="utf-8")
 
-    report = _checker().ownership_report(root)
+    first = _checker().ownership_report(root)
+    second = _checker().ownership_report(root)
 
-    assert report["status"] == "blocked"
+    assert first["status"] == second["status"] == "blocked"
     assert any(
-        item["control"] == "candidate-extraction-proof" and "alternate_decision_assembler" in item["detail"] for item in report["findings"]
+        item["control"] == "candidate-extraction-proof" and "alternate_decision_assembler" in item["detail"] for item in first["findings"]
     )
+    expectation = intent_expectation_from_principle(
+        principle={
+            "id": "host-agnostic-agent-judgment",
+            "affected_decisions": ["operating-decision-assembly"],
+            "enforcement_class": "mechanically-checkable",
+            "consumer_refs": ["runtime-implementation-ownership-contract"],
+        },
+        intent_revision="sha256:" + "2" * 64,
+        applicability={"structured_basis": ["declared-owner:runtime-implementation-ownership-contract"]},
+    )
+    feedback = compile_intent_feedback(
+        expectations=[expectation],
+        evidence=[
+            {
+                "expectation_revision": expectation["expectation_revision"],
+                "outcome": "contradicted",
+                "authority_class": "mechanical-check",
+                "addresses": ["operating-decision-assembly"],
+                "evidence_refs": ["runtime-ownership:first", "runtime-ownership:second"],
+            }
+        ],
+    )
+    finding = feedback["findings"][0]
+    recurrence = intent_recurrence_evidence(
+        finding=finding,
+        observations=[
+            {"finding_id": finding["id"], "observation_ref": "runtime-ownership:first"},
+            {"finding_id": finding["id"], "observation_ref": "runtime-ownership:second"},
+        ],
+        deterministic=True,
+    )
+    target = {
+        "owner": "runtime-implementation-ownership-contract",
+        "proof_route": "python scripts/check/check_runtime_implementation_ownership.py",
+    }
+    promotion = recurrence_promotion(finding=finding, recurrence=recurrence, promotion_target=target)
+    assert promotion["status"] == "promote-to-stronger-owner"
+
+    facade.write_text(original, encoding="utf-8")
+    correction_proof = _checker().ownership_report(root)
+    assert correction_proof["status"] == "ready"
+    facade.write_text(alternate, encoding="utf-8")
+    replay = _checker().ownership_report(root)
+    replay_finding = next(item for item in replay["findings"] if item["control"] == "candidate-extraction-proof")
+    resolution = stronger_owner_correction_resolution(
+        finding=finding,
+        promotion=promotion,
+        owner_proof={
+            "owner": "runtime-implementation-ownership-contract",
+            "status": correction_proof["status"],
+            "proof_revision": correction_proof["kind"],
+        },
+        replay={"status": replay["status"], "control": replay_finding["control"]},
+    )
+    resolved = recurrence_promotion(
+        finding=finding,
+        recurrence=recurrence,
+        promotion_target=target,
+        correction_resolution=resolution,
+    )
+    assert resolution["status"] == "proven"
+    assert resolved["status"] == "resolved-by-stronger-owner"

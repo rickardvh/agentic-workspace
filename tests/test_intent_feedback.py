@@ -8,9 +8,15 @@ from agentic_workspace.intent_feedback import (
     compile_intent_feedback,
     evaluate_intent_expectation,
     intent_expectation_from_principle,
+    intent_recurrence_evidence,
     recurrence_promotion,
 )
-from agentic_workspace.operating_decision import compile_operating_decision
+from agentic_workspace.operating_decision import (
+    admit_projection_surface_decision_input,
+    compile_operating_decision,
+    consume_projection_surface_decision_input,
+    finalize_projection_surface_operating_decision,
+)
 from agentic_workspace.workspace_runtime_core import _architecture_principles_payload
 
 
@@ -126,23 +132,28 @@ def test_applicable_intent_without_consumer_becomes_existing_coverage_gap() -> N
 
 
 @pytest.mark.parametrize(
-    ("intent_id", "affected", "evidence_ref"),
+    ("consumer", "intent_id", "affected", "evidence_ref"),
     [
-        ("phase-question-context-economy", ("routing",), "session:unrelated-log-packaging-gated"),
-        ("total-successful-completion-cost", ("operating-cost",), "measurement:repeated-closeout-rebuild"),
-        ("host-agnostic-agent-judgment", ("skill-selection",), "session:lexical-open-issue-route"),
+        ("start", "phase-question-context-economy", ("routing",), "session:unrelated-log-packaging-gated"),
+        ("report", "total-successful-completion-cost", ("operating-cost",), "measurement:repeated-closeout-rebuild"),
+        ("implement", "host-agnostic-agent-judgment", ("skill-selection",), "session:lexical-open-issue-route"),
     ],
 )
-def test_captured_session_regressions_are_named_intent_drift(intent_id: str, affected: tuple[str, ...], evidence_ref: str) -> None:
+def test_captured_sessions_replay_through_ordinary_decision(
+    consumer: str, intent_id: str, affected: tuple[str, ...], evidence_ref: str
+) -> None:
     expectation = _expectation(intent_id=intent_id, affected=affected)
     evidence = _evidence(expectation, outcome="contradicted")
     evidence["evidence_refs"] = [evidence_ref]
 
-    feedback = compile_intent_feedback(expectations=[expectation], evidence=[evidence])
+    payload, decision = _ordinary_surface_decision(consumer=consumer, expectation=expectation, evidence=evidence)
+    feedback = decision["intent_feedback"]
 
     assert feedback["status"] == "drift"
     assert feedback["findings"][0]["intent_ref"] == intent_id
     assert feedback["findings"][0]["evidence_refs"] == [evidence_ref]
+    assert decision["context_consequences"][0]["finding_id"] == feedback["findings"][0]["id"]
+    assert payload["context"]["projection_decision_authority"]["intent_expectation_revisions"] == [expectation["expectation_revision"]]
 
 
 def test_unrelated_bug_and_mature_aligned_path_create_no_ceremony() -> None:
@@ -166,16 +177,65 @@ def test_deterministic_recurrence_promotes_existing_stronger_owner() -> None:
         evidence=[_evidence(expectation, outcome="contradicted", authority="mechanical-check")],
     )
 
-    promotion = recurrence_promotion(
-        finding=feedback["findings"][0],
-        recurrence_count=2,
+    finding = feedback["findings"][0]
+    recurrence = intent_recurrence_evidence(
+        finding=finding,
+        observations=[
+            {"finding_id": finding["id"], "observation_ref": "run:first"},
+            {"finding_id": finding["id"], "observation_ref": "run:second"},
+        ],
         deterministic=True,
+    )
+    promotion = recurrence_promotion(
+        finding=finding,
+        recurrence=recurrence,
         promotion_target={"owner": "contract-checker", "proof_route": "pytest tests/test_guardrail.py"},
     )
 
     assert promotion["status"] == "promote-to-stronger-owner"
     assert promotion["stronger_owner"]["owner"] == "contract-checker"
     assert promotion["memory_or_issue_spam_allowed"] is False
+
+
+def _ordinary_surface_decision(*, consumer: str, expectation: dict, evidence: dict | None = None) -> tuple[dict, dict]:
+    admitted = admit_projection_surface_decision_input(
+        input_revisions={"planning": "planning-revision"},
+        consumer=consumer,
+    )
+    payload = consume_projection_surface_decision_input(
+        payload={
+            "status": "continue",
+            "intent_expectations": [expectation],
+            "intent_evidence": [evidence] if evidence else [],
+        },
+        admitted_input=admitted,
+        consumer=consumer,
+    )
+    return finalize_projection_surface_operating_decision(payload=payload, admitted_input=admitted, consumer=consumer)
+
+
+@pytest.mark.parametrize("consumer", ["start", "summary", "implement", "proof", "report"])
+def test_one_intent_revision_is_consumed_before_each_ordinary_surface_decision(consumer: str) -> None:
+    expectation = _expectation()
+
+    payload, decision = _ordinary_surface_decision(consumer=consumer, expectation=expectation)
+
+    authority = payload["context"]["projection_decision_authority"]
+    assert authority["status"] == "admitted"
+    assert authority["consumer"] == consumer
+    assert authority["intent_expectation_revisions"] == [expectation["expectation_revision"]]
+    assert authority["intent_feedback_revision"] == decision["intent_feedback"]["input_revision"]
+    assert decision["intent_feedback"]["evaluations"][0]["expectation_revision"] == expectation["expectation_revision"]
+
+
+def test_non_applicable_intent_stays_absent_from_ordinary_decision_authority() -> None:
+    expectation = _expectation()
+    expectation["status"] = "non-applicable"
+
+    payload, decision = _ordinary_surface_decision(consumer="start", expectation=expectation)
+
+    assert payload["context"]["projection_decision_authority"]["intent_expectation_revisions"] == []
+    assert decision["intent_feedback"]["applicable_expectations"] == []
 
 
 def test_architecture_projection_exposes_predecision_expectation_with_source_revision() -> None:
