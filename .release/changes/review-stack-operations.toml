@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Add idempotent one-shot exact-head review requests and receipt-backed compare-and-swap PR stack restacking."
