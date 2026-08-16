@@ -1992,6 +1992,12 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
         assert "transfer approval" in manifest["limitations"]
         assert manifest["transfer_review"]["status"] == "required"
         assert manifest["transfer_review"]["approval"] == "not-granted"
+        assert manifest["evidence_profile"]["id"] == "all-command-summary-with-available-artifacts"
+        assert manifest["evidence_profile"]["source_command_count"] == 1
+        assert manifest["evidence_profile"]["exported_command_count"] == 1
+        assert manifest["evidence_profile"]["structured_index_complete"] is True
+        assert manifest["evidence_profile"]["command_selection"] == "all-source-session-commands"
+        assert manifest["artifact_coverage"][0]["status"] == "included"
         assert "Share this generated archive" not in combined
         assert manifest["local_diagnostic_boundary"]["manual_handoff"] == "outside-aw-logger-responsibility"
     assert payload["transfer_approval"] == "not-granted"
@@ -2008,8 +2014,36 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
     )
     by_id = json.loads(capsys.readouterr().out)
     assert by_id["artifact_count"] == 0
+    assert by_id["manifest"]["evidence_profile"]["id"] == "all-command-summary"
+    assert by_id["manifest"]["artifact_coverage"][0]["status"] == "digest-only"
     assert source_cli.main(["session-log", "--target", str(target), "export", "--path", pointer["log_path"], "--format", "json"]) == 0
     by_path = json.loads(capsys.readouterr().out)
     assert by_path["source_log_path"] == pointer["log_path"]
     assert log_path.read_bytes() == original_log
     assert index_path.read_bytes() == original_index
+
+
+def test_session_log_export_repairs_partial_source_index_in_export_only(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "one"], lambda _argv: 0) == 0
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "two"], lambda _argv: 0) == 0
+    index_path = _current_index(target)
+    original = json.loads(index_path.read_text(encoding="utf-8"))
+    partial = {**original, "entries": original["entries"][:1]}
+    index_path.write_text(json.dumps(partial, indent=2), encoding="utf-8")
+
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    exported = session_logging.export_session_log(state=state, include_artifacts=False)
+
+    assert exported["manifest"]["evidence_profile"]["source_index_status"] == "partial"
+    assert exported["manifest"]["evidence_profile"]["source_command_count"] == 2
+    assert exported["manifest"]["evidence_profile"]["exported_command_count"] == 2
+    assert exported["manifest"]["evidence_profile"]["structured_index_complete"] is True
+    with zipfile.ZipFile(target / exported["path"]) as archive:
+        export_index = json.loads(archive.read("index.json"))
+        assert len(export_index["entries"]) == 2
+        assert export_index["export_projection"]["complete_for_profile"] is True
+    assert json.loads(index_path.read_text(encoding="utf-8")) == partial

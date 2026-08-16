@@ -15676,10 +15676,14 @@
                 "attr": "issue",
                 "option": "--issue"
               },
-              {
-                "attr": "proposal_id",
-                "option": "--proposal-id"
-              },
+                {
+                  "attr": "proposal_id",
+                  "option": "--proposal-id"
+                },
+                {
+                  "attr": "proposal",
+                  "option": "--proposal"
+                },
               {
                 "attr": "external_ref",
                 "option": "--external-ref"

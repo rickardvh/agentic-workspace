@@ -5027,6 +5027,45 @@ def test_planning_front_door_preserves_integration_propose_contract(monkeypatch,
     assert forwarded == [actual]
 
 
+def test_planning_front_door_forwards_integration_apply_proposal(monkeypatch, tmp_path: Path, capsys) -> None:
+    forwarded: list[list[str]] = []
+
+    def fake_planning_main(argv: list[str]) -> int:
+        forwarded.append(argv)
+        print(json.dumps({"argv": argv}))
+        return 0
+
+    monkeypatch.setattr("repo_planning_bootstrap.cli.main", fake_planning_main)
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "integration-apply",
+                "--proposal",
+                "archive-owner-2590",
+                "--target",
+                str(tmp_path),
+                "--expect-planning-revision",
+                "planning-revision",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    actual = json.loads(capsys.readouterr().out)["argv"]
+    assert actual[0] == "integration-apply"
+    assert actual[actual.index("--proposal") + 1] == "archive-owner-2590"
+    assert actual[actual.index("--target") + 1] == str(tmp_path)
+    assert actual[actual.index("--expect-planning-revision") + 1] == "planning-revision"
+    assert "--dry-run" in actual
+    assert actual[actual.index("--format") + 1] == "json"
+    assert forwarded == [actual]
+
+
 def test_planning_front_door_matches_direct_integration_propose_semantics(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     workspace_target = tmp_path / "workspace-front-door"

@@ -113,6 +113,22 @@ def test_planning_front_door_parity_accepts_canonical_integration_inputs() -> No
     assert module._validate_planning_integration_propose_front_door_parity(module.command_package_ir_manifest()) == []
 
 
+def test_planning_front_door_parity_rejects_unforwarded_integration_apply_proposal() -> None:
+    module = _load_module()
+    payload = copy.deepcopy(module.command_package_ir_manifest())
+    root_package = next(package for package in payload["packages"] if package["id"] == "root-workspace")
+    handler = next(
+        handler
+        for handler in root_package["python_runtime_binding"]["runtime_module_handlers"]
+        if handler.get("operation_id") == "planning.front-door"
+    )
+    handler["option_specs"] = [item for item in handler["option_specs"] if item.get("attr") != "proposal"]
+
+    errors = module._validate_planning_integration_propose_front_door_parity(payload)
+
+    assert errors == ["planning.integration-apply.lifecycle inputs are not forwarded by planning.front-door: proposal"]
+
+
 def test_non_enum_keyword_routing_audit_rejects_unclassified_candidate(tmp_path: Path) -> None:
     module = _load_module()
     source = tmp_path / "src" / "sample.py"

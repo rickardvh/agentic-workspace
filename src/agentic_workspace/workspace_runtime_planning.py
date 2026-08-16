@@ -96,14 +96,14 @@ def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
         depends_on=str(getattr(args, "depends_on", "") or ""),
         rationale=str(getattr(args, "rationale", "") or ""),
         maturity=str(getattr(args, "maturity", "") or ""),
-        expected_relation_revision=str(getattr(args, "expected_relation_revision", "") or ""),
+        expected_relation_revision=str(getattr(args, "expect_relation_revision", "") or ""),
         apply_issue_relation_reconcile=bool(getattr(args, "apply_issue_relation_reconcile", False)),
         apply_issue_relation_migration=bool(getattr(args, "apply_issue_relation_migration", False)),
         apply_pending_integrations=bool(getattr(args, "apply_pending_integrations", False)),
         preview=bool(getattr(args, "preview", False)),
         apply=bool(getattr(args, "apply", False)),
         proposal=str(getattr(args, "proposal", "") or ""),
-        expected_planning_revision=str(getattr(args, "expected_planning_revision", "") or ""),
+        expected_planning_revision=str(getattr(args, "expect_planning_revision", "") or ""),
     )
     payload = _rewrite_module_cli_commands(payload)
     if args.format == "json":
