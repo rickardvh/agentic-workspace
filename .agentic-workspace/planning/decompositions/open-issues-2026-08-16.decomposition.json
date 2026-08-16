@@ -48,7 +48,7 @@
     {
       "id": "open-issues-review-stack-operations",
       "title": "Exact-head one-shot review and safe stack restacking (#2557)",
-      "readiness": "ready",
+      "readiness": "promoted",
       "outcome": "Provide receipt-backed one-shot exact-head review and compare-and-swap stack restacking without weakening the merge gate.",
       "owner_surface": ".agentic-workspace/planning/lanes/open-issues-review-stack-operations.lane.json",
       "proof": "Stopped-watcher, stale-review, idempotency, force-with-lease success/failure, and live bounded stack evidence.",

@@ -2586,6 +2586,8 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
         "proof_route_selection",
         "proof_closeout_summary",
         "proof_invocation_posture",
+        "context",
+        "projection_reuse",
     }
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
     assert payload["proof_narrowness"]["status"] == "narrow_required"

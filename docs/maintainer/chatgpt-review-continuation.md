@@ -55,6 +55,44 @@ The command resolves the branch only from that open PR and still requires the de
 
 ## Poll or watch
 
+## One-shot exact-head review
+
+When the persistent watcher is stopped, request one independent review by naming both the PR and its current full head SHA:
+
+```powershell
+uv run python tools/chatgpt_review_loop.py recheck --pr <number> --head <40-character-sha>
+```
+
+The request has its own durable receipt under `.agentic-workspace/local/chatgpt-review-loop/rechecks/`; it neither reads nor changes watcher lifecycle state. A duplicate PR/SHA request returns the existing running, awaiting, failed, or completed request instead of launching another reviewer. An already-posted exact-head verdict is returned directly. If the PR moves before or during review, the result is classified as stale and reports the exact command for the newly observed head. Review remains separate from addressing feedback, publishing, and merging.
+
+## Declared stack restacking
+
+Use `tools/review_stack_ops.py` for descendants that must move after a reviewed base changes. It requires a JSON declaration with every PR, branch, old base, new base, and expected remote head written as a full SHA; it never discovers a rewrite target from branch ordering or abbreviated IDs:
+
+```json
+{
+  "kind": "agentic-workspace/review-stack-restack/v1",
+  "base": {"pr_number": 100, "branch": "base-fix", "head": "<full-sha>"},
+  "descendants": [
+    {
+      "pr_number": 101,
+      "branch": "dependent-change",
+      "old_base": "<full-sha>",
+      "new_base": "<full-sha>",
+      "old_remote_head": "<full-sha>"
+    }
+  ]
+}
+```
+
+Plan and verify ancestry plus stable aggregate patch identity without publishing:
+
+```powershell
+uv run python tools/review_stack_ops.py --declaration stack.json --receipt restack-receipt.json
+```
+
+After inspecting that receipt, add `--publish` to use an exact `--force-with-lease=<ref>:<old-head>` for every declared descendant. Add `--update-pr-bodies` only when the PR bodies should receive an `aw-exact-head` marker from the observed published heads. All rewrites are prepared before the first push. A pre-publication failure leaves branches and PR bodies unchanged; a later failure records precisely which pushes or metadata edits succeeded, because multi-ref GitHub publication is bounded but not atomic.
+
 Run one cheap deterministic poll:
 
 ```powershell
@@ -115,7 +153,9 @@ Run the focused deterministic suite with:
 
 ```powershell
 uv run pytest tests/test_chatgpt_review_loop.py -q
+uv run pytest tests/test_review_stack_ops.py -q
 uv run ruff check tools/chatgpt_review_loop.py tests/test_chatgpt_review_loop.py
+uv run ruff check tools/review_stack_ops.py tests/test_review_stack_ops.py
 ```
 
 The current dogfooding record is [aw-chatgpt-review-continuation-dogfood-2026-07-14.md](../reviews/aw-chatgpt-review-continuation-dogfood-2026-07-14.md). Do not close issue #2290 or consider automatic merge until that record contains representative live external-review cycles rather than deterministic fixtures alone.

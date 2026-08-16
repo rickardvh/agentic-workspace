@@ -1,0 +1,3 @@
+[[changes]]
+type = "minor"
+description = "Add idempotent one-shot exact-head review requests and receipt-backed compare-and-swap PR stack restacking."
