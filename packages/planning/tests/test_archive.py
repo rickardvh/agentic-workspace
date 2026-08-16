@@ -1003,6 +1003,147 @@ candidates = []
     assert not record_path.exists()
 
 
+def test_archive_owner_integration_is_directly_closeout_ready_and_retires_continuation(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "completed", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["proof_report"] = {"integration proof": "display label may change"}
+    record["intent_continuity"]["continuation surface"] = "#stale-continuation"
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": "#stale-continuation",
+        "activation trigger": "after integration",
+    }
+    record["continuation"] = {"owner": "#stale-continuation", "residual_intent": "stale"}
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    proposed = installer_mod.propose_integration_transition(
+        proposal_id="plan-alpha-archive",
+        owner="plan-alpha",
+        owner_ref=".agentic-workspace/planning/execplans/plan-alpha.plan.json",
+        requested_transition="archive-owner",
+        proof="sha256:admitted-integration-proof",
+        target=tmp_path,
+    )
+    assert proposed.reason_code == ""
+    applied = installer_mod.apply_integration_proposal(proposal="plan-alpha-archive", target=tmp_path)
+    assert applied.reason_code == ""
+
+    integrated = json.loads(record_path.read_text(encoding="utf-8"))
+    receipt_ref = integrated["relationships"]["integration"]["receipt_ref"]
+    integrated["proof_report"]["integration proof"] = "renamed display-only label"
+    installer_mod._write_execplan_record(record_path=record_path, record=integrated)
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--apply-cleanup",
+                "--retain-archive",
+                "--closure-decision",
+                "archive-and-close",
+                "--unsolved-intent",
+                "none",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived_path = tmp_path / ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json"
+    archived = json.loads(archived_path.read_text(encoding="utf-8"))
+
+    assert any(action["kind"] == "archived" for action in payload["actions"])
+    assert archived["proof_report"]["validation proof"].startswith(f"{receipt_ref}#")
+    assert archived["proof_report"]["proof achieved now"] == "yes; admitted archive-owner integration receipt"
+    assert archived["proof_report"]['evidence for "proof achieved" state'] == "sha256:admitted-integration-proof"
+    assert archived["intent_satisfaction"]["unsolved intent passed to"] == "none"
+    assert archived["intent_continuity"]["continuation surface"] == "none"
+    assert archived["required_continuation"]["required follow-on for the larger intended outcome"] == "no"
+    assert archived["required_continuation"]["owner surface"] == "none"
+    assert archived["continuation"] == {"owner": "none", "residual_intent": "none"}
+
+    after_first = _closeout_persistent_snapshot(tmp_path)
+    assert planning_cli.main(["archive-plan", "plan-alpha", "--target", str(tmp_path), "--prepare-closeout", "--format", "json"]) == 0
+    retry = json.loads(capsys.readouterr().out)
+    assert any(action["kind"] in {"already-current", "current"} for action in retry["actions"])
+    assert _closeout_persistent_snapshot(tmp_path) == after_first
+
+
+def test_archive_owner_integration_rejects_insufficient_receipt_without_mutation(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    installer_mod.propose_integration_transition(
+        proposal_id="plan-alpha-archive",
+        owner="plan-alpha",
+        owner_ref=".agentic-workspace/planning/execplans/plan-alpha.plan.json",
+        requested_transition="archive-owner",
+        proof="sha256:admitted-integration-proof",
+        target=tmp_path,
+    )
+    applied = installer_mod.apply_integration_proposal(proposal="plan-alpha-archive", target=tmp_path)
+    assert applied.reason_code == ""
+    integrated = json.loads(record_path.read_text(encoding="utf-8"))
+    receipt_ref = integrated["relationships"]["integration"]["receipt_ref"]
+    receipt_path = tmp_path / receipt_ref
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt["proof_refs"] = []
+    receipt["receipt_revision"] = installer_mod._record_revision(receipt)
+    receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+    before = _closeout_persistent_snapshot(tmp_path)
+
+    blocked = archive_execplan("plan-alpha", target=tmp_path, prepare_closeout=True, apply_cleanup=True)
+
+    assert blocked.reason_code == "integration-closeout-proof-insufficient"
+    assert any("contains no admitted proof_refs" in action.detail for action in blocked.actions)
+    assert _closeout_persistent_snapshot(tmp_path) == before
+
+
+def test_archive_prepare_closeout_rolls_back_normal_late_rejection(tmp_path: Path) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["durable_residue"] = {
+        "status": "memory",
+        "learned constraint": "retain this learning",
+        "motivation worth preserving": "future closeout work needs it",
+        "canonical owner now": "Memory note",
+        "promotion trigger": "before archive",
+        "retention after promotion": "retain",
+    }
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+    before = _closeout_persistent_snapshot(tmp_path)
+
+    blocked = archive_execplan("plan-alpha", target=tmp_path, prepare_closeout=True, apply_cleanup=True)
+
+    assert blocked.reason_code == "archive-closeout-rolled-back"
+    assert any(action.kind == "rolled back" for action in blocked.actions)
+    assert any("Memory is not installed" in warning["message"] for warning in blocked.warnings)
+    assert _closeout_persistent_snapshot(tmp_path) == before
+
+
 def test_archive_plan_prepare_closeout_updates_already_archived_record(tmp_path: Path, capsys) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"

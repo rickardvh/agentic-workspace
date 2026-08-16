@@ -431,6 +431,8 @@ def test_integration_apply_supports_close_archive_and_keep_open(tmp_path: Path) 
         owner_record = json.loads((root / owner_ref).read_text(encoding="utf-8"))
         assert owner_record["lifecycle"] == expected_lifecycle
         assert owner_record["phase"] == "complete"
+        assert owner_record["relationships"]["integration"]["transition"] == transition
+        assert owner_record["relationships"]["integration"]["receipt_ref"].endswith(f"{transition}-proposal.integration-receipt.json")
 
     root = tmp_path / "keep-open"
     install_bootstrap(target=root)

@@ -6261,7 +6261,7 @@ def _guard_pending_integration_owner_mutation(
 
 
 def _apply_owner_integration_transition(
-    owner_record: dict[str, Any], *, transition: str, proof_refs: list[str], now: str
+    owner_record: dict[str, Any], *, transition: str, proof_refs: list[str], now: str, receipt_ref: str = ""
 ) -> tuple[dict[str, Any], list[str]]:
     updated = copy.deepcopy(owner_record)
     changed_fields: list[str] = []
@@ -6270,20 +6270,22 @@ def _apply_owner_integration_transition(
     if transition not in {"mark-integrated", "close-owner", "archive-owner"}:
         return updated, changed_fields
 
+    relationships = dict(updated.get("relationships") or {}) if isinstance(updated.get("relationships"), dict) else {}
+    integration = dict(relationships.get("integration") or {}) if isinstance(relationships.get("integration"), dict) else {}
+    integration.update(
+        {
+            "status": "integrated",
+            "transition": transition,
+            "applied_at": now,
+            "proof_refs": proof_refs,
+            "receipt_ref": receipt_ref,
+        }
+    )
+    relationships["integration"] = integration
+    updated["relationships"] = relationships
+    changed_fields.append("owner.relationships.integration")
+
     if transition == "mark-integrated":
-        relationships = dict(updated.get("relationships") or {}) if isinstance(updated.get("relationships"), dict) else {}
-        integration = dict(relationships.get("integration") or {}) if isinstance(relationships.get("integration"), dict) else {}
-        integration.update(
-            {
-                "status": "integrated",
-                "transition": "mark-integrated",
-                "applied_at": now,
-                "proof_refs": proof_refs,
-            }
-        )
-        relationships["integration"] = integration
-        updated["relationships"] = relationships
-        changed_fields.append("owner.relationships.integration")
         if isinstance(updated.get("revision"), int):
             updated["revision"] = int(updated["revision"]) + 1
             changed_fields.append("owner.revision")
@@ -14402,6 +14404,7 @@ def _apply_pending_integration_proposals(
             )
             result.reason_code = "stale-integration-subject-revision"
             break
+        receipt_path = _integration_receipt_path(target_root, proposal_id)
         if owner_record is not None:
             if owner_kind == LANE_RECORD_KIND:
                 updated_owner, owner_changed_fields = _apply_lane_integration_transition(
@@ -14416,6 +14419,7 @@ def _apply_pending_integration_proposals(
                     transition=transition,
                     proof_refs=proof_refs,
                     now=now,
+                    receipt_ref=receipt_path.relative_to(target_root).as_posix(),
                 )
             owner_findings = _json_schema_findings(payload=updated_owner, schema_path=owner_schema_path)
             if owner_findings:
@@ -14437,7 +14441,6 @@ def _apply_pending_integration_proposals(
             if updated_owner is not None
             else current_subject_revision
         )
-        receipt_path = _integration_receipt_path(target_root, proposal_id)
         updated_record = copy.deepcopy(record)
         updated_record["status"] = "integrated"
         updated_record["phase"] = "integrated-lifecycle-truth"
@@ -14766,6 +14769,7 @@ def apply_integration_proposal(
                 transition=transition,
                 proof_refs=proof_refs,
                 now=now,
+                receipt_ref=receipt_path.relative_to(target_root).as_posix(),
             )
         owner_findings = _json_schema_findings(payload=updated_owner, schema_path=owner_schema_path)
         if owner_findings:
@@ -17578,9 +17582,12 @@ def _prepared_closeout_proof_report(
     execution_run: dict[str, str],
     finished_run_review: dict[str, str],
     iterative_follow_through: dict[str, str],
+    integration_evidence: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    integration_evidence = integration_evidence or {}
     validation_evidence = (
-        proof_report.get("validation proof", "").strip()
+        integration_evidence.get("validation proof", "").strip()
+        or proof_report.get("validation proof", "").strip()
         or execution_summary.get("validation confirmed", "").strip()
         or execution_run.get("validations run", "").strip()
     )
@@ -17588,14 +17595,17 @@ def _prepared_closeout_proof_report(
         return {}
 
     proof_now = (
-        proof_report.get("proof achieved now", "").strip()
+        integration_evidence.get("proof achieved now", "").strip()
+        or proof_report.get("proof achieved now", "").strip()
         or iterative_follow_through.get("proof achieved now", "").strip()
         or finished_run_review.get("proof status", "").strip()
     )
     if not proof_now or proof_now.lower() in {"pending", "tbd", "todo"}:
         proof_now = "yes; validation evidence is recorded in execution summary."
 
-    proof_evidence = proof_report.get('evidence for "proof achieved" state', "").strip()
+    proof_evidence = integration_evidence.get('evidence for "proof achieved" state', "").strip()
+    if not proof_evidence:
+        proof_evidence = proof_report.get('evidence for "proof achieved" state', "").strip()
     if not proof_evidence:
         proof_evidence = execution_run.get("validations run", "").strip() or execution_summary.get("validation confirmed", "").strip()
 
@@ -17608,6 +17618,103 @@ def _prepared_closeout_proof_report(
         if key not in normalized:
             normalized[key] = value
     return normalized
+
+
+def _archive_owner_integration_closeout_evidence(*, record: dict[str, Any], target_root: Path, record_path: Path) -> dict[str, Any]:
+    relationships = _record_mapping(record, "relationships")
+    integration = _record_mapping(relationships, "integration")
+    if str(integration.get("transition", "")).strip() != "archive-owner":
+        return {"status": "not-applicable"}
+    receipt_ref = str(integration.get("receipt_ref", "")).strip()
+    if not receipt_ref:
+        return {
+            "status": "rejected",
+            "reason_code": "integration-closeout-receipt-ref-missing",
+            "reason": "archive-owner integration is missing its receipt_ref",
+        }
+    receipt_path = target_root / receipt_ref
+    try:
+        receipt_path.resolve().relative_to(target_root.resolve())
+    except ValueError:
+        return {
+            "status": "rejected",
+            "reason_code": "integration-closeout-receipt-ref-invalid",
+            "reason": "archive-owner integration receipt_ref escapes the target repository",
+        }
+    receipt = _load_integration_receipt(receipt_path)
+    if receipt is None:
+        return {
+            "status": "rejected",
+            "reason_code": "integration-closeout-receipt-missing",
+            "reason": f"archive-owner integration receipt is missing or invalid: {receipt_ref}",
+        }
+    findings = _json_schema_findings(payload=receipt, schema_path=INTEGRATION_RECEIPT_SCHEMA_PATH)
+    if findings:
+        return {
+            "status": "rejected",
+            "reason_code": "integration-closeout-receipt-schema-invalid",
+            "reason": f"archive-owner integration receipt failed schema validation: {'; '.join(findings)}",
+        }
+    if str(receipt.get("outcome", "")).strip() != "integrated" or str(receipt.get("requested_transition", "")).strip() != "archive-owner":
+        return {
+            "status": "rejected",
+            "reason_code": "integration-closeout-receipt-transition-mismatch",
+            "reason": "integration receipt does not admit an integrated archive-owner transition",
+        }
+    receipt_owner = _record_section_dict(receipt, "owner") or {}
+    expected_ref = record_path.relative_to(target_root).as_posix()
+    expected_refs = {expected_ref}
+    archive_prefix = ".agentic-workspace/planning/execplans/archive/"
+    if expected_ref.startswith(archive_prefix):
+        expected_refs.add(f".agentic-workspace/planning/execplans/{expected_ref.removeprefix(archive_prefix)}")
+    expected_owner_id = str(record.get("id", "")).strip() or record_path.stem.removesuffix(".plan")
+    if str(receipt_owner.get("id", "")).strip() != expected_owner_id or str(receipt_owner.get("ref", "")).strip() not in expected_refs:
+        return {
+            "status": "rejected",
+            "reason_code": "integration-closeout-receipt-owner-mismatch",
+            "reason": "integration receipt owner identity does not match the closeout owner",
+        }
+    proof_refs = (
+        [str(item).strip() for item in receipt.get("proof_refs", []) if str(item).strip()]
+        if isinstance(receipt.get("proof_refs"), list)
+        else []
+    )
+    if not proof_refs:
+        return {
+            "status": "rejected",
+            "reason_code": "integration-closeout-proof-insufficient",
+            "reason": "archive-owner integration receipt contains no admitted proof_refs",
+        }
+    receipt_revision = str(receipt.get("receipt_revision", "")).strip()
+    if not receipt_revision or receipt_revision != _record_revision(receipt):
+        return {
+            "status": "rejected",
+            "reason_code": "integration-closeout-receipt-revision-mismatch",
+            "reason": "archive-owner integration receipt revision is missing or stale",
+        }
+    relationship_proof_refs = (
+        [str(item).strip() for item in integration.get("proof_refs", []) if str(item).strip()]
+        if isinstance(integration.get("proof_refs"), list)
+        else []
+    )
+    if relationship_proof_refs != proof_refs:
+        return {
+            "status": "rejected",
+            "reason_code": "integration-closeout-proof-mismatch",
+            "reason": "owner integration proof_refs do not match the authoritative integration receipt",
+        }
+    return {
+        "status": "admitted",
+        "receipt_ref": receipt_ref,
+        "receipt_revision": receipt_revision,
+        "proof_refs": proof_refs,
+        "proof_report": {
+            "validation proof": f"{receipt_ref}#{receipt_revision}",
+            "proof achieved now": "yes; admitted archive-owner integration receipt",
+            'evidence for "proof achieved" state': ", ".join(proof_refs),
+            "integration receipt": receipt_ref,
+        },
+    }
 
 
 def _generated_closeout_adapter(
@@ -18456,6 +18563,15 @@ def _prepare_execplan_closeout(
     iterative_follow_through = _record_section_dict(record, "iterative_follow_through") or {}
     proof_report = _record_section_dict(record, "proof_report") or {}
     existing_closure_check = _record_section_dict(record, "closure_check") or {}
+    integration_evidence = _archive_owner_integration_closeout_evidence(
+        record=record,
+        target_root=target_root,
+        record_path=record_path,
+    )
+    if integration_evidence.get("status") == "rejected":
+        result.add("manual review", record_path, str(integration_evidence.get("reason", "integration proof is not closeout-ready")))
+        result.reason_code = str(integration_evidence.get("reason_code", "integration-closeout-proof-rejected"))
+        return False
     completes_larger_outcome = intent_continuity.get("this slice completes the larger intended outcome", "").strip().lower()
     required_follow_on = required_continuation.get("required follow-on for the larger intended outcome", "").strip().lower()
     explicit_continuation_owner = _explicit_closeout_continuation(
@@ -18477,6 +18593,14 @@ def _prepare_execplan_closeout(
     if normalized_closure not in {"archive-and-close", "archive-but-keep-lane-open"}:
         result.add("manual review", record_path, "--closure-decision must be one of archive-and-close or archive-but-keep-lane-open")
         return False
+
+    explicit_continuation_retirement = normalized_closure == "archive-and-close" and (
+        integration_evidence.get("status") == "admitted"
+        or str(unsolved_intent or "").strip().lower() in {"none", "n/a", "no further action"}
+    )
+    if explicit_continuation_retirement:
+        required_follow_on = "no"
+        continuation_owner = ""
 
     existing_intent_satisfaction = _record_section_dict(record, "intent_satisfaction") or {}
     normalized_intent_satisfied = (intent_satisfied or "").strip().lower()
@@ -18525,7 +18649,9 @@ def _prepare_execplan_closeout(
     slice_status = existing_slice_status or "completed"
     larger_status = "open" if normalized_closure == "archive-but-keep-lane-open" else (existing_larger_status or "closed")
     routed_unsolved_intent = (
-        continuation_owner if normalized_closure == "archive-but-keep-lane-open" else (explicit_continuation_owner or "none")
+        continuation_owner
+        if normalized_closure == "archive-but-keep-lane-open"
+        else ("none" if explicit_continuation_retirement else (explicit_continuation_owner or "none"))
     )
     original_intent = (
         existing_intent_satisfaction.get("original intent")
@@ -18591,6 +18717,7 @@ def _prepare_execplan_closeout(
         execution_run=execution_run,
         finished_run_review=finished_run_review,
         iterative_follow_through=iterative_follow_through,
+        integration_evidence=_record_section_dict(integration_evidence, "proof_report") or {},
     )
     if prepared_proof_report:
         patch["proof_report"] = prepared_proof_report
@@ -18640,8 +18767,25 @@ def _prepare_execplan_closeout(
             "owner surface": routed_unsolved_intent,
             "activation trigger": "when the continuation owner promotes the next slice",
         }
+    elif explicit_continuation_retirement:
+        prepared_intent_continuity["this slice completes the larger intended outcome"] = "yes"
+        prepared_intent_continuity["continuation surface"] = "none"
+        patch["required_continuation"] = {
+            "required follow-on for the larger intended outcome": "no",
+            "owner surface": "none",
+            "activation trigger": "none",
+        }
     if prepared_intent_continuity:
         patch["intent_continuity"] = prepared_intent_continuity
+    if normalized_closure == "archive-but-keep-lane-open" or explicit_continuation_retirement:
+        compact_continuation = copy.deepcopy(_record_mapping(record, "continuation"))
+        compact_continuation["owner"] = routed_unsolved_intent
+        compact_continuation["residual_intent"] = (
+            f"Unsolved larger intent continues in {routed_unsolved_intent}."
+            if normalized_closure == "archive-but-keep-lane-open"
+            else "none"
+        )
+        patch["continuation"] = compact_continuation
     patch["machine_readable_contract"] = _prepared_machine_readable_contract_closeout(
         record=record,
         validation_evidence=validation_evidence,
@@ -18873,7 +19017,7 @@ def _prepare_archived_execplan_closeout(
         return result
 
     status = _execplan_status(plan_path)
-    if status not in {"completed", "done", "closed"}:
+    if status not in {"completed", "done", "closed", "archived"}:
         result.add(
             "blocked-with-reason",
             record_path,
@@ -20581,9 +20725,33 @@ def _atomic_planning_archive(operation: Callable[..., InstallResult]) -> Callabl
                 return operation(plan, target=target_root, **kwargs)
             except _PlanningArchiveAdmissionRejected as rejected:
                 return rejected.result
+        initial_plan_path = _resolve_execplan_path(target_root, plan)
+        archive_root = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive"
+        active_prepare_closeout = bool(
+            kwargs.get("prepare_closeout")
+            and initial_plan_path is not None
+            and initial_plan_path.exists()
+            and archive_root not in initial_plan_path.parents
+        )
         snapshot = _planning_archive_transaction_snapshot(target_root)
         try:
-            return operation(plan, target=target_root, **kwargs)
+            result = operation(plan, target=target_root, **kwargs)
+            terminal_applied = any(action.kind in {"archived", "closed"} for action in result.actions)
+            if active_prepare_closeout and not terminal_applied:
+                current = _planning_archive_transaction_snapshot(target_root)
+                if current != snapshot:
+                    _restore_planning_archive_transaction(target_root, snapshot)
+                    for action in result.actions:
+                        if action.kind in _MUTATION_APPLIED_ACTIONS:
+                            action.kind = "rolled back"
+                    result.add(
+                        "rolled back",
+                        initial_plan_path,
+                        "rejected closeout restored every Planning-owned persistent surface",
+                    )
+                    result.mutation_expected = False
+                    result.reason_code = result.reason_code or "archive-closeout-rolled-back"
+            return result
         except _PlanningArchiveAdmissionRejected as rejected:
             _restore_planning_archive_transaction(target_root, snapshot)
             return rejected.result
@@ -20698,7 +20866,7 @@ def archive_execplan(
             return result
         if status not in {"completed", "done", "closed"} or dry_run:
             return result
-    if status not in {"completed", "done", "closed"}:
+    if status not in {"completed", "done", "closed"} and not (prepare_closeout and status == "archived"):
         result.add("manual review", plan_path, "archive requires the active milestone status to be completed/done/closed")
         return result
     if prepare_closeout:
