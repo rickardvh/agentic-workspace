@@ -133,6 +133,15 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     assert "memory-router" in skill_ids
     assert "planning-reporting" in skill_ids
     assert all(entry["registration"] == "explicit" for entry in payload["skills"])
+    for entry in payload["skills"]:
+        if entry["availability"] != "available":
+            continue
+        resolution = entry["primary_source_resolution"]
+        assert resolution["status"] == "resolved"
+        assert resolution["resource_id"].startswith("skill-source:")
+        assert Path(resolution["selected_source"]).is_file()
+        if entry["path"]:
+            assert (target / entry["path"]).is_file()
     workspace_entries = {entry["id"]: entry for entry in payload["skills"] if entry["source_kind"] == "installed-workspace-skills"}
     assert {skill_id for skill_id, entry in workspace_entries.items() if entry["visibility"] == "ordinary-default"} == {
         "workspace-startup",
@@ -332,6 +341,9 @@ def test_registered_skill_dependency_closure_accepts_package_owned_resource(tmp_
     )
     (package_root / "resources").mkdir()
     (package_root / "resources" / "review-contract.json").write_text("{}", encoding="utf-8")
+    skill_file = package_root / "review-pass" / "SKILL.md"
+    skill_file.parent.mkdir()
+    skill_file.write_text("# Review pass\n", encoding="utf-8")
     source = workspace_runtime_core.SkillCatalogSource(
         name="package-fixture",
         registry_path=Path("REGISTRY.json"),
@@ -342,13 +354,20 @@ def test_registered_skill_dependency_closure_accepts_package_owned_resource(tmp_
         default_stability="fixture",
     )
 
-    skills = workspace_runtime_core._load_registered_skills(source=source, registry_file=registry, target_root=target)
+    skills = workspace_runtime_core._load_registered_skills(
+        source=source,
+        registry_file=registry,
+        target_root=target,
+        package_registry_file=registry,
+    )
 
     assert skills[0].availability == "available"
     assert skills[0].resource_resolution_receipts[0]["status"] == "resolved"
     assert skills[0].resource_resolution_receipts[0]["selected_owner"] == "package-owned"
     assert skills[0].resource_resolution_receipts[0]["resolver"] == "installed-contract-pair.package-resource"
     assert skills[0].resource_resolution_receipts[0]["receipt_id"].startswith("package-resource:")
+    assert skills[0].primary_source_resolution["selected_owner"] == "package-owned"
+    assert skills[0].materialized_path is None
 
 
 def test_registered_skill_discovery_resolves_package_resource_when_target_registry_exists(
@@ -397,6 +416,46 @@ def test_registered_skill_discovery_resolves_package_resource_when_target_regist
     assert [skill.skill_id for skill in skills] == ["review-pass"]
     assert skills[0].availability == "available"
     assert workspace_runtime_core._recommend_skills(task_text="run a bounded review", skills=skills)[0].skill.skill_id == "review-pass"
+
+
+def test_registered_skill_discovery_preserves_unresolved_primary_source_as_blocked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    registry = tmp_path / "REGISTRY.json"
+    registry.write_text(
+        json.dumps(
+            {
+                "skills": [
+                    {
+                        "id": "missing-skill",
+                        "path": "missing-skill/SKILL.md",
+                        "summary": "run a missing skill",
+                        "activation_hints": {"verbs": ["missing"]},
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    source = workspace_runtime_core.SkillCatalogSource(
+        name="fixture",
+        registry_path=Path("REGISTRY.json"),
+        skills_root=Path("skills"),
+        owner="fixture",
+        source_kind="fixture",
+        default_scope="bundled",
+        default_stability="fixture",
+    )
+    monkeypatch.setattr(cli, "_skill_catalog_sources", lambda: (source,))
+    monkeypatch.setattr(cli, "_package_skill_registry_file", lambda _source: None)
+
+    skills, warnings, _sources = workspace_runtime_core._discover_registered_skills(target_root=tmp_path)
+
+    assert len(skills) == 1
+    assert skills[0].availability == "blocked"
+    assert skills[0].blocked_reasons == ("missing-primary-source:missing-skill",)
+    assert skills[0].primary_source_resolution["status"] == "unresolved"
+    assert workspace_runtime_core._recommend_skills(task_text="run missing", skills=skills) == []
+    assert workspace_runtime_core._recommend_skills(task_text="run missing", skills=skills, availability="blocked")
+    assert warnings == ["REGISTRY.json points at missing skill file skills/missing-skill/SKILL.md"]
 
 
 def test_blocked_skill_match_is_preserved_outside_executable_recommendations(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -709,6 +768,9 @@ def test_registered_skill_dependency_closure_marks_unknown_resource_identity(tmp
         default_scope="bundled",
         default_stability="fixture",
     )
+    skill_file = tmp_path / "skills" / "review-pass" / "SKILL.md"
+    skill_file.parent.mkdir(parents=True)
+    skill_file.write_text("# Review pass\n", encoding="utf-8")
 
     skills = workspace_runtime_core._load_registered_skills(source=source, registry_file=registry, target_root=tmp_path)
 
@@ -1140,7 +1202,7 @@ def test_skills_command_recommends_review_skill_for_natural_review_request(tmp_p
     assert any("verb match" in reason or "phrase match" in reason for reason in payload["recommendations"][0]["reasons"])
 
 
-def test_skills_command_discovers_temporary_memory_bootstrap_skills(tmp_path: Path, capsys) -> None:
+def test_skills_command_marks_package_only_temporary_memory_bootstrap_skills_inactive(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -1170,10 +1232,54 @@ def test_skills_command_discovers_temporary_memory_bootstrap_skills(tmp_path: Pa
 
     assert install_skill["source_kind"] == "temporary-memory-bootstrap-skills"
     assert install_skill["scope"] == "temporary-bootstrap"
-    assert install_skill["path"] == ".agentic-workspace/memory/bootstrap/skills/install/SKILL.md"
-    assert payload["recommendations"][0]["id"] == "install"
+    assert install_skill["path"] == ""
+    assert install_skill["availability"] == "inactive"
+    assert install_skill["blocked_reasons"] == ["inactive-lifecycle:temporary-bootstrap"]
+    assert install_skill["primary_source_resolution"]["status"] == "resolved"
+    assert install_skill["primary_source_resolution"]["selected_owner"] == "package-owned"
+    assert install_skill["primary_source_resolution"]["materialization"] == "package-only"
+    assert all(entry["id"] != "install" for entry in payload["recommendations"])
     assert not payload["warnings"]
     assert any(source["name"] == "memory-bootstrap-temporary" and source["state"] == "package-registry" for source in payload["sources"])
+
+
+def test_skills_command_recommends_temporary_memory_bootstrap_skill_only_while_materialized(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target), "--modules", "memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    package_skill = (
+        Path(__file__).resolve().parents[1] / "packages/memory/bootstrap/.agentic-workspace/memory/bootstrap/skills/install/SKILL.md"
+    )
+    target_skill = target / ".agentic-workspace/memory/bootstrap/skills/install/SKILL.md"
+    target_skill.parent.mkdir(parents=True)
+    target_skill.write_text(package_skill.read_text(encoding="utf-8"), encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "finish bootstrap installation review",
+                "--select",
+                "skills,recommendations",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)["values"]
+    install_skill = next(entry for entry in payload["recommendations"] if entry["id"] == "install")
+
+    assert install_skill["availability"] == "available"
+    assert install_skill["path"] == ".agentic-workspace/memory/bootstrap/skills/install/SKILL.md"
+    assert install_skill["primary_source_resolution"]["selected_owner"] == "repo-owned"
+    assert install_skill["primary_source_resolution"]["materialization"] == "target"
 
 
 def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: Path, capsys) -> None:
