@@ -33,6 +33,7 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `context_effects.typed_repairs` | array of object | yes |  | Revision-bound repair operations supplied by specialist owners. |  |  |
 | `context_effects.durable_dispositions` | array of object | yes |  | Stable routed or deferred owner destinations and re-entry triggers. |  |  |
 | `context_effects.convergence_rule` | string | yes |  | Rule for deduplication, terminal lifecycle, and continuation convergence. |  |  |
+| `intent_feedback` | object | no |  | Revision-bound applicable intent expectations, evidence evaluation, material findings, and quiet/rescope posture composed before the final decision. |  |  |
 | `current_work` | object | no |  | Current-work identity admitted into the composed decision. |  |  |
 | `selected_owner` | object | no |  | Selected owner identity admitted into the composed decision. |  |  |
 | `terminal_state` | string | no |  | Terminal outcome state used for continuation or finalization claims. |  |  |

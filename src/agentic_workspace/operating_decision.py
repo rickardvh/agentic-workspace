@@ -16,6 +16,7 @@ from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_receipt_status,
     registered_context_owner_result_status,
 )
+from agentic_workspace.intent_feedback import compile_intent_feedback
 
 BLOCKER_PRECEDENCE = [
     "missing-authority",
@@ -1530,6 +1531,22 @@ def compile_projection_surface_operating_decision(
         return {}
     posture = _projection_surface_posture(payload)
     input_revisions = _as_dict(admitted_input.get("input_revisions"))
+    payload_context = _as_dict(payload.get("context"))
+    architecture_principles = _as_dict(payload.get("architecture_principles")) or _as_dict(payload_context.get("architecture_principles"))
+    forecast = _as_dict(payload.get("architecture_principles_forecast")) or _as_dict(
+        payload_context.get("architecture_principles_forecast")
+    )
+    forecast_principles = _as_dict(forecast.get("architecture_principles"))
+    intent_expectations = [
+        item
+        for source in (
+            payload.get("intent_expectations"),
+            architecture_principles.get("intent_expectations"),
+            forecast_principles.get("intent_expectations"),
+        )
+        for item in _as_list(source)
+        if isinstance(item, dict)
+    ]
     decision = compile_operating_decision(
         inputs={
             "consumer": consumer,
@@ -1545,6 +1562,9 @@ def compile_projection_surface_operating_decision(
             "primary_action": posture["primary_action"],
             "blockers": posture["blockers"],
             "blocked_claim_classes": posture["blocked_claim_classes"],
+            "intent_expectations": intent_expectations,
+            "intent_evidence": [item for item in _as_list(payload.get("intent_evidence")) if isinstance(item, dict)],
+            "intent_resolutions": [item for item in _as_list(payload.get("intent_resolutions")) if isinstance(item, dict)],
         }
     )
     decision["projection_input_id"] = str(admitted_input.get("input_id") or "")
@@ -1914,7 +1934,14 @@ def compile_implement_context_operating_decision(
 def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     """Return one primary typed action or one typed external blocker."""
 
+    intent_feedback = compile_intent_feedback(
+        expectations=[item for item in _as_list(inputs.get("intent_expectations")) if isinstance(item, dict)],
+        evidence=[item for item in _as_list(inputs.get("intent_evidence")) if isinstance(item, dict)],
+        resolutions=[item for item in _as_list(inputs.get("intent_resolutions")) if isinstance(item, dict)],
+    )
     revisions = _as_dict(inputs.get("revisions"))
+    if intent_feedback["applicable_expectations"]:
+        revisions = {**revisions, "intent_feedback_revision": intent_feedback["input_revision"]}
     authorities = _as_dict(inputs.get("authorities"))
     actionability = _as_dict(inputs.get("actionability"))
     action = _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
@@ -1944,7 +1971,13 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             }
         )
     context_findings = [
-        item for item in [*_as_list(inputs.get("context_gaps")), *_as_list(inputs.get("context_findings"))] if isinstance(item, dict)
+        item
+        for item in [
+            *_as_list(inputs.get("context_gaps")),
+            *_as_list(inputs.get("context_findings")),
+            *_as_list(intent_feedback.get("findings")),
+        ]
+        if isinstance(item, dict)
     ]
     context_consequences = derive_context_consequences(
         findings=context_findings,
@@ -2093,6 +2126,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "context_authority_projection": context_authority_projection,
         "context_consequences": context_consequences,
         "context_effects": context_effects,
+        "intent_feedback": intent_feedback,
         "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),

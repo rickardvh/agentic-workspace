@@ -143,6 +143,7 @@ from agentic_workspace.current_work_context import (
 )
 from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
+from agentic_workspace.intent_feedback import architecture_principles_intent_context
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     attach_projection_surface_decision_input_consumption,
@@ -20793,6 +20794,11 @@ def _architecture_principles_payload(
             }
         )
     status = "attention" if matched else "clear" if normalized_paths else "available"
+    intent_revision = "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+    intent_expectations = architecture_principles_intent_context(
+        principles=matched,
+        intent_revision=intent_revision,
+    )["expectations"]
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/architecture-principles-status/v1",
         "status": status,
@@ -20802,6 +20808,8 @@ def _architecture_principles_payload(
         "relationship_to_system_intent": "Architecture principles are typed subsections of the normalized system-intent record.",
         "matched_count": len(matched),
         "matched_principles": matched,
+        "intent_revision": intent_revision,
+        "intent_expectations": intent_expectations,
         "closeout": {
             "status": "explicit-claim-required" if matched else "not-applicable",
             "required_claim": "preserved|re-scoped-by-human|unresolved" if matched else "",
@@ -20862,25 +20870,11 @@ def _architecture_principles_payload(
                 }
                 for item in matched
             ],
+            "intent_revision": intent_revision,
+            "intent_expectations": intent_expectations,
             "closeout": payload["closeout"],
         }
     return payload
-
-
-def _architecture_principles_configured(target_root: Path | None) -> bool:
-    if target_root is None:
-        return False
-    path = target_root / ".agentic-workspace/system-intent/intent.toml"
-    if not path.is_file():
-        return False
-    try:
-        document = tomllib.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
-        return False
-    return any(
-        isinstance(principle, dict) and str(principle.get("id", "")).strip()
-        for principle in _list_payload(document.get("architecture_principles"))
-    )
 
 
 def _architecture_principles_forecast_payload(
@@ -20892,7 +20886,12 @@ def _architecture_principles_forecast_payload(
 ) -> dict[str, Any]:
     normalized_paths = _normalize_changed_paths(planned_paths or [])
     if not normalized_paths:
-        if not _architecture_principles_configured(target_root):
+        if (
+            target_root is None
+            or not architecture_principles_intent_context(source_path=target_root / ".agentic-workspace/system-intent/intent.toml")[
+                "configured"
+            ]
+        ):
             return {
                 "kind": "agentic-workspace/architecture-principles-forecast/v1",
                 "status": "not-configured",

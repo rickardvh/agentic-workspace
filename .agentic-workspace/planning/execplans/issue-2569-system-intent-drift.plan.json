@@ -1,0 +1,88 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2569-system-intent-drift",
+  "title": "Implement closed-loop system intent drift",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Compose explicit applicable system intent into revision-bound pre-decision expectations, evidence-backed drift/rescope evaluation, existing context consequences, and stronger-owner recurrence promotion.",
+    "non_goals": [
+      "Do not create a policy engine, alignment dashboard, parallel finding ledger, or prose-keyword applicability classifier.",
+      "Do not turn every intent or passing test into a universal hard gate.",
+      "Leave Memory-specific effectiveness and lifecycle work to the dependent Memory lane."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "GitHub #2569",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "a review-scale canonical intent-feedback module and owner-aligned tests",
+      "architecture-principle projection into pre-decision expectations",
+      "canonical operating-decision identity and #2310-compatible consequence integration",
+      "preserved, drift, unknown, non-applicable, rescope, coverage-gap, recurrence-promotion, and quiet-path fixtures",
+      "release metadata and target-branch integration proposal"
+    ],
+    "effects": [
+      "Applicable explicit intent is visible before the constrained decision and carries the same revision through later evaluation.",
+      "Material drift becomes an existing context consequence while authorized rescope and mature aligned paths become quiet.",
+      "Repeated deterministic drift points to an existing stronger owner without creating a new persistent ledger."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected",
+      "owner": "open-issues-system-intent-loop"
+    },
+    "proof_posture": {
+        "state": "satisfied",
+        "refs": [
+          "79 focused intent/operating-decision tests passed",
+          "26 projection-reuse tests passed",
+          "contract tooling, structured inventory, schema references, Ruff, typecheck, and runtime ownership checks passed"
+        ]
+    },
+    "external_posture": {
+      "state": "stacked",
+      "refs": ["PR #2583 / agent/operating-decision-contracts"]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #2569",
+      "label": "GitHub #2569",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Publish the stacked draft PR and let the target-branch integration proposal archive this owner after merge.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Implement closed-loop system intent drift is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "pytest -q tests/test_intent_feedback.py tests/test_operating_decision.py tests/test_workspace_cli.py -k intent",
+      "Run Agentic Workspace changed-path proof, contract tooling, lint, and type checking before integration."
+    ],
+    "refs": [
+      "tests/test_intent_feedback.py",
+      "tests/test_operating_decision.py",
+      "tests/test_workspace_projection_reuse.py",
+      "tests/test_workspace_implement_cli.py",
+      "Runtime implementation ownership: ready (duplicates=0, facade_lines=61)"
+    ]
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": []
+}
