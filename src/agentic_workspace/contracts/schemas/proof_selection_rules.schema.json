@@ -87,6 +87,7 @@
       "type": "object",
       "required": [
         "lane",
+        "eligibility",
         "source_lanes",
         "extensions"
       ],
@@ -94,6 +95,10 @@
         "lane": {
           "type": "string",
           "description": "Lane to use after reducing an eligible docs-only match."
+        },
+        "eligibility": {
+          "const": "whole-source-lane",
+          "description": "Require every changed path in the matched source lane to be reducer-eligible before replacing executable proof with docs review."
         },
         "source_lanes": {
           "type": "array",

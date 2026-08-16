@@ -6103,6 +6103,107 @@ def test_proof_changed_selector_reduces_package_docs_prefix_to_review(tmp_path: 
     ]
 
 
+def test_proof_changed_selector_composes_package_code_and_docs_without_reduction(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    changed_paths = [
+        "packages/planning/src/repo_planning_bootstrap/example.py",
+        "packages/planning/tests/test_example.py",
+        "packages/planning/docs/usage.md",
+    ]
+    for path in changed_paths:
+        _write(tmp_path / path, "# fixture\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", *changed_paths, "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lanes = {lane["id"]: lane for lane in answer["selected_lanes"]}
+    assert {"planning_package", "repo_docs_review"}.issubset(lanes)
+    assert lanes["planning_package"]["obligation_role"] == "primary-executable"
+    assert lanes["repo_docs_review"]["obligation_role"] == "complementary-review"
+    assert lanes["planning_package"]["changed_test_owner_route"]["status"] == "focused-owner-selected"
+    assert answer.get("routing_reductions", []) == []
+    assert answer["routing_compositions"] == [
+        {
+            "paths": ["packages/planning/docs/usage.md"],
+            "primary_lane": "planning_package",
+            "complementary_lanes": ["repo_docs_review"],
+            "reason": "Docs review complements executable proof because the matched source lane is not documentation-only.",
+        }
+    ]
+
+
+def test_proof_changed_selector_keeps_workspace_behavior_primary_for_memory_code_and_docs(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    changed_paths = [
+        "src/agentic_workspace/memory_effectiveness.py",
+        "tests/test_memory_effectiveness.py",
+        ".agentic-workspace/docs/memory-metadata-contract.md",
+        "packages/memory/README.md",
+    ]
+    for path in changed_paths:
+        _write(tmp_path / path, "# fixture\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", *changed_paths, "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lanes = {lane["id"]: lane for lane in answer["selected_lanes"]}
+    assert lanes["workspace_cli"]["obligation_role"] == "primary-executable"
+    assert lanes["workspace_cli"]["changed_test_owner_route"]["status"] == "focused-owner-selected"
+    assert lanes["repo_docs_review"]["obligation_role"] == "complementary-review"
+    assert answer["proof_route_strategy_decision"]["outcome"] != "route-refinement-required"
+    assert answer["proof_route_decision"]["route_source"] != "manual-fallback"
+    assert any("tests/test_memory_effectiveness.py" in command for command in answer["required_commands"])
+    assert any(command.startswith("git diff --") for command in answer["required_commands"])
+
+
+def test_proof_changed_selector_retains_multiple_executable_owners_with_docs(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    changed_paths = [
+        "src/agentic_workspace/example.py",
+        "tests/test_example.py",
+        "packages/planning/src/repo_planning_bootstrap/example.py",
+        "packages/planning/tests/test_example.py",
+        "packages/planning/docs/usage.md",
+    ]
+    for path in changed_paths:
+        _write(tmp_path / path, "# fixture\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", *changed_paths, "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lanes = {lane["id"]: lane for lane in answer["selected_lanes"]}
+    assert lanes["workspace_cli"]["obligation_role"] == "primary-executable"
+    assert lanes["planning_package"]["obligation_role"] == "primary-executable"
+    assert lanes["repo_docs_review"]["obligation_role"] == "complementary-review"
+    assert any("tests/test_example.py" in command for command in answer["required_commands"])
+    assert any("packages/planning/tests/test_example.py" in command for command in answer["required_commands"])
+
+
+def test_proof_changed_selector_is_independent_of_rule_order(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import workspace_runtime_proof
+
+    _write_repo_local_proof_target(tmp_path)
+    changed_paths = [
+        "packages/planning/src/repo_planning_bootstrap/example.py",
+        "packages/planning/tests/test_example.py",
+        "packages/planning/docs/usage.md",
+    ]
+    for path in changed_paths:
+        _write(tmp_path / path, "# fixture\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", *changed_paths, "--format", "json"]) == 0
+    original = json.loads(capsys.readouterr().out)["answer"]
+    rules = list(workspace_runtime_proof._PROOF_SELECTION_RULES["rules"])
+    monkeypatch.setitem(workspace_runtime_proof._PROOF_SELECTION_RULES, "rules", list(reversed(rules)))
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", *changed_paths, "--format", "json"]) == 0
+    reordered = json.loads(capsys.readouterr().out)["answer"]
+
+    assert [lane["id"] for lane in reordered["selected_lanes"]] == [lane["id"] for lane in original["selected_lanes"]]
+    assert reordered["required_commands"] == original["required_commands"]
+    assert reordered.get("routing_compositions") == original.get("routing_compositions")
+
+
 def test_proof_changed_selector_does_not_escalate_review_only_cross_lane_changes(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 

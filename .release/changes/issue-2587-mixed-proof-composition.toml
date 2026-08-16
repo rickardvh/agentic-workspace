@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve executable owner proof while composing complementary documentation review for mixed code and documentation changes."
