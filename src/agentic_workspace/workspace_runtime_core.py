@@ -18165,11 +18165,20 @@ def _successful_completion_cost_validation_observations(*, target_root: Path) ->
         bundle = _as_dict(decision.get("bundle"))
         provenance = _as_dict(bundle.get("provenance"))
         completion_cost = _as_dict(bundle.get("completion_cost"))
+        run_identity = _as_dict(provenance.get("run_identity"))
+        attempt_identity = _as_dict(provenance.get("attempt_identity"))
+        proof_operation = _as_dict(provenance.get("proof_operation"))
+        freshness = _as_dict(bundle.get("freshness"))
         runs.append(
             {
                 "evidence_ref": str(provenance.get("result_path") or ""),
                 "constituent_id": str(bundle.get("proof_route_id") or ""),
                 "run_id": str(provenance.get("run_id") or ""),
+                "run_provenance": str(run_identity.get("provenance") or ""),
+                "attempt_id": str(attempt_identity.get("attempt_id") or ""),
+                "attempt_index": int(attempt_identity.get("attempt_index") or 0),
+                "proof_operation_id": str(proof_operation.get("operation_id") or ""),
+                "execution_class": str(proof_operation.get("execution_class") or ""),
                 "outcome": str(completion_cost.get("outcome") or "unknown"),
                 "duration_seconds": round(float(completion_cost.get("duration_seconds") or 0.0), 6),
                 "rerun": bool(completion_cost.get("rerun")),
@@ -18178,6 +18187,9 @@ def _successful_completion_cost_validation_observations(*, target_root: Path) ->
                     "repository_head": provenance.get("repository_head"),
                     "repository_tree": provenance.get("repository_tree"),
                     "plan_graph": provenance.get("plan_graph"),
+                    "subject_paths": _list_payload(freshness.get("subject_paths")),
+                    "pre_subject_revision": freshness.get("pre_subject_revision"),
+                    "post_subject_revision": freshness.get("post_subject_revision"),
                 },
             }
         )

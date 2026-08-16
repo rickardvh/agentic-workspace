@@ -1844,10 +1844,20 @@ def _current_validation_authority(target_root: Path) -> dict[str, Any]:
         return result.stdout.strip() if result.returncode == 0 else ""
 
     graph = _validation_plan_graph_payload(plan)
+    tracked_status = git_value("status", "--porcelain=v1", "--untracked-files=no")
+    tracked_paths: list[str] = []
+    for line in tracked_status.splitlines():
+        parts = line.split(maxsplit=1)
+        path = parts[1].strip() if len(parts) == 2 else ""
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        if path:
+            tracked_paths.append(path.replace("\\", "/"))
     return {
         "repository_head": git_value("rev-parse", "HEAD"),
         "repository_tree": git_value("rev-parse", "HEAD^{tree}"),
-        "tracked_dirty": bool(git_value("status", "--porcelain=v1", "--untracked-files=no")),
+        "tracked_dirty": bool(tracked_status),
+        "tracked_paths": sorted(set(tracked_paths)),
         "plan_file_sha256": hashlib.sha256(raw_plan).hexdigest() if raw_plan else "",
         "plan_graph_sha256": hashlib.sha256(json.dumps(graph, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
         if plan
@@ -1876,6 +1886,14 @@ def validation_result_admission(*, record: dict[str, Any], current_head: str, au
     repository: dict[str, Any] = raw_repository if isinstance(raw_repository, dict) else {}
     raw_runtime = repository.get("runtime")
     runtime: dict[str, Any] = raw_runtime if isinstance(raw_runtime, dict) else {}
+    raw_repository_post = record.get("repository_post")
+    repository_post: dict[str, Any] = raw_repository_post if isinstance(raw_repository_post, dict) else {}
+    raw_run_identity = record.get("run_identity")
+    run_identity: dict[str, Any] = raw_run_identity if isinstance(raw_run_identity, dict) else {}
+    raw_attempt_identity = record.get("attempt_identity")
+    attempt_identity: dict[str, Any] = raw_attempt_identity if isinstance(raw_attempt_identity, dict) else {}
+    raw_proof_operation = record.get("proof_operation")
+    proof_operation: dict[str, Any] = raw_proof_operation if isinstance(raw_proof_operation, dict) else {}
     required = {
         "constituent-id-missing": str(record.get("constituent_id") or ""),
         "command-missing": record.get("command") if isinstance(record.get("command"), list) else [],
@@ -1884,6 +1902,9 @@ def validation_result_admission(*, record: dict[str, Any], current_head: str, au
         "repository-tree-missing": str(repository.get("tree") or ""),
         "started-at-missing": str(record.get("started_at") or ""),
         "ended-at-missing": str(record.get("ended_at") or ""),
+        "run-identity-missing": str(run_identity.get("provenance") or ""),
+        "attempt-identity-missing": str(attempt_identity.get("attempt_id") or ""),
+        "proof-operation-missing": str(proof_operation.get("operation_id") or ""),
     }
     reasons.extend(reason for reason, value in required.items() if not value)
     if record.get("kind") != VALIDATION_RESULT_KIND:
@@ -1899,9 +1920,25 @@ def validation_result_admission(*, record: dict[str, Any], current_head: str, au
     if not _ordered_validation_timestamps(record):
         reasons.append("invalid-or-unordered-timestamps")
     if authority is not None:
+        authority_record: dict[str, Any] = authority
         if str(repository.get("tree") or "") != str(authority.get("repository_tree") or ""):
             reasons.append("repository-tree-mismatch")
-        if bool(repository.get("tracked_dirty")) or bool(authority.get("tracked_dirty")):
+        declared_paths = {str(path).replace("\\", "/") for path in _list_payload(proof_operation.get("subject_paths")) if str(path)}
+        observed_paths = {
+            str(path).replace("\\", "/")
+            for source in (repository, repository_post, authority_record)
+            for path in _list_payload(source.get("tracked_paths"))
+            if str(path)
+        }
+        bounded_dirty_transition = (
+            bool(declared_paths)
+            and observed_paths.issubset(declared_paths)
+            and all(
+                str(source.get("head") or source.get("repository_head") or "") == current_head
+                for source in (repository, repository_post, authority_record)
+            )
+        )
+        if (bool(repository.get("tracked_dirty")) or bool(authority.get("tracked_dirty"))) and not bounded_dirty_transition:
             reasons.append("dirty-repository-subject")
         if str(plan_identity.get("file_sha256") or "") != str(authority.get("plan_file_sha256") or "") or str(
             plan_identity.get("graph_sha256") or ""
@@ -1939,6 +1976,9 @@ def validation_result_admission(*, record: dict[str, Any], current_head: str, au
         "subject_fingerprint": subject_fingerprint,
         "proof_route_id": route_id,
         "source_run_id": str(record.get("run_id") or ""),
+        "run_provenance": str(run_identity.get("provenance") or ""),
+        "attempt_id": str(attempt_identity.get("attempt_id") or ""),
+        "proof_operation_id": str(proof_operation.get("operation_id") or ""),
     }
     if reasons:
         return decision
@@ -1971,6 +2011,9 @@ def validation_result_admission(*, record: dict[str, Any], current_head: str, au
             "result_kind": record.get("kind"),
             "result_path": record.get("result_path", ""),
             "run_id": record.get("run_id"),
+            "run_identity": run_identity,
+            "attempt_identity": attempt_identity,
+            "proof_operation": proof_operation,
             "plan_graph": plan_identity.get("graph_sha256"),
             "repository_head": repository.get("head"),
             "repository_tree": repository.get("tree"),
@@ -1978,11 +2021,19 @@ def validation_result_admission(*, record: dict[str, Any], current_head: str, au
             "runtime_executable": runtime.get("executable", "") if runtime else "",
             "command": record.get("command"),
         },
-        "freshness": {"status": "current", "bound_head": current_head, "expires_when": "repository HEAD changes"},
+        "freshness": {
+            "status": "current",
+            "bound_head": current_head,
+            "subject_paths": _list_payload(proof_operation.get("subject_paths")),
+            "pre_subject_revision": repository.get("tracked_diff_sha256", ""),
+            "post_subject_revision": repository_post.get("tracked_diff_sha256", ""),
+            "expires_when": "repository HEAD changes or a declared subject path leaves the recorded transition",
+        },
         "completion_cost": {
             "duration_seconds": float(record.get("duration_seconds") or 0.0),
             "rerun": "/attempts/" in str(record.get("result_path") or "").replace("\\", "/"),
             "outcome": "passed",
+            "execution_class": proof_operation.get("execution_class", ""),
         },
     }
     return decision

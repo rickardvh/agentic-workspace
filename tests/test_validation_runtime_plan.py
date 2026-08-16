@@ -133,6 +133,20 @@ def test_validation_runtime_plan_matches_makefile_ci_and_evidence() -> None:
     assert checker.validation_findings() == []
 
 
+def test_validation_runtime_plan_declares_run_attempt_and_proof_receipt_contracts() -> None:
+    checker = _load_checker()
+    plan = json.loads(checker.PLAN_PATH.read_text(encoding="utf-8"))
+
+    identity = plan["execution_identity_contract"]
+    assert identity["run_provenance"] == ["allocated-here", "explicitly-joined", "transported-child"]
+    assert "cannot" not in identity["transport_rule"].lower()
+    assert "matching explicit join token" in identity["transport_rule"]
+    assert "monotonically ordered attempt" in identity["retry_rule"]
+    receipt = plan["proof_receipt_contract"]
+    assert receipt["execution_classes"] == ["focused-local", "exhaustive-local", "exhaustive-ci-owned"]
+    assert {"timeout", "cancelled", "failed"}.issubset(receipt["outcomes"])
+
+
 def test_automatic_validation_run_ids_do_not_collide_within_one_second_or_concurrently() -> None:
     allocator = _load_run_id_allocator()
 

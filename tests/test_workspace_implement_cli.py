@@ -3831,6 +3831,32 @@ def test_implement_accepts_runtime_symbol_working_set_selector(tmp_path: Path, c
     assert payload.get("status") != "invalid-selector"
 
 
+def test_implement_advertised_context_requirement_grounding_selector_is_executable(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "sample.py", "VALUE = 1\n")
+    common = [
+        "implement",
+        "--target",
+        str(tmp_path),
+        "--changed",
+        "src/sample.py",
+        "--task",
+        "Inspect requirement grounding.",
+        "--format",
+        "json",
+    ]
+
+    assert cli.main(common) == 0
+    ordinary = json.loads(capsys.readouterr().out)
+    assert "context.requirement_grounding" in ordinary["drill_down"]["available_selectors"]
+
+    assert cli.main([*common[:-2], "--select", "context.requirement_grounding", *common[-2:]]) == 0
+    selected = json.loads(capsys.readouterr().out)
+    assert selected["kind"] == "agentic-workspace/selected-output/v1"
+    assert selected["values"]["context.requirement_grounding"]["detail_selector"] == "requirement_grounding"
+
+
 def test_implement_tiny_profile_surfaces_manual_verification_obligations(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

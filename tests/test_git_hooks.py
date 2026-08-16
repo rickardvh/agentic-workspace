@@ -77,6 +77,23 @@ def test_pre_commit_uses_one_run_for_setup_lint_and_typecheck(monkeypatch: pytes
     assert all(command_environment is environment for _, command_environment in commands)
 
 
+def test_pre_commit_replaces_stale_transport_without_join_authority(monkeypatch: pytest.MonkeyPatch) -> None:
+    pre_commit = _load_pre_commit_module()
+    monkeypatch.setenv("VALIDATION_RUN_ID", "stale-run")
+    monkeypatch.delenv("VALIDATION_JOIN_TOKEN", raising=False)
+    monkeypatch.setattr(
+        pre_commit.subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, stdout="fresh-run\n", stderr=""),
+    )
+
+    environment = pre_commit._validation_environment()
+
+    assert environment["VALIDATION_RUN_ID"] == "fresh-run"
+    assert environment["VALIDATION_JOIN_TOKEN"] == "join:fresh-run"
+    assert environment["VALIDATION_RUN_PROVENANCE"] == "allocated-here"
+
+
 def test_pre_commit_records_and_stages_format_before_other_phases(monkeypatch: pytest.MonkeyPatch) -> None:
     pre_commit = _load_pre_commit_module()
     candidate = Path("tests/test_example.py")
@@ -125,8 +142,8 @@ def test_pre_commit_failure_retry_uses_fresh_run_and_preserves_failed_manifest(t
     _run(["git", "commit", "-m", "fixture"], cwd=tmp_path)
     environments = iter(
         [
-            {**os.environ, "VALIDATION_RUN_ID": "failed-hook-run"},
-            {**os.environ, "VALIDATION_RUN_ID": "retry-hook-run"},
+            {**os.environ, "VALIDATION_RUN_ID": "failed-hook-run", "VALIDATION_JOIN_TOKEN": "join:failed-hook-run"},
+            {**os.environ, "VALIDATION_RUN_ID": "retry-hook-run", "VALIDATION_JOIN_TOKEN": "join:retry-hook-run"},
         ]
     )
 
@@ -150,15 +167,17 @@ def test_pre_commit_failure_retry_uses_fresh_run_and_preserves_failed_manifest(t
         if command == ["make", "sync-all"] or command[-1:] == ["scripts/check/check_no_absolute_paths.py"]:
             return 0
         if len(command) > 1 and command[1] == str(runner):
-            previous = os.environ.get("VALIDATION_RUN_ID")
+            previous = {key: os.environ.get(key) for key in ("VALIDATION_RUN_ID", "VALIDATION_JOIN_TOKEN")}
             os.environ["VALIDATION_RUN_ID"] = environment["VALIDATION_RUN_ID"]
+            os.environ["VALIDATION_JOIN_TOKEN"] = environment["VALIDATION_JOIN_TOKEN"]
             try:
                 return runner_module.main(command[2:])
             finally:
-                if previous is None:
-                    os.environ.pop("VALIDATION_RUN_ID", None)
-                else:
-                    os.environ["VALIDATION_RUN_ID"] = previous
+                for key, value in previous.items():
+                    if value is None:
+                        os.environ.pop(key, None)
+                    else:
+                        os.environ[key] = value
         return subprocess.run(command, cwd=root, env=environment, check=False).returncode
 
     monkeypatch.setattr(pre_commit, "_validation_environment", lambda: next(environments))

@@ -1,0 +1,62 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "open-issues-validation-proof-runtime",
+  "title": "Validation identity and proportional proof receipts (#2553, #2561)",
+  "status": "active",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/open-issues-2026-08-16.decomposition.json",
+  "lane_outcome": "Separate validation run/join/attempt identity and bind proportional proof selection, progress, cost, and freshness to typed receipts.",
+  "purpose_for_parent": "Closes the cohesive validation execution and proof-observability issues in one runtime lane.",
+  "subsystems": [],
+  "technical_strategy": "Treat run ownership, child transport, attempt identity, proof selection, and evidence admission as one typed chain. Make/pre-commit mint or propagate explicit join authority; the compact runner owns receipts; Verification admits bounded subject transitions; successful-completion-cost consumes the same receipts.",
+  "technology_choices": [
+    "Use an explicit run-bound join token rather than ambient VALIDATION_RUN_ID as authority.",
+    "Keep JSON result and manifest files as the durable local receipt surface.",
+    "Capture tracked working-set paths at proof launch as the default bounded dirty subject, with explicit paths available when narrower authority is known."
+  ],
+  "slice_sequence": [
+    {
+      "id": "open-issues-validation-proof-runtime-implementation",
+      "title": "Implement validation identity and proportional proof receipts",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/open-issues-validation-proof-runtime-implementation.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Closes the cohesive validation execution and proof-observability issues in one runtime lane."
+    }
+  ],
+  "current_slice": "open-issues-validation-proof-runtime-implementation",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Real Make/pre-commit composition, retry, duplicate, focused-proof, progress, cancellation, and receipt fixtures.",
+  "proof_aggregation": {
+    "status": "satisfied",
+    "evidence": [
+      "32 focused validation runtime cases passed",
+      "50 Verification package cases passed",
+      "real stale-transport typecheck-nosync then sync-all replay passed",
+      "successful_completion_cost admitted eight typed dirty-work receipts",
+      "typecheck, ruff, maintainer surfaces, contract tooling, validation plan, and structured inventory passed"
+    ],
+    "known_gaps": [
+      "Historical untyped receipts remain rejected by design.",
+      "The broad proof suite retains twelve pre-existing invocation, compact-budget, and receipt-history expectation failures outside this lane."
+    ]
+  },
+  "residual_lane_work": "Publish and review the stacked lane PR; apply lifecycle closeout on the admitted target branch.",
+  "lane_to_epic_contribution": "Completes the independent validation identity and proportional proof receipt lane.",
+  "parent_close_permission": "do-not-close-parent",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/open-issues-2026-08-16.decomposition.json",
+      "label": "open-issues-validation-proof-runtime",
+      "role": "parent",
+      "locator": "candidate_lanes[1]"
+    }
+  ],
+  "notes": ""
+}

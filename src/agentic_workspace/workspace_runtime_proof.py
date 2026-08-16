@@ -5213,6 +5213,41 @@ def _lane_activation_summary(lane: dict[str, Any]) -> str:
     return "selected by changed-path proof routing"
 
 
+def _proof_execution_receipt_metadata(lane: dict[str, Any]) -> dict[str, Any]:
+    proof_kind = str(lane.get("proof_kind") or "").strip()
+    proof_responsibility = str(lane.get("proof_responsibility") or "local-closeout").strip()
+    execution_class = str(lane.get("execution_class") or "").strip()
+    if not execution_class:
+        if proof_responsibility in {"ci-owned", "exhaustive-ci-owned"}:
+            execution_class = "exhaustive-ci-owned"
+        elif proof_kind == "full-test":
+            execution_class = "exhaustive-local"
+        else:
+            execution_class = "focused-local"
+    duration_class = str(lane.get("duration_class") or "").strip()
+    if not duration_class:
+        duration_class = "long" if execution_class.startswith("exhaustive") else "medium" if proof_kind == "targeted-test" else "short"
+    return {
+        "execution_class": execution_class,
+        "execution_owner": "ci" if execution_class == "exhaustive-ci-owned" else "local",
+        "requirement_posture": "required",
+        "duration_class": duration_class,
+        "progress_contract": {
+            "status": "required-before-long-local-execution" if execution_class == "exhaustive-local" else "available",
+            "heartbeat_surface": "scripts/check/run_compact_command.py stderr plus durable validation receipt",
+            "timeout_outcome": "timeout",
+            "cancel_outcome": "cancelled",
+            "failure_outcome": "failed",
+            "next_action": "inspect the typed receipt, then retry as a new attempt or select a narrower fresh proof route",
+        },
+        "receipt_contract": {
+            "kind": "agentic-workspace/proof-operation-receipt/v1",
+            "binds": ["operation", "proof-subject-revision", "run-identity", "attempt-identity", "elapsed-cost", "outcome"],
+            "producer": "scripts/check/run_compact_command.py",
+        },
+    }
+
+
 def _proof_narrowness_payload(
     *,
     selected_lanes: list[dict[str, Any]],
@@ -8769,7 +8804,15 @@ def _proof_selection_for_changed_paths(
                     "intent_type": str(intent.get("type", "behavior-test")),
                     "lane": route_id,
                     "required": True,
+                    "proof_requirement": str(lane.get("claim_boundary") or lane.get("proof_purpose") or _lane_activation_summary(lane)),
+                    "subject_contract": {
+                        "kind": "agentic-workspace/proof-subject-request/v1",
+                        "changed_paths": changed_paths,
+                        "revision_source": "proof_subject",
+                        "run_attempt_identity_source": "validation receipt",
+                    },
                     **_lane_execution_metadata(lane),
+                    **_proof_execution_receipt_metadata(lane),
                     "authority_resolution": _proof_template_authority_resolution_for_lane(
                         lane=lane,
                         command=command_text,

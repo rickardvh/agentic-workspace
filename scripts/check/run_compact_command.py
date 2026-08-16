@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import subprocess
 import sys
 import time
@@ -22,6 +23,7 @@ DEFAULT_PROGRESS_INTERVAL_SECONDS = 30.0
 DEFAULT_PROGRESS_THRESHOLD_SECONDS = 30.0
 TIMEOUT_EXIT_CODE = 124
 DUPLICATE_EXIT_CODE = 125
+CANCELLED_EXIT_CODE = 130
 MANIFEST_LOCK_WAIT_SECONDS = 10.0
 MANIFEST_LOCK_POLL_SECONDS = 0.05
 
@@ -59,6 +61,50 @@ def _attempt_result_path(*, result_root: Path, run_id: str, constituent_id: str)
         if not candidate.exists():
             return candidate
         attempt_index += 1
+
+
+def _allocate_run_id() -> str:
+    return f"local-{time.time_ns():x}-{os.getpid():x}-{secrets.token_hex(8)}"
+
+
+def _join_token(run_id: str) -> str:
+    return f"join:{run_id}"
+
+
+def _resolve_run_context(args: argparse.Namespace) -> dict[str, object]:
+    transported_run_id = str(os.environ.get("VALIDATION_RUN_ID") or "").strip()
+    transported_token = str(os.environ.get("VALIDATION_JOIN_TOKEN") or "").strip()
+    explicit_run_id = str(args.run_id or "").strip()
+    explicit_join_id = str(args.join_run_id or "").strip()
+    if explicit_join_id:
+        if explicit_run_id and explicit_run_id != explicit_join_id:
+            raise ValueError("--run-id and --join-run-id must identify the same semantic run")
+        return {
+            "run_id": explicit_join_id,
+            "provenance": "explicitly-joined",
+            "join_authority": "command-line",
+            "transport_run_id_ignored": False,
+        }
+    if explicit_run_id:
+        return {
+            "run_id": explicit_run_id,
+            "provenance": "allocated-here",
+            "join_authority": "explicit-run-owner",
+            "transport_run_id_ignored": False,
+        }
+    if transported_run_id and transported_token == _join_token(transported_run_id):
+        return {
+            "run_id": transported_run_id,
+            "provenance": "transported-child",
+            "join_authority": "admitted-parent-token",
+            "transport_run_id_ignored": False,
+        }
+    return {
+        "run_id": _allocate_run_id(),
+        "provenance": "allocated-here",
+        "join_authority": "local-allocation",
+        "transport_run_id_ignored": bool(transported_run_id),
+    }
 
 
 def _atomic_write_json(path: Path, payload: dict[str, object]) -> None:
@@ -167,6 +213,15 @@ def _git_value(*args: str) -> str:
 
 def _repository_identity() -> dict[str, object]:
     status = _git_value("status", "--porcelain=v1", "--untracked-files=no")
+    tracked_paths: list[str] = []
+    for line in status.splitlines():
+        parts = line.split(maxsplit=1)
+        path = parts[1].strip() if len(parts) == 2 else ""
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        if path:
+            tracked_paths.append(path.replace("\\", "/"))
+    tracked_diff = _git_value("diff", "HEAD", "--binary", "--", *sorted(set(tracked_paths))) if tracked_paths else ""
     try:
         runtime = json.loads(os.environ.get("AW_RUNTIME_IDENTITY", "{}"))
     except json.JSONDecodeError:
@@ -181,6 +236,8 @@ def _repository_identity() -> dict[str, object]:
         "head": _git_value("rev-parse", "HEAD"),
         "tree": _git_value("rev-parse", "HEAD^{tree}"),
         "tracked_dirty": bool(status.strip()),
+        "tracked_paths": sorted(set(tracked_paths)),
+        "tracked_diff_sha256": hashlib.sha256(tracked_diff.encode("utf-8")).hexdigest() if tracked_diff else "",
         "runtime": runtime,
     }
 
@@ -290,6 +347,10 @@ def _write_result(
     timed_out: bool,
     log_path: Path | None,
     heartbeat: dict[str, object],
+    run_identity: dict[str, object],
+    attempt_identity: dict[str, object],
+    proof_operation: dict[str, object],
+    repository_post_identity: dict[str, object],
 ) -> Path:
     payload = {
         "kind": "agentic-workspace/validation-constituent-result/v1",
@@ -304,6 +365,10 @@ def _write_result(
         "plan_identity": plan_identity,
         "repository": repository_identity,
         "run_id": run_id,
+        "run_identity": run_identity,
+        "attempt_identity": attempt_identity,
+        "proof_operation": proof_operation,
+        "repository_post": repository_post_identity,
         "started_at": started_at,
         "ended_at": ended_at,
         "duration_seconds": round(duration_seconds, 6),
@@ -386,6 +451,7 @@ def _run_command(
     monotonic: Callable[[], float] = time.monotonic,
     process_factory: Callable[..., subprocess.Popen[str]] = subprocess.Popen,
     emit_heartbeat: Callable[[str], None] | None = None,
+    cancel_path: Path | None = None,
 ) -> tuple[int | None, str, str, bool, dict[str, object]]:
     popen_kwargs: dict[str, object] = {
         "cwd": cwd,
@@ -407,6 +473,19 @@ def _run_command(
     heartbeat_elapsed_seconds: list[float] = []
     heartbeat_writer = emit_heartbeat or (lambda message: print(message, file=sys.stderr, flush=True))
     while True:
+        if cancel_path is not None and cancel_path.is_file():
+            _terminate_process_tree(process)
+            stdout, stderr = process.communicate()
+            return None, stdout or "", stderr or "", False, {
+                "kind": "agentic-workspace/validation-heartbeat/v1",
+                "count": len(heartbeat_elapsed_seconds),
+                "elapsed_seconds": heartbeat_elapsed_seconds,
+                "threshold_seconds": progress_threshold_seconds,
+                "interval_seconds": progress_interval_seconds,
+                "claim": "process-liveness-only",
+                "cancelled": True,
+                "cancel_path": _repo_relative(cancel_path),
+            }
         now = monotonic()
         wait_until = next_progress if deadline is None else min(next_progress, deadline)
         wait_seconds = max(0.001, wait_until - now)
@@ -459,8 +538,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--allow-repeat",
         action="store_true",
-        help="Allow an existing result record for the same run id and constituent id to be overwritten.",
+        help="Compatibility alias for an explicit same-run retry; requires --retry-reason.",
     )
+    parser.add_argument("--retry", action="store_true", help="Create a new ordered attempt in an explicitly identified run.")
+    parser.add_argument("--retry-reason", default="", help="Required reason for an intentional same-run retry attempt.")
     parser.add_argument(
         "--result-dir",
         default=str(RESULT_ROOT.relative_to(REPO_ROOT)),
@@ -468,14 +549,33 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--run-id",
-        default=os.environ.get("VALIDATION_RUN_ID", "local"),
-        help="Validation run id used under --result-dir. Defaults to VALIDATION_RUN_ID or 'local'.",
+        default="",
+        help="Own a new semantic validation run with this id; ambient transport is ignored without join authority.",
+    )
+    parser.add_argument("--join-run-id", default="", help="Explicitly join an admitted semantic validation run.")
+    parser.add_argument(
+        "--execution-class",
+        choices=("focused-local", "exhaustive-local", "exhaustive-ci-owned"),
+        default="focused-local",
+        help="Proof execution lane selected before launch.",
+    )
+    parser.add_argument("--proof-requirement", default="", help="Exact claim or proof requirement served by this operation.")
+    parser.add_argument(
+        "--subject-path",
+        action="append",
+        default=[],
+        help="Repo-relative path admitted as part of a bounded dirty-work subject transition; may be repeated.",
     )
     parser.add_argument(
         "--timeout-seconds",
         type=_positive_float,
         default=None,
         help="Fail with compact timeout output after this many seconds.",
+    )
+    parser.add_argument(
+        "--cancel-file",
+        default="",
+        help="Repo-relative cooperative cancellation signal checked while the child runs.",
     )
     parser.add_argument(
         "--progress-threshold-seconds",
@@ -501,11 +601,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         args.command = args.command[1:]
     if not args.command:
         parser.error("missing command to execute; pass it after '--'")
+    if (args.retry or args.allow_repeat) and not str(args.retry_reason).strip():
+        parser.error("--retry requires --retry-reason so the new attempt is auditable")
     return args
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    try:
+        run_identity = _resolve_run_context(args)
+    except ValueError as exc:
+        print(f"validation run identity error: {exc}", file=sys.stderr)
+        return 2
+    run_id = str(run_identity["run_id"])
     working_directory = (REPO_ROOT / args.cwd).resolve()
     plan_metadata = _load_plan_metadata(str(args.label))
     constituent_id = args.id or str(plan_metadata.get("id") or _slugify(args.label))
@@ -515,31 +623,93 @@ def main(argv: list[str] | None = None) -> int:
     owner_boundary = str(plan_metadata.get("owner_boundary") or "")
     plan_identity = plan_metadata.get("plan_identity") if isinstance(plan_metadata.get("plan_identity"), dict) else {}
     repository_identity = _repository_identity()
+    explicit_subject_paths = sorted({_repo_relative((REPO_ROOT / path).resolve()) for path in args.subject_path})
+    declared_subject_paths = explicit_subject_paths or [str(path) for path in repository_identity.get("tracked_paths", [])]
     result_root = (REPO_ROOT / args.result_dir).resolve()
-    pending_result_path = _result_path(result_root=result_root, run_id=args.run_id, constituent_id=constituent_id)
+    pending_result_path = _result_path(result_root=result_root, run_id=run_id, constituent_id=constituent_id)
     result_lock_path = pending_result_path.with_suffix(".lock")
     result_lock_fd: int | None = None
-    if pending_result_path.exists() and not args.allow_repeat:
+    retry_requested = bool(args.retry or args.allow_repeat)
+    if pending_result_path.exists() and not retry_requested:
         print(
-            f"[duplicate] {args.label} ({constituent_id}) already has a result for run {args.run_id}: "
+            json.dumps(
+                {
+                    "kind": "agentic-workspace/validation-execution-conflict/v1",
+                    "status": "already-completed",
+                    "run_id": run_id,
+                    "constituent_id": constituent_id,
+                    "next_action": "retry with --join-run-id, --retry, and --retry-reason, or start a new top-level run",
+                },
+                sort_keys=True,
+            )
+            + "\n"
+            + f"[duplicate] {args.label} ({constituent_id}) already has a result for run {run_id}: "
             f"{pending_result_path.relative_to(REPO_ROOT).as_posix()}",
             file=sys.stderr,
         )
         return DUPLICATE_EXIT_CODE
-    if args.allow_repeat and pending_result_path.exists():
-        result_path = _attempt_result_path(result_root=result_root, run_id=args.run_id, constituent_id=constituent_id)
+    if retry_requested and pending_result_path.exists():
+        result_path = _attempt_result_path(result_root=result_root, run_id=run_id, constituent_id=constituent_id)
     else:
         try:
             result_lock_fd = _acquire_lock(result_lock_path, wait_seconds=0.0)
         except RuntimeError:
             print(
-                f"[duplicate] {args.label} ({constituent_id}) is already running for run {args.run_id}: "
+                json.dumps(
+                    {
+                        "kind": "agentic-workspace/validation-execution-conflict/v1",
+                        "status": "running-conflict",
+                        "run_id": run_id,
+                        "constituent_id": constituent_id,
+                        "next_action": "wait for the running attempt or allocate a new top-level run",
+                    },
+                    sort_keys=True,
+                )
+                + "\n"
+                + f"[duplicate] {args.label} ({constituent_id}) is already running for run {run_id}: "
                 f"{result_lock_path.relative_to(REPO_ROOT).as_posix()}",
                 file=sys.stderr,
             )
             return DUPLICATE_EXIT_CODE
         result_path = pending_result_path
     started_at = _utc_now()
+    attempt_index = 1
+    attempt_match = re.search(r"\.attempt-(\d+)\.json$", result_path.name)
+    if attempt_match:
+        attempt_index = int(attempt_match.group(1))
+    attempt_identity = {
+        "kind": "agentic-workspace/validation-attempt-identity/v1",
+        "attempt_id": f"{run_id}:{constituent_id}:attempt-{attempt_index}",
+        "attempt_index": attempt_index,
+        "retry": attempt_index > 1,
+        "retry_reason": str(args.retry_reason).strip(),
+        "input_revision": hashlib.sha256(
+            json.dumps(repository_identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()[:20],
+    }
+    proof_operation = {
+        "kind": "agentic-workspace/proof-operation/v1",
+        "operation_id": hashlib.sha256(
+            json.dumps(
+                {"run_id": run_id, "attempt_id": attempt_identity["attempt_id"], "command": args.command},
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()[:20],
+        "execution_class": args.execution_class,
+        "ownership": "ci" if args.execution_class == "exhaustive-ci-owned" else "local",
+        "requirement": str(args.proof_requirement or proof_purpose),
+        "posture": "required",
+        "subject_paths": declared_subject_paths,
+        "subject_declaration": "explicit" if explicit_subject_paths else "captured-tracked-working-set-at-launch",
+        "progress": {
+            "heartbeat_after_seconds": args.progress_threshold_seconds,
+            "heartbeat_interval_seconds": args.progress_interval_seconds,
+            "timeout_seconds": args.timeout_seconds,
+            "cancel_file": str(args.cancel_file),
+            "cancel_semantics": "creating the cancel file records cancelled separately from timeout and assertion failure",
+        },
+    }
     print(f"[run] {args.label} ({constituent_id})", flush=True)
     started = time.perf_counter()
     durable_result_path = _repo_relative(result_path)
@@ -552,15 +722,17 @@ def main(argv: list[str] | None = None) -> int:
         progress_label=args.label,
         constituent_id=constituent_id,
         durable_result_path=durable_result_path,
+        cancel_path=(REPO_ROOT / str(args.cancel_file)).resolve() if str(args.cancel_file).strip() else None,
     )
     duration_seconds = time.perf_counter() - started
     duration = _format_duration(duration_seconds)
     ended_at = _utc_now()
+    cancelled = bool(heartbeat.get("cancelled"))
     if returncode == 0:
         try:
             _write_result(
                 result_path=result_path,
-                run_id=args.run_id,
+                run_id=run_id,
                 constituent_id=constituent_id,
                 label=args.label,
                 command=args.command,
@@ -579,8 +751,12 @@ def main(argv: list[str] | None = None) -> int:
                 timed_out=False,
                 log_path=None,
                 heartbeat=heartbeat,
+                run_identity=run_identity,
+                attempt_identity=attempt_identity,
+                proof_operation=proof_operation,
+                repository_post_identity=_repository_identity(),
             )
-            _update_manifest(result_root=result_root, run_id=args.run_id)
+            _update_manifest(result_root=result_root, run_id=run_id)
         finally:
             if result_lock_fd is not None:
                 _release_lock(result_lock_path, result_lock_fd)
@@ -599,7 +775,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result_path = _write_result(
             result_path=result_path,
-            run_id=args.run_id,
+            run_id=run_id,
             constituent_id=constituent_id,
             label=args.label,
             command=args.command,
@@ -613,18 +789,24 @@ def main(argv: list[str] | None = None) -> int:
             started_at=started_at,
             ended_at=ended_at,
             duration_seconds=duration_seconds,
-            outcome="timeout" if timed_out else "failed",
-            exit_code=None if timed_out else int(returncode),
+            outcome="cancelled" if cancelled else "timeout" if timed_out else "failed",
+            exit_code=None if timed_out else CANCELLED_EXIT_CODE if cancelled else int(returncode),
             timed_out=timed_out,
             log_path=log_path,
             heartbeat=heartbeat,
+            run_identity=run_identity,
+            attempt_identity=attempt_identity,
+            proof_operation=proof_operation,
+            repository_post_identity=_repository_identity(),
         )
-        _update_manifest(result_root=result_root, run_id=args.run_id)
+        _update_manifest(result_root=result_root, run_id=run_id)
     finally:
         if result_lock_fd is not None:
             _release_lock(result_lock_path, result_lock_fd)
 
-    if timed_out:
+    if cancelled:
+        print(f"[cancelled] {args.label} ({duration})", file=sys.stderr)
+    elif timed_out:
         print(f"[timeout] {args.label} ({duration}, after {args.timeout_seconds:g}s)", file=sys.stderr)
     else:
         print(f"[fail] {args.label} ({duration}, exit {returncode})", file=sys.stderr)
@@ -634,7 +816,7 @@ def main(argv: list[str] | None = None) -> int:
         log_path=log_path,
     )
     print(f"Result: {result_path.relative_to(REPO_ROOT).as_posix()}", file=sys.stderr)
-    return TIMEOUT_EXIT_CODE if timed_out else int(returncode)
+    return CANCELLED_EXIT_CODE if cancelled else TIMEOUT_EXIT_CODE if timed_out else int(returncode)
 
 
 if __name__ == "__main__":
