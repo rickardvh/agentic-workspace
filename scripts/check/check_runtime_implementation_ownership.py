@@ -32,6 +32,20 @@ def _metrics(node: ast.AST) -> tuple[int, int, int, int]:
     return lines, branches, max(segments, default=lines), fan_out
 
 
+def _file_metrics(source: str) -> dict[str, int]:
+    tree = ast.parse(source)
+    direct_calls = {
+        child.func.id if isinstance(child.func, ast.Name) else child.func.attr
+        for child in ast.walk(tree)
+        if isinstance(child, ast.Call) and isinstance(child.func, ast.Name | ast.Attribute)
+    }
+    return {
+        "lines": len(source.splitlines()),
+        "top_level_symbols": len(_definitions(tree)),
+        "direct_policy_fan_out": len(direct_calls),
+    }
+
+
 def ownership_report(root: Path = REPO_ROOT, *, today: date | None = None) -> dict[str, Any]:
     policy = json.loads((root / POLICY_PATH).read_text(encoding="utf-8"))
     core_path = root / policy["canonical_owner"]
@@ -57,8 +71,31 @@ def ownership_report(root: Path = REPO_ROOT, *, today: date | None = None) -> di
 
     review = policy["review_scale"]
     lifecycle = review.get("exception_lifecycle", {})
-    if lifecycle.get("supersedes_tracking_issue") != "#2455" or lifecycle.get("removal_owner") != "#2480" or not lifecycle.get("reason"):
+    if lifecycle.get("supersedes_tracking_issue") != "#2455" or not lifecycle.get("removal_owner") or not lifecycle.get("reason"):
         findings.append({"control": "review-scale", "detail": "review-scale exceptions lack a durable post-#2455 removal owner and reason"})
+    candidate_inventory = review.get("candidate_inventory", [])
+    ranks = [item.get("rank") for item in candidate_inventory]
+    if ranks != list(range(1, len(candidate_inventory) + 1)) or not any(item.get("status") == "extracted" for item in candidate_inventory):
+        findings.append({"control": "candidate-inventory", "detail": "ranked extraction candidates must include one extracted authority family"})
+    extracted = next((item for item in candidate_inventory if item.get("status") == "extracted"), {})
+    extracted_owner = root / str(extracted.get("canonical_owner") or "")
+    if not extracted_owner.is_file() or str(extracted.get("canonical_owner") or "") not in core_source.replace(".", "/"):
+        # Import spelling is checked separately below because paths and module names use different separators.
+        if "from agentic_workspace.operating_decision import" not in core_source:
+            findings.append({"control": "candidate-inventory", "detail": "extracted operating-decision owner lacks a narrow runtime facade import"})
+
+    file_metric_records: list[dict[str, Any]] = []
+    for ratchet in review.get("file_ratchets", []):
+        relative_path = str(ratchet["path"])
+        metrics = _file_metrics((root / relative_path).read_text(encoding="utf-8"))
+        file_metric_records.append({"path": relative_path, **metrics})
+        for metric, limit_key in (
+            ("lines", "max_lines"),
+            ("top_level_symbols", "max_top_level_symbols"),
+            ("direct_policy_fan_out", "max_direct_policy_fan_out"),
+        ):
+            if metrics[metric] > int(ratchet[limit_key]):
+                findings.append({"control": "file-ratchet", "detail": f"{relative_path} {metric} grew beyond its ratchet"})
     exception_map = {(item["path"], item["symbol"]): item for item in review["exceptions"]}
     metric_records: list[dict[str, Any]] = []
     current_day = today or date.today()
@@ -106,6 +143,7 @@ def ownership_report(root: Path = REPO_ROOT, *, today: date | None = None) -> di
                 "canonical_top_level_definitions": len(core_defs),
             },
             "review_scale_exceptions": metric_records,
+            "file_ratchets": file_metric_records,
             "representative_working_set": {
                 "before": review["representative_working_set"]["before"],
                 "after": {

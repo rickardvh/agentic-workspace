@@ -304,6 +304,8 @@ source_classes = ["source-checkout"]
 target_relations = ["inside-target"]
 contract_schema = "agentic-workspace/installed-state-compatibility/v1"
 required_capabilities = ["installed-state-sync-v2"]
+minimum_reader_epoch = 1
+required_reader_capabilities = ["pre-state-runtime-compatibility-v1"]
 required_resources = [
   "agentic_workspace:contracts/context_authority_registry.json",
   "agentic_workspace:contracts/schemas/operating_decision.schema.json",

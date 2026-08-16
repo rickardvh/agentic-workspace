@@ -777,13 +777,30 @@ def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> 
 
 
 def test_absent_surface_admission_disables_reuse_without_synthesizing_a_decision(tmp_path: Path) -> None:
-    from agentic_workspace.operating_decision import admit_projection_surface_decision_input
+    from agentic_workspace.operating_decision import (
+        admit_projection_surface_decision_input,
+        attach_projection_surface_decision_input_consumption,
+        projection_surface_builder_inputs,
+    )
     from agentic_workspace.projection_reuse import lookup_projection_reuse, prepare_projection_reuse, record_projection_reuse
 
     target = _target(tmp_path)
     query = {"profile": "router"}
     context = prepare_projection_reuse(root=target, operation="report", query=query)
     admitted_input = admit_projection_surface_decision_input(input_revisions={}, consumer="report")
+    material_inputs, consumption = projection_surface_builder_inputs(
+        admitted_input=admitted_input,
+        consumer="report",
+        required_fields=("task", "changed"),
+    )
+    rendered = attach_projection_surface_decision_input_consumption(
+        payload={"status": "detail-only"},
+        consumption=consumption,
+        used_material_inputs=material_inputs,
+    )
+
+    assert consumption["status"] == "unavailable"
+    assert "context" not in rendered
 
     cached, context = lookup_projection_reuse(
         root=target,

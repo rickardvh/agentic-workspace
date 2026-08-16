@@ -180,6 +180,11 @@ from agentic_workspace.reporting_support import (
 from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
+from agentic_workspace.runtime_compatibility import (
+    READER_CAPABILITIES,
+    READER_CONTRACT_EPOCH,
+    current_runtime_compatibility_admission,
+)
 from agentic_workspace.target_evidence import assignment_decision_from_policy, target_evidence_posture
 from agentic_workspace.trusted_execution import run_trusted_shell
 from agentic_workspace.workspace_output import (
@@ -2133,6 +2138,21 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
         not missing_resources,
         configured=bool(expectation.required_resources),
     )
+    add_check(
+        "minimum_reader_epoch",
+        expectation.minimum_reader_epoch,
+        READER_CONTRACT_EPOCH,
+        expectation.minimum_reader_epoch <= READER_CONTRACT_EPOCH,
+        configured=expectation.minimum_reader_epoch > 0,
+    )
+    missing_reader_capabilities = sorted(set(expectation.required_reader_capabilities) - set(READER_CAPABILITIES))
+    add_check(
+        "required_reader_capabilities",
+        list(expectation.required_reader_capabilities),
+        list(READER_CAPABILITIES),
+        not missing_reader_capabilities,
+        configured=bool(expectation.required_reader_capabilities),
+    )
     configured_checks = [check for check in checks if check["configured"]]
     failed_checks = [check for check in configured_checks if not check["satisfied"]]
     configured = expectation.enforcement != "off" or bool(configured_checks) or expectation.command is not None
@@ -2141,7 +2161,15 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
     elif failed_checks and (
         expectation.enforcement == "blocking"
         or any(
-            check["name"] in {"resolution_posture", "contract_schema", "required_capabilities", "required_resources"}
+            check["name"]
+            in {
+                "resolution_posture",
+                "contract_schema",
+                "required_capabilities",
+                "required_resources",
+                "minimum_reader_epoch",
+                "required_reader_capabilities",
+            }
             for check in failed_checks
         )
     ):
@@ -2165,6 +2193,8 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
             "schema": expectation.contract_schema,
             "capabilities": list(expectation.required_capabilities),
             "resources": list(expectation.required_resources),
+            "minimum_reader_epoch": expectation.minimum_reader_epoch,
+            "reader_capabilities": list(expectation.required_reader_capabilities),
             "source": expectation.source,
         },
         "package_resources": resource_availability,
@@ -2175,6 +2205,13 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
         "failed_checks": [check["name"] for check in failed_checks],
         "rule": "Executable compatibility compares invoked_cli_identity against repo expectations; payload drift remains owned by module lifecycle checks.",
     }
+    pre_state_admission = current_runtime_compatibility_admission()
+    if pre_state_admission.get("target") == str(config.target_root.resolve() if config.target_root else ""):
+        payload["pre_state_admission"] = {
+            key: pre_state_admission[key]
+            for key in ("kind", "status", "identity_digest", "observed_runtime", "expected_repository", "managed_state_interpreted")
+            if key in pre_state_admission
+        }
     if compact:
         compact_payload: dict[str, Any] = {
             "kind": payload["kind"],
@@ -2190,6 +2227,8 @@ def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False
             compact_payload["invocation_confidence"] = identity["confidence"]
         if configured_checks:
             compact_payload["checks"] = payload["checks"]
+        if payload.get("pre_state_admission"):
+            compact_payload["pre_state_admission"] = payload["pre_state_admission"]
         if expectation.source != "product-default" or expectation.resolution_policy != "direct":
             compact_payload["invocation_resolution"] = invocation_resolution
             compact_payload["contract_expectation"] = payload["contract_expectation"]

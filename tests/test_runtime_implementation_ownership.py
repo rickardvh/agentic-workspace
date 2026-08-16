@@ -29,6 +29,7 @@ def _fixture(tmp_path: Path) -> Path:
         "src/agentic_workspace/workspace_runtime_primitives.py",
         "src/agentic_workspace/contracts/runtime_implementation_ownership.json",
         "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "tests/test_workspace_cli.py",
     ):
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -58,12 +59,18 @@ def test_current_runtime_has_one_implementation_owner() -> None:
     )
     assert by_symbol["closeout_execplan"]["after"]["lines"] < by_symbol["closeout_execplan"]["before"]["lines"]
     assert by_symbol["closeout_execplan"]["after"]["branch_nodes"] < by_symbol["closeout_execplan"]["before"]["branch_nodes"]
-    assert {item["continuation_owner"] for item in decompositions} == {"#2480"}
+    assert {item["continuation_owner"] for item in decompositions} == {"runtime-implementation-ownership-contract"}
+    assert [item["rank"] for item in policy["review_scale"]["candidate_inventory"]] == [1, 2, 3]
+    assert policy["review_scale"]["candidate_inventory"][0]["canonical_owner"] == "src/agentic_workspace/operating_decision.py"
+    assert {item["path"] for item in report["metrics"]["file_ratchets"]} == {
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "packages/planning/src/repo_planning_bootstrap/installer.py",
+        "tests/test_workspace_cli.py",
+    }
 
     removed_exception_symbols = {
         "_applicable_intent_source_projection_payload",
         "_record_proof_receipt_payload",
-        "planning_summary",
         "_planning_reconciliation_transaction",
         "_intent_validation_contract",
         "_apply_pending_integration_proposals",
@@ -115,10 +122,29 @@ def test_review_scale_exceptions_require_durable_continuation_owner(tmp_path: Pa
     root = _fixture(tmp_path)
     policy_path = root / "src/agentic_workspace/contracts/runtime_implementation_ownership.json"
     policy = json.loads(policy_path.read_text(encoding="utf-8"))
-    policy["review_scale"]["exception_lifecycle"]["removal_owner"] = "#2455"
+    policy["review_scale"]["exception_lifecycle"]["removal_owner"] = ""
     policy_path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
 
     report = _checker().ownership_report(root)
 
     assert report["status"] == "blocked"
     assert any("durable post-#2455 removal owner" in item["detail"] for item in report["findings"])
+
+
+def test_hotspot_file_ratchets_reject_line_symbol_and_fan_out_growth(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    policy_path = root / "src/agentic_workspace/contracts/runtime_implementation_ownership.json"
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    ratchet = next(item for item in policy["review_scale"]["file_ratchets"] if item["path"] == "tests/test_workspace_cli.py")
+    ratchet["max_lines"] -= 1
+    ratchet["max_top_level_symbols"] -= 1
+    ratchet["max_direct_policy_fan_out"] -= 1
+    policy_path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
+
+    report = _checker().ownership_report(root)
+
+    assert report["status"] == "blocked"
+    details = {item["detail"] for item in report["findings"] if item["control"] == "file-ratchet"}
+    assert any("lines grew" in detail for detail in details)
+    assert any("top_level_symbols grew" in detail for detail in details)
+    assert any("direct_policy_fan_out grew" in detail for detail in details)

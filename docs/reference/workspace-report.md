@@ -46,11 +46,12 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `cli_compatibility.invocation_resolution` | object | no |  | Non-mutating classification of the configured environment-manager invocation. |  |  |
 | `cli_compatibility.contract_expectation` | object | no |  | Durable schema, capability, and package-resource expectation owned by repo config. |  |  |
 | `cli_compatibility.package_resources` | array of object | no |  | Availability results for required package resources. |  |  |
+| `cli_compatibility.pre_state_admission` | object | no |  | Compact root-reader admission provenance established before managed state interpretation. |  |  |
 | `cli_compatibility.invocation_confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | Allowed invocation confidence value for routing or validation. |  |  |
 | `cli_compatibility.drift_findings` | array of object | no |  | Ordered drift findings entries used by this contract. |  |  |
 | `cli_compatibility.remediation` | object | no |  | Remediation details used by this contract. |  |  |
 | `cli_compatibility.checks` | array of ref `#/$defs/cli_compatibility_check` | no |  | Ordered checks entries used by this contract. |  |  |
-| `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"`, `"resolution_posture"`, `"contract_schema"`, `"required_capabilities"`, `"required_resources"` | yes |  | Ordered failed checks entries used by this contract. |  |  |
+| `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"`, `"resolution_posture"`, `"contract_schema"`, `"required_capabilities"`, `"required_resources"`, `"minimum_reader_epoch"`, `"required_reader_capabilities"` | yes |  | Ordered failed checks entries used by this contract. |  |  |
 | `cli_compatibility.rule` | string | no |  | Policy rule that explains this contract behavior. |  |  |
 | `installed_state_compatibility` | ref `#/$defs/installed_state_compatibility` | yes |  | Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts. |  |  |
 | `installed_state_compatibility.kind` | const `"agentic-workspace/installed-state-compatibility/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |

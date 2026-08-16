@@ -1064,6 +1064,18 @@
           "uniqueItems": true,
           "default": []
         },
+        "minimum_reader_epoch": {
+          "description": "Minimum pre-state compatibility reader epoch required before this repository's managed state may be interpreted.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "required_reader_capabilities": {
+          "description": "Root-reader capabilities required before generated handlers or managed repository state may be loaded.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "default": []
+        },
         "resolution_policy": {
           "description": "Required dependency-resolution posture for the configured invocation.",
           "enum": ["direct", "locked", "frozen"],

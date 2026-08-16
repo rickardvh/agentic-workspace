@@ -157,4 +157,6 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `cli_compatibility.contract_schema` | string | no | `"agentic-workspace/installed-state-compatibility/v1"` | Durable installed-state contract schema expected by this repository. |  |  |
 | `cli_compatibility.required_capabilities` | array of string | no | `[]` | Package capabilities required from the configured Agentic Workspace runtime. |  |  |
 | `cli_compatibility.required_resources` | array of string | no | `[]` | Package resources required from the configured Agentic Workspace runtime, expressed as package:relative/path. |  |  |
+| `cli_compatibility.minimum_reader_epoch` | integer | no |  | Minimum pre-state compatibility reader epoch required before this repository's managed state may be interpreted. |  |  |
+| `cli_compatibility.required_reader_capabilities` | array of string | no | `[]` | Root-reader capabilities required before generated handlers or managed repository state may be loaded. |  |  |
 | `cli_compatibility.resolution_policy` | enum `"direct"`, `"locked"`, `"frozen"` | no | `"direct"` | Required dependency-resolution posture for the configured invocation. |  |  |

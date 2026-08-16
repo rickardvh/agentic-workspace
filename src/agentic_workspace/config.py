@@ -574,6 +574,8 @@ class CLICompatibilityExpectation:
     contract_schema: str
     required_capabilities: tuple[str, ...]
     required_resources: tuple[str, ...]
+    minimum_reader_epoch: int
+    required_reader_capabilities: tuple[str, ...]
     resolution_policy: str
     source: str
 
@@ -887,6 +889,8 @@ def _load_cli_compatibility_expectation(*, raw_cli_compatibility: Any, config_pa
         "contract_schema",
         "required_capabilities",
         "required_resources",
+        "minimum_reader_epoch",
+        "required_reader_capabilities",
         "resolution_policy",
     }
     unknown = sorted(set(raw_cli_compatibility) - supported_fields)
@@ -911,6 +915,13 @@ def _load_cli_compatibility_expectation(*, raw_cli_compatibility: Any, config_pa
     contract_schema = raw_cli_compatibility.get("contract_schema", "agentic-workspace/installed-state-compatibility/v1")
     if not isinstance(contract_schema, str) or not contract_schema.strip():
         raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.contract_schema must be a non-empty string.")
+    raw_minimum_reader_epoch = raw_cli_compatibility.get("minimum_reader_epoch")
+    if raw_minimum_reader_epoch is None:
+        minimum_reader_epoch = 0
+    elif not isinstance(raw_minimum_reader_epoch, int) or isinstance(raw_minimum_reader_epoch, bool) or raw_minimum_reader_epoch < 1:
+        raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.minimum_reader_epoch must be a positive integer.")
+    else:
+        minimum_reader_epoch = raw_minimum_reader_epoch
     return (
         CLICompatibilityExpectation(
             enforcement=enforcement,
@@ -937,6 +948,12 @@ def _load_cli_compatibility_expectation(*, raw_cli_compatibility: Any, config_pa
             required_resources=require_optional_string_list(
                 payload=raw_cli_compatibility,
                 key="required_resources",
+                config_path=config_path,
+            ),
+            minimum_reader_epoch=minimum_reader_epoch,
+            required_reader_capabilities=require_optional_string_list(
+                payload=raw_cli_compatibility,
+                key="required_reader_capabilities",
                 config_path=config_path,
             ),
             resolution_policy=require_optional_enum(
