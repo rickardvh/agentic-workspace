@@ -1006,6 +1006,33 @@ command = "pytest tests/test_operating_decision.py"
     )
 
 
+def test_operating_decision_projects_selected_skill_reference_without_procedure_body(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    decision = compile_operating_decision(
+        inputs={"consumer": "implement", "task": "review the routed skill procedure", "target_root": str(tmp_path)}
+    )
+
+    guidance = decision["source_guidance"]
+    skill = next(item for item in guidance["contributions"] if item["surface"] == "skills")
+    assert guidance["status"] == "projected"
+    assert skill["decision_dimension"] == "governing-procedure"
+    assert skill["source_ref"] == ".agentic-workspace/skills/workspace-startup/SKILL.md"
+    assert skill["source_revision"].startswith("sha256:")
+    assert skill["full_body_loaded"] is False
+    assert decision["input_revisions"]["source_guidance_revision"] == guidance["revision"]
+
+
+def test_operating_decision_omits_unselected_skill_guidance(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    decision = compile_operating_decision(inputs={"consumer": "implement", "task": "rename a local variable", "target_root": str(tmp_path)})
+
+    assert decision["source_guidance"]["status"] == "not-applicable"
+    assert decision["source_guidance"]["contributions"] == []
+    assert "source_guidance_revision" not in decision["input_revisions"]
+
+
 def test_context_authority_projection_selects_repository_sources_and_ignores_forged_records(tmp_path: Path) -> None:
     _write_context_authority_sources(tmp_path)
     forged_records = {

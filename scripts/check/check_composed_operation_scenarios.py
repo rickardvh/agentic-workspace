@@ -1174,7 +1174,9 @@ def _execute_composed_workspace_path(*, target: Path, scenario: dict[str, object
     after = _snapshot(target)
     command_changes = _changed_paths(before_commands, after)
     changed = _changed_paths(before_fixture, after)
-    state_changes = {path for path in changed if path.startswith(".agentic-workspace/") or path.startswith("generated/")}
+    state_changes = {
+        path for path in command_changes if path.startswith(".agentic-workspace/") or path.startswith("generated/")
+    }
     packets["_scenario_contract"] = _scenario_contract_observation(target=target, packets=packets, scenario=scenario, fixture=fixture)
     observation = packets["_scenario_contract"]
     parity_cost = {}

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Project material source-owned guidance through the canonical operating decision and add adversarial dynamic-instruction conformance coverage."
