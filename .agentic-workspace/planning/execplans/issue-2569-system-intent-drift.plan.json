@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "validation",
-  "revision": 4,
+  "revision": 5,
   "intent": {
     "outcome": "Compose explicit applicable system intent into revision-bound pre-decision expectations, evidence-backed drift/rescope evaluation, existing context consequences, and stronger-owner recurrence promotion.",
     "non_goals": [
@@ -42,7 +42,7 @@
         "state": "satisfied",
         "refs": [
           "Ordinary start, summary, implement, proof, and report consumers bind the same intent expectation revision into the canonical projection-decision authority.",
-          "Captured routing, completion-cost, and lexical skill regressions replay through canonical decisions and the existing context-consequence path.",
+          "Captured routing, completion-cost, and lexical skill regressions derive revision-bound evidence from their typed ordinary outputs without caller-supplied verdicts, then replay through canonical decisions and the existing context-consequence path.",
           "The runtime implementation ownership contract proves a real stronger-owner correction and catches the same alternate-assembler recurrence on replay.",
           "contract tooling, structured inventory, schema references, Ruff, typecheck, and runtime ownership checks passed"
         ]
@@ -75,6 +75,7 @@
     ],
     "refs": [
       "tests/test_intent_feedback.py",
+      "tests/test_intent_feedback.py::test_captured_sessions_derive_drift_from_ordinary_product_outputs",
       "tests/test_operating_decision.py",
       "tests/test_workspace_projection_reuse.py",
       "tests/test_workspace_implement_cli.py",

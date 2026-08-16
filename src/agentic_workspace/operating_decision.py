@@ -16,7 +16,7 @@ from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_receipt_status,
     registered_context_owner_result_status,
 )
-from agentic_workspace.intent_feedback import compile_intent_feedback
+from agentic_workspace.intent_feedback import compile_intent_feedback, intent_evidence_from_observed_behavior
 
 BLOCKER_PRECEDENCE = [
     "missing-authority",
@@ -1547,6 +1547,8 @@ def compile_projection_surface_operating_decision(
         for item in _as_list(source)
         if isinstance(item, dict)
     ]
+    supplied_intent_evidence = [item for item in _as_list(payload.get("intent_evidence")) if isinstance(item, dict)]
+    observed_intent_evidence = intent_evidence_from_observed_behavior(expectations=intent_expectations, payload=payload)
     decision = compile_operating_decision(
         inputs={
             "consumer": consumer,
@@ -1563,7 +1565,7 @@ def compile_projection_surface_operating_decision(
             "blockers": posture["blockers"],
             "blocked_claim_classes": posture["blocked_claim_classes"],
             "intent_expectations": intent_expectations,
-            "intent_evidence": [item for item in _as_list(payload.get("intent_evidence")) if isinstance(item, dict)],
+            "intent_evidence": [*supplied_intent_evidence, *observed_intent_evidence],
             "intent_resolutions": [item for item in _as_list(payload.get("intent_resolutions")) if isinstance(item, dict)],
         }
     )

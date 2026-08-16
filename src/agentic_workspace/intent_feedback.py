@@ -258,6 +258,139 @@ def compile_intent_feedback(
     }
 
 
+def _observed_payload(payload: dict[str, Any], key: str) -> dict[str, Any]:
+    direct = _as_dict(payload.get(key))
+    if direct:
+        return direct
+    return _as_dict(_as_dict(payload.get("context")).get(key))
+
+
+def _observed_evidence(
+    *,
+    expectation: dict[str, Any],
+    outcome: str,
+    addresses: list[str],
+    evidence_refs: list[str],
+    source_kind: str,
+) -> dict[str, Any]:
+    identity = {
+        "expectation_revision": str(expectation.get("expectation_revision") or ""),
+        "outcome": outcome,
+        "addresses": addresses,
+        "evidence_refs": evidence_refs,
+        "source_kind": source_kind,
+    }
+    return {
+        "kind": "agentic-workspace/observed-intent-evidence/v1",
+        **identity,
+        "authority_class": "typed-runtime-observation",
+        "observation_revision": "sha256:" + _digest(identity),
+        "rule": "The outcome is derived from typed ordinary-product output and is bound to the expectation that shaped the decision.",
+    }
+
+
+def _planning_route_intent_evidence(expectation: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    gate = _observed_payload(payload, "planning_safety_gate")
+    route = _as_dict(gate.get("route_decision")) or _observed_payload(payload, "planning_route_decision")
+    if not route:
+        return {}
+    relation = str(route.get("task_relation") or "")
+    owner_posture = str(route.get("owner_posture") or "")
+    transition = str(route.get("required_transition") or "")
+    implementation_allowed = route.get("implementation_allowed")
+    contradicted = (
+        relation == "independent-pending-scope"
+        and owner_posture == "current"
+        and transition == "inspect-current-task-scope"
+        and implementation_allowed is False
+    )
+    preserved = relation == "bounded-independent" and transition == "none" and implementation_allowed is True
+    if not contradicted and not preserved:
+        return {}
+    identity = _as_dict(route.get("action_identity"))
+    evidence_ref = str(
+        identity.get("idempotency_key") or route.get("decision_id") or route.get("input_revision") or "planning-route-decision"
+    )
+    return _observed_evidence(
+        expectation=expectation,
+        outcome="contradicted" if contradicted else "preserved",
+        addresses=["routing"],
+        evidence_refs=[evidence_ref],
+        source_kind="agentic-planning/route-decision/v1",
+    )
+
+
+def _completion_cost_intent_evidence(expectation: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    completion_cost = _observed_payload(payload, "successful_completion_cost")
+    validation = _as_dict(_as_dict(completion_cost.get("evidence")).get("validation_execution"))
+    repeated_unchanged = []
+    for item in _as_list(validation.get("runs")):
+        run = _as_dict(item)
+        subject = _as_dict(run.get("subject"))
+        route_id = str(run.get("constituent_id") or run.get("proof_operation_id") or "").replace("-", "_")
+        unchanged = bool(subject.get("pre_subject_revision")) and (
+            subject.get("pre_subject_revision") == subject.get("post_subject_revision")
+        )
+        try:
+            duration_seconds = float(run.get("duration_seconds") or 0.0)
+        except (TypeError, ValueError):
+            duration_seconds = 0.0
+        if "closeout_trust" in route_id and run.get("rerun") is True and unchanged and duration_seconds >= 60.0:
+            repeated_unchanged.append(run)
+    if len(repeated_unchanged) < 2:
+        return {}
+    refs = [str(item.get("evidence_ref") or item.get("run_id") or "completion-cost-run") for item in repeated_unchanged]
+    return _observed_evidence(
+        expectation=expectation,
+        outcome="contradicted",
+        addresses=["operating-cost"],
+        evidence_refs=refs,
+        source_kind=str(validation.get("kind") or "agentic-workspace/validation-completion-cost-observations/v1"),
+    )
+
+
+def _skill_routing_intent_evidence(expectation: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    skill_routing = _observed_payload(payload, "skill_routing")
+    if not skill_routing and isinstance(payload.get("recommendations"), list):
+        skill_routing = payload
+    recommendations = [_as_dict(item) for item in _as_list(skill_routing.get("recommendations"))]
+    lexical = [item for item in recommendations if item.get("activation_evidence_class") == "lexical-candidate"]
+    if not lexical:
+        return {}
+    admitted = [item for item in lexical if item.get("recommendation_authority") in {"admitted", "authoritative", "selected", "required"}]
+    refs = [
+        f"skill-routing:{str(item.get('id') or 'unknown')}:{str(item.get('activation_evidence_class') or 'unknown')}"
+        for item in (admitted or lexical)
+    ]
+    return _observed_evidence(
+        expectation=expectation,
+        outcome="contradicted" if admitted else "preserved",
+        addresses=["skill-selection"],
+        evidence_refs=refs,
+        source_kind="agentic-workspace/skill-recommendation/v1",
+    )
+
+
+def intent_evidence_from_observed_behavior(*, expectations: list[dict[str, Any]], payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Derive revision-bound evidence from typed ordinary-product outputs."""
+
+    evidence: list[dict[str, Any]] = []
+    for expectation in expectations:
+        if not isinstance(expectation, dict) or expectation.get("status") != "applicable":
+            continue
+        affected = {str(item) for item in _as_list(expectation.get("affected_decisions"))}
+        observed: dict[str, Any] = {}
+        if "skill-selection" in affected:
+            observed = _skill_routing_intent_evidence(expectation, payload)
+        if not observed and "operating-cost" in affected:
+            observed = _completion_cost_intent_evidence(expectation, payload)
+        if not observed and "routing" in affected:
+            observed = _planning_route_intent_evidence(expectation, payload)
+        if observed:
+            evidence.append(observed)
+    return evidence
+
+
 def intent_recurrence_evidence(*, finding: dict[str, Any], observations: list[dict[str, Any]], deterministic: bool) -> dict[str, Any]:
     """Bind repeated observations to one exact drift finding."""
 

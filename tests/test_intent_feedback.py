@@ -132,26 +132,85 @@ def test_applicable_intent_without_consumer_becomes_existing_coverage_gap() -> N
 
 
 @pytest.mark.parametrize(
-    ("consumer", "intent_id", "affected", "evidence_ref"),
+    ("consumer", "intent_id", "affected", "observed", "evidence_refs"),
     [
-        ("start", "phase-question-context-economy", ("routing",), "session:unrelated-log-packaging-gated"),
-        ("report", "total-successful-completion-cost", ("operating-cost",), "measurement:repeated-closeout-rebuild"),
-        ("implement", "host-agnostic-agent-judgment", ("skill-selection",), "session:lexical-open-issue-route"),
+        (
+            "start",
+            "phase-question-context-economy",
+            ("routing",),
+            {
+                "planning_safety_gate": {
+                    "route_decision": {
+                        "kind": "agentic-planning/route-decision/v1",
+                        "task_relation": "independent-pending-scope",
+                        "owner_posture": "current",
+                        "required_transition": "inspect-current-task-scope",
+                        "implementation_allowed": False,
+                        "action_identity": {"idempotency_key": "session:unrelated-log-packaging-gated"},
+                    }
+                }
+            },
+            ["session:unrelated-log-packaging-gated"],
+        ),
+        (
+            "report",
+            "total-successful-completion-cost",
+            ("operating-cost",),
+            {
+                "successful_completion_cost": {
+                    "evidence": {
+                        "validation_execution": {
+                            "kind": "agentic-workspace/validation-completion-cost-observations/v1",
+                            "runs": [
+                                {
+                                    "evidence_ref": "measurement:closeout-rebuild:first",
+                                    "constituent_id": "closeout_trust",
+                                    "duration_seconds": 125.0,
+                                    "rerun": True,
+                                    "subject": {"pre_subject_revision": "same", "post_subject_revision": "same"},
+                                },
+                                {
+                                    "evidence_ref": "measurement:closeout-rebuild:second",
+                                    "constituent_id": "closeout_trust",
+                                    "duration_seconds": 132.0,
+                                    "rerun": True,
+                                    "subject": {"pre_subject_revision": "same", "post_subject_revision": "same"},
+                                },
+                            ],
+                        }
+                    }
+                }
+            },
+            ["measurement:closeout-rebuild:first", "measurement:closeout-rebuild:second"],
+        ),
+        (
+            "implement",
+            "host-agnostic-agent-judgment",
+            ("skill-selection",),
+            {
+                "recommendations": [
+                    {
+                        "id": "github-issue-creation",
+                        "activation_evidence_class": "lexical-candidate",
+                        "recommendation_authority": "admitted",
+                    }
+                ]
+            },
+            ["skill-routing:github-issue-creation:lexical-candidate"],
+        ),
     ],
 )
-def test_captured_sessions_replay_through_ordinary_decision(
-    consumer: str, intent_id: str, affected: tuple[str, ...], evidence_ref: str
+def test_captured_sessions_derive_drift_from_ordinary_product_outputs(
+    consumer: str, intent_id: str, affected: tuple[str, ...], observed: dict, evidence_refs: list[str]
 ) -> None:
     expectation = _expectation(intent_id=intent_id, affected=affected)
-    evidence = _evidence(expectation, outcome="contradicted")
-    evidence["evidence_refs"] = [evidence_ref]
 
-    payload, decision = _ordinary_surface_decision(consumer=consumer, expectation=expectation, evidence=evidence)
+    payload, decision = _ordinary_surface_decision(consumer=consumer, expectation=expectation, observed=observed)
     feedback = decision["intent_feedback"]
 
     assert feedback["status"] == "drift"
     assert feedback["findings"][0]["intent_ref"] == intent_id
-    assert feedback["findings"][0]["evidence_refs"] == [evidence_ref]
+    assert feedback["findings"][0]["evidence_refs"] == evidence_refs
     assert decision["context_consequences"][0]["finding_id"] == feedback["findings"][0]["id"]
     assert payload["context"]["projection_decision_authority"]["intent_expectation_revisions"] == [expectation["expectation_revision"]]
 
@@ -197,7 +256,9 @@ def test_deterministic_recurrence_promotes_existing_stronger_owner() -> None:
     assert promotion["memory_or_issue_spam_allowed"] is False
 
 
-def _ordinary_surface_decision(*, consumer: str, expectation: dict, evidence: dict | None = None) -> tuple[dict, dict]:
+def _ordinary_surface_decision(
+    *, consumer: str, expectation: dict, evidence: dict | None = None, observed: dict | None = None
+) -> tuple[dict, dict]:
     admitted = admit_projection_surface_decision_input(
         input_revisions={"planning": "planning-revision"},
         consumer=consumer,
@@ -207,6 +268,7 @@ def _ordinary_surface_decision(*, consumer: str, expectation: dict, evidence: di
             "status": "continue",
             "intent_expectations": [expectation],
             "intent_evidence": [evidence] if evidence else [],
+            **(observed or {}),
         },
         admitted_input=admitted,
         consumer=consumer,
@@ -236,6 +298,58 @@ def test_non_applicable_intent_stays_absent_from_ordinary_decision_authority() -
 
     assert payload["context"]["projection_decision_authority"]["intent_expectation_revisions"] == []
     assert decision["intent_feedback"]["applicable_expectations"] == []
+
+
+def test_candidate_only_lexical_skill_result_is_observed_as_aligned_without_a_finding() -> None:
+    expectation = _expectation(
+        intent_id="host-agnostic-agent-judgment",
+        affected=("skill-selection",),
+        enforcement="mechanically-checkable",
+    )
+    _, decision = _ordinary_surface_decision(
+        consumer="implement",
+        expectation=expectation,
+        observed={
+            "recommendations": [
+                {
+                    "id": "github-issue-creation",
+                    "activation_evidence_class": "lexical-candidate",
+                    "recommendation_authority": "candidate-only",
+                }
+            ]
+        },
+    )
+
+    assert decision["intent_feedback"]["status"] == "preserved"
+    assert decision["intent_feedback"]["findings"] == []
+
+
+def test_unrelated_slow_rerun_is_not_relabelled_as_closeout_intent_drift() -> None:
+    expectation = _expectation(intent_id="total-successful-completion-cost", affected=("operating-cost",))
+    _, decision = _ordinary_surface_decision(
+        consumer="report",
+        expectation=expectation,
+        observed={
+            "successful_completion_cost": {
+                "evidence": {
+                    "validation_execution": {
+                        "runs": [
+                            {
+                                "evidence_ref": "measurement:unrelated-slow-test",
+                                "constituent_id": "integration_export",
+                                "duration_seconds": 240.0,
+                                "rerun": True,
+                                "subject": {"pre_subject_revision": "same", "post_subject_revision": "same"},
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+    )
+
+    assert decision["intent_feedback"]["status"] == "unknown"
+    assert decision["intent_feedback"]["findings"] == []
 
 
 def test_architecture_projection_exposes_predecision_expectation_with_source_revision() -> None:
