@@ -5318,8 +5318,6 @@ candidates = []
         "--retain-archive",
         "--closure-decision",
         "archive-and-close",
-        "--intent-satisfied",
-        "yes",
         "--unsolved-intent",
         "none",
         "--format",
@@ -5358,12 +5356,10 @@ candidates = []
         args = [*closeout_args]
         args[args.index(str(target))] = str(target_override)
         if extra:
-            intent_index = args.index("--intent-satisfied")
-            del args[intent_index : intent_index + 2]
-            closure_index = args.index("--closure-decision")
-            del args[closure_index : closure_index + 2]
-            unsolved_index = args.index("--unsolved-intent")
-            del args[unsolved_index : unsolved_index + 2]
+            for option in ("--intent-satisfied", "--closure-decision", "--unsolved-intent"):
+                if option in args:
+                    option_index = args.index(option)
+                    del args[option_index : option_index + 2]
             args[args.index("--format") : args.index("--format")] = list(extra)
         assert cli.main(args) == 0
         return json.loads(capsys.readouterr().out)
