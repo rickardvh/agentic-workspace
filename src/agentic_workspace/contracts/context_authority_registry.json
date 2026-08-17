@@ -50,6 +50,7 @@
       "surface": "architecture-principles",
       "owner": "architecture-principles resolver",
       "authority_class": "canonical",
+      "decision_dimension": "durable-design-guidance",
       "consumers": ["start", "startup", "implement", "proof", "report", "closeout"],
       "activation": "matched durable shaping or validation principle for the task or changed paths",
       "editable_by": "system-intent sync and explicit repo edits",
@@ -238,6 +239,7 @@
       "stale_when": "skill registry, dependency status, or routed task shape changes",
       "proof_route": "skill registry and workspace startup tests",
       "disposition": "retain as routed operating guidance",
+      "decision_dimension": "governing-procedure",
       "revision_fields": ["skill_id", "registry_revision", "dependency_status"],
       "source_owner_contract": {
         "owner_module": "agentic_workspace.workspace_runtime_core.skill_dependency_resolver",

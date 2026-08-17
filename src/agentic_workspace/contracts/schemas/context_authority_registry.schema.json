@@ -60,6 +60,11 @@
           "stale_when": {"type": "string", "minLength": 1},
           "proof_route": {"type": "string", "minLength": 1},
           "disposition": {"type": "string", "minLength": 1},
+          "decision_dimension": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional canonical operating-decision dimension changed by material guidance from this source."
+          },
           "revision_fields": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
           "source_owner_contract": {
             "type": "object",

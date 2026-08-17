@@ -227,18 +227,19 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     reuse_query = {
         "profile": profile,
         "format": str(args.format),
+        "select": str(selected_fields or ""),
         "task": str(task_text or ""),
         "changed": changed_paths,
     }
     reuse_context: dict[str, Any] | None = None
     admitted_input: dict[str, Any] = {}
-    if args.format == "json" and profile == "tiny" and not selected_fields:
-        full_detail_command = f"{config.cli_invoke} implement --target . --changed <paths> --verbose --format json"
+    full_detail_command = f"{config.cli_invoke} implement --target . --changed <paths> --verbose --format json"
+    if args.format == "json" and profile == "tiny":
         reuse_context = prepare_projection_reuse(root=target_root, operation="implement", query=reuse_query)
         admitted_input = admit_projection_surface_decision_input(
             input_revisions=reuse_context.get("decision_input_revisions", {}),
             consumer="implement",
-            material_inputs={"task": str(task_text or ""), "changed": changed_paths},
+            material_inputs={"task": str(task_text or ""), "changed": changed_paths, "target_root": str(target_root)},
         )
         reused, reuse_context = lookup_projection_reuse(
             root=target_root,
@@ -348,6 +349,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["planning_route_decision"] = _as_dict(gate.get("route_decision"))
         if context_authority_projection_selected:
             payload["context_authority_projection"] = full_payload["context_authority_projection"]
+        if _selector_requests(selected_fields, "memory_decision_packet"):
+            payload["memory_decision_packet"] = full_payload["memory_decision_packet"]
         if _selector_requests(getattr(args, "select", None), "proof_route_strategy_preservation"):
             payload["proof_route_strategy_preservation"] = full_payload.get("proof_route_strategy_preservation", {})
         if _selector_requests(getattr(args, "select", None), "proof_route_strategy_consumer_gate"):
@@ -360,7 +363,11 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
                 cli_invoke=_load_workspace_config(target_root=target_root).cli_invoke,
             )
     if getattr(args, "select", None):
+        decision_context = _as_dict(payload.get("context"))
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
+        for field in ("projection_decision_input_consumption", "projection_decision_input_revalidation"):
+            if value := _as_dict(decision_context.get(field)):
+                payload.setdefault("context", {})[field] = value
     if changed_paths and not getattr(args, "select", None):
         transition = record_review_stack_transition(
             target_root=target_root,
@@ -410,6 +417,9 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     payload, operating_decision = finalize_projection_surface_operating_decision(
         payload=payload, admitted_input=admitted_input, consumer="implement"
     )
+    if _selector_requests(selected_fields, "source_guidance"):
+        payload.setdefault("values", {})["source_guidance"] = _as_dict(operating_decision.get("source_guidance"))
+        payload["missing"] = [item for item in payload.get("missing", []) if item != "source_guidance"]
     if reuse_context is not None:
         reuse_result = record_projection_reuse(
             root=target_root,

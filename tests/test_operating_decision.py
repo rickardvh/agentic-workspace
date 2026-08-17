@@ -1006,6 +1006,82 @@ command = "pytest tests/test_operating_decision.py"
     )
 
 
+def test_operating_decision_projects_selected_skill_reference_without_procedure_body(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    decision = compile_operating_decision(
+        inputs={"consumer": "implement", "task": "review the routed skill procedure", "target_root": str(tmp_path)}
+    )
+
+    guidance = decision["source_guidance"]
+    skill = next(item for item in guidance["contributions"] if item["surface"] == "skills")
+    assert guidance["status"] == "projected"
+    assert skill["decision_dimension"] == "governing-procedure"
+    assert skill["source_ref"] == ".agentic-workspace/skills/workspace-startup/SKILL.md"
+    assert skill["source_revision"].startswith("sha256:")
+    assert skill["full_body_loaded"] is False
+    assert decision["input_revisions"]["source_guidance_revision"] == guidance["revision"]
+
+
+def test_operating_decision_omits_unselected_skill_guidance(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    decision = compile_operating_decision(inputs={"consumer": "implement", "task": "rename a local variable", "target_root": str(tmp_path)})
+
+    assert decision["source_guidance"]["status"] == "not-applicable"
+    assert decision["source_guidance"]["contributions"] == []
+    assert "source_guidance_revision" not in decision["input_revisions"]
+
+
+def test_operating_decision_projects_selected_architecture_guidance_from_owner_output(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    decision = compile_operating_decision(
+        inputs={"consumer": "implement", "task": "follow the generated runtime contract architecture", "target_root": str(tmp_path)}
+    )
+
+    guidance = decision["source_guidance"]
+    architecture = next(item for item in guidance["contributions"] if item["surface"] == "architecture-principles")
+    assert guidance["status"] == "projected"
+    assert architecture["decision_dimension"] == "durable-design-guidance"
+    assert architecture["authority_class"] == "canonical"
+    assert architecture["source_ref"] == "SYSTEM_INTENT.md"
+    assert architecture["source_revision"].startswith("sha256:")
+    assert architecture["full_body_loaded"] is False
+
+
+def test_operating_decision_projects_memory_through_exactly_one_advisory_channel(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    contribution = {
+        "kind": "agentic-memory/decision-contribution/v1",
+        "status": "projected",
+        "fact_id": "selected-owner-trap",
+        "fact_revision": "sha256:" + "1" * 64,
+        "source_revision": "sha256:" + "2" * 64,
+        "freshness": "current",
+        "owner": "memory",
+        "authority_class": "advisory",
+        "affected_decisions": ["planning-task-relation"],
+        "guidance": "Check the structured Planning relation before proceeding.",
+        "authority_boundary": "Planning owns relation correctness.",
+    }
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": "implement",
+            "task": "avoid the recorded memory rediscovery trap",
+            "target_root": str(tmp_path),
+            "memory_contributions": [contribution],
+        }
+    )
+
+    projected = decision["memory_effectiveness"]["projected_contributions"]
+    assert len(projected) == 1
+    assert projected[0]["fact_id"] == "selected-owner-trap"
+    assert projected[0]["authority_class"] == "advisory"
+    assert not any(item["surface"] == "memory" for item in decision["source_guidance"]["contributions"])
+
+
 def test_context_authority_projection_selects_repository_sources_and_ignores_forged_records(tmp_path: Path) -> None:
     _write_context_authority_sources(tmp_path)
     forged_records = {

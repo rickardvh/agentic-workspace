@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator, Literal
 
 _CACHE_KIND = "agentic-workspace/projection-reuse-record/v2"
-_CACHE_CONTRACT_VERSION = 5
+_CACHE_CONTRACT_VERSION = 6
 _MAX_CACHE_RECORDS = 32
 _GIT_TIMEOUT_SECONDS = 0.5
 _DEPENDENCY_MAX_ENTRIES = 20_000
@@ -49,6 +49,22 @@ _OPERATION_DEPENDENCY_ROOTS = {
     "report": ("src/agentic_workspace", "generated/workspace", "scripts", "packages", "docs"),
     "summary": ("src/agentic_workspace", "generated/workspace", "generated/planning", "scripts", "packages/planning", "docs"),
 }
+_SELECTOR_ENRICHMENT_DEPENDENCIES = {
+    "memory_decision_packet": (
+        ".agentic-workspace/memory/repo/manifest.toml",
+        ".agentic-workspace/memory/repo/index.md",
+    ),
+    "closeout_trust_inspection": (
+        ".agentic-workspace/local/proof-receipts/last.json",
+        ".agentic-workspace/planning/archive/index.json",
+    ),
+}
+
+
+def _expose_projection_reuse_receipt(*, operation: str, query: dict[str, Any]) -> bool:
+    """Keep proof lineage visible where a caller supplied projection scope."""
+
+    return operation != "start" or bool(query.get("changed")) or bool(str(query.get("select") or "").strip())
 
 
 @dataclass(frozen=True)
@@ -433,6 +449,20 @@ def _changed_path_revision(root: Path, changed_paths: list[str]) -> tuple[str, l
     return _content_revision(root, normalized)
 
 
+def _selector_enrichment_revision(root: Path, query: dict[str, Any]) -> tuple[str, list[str]]:
+    """Read only canonical sources required by explicitly selected enrichment."""
+
+    selected = {token.strip() for token in str(query.get("select") or "").split(",") if token.strip()}
+    section = str(query.get("section") or "").strip()
+    if section:
+        selected.add(section)
+    relatives: list[str] = []
+    for selector, dependencies in _SELECTOR_ENRICHMENT_DEPENDENCIES.items():
+        if any(token == selector or token.startswith(f"{selector}.") for token in selected):
+            relatives.extend(dependencies)
+    return _content_revision(root, relatives)
+
+
 def admitted_projection_revisions(
     *, root: Path, operation: str, query: dict[str, Any]
 ) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
@@ -525,6 +555,8 @@ def admitted_projection_revisions(
     external_relatives = list(_LOCAL_DECISION_DEPENDENCIES)
     external_revision, external_dependencies = _content_revision(root, external_relatives)
     dependencies.extend(external_dependencies)
+    selector_enrichment_revision, selector_enrichment_dependencies = _selector_enrichment_revision(root, query)
+    dependencies.extend(selector_enrichment_dependencies)
     try:
         package_version = version("agentic-workspace")
     except PackageNotFoundError:
@@ -549,6 +581,8 @@ def admitted_projection_revisions(
         "external_freshness": external_revision,
         "worktree": worktree_revision,
     }
+    if selector_enrichment_dependencies:
+        revisions["selector_enrichment"] = selector_enrichment_revision
     return revisions, sorted(set(dependencies)), findings
 
 
@@ -730,11 +764,16 @@ def lookup_projection_reuse(
     cached_projection = record.get("projection") if isinstance(record.get("projection"), dict) else None
     if cached_projection is not None and operation in {"start", "summary", "implement", "proof", "report"}:
         reused_projection = json.loads(json.dumps(cached_projection, sort_keys=True, default=str))
-        reused_projection["projection_reuse"] = {
-            "decision_id": decision_id,
-            "status": "decision+enrichment-reused",
-            "freshness": "current",
-        }
+        if _expose_projection_reuse_receipt(operation=operation, query=query):
+            reused_projection["projection_reuse"] = {
+                "decision_id": decision_id,
+                "status": "decision+enrichment-reused",
+                "freshness": "current",
+                "authority": "agentic_workspace.operating_decision.compile_operating_decision",
+                "projection_input_revision": projection_input_revision,
+            }
+        else:
+            reused_projection.pop("projection_reuse", None)
         return reused_projection, context
     return {
         "kind": "agentic-workspace/unchanged-projection/v1",
@@ -889,6 +928,8 @@ def record_projection_reuse(
         "decision_id": context.get("decision_id", ""),
         "status": "decision+enrichment-rebuilt",
         "freshness": str(revalidation.get("status") or "unavailable"),
+        "authority": "agentic_workspace.operating_decision.compile_operating_decision",
+        "projection_input_revision": operating_decision.get("projection_input_revision", ""),
     }
     for field in (
         "projection_decision_input",
@@ -897,7 +938,10 @@ def record_projection_reuse(
         "projection_decision_authority",
     ):
         payload_context.pop(field, None)
-    payload["projection_reuse"] = compact_receipt
+    if _expose_projection_reuse_receipt(operation=operation, query=query):
+        payload["projection_reuse"] = compact_receipt
+    else:
+        payload.pop("projection_reuse", None)
     # The budget governs the emitted projection, including its reuse receipt.
     # Recalculate twice so the byte-count field's own width is reflected.
     for _iteration in range(2):

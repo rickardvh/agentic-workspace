@@ -1841,7 +1841,7 @@ def _hydrate_selected_start_advisory_payloads(
             )
             gate["route_decision"] = route
         if _selector_requests(select, "planning_safety_gate"):
-            payload["planning_safety_gate"] = gate
+            payload["planning_safety_gate"] = _selector_first_planning_safety_gate(gate)
         if _selector_requests(select, "planning_route_decision"):
             payload["planning_route_decision"] = _as_dict(gate.get("route_decision"))
     if _selector_requests(select, "issue_reference_intent"):
@@ -2935,6 +2935,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     reuse_query = {
         "profile": effective_profile,
         "format": str(args.format),
+        "select": str(selected_fields or ""),
         "task": str(task_text or ""),
         "changed": changed_paths,
         "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
@@ -2942,15 +2943,16 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     reuse_context: dict[str, Any] | None = None
     admitted_input: dict[str, Any] = {}
     payload: dict[str, Any]
-    if args.format == "json" and not selected_fields and effective_profile != "full":
-        full_detail_command = _command_with_cli_invoke(
-            command="agentic-workspace start --target . --verbose --format json", cli_invoke=config.cli_invoke
-        )
+    full_detail_command = _command_with_cli_invoke(
+        command="agentic-workspace start --target . --verbose --format json", cli_invoke=config.cli_invoke
+    )
+    volatile_local_selector = any(_selector_requests(selected_fields, field) for field in ("local_chat_checkpoint", "work_threads"))
+    if args.format == "json" and effective_profile != "full" and not volatile_local_selector:
         reuse_context = prepare_projection_reuse(root=target_root, operation="start", query=reuse_query)
         admitted_input = admit_projection_surface_decision_input(
             input_revisions=reuse_context.get("decision_input_revisions", {}),
             consumer="start",
-            material_inputs={"task": str(task_text or ""), "changed": changed_paths},
+            material_inputs={"task": str(task_text or ""), "changed": changed_paths, "target_root": str(target_root)},
         )
         reused, reuse_context = lookup_projection_reuse(
             root=target_root,
@@ -3006,6 +3008,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         _emit_payload(payload=payload, format_name=args.format)
         return 0
     if selected_fields:
+        decision_context = _as_dict(payload.get("context"))
         _hydrate_selected_start_advisory_payloads(
             payload=payload,
             select=selected_fields,
@@ -3015,9 +3018,22 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             config=config,
         )
         payload = _select_payload_fields(payload, select=selected_fields, source_command="start")
+        for field in ("projection_decision_input_consumption", "projection_decision_input_revalidation"):
+            if value := _as_dict(decision_context.get(field)):
+                payload.setdefault("context", {})[field] = value
     payload, operating_decision = finalize_projection_surface_operating_decision(
         payload=payload, admitted_input=admitted_input, consumer="start"
     )
+    if _selector_requests(selected_fields, "source_guidance"):
+        payload.setdefault("values", {})["source_guidance"] = _as_dict(operating_decision.get("source_guidance"))
+        payload["missing"] = [item for item in payload.get("missing", []) if item != "source_guidance"]
+    selected_gate = _as_dict(_as_dict(payload.get("values")).get("planning_safety_gate"))
+    selected_route = _as_dict(selected_gate.get("route_decision"))
+    if (
+        selected_route.get("task_relation") == "not-applicable"
+        and _as_dict(selected_route.get("owner_admission")).get("status") == "rejected"
+    ):
+        reuse_context = None
     if reuse_context is not None:
         reuse_result = record_projection_reuse(
             root=target_root,

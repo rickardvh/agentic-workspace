@@ -781,6 +781,7 @@ def resolve_context_authority_projection(
             "surface": surface,
             "owner": str(item.get("owner") or ""),
             "authority_class": str(item.get("authority_class") or ""),
+            "decision_dimension": str(item.get("decision_dimension") or ""),
             "activation": str(item.get("activation") or ""),
             "source_owner": expected_producer,
             "proof_route": str(item.get("proof_route") or ""),
@@ -1370,13 +1371,16 @@ def admit_projection_surface_decision_input(
             default=str,
         )
     )
-    revision = "sha256:" + _digest(normalized)
+    # The admitted decision state is shared by every public projection surface.
+    # Consumer identity and builder-only material belong to the consumption
+    # receipt, not to the canonical operating-decision key.
+    revision, decision_id = canonical_operating_decision_identity(normalized["revisions"])
     material_input_revision = "sha256:" + _digest(normalized["material_inputs"])
     return {
         "kind": "agentic-workspace/projection-decision-input/v1",
         "status": "admitted",
         "consumer": consumer,
-        "input_id": f"projection-decision-input:{_digest({'revision': revision})[:16]}",
+        "input_id": f"projection-decision-input:{_digest({'decision_id': decision_id})[:16]}",
         "admitted_input_revision": revision,
         "input_revisions": normalized["revisions"],
         "material_inputs": normalized["material_inputs"],
@@ -1558,9 +1562,13 @@ def compile_projection_surface_operating_decision(
         for item in _as_list(source)
         if isinstance(item, dict)
     ]
+    material_inputs = _as_dict(admitted_input.get("material_inputs"))
     decision = compile_operating_decision(
         inputs={
             "consumer": consumer,
+            "task": str(material_inputs.get("task") or ""),
+            "changed_paths": [str(path) for path in _as_list(material_inputs.get("changed"))],
+            "target_root": str(material_inputs.get("target_root") or "") or None,
             "revisions": {
                 **input_revisions,
                 "projection_input": str(admitted_input.get("admitted_input_revision") or ""),
@@ -1580,6 +1588,11 @@ def compile_projection_surface_operating_decision(
             "memory_outcomes": [item for item in _as_list(payload.get("memory_outcomes")) if isinstance(item, dict)],
         }
     )
+    surface_input_revision = str(decision.get("admitted_input_revision") or "")
+    canonical_revision = str(admitted_input.get("admitted_input_revision") or "")
+    decision["decision_id"] = canonical_operating_decision_identity(input_revisions)[1]
+    decision["admitted_input_revision"] = canonical_revision
+    decision["surface_decision_input_revision"] = surface_input_revision
     decision["projection_input_id"] = str(admitted_input.get("input_id") or "")
     decision["projection_input_revision"] = str(admitted_input.get("admitted_input_revision") or "")
     decision["projection_posture_revision"] = "sha256:" + _digest(posture)
@@ -1950,6 +1963,45 @@ def compile_implement_context_operating_decision(
     }
 
 
+def _project_source_owned_guidance(context_authority_projection: dict[str, Any]) -> dict[str, Any]:
+    """Project only source-declared material guidance references into the decision.
+
+    The context-authority registry owns applicability and the affected decision
+    dimension. This projection carries identity and a drill-down route; it does
+    not copy procedure bodies or infer source-specific policy.
+    """
+
+    contributions = []
+    for authority in _as_list(context_authority_projection.get("authorities")):
+        item = _as_dict(authority)
+        decision_dimension = str(item.get("decision_dimension") or "").strip()
+        source = _as_dict(item.get("source"))
+        if not decision_dimension or not source.get("id") or source.get("freshness") != "current":
+            continue
+        contributions.append(
+            {
+                "kind": "agentic-workspace/source-guidance-contribution/v1",
+                "surface": str(item.get("surface") or ""),
+                "owner": str(item.get("owner") or ""),
+                "authority_class": str(item.get("authority_class") or ""),
+                "decision_dimension": decision_dimension,
+                "source_ref": str(source.get("id") or ""),
+                "source_revision": str(source.get("revision") or ""),
+                "proof_route": str(item.get("proof_route") or ""),
+                "full_body_loaded": False,
+                "authority_boundary": "The source owner defines applicability and guidance; the operating decision only projects its material reference.",
+            }
+        )
+    revision = "sha256:" + _digest(contributions)
+    return {
+        "kind": "agentic-workspace/source-guidance-projection/v1",
+        "status": "projected" if contributions else "not-applicable",
+        "revision": revision,
+        "contributions": contributions,
+        "rule": "Only admitted source-owned guidance with a declared decision dimension is projected; inactive classes and full procedure bodies stay out.",
+    }
+
+
 def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     """Return one primary typed action or one typed external blocker."""
 
@@ -1962,11 +2014,22 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         contributions=[item for item in _as_list(inputs.get("memory_contributions")) if isinstance(item, dict)],
         outcomes=[item for item in _as_list(inputs.get("memory_outcomes")) if isinstance(item, dict)],
     )
+    requested_consumer = str(inputs.get("consumer") or "operating-decision")
+    context_authority_projection = resolve_context_authority_projection(
+        consumer=requested_consumer,
+        task=str(inputs.get("task") or ""),
+        changed_paths=[str(path) for path in _as_list(inputs.get("changed_paths"))],
+        target_root=Path(str(inputs["target_root"])) if inputs.get("target_root") else None,
+        source_records=_as_dict(inputs.get("authority_sources")) or _as_dict(inputs.get("authorities")),
+    )
+    source_guidance = _project_source_owned_guidance(context_authority_projection)
     revisions = _as_dict(inputs.get("revisions"))
     if intent_feedback["applicable_expectations"]:
         revisions = {**revisions, "intent_feedback_revision": intent_feedback["input_revision"]}
     if memory_effectiveness["projected_contributions"]:
         revisions = {**revisions, "memory_effectiveness_revision": memory_effectiveness["input_revision"]}
+    if source_guidance["contributions"]:
+        revisions = {**revisions, "source_guidance_revision": source_guidance["revision"]}
     authorities = _as_dict(inputs.get("authorities"))
     actionability = _as_dict(inputs.get("actionability"))
     action = _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
@@ -2099,14 +2162,6 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "context_constraint": context_effects["action_narrowing"],
         }
     coverage = context_authority_coverage()
-    requested_consumer = str(inputs.get("consumer") or "operating-decision")
-    context_authority_projection = resolve_context_authority_projection(
-        consumer=requested_consumer,
-        task=str(inputs.get("task") or ""),
-        changed_paths=[str(path) for path in _as_list(inputs.get("changed_paths"))],
-        target_root=Path(str(inputs["target_root"])) if inputs.get("target_root") else None,
-        source_records=_as_dict(inputs.get("authority_sources")) or _as_dict(inputs.get("authorities")),
-    )
     # Context admission is an authority gate, not advisory route decoration.
     # A typed action cannot remain actionable when one of its registered
     # required inputs is absent, stale, ambiguous, or otherwise unadmitted.
@@ -2154,6 +2209,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "context_effects": context_effects,
         "intent_feedback": intent_feedback,
         "memory_effectiveness": memory_effectiveness,
+        "source_guidance": source_guidance,
         "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),
