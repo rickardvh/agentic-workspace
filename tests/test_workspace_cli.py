@@ -5354,6 +5354,87 @@ candidates = []
     assert rejected["reason_code"] == "integration-closeout-proof-insufficient"
     assert managed_snapshot(rejected_target) == before_rejected_closeout
 
+    def closeout_for(target_override: Path, *extra: str) -> dict[str, Any]:
+        args = [*closeout_args]
+        args[args.index(str(target))] = str(target_override)
+        if extra:
+            intent_index = args.index("--intent-satisfied")
+            del args[intent_index : intent_index + 2]
+            closure_index = args.index("--closure-decision")
+            del args[closure_index : closure_index + 2]
+            unsolved_index = args.index("--unsolved-intent")
+            del args[unsolved_index : unsolved_index + 2]
+            args[args.index("--format") : args.index("--format")] = list(extra)
+        assert cli.main(args) == 0
+        return json.loads(capsys.readouterr().out)
+
+    stale_target = tmp_path / "stale-proof-receipt"
+    stale_owner_ref = arrange(stale_target)
+    propose_and_apply(stale_target, stale_owner_ref, proof="sha256:admitted-subject-proof")
+    stale_record = json.loads((stale_target / stale_owner_ref).read_text(encoding="utf-8"))
+    stale_receipt_path = stale_target / stale_record["relationships"]["integration"]["receipt_ref"]
+    stale_receipt = json.loads(stale_receipt_path.read_text(encoding="utf-8"))
+    stale_receipt["proof_refs"].append("sha256:receipt-changed-after-admission")
+    stale_receipt_path.write_text(json.dumps(stale_receipt, indent=2) + "\n", encoding="utf-8")
+    before_stale_closeout = managed_snapshot(stale_target)
+    stale = closeout_for(stale_target)
+    assert stale["reason_code"] == "integration-closeout-receipt-revision-mismatch"
+    assert managed_snapshot(stale_target) == before_stale_closeout
+
+    mismatch_target = tmp_path / "mismatched-proof-reference"
+    mismatch_owner_ref = arrange(mismatch_target)
+    propose_and_apply(mismatch_target, mismatch_owner_ref, proof="sha256:admitted-subject-proof")
+    mismatch_record_path = mismatch_target / mismatch_owner_ref
+    mismatch_record = json.loads(mismatch_record_path.read_text(encoding="utf-8"))
+    mismatch_record["relationships"]["integration"]["proof_refs"] = ["sha256:different-subject-proof"]
+    planning_installer._write_execplan_record(record_path=mismatch_record_path, record=mismatch_record)
+    before_mismatch_closeout = managed_snapshot(mismatch_target)
+    mismatch = closeout_for(mismatch_target)
+    assert mismatch["reason_code"] == "integration-closeout-proof-mismatch"
+    assert managed_snapshot(mismatch_target) == before_mismatch_closeout
+
+    unsatisfied_target = tmp_path / "unsatisfied-intent"
+    unsatisfied_owner_ref = arrange(unsatisfied_target)
+    propose_and_apply(unsatisfied_target, unsatisfied_owner_ref, proof="sha256:admitted-subject-proof")
+    before_unsatisfied_closeout = managed_snapshot(unsatisfied_target)
+    unsatisfied = closeout_for(
+        unsatisfied_target,
+        "--closure-decision",
+        "archive-and-close",
+        "--intent-satisfied",
+        "no",
+        "--unsolved-intent",
+        "none",
+    )
+    assert any(action["kind"] in {"manual review", "blocked-with-reason", "rolled back"} for action in unsatisfied["actions"])
+    assert not any(action["kind"] == "archived" for action in unsatisfied["actions"])
+    assert managed_snapshot(unsatisfied_target) == before_unsatisfied_closeout
+
+    continued_target = tmp_path / "retained-intent"
+    continued_owner_ref = arrange(continued_target)
+    propose_and_apply(continued_target, continued_owner_ref, proof="sha256:admitted-subject-proof")
+    continued = closeout_for(
+        continued_target,
+        "--closure-decision",
+        "archive-but-keep-lane-open",
+        "--intent-satisfied",
+        "no",
+        "--unsolved-intent",
+        "GitHub #next-owner",
+    )
+    assert any(action["kind"] == "archived" for action in continued["actions"]), continued
+    continued_archive = json.loads(
+        (continued_target / ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json").read_text(encoding="utf-8")
+    )
+    assert continued_archive["intent_satisfaction"]["unsolved intent passed to"] == "GitHub #next-owner"
+    assert continued_archive["required_continuation"]["owner surface"] == "GitHub #next-owner"
+    assert continued_archive["continuation"]["owner"] == "GitHub #next-owner"
+    assert cli.main(["planning", "report", "--target", str(continued_target), "--verbose", "--format", "json"]) == 0
+    planning_report = json.loads(capsys.readouterr().out)
+    inspection = planning_report["finished_work_inspection"]["inspections"][0]
+    assert inspection["classification"] == "unowned_partial"
+    assert inspection["unsolved_intent"] == "GitHub #next-owner"
+
 
 def test_planning_front_door_forwards_lane_lifecycle_positionals(monkeypatch, tmp_path: Path, capsys) -> None:
     forwarded: list[list[str]] = []
