@@ -157,6 +157,16 @@ def test_query_shaped_public_selectors_measure_cold_and_warm_reuse_cost(tmp_path
     from agentic_workspace import projection_reuse
 
     target = _target(tmp_path)
+    memory_root = target / ".agentic-workspace" / "memory" / "repo"
+    memory_root.mkdir(parents=True, exist_ok=True)
+    (memory_root / "manifest.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (memory_root / "index.md").write_text("# Memory\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=target, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=AW Tests", "-c", "user.email=aw-tests@example.invalid", "commit", "-qm", "fixture"],
+        cwd=target,
+        check=True,
+    )
     capsys.readouterr()
     measured: list[dict[str, Any]] = []
     real_digest = projection_reuse.dependency_digest
@@ -176,7 +186,7 @@ def test_query_shaped_public_selectors_measure_cold_and_warm_reuse_cost(tmp_path
     monkeypatch.setattr(projection_reuse, "dependency_digest", measured_digest)
     commands = [
         ["summary", "--target", str(target), "--select", "planning_record", "--format", "json"],
-        ["summary", "--target", str(target), "--select", "memory_decision_packet", "--format", "json"],
+        ["summary", "--target", str(target), "--select", "planning_record,memory_decision_packet", "--format", "json"],
     ]
     observations: list[dict[str, Any]] = []
     for command in commands:
@@ -205,11 +215,20 @@ def test_query_shaped_public_selectors_measure_cold_and_warm_reuse_cost(tmp_path
             **cold["projection_reuse"],
             "status": "decision+enrichment-reused",
         }
-        assert list(cold["values"]) == [command[command.index("--select") + 1]]
+        assert list(cold["values"]) == command[command.index("--select") + 1].split(",")
 
     assert len(measured) >= len(commands) * 2
     assert all(item["state_read_count"] == len(item["dependencies"]) + 3 for item in measured)
     assert len({json.dumps(item["query"], sort_keys=True) for item in measured}) == len(commands)
+    by_selector = {item["query"]["select"]: item for item in measured}
+    baseline = by_selector["planning_record"]
+    enriched = by_selector["planning_record,memory_decision_packet"]
+    enrichment_delta = set(enriched["dependencies"]) - set(baseline["dependencies"])
+    assert enrichment_delta == {
+        ".agentic-workspace/memory/repo/index.md",
+        ".agentic-workspace/memory/repo/manifest.toml",
+    }
+    assert enriched["state_read_count"] - baseline["state_read_count"] == len(enrichment_delta)
     assert all(item["cold_elapsed_ms"] < 2_000 and item["warm_elapsed_ms"] < 2_000 for item in observations)
     assert all(item["cold_bytes"] <= 65_536 and item["warm_bytes"] <= 65_536 for item in observations)
 

@@ -1033,28 +1033,52 @@ def test_operating_decision_omits_unselected_skill_guidance(tmp_path: Path) -> N
     assert "source_guidance_revision" not in decision["input_revisions"]
 
 
-def test_operating_decision_projects_selected_memory_guidance_from_owner_output(tmp_path: Path) -> None:
+def test_operating_decision_projects_selected_architecture_guidance_from_owner_output(tmp_path: Path) -> None:
     _write_context_authority_sources(tmp_path)
 
     decision = compile_operating_decision(
-        inputs={"consumer": "implement", "task": "avoid the recorded memory rediscovery trap", "target_root": str(tmp_path)}
+        inputs={"consumer": "implement", "task": "follow the generated runtime contract architecture", "target_root": str(tmp_path)}
     )
 
     guidance = decision["source_guidance"]
-    memory = next(item for item in guidance["contributions"] if item["surface"] == "memory")
+    architecture = next(item for item in guidance["contributions"] if item["surface"] == "architecture-principles")
     assert guidance["status"] == "projected"
-    assert memory["decision_dimension"] == "durable-advisory-guidance"
-    assert memory["authority_class"] == "historical/evidence"
-    assert memory["source_ref"] == ".agentic-workspace/memory/repo/index.md"
-    assert memory["source_revision"].startswith("sha256:")
-    assert memory["full_body_loaded"] is False
+    assert architecture["decision_dimension"] == "durable-design-guidance"
+    assert architecture["authority_class"] == "canonical"
+    assert architecture["source_ref"] == "SYSTEM_INTENT.md"
+    assert architecture["source_revision"].startswith("sha256:")
+    assert architecture["full_body_loaded"] is False
 
 
-def test_operating_decision_omits_unselected_memory_guidance(tmp_path: Path) -> None:
+def test_operating_decision_projects_memory_through_exactly_one_advisory_channel(tmp_path: Path) -> None:
     _write_context_authority_sources(tmp_path)
 
-    decision = compile_operating_decision(inputs={"consumer": "implement", "task": "rename a local variable", "target_root": str(tmp_path)})
+    contribution = {
+        "kind": "agentic-memory/decision-contribution/v1",
+        "status": "projected",
+        "fact_id": "selected-owner-trap",
+        "fact_revision": "sha256:" + "1" * 64,
+        "source_revision": "sha256:" + "2" * 64,
+        "freshness": "current",
+        "owner": "memory",
+        "authority_class": "advisory",
+        "affected_decisions": ["planning-task-relation"],
+        "guidance": "Check the structured Planning relation before proceeding.",
+        "authority_boundary": "Planning owns relation correctness.",
+    }
+    decision = compile_operating_decision(
+        inputs={
+            "consumer": "implement",
+            "task": "avoid the recorded memory rediscovery trap",
+            "target_root": str(tmp_path),
+            "memory_contributions": [contribution],
+        }
+    )
 
+    projected = decision["memory_effectiveness"]["projected_contributions"]
+    assert len(projected) == 1
+    assert projected[0]["fact_id"] == "selected-owner-trap"
+    assert projected[0]["authority_class"] == "advisory"
     assert not any(item["surface"] == "memory" for item in decision["source_guidance"]["contributions"])
 
 

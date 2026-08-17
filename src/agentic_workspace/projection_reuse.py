@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator, Literal
 
 _CACHE_KIND = "agentic-workspace/projection-reuse-record/v2"
-_CACHE_CONTRACT_VERSION = 5
+_CACHE_CONTRACT_VERSION = 6
 _MAX_CACHE_RECORDS = 32
 _GIT_TIMEOUT_SECONDS = 0.5
 _DEPENDENCY_MAX_ENTRIES = 20_000
@@ -48,6 +48,16 @@ _OPERATION_DEPENDENCY_ROOTS = {
     "doctor": ("src/agentic_workspace", "generated/workspace", "scripts", "packages"),
     "report": ("src/agentic_workspace", "generated/workspace", "scripts", "packages", "docs"),
     "summary": ("src/agentic_workspace", "generated/workspace", "generated/planning", "scripts", "packages/planning", "docs"),
+}
+_SELECTOR_ENRICHMENT_DEPENDENCIES = {
+    "memory_decision_packet": (
+        ".agentic-workspace/memory/repo/manifest.toml",
+        ".agentic-workspace/memory/repo/index.md",
+    ),
+    "closeout_trust_inspection": (
+        ".agentic-workspace/local/proof-receipts/last.json",
+        ".agentic-workspace/planning/archive/index.json",
+    ),
 }
 
 
@@ -433,6 +443,20 @@ def _changed_path_revision(root: Path, changed_paths: list[str]) -> tuple[str, l
     return _content_revision(root, normalized)
 
 
+def _selector_enrichment_revision(root: Path, query: dict[str, Any]) -> tuple[str, list[str]]:
+    """Read only canonical sources required by explicitly selected enrichment."""
+
+    selected = {token.strip() for token in str(query.get("select") or "").split(",") if token.strip()}
+    section = str(query.get("section") or "").strip()
+    if section:
+        selected.add(section)
+    relatives: list[str] = []
+    for selector, dependencies in _SELECTOR_ENRICHMENT_DEPENDENCIES.items():
+        if any(token == selector or token.startswith(f"{selector}.") for token in selected):
+            relatives.extend(dependencies)
+    return _content_revision(root, relatives)
+
+
 def admitted_projection_revisions(
     *, root: Path, operation: str, query: dict[str, Any]
 ) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
@@ -525,6 +549,8 @@ def admitted_projection_revisions(
     external_relatives = list(_LOCAL_DECISION_DEPENDENCIES)
     external_revision, external_dependencies = _content_revision(root, external_relatives)
     dependencies.extend(external_dependencies)
+    selector_enrichment_revision, selector_enrichment_dependencies = _selector_enrichment_revision(root, query)
+    dependencies.extend(selector_enrichment_dependencies)
     try:
         package_version = version("agentic-workspace")
     except PackageNotFoundError:
@@ -549,6 +575,8 @@ def admitted_projection_revisions(
         "external_freshness": external_revision,
         "worktree": worktree_revision,
     }
+    if selector_enrichment_dependencies:
+        revisions["selector_enrichment"] = selector_enrichment_revision
     return revisions, sorted(set(dependencies)), findings
 
 

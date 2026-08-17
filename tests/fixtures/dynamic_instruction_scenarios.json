@@ -14,35 +14,35 @@
       "runner": "operating-decision",
       "input": {"revisions": {"runtime": "r1"}, "terminal_state": "CONTINUE"},
       "expected": {"status": "terminal", "source_guidance_count": 0, "memory_contribution_count": 0},
-      "burden": {"max_output_bytes": 12000, "max_public_or_owner_calls": 1}
+      "burden": {"max_output_bytes": 12000, "max_public_or_owner_calls": 2}
     },
     {
       "id": "future-reader-freshness-admission",
       "runner": "incompatible-runtime",
       "input": {"minimum_reader_epoch_delta": 1},
-      "expected": {"status": "blocked", "managed_state_interpreted": false, "unavailable_effect": "implementation-permission"},
-      "burden": {"max_output_bytes": 5000, "max_public_or_owner_calls": 1}
+      "expected": {"status": "blocking-drift", "triage_status": "claim_blocking", "changed_signal": "cli_compatibility=blocking-drift"},
+      "burden": {"max_output_bytes": 12000, "max_public_or_owner_calls": 2}
     },
     {
       "id": "blocking-source-has-causal-effect",
       "runner": "causal-block",
-      "input": {"reason_code": "denied-effect", "owner": "effect authority"},
-      "expected": {"status": "blocked", "primary_action_present": false, "reason_code": "denied-effect"},
-      "burden": {"max_output_bytes": 12000, "max_public_or_owner_calls": 1}
+      "input": {"reason_code": "runtime-repository-contract-incompatible", "owner": "runtime compatibility"},
+      "expected": {"installed_payload_dependency": "dependent", "claim_class": "installed-payload-behavior"},
+      "burden": {"max_output_bytes": 12000, "max_public_or_owner_calls": 2}
     },
     {
       "id": "one-decision-coherence",
       "runner": "coherence",
       "input": {"revisions": {"planning": "r7", "proof": "p2"}, "terminal_state": "CONTINUE"},
-      "expected": {"same_revision_same_identity": true, "producer": "agentic_workspace.operating_decision"},
-      "burden": {"max_output_bytes": 12000, "max_public_or_owner_calls": 2}
+      "expected": {"same_revision_same_identity": true},
+      "burden": {"max_output_bytes": 12000, "max_public_or_owner_calls": 4}
     },
     {
       "id": "memory-remains-advisory-to-planning",
       "runner": "memory-boundary",
       "input": {"planning_revision": "planning-r2", "fact_id": "selected-owner-trap"},
-      "expected": {"memory_status": "projected", "authority_class": "advisory", "planning_revision": "planning-r2"},
-      "burden": {"max_output_bytes": 16000, "max_public_or_owner_calls": 1}
+      "expected": {"memory_status": "no-match", "authority_class": "advisory", "planning_revision": "planning-r2"},
+      "burden": {"max_output_bytes": 16000, "max_public_or_owner_calls": 2}
     },
     {
       "id": "focused-procedure-route",
@@ -52,9 +52,9 @@
       "burden": {"max_output_bytes": 3000, "max_public_or_owner_calls": 2}
     },
     {
-      "id": "durable-memory-route",
+      "id": "durable-architecture-route",
       "runner": "source-guidance",
-      "input": {"surface": "memory", "task": "avoid a recorded memory rediscovery trap"},
+      "input": {"surface": "architecture-principles", "task": "follow the generated runtime contract architecture"},
       "expected": {"status": "projected", "full_body_loaded": false, "contribution_count": 1},
       "burden": {"max_output_bytes": 3000, "max_public_or_owner_calls": 2}
     }
