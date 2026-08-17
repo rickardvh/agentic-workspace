@@ -1243,7 +1243,43 @@ def test_skills_command_marks_package_only_temporary_memory_bootstrap_skills_ina
     assert any(source["name"] == "memory-bootstrap-temporary" and source["state"] == "package-registry" for source in payload["sources"])
 
 
-def test_skills_command_recommends_temporary_memory_bootstrap_skill_only_while_materialized(tmp_path: Path, capsys) -> None:
+def test_skills_command_recommends_temporary_memory_bootstrap_skill_only_during_supported_lifecycle(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target), "--modules", "memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    from repo_memory_bootstrap.installer import install_bootstrap
+
+    install_bootstrap(target=target)
+
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                str(target),
+                "--task",
+                "finish bootstrap installation review",
+                "--select",
+                "skills,recommendations",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)["values"]
+    install_skill = next(entry for entry in payload["recommendations"] if entry["id"] == "install")
+
+    assert install_skill["availability"] == "available"
+    assert install_skill["path"] == ".agentic-workspace/memory/bootstrap/skills/install/SKILL.md"
+    assert install_skill["primary_source_resolution"]["selected_owner"] == "repo-owned"
+    assert install_skill["primary_source_resolution"]["materialization"] == "target"
+
+
+def test_skills_command_keeps_temporary_memory_bootstrap_skill_inactive_when_only_skill_is_copied(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -1274,12 +1310,13 @@ def test_skills_command_recommends_temporary_memory_bootstrap_skill_only_while_m
         == 0
     )
     payload = json.loads(capsys.readouterr().out)["values"]
-    install_skill = next(entry for entry in payload["recommendations"] if entry["id"] == "install")
+    install_skill = next(entry for entry in payload["skills"] if entry["id"] == "install")
 
-    assert install_skill["availability"] == "available"
+    assert install_skill["availability"] == "inactive"
     assert install_skill["path"] == ".agentic-workspace/memory/bootstrap/skills/install/SKILL.md"
+    assert install_skill["blocked_reasons"] == ["inactive-lifecycle:temporary-bootstrap"]
     assert install_skill["primary_source_resolution"]["selected_owner"] == "repo-owned"
-    assert install_skill["primary_source_resolution"]["materialization"] == "target"
+    assert all(entry["id"] != "install" for entry in payload["recommendations"])
 
 
 def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: Path, capsys) -> None:

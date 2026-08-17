@@ -57694,7 +57694,11 @@ def _load_registered_skills(
             dependency_diagnostics = (*dependency_diagnostics, primary_source_diagnostic)
         blocked_reasons = tuple(diagnostic["reason_code"] for diagnostic in dependency_diagnostics)
         target_path = target_root / source.skills_root / relative
-        lifecycle_inactive = source.default_scope.startswith("temporary") and not target_path.is_file()
+        # Temporary skills are executable only while their lifecycle-owned
+        # registry is materialized in the target.  The package registry keeps
+        # their source readable after cleanup, but neither that package source
+        # nor a stray copied SKILL.md is lifecycle authority.
+        lifecycle_inactive = source.default_scope.startswith("temporary") and not (target_root / source.registry_path).is_file()
         if lifecycle_inactive:
             blocked_reasons = (*blocked_reasons, "inactive-lifecycle:temporary-bootstrap")
         skills.append(
