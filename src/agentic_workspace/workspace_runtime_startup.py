@@ -2951,7 +2951,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         admitted_input = admit_projection_surface_decision_input(
             input_revisions=reuse_context.get("decision_input_revisions", {}),
             consumer="start",
-            material_inputs={"task": str(task_text or ""), "changed": changed_paths},
+            material_inputs={"task": str(task_text or ""), "changed": changed_paths, "target_root": str(target_root)},
         )
         reused, reuse_context = lookup_projection_reuse(
             root=target_root,
@@ -3023,6 +3023,9 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     payload, operating_decision = finalize_projection_surface_operating_decision(
         payload=payload, admitted_input=admitted_input, consumer="start"
     )
+    if _selector_requests(selected_fields, "source_guidance"):
+        payload.setdefault("values", {})["source_guidance"] = _as_dict(operating_decision.get("source_guidance"))
+        payload["missing"] = [item for item in payload.get("missing", []) if item != "source_guidance"]
     if reuse_context is not None:
         reuse_result = record_projection_reuse(
             root=target_root,

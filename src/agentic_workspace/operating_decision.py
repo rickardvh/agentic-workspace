@@ -1371,13 +1371,16 @@ def admit_projection_surface_decision_input(
             default=str,
         )
     )
-    revision = "sha256:" + _digest(normalized)
+    # The admitted decision state is shared by every public projection surface.
+    # Consumer identity and builder-only material belong to the consumption
+    # receipt, not to the canonical operating-decision key.
+    revision, decision_id = canonical_operating_decision_identity(normalized["revisions"])
     material_input_revision = "sha256:" + _digest(normalized["material_inputs"])
     return {
         "kind": "agentic-workspace/projection-decision-input/v1",
         "status": "admitted",
         "consumer": consumer,
-        "input_id": f"projection-decision-input:{_digest({'revision': revision})[:16]}",
+        "input_id": f"projection-decision-input:{_digest({'decision_id': decision_id})[:16]}",
         "admitted_input_revision": revision,
         "input_revisions": normalized["revisions"],
         "material_inputs": normalized["material_inputs"],
@@ -1559,9 +1562,13 @@ def compile_projection_surface_operating_decision(
         for item in _as_list(source)
         if isinstance(item, dict)
     ]
+    material_inputs = _as_dict(admitted_input.get("material_inputs"))
     decision = compile_operating_decision(
         inputs={
             "consumer": consumer,
+            "task": str(material_inputs.get("task") or ""),
+            "changed_paths": [str(path) for path in _as_list(material_inputs.get("changed"))],
+            "target_root": str(material_inputs.get("target_root") or "") or None,
             "revisions": {
                 **input_revisions,
                 "projection_input": str(admitted_input.get("admitted_input_revision") or ""),
@@ -1581,6 +1588,11 @@ def compile_projection_surface_operating_decision(
             "memory_outcomes": [item for item in _as_list(payload.get("memory_outcomes")) if isinstance(item, dict)],
         }
     )
+    surface_input_revision = str(decision.get("admitted_input_revision") or "")
+    canonical_revision = str(admitted_input.get("admitted_input_revision") or "")
+    decision["decision_id"] = canonical_operating_decision_identity(input_revisions)[1]
+    decision["admitted_input_revision"] = canonical_revision
+    decision["surface_decision_input_revision"] = surface_input_revision
     decision["projection_input_id"] = str(admitted_input.get("input_id") or "")
     decision["projection_input_revision"] = str(admitted_input.get("admitted_input_revision") or "")
     decision["projection_posture_revision"] = "sha256:" + _digest(posture)

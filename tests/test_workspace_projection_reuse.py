@@ -144,13 +144,18 @@ def test_start_implement_and_proof_reuse_each_surface_admitted_decision(tmp_path
             "decision_id": compact_receipt["decision_id"],
             "status": "decision+enrichment-rebuilt",
             "freshness": "current",
+            "authority": "agentic_workspace.operating_decision.compile_operating_decision",
+            "projection_input_revision": compact_receipt["projection_input_revision"],
         }
         assert compact_receipt["decision_id"]
+        assert compact_receipt["projection_input_revision"].startswith("sha256:")
         assert not any(field.startswith("projection_decision_") for field in cold.get("context", {}))
         assert warm["projection_reuse"] == {
             "decision_id": compact_receipt["decision_id"],
             "status": "decision+enrichment-reused",
             "freshness": "current",
+            "authority": "agentic_workspace.operating_decision.compile_operating_decision",
+            "projection_input_revision": compact_receipt["projection_input_revision"],
         }
 
 

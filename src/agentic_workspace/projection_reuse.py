@@ -762,6 +762,8 @@ def lookup_projection_reuse(
             "decision_id": decision_id,
             "status": "decision+enrichment-reused",
             "freshness": "current",
+            "authority": "agentic_workspace.operating_decision.compile_operating_decision",
+            "projection_input_revision": projection_input_revision,
         }
         return reused_projection, context
     return {
@@ -917,6 +919,8 @@ def record_projection_reuse(
         "decision_id": context.get("decision_id", ""),
         "status": "decision+enrichment-rebuilt",
         "freshness": str(revalidation.get("status") or "unavailable"),
+        "authority": "agentic_workspace.operating_decision.compile_operating_decision",
+        "projection_input_revision": operating_decision.get("projection_input_revision", ""),
     }
     for field in (
         "projection_decision_input",

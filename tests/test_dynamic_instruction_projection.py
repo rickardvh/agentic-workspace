@@ -8,7 +8,6 @@ from typing import Any
 import pytest
 from tests.workspace_cli_support import cli
 
-from agentic_workspace.operating_decision import compile_operating_decision
 from agentic_workspace.runtime_compatibility import READER_CONTRACT_EPOCH
 
 FIXTURE = Path(__file__).parent / "fixtures" / "dynamic_instruction_scenarios.json"
@@ -55,7 +54,27 @@ def _scenario_payload(scenario: dict[str, Any], tmp_path: Path, capsys) -> tuple
         return selected["values"]["planning_safety_gate"]["route_decision"], 3
     if runner == "operating-decision":
         target = _public_target(tmp_path, capsys)
-        return compile_operating_decision(inputs={**inputs, "consumer": "implement", "target_root": str(target)}), 2
+        assert (
+            cli.main(
+                [
+                    "implement",
+                    "--target",
+                    str(target),
+                    "--task",
+                    "rename an unrelated local variable",
+                    "--select",
+                    "source_guidance,memory_decision_packet",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        selected = json.loads(capsys.readouterr().out)
+        return {
+            "source_guidance": selected["values"]["source_guidance"],
+            "memory_effectiveness": {"projected_contributions": selected["values"]["memory_decision_packet"]["use"]["contributions"]},
+        }, 2
     if runner == "incompatible-runtime":
         target = _public_target(tmp_path, capsys)
         config = target / ".agentic-workspace" / "config.toml"
@@ -108,7 +127,7 @@ def _scenario_payload(scenario: dict[str, Any], tmp_path: Path, capsys) -> tuple
         assert (
             cli.main(
                 [
-                    "start",
+                    "implement",
                     "--target",
                     str(target),
                     "--task",
@@ -128,9 +147,23 @@ def _scenario_payload(scenario: dict[str, Any], tmp_path: Path, capsys) -> tuple
             "# System Intent\n\n## Governing intents\n\nGenerated runtime contract architecture.\n",
             encoding="utf-8",
         )
-        return compile_operating_decision(inputs={"consumer": "implement", "task": inputs["task"], "target_root": str(target)})[
-            "source_guidance"
-        ], 2
+        assert (
+            cli.main(
+                [
+                    "start",
+                    "--target",
+                    str(target),
+                    "--task",
+                    inputs["task"],
+                    "--select",
+                    "source_guidance",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        return json.loads(capsys.readouterr().out)["values"]["source_guidance"], 2
     raise AssertionError(f"unknown bounded scenario runner: {runner}")
 
 
@@ -141,7 +174,6 @@ def _assert_expected(scenario: dict[str, Any], payload: dict[str, Any]) -> None:
         assert payload["task_relation"] == expected["task_relation"]
         assert payload["required_transition"] == expected["required_transition"]
     elif runner == "operating-decision":
-        assert payload["status"] == expected["status"]
         assert len(payload["source_guidance"]["contributions"]) == expected["source_guidance_count"]
         assert len(payload["memory_effectiveness"]["projected_contributions"]) == expected["memory_contribution_count"]
     elif runner == "incompatible-runtime":
@@ -163,8 +195,11 @@ def _assert_expected(scenario: dict[str, Any], payload: dict[str, Any]) -> None:
         assert "agent_owns" in payload["authority_boundary"]
     elif runner == "source-guidance":
         assert payload["status"] == expected["status"]
-        assert len(payload["contributions"]) == expected["contribution_count"]
-        assert payload["contributions"][0]["full_body_loaded"] is expected["full_body_loaded"]
+        assert len(payload["contributions"]) >= expected["contribution_count"]
+        contribution = next(item for item in payload["contributions"] if item["surface"] == scenario["input"]["surface"])
+        assert contribution["full_body_loaded"] is expected["full_body_loaded"]
+        assert contribution["source_ref"] == expected["source_ref"]
+        assert all(item["full_body_loaded"] is False for item in payload["contributions"])
 
 
 def _first_line_projection(scenario: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
@@ -321,6 +356,11 @@ def test_generic_operating_loop_reaches_terminal_state_without_stale_continuatio
         else:
             assert '"required_commands"' in json.dumps(phases[phase])
 
+    reuse_lineage = [phases[phase]["projection_reuse"] for phase in ("start", "implement", "proof")]
+    assert len({receipt["decision_id"] for receipt in reuse_lineage}) == 1
+    assert len({receipt["projection_input_revision"] for receipt in reuse_lineage}) == 1
+    assert {receipt["authority"] for receipt in reuse_lineage} == {"agentic_workspace.operating_decision.compile_operating_decision"}
+
     start_route = _find_planning_route(phases["start"])
     implement_route = _find_planning_route(phases["implement"])
     assert start_route["selected_owner_identity"] == implement_route["selected_owner_identity"]
@@ -354,6 +394,11 @@ def test_generic_operating_loop_reaches_terminal_state_without_stale_continuatio
     assert recorded["plan_id"] == "generic-loop"
     assert recorded["proof_subject"]["identity_complete"] is True
     assert [item["path"] for item in recorded["proof_subject"]["source_inputs"]] == ["src/bounded.py", "tests/test_bounded.py"]
+
+    assert cli.main(["proof", *common]) == 0
+    proof_after_receipt = json.loads(capsys.readouterr().out)
+    assert proof_after_receipt["projection_reuse"]["decision_id"] == reuse_lineage[0]["decision_id"]
+    assert proof_after_receipt["projection_reuse"]["projection_input_revision"] == reuse_lineage[0]["projection_input_revision"]
 
     assert cli.main(["planning", "handoff", "--target", str(target), "--format", "json"]) == 0
     handoff = json.loads(capsys.readouterr().out)

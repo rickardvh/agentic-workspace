@@ -48750,7 +48750,7 @@ def _emit_proof(
             admitted_input = admit_projection_surface_decision_input(
                 input_revisions=reuse_context.get("decision_input_revisions", {}),
                 consumer="proof",
-                material_inputs={"task": str(task_text or ""), "changed": normalized_paths},
+                material_inputs={"task": str(task_text or ""), "changed": normalized_paths, "target_root": str(target_root)},
             )
             reused, reuse_context = lookup_projection_reuse(
                 root=target_root,
