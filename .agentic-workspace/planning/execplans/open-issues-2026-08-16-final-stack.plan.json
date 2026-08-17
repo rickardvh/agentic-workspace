@@ -1,0 +1,86 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "open-issues-2026-08-16-final-stack",
+  "title": "Close all remaining open issue lanes",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "shaping",
+  "revision": 1,
+  "intent": {
+    "outcome": "Close every currently open GitHub issue through three reviewable stacked lanes: agent and skill guidance, lifecycle evidence, and canonical operating-decision composition.",
+    "non_goals": [
+      "Do not create a universal instruction registry, a second operating-decision authority, or provider-specific lifecycle state.",
+      "Do not claim parent issue closure from a useful slice unless its acceptance criteria and composed proof are satisfied.",
+      "Leave issues opened after the 2026-08-16 inventory and unrelated backlog outside this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Resolve the complete open-issue inventory observed on 2026-08-16.",
+    "closure_boundary": "all listed issues require issue-level acceptance and proof before closure"
+  },
+  "scope": {
+    "owned": [
+      "Lane 1: #2594 and #2599 across skill source resolution, maintainer skills, generated external-agent adapters, and focused fixtures.",
+      "Lane 2: #2555 and #2590 across session evidence coverage plus Planning integration-to-closeout transactions and end-to-end target-branch fixtures.",
+      "Lane 3: #2556, #2558, #2562, #2565, #2566, #2570, #2571, #2597, and #2598 across the canonical operating decision, relevance, Memory contribution, reuse, and behavioral conformance.",
+      "Three ordered commits and draft PRs; each later PR is based on the preceding lane branch."
+    ],
+    "effects": [
+      "tools/skills and generated agent adapters",
+      "workspace, Planning, Memory, and session runtime contracts",
+      "focused cross-domain and generated-surface tests",
+      "Planning continuation and closeout records for this stack"
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "observed",
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/issues/2555",
+        "https://github.com/rickardvh/agentic-workspace/issues/2599"
+      ]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub open issues #2555 #2556 #2558 #2562 #2565 #2566 #2570 #2571 #2590 #2594 #2597 #2598 #2599",
+      "label": "GitHub open issues #2555 #2556 #2558 #2562 #2565 #2566 #2570 #2571 #2590 #2594 #2597 #2598 #2599",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Finish and prove the #2594/#2599 guidance lane on draft PR #2596, then stack lifecycle evidence and canonical decision composition branches in that order.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Every listed issue acceptance boundary is either satisfied by the owning stack diff or by cited already-merged proof plus a new composed regression.",
+      "The three PRs have correct base/head dependency order and independently reviewable diffs.",
+      "No parallel decision, instruction, Memory, proof, or lifecycle authority is introduced."
+    ],
+    "requirements": [
+      "Run AW proof selection for each lane's changed paths and all selected commands.",
+      "Run focused skill/adapter freshness tests for lane 1.",
+      "Run session export and Planning apply-to-closeout atomicity fixtures for lane 2.",
+      "Run operating-decision behavioral integration, relevance, reuse, compatibility, Planning relation, and Memory authority fixtures for lane 3.",
+      "Inspect each PR base/head, diff boundary, and live checks after publishing."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": []
+}

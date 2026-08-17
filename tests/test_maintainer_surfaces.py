@@ -455,4 +455,32 @@ def test_rendered_routing_adapter_stays_secondary_and_compact() -> None:
     assert "uv run agentic-workspace summary --format json" in text
     assert "uv run agentic-workspace preflight --format json" not in text
     assert "uv run agentic-workspace report --target . --format json" not in text
-    assert len(text.splitlines()) <= 20
+    assert "tools/skills/github-issue-shaping/SKILL.md" in text
+    assert "tools/skills/pr-review-recheck/SKILL.md" in text
+    assert len(text.splitlines()) <= 22
+
+
+def test_issue_and_review_skills_audit_architectural_assumptions() -> None:
+    issue_skill = (WORKSPACE_ROOT / "tools" / "skills" / "github-issue-shaping" / "SKILL.md").read_text(encoding="utf-8")
+    creation_skill = (WORKSPACE_ROOT / "tools" / "skills" / "github-issue-creation" / "SKILL.md").read_text(encoding="utf-8")
+    review_skill = (WORKSPACE_ROOT / "tools" / "skills" / "pr-review-recheck" / "SKILL.md").read_text(encoding="utf-8")
+
+    assert "directly observed evidence" in issue_skill
+    assert "framework, registry, durable-state, or event-ledger growth" in issue_skill
+    assert "repo/provider/dogfooding evidence" in issue_skill
+    assert "one-off static comparison" in issue_skill
+    assert "use `github-issue-shaping` first" in creation_skill
+    assert "PR violates a sound issue requirement" in review_skill
+    assert "issue requirement is wrong or too strong" in review_skill
+    assert "every selector to be cheaper" in review_skill
+
+
+def test_rendered_quickstart_routes_issue_and_review_work_without_copying_doctrine() -> None:
+    mod = _load_module(_render_script_path(), "maintainer_render_issue_review_routes")
+    text = mod.render_quickstart(_baseline_manifest())
+
+    assert "tools/skills/github-issue-shaping/SKILL.md" in text
+    assert "tools/skills/github-issue-creation/SKILL.md" in text
+    assert "tools/skills/pr-review-recheck/SKILL.md" in text
+    assert "directly observed evidence" not in text
+    assert len(text.splitlines()) <= 28

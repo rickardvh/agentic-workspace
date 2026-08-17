@@ -6,6 +6,7 @@ description: Create GitHub issues from this repo while preserving issue-template
 # GitHub Issue Creation
 
 Use this repo-owned skill before creating GitHub issues for this repository.
+For any nontrivial issue or refinement, use `github-issue-shaping` first; this skill owns template mechanics and must not bypass the assumption, ownership, scope, or closure audit.
 
 ## Required Shape
 

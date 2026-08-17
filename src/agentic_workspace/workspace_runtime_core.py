@@ -5378,6 +5378,8 @@ class RegisteredSkill:
     blocked_reasons: tuple[str, ...] = ()
     dependency_diagnostics: tuple[dict[str, str], ...] = ()
     resource_resolution_receipts: tuple[dict[str, str], ...] = ()
+    primary_source_resolution: dict[str, str] | None = None
+    materialized_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -57093,7 +57095,7 @@ def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str |
         print("Recommended:")
         for recommendation in payload["recommendations"]:
             print(f"- {recommendation['id']} ({recommendation['score']}): {recommendation['summary']}")
-            print(f"  path: {recommendation['path']}")
+            print(f"  path: {recommendation.get('path') or recommendation.get('primary_source_resolution', {}).get('selected_source', '')}")
             print(f"  reasons: {', '.join(recommendation['reasons'])}")
     if payload.get("agent_aid_recommendations"):
         print("Recommended agent aids:")
@@ -57105,7 +57107,7 @@ def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str |
         print("- none")
     for skill in payload.get("skills", []):
         print(f"{skill['id']}: {skill['summary']}")
-        print(f"  path: {skill['path']}")
+        print(f"  path: {skill.get('path') or skill.get('primary_source_resolution', {}).get('selected_source', '')}")
         print(f"  owner: {skill['owner']}")
         print(f"  source: {skill['source_kind']}")
         print(f"  registration: {skill['registration']}")
@@ -57171,6 +57173,23 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
     def recommendation_projection(item: dict[str, Any]) -> dict[str, Any]:
         reasons = [str(reason) for reason in _list_payload(item.get("reasons"))]
         intent_level = has_intent_level_evidence(item)
+        primary_source = _as_dict(item.get("primary_source_resolution"))
+        primary_source_projection = {
+            key: primary_source.get(key)
+            for key in (
+                "resource_id",
+                "status",
+                "resolver",
+                "declared_owner",
+                "selected_owner",
+                "selected_source",
+                "package_resource",
+                "materialization",
+                "target_path",
+                "receipt_id",
+            )
+            if primary_source.get(key) not in (None, "")
+        }
         projection = {
             key: value
             for key, value in {
@@ -57188,6 +57207,7 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
                 "dependency_diagnostics": item.get("dependency_diagnostics"),
                 "blocked_reasons": item.get("blocked_reasons"),
                 "repair_command": item.get("repair_command"),
+                "primary_source_resolution": primary_source_projection if not item.get("path") else None,
                 "activation_evidence_class": "intent-level" if intent_level else "lexical-candidate",
                 "recommendation_authority": "admitted" if intent_level else "candidate-only",
             }.items()
@@ -57218,7 +57238,9 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
             "blocked_reasons": top_blocked.get("blocked_reasons", []) if top_blocked else [],
             "repair_command": top_blocked.get("repair_command", "") if top_blocked else "",
         },
-        "top_recommendations": projected_recommendations[:3],
+        "top_recommendations": [
+            {key: value for key, value in item.items() if key != "primary_source_resolution"} for item in projected_recommendations[:3]
+        ],
         "recommendations": projected_recommendations,
         "blocked_recommendations": projected_blocked,
         "agent_aids": _list_payload(payload.get("agent_aids"))[:5],
@@ -57505,7 +57527,6 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
         registry_file = target_root / source.registry_path
         skills_root = target_root / source.skills_root
         package_registry_file = _package_skill_registry_file(source)
-        package_skills_root = package_registry_file.parent if package_registry_file is not None else None
         source_state = "absent"
         loaded_from_registry: list[RegisteredSkill] = []
         warn_for_missing_registry_entries = False
@@ -57527,17 +57548,9 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
                 package_registry_file=package_registry_file,
             )
         for skill in loaded_from_registry:
-            skill_exists = (target_root / skill.path).exists()
-            if (not skill_exists) and package_skills_root is not None:
-                try:
-                    package_relative = skill.path.relative_to(source.skills_root)
-                except ValueError:
-                    package_relative = Path(str(skill.path.name))
-                skill_exists = (package_skills_root / package_relative).exists()
-            if not skill_exists:
-                if warn_for_missing_registry_entries and package_registry_file is None:
+            if skill.availability == "blocked" and skill.primary_source_resolution is not None:
+                if warn_for_missing_registry_entries and skill.primary_source_resolution["status"] == "unresolved":
                     warnings.append(f"{source.registry_path.as_posix()} points at missing skill file {skill.path.as_posix()}")
-                continue
             key = (skill.skill_id, skill.path.as_posix())
             if key in seen:
                 continue
@@ -57574,6 +57587,14 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
                     summary="unregistered skill discovered by directory scan",
                     activation_hints=SkillActivationHints(verbs=(), nouns=(), phrases=(), when=()),
                     registration="implicit-scan",
+                    primary_source_resolution=_skill_primary_source_resolution(
+                        source=source,
+                        skill_id=skill_id,
+                        relative_skill_path=relative.relative_to(source.skills_root),
+                        target_root=target_root,
+                        package_registry_file=None,
+                    ),
+                    materialized_path=relative,
                 )
             )
         if registry_file.exists() or scanned_paths or package_registry_file is not None:
@@ -57632,6 +57653,14 @@ def _load_registered_skills(
         if not isinstance(activation_hints, dict):
             activation_hints = {}
         required_resources = tuple(str(value).strip() for value in raw.get("required_resources", []) if str(value).strip())
+        skill_id = str(raw.get("id", "")).strip()
+        primary_source_resolution = _skill_primary_source_resolution(
+            source=source,
+            skill_id=skill_id,
+            relative_skill_path=relative,
+            target_root=target_root,
+            package_registry_file=package_registry_file,
+        )
         resource_resolution_receipts = tuple(
             _skill_resource_resolution(
                 resource_id=resource_id,
@@ -57656,10 +57685,25 @@ def _load_registered_skills(
             )
             is not None
         )
+        primary_source_diagnostic = _skill_primary_source_diagnostic(
+            skill_id=skill_id,
+            source=source,
+            resolution=primary_source_resolution,
+        )
+        if primary_source_diagnostic is not None:
+            dependency_diagnostics = (*dependency_diagnostics, primary_source_diagnostic)
         blocked_reasons = tuple(diagnostic["reason_code"] for diagnostic in dependency_diagnostics)
+        target_path = target_root / source.skills_root / relative
+        # Temporary skills are executable only while their lifecycle-owned
+        # registry is materialized in the target.  The package registry keeps
+        # their source readable after cleanup, but neither that package source
+        # nor a stray copied SKILL.md is lifecycle authority.
+        lifecycle_inactive = source.default_scope.startswith("temporary") and not (target_root / source.registry_path).is_file()
+        if lifecycle_inactive:
+            blocked_reasons = (*blocked_reasons, "inactive-lifecycle:temporary-bootstrap")
         skills.append(
             RegisteredSkill(
-                skill_id=str(raw.get("id", "")).strip(),
+                skill_id=skill_id,
                 path=source.skills_root / relative,
                 owner=str(payload.get("owner", source.owner)),
                 source_kind=str(payload.get("source_kind", source.source_kind)),
@@ -57675,13 +57719,66 @@ def _load_registered_skills(
                 ),
                 registration="explicit",
                 required_resources=required_resources,
-                availability="blocked" if blocked_reasons else "available",
+                availability="blocked" if dependency_diagnostics else "inactive" if lifecycle_inactive else "available",
                 blocked_reasons=blocked_reasons,
                 dependency_diagnostics=dependency_diagnostics,
                 resource_resolution_receipts=resource_resolution_receipts,
+                primary_source_resolution=primary_source_resolution,
+                materialized_path=(source.skills_root / relative) if target_path.is_file() else None,
             )
         )
     return [skill for skill in skills if skill.skill_id and skill.path.as_posix()]
+
+
+def _skill_primary_source_resolution(
+    *,
+    source: SkillCatalogSource,
+    skill_id: str,
+    relative_skill_path: Path,
+    target_root: Path,
+    package_registry_file: Path | None,
+) -> dict[str, str]:
+    """Resolve a skill's primary content through the package-resource vocabulary."""
+
+    resource_id = f"skill-source:{source.name}:{skill_id}"
+    target_path = target_root / source.skills_root / relative_skill_path
+    candidates: list[tuple[str, Path]] = [("repo-owned", target_path)]
+    if package_registry_file is not None:
+        candidates.append(("package-owned", package_registry_file.parent / relative_skill_path))
+    selected = next(((owner, candidate) for owner, candidate in candidates if candidate.is_file()), None)
+    selected_owner, selected_path = selected or ("", None)
+    receipt_material = f"{resource_id}\0{selected_owner}\0{selected_path.as_posix() if selected_path else ''}"
+    return {
+        "resource_id": resource_id,
+        "status": "resolved" if selected else "unresolved",
+        "resolver": "installed-contract-pair.package-resource",
+        "declared_owner": source.owner,
+        "selected_owner": selected_owner,
+        "selected_source": selected_path.as_posix() if selected_path else "",
+        "expected_owner": candidates[0][0],
+        "candidates": "\n".join(candidate.as_posix() for _, candidate in candidates),
+        "package_resource": f"{source.name}:{relative_skill_path.as_posix()}",
+        "materialization": "target" if selected_owner == "repo-owned" else "package-only" if selected else "unresolved",
+        "target_path": (source.skills_root / relative_skill_path).as_posix() if target_path.is_file() else "",
+        "receipt_id": "package-resource:" + hashlib.sha256(receipt_material.encode("utf-8")).hexdigest()[:16],
+    }
+
+
+def _skill_primary_source_diagnostic(*, skill_id: str, source: SkillCatalogSource, resolution: dict[str, str]) -> dict[str, str] | None:
+    if resolution["status"] == "resolved":
+        return None
+    candidate_paths = resolution["candidates"].split("\n") if resolution["candidates"] else []
+    return {
+        "resource_id": resolution["resource_id"],
+        "status": "blocked",
+        "reason_code": f"missing-primary-source:{skill_id}",
+        "expected_owner": resolution["expected_owner"],
+        "expected_source": candidate_paths[0] if candidate_paths else source.registry_path.as_posix(),
+        "compatibility_state": "primary-source-unresolved",
+        "repair_route": "manual",
+        "repair_safe_to_apply": "false",
+        "manual_action": f"Restore the registered primary source for skill '{skill_id}' through its owning registry or package.",
+    }
 
 
 def _skill_resource_diagnostic(
@@ -57806,7 +57903,7 @@ def _skill_resource_repair_route(*, source: SkillCatalogSource, repo_path: Path,
 def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "id": skill.skill_id,
-        "path": skill.path.as_posix(),
+        "path": skill.materialized_path.as_posix() if skill.materialized_path is not None else "",
         "owner": skill.owner,
         "source_kind": skill.source_kind,
         "scope": skill.scope,
@@ -57824,6 +57921,7 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
         "availability": skill.availability,
         "blocked_reasons": list(skill.blocked_reasons),
         "resource_resolution_receipts": list(skill.resource_resolution_receipts),
+        "primary_source_resolution": skill.primary_source_resolution or {},
     }
     if skill.dependency_diagnostics:
         payload["dependency_diagnostics"] = _skill_dependency_diagnostic_payloads(skill)
