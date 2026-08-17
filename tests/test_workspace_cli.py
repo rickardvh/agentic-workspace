@@ -5187,6 +5187,174 @@ def test_planning_front_door_matches_direct_integration_propose_semantics(tmp_pa
     }
 
 
+def test_planning_front_door_integration_archive_closeout_is_transactional_and_idempotent(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    def managed_snapshot(target: Path) -> dict[str, bytes]:
+        root = target / ".agentic-workspace/planning"
+        return {path.relative_to(target).as_posix(): path.read_bytes() for path in root.rglob("*") if path.is_file()}
+
+    def arrange(target: Path) -> Path:
+        target.mkdir()
+        _init_git_repo(target)
+        assert cli.main(["init", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
+        capsys.readouterr()
+        owner_ref = Path(".agentic-workspace/planning/execplans/plan-alpha.plan.json")
+        _write(
+            target / ".agentic-workspace/planning/state.toml",
+            """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "completed", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+        )
+        record = planning_installer._build_legacy_execplan_record_from_todo_item(
+            title="Plan alpha",
+            item_id="plan-alpha",
+            status="completed",
+            why_now="Prove the public integration closeout transaction.",
+            next_action="Apply the admitted integration and close out.",
+            done_when="The owner is archived exactly once.",
+        )
+        record["execution_run"] = {
+            "run status": "completed",
+            "executor": "public Planning front door",
+            "handoff source": "planning integration-apply",
+            "what happened": "applied the bounded owner integration.",
+            "scope touched": owner_ref.as_posix(),
+            "changed surfaces": owner_ref.as_posix(),
+            "validations run": "focused public-path behavior proof",
+            "result for continuation": "no further execution is required.",
+            "next step": "archive the plan.",
+        }
+        record["finished_run_review"] = {
+            "review status": "completed",
+            "scope respected": "yes",
+            "proof status": "satisfied",
+            "intent served": "yes",
+            "config compliance": "yes",
+            "misinterpretation risk": "low",
+            "follow-on decision": "archive-and-close",
+        }
+        record["proof_report"] = {"integration proof": "display-only integration evidence"}
+        record["execution_summary"]["outcome delivered"] = "Public integration and closeout behavior is ready for archive."
+        record["execution_summary"]["validation confirmed"] = "Focused public-path behavior proof passed."
+        record["execution_summary"]["follow-on routed to"] = "none"
+        record["execution_summary"]["post-work posterity capture"] = "none"
+        record["execution_summary"]["resume from"] = "archive"
+        record["intent_satisfaction"] = {
+            "original intent": "Prove public integration closeout.",
+            "was original intent fully satisfied?": "yes",
+            "evidence of intent satisfaction": "The public-path assertions observe the requested lifecycle effects.",
+            "unsolved intent passed to": "none",
+        }
+        record["closure_check"] = {
+            "slice status": "bounded slice complete",
+            "larger-intent status": "closed",
+            "closure decision": "archive-and-close",
+            "why this decision is honest": "The integration carries admitted subject proof and the public closeout validates it.",
+            "evidence carried forward": "integration receipt plus public-path behavior assertions",
+            "reopen trigger": "new contradictory evidence",
+        }
+        record["intent_continuity"]["continuation surface"] = "#stale-continuation"
+        record["required_continuation"] = {
+            "required follow-on for the larger intended outcome": "yes",
+            "owner surface": "#stale-continuation",
+            "activation trigger": "after integration",
+        }
+        record["continuation"] = {"owner": "#stale-continuation", "residual_intent": "stale"}
+        planning_installer._write_execplan_record(record_path=target / owner_ref, record=record)
+        return owner_ref
+
+    def propose_and_apply(target: Path, owner_ref: Path, *, proof: str) -> dict[str, Any]:
+        argv = [
+            "planning",
+            "integration-propose",
+            "--proposal-id",
+            "plan-alpha-archive",
+            "--owner",
+            "plan-alpha",
+            "--owner-ref",
+            owner_ref.as_posix(),
+            "--requested-transition",
+            "archive-owner",
+            "--target",
+            str(target),
+            "--format",
+            "json",
+        ]
+        if proof:
+            argv[argv.index("--target") : argv.index("--target")] = ["--proof", proof]
+        assert cli.main(argv) == 0
+        proposed = json.loads(capsys.readouterr().out)
+        assert proposed["outcome"] == "applied"
+        assert (
+            cli.main(["planning", "integration-apply", "--proposal", "plan-alpha-archive", "--target", str(target), "--format", "json"])
+            == 0
+        )
+        applied = json.loads(capsys.readouterr().out)
+        assert "operation_receipt" in applied, applied
+        return applied
+
+    target = tmp_path / "admitted"
+    owner_ref = arrange(target)
+    applied = propose_and_apply(target, owner_ref, proof="sha256:admitted-subject-proof")
+    assert applied["operation_receipt"]["proof_refs"] == ["sha256:admitted-subject-proof"]
+    closeout_args = [
+        "planning",
+        "archive-plan",
+        "--plan",
+        "plan-alpha",
+        "--target",
+        str(target),
+        "--prepare-closeout",
+        "--apply-cleanup",
+        "--retain-archive",
+        "--closure-decision",
+        "archive-and-close",
+        "--intent-satisfied",
+        "yes",
+        "--unsolved-intent",
+        "none",
+        "--format",
+        "json",
+    ]
+    assert cli.main(closeout_args) == 0
+    closed = json.loads(capsys.readouterr().out)
+    assert not closed["warnings"], closed["warnings"]
+    assert any(action["kind"] == "archived" for action in closed["actions"]), closed
+    archived_path = target / ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json"
+    archived = json.loads(archived_path.read_text(encoding="utf-8"))
+    assert archived["proof_report"]["proof achieved now"] == "yes; admitted archive-owner integration receipt"
+    assert archived["proof_report"]['evidence for "proof achieved" state'] == "sha256:admitted-subject-proof"
+    assert archived["intent_satisfaction"]["unsolved intent passed to"] == "none"
+    assert archived["required_continuation"]["owner surface"] == "none"
+    assert archived["continuation"] == {"owner": "none", "residual_intent": "none"}
+    after_closeout = managed_snapshot(target)
+    assert cli.main(closeout_args) == 0
+    replay = json.loads(capsys.readouterr().out)
+    assert any(action["kind"] in {"already-current", "current"} for action in replay["actions"])
+    assert managed_snapshot(target) == after_closeout
+
+    rejected_target = tmp_path / "missing-subject-proof"
+    rejected_owner_ref = arrange(rejected_target)
+    rejected_apply = propose_and_apply(rejected_target, rejected_owner_ref, proof="")
+    assert rejected_apply["operation_receipt"]["proof_refs"] == []
+    before_rejected_closeout = managed_snapshot(rejected_target)
+    rejected_args = [*closeout_args]
+    rejected_args[rejected_args.index(str(target))] = str(rejected_target)
+    assert cli.main(rejected_args) == 0
+    rejected = json.loads(capsys.readouterr().out)
+    assert rejected["reason_code"] == "integration-closeout-proof-insufficient"
+    assert managed_snapshot(rejected_target) == before_rejected_closeout
+
+
 def test_planning_front_door_forwards_lane_lifecycle_positionals(monkeypatch, tmp_path: Path, capsys) -> None:
     forwarded: list[list[str]] = []
 

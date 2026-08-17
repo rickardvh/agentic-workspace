@@ -1102,7 +1102,16 @@ def _append_index_command(
     parent_context: dict[str, str] | None = None,
 ) -> None:
     index = _read_index(state=state, session=session) or {}
-    entries = _entries_from_index(index)
+    indexed_by_id = {str(entry.get("id", "")): entry for entry in _entries_from_index(index)}
+    log_path = state.target_root / session["log_path"]
+    # Markdown is the append chronology and survives supported index schema
+    # transitions.  Reconcile it at the writer boundary before adding the rich
+    # current entry so a partial/legacy index cannot silently replace history.
+    entries = [
+        indexed_by_id.get(str(entry.get("id", "")), entry)
+        for entry in _entries_from_markdown(log_path)
+        if str(entry.get("id", "")) != entry_id
+    ]
     notes = index.get("notes", []) if isinstance(index.get("notes"), list) else []
     normalized_capture = _normalized_capture(state, capture)
     stdout_summary = _summarize_stream(stream="stdout", text=normalized_capture.stdout)

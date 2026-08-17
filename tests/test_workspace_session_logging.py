@@ -1057,6 +1057,38 @@ def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tm
     assert session_logging.repair_session_log_index(state=state)["status"] == "already-covered"
 
 
+def test_current_writer_reconciles_supported_legacy_partial_index_before_append(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+
+    def runner(argv: list[str]) -> int:
+        print(json.dumps({"kind": "agentic-workspace/example/v1", "selector": argv[-1]}))
+        return 0
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "one"], runner) == 0
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "two"], runner) == 0
+    capsys.readouterr()
+    index_path = _current_index(target)
+    original = json.loads(index_path.read_text(encoding="utf-8"))
+    first = session_logging._entries_from_index(original)[0]
+    legacy_partial = {**original, "kind": "agentic-workspace/session-log-index/v1", "entries": original["entries"][:1]}
+    index_path.write_text(json.dumps(legacy_partial, indent=2), encoding="utf-8")
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "three"], runner) == 0
+    capsys.readouterr()
+
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    current = json.loads(index_path.read_text(encoding="utf-8"))
+    indexed_entries = session_logging._entries_from_index(current)
+    markdown_entries = session_logging._entries_from_markdown(target / current["log_path"])
+    assert current["kind"] == session_logging.SESSION_LOG_INDEX_KIND
+    assert [entry["id"] for entry in indexed_entries] == [entry["id"] for entry in markdown_entries]
+    assert len(indexed_entries) == 3
+    assert indexed_entries[0] == first
+    assert session_logging.analyze_session_log(state=state)["index_status"] == "complete"
+
+
 def test_session_log_segments_can_be_summarized_and_selected(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
