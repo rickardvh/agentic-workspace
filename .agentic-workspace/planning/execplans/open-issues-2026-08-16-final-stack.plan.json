@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "validation",
-  "revision": 2,
+  "revision": 3,
   "intent": {
     "outcome": "Close every currently open GitHub issue through three reviewable stacked lanes: agent and skill guidance, lifecycle evidence, and canonical operating-decision composition.",
     "non_goals": [
@@ -39,11 +39,35 @@
       "owner": "current-work context"
     },
     "proof_posture": {
-      "state": "ready",
+      "state": "ready-awaiting-final-merge",
       "refs": [
         "https://github.com/rickardvh/agentic-workspace/pull/2596",
         "https://github.com/rickardvh/agentic-workspace/pull/2600",
         "https://github.com/rickardvh/agentic-workspace/pull/2601"
+      ]
+    },
+    "stack_progress": {
+      "state": "awaiting-final-merge",
+      "completed": [
+        {
+          "pr": 2596,
+          "state": "merged",
+          "merged_at": "2026-08-17T08:24:30Z",
+          "merge_commit": "5fa4ea11f6f97d7015e170b67937c56f19a4c72e"
+        },
+        {
+          "pr": 2600,
+          "state": "merged",
+          "merged_at": "2026-08-17T09:31:21Z",
+          "merge_commit": "3747e2fe59ceb935db3186948b7ede843837b1d4"
+        }
+      ],
+      "remaining": [
+        {
+          "pr": 2601,
+          "state": "open",
+          "action": "complete final review and merge"
+        }
       ]
     },
     "external_posture": {
@@ -63,9 +87,9 @@
       "locator": ""
     }
   ],
-  "next_action": "Review and merge draft PRs #2596, #2600, and #2601 in stack order, then allow their closing keywords to close the listed issues.",
+  "next_action": "Complete final review and merge PR #2601, then verify its closing keywords close the remaining listed issues.",
   "blockers": [
-    "None."
+    "PR #2601 remains open pending final review and merge."
   ],
   "proof": {
     "claims": [
@@ -78,7 +102,7 @@
       "Run focused skill/adapter freshness tests for lane 1.",
       "Run session export and Planning apply-to-closeout atomicity fixtures for lane 2.",
       "Run operating-decision behavioral integration, relevance, reuse, compatibility, Planning relation, and Memory authority fixtures for lane 3.",
-      "Inspect each PR base/head, diff boundary, and live checks after publishing."
+      "Retain merged PRs #2596 and #2600 as historical stack proof; inspect PR #2601 base/head, diff boundary, and live checks before final merge."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/2596",
@@ -87,8 +111,8 @@
     ]
   },
   "continuation": {
-    "owner": "none",
-    "residual_intent": "none"
+    "owner": "PR #2601 final review and merge",
+    "residual_intent": "Merge PR #2601 and verify the remaining listed issues close from its closing keywords."
   },
   "specialist_contracts": []
 }
