@@ -4,7 +4,7 @@
   "title": "Close all remaining open issue lanes",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "review",
+  "phase": "validation",
   "revision": 2,
   "intent": {
     "outcome": "Close every currently open GitHub issue through three reviewable stacked lanes: agent and skill guidance, lifecycle evidence, and canonical operating-decision composition.",

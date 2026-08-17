@@ -153,6 +153,67 @@ def test_selected_closeout_and_planning_projections_are_bounded_and_warm_reused(
         assert warm_elapsed < 2.0
 
 
+def test_query_shaped_public_selectors_measure_cold_and_warm_reuse_cost(tmp_path: Path, capsys, monkeypatch) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+    capsys.readouterr()
+    measured: list[dict[str, Any]] = []
+    real_digest = projection_reuse.dependency_digest
+
+    def measured_digest(**kwargs: Any):
+        result = real_digest(**kwargs)
+        measured.append(
+            {
+                "operation": kwargs["operation"],
+                "query": dict(kwargs["query"]),
+                "state_read_count": result.state_read_count,
+                "dependencies": list(result.dependencies),
+            }
+        )
+        return result
+
+    monkeypatch.setattr(projection_reuse, "dependency_digest", measured_digest)
+    commands = [
+        ["summary", "--target", str(target), "--select", "planning_record", "--format", "json"],
+        ["summary", "--target", str(target), "--select", "memory_decision_packet", "--format", "json"],
+    ]
+    observations: list[dict[str, Any]] = []
+    for command in commands:
+        started = time.perf_counter()
+        assert cli.main(command) == 0
+        cold_text = capsys.readouterr().out
+        cold_elapsed_ms = (time.perf_counter() - started) * 1000
+        cold = json.loads(cold_text)
+
+        started = time.perf_counter()
+        assert cli.main(command) == 0
+        warm_text = capsys.readouterr().out
+        warm_elapsed_ms = (time.perf_counter() - started) * 1000
+        warm = json.loads(warm_text)
+        observations.append(
+            {
+                "cold_elapsed_ms": cold_elapsed_ms,
+                "warm_elapsed_ms": warm_elapsed_ms,
+                "cold_bytes": len(cold_text.encode()),
+                "warm_bytes": len(warm_text.encode()),
+            }
+        )
+
+        assert cold["projection_reuse"]["status"] == "decision+enrichment-rebuilt"
+        assert warm["projection_reuse"] == {
+            **cold["projection_reuse"],
+            "status": "decision+enrichment-reused",
+        }
+        assert list(cold["values"]) == [command[command.index("--select") + 1]]
+
+    assert len(measured) >= len(commands) * 2
+    assert all(item["state_read_count"] == len(item["dependencies"]) + 3 for item in measured)
+    assert len({json.dumps(item["query"], sort_keys=True) for item in measured}) == len(commands)
+    assert all(item["cold_elapsed_ms"] < 2_000 and item["warm_elapsed_ms"] < 2_000 for item in observations)
+    assert all(item["cold_bytes"] <= 65_536 and item["warm_bytes"] <= 65_536 for item in observations)
+
+
 def test_invalidation_reasons_cover_each_admitted_authority_input_exactly() -> None:
     from agentic_workspace.projection_reuse import _invalidation_reasons
 

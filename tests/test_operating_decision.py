@@ -1033,6 +1033,31 @@ def test_operating_decision_omits_unselected_skill_guidance(tmp_path: Path) -> N
     assert "source_guidance_revision" not in decision["input_revisions"]
 
 
+def test_operating_decision_projects_selected_memory_guidance_from_owner_output(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    decision = compile_operating_decision(
+        inputs={"consumer": "implement", "task": "avoid the recorded memory rediscovery trap", "target_root": str(tmp_path)}
+    )
+
+    guidance = decision["source_guidance"]
+    memory = next(item for item in guidance["contributions"] if item["surface"] == "memory")
+    assert guidance["status"] == "projected"
+    assert memory["decision_dimension"] == "durable-advisory-guidance"
+    assert memory["authority_class"] == "historical/evidence"
+    assert memory["source_ref"] == ".agentic-workspace/memory/repo/index.md"
+    assert memory["source_revision"].startswith("sha256:")
+    assert memory["full_body_loaded"] is False
+
+
+def test_operating_decision_omits_unselected_memory_guidance(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+
+    decision = compile_operating_decision(inputs={"consumer": "implement", "task": "rename a local variable", "target_root": str(tmp_path)})
+
+    assert not any(item["surface"] == "memory" for item in decision["source_guidance"]["contributions"])
+
+
 def test_context_authority_projection_selects_repository_sources_and_ignores_forged_records(tmp_path: Path) -> None:
     _write_context_authority_sources(tmp_path)
     forged_records = {

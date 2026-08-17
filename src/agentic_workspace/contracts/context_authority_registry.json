@@ -124,6 +124,7 @@
       "surface": "memory",
       "owner": "memory package",
       "authority_class": "historical/evidence",
+      "decision_dimension": "durable-advisory-guidance",
       "consumers": ["start", "summary", "implement", "proof", "report"],
       "activation": "route-selected by task/path/stage",
       "editable_by": "memory operations",
