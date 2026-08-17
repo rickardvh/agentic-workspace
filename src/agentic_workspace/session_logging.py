@@ -1102,7 +1102,16 @@ def _append_index_command(
     parent_context: dict[str, str] | None = None,
 ) -> None:
     index = _read_index(state=state, session=session) or {}
-    entries = _entries_from_index(index)
+    indexed_by_id = {str(entry.get("id", "")): entry for entry in _entries_from_index(index)}
+    log_path = state.target_root / session["log_path"]
+    # Markdown is the append chronology and survives supported index schema
+    # transitions.  Reconcile it at the writer boundary before adding the rich
+    # current entry so a partial/legacy index cannot silently replace history.
+    entries = [
+        indexed_by_id.get(str(entry.get("id", "")), entry)
+        for entry in _entries_from_markdown(log_path)
+        if str(entry.get("id", "")) != entry_id
+    ]
     notes = index.get("notes", []) if isinstance(index.get("notes"), list) else []
     normalized_capture = _normalized_capture(state, capture)
     stdout_summary = _summarize_stream(stream="stdout", text=normalized_capture.stdout)
@@ -1949,6 +1958,43 @@ def _normalized_export_value(*, state: SessionLoggingState, value: Any) -> Any:
     return value
 
 
+def _export_index_payload(
+    *, state: SessionLoggingState, session: dict[str, str], markdown_entries: list[dict[str, Any]], index: dict[str, Any] | None
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    indexed_entries = _entries_from_index(index or {})
+    indexed_by_id = {str(entry.get("id", "")): entry for entry in indexed_entries}
+    entries = [indexed_by_id.get(str(entry.get("id", "")), entry) for entry in markdown_entries]
+    normalized_entries, records = _normalized_index_entries(entries)
+    payload = {
+        "kind": SESSION_LOG_INDEX_KIND,
+        "session_id": session["session_id"],
+        "log_path": session["log_path"],
+        "path": _index_path_for_session(session).as_posix(),
+        "created_at": str((index or {}).get("created_at", session.get("created_at", ""))),
+        "updated_at": str((index or {}).get("updated_at", "")),
+        "path_normalization": _path_normalization_payload(state),
+        "local_diagnostic_boundary": _session_log_local_boundary(),
+        "session_header": {
+            "session_id": session["session_id"],
+            "log_path": session["log_path"],
+            "created_at": session.get("created_at", ""),
+        },
+        "records": records,
+        "entries": normalized_entries,
+        "notes": list((index or {}).get("notes", [])) if isinstance((index or {}).get("notes"), list) else [],
+        "export_projection": {
+            "profile": "all-command-summary",
+            "selection_mode": "all-source-session-commands",
+            "source_command_count": len(markdown_entries),
+            "exported_command_count": len(normalized_entries),
+            "complete_for_profile": len(markdown_entries) == len(normalized_entries),
+        },
+        "local_only": False,
+        "authoritative": False,
+    }
+    return payload, entries
+
+
 def export_session_log(
     *, state: SessionLoggingState, path: str = "", session_id: str = "", include_artifacts: bool = True
 ) -> dict[str, Any]:
@@ -1958,27 +2004,36 @@ def export_session_log(
         return {"kind": "agentic-workspace/session-log-export/v1", "status": "missing-log", "path": ""}
     effective_session = _session_for_log(state=state, log_path=log_path, session=session)
     index = _read_index_for_log(state=state, log_path=log_path, session=session)
-    entries = _entries_from_index(index) if index is not None else _entries_from_markdown(log_path)
+    markdown_entries = _entries_from_markdown(log_path)
+    source_coverage = _coverage_payload(markdown_entries=markdown_entries, index=index)
+    export_index, entries = _export_index_payload(state=state, session=effective_session, markdown_entries=markdown_entries, index=index)
     files: dict[str, bytes] = {
-        "session.md": _normalized_export_text(state=state, text=log_path.read_text(encoding="utf-8-sig")).encode("utf-8")
+        "session.md": _normalized_export_text(state=state, text=log_path.read_text(encoding="utf-8-sig")).encode("utf-8"),
+        "index.json": (json.dumps(_normalized_export_value(state=state, value=export_index), indent=2, sort_keys=True) + "\n").encode(
+            "utf-8"
+        ),
     }
-    if index is not None:
-        normalized_index = _normalized_export_value(state=state, value=index)
-        files["index.json"] = (json.dumps(normalized_index, indent=2, sort_keys=True) + "\n").encode("utf-8")
     included_artifacts: list[str] = []
-    if include_artifacts:
-        artifact_paths = {
-            str(entry.get("artifact", {}).get("path", ""))
-            for entry in entries
-            if isinstance(entry.get("artifact"), dict) and entry.get("artifact", {}).get("path")
+    artifact_coverage: list[dict[str, Any]] = []
+    artifacts_by_path = {
+        str(entry.get("artifact", {}).get("path", "")): entry.get("artifact", {})
+        for entry in entries
+        if isinstance(entry.get("artifact"), dict) and entry.get("artifact", {}).get("path")
+    }
+    artifact_root = (state.target_root / _artifact_root_for_session(effective_session)).resolve()
+    for artifact_path, artifact in sorted(artifacts_by_path.items()):
+        coverage_record = {
+            "source_path": artifact_path,
+            "sha256": str(artifact.get("sha256", "")),
+            "bytes": int(artifact.get("bytes", 0) or 0),
         }
-        artifact_root = (state.target_root / _artifact_root_for_session(effective_session)).resolve()
-        for artifact_path in sorted(artifact_paths):
+        if include_artifacts:
             candidate = (state.target_root / artifact_path).resolve()
             try:
                 candidate.relative_to(artifact_root)
                 raw = candidate.read_text(encoding="utf-8-sig")
             except (OSError, ValueError):
+                artifact_coverage.append({**coverage_record, "status": "missing"})
                 continue
             archive_name = f"artifacts/{candidate.name}"
             try:
@@ -1988,6 +2043,10 @@ def export_session_log(
                 safe_raw = _normalized_export_text(state=state, text=raw)
             files[archive_name] = safe_raw.encode("utf-8")
             included_artifacts.append(archive_name)
+            artifact_coverage.append({**coverage_record, "status": "included", "export_path": archive_name})
+        else:
+            status = "digest-only" if coverage_record["sha256"] else "omitted"
+            artifact_coverage.append({**coverage_record, "status": status, "reason": "summary profile omits raw artifact bytes"})
     source_hashes = {"session.md": hashlib.sha256(log_path.read_bytes()).hexdigest()}
     if index is not None:
         source_index_path = state.target_root / _index_path_for_session(effective_session)
@@ -2004,6 +2063,28 @@ def export_session_log(
         "path_normalization_mode": "known-local-paths",
         "included_files": sorted(files),
         "included_artifacts": included_artifacts,
+        "evidence_profile": {
+            "id": "all-command-summary-with-available-artifacts" if include_artifacts else "all-command-summary",
+            "command_selection": "all-source-session-commands",
+            "detail_policy": "include-available-artifacts" if include_artifacts else "omit-artifact-bytes-retain-digests",
+            "source_command_count": len(markdown_entries),
+            "exported_command_count": len(entries),
+            "structured_index_complete": len(markdown_entries) == len(entries),
+            "source_index_status": source_coverage["status"],
+            "source_indexed_command_count": source_coverage["indexed_command_count"],
+            "source_index_missing_entry_ids": source_coverage["missing_entry_ids"],
+            "source_index_extra_entry_ids": source_coverage["extra_entry_ids"],
+            "suitable_for": [
+                "summary-analysis",
+                "human-chronology",
+                *(
+                    ["detailed-artifact-review"]
+                    if artifact_coverage and all(item["status"] == "included" for item in artifact_coverage)
+                    else []
+                ),
+            ],
+        },
+        "artifact_coverage": artifact_coverage,
         "source_hashes": source_hashes,
         "exported_hashes": exported_hashes,
         "originals_mutated": False,

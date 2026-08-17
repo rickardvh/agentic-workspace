@@ -72,6 +72,13 @@ def load_planning_reconcile_operation(values: dict, _arguments: dict, _context) 
         dry_run=bool(values.get("dry_run")),
         lane=str(values.get("lane") or ""),
         apply_lane_reconcile=bool(values.get("apply_lane_reconcile")),
+        apply_lane_current_slice_reconcile=bool(values.get("apply_lane_current_slice_reconcile")),
+        owner_surface=str(values.get("owner_surface") or ""),
+        relation_identity=str(values.get("relation_identity") or ""),
+        subject=str(values.get("subject") or ""),
+        expected_lane_revision=str(values.get("expected_lane_revision") or ""),
+        transition=str(values.get("transition") or ""),
+        expected_execplan=str(values.get("expected_execplan") or ""),
         issue=str(values.get("issue") or ""),
         external_ref=str(values.get("external_ref") or ""),
         priority=str(values.get("priority") or ""),
@@ -85,7 +92,7 @@ def load_planning_reconcile_operation(values: dict, _arguments: dict, _context) 
         preview=bool(values.get("preview")),
         apply=bool(values.get("apply")),
         proposal=str(values.get("proposal") or ""),
-        expected_planning_revision=str(values.get("expected_planning_revision") or ""),
+        expected_planning_revision=str(values.get("expect_planning_revision") or ""),
     )
 
 

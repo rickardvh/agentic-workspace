@@ -761,7 +761,7 @@ def _patch_python_operation_exit_status(output: GeneratedOutput, *, repo_root: P
     return GeneratedOutput(output.path, output.content.replace(old_return, new_return, 1))
 
 
-def _patch_planning_python_targeted_write_preflight_values(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+def _patch_planning_python_runtime_values(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
     path = output.path if output.path.is_absolute() else repo_root / output.path
     relative = path.relative_to(repo_root).as_posix()
     if relative != "generated/planning/python/primitives/operation_executor.py":
@@ -783,6 +783,31 @@ def _patch_planning_python_targeted_write_preflight_values(output: GeneratedOutp
     )
     if values_anchor in content and "'preflight_token': values.get('preflight_token', '')," not in content:
         content = content.replace(values_anchor, values_insert, 1)
+    reconcile_values = (
+        ("apply_lane_current_slice_reconcile", "False"),
+        ("owner_surface", "''"),
+        ("relation_identity", "''"),
+        ("subject", "''"),
+        ("expected_lane_revision", "''"),
+        ("transition", "''"),
+        ("expected_execplan", "''"),
+        ("apply_issue_relation_reconcile", "False"),
+        ("apply_issue_relation_migration", "False"),
+        ("apply_pending_integrations", "False"),
+        ("preview", "False"),
+    )
+    args_reconcile_anchor = "                'apply_lane_reconcile': getattr(args, 'apply_lane_reconcile', False),\n"
+    values_reconcile_anchor = "                'apply_lane_reconcile': values.get('apply_lane_reconcile', False),\n"
+    args_reconcile_insert = args_reconcile_anchor + "".join(
+        f"                '{name}': getattr(args, '{name}', {default}),\n" for name, default in reconcile_values
+    )
+    values_reconcile_insert = values_reconcile_anchor + "".join(
+        f"                '{name}': values.get('{name}', {default}),\n" for name, default in reconcile_values
+    )
+    if args_reconcile_anchor in content and "'apply_pending_integrations': getattr(args" not in content:
+        content = content.replace(args_reconcile_anchor, args_reconcile_insert, 1)
+    if values_reconcile_anchor in content and "'apply_pending_integrations': values.get(" not in content:
+        content = content.replace(values_reconcile_anchor, values_reconcile_insert, 1)
     return GeneratedOutput(output.path, content)
 
 
@@ -951,7 +976,7 @@ def render_workspace_command_package_outputs(
                         _patch_workspace_typescript_sample_command_test(
                             _patch_python_operation_exit_status(
                                 _patch_python_structured_usage_errors(
-                                    _patch_planning_python_targeted_write_preflight_values(
+                                    _patch_planning_python_runtime_values(
                                         _patch_typescript_structured_usage_errors(
                                             _normalize_releaseable_typescript_package_json(
                                                 output, release_metadata=release_metadata, repo_root=repo_root
@@ -1023,6 +1048,13 @@ from ..cli import build_generated_parser
 """
         if old in content:
             content = content.replace(old, new)
+        proposal_anchor = "('--proposal-id', 'proposal_id', '', 'value'),"
+        if proposal_anchor in content and "('--proposal', 'proposal', '', 'value')," not in content:
+            content = content.replace(
+                proposal_anchor,
+                proposal_anchor + " ('--proposal', 'proposal', '', 'value'),",
+                1,
+            )
         return GeneratedOutput(output.path, content)
     if relative != "generated/workspace/typescript/package.json":
         return output

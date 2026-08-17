@@ -1130,14 +1130,6 @@ def _validate_planning_integration_propose_front_door_parity(payload: dict[str, 
         ),
         None,
     )
-    integration_interface = next(
-        (
-            command
-            for command in planning_command.get("interface", {}).get("subcommands", [])
-            if isinstance(command, dict) and command.get("name") == "integration-propose"
-        ),
-        None,
-    ) if isinstance(planning_command, dict) else None
     runtime_binding = root_package.get("python_runtime_binding", {})
     front_door_handler = next(
         (
@@ -1147,34 +1139,43 @@ def _validate_planning_integration_propose_front_door_parity(payload: dict[str, 
         ),
         None,
     ) if isinstance(runtime_binding, dict) else None
-    if not isinstance(integration_interface, dict) or not isinstance(front_door_handler, dict):
-        return ["Planning integration-propose parity cannot find its declared interface and front-door runtime mapping"]
+    if not isinstance(planning_command, dict) or not isinstance(front_door_handler, dict):
+        return ["Planning integration parity cannot find its declared interface and front-door runtime mapping"]
 
-    canonical_operation = operation_manifest("operations/planning.integration-propose.lifecycle.json")
-    canonical_inputs = {
-        str(item.get("name", ""))
-        for item in canonical_operation.get("inputs", [])
-        if isinstance(item, dict) and item.get("source") == "cli-option"
-    }
-    interface_inputs = {
-        str(item.get("name", "")) for item in integration_interface.get("options", []) if isinstance(item, dict)
-    }
     forwarded_inputs = {
         str(item.get("attr", "")) for item in front_door_handler.get("option_specs", []) if isinstance(item, dict)
     }
     errors: list[str] = []
-    missing_interface = sorted(canonical_inputs - interface_inputs)
-    if missing_interface:
-        errors.append(
-            "planning.integration-propose.lifecycle inputs missing from the Workspace Planning interface: "
-            + ", ".join(missing_interface)
+    for command_name in ("integration-propose", "integration-apply"):
+        operation_id = f"planning.{command_name}.lifecycle"
+        integration_interface = next(
+            (
+                command
+                for command in planning_command.get("interface", {}).get("subcommands", [])
+                if isinstance(command, dict) and command.get("name") == command_name
+            ),
+            None,
         )
-    unforwarded = sorted(canonical_inputs - forwarded_inputs)
-    if unforwarded:
-        errors.append(
-            "planning.integration-propose.lifecycle inputs are not forwarded by planning.front-door: "
-            + ", ".join(unforwarded)
-        )
+        if not isinstance(integration_interface, dict):
+            errors.append(f"{operation_id} is missing from the Workspace Planning interface")
+            continue
+        canonical_operation = operation_manifest(f"operations/{operation_id}.json")
+        canonical_inputs = {
+            str(item.get("name", ""))
+            for item in canonical_operation.get("inputs", [])
+            if isinstance(item, dict) and item.get("source") == "cli-option"
+        }
+        interface_inputs = {
+            str(item.get("name", "")) for item in integration_interface.get("options", []) if isinstance(item, dict)
+        }
+        missing_interface = sorted(canonical_inputs - interface_inputs)
+        if missing_interface:
+            errors.append(
+                f"{operation_id} inputs missing from the Workspace Planning interface: " + ", ".join(missing_interface)
+            )
+        unforwarded = sorted(canonical_inputs - forwarded_inputs)
+        if unforwarded:
+            errors.append(f"{operation_id} inputs are not forwarded by planning.front-door: " + ", ".join(unforwarded))
     return errors
 
 

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Make session-log evidence coverage explicit and preserve Planning integration lifecycle inputs across generated CLI boundaries."

@@ -13754,6 +13754,10 @@
             "option": "--proposal-id"
           },
           {
+            "attr": "proposal",
+            "option": "--proposal"
+          },
+          {
             "attr": "external_ref",
             "option": "--external-ref"
           },
