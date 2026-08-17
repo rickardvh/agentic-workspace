@@ -30424,6 +30424,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "label": "work gate",
         "provenance": "planning",
         "status": gate.get("status"),
+        "decision": gate.get("decision"),
         "gate_result": gate.get("gate_result") or gate.get("decision"),
         "workflow_sufficient": gate.get("workflow_sufficient"),
         "reason": _task_excerpt(str(gate.get("reason") or ""), limit=180) if compact_route else gate.get("reason"),
@@ -30431,6 +30432,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "required_next_action": gate.get("required_next_action"),
         "active_planning_present": gate.get("active_planning_present"),
         "issue_refs": gate.get("issue_refs", []),
+        "pr_context": gate.get("pr_context"),
         "planning_revision": _compact_selector_planning_revision(gate.get("planning_revision")),
         "implementation_allowed": gate.get("implementation_allowed"),
         "delegation_decision_required": gate.get("delegation_decision_required"),
@@ -30478,8 +30480,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             compact["changed_path_facts"]["archived_planning_residue"] = {"status": "completed-closeout-residue"}
     if "work_shape_guidance" in gate and gate.get("workflow_sufficient") is False:
         compact["work_shape_guidance"] = _tiny_work_shape_guidance(gate["work_shape_guidance"])
-    if compact_route:
-        compact["route_decision"] = {
+    if route_decision:
+        compact_route_payload = {
             key: route_decision.get(key)
             for key in (
                 "kind",
@@ -30502,9 +30504,16 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "legacy_consumer_replacement_map",
                 "reconciliation_proposal",
                 "next_safe_action",
+                "owner_admission",
+                "binding",
             )
             if route_decision.get(key) not in (None, "", [], {})
         }
+        if "selected_owner" in route_decision:
+            compact_route_payload["selected_owner"] = route_decision.get("selected_owner")
+        compact["route_decision"] = compact_route_payload
+        if route_decision.get("owner_admission") not in (None, "", [], {}):
+            compact["owner_admission"] = route_decision["owner_admission"]
     if isinstance(task_switch, dict):
         compact_switch = {
             "kind": task_switch.get("kind"),

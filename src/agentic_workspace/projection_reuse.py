@@ -61,6 +61,12 @@ _SELECTOR_ENRICHMENT_DEPENDENCIES = {
 }
 
 
+def _expose_projection_reuse_receipt(*, operation: str, query: dict[str, Any]) -> bool:
+    """Keep proof lineage visible where a caller supplied projection scope."""
+
+    return operation != "start" or bool(query.get("changed")) or bool(str(query.get("select") or "").strip())
+
+
 @dataclass(frozen=True)
 class DependencyScanBudget:
     max_entries: int = _DEPENDENCY_MAX_ENTRIES
@@ -758,13 +764,16 @@ def lookup_projection_reuse(
     cached_projection = record.get("projection") if isinstance(record.get("projection"), dict) else None
     if cached_projection is not None and operation in {"start", "summary", "implement", "proof", "report"}:
         reused_projection = json.loads(json.dumps(cached_projection, sort_keys=True, default=str))
-        reused_projection["projection_reuse"] = {
-            "decision_id": decision_id,
-            "status": "decision+enrichment-reused",
-            "freshness": "current",
-            "authority": "agentic_workspace.operating_decision.compile_operating_decision",
-            "projection_input_revision": projection_input_revision,
-        }
+        if _expose_projection_reuse_receipt(operation=operation, query=query):
+            reused_projection["projection_reuse"] = {
+                "decision_id": decision_id,
+                "status": "decision+enrichment-reused",
+                "freshness": "current",
+                "authority": "agentic_workspace.operating_decision.compile_operating_decision",
+                "projection_input_revision": projection_input_revision,
+            }
+        else:
+            reused_projection.pop("projection_reuse", None)
         return reused_projection, context
     return {
         "kind": "agentic-workspace/unchanged-projection/v1",
@@ -929,7 +938,10 @@ def record_projection_reuse(
         "projection_decision_authority",
     ):
         payload_context.pop(field, None)
-    payload["projection_reuse"] = compact_receipt
+    if _expose_projection_reuse_receipt(operation=operation, query=query):
+        payload["projection_reuse"] = compact_receipt
+    else:
+        payload.pop("projection_reuse", None)
     # The budget governs the emitted projection, including its reuse receipt.
     # Recalculate twice so the byte-count field's own width is reflected.
     for _iteration in range(2):

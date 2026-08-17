@@ -2946,7 +2946,8 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     full_detail_command = _command_with_cli_invoke(
         command="agentic-workspace start --target . --verbose --format json", cli_invoke=config.cli_invoke
     )
-    if args.format == "json" and effective_profile != "full":
+    volatile_local_selector = any(_selector_requests(selected_fields, field) for field in ("local_chat_checkpoint", "work_threads"))
+    if args.format == "json" and effective_profile != "full" and not volatile_local_selector:
         reuse_context = prepare_projection_reuse(root=target_root, operation="start", query=reuse_query)
         admitted_input = admit_projection_surface_decision_input(
             input_revisions=reuse_context.get("decision_input_revisions", {}),
@@ -3026,6 +3027,13 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     if _selector_requests(selected_fields, "source_guidance"):
         payload.setdefault("values", {})["source_guidance"] = _as_dict(operating_decision.get("source_guidance"))
         payload["missing"] = [item for item in payload.get("missing", []) if item != "source_guidance"]
+    selected_gate = _as_dict(_as_dict(payload.get("values")).get("planning_safety_gate"))
+    selected_route = _as_dict(selected_gate.get("route_decision"))
+    if (
+        selected_route.get("task_relation") == "not-applicable"
+        and _as_dict(selected_route.get("owner_admission")).get("status") == "rejected"
+    ):
+        reuse_context = None
     if reuse_context is not None:
         reuse_result = record_projection_reuse(
             root=target_root,
