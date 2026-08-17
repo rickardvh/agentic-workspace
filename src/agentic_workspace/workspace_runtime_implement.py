@@ -227,13 +227,14 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     reuse_query = {
         "profile": profile,
         "format": str(args.format),
+        "select": str(selected_fields or ""),
         "task": str(task_text or ""),
         "changed": changed_paths,
     }
     reuse_context: dict[str, Any] | None = None
     admitted_input: dict[str, Any] = {}
-    if args.format == "json" and profile == "tiny" and not selected_fields:
-        full_detail_command = f"{config.cli_invoke} implement --target . --changed <paths> --verbose --format json"
+    full_detail_command = f"{config.cli_invoke} implement --target . --changed <paths> --verbose --format json"
+    if args.format == "json" and profile == "tiny":
         reuse_context = prepare_projection_reuse(root=target_root, operation="implement", query=reuse_query)
         admitted_input = admit_projection_surface_decision_input(
             input_revisions=reuse_context.get("decision_input_revisions", {}),
@@ -360,7 +361,11 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
                 cli_invoke=_load_workspace_config(target_root=target_root).cli_invoke,
             )
     if getattr(args, "select", None):
+        decision_context = _as_dict(payload.get("context"))
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
+        for field in ("projection_decision_input_consumption", "projection_decision_input_revalidation"):
+            if value := _as_dict(decision_context.get(field)):
+                payload.setdefault("context", {})[field] = value
     if changed_paths and not getattr(args, "select", None):
         transition = record_review_stack_transition(
             target_root=target_root,
