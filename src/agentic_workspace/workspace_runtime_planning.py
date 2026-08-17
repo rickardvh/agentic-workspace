@@ -103,7 +103,9 @@ def _run_reconcile_report_adapter(args: argparse.Namespace) -> int:
         preview=bool(getattr(args, "preview", False)),
         apply=bool(getattr(args, "apply", False)),
         proposal=str(getattr(args, "proposal", "") or ""),
-        expected_planning_revision=str(getattr(args, "expect_planning_revision", "") or ""),
+        expected_planning_revision=str(
+            getattr(args, "expected_planning_revision", "") or getattr(args, "expect_planning_revision", "") or ""
+        ),
     )
     payload = _rewrite_module_cli_commands(payload)
     if args.format == "json":
