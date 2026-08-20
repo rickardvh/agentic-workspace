@@ -4,27 +4,37 @@ Modules add independently owned capabilities to Agentic Workspace. They extend w
 
 Planning, Memory, and Verification are the current first-party modules. They are bundled batteries and examples of the module model, not fixed architectural slots.
 
-## Participation model
+## Authoring model
 
-The core loop is `resolve -> act -> reconcile`.
+The core loop is `resolve -> act -> reconcile`, but those are **Workspace responsibilities**, not three module interfaces.
 
-A module may contribute at any of those points through stable declared semantics:
+A module should describe its own domain:
 
-| Loop step | Module contribution |
+1. **Identity / compatibility** — what capability is this, is it available, and which public contract/runtime range can admit it?
+2. **Ownership** — what state, resources, roots, and effects belong to it?
+3. **Relevance** — what bounded task/path/state facts make it worth considering now?
+4. **Capabilities** — what source-owned resources/context, lazily discoverable skills/procedures, and typed operations can it provide?
+5. **Result semantics** — what do its operation results mean inside its own domain: state change, evidence, blocker, residue, continuation fact, or bounded effect?
+
+Dependencies and conflicts belong alongside compatibility/ownership where needed.
+
+Contribution dimensions are optional. A read-only retrieval module may expose only relevance plus resources or a skill. A mechanical action module may expose an operation/result without inventing startup posture, a workflow phase, or a closeout hook. Modules should not implement empty `on_resolve`, `on_act`, or `on_reconcile` callbacks just to fit the framework.
+
+Workspace consumes those declarations through its own loop:
+
+| Workspace step | What Workspace does with module declarations |
 | --- | --- |
-| **Resolve** | bounded relevant context, capability availability, constraints, owner/procedure references, or selectors that can change the current decision |
-| **Act** | stable typed operations with explicit inputs, results, effects, and authority |
-| **Reconcile** | bounded domain state changes, evidence, residue, continuation facts, or other result semantics owned by the module |
+| **Resolve** | selects relevant resources, constraints, procedures, or action candidates that can change the current decision |
+| **Act** | invokes a declared typed operation or routed skill when the current contract selects it |
+| **Reconcile** | consumes bounded typed results/effects through the module owner and composes their effect on the next decision |
 
 The module keeps ownership of its domain state and meaning. Workspace consumes only the bounded current effect needed to compose the operating decision.
-
-A module should not define an independent mandatory workflow when its capability can enrich the existing loop.
 
 ## Source ownership
 
 Module-owned context remains module-owned. AW should not copy all module state into a generic central context store merely to make composition uniform.
 
-A resolve contribution should normally expose only what Workspace needs for current relevance, provenance, routing, and decision composition. Deeper domain detail stays behind the module's selectors, skills, operations, or references.
+A relevance/context contribution should normally expose only what Workspace needs for current relevance, provenance, routing, and decision composition. Deeper domain detail stays behind the module's selectors, skills, operations, or references.
 
 This keeps the operating-context model narrow and prevents module extensibility from becoming a repository knowledge platform.
 
@@ -32,20 +42,36 @@ This keeps the operating-context model narrow and prevents module extensibility 
 
 The stable public module boundary should remain deliberately smaller than AW's full internal participation vocabulary.
 
-An independent module should need only semantics required for safe composition, such as:
+The public contract should be centered on the authoring model above and reuse existing generic primitives where they already fit:
 
-- module identity, compatibility, and availability;
-- declared capabilities and relevance/activation;
-- owned state/resources and writable/effect boundaries;
-- compact resolve contributions and routed procedure references;
-- stable typed operations and result/effect contracts;
-- bounded reconcile/result contributions;
-- lifecycle, dependencies, conflicts, safe absence, and removal;
-- generated discovery/reference metadata.
+- component/resource declarations for source-owned context;
+- routed skills/prompts for deeper procedure;
+- typed operation/result/effect/authority contracts for actions;
+- declared ownership and compatibility for safe admission;
+- bounded relevance sufficient for progressive discovery;
+- safe absence/removal and conflict semantics where required.
 
-Internal implementation metadata may be broader. Lifecycle hooks, arbitrary workflow phases, posture fragments, renderer packets, and first-party callbacks are not automatically public primitives because they exist today.
+Internal implementation metadata may be broader. Lifecycle hooks, arbitrary workflow phases, posture fragments, renderer packets, report slots, startup fragments, proof/closeout hooks, and first-party callbacks are not automatically public primitives because they exist today.
+
+The test for every proposed public field is: **does the module author need this to describe their capability, or are we asking them to describe AW's choreography back to AW?** Prefer deriving the latter inside Workspace.
 
 See [Extensibility and public boundary](../extension-boundary.md).
+
+## Practical extension test
+
+Genericity is useful only when it reduces module integration cost.
+
+An ordinary independent module should normally require:
+
+- its own package/implementation;
+- its public descriptor/contracts;
+- its own tests and fixtures.
+
+Adding that module should not require semantic Workspace edits merely to teach core its identity or domain: no new runtime name switch, core module enum, fixed slot/phase, canonical-skill branch, proof/closeout branch, global posture dimension, or another core-owned per-module list.
+
+Monorepo test/package wiring may exist to exercise an in-repo fixture, but it must remain semantically ignorant of the module. An out-of-tree/external-consumer module should be able to participate through the same public contract without modifying the AW repository.
+
+If a small independent module needs many AW-specific concepts or core-file edits, treat that as evidence that the public seam is still too framework-shaped.
 
 ## Progressive discovery
 
@@ -57,7 +83,7 @@ Adding a module should not add a mandatory new first-contact command, phase, or 
 
 ## Authority and conflicts
 
-Modules do not gain global authority by registering a contribution.
+Modules do not gain global authority by registering a capability.
 
 A module must not silently widen unrelated:
 
@@ -73,7 +99,7 @@ Compatibility and ownership/effect conflicts should fail closed before incompati
 
 Host repositories can program AW through repo-owned config, obligations, skills, canonical guidance, ownership, proof declarations, and deterministic repository operations.
 
-Use repo customization for host-specific policy and operating choices. Use a module for an independently owned reusable capability with its own lifecycle, state/resources, operations, and compatibility boundary.
+Use repo customization for host-specific policy and operating choices. Use a module for an independently owned reusable capability with its own compatibility/ownership boundary and whatever resources, procedures, operations, or state its domain actually needs.
 
 Keeping those mechanisms separate avoids turning every repo rule into a package extension.
 
@@ -97,7 +123,7 @@ Typical concerns include:
 - active-work proof expectations;
 - Planning-domain archive/continuation transitions.
 
-Planning can contribute current-work context during resolve, Planning operations during act, and progress/continuation facts during reconcile.
+Planning can expose relevant current-work context, Planning operations, and bounded progress/continuation results through the generic capability path. Its rich participation does not define what every module must implement.
 
 Module implementation: [Planning README](../../packages/planning/README.md).
 
@@ -112,7 +138,7 @@ Typical concerns include:
 - recurring traps and verified failure lessons;
 - operator runbooks and routing facts worth retaining.
 
-Memory can contribute relevant learned context during resolve, capture/retrieval operations during act, and durable lesson promotion during reconcile.
+Memory can expose relevant learned context and capture/retrieval operations/results through the same capability path.
 
 Memory is one module; it is not AW's abstract persistence layer. Other durable context keeps its own canonical owner.
 
@@ -129,13 +155,13 @@ Typical concerns include:
 - known gaps and stale conditions;
 - proof-route information consumed by the broader claim boundary.
 
-Verification can contribute applicable proof context during resolve, verification operations during act, and evidence/gap facts during reconcile.
+Verification can expose applicable proof context, verification operations, and bounded evidence/gap results through the same capability path.
 
 Module implementation: [Verification README](../../packages/verification/README.md).
 
 ## Future modules
 
-The architecture should allow future capabilities—delegation, deployment, richer knowledge retrieval, security, or domains not anticipated today—to use the same generic contribution model.
+The architecture should allow future capabilities—delegation, deployment, richer knowledge retrieval, security, or domains not anticipated today—to use the same generic capability model.
 
 A future RAG, knowledge-graph, semantic-index, or repository-model capability would therefore be a module layered onto AW. Core AW does not need those capabilities to preserve and route bounded operating context.
 
