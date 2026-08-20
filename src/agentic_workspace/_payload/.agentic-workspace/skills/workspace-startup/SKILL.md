@@ -44,8 +44,9 @@ After the bounded action:
 1. Admit or refresh the result through the owner/operation named by the current route when required.
 2. Reconcile only concerns relevant to this work: changed state, proof/evidence, claim permission, future-relevant residue, continuation, or an explicit human decision.
 3. Preserve the difference between successful local action and permission to make a broader completion claim.
-4. If the result names another supported action or unresolved owner, resolve again from that current state.
-5. Stop when no further action is required and the intended claim is permitted. Terminal reconciliation is closeout; no separate closeout framework is assumed.
+4. If the user, review, orchestrator, or host explicitly corrects the acting agent's behavior, treat that correction as reconciliation input and submit it through `correction-event submit` (or a newer routed equivalent) when available. Do not substitute an apology, chat promise, or Memory note for correction admission.
+5. If the result names another supported action or unresolved owner, resolve again from that current state.
+6. Stop when no further action is required and the intended claim is permitted. Terminal reconciliation is closeout; no separate closeout framework is assumed.
 
 ## Progressive Disclosure
 
