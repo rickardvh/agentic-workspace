@@ -1,0 +1,27 @@
+{
+  "kind": "agentic-workspace/instruction-clause-ir-contract/v1",
+  "version": 1,
+  "objects": {
+    "fact": "A typed, source-owned, revision-bound projection; never a central knowledge record.",
+    "clause": "A source-bound bounded predicate mapped to declared control effects.",
+    "capability_reference": "An existing registered context, skill, operation, evidence, human-decision, action, effect, or claim affordance.",
+    "operating_contract": "The existing operating decision; no peer instruction authority is created."
+  },
+  "predicate_operators": ["present", "is", "one_of", "intersects", "matches", "current"],
+  "predicate_composition": ["all", "any", "none"],
+  "predicate_results": ["true", "false", "unknown"],
+  "effect_kinds": ["surface", "prefer", "require", "restrict"],
+  "forbidden_effects": ["allow", "execute", "mutate"],
+  "target_classes": ["surface", "skill", "operation", "evidence", "human", "action", "effect", "claim"],
+  "composition": {
+    "surface": "set-union by target",
+    "prefer": "advisory first occurrence by target",
+    "require": "accumulate and deduplicate by target plus satisfier",
+    "restrict": "conservative set-union by target"
+  },
+  "unknown_rule": "Unknown advisory clauses remain inactive and diagnosable. Unknown enforcing clauses block only a matching current target.",
+  "authority_rule": "A source may emit only declared effect kinds against declared target patterns; clauses cannot widen authority.",
+  "state_rule": "Requirements are satisfied from current source-owned facts, capabilities, evidence, or human dispositions; the IR stores no obligation state.",
+  "compiler_owner": "agentic_workspace.operating_decision.compile_operating_decision",
+  "schema": "schemas/instruction_clause_program.schema.json"
+}

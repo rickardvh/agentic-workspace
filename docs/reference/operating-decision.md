@@ -39,6 +39,7 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `reconciliation` | object | no |  | Generic post-action result, bounded claim, residue, continuation, and constructible next-action composition supplied by domain owners. |  |  |
 | `control_inputs` | object | no |  | Applicable host, local-runtime, module, and task-derived inputs reduced to their material effects on the current contract. |  |  |
 | `assurance` | object | no |  | Admission of a repository-owned assurance classification, quiet when no external classifier is configured. |  |  |
+| `instruction_clause_projection` | object | no |  | Revision-bound explanation of source-owned facts, bounded clauses, composed effects, and target-scoped blockers feeding this compiler. |  |  |
 | `current_work` | object | no |  | Current-work identity admitted into the composed decision. |  |  |
 | `selected_owner` | object | no |  | Selected owner identity admitted into the composed decision. |  |  |
 | `terminal_state` | string | no |  | Terminal outcome state used for continuation or finalization claims. |  |  |

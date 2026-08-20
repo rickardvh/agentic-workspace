@@ -26,6 +26,7 @@ Do not hand-edit generated pages. Update the source schema and regenerate the re
 - [Current CLI catalogue](cli-catalogue.md): every current root/nested command and option value from authoritative command data.
 - [Current installed-surface catalogue](installed-surface-catalogue.md): exact footprint/module cells, ownership, and degraded references.
 - [Current support-bearing install](support-bearing-install.md): immutable receipt-bound install projection.
+- [Instruction clause program](instruction-clause-program.md): source-owned facts, bounded predicates, capability references, and the four-effect internal IR.
 - [CLI commands schema](cli-commands.md): command-manifest shape.
 - [CLI option groups schema](cli-option-groups.md): shared option-group shape.
 - [SkillSpec contract](skill-spec.md): package-owned skill semantics for CLI-assisted agent behavior.

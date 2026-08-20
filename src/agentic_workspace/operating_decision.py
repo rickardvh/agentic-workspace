@@ -18,6 +18,7 @@ from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_result_status,
 )
 from agentic_workspace.control_inputs import compile_control_inputs
+from agentic_workspace.instruction_clause_ir import compile_instruction_program, instruction_program_from_existing_mechanisms
 from agentic_workspace.intent_feedback import compile_intent_feedback, intent_evidence_from_observed_behavior
 from agentic_workspace.memory_effectiveness import compile_memory_effectiveness
 from agentic_workspace.reconciliation import compile_reconciliation
@@ -1530,6 +1531,88 @@ def _projection_surface_posture(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Adapt existing projection owners to the shared clause IR without copying their domain state."""
+
+    context = _as_dict(payload.get("context"))
+    context_projection = _as_dict(payload.get("context_authority_projection")) or _as_dict(context.get("context_authority_projection"))
+    scoped: list[dict[str, Any]] = []
+    for authority in [_as_dict(item) for item in _as_list(context_projection.get("authorities"))]:
+        if authority.get("surface") != "scoped-instructions":
+            continue
+        source = _as_dict(authority.get("source"))
+        scoped.append(
+            {
+                "id": str(source.get("id") or "scoped-instructions"),
+                "owner": str(authority.get("source_owner") or authority.get("owner") or "scoped-instructions"),
+                "revision": str(source.get("revision") or ""),
+                "target": f"surface:{source.get('id') or 'scoped-instructions'}",
+            }
+        )
+    skill_routing = _as_dict(payload.get("skill_routing"))
+    preferred_routes = [_as_dict(item) for item in _as_list(skill_routing.get("preferred_routes"))]
+    skill_revision = "sha256:" + _digest(preferred_routes) if preferred_routes else ""
+    skills = [
+        {
+            "id": str(item.get("skill") or f"route-{index + 1}"),
+            "owner": "skill-routing",
+            "revision": skill_revision,
+            "target": f"skill:{item.get('skill') or f'route-{index + 1}'}",
+        }
+        for index, item in enumerate(preferred_routes)
+    ]
+    assurance = _as_dict(payload.get("assurance_requirements"))
+    assurance_revision = "sha256:" + _digest(assurance) if assurance else ""
+    requirements: list[dict[str, Any]] = []
+    capabilities: list[dict[str, Any]] = []
+    evidence_status = {
+        (str(item.get("requirement_id") or ""), str(item.get("evidence_label") or "")): str(item.get("status") or "")
+        for item in [_as_dict(value) for value in _as_list(assurance.get("evidence_status"))]
+    }
+    for requirement in [_as_dict(item) for item in _as_list(assurance.get("active"))]:
+        requirement_id = str(requirement.get("id") or "requirement")
+        for claim in _as_list(requirement.get("blocking_claims")):
+            for label in _as_list(requirement.get("required_evidence")) or ["owner-disposition"]:
+                satisfier = f"evidence:{requirement_id}:{label}"
+                requirements.append(
+                    {
+                        "id": f"{requirement_id}:{claim}:{label}",
+                        "owner": "assurance-requirements",
+                        "revision": assurance_revision,
+                        "target": f"claim:{claim}",
+                        "satisfier": satisfier,
+                    }
+                )
+                capabilities.append(
+                    {
+                        "id": satisfier,
+                        "kind": "evidence",
+                        "current": evidence_status.get((requirement_id, str(label))) == "satisfied",
+                        "source": {"owner": "assurance-requirements", "revision": assurance_revision, "current": True},
+                    }
+                )
+    blocked_claims = [str(item) for item in _as_list(posture.get("blocked_claim_classes")) if str(item)]
+    restriction_revision = "sha256:" + _digest(blocked_claims) if blocked_claims else ""
+    restrictions = [
+        {
+            "id": claim,
+            "owner": "operating-decision-source-posture",
+            "revision": restriction_revision,
+            "target": f"claim:{claim}",
+        }
+        for claim in blocked_claims
+    ]
+    return (
+        {
+            "scoped_instructions": scoped,
+            "skill_routing": skills,
+            "assurance_requirements": requirements,
+            "claim_restrictions": restrictions,
+        },
+        capabilities,
+    )
+
+
 def compile_projection_surface_operating_decision(
     *, payload: dict[str, Any], admitted_input: dict[str, Any], consumer: str
 ) -> dict[str, Any]:
@@ -1566,6 +1649,7 @@ def compile_projection_surface_operating_decision(
         if isinstance(item, dict)
     ]
     material_inputs = _as_dict(admitted_input.get("material_inputs"))
+    instruction_mechanisms, instruction_capabilities = _projection_instruction_mechanisms(payload, posture)
     decision = compile_operating_decision(
         inputs={
             "consumer": consumer,
@@ -1589,6 +1673,8 @@ def compile_projection_surface_operating_decision(
             "intent_resolutions": [item for item in _as_list(payload.get("intent_resolutions")) if isinstance(item, dict)],
             "memory_contributions": memory_contributions,
             "memory_outcomes": [item for item in _as_list(payload.get("memory_outcomes")) if isinstance(item, dict)],
+            "instruction_mechanisms": instruction_mechanisms,
+            "instruction_capabilities": instruction_capabilities,
         }
     )
     surface_input_revision = str(decision.get("admitted_input_revision") or "")
@@ -2030,6 +2116,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         if assurance_requested
         else {"kind": "agentic-workspace/assurance-decision-admission/v1", "status": "not-requested", "reason_codes": []}
     )
+    instruction_program = instruction_program_from_existing_mechanisms(inputs)
+    instruction_action = _as_dict(_as_dict(inputs.get("actionability")).get("next_action") or inputs.get("primary_action"))
+    instruction_invocation = _as_dict(instruction_action.get("operation_invocation"))
+    instruction_targets = [str(item) for item in _as_list(inputs.get("instruction_targets")) if str(item)]
+    if instruction_invocation.get("operation_id"):
+        instruction_targets.append(f"operation:{instruction_invocation['operation_id']}")
+    instruction_targets.extend(f"claim:{item}" for item in _as_list(inputs.get("requested_claim_classes")) if str(item))
+    instruction_clause_projection = compile_instruction_program(instruction_program, current_targets=instruction_targets)
     requested_consumer = str(inputs.get("consumer") or "operating-decision")
     context_authority_projection = resolve_context_authority_projection(
         consumer=requested_consumer,
@@ -2038,6 +2132,25 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         target_root=Path(str(inputs["target_root"])) if inputs.get("target_root") else None,
         source_records=_as_dict(inputs.get("authority_sources")) or _as_dict(inputs.get("authorities")),
     )
+    if instruction_clause_projection["status"] == "not-requested" and requested_consumer in {"start", "implement"}:
+        scoped_mechanisms: list[dict[str, Any]] = []
+        for authority in [_as_dict(item) for item in _as_list(context_authority_projection.get("authorities"))]:
+            if authority.get("surface") != "scoped-instructions":
+                continue
+            source = _as_dict(authority.get("source"))
+            scoped_mechanisms.append(
+                {
+                    "id": str(source.get("id") or "scoped-instructions"),
+                    "owner": str(authority.get("source_owner") or authority.get("owner") or "scoped-instructions"),
+                    "revision": str(source.get("revision") or ""),
+                    "target": f"surface:{source.get('id') or 'scoped-instructions'}",
+                }
+            )
+        if scoped_mechanisms:
+            instruction_program = instruction_program_from_existing_mechanisms(
+                {"instruction_mechanisms": {"scoped_instructions": scoped_mechanisms}}
+            )
+            instruction_clause_projection = compile_instruction_program(instruction_program, current_targets=instruction_targets)
     source_guidance = _project_source_owned_guidance(context_authority_projection)
     revisions = _as_dict(inputs.get("revisions"))
     if intent_feedback["applicable_expectations"]:
@@ -2056,6 +2169,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "assurance_source_revision": str(inputs.get("assurance_source_revision") or ""),
             "assurance_input_revision": str(inputs.get("assurance_input_revision") or ""),
         }
+    if instruction_clause_projection["status"] != "not-requested":
+        revisions = {**revisions, "instruction_clause_revision": instruction_clause_projection["snapshot_revision"]}
     authorities = _as_dict(inputs.get("authorities"))
     actionability = _as_dict(inputs.get("actionability"))
     action = _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
@@ -2070,6 +2185,15 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     )
     blockers = [item for item in _as_list(inputs.get("blockers")) if isinstance(item, dict)]
     blockers.extend(_as_dict(item) for item in _as_list(reconciliation.get("blockers")))
+    blockers.extend(_as_dict(item) for item in _as_list(instruction_clause_projection.get("blockers")))
+    if instruction_clause_projection["status"] == "invalid":
+        blockers.append(
+            {
+                "reason_code": "conflicting-input",
+                "owner": "instruction-clause-source",
+                "repair": "repair instruction-clause conformance diagnostics before using the program",
+            }
+        )
     if assurance_requested and assurance["status"] != "admitted":
         blockers.append(
             {
@@ -2224,6 +2348,11 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             [
                 *[str(item) for item in _as_list(inputs.get("blocked_claim_classes"))],
                 *[str(item) for item in context_effects["blocked_claim_classes"]],
+                *[
+                    str(_as_dict(item).get("target") or "").removeprefix("claim:")
+                    for item in _as_list(_as_dict(instruction_clause_projection.get("effects")).get("restrict"))
+                    if str(_as_dict(item).get("target") or "").startswith("claim:")
+                ],
             ]
         )
     )
@@ -2257,6 +2386,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "reconciliation": reconciliation,
         "control_inputs": control_inputs,
         "assurance": assurance,
+        "instruction_clause_projection": instruction_clause_projection,
         "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),
@@ -2280,6 +2410,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "actionability.progress_check.proposed_operation": "derived from operation_invocation.operation_id",
             "startup/implement/proof claim gates": "consume operating decision status and blocker reason codes",
             "closeout/terminal/residue projections": "derived from operating_decision.reconciliation; domain owners retain their source facts",
+            "scoped instructions, skill routing, assurance requirements, and claim restrictions": "compile through instruction_clause_projection while source owners retain fact and effect authority",
         },
         "rule": "This compiler composes admitted specialist outputs and preserves their ownership; it does not infer authority from rendered text.",
     }

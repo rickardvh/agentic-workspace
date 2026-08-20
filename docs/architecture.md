@@ -177,6 +177,14 @@ This is the repository's programming surface for agent behavior. Its direction s
 
 Machine-local preferences and capabilities remain lower-authority local inputs unless explicitly promoted. Local learned guidance can use the same internal control semantics at its lower authority without silently becoming checked-in repo policy.
 
+### Instruction compilation normal form
+
+Overlapping cross-cutting instruction mechanisms compile through one internal normal form before the existing operating-decision compiler resolves an action or blocker. Source owners project revision-bound facts; bounded clauses may only `surface`, `prefer`, `require`, or `restrict` existing capability, action, effect, evidence, human-decision, or claim references. There is no generic `allow`: ownership, operation, proof, repository, and human authorities remain the permission sources.
+
+Conditions use a deliberately weak three-valued predicate model. Unknown enforcing applicability blocks only the matching action or claim while unrelated direct work remains cheap; advisory surfacing or preference stays inactive and diagnosable. The IR executes nothing, mutates nothing, and stores no generic obligations or repository knowledge.
+
+Use the existing `instruction_clause_projection` selector to explain matched facts, source revisions, composed effects, satisfiers, conflicts, and the resulting bounded recovery. See the [schema reference](reference/instruction-clause-program.md) and [migration map](maintainer/instruction-clause-migration-map.md).
+
 ## External adapter boundary
 
 External integrations are inverted: the adapter knows about AW and consumes stable AW operations; AW does not discover or manage the adapter.
