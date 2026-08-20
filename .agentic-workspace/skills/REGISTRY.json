@@ -9,15 +9,15 @@
       "scope": "main-operating-skill",
       "stability": "contract-backed-projection",
       "visibility": "ordinary-default",
-      "summary": "main AW operating loop for compact routing, configured invocation, routed gates, proof boundaries, and subskill handoff",
+      "summary": "canonical AW resolve-act-reconcile loop: consume one compact current contract, follow its routed action, reconcile the result, and discover specialized capability detail only when relevant",
       "activation_hints": {
-        "verbs": ["start", "orient", "route", "resume", "implement", "closeout"],
-        "nouns": ["workspace", "startup", "workflow", "config", "proof", "closeout", "AW repo"],
+        "verbs": ["start", "orient", "route", "resume", "implement", "reconcile"],
+        "nouns": ["workspace", "startup", "operating contract", "current decision", "next action", "AW repo"],
         "phrases": [
           "workspace startup",
           "main aw operating loop",
+          "resolve current contract",
           "start work on this aw repo",
-          "implement issue",
           "orient in the workspace",
           "route this task",
           "what should I do first"
@@ -25,8 +25,8 @@
         "when": [
           "first contact with an installed workspace",
           "ordinary AW work starts or resumes",
-          "agent is tempted to scan raw workspace docs",
-          "a compact router should decide next safe action before source inspection"
+          "agent is tempted to scan raw workspace docs or module state",
+          "the compact current contract should decide the next safe action before deeper inspection"
         ]
       }
     },
@@ -149,29 +149,32 @@
       "scope": "reference-support",
       "stability": "contract-backed-projection",
       "visibility": "reference-only",
-      "summary": "reference SkillSpec-backed transition gate details when compact routed fields need interpretation",
+      "summary": "interpret explicit current-contract gates for allowed/forbidden effects, routed owner/action, proof or claim limits, reconciliation, and degraded fallback",
       "activation_hints": {
-        "verbs": ["reference", "interpret"],
+        "verbs": ["reference", "interpret", "recover", "reconcile"],
         "nouns": [
-          "SkillSpec",
           "transition gate",
           "allowed actions",
           "forbidden actions",
-          "preferred CLI",
-          "interpreted fields",
+          "preferred operation",
+          "owner route",
+          "proof gate",
+          "claim gate",
+          "reconciliation gate",
           "no-CLI fallback"
         ],
         "phrases": [
-          "SkillSpec-backed gate reference",
           "transition gate reference",
           "interpret forbidden actions",
           "interpret allowed actions",
-          "no-CLI fallback reference"
+          "interpret owner route",
+          "bounded fallback",
+          "reconciliation gate"
         ],
         "when": [
-          "moving between workspace, planning, proof, memory, or closeout",
-          "a transition needs explicit allowed and forbidden actions",
-          "CLI fallback must preserve the same guardrails"
+          "a compact routed gate needs deeper interpretation",
+          "a blocked action needs an exact owner or recovery route",
+          "CLI fallback must preserve the same authority and forbidden-action boundaries"
         ]
       }
     },
@@ -181,46 +184,39 @@
       "scope": "specialized-subskill",
       "stability": "contract-backed-projection",
       "visibility": "routed-on-demand",
-      "summary": "use compact AW state for state-delta updates, correction capture, and module-slot ownership without adding direct-work ceremony",
+      "summary": "interpret compact AW state through resolve-act-reconcile, owner/capability routing, state-delta communication, and no-artifact direct behavior without fixed module slots",
       "activation_hints": {
-        "verbs": ["reference", "interpret", "answer", "respond", "update", "resume", "recheck"],
+        "verbs": ["interpret", "answer", "respond", "update", "resume", "recheck", "reconcile"],
         "nouns": [
           "operating loop",
+          "resolve act reconcile",
           "state-delta",
           "current decision",
           "message economy",
           "continuation capsule",
-          "correction capture",
           "evidence bundle",
-          "decision packet",
           "visible update",
-          "module slot",
-          "module slot contract",
-          "workspace slot",
-          "planning slot",
-          "memory slot",
+          "owner route",
+          "capability route",
           "direct answer"
         ],
         "phrases": [
           "state-delta-first",
-          "state delta first",
           "current decision packet",
+          "resolve act reconcile",
           "message economy",
           "continuation capsule",
           "evidence bundle",
           "visible update delta",
           "answer from compact state",
-          "module slot contract reference",
-          "module slot reference",
-          "interpret module slot",
+          "interpret routed owner",
           "answer directly no artifact reference"
         ],
         "when": [
           "current_decision, message_economy, continuation_capsule, or evidence_bundle packets are present",
           "the agent needs to write a compact visible update from AW state",
-          "a resume, recheck, handoff, proof, or closeout message should avoid prose recap",
-          "module ownership is unclear",
-          "a next-safe-action packet names a module slot",
+          "a resume, recheck, handoff, proof, or reconciliation message should avoid prose recap",
+          "a routed owner or specialized capability needs interpretation",
           "the agent may create an unnecessary artifact instead of answering directly"
         ]
       }
