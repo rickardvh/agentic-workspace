@@ -64,13 +64,17 @@ Reduce rereads, rediscovery, clarification loops, route reversals, retries, proo
 
 Prompt size, token count, latency, command count, and file count are useful only when they improve the total path to a correct result. A local optimization that makes another stage heavier is not a product improvement.
 
-### 5. Keep modules as peer extensions of the loop
+### 5. Keep modules as practical peer extensions of the loop
 
 Workspace is the small cross-cutting control kernel, not the union of today's domain capabilities.
 
-Modules may extend what the loop can know or do through bounded contributions to resolution, action, and reconciliation: source-owned context, relevance, procedures, operations/effects, state, evidence, residue, or other domain facts. Planning, Memory, and Verification are first-party batteries and proving grounds for that model, not privileged architectural slots.
+The practical rule is: **a module describes its domain; Workspace owns the loop.** `resolve -> act -> reconcile` must not become three mandatory module hooks or another framework that extension authors have to learn.
 
-The kernel should not need to understand a module's domain identity or state shape merely to compose it.
+An ordinary module should declare only the domain facts needed for safe composition: what capability it is and is compatible with, what it owns, when it is relevant, what resources/procedures/typed operations it can provide, and what its results/effects mean. Contribution dimensions are optional when they do not apply. A read-only capability should not invent action or reconciliation hooks; an operation-oriented capability should not invent startup posture or a closeout phase.
+
+Workspace derives how those declarations affect resolution, action, and reconciliation through the existing operating decision. Planning, Memory, and Verification are first-party batteries and proving grounds for that model, not privileged architectural slots.
+
+Useful genericity must reduce extension cost as well as conceptual duplication. Adding a later independent module should normally be module-package work plus its public descriptor/contracts and tests—not semantic Workspace edits, module-name switches, fixed slot/phase registration, canonical-skill changes, or another core-owned per-module list merely to recognize the capability.
 
 Keep three mechanisms distinct:
 
@@ -133,6 +137,7 @@ AW should resist becoming:
 - a framework where Planning, Memory, Verification, assurance, delegation, closeout, posture, or another current capability becomes a mandatory core concept;
 - a surface-growing contract maze where every useful mechanism becomes a new command, phase, file, policy dimension, identity, or lifecycle concept;
 - an arbitrary plugin/callback runtime, adapter marketplace, or credential host;
+- a module API that makes extension authors describe AW's phase/slot choreography back to AW;
 - a historical archive preserved mainly because it already exists;
 - a blurry ownership model where generated instructions compete with their source authorities;
 - a local optimization machine that reduces one metric while increasing total completion cost.
@@ -148,7 +153,8 @@ A change is not validated merely because its requested slice landed. Ask whether
 - respected source ownership and provenance;
 - reduced or bounded total successful-completion cost;
 - kept direct work cheap and irrelevant capabilities quiet;
-- made modules more peer-like rather than strengthening first-party slots;
+- made modules easier to author as well as more peer-like, with module-specific meaning remaining module-owned;
+- avoided requiring a new independent module to modify semantic core code or register itself in fixed AW choreography;
 - reconciled results and claims without another parallel authority;
 - removed, derived, backgrounded, or replaced older machinery where a new abstraction was introduced.
 
