@@ -67,17 +67,27 @@ Closeout is terminal reconciliation.
 
 Modules are peer domain capabilities. They extend what the generic loop can know and do without redefining the loop.
 
-A stable module contract should be small enough to describe:
+The key separation is:
+
+> **Modules describe their domain; Workspace owns the loop.**
+
+`resolve`, `act`, and `reconcile` are kernel composition behavior, not three public callbacks that every module must implement.
+
+A stable public module contract should reduce toward:
 
 - identity, compatibility, and availability;
-- relevance/activation;
-- source-owned state/resources and writable/effect ownership;
-- compact resolve contributions such as context/procedure/constraint references;
-- stable typed operations for action;
-- bounded reconcile results such as domain state, evidence, residue, or continuation facts;
-- lifecycle, dependencies, conflicts, absence, and removal.
+- owned state/resources/roots/effects;
+- bounded relevance/activation;
+- source-owned resources/context and lazily discoverable procedures;
+- stable typed operations where the module has actions to expose;
+- bounded typed result/effect semantics where the module produces state/evidence/blocker/residue/continuation effects;
+- dependencies/conflicts and safe absence/removal where required.
 
-The kernel should not infer semantics from module name, package layout, or similarity to a first-party module.
+Contribution dimensions are optional. A read-only module should not invent operations or reconciliation hooks. An operation-oriented module should not invent startup posture, a workflow phase, report slot, or closeout hook merely to satisfy the extension contract.
+
+Workspace derives how admitted declarations participate in resolve/act/reconcile through the existing operating decision. The kernel should not infer semantics from module name, package layout, or similarity to a first-party module.
+
+This also creates a practical extension boundary: adding an ordinary independent module should normally be module-package work plus its descriptor/contracts/tests. The module's identity should not require semantic Workspace runtime edits, core name lists/enums, fixed slot or phase registration, canonical-skill changes, proof/closeout branches, or another core-owned per-module registry entry. In-repo test/package wiring may exist, but it must not encode module-domain semantics; an out-of-tree module should be able to use the same public contract without changing the AW repository.
 
 Planning, Memory, and Verification are current first-party examples:
 
@@ -119,7 +129,9 @@ Adding capabilities should not proportionally enlarge first contact.
 
 Internal runtime machinery may be broad. Public extension compatibility should cover only stable semantics needed for independent composition.
 
-A lifecycle hook, workflow phase, renderer packet, posture fragment, or callback is not automatically a public primitive because it exists internally. Prefer declarative relevance, ownership, operations, and bounded result semantics over a generic callback framework.
+A lifecycle hook, workflow phase, renderer packet, posture fragment, report slot, startup fragment, proof/closeout hook, or callback is not automatically a public primitive because it exists internally. Prefer declarative identity/compatibility, ownership, relevance, capabilities, operations, and bounded result semantics over a generic callback framework.
+
+For every public field, ask whether the module author needs it to describe the module's domain or whether it merely asks the author to describe AW's choreography back to AW. The latter should normally be derived or remain internal.
 
 ## Monorepo boundary
 
@@ -132,13 +144,15 @@ In this source repository:
 
 ## Design test
 
-A change fits this architecture when it makes AW better at preserving control-relevant context, resolving the current operating contract, acting through a supported route, reconciling results, or extending those abilities through a peer module—without enlarging the ordinary mental model unnecessarily.
+A change fits this architecture when it makes AW better at preserving control-relevant context, resolving the current operating contract, acting through a supported route, reconciling results, or extending those abilities through a peer module—without enlarging the ordinary mental model or independent-module integration cost unnecessarily.
 
 Question a change when it:
 
 - creates a general repository knowledge store in core;
 - introduces another decision packet or phase-specific authority beside the compiled operating decision;
 - requires Workspace to learn a module's identity/domain logic unnecessarily;
+- makes an independent module author register AW-specific phases, slots, posture fragments, or empty loop hooks rather than describe the capability itself;
+- requires a central per-module core edit merely to recognize a new independent module;
 - exposes irrelevant capability context at first contact;
 - adds a new workflow phase, policy concept, or command where an existing resolve/act/reconcile route would suffice;
 - gives adapter transport or module-local success broader authority than its owner permits;
