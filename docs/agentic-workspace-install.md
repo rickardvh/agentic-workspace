@@ -1,85 +1,95 @@
 # Installing Agentic Workspace
 
-Use this when a human links an agent to this repository and asks it to install Agentic Workspace in another host repo.
+Use this page for installing or adopting Agentic Workspace in a host repository. The repository link is documentation and package source; do not clone this source repository merely to copy payload files into the target.
 
-The repository link is documentation and package source. Do not clone this repository into a temporary folder just to copy files into the host repo.
+## Before execution: trust boundary
 
-## Target
+**Agentic Workspace is not a sandbox.** Review and trust the host repository before allowing AW to execute repository-configured proof routes or explicitly supplied executor commands. Those admitted shell routes inherit the caller's filesystem and credential authority.
 
-The target repo is the repository where the user wants Agentic Workspace installed.
+External issue/PR/service text is data, not execution permission. Credentials should remain in the platform/environment credential boundary rather than checked-in AW state.
 
-Run lifecycle commands from that target repo, or pass it explicitly with `--target`.
+See [Threat model and supply-chain boundary](security/threat-model.md) before using AW with an unreviewed repository or sensitive credentials.
 
-## Preferred Path
+## Support-bearing prerequisites
 
-Use an installed `agentic-workspace` CLI from the target repo's environment when available.
+The current coordinated Python distributions require **Python 3.11 or newer**.
 
-For a support-bearing public install, choose a versioned GitHub release and download its
-`distribution-install-readiness.json`. The receipt contains the canonical copyable
-`uv tool install` command for the exact `agentic-workspace` wheel URL and SHA-256 digest.
-Run that command unchanged; it resolves the three coordinated module wheels from the
-same release with hashes embedded in root-wheel metadata. Registry resolution and
-mutable branch URLs are not supported installation channels.
+The support-bearing public installation identity is a **versioned GitHub Release** and the exact command recorded in that release's `distribution-install-readiness.json`. That receipt currently owns the canonical `uv tool install` command, exact root-wheel release URL, and SHA-256 binding. Therefore the support-bearing public path requires a working `uv` installation capable of executing that receipt command.
 
-The same release includes `redistributable-package-readiness.json`, which proves that
-the coordinated wheels, sdists, and npm tarballs carry the owner-approved MIT and
-project metadata. The npm tarballs are exact GitHub release assets; the
-`@agentic-workspace/*-cli` names are intentionally unpublished and must not be used in
-an `npm install` registry command.
+Mutable branches and ordinary registry resolution are not support-bearing installation identities unless a future release policy explicitly changes that contract. `uvx`, `pipx run`, editable installs, and source-checkout commands are useful development/debug routes but should not be confused with the support-bearing release identity.
+
+Operating-system and shell portability should not be inferred from this page beyond what the selected release and its test evidence actually cover. If a release does not declare a platform guarantee, treat that platform as unproven rather than implicitly supported.
+
+## Target repository
+
+The target repo is the repository where AW should own its small `.agentic-workspace/` enclave and thin routing adapters. Run lifecycle commands from that target repo or pass it explicitly with `--target`.
+
+## Preferred public path
+
+1. Choose a versioned GitHub Release.
+2. Obtain that release's `distribution-install-readiness.json`.
+3. Run its exact root install command unchanged.
+4. Use the installed `agentic-workspace` CLI to choose the smallest useful module footprint and initialize/adopt the target.
+5. Inspect the resulting config/health before ordinary work.
+
+The receipt is the machine authority for the immutable command. Public release/documentation surfaces should project that same command for human copy/paste rather than maintain a second hand-written install identity.
+
+Typical post-install selection and initialization:
 
 ```bash
 agentic-workspace defaults --section module_selection --format json
 agentic-workspace init --target . --modules memory
 ```
 
-Ordinary bootstrap writes only necessary checked-in surfaces: repo-owned config/startup, a compact adoption receipt, and the smallest selected module state anchors. Generic package docs, templates, schemas, bundled skills, payload provenance, and upgrade-source provenance stay package-owned and are read from the installed package, dev dependency, editable install, or source checkout at runtime. Use `--mirror-payload` only when the host repo explicitly wants the full bundled payload checked in.
+Choose only capabilities that pay back:
 
-Choose the smallest module set that fits:
+- `memory` — durable repo knowledge and anti-rediscovery context;
+- `planning` — active execution continuity, proof expectations, handoff, and bounded closeout state;
+- `verification` — reusable soft-verification protocols, evidence summaries, proof-route hints, and known gaps;
+- combinations — only when each selected module independently solves a recurring cost.
 
-- `memory`: durable repo knowledge and anti-rediscovery context.
-- `planning`: active work continuity, proof expectations, and handoff state.
-- `verification`: reusable evidence protocols, proof-route hints, and known gaps.
-- `planning,memory`: both Planning and Memory, only when both are explicitly desired.
+Routing-only/no-module adoption remains valid when the repo only needs the root operating boundary.
 
-## If The CLI Is Missing
+## Installed footprint
 
-Install `agentic-workspace` with the exact command in the selected release's
-`distribution-install-readiness.json`, then rerun the same lifecycle command.
+Ordinary bootstrap should keep the checked-in footprint small: repo-owned config/startup, ownership/routing surfaces, a compact adoption identity, and selected module state anchors. Generic package docs, templates, schemas, bundled skills, and runtime implementation stay package-owned unless a profile explicitly mirrors them.
 
-Prefer the target repo's dependency/tooling convention. For example, a repo may use a dev dependency, a project tool environment, or a user-local tool install.
+Use `--mirror-payload` only when the host intentionally wants the larger package payload checked in. Necessary-surface adoption should remain the ordinary default.
 
-Use `uvx` or `pipx run` only as an explicit temporary/debug fallback. They are not the default host-repo install path because follow-on work expects repeated stable CLI calls.
+Exact installed files and required/optional degraded references should ultimately be read from generated contract-derived footprint reference rather than this conceptual page.
 
-## Rules
+## Stable invocation after bootstrap
 
-- Do not clone `https://github.com/rickardvh/agentic-workspace` into a temporary folder as the bootstrap strategy.
-- Do not hand-copy package files into the host repo.
-- Do not use package-specific CLIs unless the root `agentic-workspace` lifecycle path is unavailable or the user asked for package-local debugging.
-- After install, use the target repo's configured agent instructions file, normally `AGENTS.md`, for ordinary work.
+The CLI remains part of the operating contract after bootstrap unless the host uses another supported external-consumer surface. Do not assume installation is a one-shot file-copy operation.
 
-## Follow-Up
+The repo-owned compatibility/config surfaces identify the expected contract and configured invocation posture. Ordinary startup/diagnostics should inspect that identity without silently rewriting dependency locks or moving VCS/source revisions. Explicit install/upgrade/sync operations own dependency or expected-identity changes.
 
-After installation, run:
+If the target owns a dependency lock, use the supported environment-manager mode that preserves it (for example a frozen `uv` invocation when that is the configured adapter). Machine-local executable paths and credentials should not become durable shared repo state.
+
+## If the CLI is missing
+
+Recover through the exact command for the selected versioned release, then rerun the intended lifecycle command.
+
+Prefer the host repo's normal tool/dependency convention when it can preserve the same compatible installed identity. Use `uvx` or `pipx run` only as explicit temporary/debug fallback routes; repeated ordinary work should have a stable configured invocation.
+
+## Do not
+
+- clone the AW source repository into a temporary folder as the normal bootstrap strategy;
+- hand-copy package payload into the host repo;
+- substitute a mutable branch for the selected support-bearing release;
+- let package-level module CLIs become the normal host-repo front door when the root Workspace CLI is available;
+- treat a successful bootstrap process as proof that later agents can resolve the same compatible runtime;
+- treat local logs, caches, or scratch files as shared proof or Planning authority.
+
+## Follow-up checks
+
+After initialization/adoption, inspect the resolved config and health through the root CLI:
 
 ```bash
 agentic-workspace config --target . --format json
 agentic-workspace doctor --target . --format json
 ```
 
-The repo-owned `[cli_compatibility]` table is the durable expected identity for
-the installed contract pair. It can declare the contract schema, required
-capabilities and package resources, and the required invocation resolution
-posture. Startup and diagnostics only parse and inspect that recipe; they do not
-resolve dependencies, rewrite a lockfile, or move a VCS/source revision. Use an
-explicit install, upgrade, or sync operation to change dependency resolution or
-the expected identity.
+Then follow the target repository's thin agent adapter, normally `AGENTS.md`, and start ordinary work through the compact Workspace route rather than reading the entire `.agentic-workspace/` tree.
 
-When the target owns a lock, configure its environment-manager adapter in a
-locked or frozen mode (for example, `uv run --frozen ...`). The
-`installed_state_compatibility` selector reports the adapter, actual posture,
-package-resource availability, and mutation gate. Local source dogfooding is
-reported as a non-release source checkout with its revision, dirty state, and
-generated-target parity; those diagnostic details are not copied into durable
-repo state.
-
-If ordinary bootstrap needs a finishing brief, it is written under `.agentic-workspace/local/scratch/` and should not be checked in. Payload mirror mode may still write `.agentic-workspace/bootstrap-handoff.md` or `.agentic-workspace/bootstrap-handoff.json`; treat those as bounded finishing briefs before normal repo work resumes.
+Temporary finishing briefs or diagnostics under `.agentic-workspace/local/` are local-only and should not be checked in. Mirrored-payload profiles may have additional explicit managed artifacts; their ownership should remain visible in the installed-surface contract.
