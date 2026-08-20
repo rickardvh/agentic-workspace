@@ -11,9 +11,44 @@ AW is an amortized coordination layer. It should add structure only when that st
 The product has two core concerns:
 
 1. **Operating context** — source-owned context whose current or durable availability can change how an agent should operate.
-2. **Dynamic control** — task-shaped selection and composition of that context into one current operating decision and action envelope.
+2. **Dynamic control** — task-shaped selection and composition of that context and applicable repo policy into one current operating decision and action envelope.
 
 Operating context is deliberately narrower than general repository knowledge. AW does not mirror or semantically model the whole repository. Ordinary source, docs, tests, history, and other canonical content remain in their existing owners. Rich semantic retrieval, indexing, RAG, or knowledge graphs are possible future module capabilities rather than core requirements.
+
+## Programmable instruction model
+
+Repo customization should be more than a set of switches choosing prewritten behavior. A repository should be able to state bounded conditional control such as:
+
+> when these authoritative task/path/owner/capability/evidence facts apply, surface this context or procedure, require or nominate this typed action/evidence/human decision, or restrict this effect/claim.
+
+The intended internal normal form is:
+
+```text
+source-owned facts
++ bounded instruction clauses
++ available skills and typed operations
++ module capabilities/results
+                    ↓
+        existing operating-decision compiler
+                    ↓
+          current operating contract
+```
+
+This is not a second compiler. The existing operating decision remains authoritative; specialized config and domain declarations should converge on or compile into the smallest shared control semantics they actually have in common.
+
+The roles are deliberately separate:
+
+- **facts** belong to their existing owners and remain independently fresh/revisioned;
+- **instruction clauses** add bounded applicability plus a control effect, not domain state;
+- **skills** contain lazily loaded procedure;
+- **typed operations** own effectful action and mutation authority;
+- **modules** add new facts, capabilities, procedures, operations, and result semantics without adding new global instruction operators.
+
+A useful effect vocabulary should remain closed and small: surface relevant context/procedure, route or require a typed operation, require evidence or a human decision, restrict an effect, or limit a claim. The clause itself should not mutate state.
+
+Composition should be deterministic and authority-preserving. Lower-authority input cannot widen higher-authority permission; restrictions and requirements compose conservatively; incompatible control effects surface a conflict instead of relying on hidden order; provenance and input revisions remain inspectable.
+
+The current product already contains specialized precursors—workflow obligations, assurance/proof declarations, scoped instructions, skill routing, target/correction guidance, configuration projections, and module contributions. They are not yet one public general-purpose instruction API, and they should not be mechanically replaced by a larger rule language. First normalize overlap internally, then expose only authoring semantics that repeatedly prove useful.
 
 ## Ordinary loop
 
@@ -21,7 +56,7 @@ The conceptual loop is:
 
 ### Resolve
 
-Use the current task, authoritative repo context, environment/runtime facts, and admitted capability contributions to derive the smallest trustworthy operating contract.
+Use the current task, authoritative repo context, environment/runtime facts, applicable instruction policy, and admitted capability contributions to derive the smallest trustworthy operating contract.
 
 Only decision-relevant information should be first-line. Deeper context and procedures remain behind selectors, skills, operations, or owners.
 
@@ -56,13 +91,9 @@ The current Python distribution bundles the first-party modules for lifecycle co
 
 Modules are peer extensions of what the operating loop can know and do.
 
-A module may contribute:
+A module author describes the module's domain—identity/compatibility, ownership, relevance, resources/procedures/typed operations, and result/effect semantics. Workspace derives how those declarations participate in its loop; modules do not implement three mandatory resolve/act/reconcile hooks or define new global control operators.
 
-- **resolve inputs** — relevant domain context, constraints, owner/procedure references, or capability availability;
-- **act operations** — stable typed operations with declared effects and authority;
-- **reconcile facts** — domain state changes, evidence, residue, continuation, or other bounded result semantics.
-
-Domain state stays under the module owner. Workspace composes only the bounded current effect needed for the operating decision.
+Contribution dimensions are optional. Domain state stays under the module owner. Workspace composes only the bounded current effect needed for the operating decision.
 
 The current first-party modules are examples:
 
@@ -75,6 +106,8 @@ See [Modules](modules.md) and [Extensibility and public boundary](../extension-b
 ## Repo customization
 
 A host repository can program AW's dynamic control without creating a module. Repo-owned config, obligations, skills, canonical guidance, ownership, proof declarations, and repository operations can all affect the current operating contract.
+
+The long-term goal is a **smaller programming surface**, not a larger policy framework: specialized authoring formats may remain where they carry domain meaning, but overlapping applicability/effect semantics should be normalized instead of spawning more peer knobs, stages, forces, packet types, or runtime branches.
 
 Keep hard repo authority distinct from machine-local capability/preferences and from module-owned policy. A growing `posture` vocabulary is not itself a product goal; the useful output is the resulting current constraint or action.
 
@@ -102,9 +135,9 @@ The acting agent should not have to infer a command sequence from documentation.
 Keep one primary owner per concern:
 
 - canonical repo content stays repo-owned;
-- Workspace owns cross-cutting dynamic-control composition and stable action/authority boundaries;
+- Workspace owns cross-cutting dynamic-control and instruction-effect composition plus stable action/authority boundaries;
 - modules own their domain semantics and state;
-- repo customization owns host policy and operating choices;
+- repo customization owns host policy and bounded instruction declarations;
 - external adapters own transport/vendor integration;
 - local state supports machine-specific operation but is not shared authority by existence alone.
 
@@ -118,7 +151,7 @@ AW is not a sandbox. Repository-configured shell/proof/executor routes inherit c
 
 Use the smallest layer that answers the question:
 
-1. **Conceptual docs** explain operating context, dynamic control, modules, trust, and adoption.
+1. **Conceptual docs** explain operating context, programmable dynamic control, modules, trust, and adoption.
 2. **Generated/current-value references** answer exact command, schema, module, and footprint questions from machine-readable authority.
 3. **Maintainer docs** own source-checkout generation, validation, release, and dogfooding procedure.
 4. **Reviews and Planning** retain dated evidence and active implementation shaping rather than current public doctrine.
