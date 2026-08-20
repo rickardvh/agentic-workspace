@@ -16,6 +16,8 @@ AW must preserve that ladder across decomposition, interruption, delegation, rev
 
 Active execution state belongs to Planning or another explicit owner. Durable repository truth belongs in its canonical repo surface or Memory when it is genuinely anti-rediscovery knowledge. Proof evidence does not by itself own semantic completion. External trackers and services provide evidence unless the repository explicitly gives them stronger authority.
 
+This file does not own the current execution queue or medium-term roadmap. In this source repository those belong to Planning and its compact summary/routing surfaces; use the configured Planning/Workspace query path before treating raw Planning files as the current work answer.
+
 ## Governing intents
 
 ### 1. Preserve the right intent and context
