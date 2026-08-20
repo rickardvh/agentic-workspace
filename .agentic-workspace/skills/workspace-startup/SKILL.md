@@ -26,7 +26,7 @@ Do not replace a configured invocation with a guessed bare command.
    - proof or claim boundaries;
    - routed owner, skill, operation, selector, or preferred invocation;
    - compatibility projections such as `planning_route_decision`, `planning_safety_gate`, or `module_slot` when the current runtime emits them.
-4. Treat module- or phase-specific fields as projections of the current operating decision, not as a fixed architecture to generalize from. Follow the route they name; do not make an unrelated capability globally relevant.
+4. Treat module- or phase-specific fields as projections of the current operating decision, not as a fixed architecture to generalize from. Follow the route they name. **Do not reclassify the task** from prose, legacy task-switch fields, or another capability after a current authoritative route decision exists.
 5. If the compact result is insufficient, use only the smallest selector, skill, operation, or safe probe it routes to before broadening context.
 
 ## Act
