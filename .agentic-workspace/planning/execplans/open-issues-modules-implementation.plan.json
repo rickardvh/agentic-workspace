@@ -1,0 +1,94 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "open-issues-modules-implementation",
+  "title": "Implement capability-first module lane",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "shaping",
+  "revision": 2,
+  "intent": {
+    "outcome": "Deliver a minimal capability-first public module contract, prove it with an independently shaped module, make admission/removal fail closed, evaluate ordinary-loop and authoring cost, and keep the canonical operating guidance module-neutral.",
+    "non_goals": [
+      "Do not introduce a second operating-decision compiler, context store, workflow engine, or arbitrary resolve/act/reconcile callback framework.",
+      "Do not give the independent fixture first-party product semantics or add its identity to core runtime branches.",
+      "Leave lifecycle/config, assurance/evidence, and public-product closure lanes to their declared owners."
+    ]
+  },
+  "parent": {
+    "owner_id": "open-issues-modules",
+    "contribution": "Close GitHub issues #2606 #2607 #2608 #2609 #2610 and #2624 on top of PR #2625.",
+    "closure_boundary": "this slice and its six linked issues only; the parent decomposition remains open"
+  },
+  "scope": {
+    "owned": [
+      "Public module capability contracts and registry projection under src/agentic_workspace/contracts/.",
+      "Generic module discovery, admission, operating-decision contribution, and lifecycle/removal behavior in src/agentic_workspace/.",
+      "A semantically independent fixture plus conformance and ordinary-loop evaluation coverage under tests/ and tools/model-cli-harness/.",
+      "Canonical and payload operating skill/spec parity needed to remove fixed module-slot behavior.",
+      "Focused module authoring/reference documentation and one release changeset."
+    ],
+    "effects": [
+      "versioned public schemas and generated/reference projections",
+      "module admission and operating-decision composition",
+      "module removal and stale-authority behavior",
+      "first-contact skill routing and progressive disclosure",
+      "extension-cost and mixed-agent evidence"
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "The active Codex coordination policy forbids spawning subagents unless the user explicitly requests them; the user requested stacked PRs but did not request delegation."
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub issues #2606 #2607 #2608 #2609 #2610 #2624; base PR #2625",
+      "label": "GitHub issues #2606 #2607 #2608 #2609 #2610 #2624; base PR #2625",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Inventory current module contracts and first-party-specific branches, implement the smallest generic seam, add the independent fixture, then run focused and package proof.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Implement capability-first module lane is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Run AW implement/proof selection for the final changed-path set.",
+      "Run focused module schema, registry, CLI, operating-decision, skill-spec, and conformance tests.",
+      "Run independent relevant/irrelevant, incompatible, removal/restart, and partial-capability scenarios.",
+      "Run generated/payload freshness checks and the repository package validation selected by AW.",
+      "Verify the branch diff is based only on PR #2625 and the pre-existing .codex/hooks.json deletion is unstaged from every commit."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": ".agentic-workspace/planning/lanes/open-issues-lifecycle.lane.json",
+    "residual_intent": "After this lane PR is published, activate the lifecycle lane and stack its branch on this one."
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ]
+}

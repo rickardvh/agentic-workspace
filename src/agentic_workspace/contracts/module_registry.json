@@ -27,34 +27,22 @@
     "product_model": "Agentic Workspace is a repo-native operating substrate for agents. It provides a recommended skill-guided operating loop, while repo config and module declarations can add obligations, tools, state, reports, gates, proof routes, lifecycle hooks, roots, and workflow phases without becoming separate first-contact concepts.",
     "recommended_loop": [
       {
-        "id": "startup",
-        "purpose": "Orient the agent through the thin startup adapter and compact routing commands before opening deeper state.",
+        "id": "resolve",
+        "purpose": "Compile the smallest source-owned context, constraints, capabilities, and exact next action relevant to the current decision.",
         "default_owner": "workspace",
-        "module_extension_rule": "Modules may contribute startup routing hints, prompts, reports, or gates, but startup must expose them through compact routing rather than broad raw reads."
+        "module_extension_rule": "Modules declare bounded relevance and optional resources or skills; Workspace selects contributions without module callbacks or broad raw reads."
       },
       {
-        "id": "active-work",
-        "purpose": "Decide direct, bounded, lane, or epic shape and preserve current intent, stop conditions, and continuation owner.",
-        "default_owner": "workspace/planning",
-        "module_extension_rule": "Modules may add state owners, lifecycle hooks, or workflow phases when active work needs them; they must declare owned roots and proof or closeout effects."
+        "id": "act",
+        "purpose": "Perform the bounded typed action chosen by the compiled operating decision.",
+        "default_owner": "workspace",
+        "module_extension_rule": "Modules may expose typed operations, but do not declare Workspace phases or mandatory act hooks."
       },
       {
-        "id": "durable-knowledge",
-        "purpose": "Load or capture only durable anti-rediscovery knowledge that is cheaper than re-deriving it.",
-        "default_owner": "memory",
-        "module_extension_rule": "Modules may contribute resources or prompts for durable context, but must not blur active sequencing, issue history, or broad documentation into Memory."
-      },
-      {
-        "id": "proof",
-        "purpose": "Select evidence for the changed surface and keep proof separate from semantic completion permission.",
-        "default_owner": "workspace.proof/verification",
-        "module_extension_rule": "Modules may contribute proof routes, verification protocols, evidence bundles, or gates; proof routes must name result schemas and safety metadata."
-      },
-      {
-        "id": "closeout",
-        "purpose": "Reconcile proof, intent satisfaction, residue, and next owner before any completion or issue-closure claim.",
-        "default_owner": "planning.closeout",
-        "module_extension_rule": "Modules may add closeout obligations or residue routes, but parent/lane closure remains blocked until the owning intent and proof boundaries are satisfied."
+        "id": "reconcile",
+        "purpose": "Admit results to their source owners, compose proof, effects, claims, residue, and continuation, then resolve again when work remains.",
+        "default_owner": "workspace",
+        "module_extension_rule": "Modules declare result and effect semantics; Workspace owns cross-cutting reconciliation and global claim boundaries."
       }
     ],
     "module_can_contribute": [
@@ -586,45 +574,120 @@
       ],
       "dependencies": [],
       "conflicts": [],
+      "public_contract": {
+        "schema_version": "agentic-workspace/module-capability/v2",
+        "name": "planning",
+        "description": "Active execution ownership, decomposition, continuation, and intent reconciliation.",
+        "compatibility": {
+          "reader_epoch": 1,
+          "required_capabilities": [
+            "module-resources-v1",
+            "module-skills-v1",
+            "module-operations-v1",
+            "module-results-v1"
+          ]
+        },
+        "ownership": {
+          "roots": [
+            ".agentic-workspace/planning"
+          ],
+          "effect_classes": [
+            "planning-state"
+          ],
+          "authority_exclusions": [
+            "cannot infer semantic issue completion from plan progress",
+            "cannot widen mutation authority outside the selected owner",
+            "cannot become durable general knowledge storage"
+          ]
+        },
+        "relevance": {
+          "task_terms": [
+            "plan",
+            "lane",
+            "epic",
+            "issue",
+            "continuation",
+            "closeout"
+          ],
+          "path_prefixes": [
+            ".agentic-workspace/planning/"
+          ],
+          "always": false
+        },
+        "capabilities": {
+          "resources": [
+            {
+              "id": "planning.state",
+              "ref": "planning://state",
+              "read_only": true
+            },
+            {
+              "id": "planning.summary",
+              "ref": "planning://summary",
+              "read_only": true
+            }
+          ],
+          "skills": [
+            {
+              "id": "planning.reporting",
+              "ref": ".agentic-workspace/planning/skills/planning-reporting/SKILL.md"
+            }
+          ],
+          "operations": [
+            {
+              "id": "planning.mutate",
+              "input_schema": "generated planning operation",
+              "result_schema": "planning lifecycle result"
+            }
+          ]
+        },
+        "result_semantics": {
+          "schema_version": "planning lifecycle result",
+          "guaranteed_fields": [
+            "outcome"
+          ],
+          "effect_fields": [
+            "planning-state"
+          ],
+          "warning_fields": [
+            "warnings"
+          ]
+        },
+        "dependencies": [],
+        "conflicts": []
+      },
       "participation": {
         "loop_steps": [
-          "startup",
-          "active-work",
-          "closeout"
+          "resolve",
+          "act",
+          "reconcile"
         ],
         "declares": [
-          "state_owners",
-          "workflow_phases",
-          "lifecycle_hooks",
-          "task_posture_fragments",
-          "output_shape_requirements",
-          "review_rubrics",
-          "authority_boundaries",
-          "reports",
-          "gates"
+          "resources",
+          "skills",
+          "operations"
         ],
         "posture_triggers": [
-          "active planning state is present",
-          "task shape is broad, lane-shaped, or issue-linked",
-          "changed paths include planning-owned surfaces",
-          "completion or archive claims are being made"
+          "plan",
+          "lane",
+          "epic",
+          "issue",
+          "continuation",
+          "closeout",
+          ".agentic-workspace/planning/"
         ],
         "dynamic_projection": {
-          "startup_contribution": "Expose active plan/TODO pressure, allowed next action, forbidden implementation paths, planning-required skills, and proof/closeout posture only when planning state or task shape requires it.",
-          "report_contribution": "Report planning health, active state, continuation view, proof posture, closeout status, and stale or conflicting planning records.",
-          "closeout_contribution": "Require proof-to-intent reconciliation, residue routing, parent/lane boundary checks, and explicit continuation owner before completion claims."
+          "startup_contribution": "Route only matched resources, skills, or operations from the module contract.",
+          "report_contribution": "Report availability, compatibility, relevance, and declared capabilities.",
+          "closeout_contribution": "Admit only declared result and effect semantics; module-local success cannot set global completion."
         },
         "authority_boundaries": [
-          "Planning may own active execution sequencing and closeout state.",
-          "Planning must not decide semantic issue completion without proof and acceptance reconciliation.",
-          "Planning must not become a general backlog or durable knowledge store."
+          "cannot infer semantic issue completion from plan progress",
+          "cannot widen mutation authority outside the selected owner",
+          "cannot become durable general knowledge storage"
         ],
         "conflict_provenance": [
-          "planning state revision",
-          "active execplan path",
-          "todo item id",
-          "workflow obligation stage",
-          "changed planning-owned path"
+          "module capability contract"
         ]
       },
       "components": {
@@ -814,41 +877,115 @@
       ],
       "dependencies": [],
       "conflicts": [],
+      "public_contract": {
+        "schema_version": "agentic-workspace/module-capability/v2",
+        "name": "memory",
+        "description": "Routed durable anti-rediscovery knowledge and residue capture.",
+        "compatibility": {
+          "reader_epoch": 1,
+          "required_capabilities": [
+            "module-resources-v1",
+            "module-skills-v1",
+            "module-operations-v1",
+            "module-results-v1"
+          ]
+        },
+        "ownership": {
+          "roots": [
+            ".agentic-workspace/memory"
+          ],
+          "effect_classes": [
+            "memory-state"
+          ],
+          "authority_exclusions": [
+            "cannot own active execution sequencing",
+            "cannot grant proof or completion authority",
+            "cannot replace canonical documentation"
+          ]
+        },
+        "relevance": {
+          "task_terms": [
+            "memory",
+            "durable lesson",
+            "anti-rediscovery",
+            "residue"
+          ],
+          "path_prefixes": [
+            ".agentic-workspace/memory/"
+          ],
+          "always": false
+        },
+        "capabilities": {
+          "resources": [
+            {
+              "id": "memory.index",
+              "ref": "memory://index",
+              "read_only": true
+            }
+          ],
+          "skills": [
+            {
+              "id": "memory.router",
+              "ref": ".agentic-workspace/memory/skills/memory-router/SKILL.md"
+            },
+            {
+              "id": "memory.capture",
+              "ref": ".agentic-workspace/memory/skills/memory-capture/SKILL.md"
+            }
+          ],
+          "operations": [
+            {
+              "id": "memory.capture",
+              "input_schema": "memory note input",
+              "result_schema": "memory operation result"
+            }
+          ]
+        },
+        "result_semantics": {
+          "schema_version": "memory operation result",
+          "guaranteed_fields": [
+            "outcome"
+          ],
+          "effect_fields": [
+            "memory-state"
+          ],
+          "warning_fields": [
+            "warnings"
+          ]
+        },
+        "dependencies": [],
+        "conflicts": []
+      },
       "participation": {
         "loop_steps": [
-          "startup",
-          "durable-knowledge",
-          "closeout"
+          "resolve",
+          "act",
+          "reconcile"
         ],
         "declares": [
           "resources",
-          "prompts_or_skills",
-          "task_posture_fragments",
-          "output_shape_requirements",
-          "review_rubrics",
-          "reports",
-          "state_owners"
+          "skills",
+          "operations"
         ],
         "posture_triggers": [
-          "task needs durable repo knowledge",
-          "changed paths match memory-routed files",
-          "closeout residue contains reusable anti-rediscovery knowledge",
-          "startup has insufficient context after compact routing"
+          "memory",
+          "durable lesson",
+          "anti-rediscovery",
+          "residue",
+          ".agentic-workspace/memory/"
         ],
         "dynamic_projection": {
-          "startup_contribution": "Expose memory consultation guidance and read-first durable notes only when task facts or changed paths justify them.",
-          "report_contribution": "Report memory freshness, manifest routing, stale notes, and capture affordances without making notes part of ordinary startup.",
-          "closeout_contribution": "Route durable lessons to Memory only when they are stable, reusable, and cheaper to retain than rediscover."
+          "startup_contribution": "Route only matched resources, skills, or operations from the module contract.",
+          "report_contribution": "Report availability, compatibility, relevance, and declared capabilities.",
+          "closeout_contribution": "Admit only declared result and effect semantics; module-local success cannot set global completion."
         },
         "authority_boundaries": [
-          "Memory may own durable anti-rediscovery knowledge and capture hygiene.",
-          "Memory must not own active execution state, issue history, proof authority, or general documentation."
+          "cannot own active execution sequencing",
+          "cannot grant proof or completion authority",
+          "cannot replace canonical documentation"
         ],
         "conflict_provenance": [
-          "memory manifest route",
-          "memory note path",
-          "changed memory-owned path",
-          "closeout residue bucket"
+          "module capability contract"
         ]
       },
       "components": {
@@ -1033,40 +1170,98 @@
       ],
       "dependencies": [],
       "conflicts": [],
+      "public_contract": {
+        "schema_version": "agentic-workspace/module-capability/v2",
+        "name": "verification",
+        "description": "Repository-owned proof protocols and bounded evidence projection.",
+        "compatibility": {
+          "reader_epoch": 1,
+          "required_capabilities": [
+            "module-resources-v1",
+            "module-results-v1"
+          ]
+        },
+        "ownership": {
+          "roots": [
+            ".agentic-workspace/verification"
+          ],
+          "effect_classes": [
+            "verification-evidence"
+          ],
+          "authority_exclusions": [
+            "cannot set semantic completion",
+            "cannot grant unrelated mutation authority",
+            "cannot become provider-specific CI ownership"
+          ]
+        },
+        "relevance": {
+          "task_terms": [
+            "proof",
+            "verify",
+            "verification",
+            "evidence",
+            "assurance"
+          ],
+          "path_prefixes": [
+            ".agentic-workspace/verification/"
+          ],
+          "always": false
+        },
+        "capabilities": {
+          "resources": [
+            {
+              "id": "verification.report",
+              "ref": "verification://report",
+              "read_only": true
+            }
+          ],
+          "skills": [],
+          "operations": []
+        },
+        "result_semantics": {
+          "schema_version": "agentic-workspace/verification/v1",
+          "guaranteed_fields": [
+            "status"
+          ],
+          "effect_fields": [
+            "verification-evidence"
+          ],
+          "warning_fields": [
+            "warnings"
+          ]
+        },
+        "dependencies": [],
+        "conflicts": []
+      },
       "participation": {
         "loop_steps": [
-          "proof",
-          "closeout"
+          "resolve",
+          "act",
+          "reconcile"
         ],
         "declares": [
-          "proof_routes",
-          "reports",
-          "schemas",
-          "task_posture_fragments",
-          "review_rubrics",
-          "authority_boundaries",
-          "safety_metadata"
+          "resources"
         ],
         "posture_triggers": [
-          "task or changed paths activate verification protocols",
-          "assurance posture requires stronger proof",
-          "proof selection needs bounded evidence or known-gap reporting",
-          "closeout must distinguish evidence from completion permission"
+          "proof",
+          "verify",
+          "verification",
+          "evidence",
+          "assurance",
+          ".agentic-workspace/verification/"
         ],
         "dynamic_projection": {
-          "startup_contribution": "Stay quiet unless task facts, changed paths, or assurance requirements activate verification protocols.",
-          "report_contribution": "Expose configured protocols, proof route hints, evidence bundles, known gaps, and validation warnings.",
-          "closeout_contribution": "Make proof evidence and known gaps visible while preserving Planning or human ownership of completion claims."
+          "startup_contribution": "Route only matched resources, skills, or operations from the module contract.",
+          "report_contribution": "Report availability, compatibility, relevance, and declared capabilities.",
+          "closeout_contribution": "Admit only declared result and effect semantics; module-local success cannot set global completion."
         },
         "authority_boundaries": [
-          "Verification may contribute proof protocols and bounded evidence.",
-          "Verification must not become generic proof authority, CI ownership, Planning state, or issue-close permission."
+          "cannot set semantic completion",
+          "cannot grant unrelated mutation authority",
+          "cannot become provider-specific CI ownership"
         ],
         "conflict_provenance": [
-          "verification manifest entry",
-          "proof route id",
-          "assurance requirement",
-          "changed verification-owned path"
+          "module capability contract"
         ]
       },
       "components": {

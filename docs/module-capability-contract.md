@@ -1,33 +1,79 @@
 # Module Capability Contract
 
-This page defines the current plugin-ready internal contract for `agentic-workspace` modules.
+Agentic Workspace modules are peer capability contributors to the existing operating decision. A module describes its domain; Workspace owns `resolve -> act -> reconcile`.
 
-It is intentionally stronger than ad hoc first-party assumptions, but still not a supported third-party plugin API.
+The versioned public contract is `agentic-workspace/module-capability/v2`, registered through the Python entry-point group `agentic_workspace.modules`. An entry point returns either the contract object directly or `{ "contract": ..., "operations": ... }`.
 
-## Contract Shape
+## Author-facing shape
 
-Each workspace module descriptor should declare:
+A module declares five things:
 
-- `capabilities`: the durable product capabilities the module owns
-- `commands`: the lifecycle hooks the workspace layer may orchestrate
-- `command_args`: which lifecycle hooks accept `target`, `dry_run`, or `force`
-- `install_signals`: the repo surfaces that indicate the module is materially installed
-- `workflow_surfaces`: the repo surfaces that belong to the module's working contract
-- `generated_artifacts`: generated outputs whose drift should be reported instead of hand-edited
-- `dependencies`: other modules that must also be selected when this module is selected
-- `conflicts`: other modules that may not be selected at the same time
-- `result_contract`: the schema version and required top-level/action/warning fields the workspace adapter guarantees to preserve
+1. `name`, `description`, and `compatibility`: stable identity plus the reader epoch and required generic capabilities.
+2. `ownership`: module-owned roots and effect classes, plus explicit authority the module cannot acquire.
+3. `relevance`: bounded task terms and path prefixes that decide whether the contribution belongs in the current contract.
+4. `capabilities`: optional `resources`, `skills`, and typed `operations`. Omit dimensions the module does not use.
+5. `result_semantics`: the result schema, guaranteed fields, effect fields, and warning fields the kernel may reconcile.
 
-## Current Rule
+Dependencies, conflicts, and selection rank are optional. Unknown additive metadata is allowed. Unknown required capabilities and newer reader epochs fail closed.
 
-- The workspace layer may orchestrate only modules that satisfy this contract.
-- Once dependency or conflict metadata is declared, the workspace selector must enforce it.
-- Capability and result-contract metadata should be queryable from the root registry and `modules` output so maintainers do not need to infer them from source code.
+```python
+def module_provider():
+    return {
+        "contract": {
+            "schema_version": "agentic-workspace/module-capability/v2",
+            "name": "signals",
+            "description": "Read bounded build signals.",
+            "compatibility": {
+                "reader_epoch": 1,
+                "required_capabilities": ["module-resources-v1"],
+            },
+            "ownership": {
+                "roots": [],
+                "effect_classes": [],
+                "authority_exclusions": [
+                    "cannot grant mutation, proof, or completion authority"
+                ],
+            },
+            "relevance": {
+                "task_terms": ["build signal"],
+                "path_prefixes": ["build/signals/"],
+            },
+            "capabilities": {
+                "resources": [
+                    {
+                        "id": "signals.latest",
+                        "ref": "signals://latest",
+                        "read_only": True,
+                    }
+                ]
+            },
+            "result_semantics": {
+                "schema_version": "signals/result/v1",
+                "guaranteed_fields": ["status"],
+                "effect_fields": [],
+                "warning_fields": ["warnings"],
+            },
+        }
+    }
+```
 
-## Not A Public Plugin API
+```toml
+[project.entry-points."agentic_workspace.modules"]
+signals = "signals_module:module_provider"
+```
 
-This contract is still first-party only.
+This read-only module declares no operations, workflow phases, posture fragments, closeout hooks, or lifecycle callbacks. The kernel supplies quiet lifecycle defaults.
 
-It exists so the repo can stabilize the right internal seams before external extension is supported.
+## Admission and composition
 
-See [`docs/extension-boundary.md`](extension-boundary.md) for the readiness gates that still block public third-party module support.
+Workspace validates identity and compatibility before using a contribution. Selected modules with malformed contracts, unsupported required capabilities, missing dependencies, explicit conflicts, overlapping owned roots, or colliding effect classes fail with the competing owners and a repository-configuration recovery owner.
+
+Only enabled, installed, compatible, and relevant modules contribute to the current operating decision. Irrelevant modules remain absent from first-line context. A contribution may route resources, skills, or operations, but its authority remains bounded by `ownership.authority_exclusions`.
+
+Typed operations are invoked through the generic module-operation boundary. Results must contain their guaranteed fields and may report only declared effect classes. Module-local success cannot set unrelated mutation, proof, parent-intent, or completion authority.
+
+Removing a module means deselecting its capability contract. Repo-owned promoted outputs remain under their existing owners; no cached module contribution remains authoritative after a fresh resolution.
+
+## Internal compatibility metadata
+
+The root package still carries broader first-party lifecycle and distribution metadata in `module_registry.json`. That metadata is an internal compatibility surface, not the public authoring API. Planning, Memory, and Verification publish the same capability-first contract used by external modules where their semantics overlap.

@@ -145,6 +145,14 @@ from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.evaluation_projection import specialist_evaluation_projection
 from agentic_workspace.intent_feedback import architecture_principles_intent_context
 from agentic_workspace.memory_effectiveness import memory_effectiveness_operation
+from agentic_workspace.module_contract import (
+    DiscoveredModule,
+    discover_module_contracts,
+    module_contract_compatibility,
+    module_contribution,
+    target_has_install_signal,
+    validate_module_contract,
+)
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     attach_projection_surface_decision_input_consumption,
@@ -5340,6 +5348,10 @@ class ModuleRegistryEntry:
     conflicts: tuple[str, ...]
     participation: dict[str, Any]
     result_contract: ModuleResultContract
+    availability: str = "available"
+    availability_reason: str = ""
+    entry_point: str = ""
+    public_contract: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -7371,6 +7383,70 @@ class _VerificationLifecycleResult:
     force: bool = False
 
 
+def _external_module_lifecycle_result(
+    *, module_name: str, target: str | None = None, dry_run: bool = True, force: bool = False
+) -> _VerificationLifecycleResult:
+    _ = force
+    return _VerificationLifecycleResult(
+        target_root=_resolve_target_root(target),
+        message=f"External module '{module_name}' uses its capability contract; no module-authored lifecycle hook is required.",
+        dry_run=dry_run,
+        actions=[],
+        warnings=[],
+    )
+
+
+def _external_module_descriptor(discovered: DiscoveredModule) -> ModuleDescriptor:
+    contract = discovered.contract
+    ownership = _as_dict(contract.get("ownership"))
+    capabilities = _as_dict(contract.get("capabilities"))
+    result_semantics = _as_dict(contract.get("result_semantics"))
+    install_signals = [str(item) for item in _list_payload(contract.get("install_signals")) if str(item).strip()]
+    roots = [str(item) for item in _list_payload(ownership.get("roots")) if str(item).strip()]
+    capability_ids = tuple(
+        f"{capability_class}:{str(item.get('id', ''))}"
+        for capability_class in ("resources", "skills", "operations")
+        for item in _list_payload(capabilities.get(capability_class))
+        if isinstance(item, dict) and str(item.get("id", "")).strip()
+    )
+    lifecycle_commands: dict[str, Any] = {
+        command_name: functools.partial(_external_module_lifecycle_result, module_name=discovered.name)
+        for command_name in MODULE_COMMAND_ARGS
+    }
+    return ModuleDescriptor(
+        name=discovered.name,
+        description=str(contract.get("description") or f"Unavailable module provider {discovered.entry_point}"),
+        commands=lifecycle_commands,
+        detector=lambda target_root, signals=install_signals: target_has_install_signal(target_root, signals),
+        selection_rank=int(contract.get("selection_rank", 100)),
+        install_signals=tuple(Path(path) for path in install_signals),
+        workflow_surfaces=tuple(Path(path) for path in roots),
+        generated_artifacts=(),
+        command_args=MODULE_COMMAND_ARGS,
+        startup_steps=(),
+        sources_of_truth=tuple(
+            str(item.get("ref") or item.get("id")) for item in _list_payload(capabilities.get("resources")) if isinstance(item, dict)
+        ),
+        root_agents_cleanup_blocks=(),
+        capabilities=capability_ids,
+        dependencies=tuple(str(item) for item in _list_payload(contract.get("dependencies"))),
+        conflicts=tuple(str(item) for item in _list_payload(contract.get("conflicts"))),
+        result_contract=ModuleResultContract(
+            schema_version=str(result_semantics.get("schema_version") or "agentic-workspace/module-result/v1"),
+            guaranteed_fields=tuple(str(item) for item in _list_payload(result_semantics.get("guaranteed_fields"))),
+            action_fields=tuple(str(item) for item in _list_payload(result_semantics.get("effect_fields"))),
+            warning_fields=tuple(str(item) for item in _list_payload(result_semantics.get("warning_fields"))),
+        ),
+        kind="external",
+        default_enabled=False,
+        availability=discovered.status,
+        availability_reason=discovered.reason,
+        entry_point=discovered.entry_point,
+        public_contract=copy.deepcopy(contract) if contract else None,
+        domain_operations=discovered.operations,
+    )
+
+
 def _module_operations() -> dict[str, ModuleDescriptor]:
     from repo_memory_bootstrap.installer import adopt_bootstrap as memory_adopt_bootstrap
     from repo_memory_bootstrap.installer import collect_status as memory_collect_status
@@ -7440,7 +7516,7 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             "detector": lambda target_root: (target_root / ".agentic-workspace" / "verification" / "manifest.toml").exists(),
         },
     }
-    return {
+    descriptors = {
         module_name: _build_module_descriptor(
             name=module_name,
             metadata=_MODULE_REGISTRY_ENTRIES[module_name],
@@ -7454,6 +7530,13 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
         )
         for module_name, handler_bundle in handlers.items()
     }
+    for discovered in discover_module_contracts():
+        if discovered.name in descriptors:
+            raise ModuleSelectionError(
+                f"External module entry point '{discovered.entry_point}' collides with existing module '{discovered.name}'."
+            )
+        descriptors[discovered.name] = _external_module_descriptor(discovered)
+    return descriptors
 
 
 def _build_module_descriptor(
@@ -7468,6 +7551,8 @@ def _build_module_descriptor(
     status_handler: Callable[..., Any],
     detector: Callable[[Path], bool],
 ) -> ModuleDescriptor:
+    public_contract = validate_module_contract(metadata["public_contract"]) if metadata.get("public_contract") else None
+    availability, availability_reason = module_contract_compatibility(public_contract) if public_contract is not None else ("available", "")
     result_contract = ModuleResultContract(
         schema_version=str(metadata["result_contract"]["schema_version"]),
         guaranteed_fields=tuple(metadata["result_contract"]["guaranteed_fields"]),
@@ -7511,6 +7596,9 @@ def _build_module_descriptor(
         dependencies=tuple(metadata["dependencies"]),
         conflicts=tuple(metadata["conflicts"]),
         result_contract=result_contract,
+        availability=availability,
+        availability_reason=availability_reason,
+        public_contract=public_contract,
     )
 
 
@@ -9969,8 +10057,13 @@ def _parse_modules(module_arg: str, *, ordered_module_names: list[str]) -> set[s
 
 def _validate_selected_module_contract(*, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor]) -> None:
     selected_set = set(selected_modules)
+    claimed_roots: dict[str, str] = {}
+    claimed_effects: dict[str, str] = {}
     for module_name in selected_modules:
         descriptor = descriptors[module_name]
+        if descriptor.availability != "available":
+            detail = f": {descriptor.availability_reason}" if descriptor.availability_reason else ""
+            raise ModuleSelectionError(f"Module '{module_name}' is {descriptor.availability}{detail}.")
         missing = [dependency for dependency in descriptor.dependencies if dependency not in selected_set]
         if missing:
             missing_text = ", ".join(missing)
@@ -9979,6 +10072,24 @@ def _validate_selected_module_contract(*, selected_modules: list[str], descripto
         if conflicts:
             conflict_text = ", ".join(conflicts)
             raise ModuleSelectionError(f"Module '{module_name}' conflicts with: {conflict_text}.")
+        contract = descriptor.public_contract or {}
+        ownership = _as_dict(contract.get("ownership"))
+        for root in [str(item) for item in _list_payload(ownership.get("roots")) if str(item).strip()]:
+            competing = claimed_roots.get(root)
+            if competing is not None:
+                raise ModuleSelectionError(
+                    f"Module ownership collision: '{competing}' and '{module_name}' both claim root '{root}'. "
+                    "Force=blocking; resolution owner=repository module configuration."
+                )
+            claimed_roots[root] = module_name
+        for effect in [str(item) for item in _list_payload(ownership.get("effect_classes")) if str(item).strip()]:
+            competing = claimed_effects.get(effect)
+            if competing is not None:
+                raise ModuleSelectionError(
+                    f"Module effect collision: '{competing}' and '{module_name}' both claim effect '{effect}'. "
+                    "Force=blocking; resolution owner=repository module configuration."
+                )
+            claimed_effects[effect] = module_name
 
 
 def _resolve_target_root(target: str | None) -> Path:
@@ -44416,7 +44527,19 @@ def _task_posture_packet_payload(
     except Exception:
         registry = []
     trigger_text = " ".join([task_text or "", " ".join(normalized_paths), surface]).lower()
+    enabled_modules = set(config.enabled_modules)
     for entry in registry:
+        if entry.name not in enabled_modules or entry.availability != "available" or entry.installed is False:
+            continue
+        if entry.public_contract is not None:
+            contribution = module_contribution(
+                entry.public_contract,
+                task=task_text or surface,
+                changed_paths=normalized_paths,
+            )
+            if contribution is not None:
+                module_contributions.append(contribution)
+            continue
         participation = entry.participation if isinstance(entry.participation, dict) else {}
         triggers = [str(item) for item in _list_payload(participation.get("posture_triggers")) if str(item).strip()]
         declares = [str(item) for item in _list_payload(participation.get("declares")) if str(item).strip()]
@@ -47023,7 +47146,11 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
                 "capabilities": list(entry.capabilities),
                 "dependencies": list(entry.dependencies),
                 "conflicts": list(entry.conflicts),
-                "participation": copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(entry.name, {}).get("participation", {})),
+                "availability": entry.availability,
+                "availability_reason": entry.availability_reason,
+                "entry_point": entry.entry_point,
+                "public_contract": copy.deepcopy(entry.public_contract),
+                "participation": copy.deepcopy(entry.participation),
                 "components": copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(entry.name, {}).get("components", {})),
                 "result_contract": {
                     "schema_version": entry.result_contract.schema_version,
@@ -58117,6 +58244,33 @@ def _scan_skill_paths(skills_root: Path) -> list[Path]:
     return sorted((path for path in skills_root.rglob("SKILL.md") if "__pycache__" not in path.parts))
 
 
+def _descriptor_participation(descriptor: ModuleDescriptor) -> dict[str, Any]:
+    if descriptor.public_contract is None:
+        return copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(descriptor.name, {}).get("participation", {}))
+    contract = descriptor.public_contract
+    relevance = _as_dict(contract.get("relevance"))
+    capabilities = _as_dict(contract.get("capabilities"))
+    declared = [name for name in ("resources", "skills", "operations") if _list_payload(capabilities.get(name))]
+    return {
+        "loop_steps": ["resolve", "act", "reconcile"],
+        "declares": declared,
+        "posture_triggers": [
+            *[str(item) for item in _list_payload(relevance.get("task_terms"))],
+            *[str(item) for item in _list_payload(relevance.get("path_prefixes"))],
+        ],
+        "dynamic_projection": {
+            "startup_contribution": "Route only matched resources, skills, or operations from the module contract.",
+            "report_contribution": "Report availability, compatibility, relevance, and declared capabilities.",
+            "closeout_contribution": "Admit only declared result and effect semantics; module-local success cannot set global completion.",
+        },
+        "authority_boundaries": list(_as_dict(contract.get("ownership")).get("authority_exclusions", [])),
+        "conflict_provenance": [
+            *([descriptor.entry_point] if descriptor.entry_point else []),
+            "module capability contract",
+        ],
+    }
+
+
 def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: Path | None) -> list[ModuleRegistryEntry]:
     entries: list[ModuleRegistryEntry] = []
     for module_name in _ordered_module_names(descriptors):
@@ -58145,8 +58299,12 @@ def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: P
                 capabilities=descriptor.capabilities,
                 dependencies=descriptor.dependencies,
                 conflicts=descriptor.conflicts,
-                participation=copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(descriptor.name, {}).get("participation", {})),
+                participation=_descriptor_participation(descriptor),
                 result_contract=descriptor.result_contract,
+                availability=descriptor.availability,
+                availability_reason=descriptor.availability_reason,
+                entry_point=descriptor.entry_point,
+                public_contract=copy.deepcopy(descriptor.public_contract),
             )
         )
     return entries
