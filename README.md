@@ -46,6 +46,16 @@ The CLI is an interface to this loop, not a workflow agents should memorize. `st
 
 Closeout is simply terminal reconciliation: no further action remains, the intended claim is justified, and any future-relevant residue has an explicit owner or is deliberately absent.
 
+## Programmable instructions
+
+"Programmable" should mean more than choosing among hard-coded modes. The repository should be able to express bounded conditional control using stable, typed facts and capabilities: when a relevant scope, owner, task, capability, evidence state, or decision point applies, AW can surface context or a skill, route or require a typed operation, require evidence or a human decision, or restrict an effect or claim.
+
+Workspace owns the composition semantics. Repo declarations should not need Python changes to create a new ordinary control relationship, and they should not become arbitrary scripts, callbacks, hidden priority chains, or a general workflow/rule engine. Source owners keep their facts; instructions affect the current operating contract rather than mutating those sources directly.
+
+The current implementation already has several specialized forms of this idea—workflow obligations, assurance/proof declarations, scoped instructions, skill routing, target/correction guidance, and module contributions—but they do not yet form one support-bearing general instruction-clause API. The architectural direction is to normalize overlapping semantics through the existing operating-decision/typed-action boundary rather than add another compiler.
+
+Skills are lazily discovered procedures. Typed operations are effectful actions. Repo-owned instruction declarations decide when those existing primitives matter; modules add capabilities and facts without inventing new control operators.
+
 ## Modules
 
 Modules are peer extensions of what the operating loop can know and do. They add independently owned capabilities without redefining the core workflow.
@@ -90,6 +100,7 @@ Agentic Workspace is not:
 - a repository knowledge database or semantic index;
 - a ticket tracker or backlog manager;
 - a workflow engine that scripts implementation judgment;
+- a general-purpose policy language or arbitrary rule/callback host;
 - a generic plugin/callback host;
 - a vendor integration marketplace;
 - a replacement for canonical repository docs, source, tests, review, or issue trackers.
