@@ -36,6 +36,7 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `intent_feedback` | object | no |  | Revision-bound applicable intent expectations, evidence evaluation, material findings, and quiet/rescope posture composed before the final decision. |  |  |
 | `memory_effectiveness` | object | no |  | Decision-bound Memory contributions, sparse outcome attribution, material findings, and stronger-owner lifecycle review. |  |  |
 | `source_guidance` | object | no |  | Compact references for admitted source-owned guidance whose registry contract declares a material decision dimension. |  |  |
+| `instruction_clause_projection` | object | no |  | Revision-bound explanation of source-owned facts, bounded clauses, composed effects, and target-scoped blockers feeding this compiler. |  |  |
 | `current_work` | object | no |  | Current-work identity admitted into the composed decision. |  |  |
 | `selected_owner` | object | no |  | Selected owner identity admitted into the composed decision. |  |  |
 | `terminal_state` | string | no |  | Terminal outcome state used for continuation or finalization claims. |  |  |

@@ -130,6 +130,8 @@ Common routes include:
 
 The acting agent should not have to infer a command sequence from documentation.
 
+Cross-cutting instruction semantics normalize internally to source-owned facts and bounded clauses. Clauses can only surface or prefer existing capabilities, require a source-owned satisfier, or restrict an action, effect, operation, or claim. They cannot grant authority, execute code, or become a general rule or obligation store. `start` and `implement` expose the explanation on demand through `--select instruction_clause_projection`.
+
 ## Ownership model
 
 Keep one primary owner per concern:
