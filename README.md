@@ -48,9 +48,13 @@ Closeout is simply terminal reconciliation: no further action remains, the inten
 
 ## Modules
 
-Modules are peer extensions of the operating loop. They add independently owned capabilities without redefining the core workflow.
+Modules are peer extensions of what the operating loop can know and do. They add independently owned capabilities without redefining the core workflow.
 
-A module can contribute relevant context, procedures, operations, state, evidence, constraints, or reconciliation behavior. It should stay absent when irrelevant and should not require Workspace to understand its domain semantics.
+The authoring rule is simple: **a module describes its domain; Workspace owns the loop.** A module should normally declare what capability it is, what it owns, when it is relevant, which resources/procedures/typed operations it provides, and what its results/effects mean. It should not have to describe AW's startup/proof/closeout choreography or implement empty `resolve`/`act`/`reconcile` hooks merely to fit the framework.
+
+Workspace derives how those declarations participate in the current operating contract. A read-only capability may only contribute relevant context or a routed procedure; an operation-oriented capability may add typed actions/results without inventing a new phase or posture model.
+
+Useful genericity should make future modules cheaper to add as well as keeping first contact small. An ordinary independent module should normally be mostly self-contained in its own package and public descriptor/contracts, without semantic Workspace edits or a new core-owned per-module name list merely to recognize its identity.
 
 The current first-party modules are examples:
 
@@ -58,7 +62,7 @@ The current first-party modules are examples:
 - **Memory** contributes learned anti-rediscovery repository knowledge and capture/retrieval behavior.
 - **Verification** contributes reusable soft-verification protocols, bounded evidence, proof-route hints, and known gaps.
 
-They are bundled batteries, not architectural pillars. Future modules can provide other functions—delegation, deployment, richer knowledge retrieval, security, or something not anticipated today—through the same generic contribution model.
+They are bundled batteries, not architectural pillars. Future modules can provide other functions—delegation, deployment, richer knowledge retrieval, security, or something not anticipated today—through the same generic capability model.
 
 See [`docs/package/modules.md`](docs/package/modules.md) and [`docs/extension-boundary.md`](docs/extension-boundary.md).
 
