@@ -1,137 +1,102 @@
-# Extension Boundary
+# Extensibility and Public Boundary
 
-Last readiness review: 2026-04-13
+Extensibility is a core Agentic Workspace product property. The current support boundary is narrower than that architectural intent: AW already has generic module participation machinery and a stable external-operation direction, while the public third-party module compatibility contract is still being deliberately stabilized.
 
-This page is the canonical statement of the current extension boundary for Agentic Workspace.
+This page distinguishes **product direction** from **current support-bearing compatibility** so those concepts do not get conflated.
 
-Use it when you need to know what kinds of modules or integrations are supported today, what the workspace layer may assume about them, and what must be true before any external module or plugin contract is treated as public.
+## Core stance
 
-## Role Boundary
+Workspace should be a small operating kernel that composes independently owned capabilities. Planning, Memory, and Verification are first-party batteries and proving grounds for that model, not the fixed outer boundary of the architecture.
 
-This page owns:
+The extension architecture has three distinct forms:
 
-- the current public extension boundary
-- what the workspace layer may assume about modules today
-- the readiness-gate snapshot for any future public extension contract
+1. **Modules** add domain capabilities, owned state/resources, operations, lifecycle, and bounded effects on the ordinary operating decision.
+2. **Repo customization** uses host-owned config, obligations, skills, canonical guidance, ownership, and proof declarations.
+3. **External adapters** integrate AW with other tools and vendors by consuming stable AW operations from outside core.
 
-It does not own:
+These forms must not collapse into one generic plugin mechanism because they have different ownership, trust, lifecycle, and compatibility semantics.
 
-- the detailed first-party module contract
-- the broader ecosystem-packaging stance
-- bounded future-work sequencing
+## Current support boundary
 
-Route those concerns to:
+### First-party modules
 
-- `docs/module-capability-contract.md` for the current first-party module contract
-- `docs/ecosystem-roadmap.md` for ecosystem stance and extraction discipline
-- `roadmap` in `.agentic-workspace/planning/state.toml` for bounded follow-on work when readiness conditions materially change
+Planning, Memory, and Verification are the currently shipped support-bearing module implementations. The coordinated root distribution may bundle them for lifecycle convenience.
 
-## Current Boundary
+They should increasingly exercise the same generic composition path expected of independently implemented modules. Bundling is a distribution choice, not a reason for Workspace to hard-code their domain semantics.
 
-Today, the supported module boundary is first-party only.
+### Independent modules
 
-Supported:
+Independent modules are part of the intended architecture, but the public module contract must remain narrower than the full internal participation registry.
 
-- Agentic Memory
-- Agentic Planning
-- the thin `agentic-workspace` composition layer that orchestrates those first-party modules
+Until a versioned public module compatibility profile is explicitly published and conformance-tested, external module authors should not assume that every field, lifecycle hook, posture fragment, workflow phase, or internal descriptor detail is a stable API.
 
-Not yet supported as a public contract:
+The public boundary should stabilize only what independent capability authors need for safe composition, including the equivalent of:
 
-- third-party modules
-- plugin loading
-- dynamic registry extension by downstream repos
-- undocumented external modules that imitate first-party descriptor fields
+- module identity and compatibility;
+- declared capabilities and activation/relevance;
+- owned resources/state and writable roots;
+- stable operations and effect/result contracts;
+- lifecycle, dependencies, and conflicts;
+- bounded proof/authority effects;
+- generated discovery/reference metadata.
 
-## What The Workspace Layer May Assume
+Internal implementation flexibility may remain broader.
 
-The workspace layer may assume first-party modules provide:
+### External adapters and integrations
 
-- explicit capability declarations
-- explicit lifecycle commands for install, adopt, upgrade, uninstall, doctor, and status
-- dependency/conflict metadata when compatibility rules exist
-- result-contract metadata that the workspace adapter can preserve and report
-- owned writable surfaces
-- install-signal detection
-- generated-artifact classification when generated files are part of the contract
-- package-local ownership of domain logic
+External adapters follow an inverted dependency model: the integration knows about AW; AW does not need to know the integration package or vendor.
 
-The workspace layer must not assume:
+Adapters may translate native tool events, invoke public AW operations, and keep disposable local integration state. They own transport, authentication, credentials, and vendor-specific lifecycle. They do not own AW Planning state, proof semantics, completion permission, or unrelated repository mutations.
 
-- external modules can satisfy the same contract yet
-- module internals are interchangeable across different products
-- hidden plugin hooks that are not documented here
+Core should not gain an adapter registry, marketplace, credential store, or vendor-specific configuration solely to support integrations.
 
-## Why The Boundary Stays Closed For Now
+## Kernel guarantees extensions must preserve
 
-The first-party module contract is real and useful, but still optimized around
-the shipped modules dogfooded in this monorepo.
+Any support-bearing extension path must preserve the same kernel invariants:
 
-Opening that boundary too early would risk:
+- **compatibility before authority**: incompatible or unsupported contributions do not partially influence current semantic decisions;
+- **explicit ownership**: modules and adapters cannot silently claim unrelated roots, state, proof, or completion authority;
+- **bounded relevance**: irrelevant installed capabilities stay out of the first-line operating context;
+- **conflict visibility**: collisions name the competing owners and resolution owner instead of relying on hidden precedence;
+- **safe absence**: missing or removed capabilities leave the remaining workspace interpretable;
+- **clean removal**: package/module/local/promoted output boundaries remain distinguishable when a capability is removed;
+- **projection discipline**: generated docs, clients, catalogue entries, and adapters derive from authority rather than becoming parallel sources of truth;
+- **ordinary-loop stability**: adding capabilities should normally enrich existing startup/work/proof/closeout/continuation questions instead of multiplying first-contact concepts.
 
-- freezing private assumptions as a fake public API
-- pushing plugin pressure into the workspace layer before module seams are fully stable
-- raising support and compatibility expectations faster than the repo can justify
+## What the kernel may assume
 
-## Current Readiness Assessment
+The kernel may assume only the capabilities declared by an admitted compatible module or host-repo contract. It should not infer behavior from a module's package name, source-tree layout, first-party status, or similarity to Planning/Memory/Verification.
 
-- Gate 1 is now materially stronger: first-party modules are descriptor-owned and no longer depend on separate orchestrator globals for ordering, presets, startup guidance, capabilities, or result-contract reporting.
-- Gate 2 is only partially met: the module-capability and lifecycle contract is explicit, but it is still documented as a first-party internal contract rather than a supported third-party public contract.
-- Gate 3 is proven for the current first-party modules, including selective
-  Memory, Planning, Verification, and combined installs through the shared
-  workspace lifecycle. It is still not exercised with a realistic non-core
-  module.
-- Gate 4 remains unmet for external extension: compatibility, upgrade, uninstall, and doctor expectations are explicit for first-party modules, not for hypothetical non-core modules.
-- Gate 5 remains unmet: there is still no concrete external-use-case pressure that is clearly better solved by opening the boundary than by keeping the capability package-local or internal.
+Where the public contract is insufficient, the correct outcome is to extend that contract deliberately or keep the behavior first-party/internal—not to add a hidden module-name special case and call the boundary generic.
 
-Current result: keep the public extension boundary closed.
+## What extensibility does not imply
 
-## Readiness Gates For A Public Extension Contract
+Extensibility does not require:
 
-Do not treat external extension as supported until all of the following are true:
+- arbitrary in-process code loading from untrusted sources;
+- a remote module marketplace;
+- a generic event bus or workflow engine;
+- every internal callback becoming public API;
+- adapter discovery or credentials inside AW;
+- fixed module slots matching today's first-party products;
+- a new user-visible command for every capability.
 
-1. The first-party module contract is stable enough that new first-party modules could be added from descriptor-owned metadata without bespoke orchestrator globals or hardcoded root-guidance branches.
-2. The registry and lifecycle model are documented in public-contract terms rather than only internal descriptor terms.
-3. Selective adoption still works cleanly when the workspace layer coordinates
-   first-party modules plus a realistic non-core module.
-4. Compatibility, upgrade, uninstall, and doctor expectations are explicit for non-core modules.
-5. At least one realistic external-use case exists that is better solved by extension than by keeping the capability inside an existing module.
+## Readiness standard for a public module contract
 
-## Current Readiness Snapshot
+A module capability should be described as support-bearing for independent authors only when:
 
-| Gate | Current status | Current read | Reopen when |
-| --- | --- | --- | --- |
-| 1. First-party module contract is stable enough for another first-party module without bespoke orchestrator globals. | `conditional` | The descriptor-owned first-party contract is much stronger than before, but it is still proven only inside the shipped first-party set plus workspace composition. | Another first-party module lands or a new module-contract change still requires orchestrator special-casing. |
-| 2. Registry and lifecycle model are documented in public-contract terms. | `not yet` | The registry and module contract are documented honestly as first-party-only internal structure, not as a public external contract. | Maintainer pressure or external demand requires describing the contract in public, non-internal terms. |
-| 3. Selective adoption still works cleanly beyond the current first-party set. | `not yet` | Selective adoption is proven for shipped first-party modules and combined installs, but not yet demonstrated with a realistic non-core module. | A realistic non-core module candidate appears. |
-| 4. Compatibility, upgrade, uninstall, and doctor expectations are explicit for non-core modules. | `not yet` | Current lifecycle and doctor expectations are explicit for the existing first-party modules only. | A realistic non-core module candidate exists and its lifecycle behavior needs to be described end to end. |
-| 5. A realistic external-use case is better solved by extension than by keeping capability inside an existing module. | `not yet` | Current dogfooding still points toward sharpening first-party seams instead of opening extension. | Repeated real requests or internal pressure show that keeping the capability package-local is the worse design. |
+1. its public contract is versioned and mechanically distinguishable from internal participation metadata;
+2. first-party modules use that same semantic path where applicable;
+3. an independently implemented non-core module can be discovered, activated, used, disabled, and removed without Workspace learning its identity;
+4. compatibility, conflict, authority, absence, and removal behavior fail closed;
+5. reusable conformance fixtures prove the boundary from outside first-party assumptions;
+6. ordinary-agent scenarios show that the extension stays quiet when irrelevant and does not materially regress direct work.
 
-The boundary remains closed because the current evidence is still strongest for first-party hardening, not public extension support.
+This is a readiness bar for **how** the core extensibility goal is exposed safely, not a gate on whether extensibility belongs in the product at all.
 
-## Current Maintainer Rule
+## Related documentation
 
-- Treat extension-boundary work as design work until those readiness gates are met.
-- Prefer sharpening first-party module seams, docs, tests, and lifecycle reporting over inventing a plugin API.
-- If a new capability is only useful as a helper to a shipped first-party module,
-  keep it package-local or capability-local instead of making it look like an
-  external module surface.
-- Re-run a bounded readiness review when first-party module contracts change materially or when real downstream extension pressure appears.
-
-## Re-Review Triggers
-
-Refresh this page directly when any of the following happens:
-
-- a new first-party module or near-module candidate appears
-- registry or lifecycle docs start reading as if external extension is already supported
-- repeated external-use pressure appears in issues, reviews, or dogfooding
-- a module-contract change materially moves one of the readiness gates
-
-If that review reveals bounded follow-on work, record it in `roadmap` in `.agentic-workspace/planning/state.toml` instead of turning this page into a latent queue.
-
-## Relationship To Other Docs
-
-- Use [`docs/integration-contract.md`](integration-contract.md) for how Planning, Memory, Verification, managed surfaces, and generated docs interact today.
-- Use [`docs/module-capability-contract.md`](module-capability-contract.md) for the current first-party capability/dependency/result contract that prepares the registry for later extension without opening it yet.
-- Use [`.agentic-workspace/docs/extraction-and-discovery-contract.md`](../.agentic-workspace/docs/extraction-and-discovery-contract.md) for extraction criteria and ownership rules.
-- Use [`docs/ecosystem-roadmap.md`](ecosystem-roadmap.md) for long-horizon stance without treating it as a promise of immediate extension support.
+- [Architecture](architecture.md) — kernel/module/repo/adapter ownership model.
+- [Modules](package/modules.md) — capability ownership and current first-party modules.
+- [Contracts and references](package/contracts.md) — machine-readable contract layers and generated projections.
+- [`SYSTEM_INTENT.md`](../SYSTEM_INTENT.md) — durable product intent.
