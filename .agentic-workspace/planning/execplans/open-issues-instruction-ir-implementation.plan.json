@@ -4,8 +4,8 @@
   "title": "Implement bounded instruction clause IR",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 2,
+  "phase": "validation",
+  "revision": 3,
   "intent": {
     "outcome": "Close GitHub #2629 in a fifth draft PR stacked on #2630.",
     "non_goals": [
@@ -40,7 +40,7 @@
     },
     "external_posture": {
       "state": "current",
-      "refs": ["GitHub #2629", "PR #2630"]
+      "refs": ["GitHub #2629", "PR #2630", "PR #2631"]
     }
   },
   "references": [
@@ -52,7 +52,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Complete broad validation, publish the fifth stacked draft PR, and reconcile #2629 against its acceptance criteria.",
+  "next_action": "Review and merge the five-lane stack in order; #2631 is the final parent-closure layer.",
   "blockers": [],
   "proof": {
     "claims": [
@@ -65,7 +65,12 @@
       "Start and implement selectors expose deterministic clause explanations.",
       "Schema references, contract tooling, lint, typechecks, and affected runtime tests pass."
     ],
-    "refs": []
+    "refs": [
+      "15 instruction-clause IR tests passed",
+      "90 final focused IR, operating-decision, and schema-reference tests passed",
+      "396 workspace CLI tests passed with one host-executable prerequisite failure",
+      "PR #2631"
+    ]
   },
   "continuation": {
     "owner": "stack-review",
