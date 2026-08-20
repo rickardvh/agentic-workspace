@@ -76,6 +76,14 @@
       "type": "object",
       "description": "Compact references for admitted source-owned guidance whose registry contract declares a material decision dimension."
     },
+    "reconciliation": {
+      "type": "object",
+      "description": "Generic post-action result, bounded claim, residue, continuation, and constructible next-action composition supplied by domain owners."
+    },
+    "control_inputs": {
+      "type": "object",
+      "description": "Applicable host, local-runtime, module, and task-derived inputs reduced to their material effects on the current contract."
+    },
     "current_work": {"type": "object", "description": "Current-work identity admitted into the composed decision."},
     "selected_owner": {"type": "object", "description": "Selected owner identity admitted into the composed decision."},
     "terminal_state": {"type": "string", "description": "Terminal outcome state used for continuation or finalization claims."},

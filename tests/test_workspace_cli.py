@@ -9144,6 +9144,75 @@ candidates = []
     assert "claim-active-plan-progress" in route["blocked_claims"]
 
 
+def test_implement_allows_proven_ignored_transient_cleanup_outside_active_plan(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n.pytest_cache/\n")
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """schema_version = 1
+
+[todo]
+active_items = [{ id = "active-plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" }]
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json",
+        {"kind": "planning-execplan/v1", "id": "active-plan", "lifecycle": "live"},
+    )
+    _write(tmp_path / ".agentic-workspace/local/tmp.txt", "transient\n")
+    _write(tmp_path / ".pytest_cache/v/cache/nodeids", "[]\n")
+    before = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/local/tmp.txt",
+                ".pytest_cache/v/cache/nodeids",
+                "--task",
+                "Delete only ignored transient cleanup residue; preserve tracked files, meaningful untracked work, .venv, and .agentic-workspace/config.local.toml",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["planning_safety_gate"]
+    route = gate["route_decision"]
+    effect_scope = route["structured_inputs"]["task_binding"]["effect_scope"]
+
+    assert effect_scope["status"] == "proven-local-transient"
+    assert route["task_relation"] == "bounded-independent"
+    assert route["required_transition"] == "none"
+    assert route["implementation_allowed"] is True
+    assert route["mutation_authority"] == "current-task"
+    assert route["structured_inputs"]["task_binding"]["mode"] == "local-transient-cleanup"
+    assert route["structured_inputs"]["task_binding"]["effect_scope"]["claim_authority"] == "none-for-active-planning"
+    assert "claim-active-plan-progress" in route["blocked_claims"]
+    assert (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8") == before
+
+
+def test_transient_cleanup_scope_fails_closed_for_durable_paths(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n")
+    _write(tmp_path / ".agentic-workspace/config.local.toml", "[workspace]\n")
+
+    facts = cli._planning_safety_path_classification(
+        [".agentic-workspace/config.local.toml"],
+        target_root=tmp_path,
+        task_text="Delete cleanup files; preserve tracked files, meaningful untracked work, .venv, and .agentic-workspace/config.local.toml",
+    )
+
+    assert facts["effect_scope"]["status"] == "not-proven"
+    assert facts["effect_scope"]["protected_paths"] == [".agentic-workspace/config.local.toml"]
+    assert facts["effect_scope"]["constructible_next_action"]["command"] == "git status --short --ignored"
+
+
 def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Path, capsys) -> None:
     from types import SimpleNamespace
 

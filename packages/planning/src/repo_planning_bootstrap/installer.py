@@ -11115,6 +11115,28 @@ def _normalize_external_owner_observation(
         }
     )
     observation_id = str(raw.get("observation_id") or f"{system}:{external_id}:{external_revision}").strip()
+    reconciliation_state = (
+        "current"
+        if admission_state == "current"
+        else "external-evidence-unavailable"
+        if admission_state == "unavailable"
+        else "external-evidence-stale"
+        if admission_state == "stale"
+        else "external-state-changed"
+        if admission_state in {"externally-completed-awaiting-admission", "contradicted", "externally-blocked"}
+        else "not-applicable"
+    )
+    reconciliation_choices: list[dict[str, str]] = []
+    if admission_state == "externally-completed-awaiting-admission":
+        reconciliation_choices = [
+            {"id": "local-intent-satisfied", "effect": "archive or close only after local intent/proof admission"},
+            {"id": "local-intent-remains", "effect": "retain or rebind with a current local owner and reason"},
+        ]
+    elif admission_state in {"stale", "unavailable", "contradicted", "externally-blocked"}:
+        reconciliation_choices = [
+            {"id": "refresh-external-evidence", "effect": "refresh without mutating Planning"},
+            {"id": "human-intent-decision", "effect": "record retain, rebind, defer, or archive intent through Planning"},
+        ]
     return {
         **raw,
         "system": system,
@@ -11141,6 +11163,30 @@ def _normalize_external_owner_observation(
         "contradictions": contradictions,
         "provider_detail": copy.deepcopy(raw.get("provider_detail")) if isinstance(raw.get("provider_detail"), dict) else {},
         "admission": {"state": admission_state, "reason_code": reason_code},
+        "planning_reconciliation": {
+            "state": reconciliation_state,
+            "choices": reconciliation_choices,
+            "required_next_action": (
+                "continue-current-owner"
+                if reconciliation_state == "current"
+                else "refresh-or-reconcile-external-evidence"
+                if reconciliation_state != "not-applicable"
+                else "none"
+            ),
+            "command": str(raw.get("refresh_route") or EXTERNAL_INTENT_REFRESH_COMMAND)
+            if reconciliation_state in {"external-evidence-stale", "external-evidence-unavailable"}
+            else "agentic-workspace planning reconcile --target . --format json"
+            if reconciliation_state == "external-state-changed"
+            else "",
+            "claim_effect": (
+                "current-owner-claims-available"
+                if reconciliation_state == "current"
+                else "limit-work-selection-and-completion-claims-until-local-intent-owner-disposes-mismatch"
+                if reconciliation_state != "not-applicable"
+                else "none"
+            ),
+            "authority_boundary": "External state is evidence; only the local Planning owner may satisfy, retain, rebind, defer, or archive intent.",
+        },
         "relevant": relevant,
     }
 
@@ -11249,6 +11295,7 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
                 "refresh_route",
                 "availability",
                 "admission",
+                "planning_reconciliation",
             )
         }
         for item in relevant_observations
