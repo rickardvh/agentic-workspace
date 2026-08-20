@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Generate exact command, footprint, and support references while simplifying public documentation around operating context and peer modules."

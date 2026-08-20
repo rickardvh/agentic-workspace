@@ -7329,6 +7329,15 @@
     }
   ],
   "description": "Workspace-level lifecycle orchestrator for selected agentic-workspace modules.",
+  "local_execution_effects": {
+    "authority": "diagnostic-only",
+    "condition": ".agentic-workspace/config.local.toml enables session_logging",
+    "effects": [
+      "append an ignored machine-local command/session record",
+      "update ignored local diagnostic indexes or caches"
+    ],
+    "rule": "Possible local diagnostics do not make a shared read-only command mutating and never become proof or semantic authority by existence alone."
+  },
   "program": "agentic-workspace",
   "schema_version": "agentic-workspace/cli-commands/v1"
 }

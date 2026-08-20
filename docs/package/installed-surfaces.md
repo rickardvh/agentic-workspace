@@ -1,173 +1,35 @@
 # Installed Surfaces
 
-An installed host repository gets a small set of checked-in surfaces. Their purpose is to make startup, ownership, active work, durable knowledge, and verification discoverable from repository state.
+An installed repository gets a small checked-in control enclave plus thin routing adapters. The surface exists to preserve only control-relevant operating context; it does not mirror ordinary source, documentation, tests, or repository knowledge for search.
 
-## Root Surfaces
+For the exact package-managed file set in every supported footprint/module cell, required versus optional references, ownership classes, and selected-but-unconfigured behavior, use the generated [current installed-surface catalogue](../reference/installed-surface-catalogue.md). The [workspace-surfaces schema](../reference/workspace-surfaces-manifest.md) explains contract shape rather than current values.
 
-| Surface | Owner | Purpose |
-| --- | --- | --- |
-| `AGENTS.md` | repo-owned adapter with managed fences | first file an agent can read; routes to compact workspace commands |
-| `.agentic-workspace/` | product-managed enclave | shared workspace configuration, contracts, module roots, and local boundaries |
-| `.agentic-workspace/config.toml` | repo-owned config | selected modules, posture, workflow obligations, and repo-specific settings |
-| `.agentic-workspace/OWNERSHIP.toml` | repo-owned ledger | managed paths, fences, and authority metadata |
-| `.agentic-workspace/WORKFLOW.md` | product-managed workflow adapter | CLI-first bootstrap router and Markdown fallback for installed workspaces |
-| `.agentic-workspace/docs/module-map.md` | product-managed module router | compact abstraction ladder for Workspace, Planning, Memory, Verification, and generated references |
-| `.agentic-workspace/skills/` | product-managed workspace skills | first-contact workflow skills for startup, routing, proof, closeout, and module boundaries |
-| `.agentic-workspace/local/` | local-only ignored area | machine-local overrides, caches, and non-shared runtime aids |
+## Conceptual ownership
 
-The package keeps `AGENTS.md` thin. Durable rules and structured state live under `.agentic-workspace/` or in repo-owned docs, not in a growing startup manual.
-
-Bootstrap uses the necessary-surface footprint by default. It creates shared config/startup, a compact adoption receipt, selected module state anchors, the routed skills, the four self-contained fallback documents those skills require (`module-map`, `workspace-config-contract`, `jumpstart-contract`, and `setup-findings-contract`), and the executable no-CLI fallback plus its machine-readable policy. It preserves durable pre-existing local-mode Planning, Memory, and Verification state. Other generic package payload remains package-owned and is read from the installed package, dev dependency, editable install, or source checkout at runtime. `--mirror-payload` is the explicit opt-in for checking in the complete bundled docs, templates, schemas, payload provenance, and upgrade-source provenance.
-
-`src/agentic_workspace/contracts/workspace_surfaces.json` is the canonical installed-surface and required-reference graph. Module-contributed host paths are first-class, so every profile/module cell receives its own installed source set rather than a copied profile-level result. The checker also scans installed operational skills and docs for file-like `.agentic-workspace` references and rejects any discovered edge missing from the graph. Human file references, stable package-resource identifiers, and optional degraded behavior remain distinct resolution classes.
-
-The no-CLI proof installs every supported module combination into a clean host, removes the configured CLI from `PATH`, invokes `.agentic-workspace/fallback/no_cli_startup.py` in a second process, and requires fail-closed implementation/completion decisions plus the canonical forbidden actions and next safe action without network access. Removing a required fallback target makes the executable path return a blocked repair result. Reference parity scans Markdown, JSON, TOML, and Python installed authorities—including generated config and ownership/lifecycle sources—so a surviving non-Markdown reference cannot bypass the closure checker.
-
-## External Integration Boundary
-
-Agentic Workspace is an adapter-unaware operation provider. External ecosystems own adapter discovery, installation, enablement, trust, credentials, updates, and removal. AW does not maintain an adapter registry, plugin lockfile, vendor configuration, or reverse dependency on an integration package.
-
-Consumers detect the workspace through the documented root/config contract and consume released client and contract resources. They must not require mirrored `.agentic-workspace` docs, schemas, skills, templates, or package payload. Necessary-surface and full-mirror repositories therefore have the same external operation semantics.
-
-Optional repository-coupled scratch state belongs under `.agentic-workspace/local/integrations/<adapter-id>/`. It is ignored, non-authoritative, safe to delete, and cannot establish planning, proof, completion, configuration, or workflow state. Durable results enter shared state only through the existing owning AW operations or repo-native surfaces. Removing a consumer must leave checked-in AW state meaningful and ordinarily usable.
-
-The maintained closure proof is:
-
-```text
-uv run python scripts/check/run_external_consumer_readiness.py --require-node
-```
-
-It builds the released Python wheels and TypeScript package, installs two minimal
-consumers outside the source checkout, and requires both public clients to
-consume the current compatibility profile and provenance-bound conformance
-receipts. The proof covers absent, disabled, incompatible, malformed,
-retryable, additive-field, optional-module, necessary/full-mirror, and real
-mutation applied/duplicate/rejected/write-failure scenarios. It then removes
-the consumers, re-runs ordinary AW status through a separate installed host,
-checks that target repositories have no checked-in residue, and scans Python
-and Node package manifests for reverse dependencies on consumer fixtures.
-
-## Participation Boundary
-
-Installed surfaces should expose the operating loop, not every implementation
-detail. The ordinary path starts from `AGENTS.md` and compact Workspace commands;
-module roots, reports, skills, and generated references are opened only when
-that loop routes there.
-
-Modules participate by declaring resources, tools, prompts or skills, schemas,
-roots, reports, gates, proof routes, lifecycle hooks, workflow phases, startup
-routing hints, state owners, and safety metadata. Repo-configured
-`workflow_obligations` participate by stage and scope tag. Both are surfaced
-through compact routing and reports so a host repo can add obligations or
-modules without turning the first-contact surface into a manual.
-
-Planning, Memory, and Verification are first-party examples of the same open
-participation model. Their installed roots demonstrate active state, durable
-knowledge, and soft verification ownership, but they are not the limit of what a
-module can contribute.
-
-The same boundary applies to task posture. `AGENTS.md` should stay a compact
-adapter that points agents to the configured workspace entrypoint. Startup and
-changed-path commands emit the matching posture packet for the current task:
-workflow obligations, skill routes, allowed and forbidden actions, proof and
-closeout boundaries, read budget, authority boundaries, output-shape
-requirements, review rubrics, and module contributions appear only when task
-facts, changed paths, active state, or repo config activate them.
-
-Reports and closeout preserve provenance for selected posture fragments so
-agents can see whether a rule came from repo config, a workflow obligation, or a
-module declaration without turning first contact into a full inventory.
-
-## Surface Classes
-
-The installed and source-checkout surfaces fall into different classes. Keeping those classes distinct is what prevents the docs set from becoming another startup burden.
-
-| Class | Examples | How readers should use it |
-| --- | --- | --- |
-| core entrypoint | `AGENTS.md`, `agentic-workspace start`, `agentic-workspace summary` | start here or let compact commands route deeper |
-| secondary/deep surface | `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/docs/`, `.agentic-workspace/planning/`, `.agentic-workspace/memory/`, `.agentic-workspace/verification/` | open only when a compact command or package doc points there |
-| machine contract | `.agentic-workspace/OWNERSHIP.toml`, contract JSON, schema JSON, manifest files | inspect through commands or generated references before hand-reading |
-| generated adapter | generated agent aids, `docs/reference/*.md` | treat as derived output; edit the source contract or renderer instead |
-| local-only surface | `.agentic-workspace/local/` | machine-local cache or override, not shared authority |
-| review artifact | `docs/reviews/*.md` | dated evidence for future work, not current product documentation |
-| maintainer machinery | `scripts/`, package bootstrap payloads, generated-package development files | source-checkout workflow only, not ordinary host-repo operation |
-
-Stable conclusions in this table come from the dated visible-surface and shipped-payload reviews, now promoted here so readers do not need to mine review history for the current answer.
-
-For the reviewed ordinary-loop classification of these surfaces, including
-skills, diagnostics, generated references, module CLIs, and closeout posture,
-see [Ordinary continuity loop and surface classification](ordinary-continuity-loop.md).
-
-## Planning Surfaces
-
-Planning adds active execution state:
-
-| Surface | Purpose |
+| Class | Owner and role |
 | --- | --- |
-| `.agentic-workspace/planning/state.toml` | active items, roadmap lanes, and current planning state |
-| `.agentic-workspace/planning/execplans/` | bounded execution plans and archives |
-| `.agentic-workspace/planning/agent-manifest.json` | module-managed manifest for generated agent aids |
-| `.agentic-workspace/planning/schemas/` | planning-specific schema contracts |
+| Repo-owned | `AGENTS.md` outside managed fences, config, canonical docs/source/tests, and host policy remain repository truth. |
+| Package-managed | The base `.agentic-workspace/` routing/contract payload is installed and refreshed by explicit lifecycle operations. |
+| Module-owned | Selected modules own only their declared roots and effects. Planning, Memory, and Verification are peer examples. |
+| Generated/derived | References and adapters are rebuilt from their named source contract; edit the source, not the projection. |
+| Local-only | Ignored overrides, diagnostics, logs, and caches are machine state, not shared authority. |
+| Optional/degraded | Absence remains explicit and produces the declared degraded behavior rather than invented policy. |
+| Promoted output | A result becomes durable only through an explicit repository or module owner operation. |
 
-Raw planning files are opened only when `summary`, `preflight`, or another compact route points there.
+The ordinary `necessary-surfaces` profile keeps the checked-in footprint small. `full-mirror` is an explicit larger profile, not a prerequisite for runtime semantics. External clients consume stable package/runtime contracts and do not require a host repository to mirror the full payload.
 
-## Memory Surfaces
+## Selected but unconfigured
 
-Memory adds durable anti-rediscovery knowledge:
+Module selection and repository-owned domain configuration are separate. In particular, selecting Verification does not invent `.agentic-workspace/verification/manifest.toml`; the module reports selected-but-unconfigured and keeps repository proof policy absent until the host supplies it. The generated catalogue exposes this mechanically for every optional reference.
 
-| Surface | Purpose |
-| --- | --- |
-| `.agentic-workspace/memory/repo/index.md` | route-indexed memory entrypoint |
-| `.agentic-workspace/memory/repo/manifest.toml` | machine-readable memory note metadata |
-| `.agentic-workspace/memory/repo/domains/` | subsystem orientation |
-| `.agentic-workspace/memory/repo/invariants/` | contracts and authority boundaries |
-| `.agentic-workspace/memory/repo/runbooks/` | repeatable operator procedures |
-| `.agentic-workspace/memory/repo/decisions/` | longer-lived rationale |
-| `.agentic-workspace/memory/skills/` | package-managed memory skills |
+## Ordinary discovery
 
-Memory should reduce rediscovery cost. It is not a task tracker, execution log, or broad product documentation replacement.
+Start from the repository adapter and compact Workspace decision. Open module roots, raw manifests, generated references, or maintainer machinery only when a selector, skill, operation, or owner routes there.
 
-## Verification Surfaces
-
-Verification adds repo-native evidence protocol state:
-
-| Surface | Purpose |
-| --- | --- |
-| `.agentic-workspace/verification/manifest.toml` | protocols, scenarios, proof routes, bounded evidence bundles, and known gaps |
-| `.agentic-workspace/verification/proof-decision.json` | optional agent-authored proof decision record for changed evidence |
-| `.agentic-workspace/verification/test-strategy-dispositions.json` | optional compact disposition record when ordinary tests are added, merged, moved, or removed |
-
-Verification should make evidence expectations reviewable. It is not a CI
-runner, universal testing policy, or claim authority.
-
-## Payload And Source Boundaries
-
-The root workspace package, first-party modules, and command-generation
-dependency have different delivery roles:
-
-| Area | Shipped or installed role | Hidden/source-checkout role |
-| --- | --- | --- |
-| root workspace package | root CLI, shared lifecycle orchestration, contracts, generated adapters, workspace skills, config/report/proof routing | contract tooling, generated-package development, maintainer checks |
-| Planning | active planning state, execplan templates, selected installed contract docs, planning schemas | package tests, payload verification, optional richer planning surfaces |
-| Memory | durable memory note skeleton, manifest, workflow, package-managed skills, note templates | memory package tests, payload verification, package-local bootstrap source |
-| Verification | verification manifest, proof-route hints, evidence bundles, known gaps, and optional proof-decision records | verification package tests, runtime primitives, manifest/report contract checks |
-| command generation | none in ordinary host-repo operation; released maintainer dependency for generated CLI package rendering and proof | pinned wheel provenance, generation adapters, checker adapters, and generated-target conformance |
-
-For exact contract fields behind this overview, see [Workspace config](../reference/workspace-config.md), [Workspace surfaces manifest](../reference/workspace-surfaces-manifest.md), [Module registry](../reference/module-registry.md), and [Command package IR](../reference/command-package-ir.md).
-
-## Ownership Rule
-
-The stable rule is one owner per concern:
-
-- active execution state belongs in Planning;
-- durable repo knowledge belongs in Memory or canonical docs;
-- evidence protocols, bounded evidence records, and known gaps belong in Verification;
-- package-managed installed contracts live under `.agentic-workspace/`;
-- repo-owned startup and documentation stay outside managed areas unless they use explicit managed fences;
-- local-only runtime residue stays under `.agentic-workspace/local/`.
-
-For exact ownership and path metadata, use:
+For live target ownership, run:
 
 ```bash
-agentic-workspace ownership --target ./repo --format json
+agentic-workspace ownership --target . --format json
 ```
+
+For the trust boundary around installed code and repo-configured commands, see [Threat model](../security/threat-model.md). For support-bearing installation, see [Installing Agentic Workspace](../agentic-workspace-install.md).

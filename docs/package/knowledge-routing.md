@@ -280,11 +280,11 @@ backlog or closeout archive.
 
 ## Relationship To The Next Lanes
 
-For #1390, each investigated operating-loop step should classify its governing
+Each investigated operating-loop step should classify its governing
 knowledge sources and decide whether they should be hidden, compact selectors,
 task-posture fields, proof gates, or closeout capture obligations.
 
-For #1391, each surface audit should identify whether the surface is a source
+Each surface audit should identify whether the surface is a source
 owner, a route projection, a generated reference, a diagnostic, or residue that
 needs promotion or demotion.
 
