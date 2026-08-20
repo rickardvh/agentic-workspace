@@ -14,6 +14,18 @@ See [Threat model and supply-chain boundary](security/threat-model.md) before us
 
 The current coordinated Python distributions require **Python 3.11 or newer**.
 
+This page is the canonical support/prerequisite owner. Exact release identity is projected separately so changing releases does not require copying commands through conceptual prose.
+
+| Concern | Supported contract | Unknown or excluded |
+| --- | --- | --- |
+| Python | CPython-compatible Python 3.11+ as declared by coordinated package metadata | alternative implementations are not promised unless release evidence says so |
+| Installer | `uv tool install` using the exact hash-bound release receipt command | ordinary registry resolution, mutable branches, editable/source installs are not support-bearing |
+| Git/repository | a Git working tree for shared checked-in operating context and ownership | non-Git hosts are not part of the current public adoption contract |
+| Network | required to obtain release assets and for explicitly configured external adapters | ordinary local resolve/act/reconcile does not imply a network service |
+| OS/shell | only what the selected release evidence actually exercises | no blanket OS, shell, container, or runner guarantee is inferred |
+| Credentials | remain in caller/platform boundaries | AW is not a credential host or sandbox |
+| Runtime tools | repository-configured commands run with caller authority | arbitrary host tools are not bundled or silently trusted |
+
 The support-bearing public installation identity is a **versioned GitHub Release** and the exact command recorded in that release's `distribution-install-readiness.json`. That receipt currently owns the canonical `uv tool install` command, exact root-wheel release URL, and SHA-256 binding. Therefore the support-bearing public path requires a working `uv` installation capable of executing that receipt command.
 
 Mutable branches and ordinary registry resolution are not support-bearing installation identities unless a future release policy explicitly changes that contract. `uvx`, `pipx run`, editable installs, and source-checkout commands are useful development/debug routes but should not be confused with the support-bearing release identity.
@@ -32,7 +44,7 @@ The target repo is the repository where AW should own its small `.agentic-worksp
 4. Use the installed `agentic-workspace` CLI to choose the smallest useful module footprint and initialize/adopt the target.
 5. Inspect the resulting config/health before ordinary work.
 
-The receipt is the machine authority for the immutable command. Public release/documentation surfaces should project that same command for human copy/paste rather than maintain a second hand-written install identity.
+The receipt is the machine authority for the immutable command. Use the generated [current support-bearing install](reference/support-bearing-install.md) for a human-copyable projection bound to the receipt URL, receipt digest, release tag commit, wheel URL, and wheel digest.
 
 Typical post-install selection and initialization:
 
@@ -56,7 +68,7 @@ Ordinary bootstrap should keep the checked-in footprint small: repo-owned config
 
 Use `--mirror-payload` only when the host intentionally wants the larger package payload checked in. Necessary-surface adoption should remain the ordinary default.
 
-Exact installed files and required/optional degraded references should ultimately be read from generated contract-derived footprint reference rather than this conceptual page.
+Exact installed files and required/optional degraded references are generated in the [current installed-surface catalogue](reference/installed-surface-catalogue.md).
 
 ## Stable invocation after bootstrap
 
@@ -93,3 +105,19 @@ agentic-workspace doctor --target . --format json
 Then follow the target repository's thin agent adapter, normally `AGENTS.md`, and start ordinary work through the compact Workspace route rather than reading the entire `.agentic-workspace/` tree.
 
 Temporary finishing briefs or diagnostics under `.agentic-workspace/local/` are local-only and should not be checked in. Mirrored-payload profiles may have additional explicit managed artifacts; their ownership should remain visible in the installed-surface contract.
+
+## Worked adoption example
+
+1. Install with the exact command from [current support-bearing install](reference/support-bearing-install.md).
+2. Initialize the smallest footprint that solves a recurring cost, or select no module when routing alone is enough.
+3. Start a small direct task:
+
+   ```bash
+   agentic-workspace start --target . --task "Clarify one README sentence" --format json
+   ```
+
+   The resolved contract can remain direct: edit the canonical README, run proportionate validation, reconcile the bounded result, and create no Planning/Memory/Verification artifact when no future-relevant residue exists.
+4. Start a continuity-sensitive task, such as preparing a multi-slice import feature. Progressive discovery may make Planning relevant; follow the typed Planning operation supplied by the current decision rather than learning a second workflow. Planning owns the continuation, not the source implementation.
+5. After acting, reconcile the result: passing proof supports only its bounded claim; unfinished parent intent stays with its owner; durable anti-rediscovery residue may route to Memory; Verification contributes evidence only if configured and relevant. Resolve again when a constructible next action remains.
+
+This example intentionally omits an exhaustive command or footprint list. Exact current commands are in the [CLI catalogue](reference/cli-catalogue.md), and exact installed files are in the [surface catalogue](reference/installed-surface-catalogue.md).
