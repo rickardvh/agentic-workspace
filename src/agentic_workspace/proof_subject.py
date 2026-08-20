@@ -88,14 +88,38 @@ def classify_proof_subject(*, target_root: Path, receipt: dict[str, Any], change
         changed_paths=changed_paths,
         command=command,
     )
+    return compare_proof_subjects(stored=stored, current=current, minimum_rerun_command=command)
+
+
+def compare_proof_subjects(*, stored: dict[str, Any], current: dict[str, Any], minimum_rerun_command: str = "") -> dict[str, Any]:
+    """Compare two already-issued proof subjects without depending on transport."""
+
+    if stored.get("kind") != PROOF_SUBJECT_KIND or current.get("kind") != PROOF_SUBJECT_KIND:
+        return {
+            "status": "unverifiable",
+            "reasons": ["proof-subject-kind-mismatch"],
+            "minimum_rerun_command": minimum_rerun_command,
+        }
     if not bool(stored.get("identity_complete")) or not bool(current.get("identity_complete")):
-        return {"status": "unverifiable", "reasons": ["incomplete-subject-identity"], "minimum_rerun_command": command}
+        return {
+            "status": "unverifiable",
+            "reasons": ["incomplete-subject-identity"],
+            "minimum_rerun_command": minimum_rerun_command,
+        }
     if stored.get("claim_classes") != current.get("claim_classes"):
-        return {"status": "incompatible", "reasons": ["claim-class-changed"], "minimum_rerun_command": command}
+        return {
+            "status": "incompatible",
+            "reasons": ["claim-class-changed"],
+            "minimum_rerun_command": minimum_rerun_command,
+        }
     if stored.get("fingerprint") == current.get("fingerprint"):
         return {"status": "reusable", "reasons": ["subject-fingerprint-match"], "minimum_rerun_command": ""}
     stored_paths = {item.get("path") for item in stored.get("source_inputs", []) if isinstance(item, dict)}
     current_paths = {item.get("path") for item in current.get("source_inputs", []) if isinstance(item, dict)}
     if stored_paths.isdisjoint(current_paths):
-        return {"status": "partially-reusable", "reasons": ["independent-subject-scope"], "minimum_rerun_command": command}
-    return {"status": "stale", "reasons": ["dependency-input-changed"], "minimum_rerun_command": command}
+        return {
+            "status": "partially-reusable",
+            "reasons": ["independent-subject-scope"],
+            "minimum_rerun_command": minimum_rerun_command,
+        }
+    return {"status": "stale", "reasons": ["dependency-input-changed"], "minimum_rerun_command": minimum_rerun_command}

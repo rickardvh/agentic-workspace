@@ -40,6 +40,7 @@ from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
 from agentic_workspace.actionability import derive_actionability, operation_invocation, proposed_action_input_revision
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
+from agentic_workspace.assurance_authority import build_assurance_application, evaluate_assurance_disposition
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, revalidate_mutation_baseline
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
@@ -3523,6 +3524,7 @@ def _assurance_disposition_payload(value: Any) -> dict[str, Any]:
         "status": "recorded",
         "reason": str(getattr(value, "reason", "")),
         "owner": str(getattr(value, "owner", "")),
+        "applicability": dict(getattr(value, "applicability", {}) or {}),
     }
 
 
@@ -4047,6 +4049,7 @@ def _assurance_status_for_requirement(
     applies_because: list[str],
     planning_facts: dict[str, Any],
     activation_facts: list[dict[str, Any]] | None = None,
+    strict_policy: bool = False,
 ) -> dict[str, Any]:
     required_evidence = [str(item).strip() for item in _list_payload(requirement.get("required_evidence")) if str(item).strip()]
     evidence_by_requirement = planning_facts.get("evidence_by_requirement", {})
@@ -4060,11 +4063,35 @@ def _assurance_status_for_requirement(
     missing_evidence = [item for item in required_evidence if item not in evidence_present]
     waiver = requirement.get("waiver", {}) if isinstance(requirement.get("waiver"), dict) else {}
     dismissal = requirement.get("dismissal", {}) if isinstance(requirement.get("dismissal"), dict) else {}
+    classification_source = {key: value for key, value in requirement.items() if key not in {"waiver", "dismissal", "notes"}}
+    source_revision = "sha256:" + hashlib.sha256(json.dumps(classification_source, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+    application = build_assurance_application(
+        requirement_id=str(requirement.get("id") or ""),
+        classification_owner=str((_list_payload(requirement.get("authority_refs")) or ["workspace-config"])[0]),
+        source_revision=source_revision,
+        applicability_input={
+            "applies_because": applies_because,
+            "activation_kinds": sorted(
+                {str(item.get("activation_kind")) for item in activation_facts or [] if item.get("activation_kind")}
+            ),
+        },
+        current_work_id=str(planning_facts.get("current_work_id") or ""),
+    )
+    waiver_evaluation = evaluate_assurance_disposition(
+        disposition=waiver if waiver.get("status") == "recorded" else None,
+        application=application,
+        strict_policy=strict_policy,
+    )
+    dismissal_evaluation = evaluate_assurance_disposition(
+        disposition=dismissal if dismissal.get("status") == "recorded" else None,
+        application=application,
+        strict_policy=strict_policy,
+    )
     state = "satisfied" if not missing_evidence else "missing-evidence"
-    if dismissal.get("status") == "recorded":
+    if dismissal.get("status") == "recorded" and not dismissal_evaluation["requirement_active"]:
         state = "dismissed"
         missing_evidence = []
-    elif waiver.get("status") == "recorded":
+    elif waiver.get("status") == "recorded" and not waiver_evaluation["requirement_active"]:
         state = "waived"
         missing_evidence = []
     elif missing_evidence and requirement.get("review_owner"):
@@ -4082,6 +4109,9 @@ def _assurance_status_for_requirement(
         "missing_evidence": missing_evidence,
         "waiver": waiver if waiver else {"status": "none"},
         "dismissal": dismissal if dismissal else {"status": "none"},
+        "application": application,
+        "waiver_evaluation": waiver_evaluation,
+        "dismissal_evaluation": dismissal_evaluation,
         "proof_profile": requirement.get("proof_profile"),
         "workflow_obligation_refs": _list_payload(requirement.get("workflow_obligation_refs")),
         "review_owner": requirement.get("review_owner"),
@@ -4135,6 +4165,7 @@ def _assurance_requirements_report_payload(
             applies_because=applies_because,
             planning_facts=planning_facts,
             activation_facts=activation_facts,
+            strict_policy=bool(config.assurance.strict_closeout) if config is not None else False,
         )
         matching.append(
             {
@@ -5870,6 +5901,8 @@ def _repo_posture_payload(*, config: WorkspaceConfig, surface: str, compact: boo
         "workflow_artifact_profile_source": config.workflow_artifact_profile_source,
         "assurance": {
             "default_level": config.assurance.default_level,
+            "classification_owner": config.assurance.classification_owner,
+            "classification_source": config.assurance.classification_source,
             "strict_closeout": config.assurance.strict_closeout,
             "agent_may_escalate": config.assurance.agent_may_escalate,
             "agent_may_deescalate": config.assurance.agent_may_deescalate,
