@@ -16,7 +16,7 @@ The product should make the correct operating path cheaper than broad repository
 
 The ordinary conceptual loop is:
 
-1. **Resolve** — derive the smallest relevant operating contract from current task facts, source-owned repository context, runtime/environment facts, and admitted capability contributions.
+1. **Resolve** — derive the smallest relevant operating contract from current task facts, source-owned repository context, runtime/environment facts, admitted capability contributions, and applicable repo-owned instruction policy.
 2. **Act** — let the agent perform the bounded action through the supported operation, skill, owner, or explicit human decision, loading deeper detail only when the contract routes there.
 3. **Reconcile** — admit the result back to the correct owners, determine what changed, what may now be claimed, what must survive, and whether another resolve step is required.
 
@@ -52,11 +52,29 @@ First contact should contain only information that can change the current decisi
 
 The right information at the wrong time is still a product failure. Installing another capability should not proportionally enlarge ordinary startup or the agent's mental model.
 
-### 3. Make control actionable, not merely descriptive
+### 3. Make control programmable and actionable
 
 When AW says what should happen next, that route should normally be constructible: a typed operation, derived command, exact selector, routed skill, named owner, bounded recovery, or explicit human decision with the required facts.
 
 Prose that says to “reconcile,” “inspect,” “close,” or “handle appropriately” without a supported route is not sufficient dynamic control.
+
+Programmability should go further than choosing among hard-coded modes. A host repository should be able to declare new **bounded conditional control relationships** over stable facts and capabilities without requiring a new Workspace runtime branch merely because that relationship is new.
+
+The architectural normal form is intentionally small:
+
+- **facts** remain source-owned typed context from repo, runtime, module, or admitted external owners;
+- **instruction clauses** state bounded applicability and a supported control effect;
+- **skills** provide lazily discovered multi-step procedure;
+- **typed operations** provide effectful action under explicit authority;
+- the existing **operating-decision compiler** resolves applicable clauses and capabilities into one current contract.
+
+A clause should express only control effects the kernel already knows how to compose safely, such as surfacing a context/skill reference, nominating or requiring a typed operation, requiring evidence or an explicit human decision, restricting an effect, or limiting a claim. The clause itself must not mutate repository state; mutation remains behind an admitted typed operation and its owner.
+
+Composition must preserve authority and be deterministic. Lower-authority guidance cannot widen a higher-authority permission or claim. Restrictions and requirements compose conservatively, conflicts become visible facts rather than hidden precedence, and decisions remain revision/provenance bound.
+
+Do not create a second instruction compiler or a general-purpose policy/rule language. Existing specialized mechanisms—workflow obligations, assurance/proof declarations, scoped instructions, skill routing, target/correction guidance, and module relevance—should converge on or compile through a shared internal control normal form where their semantics overlap. They may retain domain-specific authoring surfaces when those surfaces carry genuine domain meaning.
+
+Natural-language or keyword applicability may help advisory discovery, but hard authority should be grounded in typed facts, owners, explicit references, or admitted results wherever feasible.
 
 ### 4. Optimize total successful-completion cost
 
@@ -76,10 +94,12 @@ Workspace derives how those declarations affect resolution, action, and reconcil
 
 Useful genericity must reduce extension cost as well as conceptual duplication. Adding a later independent module should normally be module-package work plus its public descriptor/contracts and tests—not semantic Workspace edits, module-name switches, fixed slot/phase registration, canonical-skill changes, or another core-owned per-module list merely to recognize the capability.
 
+Modules contribute facts, capabilities, procedures, operations, and result semantics. They should not define new global instruction operators merely because their domain is new; repo-owned instruction policy and Workspace composition remain the control layer.
+
 Keep three mechanisms distinct:
 
 - **modules** add independently owned reusable capabilities;
-- **repo customization** supplies host-owned control inputs through config, obligations, skills, canonical guidance, ownership, and repository operations;
+- **repo customization** supplies host-owned control inputs and bounded instruction policy through config, obligations, skills, canonical guidance, ownership, and repository operations;
 - **external adapters** project or transport stable AW operations into other hosts while remaining outside AW's semantic authority.
 
 A new capability should normally enrich the existing resolve/act/reconcile loop instead of adding a mandatory new phase, first-contact command, or mental model.
@@ -89,6 +109,8 @@ A new capability should normally enrich the existing resolve/act/reconcile loop 
 Shared config should express real repository policy, authority, ownership, capability selection, or durable operating choices. Local config should express machine/runtime capability or preference with appropriately weaker authority. Module-specific controls should stay with the module.
 
 Do not preserve a growing public `posture` model merely because many independent knobs can be represented. Retain a field when it materially changes the current operating contract or has demonstrated completion-cost value; otherwise merge, derive, demote, or remove it.
+
+Repo customization should become more programmable by composing a small set of typed instruction effects, not by accumulating more peer knobs, stages, forces, callbacks, or prose fragments.
 
 ### 7. Keep ownership sharp and residue low
 
@@ -118,13 +140,13 @@ Do not preserve permanent compensating guidance when the underlying owner can be
 
 ## Product-shape rules
 
-Workspace owns only the cross-cutting mechanics needed to resolve and reconcile one trustworthy operating contract: compatibility admission, relevance/routing, source provenance, conflict visibility, effect/mutation boundaries, typed actions, claim boundaries, lifecycle coordination, and safe degraded recovery.
+Workspace owns only the cross-cutting mechanics needed to resolve and reconcile one trustworthy operating contract: compatibility admission, relevance/routing, source provenance, instruction-effect composition, conflict visibility, effect/mutation boundaries, typed actions, claim boundaries, lifecycle coordination, and safe degraded recovery.
 
-Modules own domain semantics. Repo customization owns host policy. External adapters own transport/vendor integration. Canonical repository contents remain repository-owned. None should silently absorb another owner's meaning.
+Modules own domain semantics. Repo customization owns host policy and bounded instruction programming. External adapters own transport/vendor integration. Canonical repository contents remain repository-owned. None should silently absorb another owner's meaning.
 
 Conflicts that change accepted workflow or authority must be surfaced rather than resolved through hidden precedence.
 
-Irrelevance and absence are first-class states. Direct work should stay direct. An irrelevant installed module, Memory note, plan, proof protocol, config fragment, or diagnostic should remain absent from the current contract.
+Irrelevance and absence are first-class states. Direct work should stay direct. An irrelevant installed module, Memory note, plan, proof protocol, config fragment, instruction clause, or diagnostic should remain absent from the current contract.
 
 ## Anti-intents
 
@@ -134,6 +156,7 @@ AW should resist becoming:
 - a project-management or ticketing system;
 - a visible workflow engine the user must consciously operate;
 - a repo-side script that micromanages ordinary implementation judgment;
+- a general-purpose or Turing-complete policy/rule language, scheduler, event bus, or arbitrary callback runtime;
 - a framework where Planning, Memory, Verification, assurance, delegation, closeout, posture, or another current capability becomes a mandatory core concept;
 - a surface-growing contract maze where every useful mechanism becomes a new command, phase, file, policy dimension, identity, or lifecycle concept;
 - an arbitrary plugin/callback runtime, adapter marketplace, or credential host;
@@ -148,21 +171,23 @@ A change is not validated merely because its requested slice landed. Ask whether
 
 - preserved the intended why;
 - improved the repository's ability to preserve useful operating context or apply it to current agent behavior;
+- allowed a new bounded repo control relationship to be expressed without an unnecessary new runtime branch or framework concept;
 - surfaced less but better context at the right decision point;
 - produced an exact supported next action rather than another instruction to infer;
 - respected source ownership and provenance;
 - reduced or bounded total successful-completion cost;
-- kept direct work cheap and irrelevant capabilities quiet;
+- kept direct work cheap and irrelevant capabilities/instruction clauses quiet;
 - made modules easier to author as well as more peer-like, with module-specific meaning remaining module-owned;
 - avoided requiring a new independent module to modify semantic core code or register itself in fixed AW choreography;
 - reconciled results and claims without another parallel authority;
 - removed, derived, backgrounded, or replaced older machinery where a new abstraction was introduced.
 
-Question new work when it does not materially improve operating context, dynamic control, or a module's bounded contribution to that loop.
+Question new work when it does not materially improve operating context, dynamic control, programmable instruction composition, or a module's bounded contribution to that loop.
 
 ## Compact operating rule
 
 Preserve the context that governs work.
+Program only bounded control that pays back.
 Surface only what matters now.
 Act through the supported route.
 Reconcile what changed.
