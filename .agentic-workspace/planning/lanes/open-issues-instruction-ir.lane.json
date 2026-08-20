@@ -17,7 +17,7 @@
     {
       "id": "open-issues-instruction-ir-implementation",
       "title": "Implement bounded instruction clause IR",
-      "status": "active",
+      "status": "validation",
       "execplan_ref": ".agentic-workspace/planning/execplans/open-issues-instruction-ir-implementation.plan.json",
       "depends_on": [],
       "purpose_for_lane": "Unify cross-cutting programmable instruction semantics without creating a peer authority or general workflow engine."
@@ -27,26 +27,27 @@
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Schema, authority, predicate, composition, conflict, no-divergence, simulation, progressive-disclosure, and direct-work fixtures.",
   "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
-    "known_gaps": []
+    "status": "in-progress",
+    "evidence": [
+      "IR/schema/selector and operating-decision focused proof passed",
+      "workspace CLI suite: 396 passed",
+      "lint, all package typechecks, schema freshness, contract tooling, structured inventory, and source/payload closure passed",
+      "draft PR #2631 published and reordered directly above foundation PR #2625"
+    ],
+    "known_gaps": [
+      "Host agentic-planning and agentic-memory executables are unavailable in this environment; direct package/source checks passed.",
+      "Blocking-review follow-up and final stack proof remain in progress."
+    ]
   },
-  "residual_lane_work": "not evaluated",
-  "lane_to_epic_contribution": "not evaluated",
-  "parent_close_permission": "not-evaluated",
+  "residual_lane_work": "Complete blocking-review proof, then review and ordered stack merge.",
+  "lane_to_epic_contribution": "Supplies the shared programmable instruction semantics used by later module and assurance lanes.",
+  "parent_close_permission": "not-owned-by-this-lane",
   "closeout_state": {
     "status": "open",
-    "summary": "",
-    "residual_work": "",
-    "next_owner": ""
+    "summary": "Implementation is under blocking-review follow-up; draft PR published.",
+    "residual_work": "Complete review proof and merge the stack in order.",
+    "next_owner": "implementation"
   },
-  "references": [
-    {
-      "kind": "decomposition",
-      "target": ".agentic-workspace/planning/decompositions/open-issues-2026-08-20-stack.decomposition.json",
-      "label": ".agentic-workspace/planning/decompositions/open-issues-2026-08-20-stack.decomposition.json",
-      "role": "parent"
-    }
-  ],
+  "references": [],
   "notes": ""
 }

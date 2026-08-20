@@ -4,8 +4,8 @@
   "title": "Implement bounded instruction clause IR",
   "owner_level": "slice",
   "lifecycle": "live",
-  "phase": "implementation",
-  "revision": 2,
+  "phase": "validation",
+  "revision": 4,
   "intent": {
     "outcome": "Close GitHub #2629 in the first dependent draft PR stacked directly on foundation PR #2625.",
     "non_goals": [
@@ -52,7 +52,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Complete broad validation, publish the first dependent draft PR, and reconcile #2629 against its acceptance criteria.",
+  "next_action": "Complete blocking-review validation and merge PR #2631 after foundation PR #2625.",
   "blockers": [],
   "proof": {
     "claims": [
@@ -65,7 +65,10 @@
       "Start and implement selectors expose deterministic clause explanations.",
       "Schema references, contract tooling, lint, typechecks, and affected runtime tests pass."
     ],
-    "refs": []
+    "refs": [
+      "instruction-clause IR and operating-decision focused proof passed before review follow-up",
+      "PR #2631"
+    ]
   },
   "continuation": {
     "owner": "stack-review",
