@@ -19,7 +19,7 @@ Generated from `src/agentic_workspace/contracts/skill_specs.json`. Do not hand-e
 ## Interpret These Fields
 - `immediate_next_allowed_action`: The next allowed action before any broad file reads.
 - `skill_routing.preferred_routes`: The skill guidance to load when task-specific instructions are useful.
-- `next_safe_action.implementation_allowed`: Whether implementation can start without additional planning or proof setup.
+- `next_safe_action.implementation_allowed`: Whether implementation can start without additional planning or proof setup after enabled-AW routing has already been followed.
 
 ## Allowed Actions
 - Run the configured startup CLI command before broad workspace inspection.
@@ -28,11 +28,12 @@ Generated from `src/agentic_workspace/contracts/skill_specs.json`. Do not hand-e
 
 ## Forbidden Actions
 - Open raw planning or memory state before compact startup routing points there.
+- Treat advisory skill routing or implementation_allowed as permission to skip start/implement routing.
 - Create planning, review, memory, or handoff artifacts for routine direct work.
 - Treat generated skill or adapter output as the source of product behavior.
 
 ## No-CLI Fallback
-- Read `.agentic-workspace/WORKFLOW.md` before other workspace files.
+- Read `.agentic-workspace/skills/workspace-startup/SKILL.md` before other workspace files.
 - Use the smallest safe manual path and preserve no-artifact-by-default behavior.
 - Escalate to planning only when the work shape, risk, or continuation need requires durable state.
 
@@ -56,4 +57,4 @@ Generated from `src/agentic_workspace/contracts/skill_specs.json`. Do not hand-e
 ## Generated Target Behavior Fixtures
 - `direct-task-cheap-path` (direct, skill `startup-router`): Direct work remains cheap when compact routing permits it.; Generated targets do not create planning artifacts by default.; A narrow validation or inspection is still named before completion.
 - `lane-task-planning-gate` (lane, skill `planning-autopilot`): Lane and epic work route through planning ownership before implementation.; Generated targets surface required skill visibility.; Proof requirements stay separate from completion permission.
-- `no-cli-conservative-fallback` (fallback, skill `startup-router`): Read `.agentic-workspace/WORKFLOW.md` before broad raw state.; Preserve forbidden actions even without CLI output.; Do not bypass CLI-preferred/no-CLI fallback semantics.
+- `no-cli-conservative-fallback` (fallback, skill `startup-router`): Read `.agentic-workspace/skills/workspace-startup/SKILL.md` before broad raw state.; Preserve forbidden actions even without CLI output.; Do not bypass CLI-preferred/no-CLI fallback semantics.

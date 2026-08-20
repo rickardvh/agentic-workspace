@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypedDict
@@ -42,6 +42,11 @@ class ModuleDescriptor:
     result_contract: ModuleResultContract
     kind: str = "core"
     default_enabled: bool = False
+    availability: str = "available"
+    availability_reason: str = ""
+    entry_point: str = ""
+    public_contract: dict[str, Any] | None = None
+    domain_operations: Mapping[str, Callable[..., Any]] | None = None
 
 
 class ModuleReportFinding(TypedDict, total=False):
