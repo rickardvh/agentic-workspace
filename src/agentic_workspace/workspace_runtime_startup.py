@@ -3027,6 +3027,11 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     if _selector_requests(selected_fields, "source_guidance"):
         payload.setdefault("values", {})["source_guidance"] = _as_dict(operating_decision.get("source_guidance"))
         payload["missing"] = [item for item in payload.get("missing", []) if item != "source_guidance"]
+    if _selector_requests(selected_fields, "instruction_clause_projection"):
+        payload.setdefault("values", {})["instruction_clause_projection"] = _as_dict(
+            operating_decision.get("instruction_clause_projection")
+        )
+        payload["missing"] = [item for item in payload.get("missing", []) if item != "instruction_clause_projection"]
     selected_gate = _as_dict(_as_dict(payload.get("values")).get("planning_safety_gate"))
     selected_route = _as_dict(selected_gate.get("route_decision"))
     if (

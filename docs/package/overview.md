@@ -58,6 +58,8 @@ Diagnostics such as `report`, `doctor`, `ownership`, `modules`, `defaults`, and 
 
 A module should normally enrich one of these existing questions. Installing more capabilities should not require agents to learn a proportionally larger first-contact framework.
 
+Cross-cutting instruction semantics normalize internally to source-owned facts and bounded clauses. Clauses can only surface or prefer existing capabilities, require a source-owned satisfier, or restrict an action, effect, operation, or claim. They cannot grant authority, execute code, or become a general rule or obligation store. `start` and `implement` expose the explanation on demand through `--select instruction_clause_projection`.
+
 ## Ownership model
 
 Keep one primary owner per concern:
