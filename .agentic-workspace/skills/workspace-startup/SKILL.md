@@ -1,64 +1,108 @@
 ---
 name: workspace-startup
-description: Use the main Agentic Workspace operating loop in an installed AW repo. Start from the configured compact router, preserve routed actions and proof boundaries, and load specialized AW skills only when routed.
+description: Use the canonical Agentic Workspace operating loop. Resolve one compact current contract, act through its routed operation or skill, reconcile the result, and load deeper capability detail only when routed.
 ---
 
 # Workspace Startup / Operating Loop
 
-Use this skill for ordinary AW startup, resume, changed-path implementation, proof approach, closeout, or routed fallback in an installed Agentic Workspace repo.
-When Agentic Workspace is enabled, this is the canonical main operating skill. Advisory skill routing and `implementation_allowed` never bypass startup, Planning gates, proof, or closeout.
+Use this skill for ordinary first contact, resume, changed-path work, routed proof, continuation, or fallback in an installed Agentic Workspace repository.
 
-Do not use this as a broad manual. Load specialized AW subskills only when the compact router, task shape, or this skill names their narrower job.
+The ordinary mental model is **resolve -> act -> reconcile**. Do not learn module topology or reconstruct a command sequence before work can begin.
 
 ## Configured Invocation
 
-Use the configured AW invocation exposed by the repo adapter, config, or compact startup/config output. In an installed repo this may look like `agentic-workspace ...`; in a source checkout or dev-dependency install it may be a repo-local command. Do not prefer a bare selector when adapter/config names a different invocation.
+Use the configured AW invocation exposed by the repo adapter, config, or compact output. In an installed repo this may be `agentic-workspace ...`; in a source checkout or dev-dependency install it may be a repo-local command.
 
-## Procedure
+Do not replace a configured invocation with a guessed bare command.
+
+## Resolve
 
 1. Run the configured invocation with `start --target . --task "<task>" --format json` for ordinary first contact.
-2. If changed paths are already known, run the configured invocation with `implement --target . --changed <paths> --task "<task>" --format json`.
-3. When `planning_route_decision` is present, consume the projection for the current surface and preserve its `decision_id`, `input_revision`, `action_identity`, transition, proof, mutation, and claim boundaries. Do not reclassify the task from prose or a legacy task-switch field.
-4. Preserve `module_slot`, `next_safe_action`, `allowed_actions`, `forbidden_actions`, `proof_required`, and `completion_claim_allowed`.
-5. Follow `next_safe_action` before opening raw `.agentic-workspace/` files or running drill-down commands.
-6. Keep direct work direct when the router allows no-artifact work; do not create Planning, Memory, review, or handoff artifacts just to show work.
-7. Load specialized subskills only for routed intent/shape, proof, setup, or fallback/reference needs.
-8. Before claiming completion, reconcile intent, proof, residue, issue/PR closure, and next owner separately.
+2. If changed paths are already known, use `implement --target . --changed <paths> --task "<task>" --format json` when that is the routed/current affordance.
+3. Consume the compact current decision before raw `.agentic-workspace/` files. Preserve the fields that materially constrain the decision, including when present:
+   - decision/action identity and input revision;
+   - `next_safe_action` or `immediate_next_allowed_action`;
+   - allowed and forbidden actions/effects;
+   - proof or claim boundaries;
+   - routed owner, skill, operation, selector, or preferred invocation;
+   - compatibility projections such as `planning_route_decision`, `planning_safety_gate`, or `module_slot` when the current runtime emits them.
+4. Treat module- or phase-specific fields as projections of the current operating decision, not as a fixed architecture to generalize from. Follow the route they name; do not make an unrelated capability globally relevant.
+5. If the compact result is insufficient, use only the smallest selector, skill, operation, or safe probe it routes to before broadening context.
 
-## Subskill Routes
+## Act
 
-- `workspace-intent-discovery`: ambiguous human intent, vague outcome prompts, or direct/bounded/lane/epic work-shape decisions.
-- `workspace-proof-selection`: proof selection or interpretation for task, slice, lane, epic, skipped, warning, retry, crash, or negative evidence.
-- `workspace-setup-jumpstart`: newly installed or adopted AW in a lived-in repo that needs bounded post-bootstrap seeding.
-- `workspace-operating-loop` / `workspace-transition-gates`: reference support only when `module_slot`, `forbidden_actions`, preferred invocation fallback, or transition gate details need interpretation.
+1. Follow the supported next action before inventing a different command path.
+2. Prefer a typed/routed operation, generated command, specialized skill, exact owner/selector, or explicit human decision over hand-editing managed state.
+3. Load a specialized capability procedure only when the current decision routes there.
+4. Keep direct work direct when the contract permits it. Do not create Planning, Memory, review, proof, handoff, or other artifacts merely to demonstrate AW use.
+5. Do not infer permission from advisory prose when a current hard gate or forbidden action says otherwise.
+
+## Reconcile
+
+After the bounded action:
+
+1. Admit or refresh the result through the owner/operation named by the current route when required.
+2. Reconcile only concerns relevant to this work: changed state, proof/evidence, claim permission, future-relevant residue, continuation, or an explicit human decision.
+3. Preserve the difference between successful local action and permission to make a broader completion claim.
+4. If the result names another supported action or unresolved owner, resolve again from that current state.
+5. Stop when no further action is required and the intended claim is permitted. Terminal reconciliation is closeout; no separate closeout framework is assumed.
+
+## Progressive Disclosure
+
+First contact should stay small.
+
+- Do not open a module map, module state, broad generated references, or raw Planning/Memory/Verification files merely because they exist.
+- Do not load specialized skills merely because they are installed.
+- Use exact selectors and routed procedures before broad reads.
+- An irrelevant installed capability should remain irrelevant.
+
+## Specialized Routes
+
+Use specialized skills only when routed or when the request directly maps to their narrow job:
+
+- `workspace-intent-discovery` — ambiguous human intent or work-shape decision.
+- `workspace-proof-selection` — proof selection/interpretation when the current claim needs it.
+- `workspace-setup-jumpstart` — bounded post-bootstrap seeding in a lived-in repo.
+- `workspace-operating-loop` — interpret compact decision/state-delta behavior when a visible update or reconciliation needs deeper guidance.
+- `workspace-transition-gates` — interpret explicit allowed/forbidden actions, preferred invocation, or degraded fallback when the compact route is not self-explanatory.
+
+A module or future capability may route its own specialized skill or operation through the same mechanism without becoming part of this fixed list.
+
+## No-CLI / Degraded Fallback
+
+If the configured invocation is unavailable, use the installed no-CLI startup fallback when present:
+
+```bash
+python .agentic-workspace/fallback/no_cli_startup.py
+```
+
+Follow its forbidden actions and next safe action. A degraded route should stay bounded to the named repair or owner; do not compensate by reading the entire workspace tree.
+
+## Compatibility Note
+
+Current runtime packets may still expose first-party or historical projection names such as `planning_safety_gate`, `planning_route_decision`, `module_slot`, or closeout-specific fields.
+
+Use them when present because they carry current authority, but interpret them through the generic rule: **which owner/capability is relevant now, what action is allowed, and what claim/reconciliation effect follows?** Do not teach those projection names as permanent core concepts.
 
 ## Red Flags
 
 Red flag:
-  I can inspect raw planning or memory files first because the request seems simple.
+  I can inspect raw Planning, Memory, Verification, or module files first because the task seems related to that capability.
 
 Use instead:
-  Run the configured invocation with `start --target . --task "<task>" --format json`, or the known dedicated AW command when the request already names one, then follow `next_safe_action`.
+  Resolve the compact current contract, then follow the routed owner/skill/operation if that capability is actually relevant.
 
-## SkillSpec Pilot
+Red flag:
+  Validation succeeded, so I can call the whole task complete.
 
-This skill is the hand-authored startup pilot for the installed package's `startup-router` SkillSpec contract. Source-tree layout is not required for fallback operation.
+Use instead:
+  Reconcile the actual result with the current claim boundary and containing intent before making a broader claim.
 
-- Preferred route: configured AW invocation with `start --target . --task "<task>" --format json`.
-- Interpreted fields: `workflow_participation`, `immediate_next_allowed_action`, `next_safe_action`, `planning_safety_gate`, `skill_routing.preferred_routes`, and `detail_commands`.
-- Direct work: if compact startup does not require planning and proof is obvious, keep the work direct and avoid planning, review, Memory, or handoff artifacts.
-- Planning work: if `planning_safety_gate.implementation_allowed` is false, run the named planning command before implementation.
-- No-CLI fallback: if the configured invocation is unavailable, run `python .agentic-workspace/fallback/no_cli_startup.py`. Follow its `forbidden_actions` and `next_safe_action`; a blocked result permits only repair of the named installed fallback surface.
+## Guardrails
 
-## Module Map
-
-- Workspace orchestrates startup, lifecycle, config, ownership, proof routing, reports, and module composition.
-- Planning owns active execution state, checked-in execplans, decomposition records, proof expectations, and closeout routing.
-- Memory owns durable anti-rediscovery knowledge: invariants, boundaries, runbooks, routing hints, and recurring failure lessons.
-- Generated references own exact field names and structured output shapes after conceptual docs explain the behavior.
-
-Use `.agentic-workspace/docs/module-map.md` when a short installed-repo module map is enough and broader package docs would cost too much context.
-
-## Closeout
-
-For planned work, closeout is not only validation success. Separate proof, intent satisfaction, issue completion, durable residue, and dogfooding findings. Route future-relevant learning to Memory, docs, checks, contracts, config, Planning, or an issue. Do not keep completed execplans as the ordinary knowledge base.
+- Repository sources keep their own authority; a generated operating contract is a projection, not a new source of truth.
+- Do not replace structured decision/action fields with prompt-keyword inference.
+- Do not bypass forbidden actions because a different capability appears permissive.
+- Do not make installed modules or specialized procedures visible when irrelevant.
+- Do not persist residue unless it has future decision value and a clear owner.
+- Prefer the smallest safe next action and the smallest sufficient context.
