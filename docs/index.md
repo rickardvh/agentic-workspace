@@ -1,68 +1,93 @@
 # Agentic Workspace Documentation
 
-This documentation is organized around the shipped package first, then the supporting references that define and maintain it.
+Use the smallest documentation layer that answers the question. Public conceptual docs explain stable product roles; machine-generated references should answer exact contract questions; maintainer docs own source-checkout procedure; dated reviews and Planning retain implementation evidence rather than current product doctrine.
 
-## Canonical Owners
+## Start here
 
-Use this map when updating docs so each page stays complete at its level without restating deeper operational detail.
+- [Package overview](package/overview.md) — what AW is, when it pays back, and the ordinary operating shape.
+- [Modules](package/modules.md) — capability ownership, module selection, and the module/repo/adapter distinction.
+- [Architecture](architecture.md) — kernel, module, repo-customization, and external-adapter boundaries.
+- [Installation and adoption](agentic-workspace-install.md) — support-bearing install and lifecycle entrypoint.
+- [Threat model](security/threat-model.md) — trust, shell execution, credentials, repository, and supply-chain boundaries.
+- [Installed surfaces](package/installed-surfaces.md) — conceptual host-repo ownership and footprint model.
+- [Contracts and references](package/contracts.md) — how source contracts, schemas, runtime outputs, and generated references relate.
 
-| Question | Canonical owner | Link instead of repeating when |
-| --- | --- | --- |
-| What is Agentic Workspace and when does it pay back? | [Package overview](package/overview.md) | another page only needs the product thesis or adoption boundary |
-| Which core modules should a repo enable? | [Modules](package/modules.md) | repeating module thresholds would duplicate module guidance |
-| What does the root CLI do? | [Lifecycle and context commands](package/lifecycle.md) and [Command map](package/commands.md) | a page only needs to name a command or compact router |
-| What is the ordinary agent operating loop and how are visible surfaces classified? | [Ordinary continuity loop and surface classification](package/ordinary-continuity-loop.md) | later simplification work needs the target workflow, surface classes, overlap findings, or follow-on sequence |
-| Which substeps inside the ordinary loop should be simplified next? | [Operating loop substep inventory](package/operating-loop-substeps.md) | later #1389 slices need per-step decisions, module-slot seams, knowledge-gate fields, or concrete follow-on issues |
-| Which CLI output profile should an agent use? | [CLI output profiles](package/output-profiles.md) | next-decision policy belongs in one command-output contract |
-| What files are installed and who owns them? | [Installed surfaces](package/installed-surfaces.md) | explaining startup adapters, managed fences, local-only state, or source-checkout boundaries |
-| How should agents route governing knowledge and source authority? | [Knowledge routing and source authority](package/knowledge-routing.md) | a page only needs to name a source kind, authority class, route trigger, freshness rule, or capture obligation |
-| When should governing knowledge block or constrain work? | [Pre-work knowledge gates](package/knowledge-gates.md) | a page only needs to name gate force, blocked actions, closeout evidence, or fallback behavior |
-| Which generated-command tests belong at the CLI wrapper boundary? | [CLI boundary tests](package/cli-boundary-tests.md) | a page only needs to distinguish operation conformance from argv/help/error/exit/stdout wrapper proof |
-| What final accounting proves generated behavior migration is complete? | [Generated behavior closure inventory](package/generated-behavior-closure-inventory.md) | a page only needs the #1476 parent closure evidence, unresolved-state rule, or bypass guardrails |
-| What do Planning, Memory, and Verification own? | [Modules](package/modules.md), then the module READMEs | a page only needs to distinguish active execution state, durable repo knowledge, and verification evidence |
-| What are the exact fields and generated references? | [Contracts and references](package/contracts.md) and [Reference material](reference/index.md) | hand-written docs would otherwise copy generated schema detail |
-| What is source-checkout maintainer workflow? | [Maintainer index](maintainer/index.md) | ordinary host-repo docs mention internal validation, dogfooding, or generation only as a boundary |
-| What is current maturity or freshness? | [Documentation status](documentation-status.md) and [Maturity model](maturity-model.md) | status wording starts becoming a second product overview |
+## Canonical conceptual owners
 
-## Start Here
+| Question | Canonical conceptual owner |
+| --- | --- |
+| What is Agentic Workspace and when should a repo use it? | [Package overview](package/overview.md) |
+| What do modules own and how does extensibility work? | [Modules](package/modules.md) and [Extensibility and public boundary](extension-boundary.md) |
+| What does the kernel own versus modules, repo policy, and adapters? | [Architecture](architecture.md) |
+| How do I install/adopt it? | [Installation and adoption](agentic-workspace-install.md) |
+| What is the security/trust boundary? | [Threat model](security/threat-model.md) |
+| What files/state exist in a host repo and who owns them? | [Installed surfaces](package/installed-surfaces.md) |
+| How do lifecycle/context commands fit the product? | [Lifecycle and context commands](package/lifecycle.md) and [Command map](package/commands.md) |
+| How do contracts and generated references relate? | [Contracts and references](package/contracts.md) |
+| What is current maturity/support status? | [Maturity model](maturity-model.md) and [Documentation status](documentation-status.md) |
+| How do maintainers build, validate, dogfood, and release AW? | [Maintainer index](maintainer/index.md) |
 
-- [Package overview](package/overview.md): what `agentic-workspace` ships and why it exists.
-- [Lifecycle and context commands](package/lifecycle.md): how the root command initializes, inspects, routes, verifies, upgrades, and removes installed surfaces.
-- [Command map](package/commands.md): quick human map of the shipped CLI surface.
-- [Ordinary continuity loop and surface classification](package/ordinary-continuity-loop.md): reviewed target model for ordinary agent operation and follow-on simplification lanes.
-- [Operating loop substep inventory](package/operating-loop-substeps.md): reviewed per-step #1391 inventory for simplifying startup, active work, durable knowledge, proof, and closeout.
-- [Installed surfaces](package/installed-surfaces.md): what files the package writes into a host repository and who owns them.
-- [Modules](package/modules.md): how the root package composes Planning, Memory, and Verification.
-- [Knowledge routing and source authority](package/knowledge-routing.md): how startup, posture, closeout, Memory, Planning, issues, docs, and external sources route governing knowledge without broad mirroring.
-- [Pre-work knowledge gates](package/knowledge-gates.md): when routed knowledge should block design, edits, claims, or closeout until resolved.
-- [CLI boundary tests](package/cli-boundary-tests.md): how shell-facing wrapper tests stay separate from operation conformance cases.
-- [Generated behavior closure inventory](package/generated-behavior-closure-inventory.md): final #1476 accounting and bypass guardrails for generated behavior migration.
-- [Contracts and references](package/contracts.md): how JSON contracts, schemata, generated reference docs, and runtime outputs relate.
-- [Jumpstart contract](jumpstart-contract.md): how a newly installed or adopted workspace in a lived-in repo should discover candidate durable surfaces without bulk importing repo prose.
-- [Collaboration safety](collaboration-safety.md): git-native collaboration model, merge recovery, and shared-state pressure rules.
+A second conceptual page should link to these owners instead of restating their full model.
 
-## Reference Material
+## Exact reference material
 
-- [Generated schema reference](reference/index.md): generated field-level documentation for machine-readable contracts.
-- [Workspace configuration reference](reference/workspace-config.md): schema reference for `.agentic-workspace/config.toml`.
-- [CLI command contract](reference/cli-commands.md): generated reference for the declared root command surface.
-- [Module registry contract](reference/module-registry.md): generated reference for core modules, components, and package footprint metadata.
+Generated references are for exact contract shapes and values after the conceptual model is understood.
 
-## Maintainer Material
+- [Reference index](reference/index.md)
+- [Workspace configuration](reference/workspace-config.md)
+- [Module registry](reference/module-registry.md)
+- [Startup context](reference/startup-context.md)
+- [Workspace report](reference/workspace-report.md)
+- [Operation contracts](reference/operation-contracts.md)
 
-- [Maintainer index](maintainer/index.md): source-checkout workflows, validation lanes, dogfooding policy, and internal review bars.
-- [Contributor playbook](maintainer/contributor-playbook.md): maintainer routing, ownership, and validation guidance.
-- [Maintainer commands](maintainer/maintainer-commands.md): literal command index.
+The current CLI schema/reference pages describe declared contract structure. Work to generate a true current command catalogue and exact installed-surface matrix is tracked separately; conceptual docs should not claim a schema-shape page already answers those current-value questions.
 
-## Supporting Context
+## Supporting product concepts
 
-- [Architecture](architecture.md): current composition and module-boundary summary.
-- [Documentation status](documentation-status.md): role and freshness index after the package docs answer the current behavior question.
-- [Maturity model](maturity-model.md): support and adoption expectations, not a product map.
-- [Design principles](design-principles.md): product doctrine and tradeoff guidance, not first-contact package documentation.
-- [Setup findings contract](setup-findings-contract.md): how optional setup findings are promoted, dismissed, or kept transient.
-- [Host-repo learning](host-repo-learning.md): how agents turn repo-specific evidence into the right owner surface instead of relying on hard-coded assumptions.
-- [Continuation readiness projections](continuation-readiness-projections.md): completion, repair, findings, external-evidence, migration, compaction, and automation-readiness report sections.
-- [Collaboration safety](collaboration-safety.md): practical merge expectations for Planning, Memory, config, generated surfaces, and managed fences.
-- [Planning live-state collaboration design](planning-live-state-collaboration-design.md): design note for lower-conflict live-state alternatives and the current compact-state choice.
-- [Historical reviews](reviews/): dated audits and evidence. These support future work, but they are not first-contact package documentation.
+Use these only when the ordinary conceptual pages route you deeper:
+
+- [Knowledge routing and source authority](package/knowledge-routing.md)
+- [Pre-work knowledge gates](package/knowledge-gates.md)
+- [CLI output profiles](package/output-profiles.md)
+- [Collaboration safety](collaboration-safety.md)
+- [Jumpstart contract](jumpstart-contract.md)
+- [Host-repo learning](host-repo-learning.md)
+- [Setup findings contract](setup-findings-contract.md)
+
+## Maintainer and design material
+
+Source-checkout procedure, generator/test inventories, implementation-shaping audits, and migration closure evidence are not first-contact package documentation.
+
+Start with:
+
+- [Maintainer index](maintainer/index.md)
+- [Contributor playbook](maintainer/contributor-playbook.md)
+- [Maintainer commands](maintainer/maintainer-commands.md)
+
+The following existing package-path documents currently function primarily as design/maintainer evidence and should be treated that way until the documentation-ladder cleanup gives them a final move/merge/delete disposition:
+
+- `package/ordinary-continuity-loop.md`
+- `package/operating-loop-substeps.md`
+- `package/cli-boundary-tests.md`
+- `package/generated-behavior-test-inventory.md`
+- `package/generated-behavior-closure-inventory.md`
+
+Do not use active issue numbers or migration inventories in those pages as the current public product definition.
+
+## Historical evidence
+
+- [Historical reviews](reviews/) contain dated audits and evidence.
+- Planning state and execplans contain active implementation shaping.
+- Git and merged PRs retain completed implementation history.
+
+Historical evidence may explain why the product changed, but it is not current authority unless a current owner explicitly promotes or references the conclusion.
+
+## Documentation maintenance rule
+
+Prefer this ladder:
+
+1. explain stable meaning once in a conceptual owner;
+2. derive exact facts from machine-readable authority;
+3. keep source-checkout procedure in maintainer docs;
+4. keep dated evidence historical;
+5. delete or demote duplicated current prose instead of adding another index or compatibility explanation.

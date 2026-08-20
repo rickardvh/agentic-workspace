@@ -1,228 +1,138 @@
 # System Intent
 
-This file states the package's durable purpose and the main intents that should guide future work.
-
-Treat it as a compass and source declaration for planning and validation. It should orient shaping and evaluation, but it is not itself the active planning surface, execution authority, or task state.
-
-It exists to keep the system aligned as issues, slices, implementation details, local operating surfaces, and host-repo adaptations evolve.
-
-It is the compact answer to:
-
-- what is this system trying to become?
-- what must future work preserve?
-- what should the system resist becoming?
-- what should planning and validation test when judging whether a change really helped?
-
-## Planning and Roadmap Authority
-
-While this file defines the long-term intent, the active execution queue and medium-term roadmap are managed in `.agentic-workspace/planning/state.toml`.
-
-- **Roadmap**: Use `state.toml` to view candidate lanes and prioritised tranches.
-- **Active Queue**: Use `state.toml` to see what is currently being implemented.
-- **Execution Details**: Use `.agentic-workspace/planning/execplans/` for the detailed "how" and "done when" of active work.
-- **First Recovery Path**: Use `agentic-workspace summary --format json` before reading raw planning files.
-
-Treat `state.toml` as the machine-readable execution state for queue and roadmap management, not as a replacement for this durable intent or the compact summary/report surfaces.
+This file states Agentic Workspace's durable product intent. It is a compass for shaping and validation, not active task state or execution authority.
 
 ## Purpose
 
-Agentic Workspace should be a quiet, repo-native continuity and execution layer that preserves human intent, keeps bounded work cheap to continue and verify, and reduces total operating cost for agents without becoming a visible framework or a second source of truth.
+Agentic Workspace should be a quiet, repo-native operating substrate for agents. It should preserve human intent across time, keep bounded work cheap to start and continue, make proof and ownership legible, and reduce total successful-completion cost without becoming a visible workflow framework or a second source of truth.
+
+The package should help an agent answer the current operating question from the smallest trustworthy state, then get out of the way.
+
+## Authority model
+
+The human or domain expert owns **why**. The system-shaping layer reasons about **what** best serves that why. The implementation layer owns **how**.
+
+AW must preserve that ladder across decomposition, interruption, delegation, review, and closeout. It must not silently narrow the intended outcome merely because a smaller local interpretation is easier to implement or prove.
+
+Active execution state belongs to Planning or another explicit owner. Durable repository truth belongs in its canonical repo surface or Memory when it is genuinely anti-rediscovery knowledge. Proof evidence does not by itself own semantic completion. External trackers and services provide evidence unless the repository explicitly gives them stronger authority.
+
+This file does not own the current execution queue or medium-term roadmap. In this source repository those belong to Planning and its compact summary/routing surfaces; use the configured Planning/Workspace query path before treating raw Planning files as the current work answer.
 
 ## Governing intents
 
-### 1. Preserve the right things, not more things
-The system should keep only information that is expensive to rediscover and necessary for safe continuation.
+### 1. Preserve the right intent and context
 
-That includes:
-- current bounded execution state
-- durable repo understanding
-- higher-level convergence context
-- proof and ownership boundaries
-- compact handoff and review residue
+Keep what is expensive to rediscover and necessary for safe continuation: current bounded intent, durable repo understanding, proof and ownership boundaries, higher-level convergence context, and compact handoff residue.
 
-It should resist becoming a prose archive, a second backlog, or a broad framework-shaped knowledge dump.
+Do not preserve narrative history merely because it exists. Chat, logs, plans, reviews, and archives should survive only when their future value exceeds their reread and maintenance cost.
 
-### 2. Keep agents aligned with human intent across time
-The human or domain expert owns **why**.
-The system-shaping layer reasons about **what** best serves that why.
-The implementation layer owns **how**.
+### 2. Make bounded work cheap to start, continue, hand off, review, and finish
 
-The package should preserve that ladder across bounded slices, interruptions, delegation, and review.
+The ordinary product should be organized around phase questions rather than command inventory: smallest safe startup context, work shape, governing knowledge, implementation boundary, proof, closeout, and continuation.
 
-It must not silently rewrite the human's intended outcome just because a narrower local interpretation looks plausible or locally efficient.
+Commands, skills, state files, modules, and diagnostics are useful when they answer one of those questions or expose the next safe action. They should not become concepts an agent must learn before repository work can begin.
 
-### 3. Make active work cheap to start, continue, hand off, review, and finish
-The package should act as a low-cost execution substrate for bounded work.
+### 3. Optimize total successful-completion cost
 
-Active work should be:
-- easy to start from small checked-in state
-- easy to continue after interruption
-- easy to hand off between agents
-- easy to review against intent and scope
-- easy to finish cleanly without dangling ends
+Reduce rereads, rediscovery, clarification loops, retries, proof reruns, repair cycles, handoff reconstruction, and unnecessary user roundtrips. Prompt size, token count, latency, and file count are useful proxies only when they improve the total path to a correct result.
 
-The ordinary product shape should be phase-question first: smallest safe
-startup context, work shape, governing knowledge, implementation context,
-proof, closeout, and continuation. Commands, skills, state files, docs, and
-diagnostics are valuable when they answer the current phase question or expose
-the next safe action; they should not become a command inventory the agent must
-understand before repository work can begin.
+A local optimization that makes another stage heavier is not a product improvement.
 
-### 4. Reduce total interaction cost, not just prompt size
-The system should lower the total cost of getting a tranche done correctly.
+### 4. Prefer compact, queryable operational state
 
-That means reducing:
-- rereads
-- rediscovery
-- clarification loops
-- retries
-- review and repair cycles
-- unnecessary roundtrips
-- repeated reasoning caused by missing residue
+Prefer machine-readable current state, narrow selectors, compact reports, lazy discovery, typed next actions, and thin human-readable explanations over prose-first operation.
 
-Optimize for total successful-completion cost, not one narrow metric.
+Prose should explain stable concepts and maintenance decisions. It should not remain the primary operating substrate when a small contract can answer the question more reliably.
 
-### 5. Make weaker agents safer and stronger agents more worthwhile
-The package should reduce interpretation burden enough that weaker agents can succeed on bounded work more often.
+### 5. Treat safe composable extensibility as a core product property
 
-It should also make larger models economically worthwhile by ensuring that expensive reasoning is spent on judgment, shaping, review, and recovery rather than orchestration waste.
+Workspace is the small operating kernel, not the fixed union of today's first-party modules.
 
-### 6. Prefer queryable compact state over prose-first operation
-The system should prefer:
-- machine-readable active state
-- narrow selectors
-- compact reports
-- lazy discovery
-- thin human-readable views
+Domain capabilities should compose through stable declared contracts. Planning, Memory, and Verification are first-party batteries and proving grounds for that capability model, not privileged architectural slots.
 
-Prose should explain the system and support maintenance, but should not remain the main operational substrate when a compact contract would do better.
+Keep three extension mechanisms distinct:
 
-### 7. Stay quiet, repo-native, and low-residue
-The package should help from the background.
+- **modules** provide independently owned domain capabilities, state/resources, operations, and bounded effects on the ordinary operating decision;
+- **repo customization** uses repository-owned config, obligations, skills, and canonical guidance to adapt the operating contract to the host;
+- **external adapters** consume stable AW operations from outside the core package and own vendor/tool transport, credentials, and integration lifecycle.
 
-It should:
-- live primarily in its own domain
-- keep ownership unambiguous
-- avoid leaking package artifacts into the wider repo
-- remain easy to remove cleanly
-- justify every visible user-facing surface by clear operating-cost savings
+AW should remain adapter-unaware: external integrations know about AW; AW does not need an adapter registry, marketplace, credential store, or reverse dependency on them.
 
-Promoted output should become normal repo output.
-Package residue should remain package residue.
+Extensibility does not mean every internal hook is a public API. The public module boundary should be deliberately smaller than the implementation vocabulary and should expose only the stable semantics needed for safe composition, compatibility, ownership, lifecycle, and conformance.
 
-### 8. Be useful even when agents only partially comply
-The package cannot depend on perfect obedience or a universal plugin standard.
+New capabilities should normally enrich the existing startup/work/proof/closeout/continuation questions rather than multiply first-contact commands or concepts.
 
-It should therefore be:
-- easy to discover
-- cheap to follow
-- useful with partial adoption
-- visibly lower-trust when bypassed
-- better than ad hoc repo scavenging
+### 6. Keep ownership sharp and residue low
 
-The system should succeed under imperfect agent behavior, not only under ideal integration.
+Package-owned machinery, module-owned state, repo-owned policy, local-only runtime state, and promoted normal repo output must remain distinguishable.
 
-### 9. Prefer portable, host-agnostic operating contracts
-The package should remain portable across host repos, languages, agents, and vendors.
+Keep package-owned artifacts under `.agentic-workspace/` as far as reasonably possible. Promoted output should become ordinary repo output. Local caches, diagnostics, and integration residue must not become shared authority merely because they exist.
 
-It should assume as little as possible about a host repo beyond:
-- the presence of an agent able to operate the package
-- the repo's ability to host the package's declared surfaces
+The package should remain plausibly removable.
 
-Dogfooding must not silently turn this repo's current language, structure, tooling, workflow, or preferred agents into universal product assumptions.
+### 7. Work under partial compliance and mixed agents
 
-When implementation choices are specific to the current repo or local environment, keep those choices clearly separated from the durable product contract.
+AW cannot depend on perfect obedience, hidden reasoning, one vendor, or a universal integration standard.
 
-### 10. Treat declared config and normalized operational mirrors as first-class authority surfaces when they materially affect work
-When config, declared posture, or normalized machine-readable mirrors materially affect execution, ownership, routing, signal handling, review trust, or cleanup behavior, they should be treated as operational authority rather than ambient advice.
+Correct use should be easy to discover and cheaper than ad hoc repo scavenging. When an agent bypasses a routed contract, trust should degrade visibly rather than causing silent corruption. Strong agents should spend reasoning on judgment; weaker agents should receive enough structure to avoid common ownership, proof, and continuation failures.
 
-The system should increasingly prefer authoritative definitions that can drive multiple local surfaces consistently rather than relying on freeform artifact creation.
+### 8. Stay portable across repositories, languages, agents, and vendors
 
-## Supporting intents
+Assume as little as possible about a host repository beyond its ability to host declared AW surfaces and an agent capable of operating them.
 
-### 11. Convert repeated friction into product improvement
-Repeated human steering, repeated proof confusion, repeated handoff repair, repeated context overload, and repeated late failure should become signals for product refinement.
+Dogfooding must not turn this repository's language, structure, environment manager, provider, workflow, or current first-party modules into hidden universal requirements. Repo- or provider-specific choices should remain visibly outside the durable product contract unless repeated evidence justifies promotion.
 
-The workspace should adapt itself before repeatedly asking the repo or the user to compensate.
+### 9. Convert repeated friction into product improvement
 
-### 12. Keep boundaries and ownership sharp
-Planning, Memory, config, package-owned machinery, repo-owned artifacts, local state, and promoted output must not blur.
+Repeated human steering, context overload, proof confusion, wrong-owner work, stale state, failed handoff, late closeout repair, and recurring workarounds should become pressure to improve the product or the repository's canonical surfaces.
 
-A cheaper system is usually also a system with sharper boundaries and fewer ambiguous surfaces.
+Prefer fixing the deterministic owner over preserving permanent compensating guidance in another domain.
 
-### 13. Preserve durable understanding without turning Memory into a dump
-Memory should hold what is expensive to forget and useful to recover:
-- invariants
-- authority boundaries
-- anti-trap knowledge
-- durable rationale
-- runbooks
+### 10. Keep planning, Memory, config, and evaluation proportional
 
-It should not become generic documentation mirroring, hidden active planning, or broad workaround accumulation.
+Planning should preserve live intent and cheap continuation, not become a prose archive or second backlog. Memory should preserve expensive-to-forget durable understanding, not active state or broad documentation. Config should express real authority or durable operating choices, not every possible agent preference. Evaluation should preserve decision-useful evidence and named ownership, not raw history by default.
 
-### 14. Keep planning residue proportional to its value
-Execplans, run artifacts, completion residue, reports, and archives should justify their continued size and visibility.
+When declared config or a normalized machine-readable mirror materially affects routing, mutation, proof, review, or closeout, treat it as explicit operational authority rather than ambient advice. Prefer one authoritative definition projected consistently across CLI, skills, generated targets, modules, and adapters.
 
-Finished work can be inspected through git and the resulting repo state.
-Whatever survives in planning after work is done should usually be much smaller than the full narrative used during active execution.
+## Product-shape rules
+
+The kernel owns cross-cutting composition: compatibility admission, current authority, task-shaped routing, conflict visibility, effect/mutation boundaries, proof/claim boundaries, lifecycle coordination, and stable operations.
+
+Modules own domain semantics. Repo customization owns host policy. External adapters own transport and vendor integration. None should silently absorb another owner's meaning.
+
+Conflicts must be surfaced rather than resolved by hidden precedence when they change accepted workflow or authority. Blocking results should name a constructible next action: an operation, selector, owner, recovery route, or explicit human decision with the facts needed to make it.
+
+Closeout should distinguish useful slice completion from the larger intended outcome. Passing tests or a successful module-local operation must never automatically authorize a broader claim.
 
 ## Anti-intents
 
-The system should resist becoming any of the following:
+AW should resist becoming:
 
-- a visible workflow framework the user must consciously operate
-- a repo-side script for micromanaging the agent's local judgment
-- a surface-growing contract maze where every good idea becomes a new file or command
-- a historical archive preserved mainly because it already exists
-- a blurry ownership model where package-owned and repo-owned artifacts are hard to distinguish
-- a local optimization machine that makes one step cheaper while increasing total loop cost
-- a repo-, language-, agent-, or vendor-specific solution accidentally shaped by dogfooding assumptions
-- a system that treats current local tooling preferences as hidden universal requirements
+- a project-management or ticketing system;
+- a visible workflow framework the user must consciously operate;
+- a repo-side script that micromanages ordinary local judgment;
+- a surface-growing contract maze where every good idea becomes a new command, file, posture field, or lifecycle concept;
+- an arbitrary plugin runtime, adapter marketplace, or vendor credential host;
+- a historical archive preserved mainly because it already exists;
+- a blurry ownership model where package, module, repo, local, and promoted artifacts compete;
+- a local optimization machine that reduces one metric while increasing total completion cost;
+- a repo-, language-, module-, agent-, or vendor-specific product accidentally generalized from dogfooding.
 
 ## Validation implications
 
-This file should inform planning and validation in the following way:
+A change is not validated merely because the requested slice landed. Validation should ask whether it:
 
-- A change is not validated merely because the requested slice landed.
-- A locally correct implementation may still fail system intent if it narrows, bypasses, or obscures the intended outcome.
-- Validation should ask whether a change:
-  - preserved the intended why, not only the literal request
-  - reduced or at least did not worsen total operating cost
-  - respected ownership boundaries
-  - improved or at least did not worsen handoff, resumability, reviewability, or proof clarity
-  - made correct construction cheap enough that validation confirms the shape instead of teaching agents how to repair it
-  - avoided unnecessary visible residue or new framework feel
-  - treated relevant config or declared operating posture as authority when it materially mattered
-  - strengthened the durable product contract rather than only fitting this repo, language, agent, or vendor more tightly
+- preserved the intended why rather than only the literal local request;
+- reduced or at least did not worsen total successful-completion cost;
+- respected ownership and compatibility boundaries;
+- made continuation, review, proof, and closeout cheaper and more trustworthy;
+- made the correct action easy to construct by design rather than teaching it through repeated validation failures;
+- avoided unnecessary visible residue or new framework feel;
+- kept relevant config and declared posture explicit when they materially mattered;
+- improved portability and composability rather than hardening current dogfooding assumptions;
+- used extensibility to background capability behind existing ordinary questions rather than expanding first-contact complexity.
 
-## Design tests for future work
-
-New work should be favored when it does one or more of the following:
-- preserves human intent more faithfully across time
-- makes bounded work cheaper to continue or verify
-- reduces total interaction cost
-- makes weaker agents safer without adding heavy ceremony
-- makes stronger-agent effort more reusable
-- removes, merges, compresses, or backgrounds older machinery
-- sharpens ownership or reduces package residue
-- turns important operating choices into clearer declared or machine-consumable authority
-- makes the correct action easy to construct by design, with validation acting as confirmation rather than the authoring interface
-- improves portability across host repos, languages, agents, or vendors by reducing accidental local assumptions
-
-New work should be questioned when it mainly:
-- adds a new visible concept or surface without replacing an older one
-- preserves narrative history more than future usefulness
-- increases framework feel in ordinary use
-- scripts local execution judgment instead of supporting it
-- improves one narrow loop stage while making the overall system heavier
-- relies on repeated validation failures to teach agents how to construct package-owned artifacts or workflows
-- leaves materially relevant config or operating posture as ambient advice instead of explicit authority
-- hardens current dogfooding assumptions into durable product contract without strong justification
-
-## Open questions / tensions
-
-This file may leave some tensions unresolved on purpose.
-When the system direction is materially ambiguous, keep that ambiguity visible rather than silently normalizing it away.
+New work should be questioned when it mainly adds another visible concept, preserves history without future value, scripts agent judgment, duplicates an existing owner, or exposes an internal mechanism as public API without a demonstrated external need.
 
 ## Compact operating rule
 

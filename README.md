@@ -1,127 +1,91 @@
 # Agentic Workspace
 
-Agentic Workspace adds a small repo-native operating layer for repositories where agent work must preserve intent, context, proof expectations, and handoff state across sessions, tools, branches, or contributors.
+Agentic Workspace is a quiet, repo-native operating substrate for agents working in repositories where intent, context, proof, and continuation must survive across sessions, branches, tools, models, or contributors.
 
-It is built around checked-in workspace contracts, compact routing, explicit ownership, selected modules, and thin adapter files that point agents at the right repo-local commands.
+It gives agents a small set of repository-owned contracts and compact routing surfaces so they can recover the right context, act within the right authority, prove the right claim, and leave useful continuation state without reconstructing the task from chat history.
 
 ## Why it exists
 
-Agents can move quickly, but they enter and leave a repository with partial context. In longer-running work, important state often lives only in chat: why a task matters, what has already been tried, which repo facts matter, what proof is expected, and what remains unsafe to claim.
+Agent work becomes expensive when the same context has to be rediscovered, when active intent exists only in conversation, when proof expectations are implicit, or when a later agent cannot tell which work is actually complete.
 
-Agentic Workspace gives that operating state a repo-native home so future agents can start from the repository instead of reconstructing intent from conversation history.
+AW is meant to reduce that total cost. It keeps only state that is expensive to reconstruct and useful for future decisions, and it tries to make the next safe action cheaper than broad repository scavenging.
 
-## What it does
+Use it when continuation, handoff, proof, recurring repo knowledge, or agent/tool switching are genuine sources of friction. Do not use it merely because a repository contains agents: if ordinary docs, tests, and a short task finish the work cheaply, AW should stay unnecessary.
 
-Agentic Workspace helps agents:
+## Product shape
 
-* start from compact repo state instead of broad rereading;
-* preserve durable lessons that would otherwise be rediscovered;
-* keep active work bounded, resumable, and honestly closeable;
-* route proof expectations and evidence through reviewable surfaces;
-* hand off unfinished or risky work without hiding uncertainty.
+Workspace is the small operating kernel. Capabilities compose around it through three distinct mechanisms:
 
-It does this through compact command surfaces, selected module state under `.agentic-workspace/`, thin adapter files such as `AGENTS.md`, and file-based contracts that can be generated, packaged, or projected into agent-facing integrations.
+- **Modules** add independently owned domain capabilities, state/resources, operations, and bounded effects on the ordinary operating loop.
+- **Repo customization** uses repository-owned config, obligations, skills, and canonical guidance to adapt that loop to the host repository.
+- **External adapters** integrate AW into other agents, IDEs, CLIs, MCP-style clients, or vendor workflows by consuming stable AW operations from outside the core package.
+
+Planning, Memory, and Verification are the current first-party modules. They are batteries supplied by the project and examples of the module model, not the fixed architectural boundary of Agentic Workspace.
+
+AW should remain adapter-unaware: an integration may know how to invoke AW, but AW should not need a vendor registry, marketplace, credential store, or reverse dependency on that integration.
+
+Extensibility is a core product property, but it is not a promise that every internal hook is a stable public plugin API. The supported public module boundary is intentionally being kept smaller than the full internal participation vocabulary. See [`docs/extension-boundary.md`](docs/extension-boundary.md).
+
+## Ordinary operating loop
+
+Agents should not need to learn the CLI as a workflow. The root command exposes compact answers to the current question:
+
+| Question | Ordinary route |
+| --- | --- |
+| What is the smallest safe context before acting? | `start` |
+| What work currently owns continuation? | `summary` |
+| What changes are safe and relevant now? | `implement` and routed owner operations |
+| What evidence is required for the intended claim? | `proof` |
+| What may be claimed, what must survive, and who owns the remainder? | compact closeout/continuation state |
+
+Modules and repo policy enrich those answers when relevant. An installed capability should not normally require a new first-contact mental model.
+
+## First-party modules
+
+- **Memory** preserves durable repo knowledge that is expensive to rediscover.
+- **Planning** preserves active execution continuity, bounded intent, handoff, and honest closeout.
+- **Verification** preserves reusable soft-verification protocols, bounded evidence, proof-route hints, and known gaps.
+
+A repo can use the root routing layer with none of these, select only the capabilities that pay back, or combine them. Module selection controls the host-repo footprint; the current Python distribution still bundles the first-party module packages for lifecycle convenience.
+
+See [`docs/package/modules.md`](docs/package/modules.md) for ownership and selection guidance.
 
 ## What it is not
 
-Agentic Workspace is not:
+Agentic Workspace is not a ticket tracker, backlog manager, database, general analytics system, or vendor/plugin host. It is not a replacement for canonical repository documentation, tests, code review, or external issue trackers.
 
-* a project-management system;
-* a ticket tracker;
-* a runtime orchestrator;
-* a database;
-* a generic runtime plugin platform;
-* a replacement for tests, review, issue trackers, or canonical repo documentation.
+It should also not become a framework that scripts ordinary agent judgment. The kernel should own mechanical continuity, compatibility, authority, routing, proof/claim boundaries, and lifecycle coordination while leaving domain intent and implementation judgment with the proper owner.
 
-It should make the correct agent operating path cheaper. If it adds more coordination cost than it removes, it is the wrong tool or the wrong module set.
+## Trust boundary
 
-## When it pays back
+**Agentic Workspace is not a sandbox.** Treat the repository and its configured proof/executor commands as trusted before allowing AW to execute them. Admitted repository shell routes and explicitly supplied executor commands inherit the caller's filesystem and credential authority.
 
-Use Agentic Workspace when:
+External issue, PR, and service content should be treated as data rather than executable instruction. Local logs and caches are useful diagnostics but are not proof, Planning, or completion authority merely because they exist.
 
-* agents repeatedly reread or rediscover the same repo facts;
-* work crosses sessions, branches, tools, or contributors;
-* tasks need explicit proof expectations;
-* handoff or continuation state matters;
-* recurring friction should become durable repo knowledge or follow-up work.
+See [`docs/security/threat-model.md`](docs/security/threat-model.md) for the full trust and supply-chain boundary.
 
-Do not use it when:
+## Adoption
 
-* the repo is cheap to reread;
-* work usually finishes in one sitting;
-* a README note or existing repo command is enough;
-* the added coordination surface would cost more than it saves.
+The support-bearing install path is a versioned GitHub Release. Each coordinated release publishes `distribution-install-readiness.json`, which identifies the exact project-controlled root wheel and SHA-256-bound install command. Mutable branches and ordinary registry resolution are not support-bearing installation identities unless a future release policy explicitly says otherwise.
 
-The threshold is not team size. The threshold is whether future continuation would otherwise lose expensive context, intent, or proof obligations.
+After installing the CLI, initialize or adopt the target repository with the smallest useful module set. AW writes a small `.agentic-workspace/` enclave plus thin routing adapters such as `AGENTS.md`; selected modules add their own owned roots. Package-managed and local-only state should remain distinguishable and removable.
 
-## How to adopt it
+For exact installation and environment guidance, use [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md). For installed ownership and footprint concepts, use [`docs/package/installed-surfaces.md`](docs/package/installed-surfaces.md).
 
-The usual adoption path has two parts.
+## Documentation
 
-First, choose a versioned GitHub release and use the exact root-wheel command in its
-`distribution-install-readiness.json`. That receipt pins the project-controlled release
-asset and SHA-256 digest; mutable branch and registry resolution are not support-bearing
-installation paths. The CLI can then be retained in the target repository's development
-or tool environment. Future integrations may use another surface, such as an MCP server.
+Start with:
 
-Then give an agent a small bootstrap instruction in the target repo, or point it at the remote instructions in [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md) so it can perform the operation itself. The agent should use the target repo’s tooling environment, choose the smallest useful module footprint, inspect the generated surfaces, and leave a bounded handoff for any manual initialization that remains.
+- [`docs/package/overview.md`](docs/package/overview.md) — product model and ordinary operating shape.
+- [`docs/package/modules.md`](docs/package/modules.md) — modules, capability ownership, and extension model.
+- [`docs/architecture.md`](docs/architecture.md) — kernel, module, repo-customization, and adapter boundaries.
+- [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md) — installation and adoption.
+- [`docs/security/threat-model.md`](docs/security/threat-model.md) — trust and supply-chain boundary.
+- [`docs/package/contracts.md`](docs/package/contracts.md) — machine-readable contracts and generated references.
+- [`docs/index.md`](docs/index.md) — full documentation map.
 
-Modules can be selected during initialization and added or removed later. Humans should normally choose the installation surface and review the result rather than operate lifecycle commands directly.
+Exact fields and generated contract references should be treated as reference material rather than duplicated into conceptual pages.
 
-For exact installation paths, current package targets, and environment-specific invocation, see [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md).
+## Source checkout
 
-## How it works
-
-Agentic Workspace keeps agent work moving through a small continuity loop:
-
-| Step              | What it protects                                                                                                    |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Startup           | The agent starts from the smallest relevant repo state instead of chat history or broad rereading                   |
-| Work shaping      | The task is treated as direct work, bounded work, lane work, takeover, or continuation instead of drifting silently |
-| Durable knowledge | Expensive-to-rediscover repo facts are pulled only when relevant and captured only when worth keeping               |
-| Proof             | Validation expectations are selected from changed surfaces, repo policy, and configured verification protocols      |
-| Closeout          | Completion claims are checked against intent, proof, residue, and the next owner before work is called done         |
-
-Installed adapters such as `AGENTS.md` point agents at the right compact command surface. Users should not need to remember the command sequence during ordinary work.
-
-## Core modules
-
-Agentic Workspace can be installed with only the modules a repo needs.
-
-* **Memory** preserves durable repo knowledge that is expensive to rediscover. See [`packages/memory/README.md`](packages/memory/README.md).
-* **Planning** preserves active execution state, bounded work, handoff, and honest closeout. See [`packages/planning/README.md`](packages/planning/README.md).
-* **Verification** preserves reusable soft verification protocols, proof-route hints, bounded evidence, and known gaps. See [`packages/verification/README.md`](packages/verification/README.md).
-
-For module-selection detail, see [`docs/package/modules.md`](docs/package/modules.md).
-
-## Installed footprint
-
-An installed repo gets a small `.agentic-workspace/` operating layer plus thin adapter files such as `AGENTS.md`. Selected modules add their own roots under that operating layer.
-
-Module selection controls the host-repo footprint. Package-owned state should stay quiet, checked in when useful for continuation, and plausibly removable. Adapter files should route agents to compact commands instead of becoming a second operating manual.
-
-For installed surfaces and ownership boundaries, see [`docs/package/installed-surfaces.md`](docs/package/installed-surfaces.md).
-
-## Documentation map
-
-* Installing into a repo: [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md)
-* Understanding the package: [`docs/package/overview.md`](docs/package/overview.md)
-* Choosing modules: [`docs/package/modules.md`](docs/package/modules.md)
-* Lifecycle and context commands: [`docs/package/lifecycle.md`](docs/package/lifecycle.md)
-* Installed files and ownership: [`docs/package/installed-surfaces.md`](docs/package/installed-surfaces.md)
-* Contracts and generated references: [`docs/package/contracts.md`](docs/package/contracts.md)
-* Documentation status and maturity: [`docs/documentation-status.md`](docs/documentation-status.md), [`docs/maturity-model.md`](docs/maturity-model.md)
-* Full documentation index: [`docs/index.md`](docs/index.md)
-
-## Source checkout note
-
-If you are working on Agentic Workspace itself, follow [`AGENTS.md`](AGENTS.md) and the [`maintainer documentation`](docs/maintainer/contributor-playbook.md). This README describes the shipped package and ordinary adoption path, not the full source-checkout workflow.
-
-For agent maintainers, the primary operating path is `AGENTS.md`, active execplan, and `docs/maintainer/contributor-playbook.md`.
-
-Default startup path for an agent maintainer:
-
-1. Read [`AGENTS.md`](AGENTS.md).
-2. Use `uv run python scripts/run_agentic_workspace.py start --task "<task>" --format json` before non-trivial source-checkout work.
-3. Use `uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task "<task>" --format json` when changed paths are already known.
-4. Open active planning state or package-local instructions only when the compact command output routes you there.
+This README describes the shipped product and adoption model. When maintaining Agentic Workspace itself, follow [`AGENTS.md`](AGENTS.md) and the [`maintainer documentation`](docs/maintainer/index.md). Source-checkout proof commands, dogfooding procedures, migration inventories, and historical design evidence belong in maintainer/review surfaces rather than the public product model.
