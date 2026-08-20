@@ -2,241 +2,249 @@
 
 ## Purpose
 
-Agentic Workspace should make repositories easier to enter, easier to resume, and cheaper to operate for both agents and humans while staying quiet about its own machinery.
+Agentic Workspace should make repositories easier and cheaper for agents to operate while staying quiet about its own machinery.
 
-The product should feel smaller than the internals behind it and should earn every visible surface it keeps.
+Its core product idea is simple:
 
-Its core thesis is amortized coordination: accept a small checked-in operating cost when that cost prevents larger future costs from repeated rediscovery, unsafe handoff, stale context, weak proof, duplicated work, or unreviewable agent output.
+- preserve a bounded set of **operating context** because it can materially change agent behavior;
+- dynamically resolve the relevant part into the current operating contract;
+- let specialized modules extend what the loop can know and do without changing the loop itself.
 
-For current shipped package behavior, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This page explains why the shape should stay coherent; it should not be used as the first product map.
+The product should feel smaller than the implementation behind it and should earn every visible surface it keeps.
 
-## Must-Internalize Doctrine
+For the current product model, start with [`docs/package/overview.md`](package/overview.md) and [`SYSTEM_INTENT.md`](../SYSTEM_INTENT.md). This page explains the design pressure that should keep that model coherent.
 
-### 1. Repository-native state beats chat residue
+## Doctrine
 
-If a fact materially affects restart cost, safe execution, or future work, the repository should be able to carry it.
+### 1. Keep context only when it changes future decisions
 
-### 2. Reduce reading, not increase it
+Repository persistence is not free. Preserve a fact, state, procedure, or lesson when its current or durable availability materially changes safe agent behavior and its future value exceeds its reread and maintenance cost.
 
-The system succeeds when it narrows the working set:
+Do not persist chat, logs, plans, reviews, histories, or arbitrary repository facts merely because they exist.
 
-- load the smallest useful guidance bundle
-- route to the right owner quickly
-- avoid broad exploratory scans when the repo can already point the way
+### 2. Operating context is not a repository knowledge model
 
-### 3. Preserve one home per concern
+AW should not ingest or mirror the repository simply to make it knowable.
 
-Each concern should have one primary owner.
+Source code, canonical docs, tests, history, and normal project artifacts keep their existing owners. Rich semantic search, RAG, embeddings, knowledge graphs, or broader repository models may be useful specialized modules, but core AW should remain simpler.
 
-- durable technical residue belongs in memory
-- active execution state belongs in planning
-- routing belongs in routing surfaces
-- validation belongs in checks
-- orchestration belongs in the workspace layer
-- broad enduring explanation belongs in canonical docs
+### 3. Surface less, later
 
-### 4. Make the repo easier to enter
+The system succeeds when first contact contains only what can change the current decision.
 
-A new agent or human should be able to answer, cheaply:
+Prefer:
 
-- what matters now
-- what to read first
-- what rules govern the repo
-- what not to touch
+- compact current decisions;
+- exact selectors;
+- lazy skill/module discovery;
+- owner references;
+- typed actions;
+- bounded evidence bundles.
 
-### 5. Structure should lower reasoning cost
+Avoid broad reading lists and always-loaded capability manuals.
 
-The product should reduce inference through clearer ownership, narrower startup paths, explicit routing, bounded validation, and fewer hidden conventions.
+### 4. One operating decision, many source owners
 
-### 6. Simplicity should remain viable
+Repository and module sources keep semantic authority. Workspace composes their current effect; it should not create a second source of truth.
 
-Small local work should stay cheap. Add structure when ambiguity, restart cost, collaboration risk, or proof burden justify it, not by default.
+A generated instruction or operating contract is useful because it is cheap to consume, not because it replaces the source that authorized it.
 
-Do not pretend the structure is free. For small or short-lived repositories, the overhead may not pay back; for long-running agent-heavy work, the package should make the saved future cost visible.
+### 5. Make the next action constructible
 
-### 7. Be quiet by default
+Good dynamic control should normally end in something the agent can actually do:
 
-Visible machinery should justify its visibility. If a surface can move into reporting, routing, or background structure without losing safety or clarity, prefer the quieter shape.
+- a typed operation;
+- a derived command;
+- a routed skill;
+- an exact selector/owner;
+- a bounded recovery;
+- or an explicit human decision with the relevant facts.
 
-### 8. Improve the repo, not just the agent experience
+A transition name without a supported route is not an adequate instruction.
 
-Repeated workaround residue is pressure to improve the repo or the product. New surfaces should replace, merge, or materially simplify older paths instead of only adding precision.
+### 6. Use one generic loop
 
-### 9. Favor explicit seams over hidden coupling
+The ordinary mental model is `resolve -> act -> reconcile`.
 
-Prefer explicit ownership rules, manifests, schemas, stable contracts, and narrow adapters over private cross-module convenience.
+Startup, implementation, proof, handoff, closeout, and continuation are common situations, not independent core frameworks. Closeout is terminal reconciliation.
 
-### 10. Selective adoption must remain valid
+Do not create another phase-specific decision engine when the existing operating-decision path can carry the result.
 
-Memory, planning, and future modules should remain useful alone. The stack may get stronger when combined, but it must still make sense in parts.
+### 7. Modules specialize the loop; they do not redefine it
 
-### 11. Lifecycle should be centralized, domain logic should not
+Modules own independently reusable domain capabilities. They may contribute relevant context/procedure, typed operations, and bounded result/reconciliation facts.
 
-The workspace layer may centralize lifecycle entrypoints, presets, orchestration, and shared reporting, but it must not absorb module-owned domain logic.
+Planning, Memory, and Verification are current first-party examples, not privileged architectural slots. Future modules should fit without adding a mandatory new first-contact question or requiring Workspace to understand their domain state shape.
 
-Workspace self-improvement should also stay distinct from repo-directed improvement: the workspace may improve its own routing, reporting, recovery, or contract surfaces without using that as cover for repo-specific product drift.
+### 8. Preserve one semantic owner per concern
 
-### 12. Do not preserve both the old and new model by default
+Ownership should follow meaning rather than convenience.
 
-Compatibility layers, shims, transitional helper surfaces, and generated adapter artefacts should not be the automatic response to change.
+- canonical repository truth stays in canonical repository surfaces;
+- Workspace owns cross-cutting control composition;
+- modules own their domain state and semantics;
+- repo customization owns host policy and durable operating choices;
+- external adapters own transport/vendor integration;
+- local runtime state remains lower-authority local state unless deliberately promoted.
 
-They are justified only when they protect a specific real boundary or user of the system. Otherwise they usually:
+Do not duplicate an owner merely to make another subsystem easier to implement.
 
-- preserve ambiguity instead of resolving it
-- multiply visible surfaces
-- delay convergence on the intended product shape
-- convert temporary uncertainty into durable residue
+### 9. Configuration must earn durable authority
 
-Prefer direct convergence when the system already knows which shape it wants.
+Shared config should express real repo policy, ownership, capability selection, or durable operating choices. Local config should express machine/runtime capability or preference with appropriately weaker authority.
 
-### 13. Compatibility layers must earn their keep
+Do not preserve a growing `posture` or personality framework simply because more knobs can be represented. Retain a control when it materially changes the current contract or has demonstrated completion-cost value.
 
-Do not add or preserve a compatibility layer unless all three are true:
+### 10. Direct work must stay direct
 
-1. it protects a named consumer or boundary
-2. it exists for a concrete transition reason
-3. it has a credible path to removal, narrowing, or demotion
+Small, obvious work should not acquire Planning, Memory, Verification, review, handoff, or other artifacts merely because those capabilities are installed.
 
-If those are missing, the layer is probably clutter wearing the language of caution.
+Irrelevance and absence are valid states. A capability that is not needed should be silent.
 
-### 14. Static routing aids are different from mutable compatibility shims
+### 11. Help the agent do the job; do not script the job
 
-A small, obviously named, stable routing surface may be justified when it only helps weaker agents find the canonical next workflow.
+AW should be opinionated about authority, effects, proof/claim boundaries, ownership, and safe transitions. It should not micromanage ordinary implementation judgment.
 
-Such a surface should:
+Prefer thin contracts and exact escalation over scheduler-like choreography.
 
-- be static or slow-changing
-- remain clearly non-authoritative
-- point toward canonical config, query, planning, or ownership surfaces
-- avoid restating changing operational truth
-- stay narrow enough that it does not become a second operating layer
+### 12. Optimize total successful-completion cost
 
-Do not confuse a routing aid with a prose mirror of live state.
+Measure the whole path: rereads, rediscovery, clarification, retries, route reversals, proof reruns, handoff reconstruction, repair, and user roundtrips.
 
-### 15. Generated surfaces are suspect by default
-
-Generated docs are only useful when they derive from canonical sources, stay easy to regenerate, and remove more cost than they create.
-
-Do not keep generated checked-in prose merely because it is possible to generate it.
-
-Generated surfaces are a poor fit when they:
-
-- restate changing state
-- duplicate canonical routing or authority
-- ask maintainers to preserve both a structured source and a prose byproduct
-- create more agent-facing surfaces than weak-agent discoverability actually requires
-
-Prefer on-demand prose generation in chat or tooling over checked-in generated prose when the prose is explanatory rather than authoritative.
-
-### 16. Collaboration safety matters
-
-The product must degrade gracefully under normal git pressure:
-
-- keep shared hot files small
-- archive completed active surfaces promptly
-- prefer bounded feature-scoped files over giant mutable dashboards
-- keep generated or derived surfaces reproducible when they must exist
-
-### 17. Help the agent do the job, do not script the job
-
-The product should be opinionated about what boundary must remain true, not about the exact local choreography used to get there.
-
-Prefer thin guidance, capability-shaped contracts, and explicit escalation cues over scheduler-like repo policy.
-
-### 18. Portability matters more than local cleverness
-
-Prefer narrow assumptions, conservative adoption, and plain checked-in surfaces over solutions that only feel elegant inside one well-understood monorepo.
-
-### 19. Checked-in leverage should complement runtime leverage
-
-Assume a capable runtime may already be better at delegation, model choice, or execution shaping than the repo should prescribe.
-
-The repo should therefore focus on:
-
-- explicit execution contracts
-- durable handoff state
-- smaller restart surfaces
-- machine-readable proof expectations
-- clear escalation boundaries
-
-### 20. Proof should beat preference
-
-Features that claim to reduce restart cost, token cost, or handoff burden should earn their place through repeated ordinary work, bounded review, or other real evidence.
-
-### 21. Optimize total operating cost
-
-Do not optimize for single-run cheapness if it raises total cost across planning, execution, interruption, handoff, review, or restart.
+Token count, bytes, latency, commands, and file count are useful proxies only when they improve the total path to a correct result.
 
 Do not save model tokens by creating human bureaucracy.
 
-The system should surface what the overhead bought: rediscovery avoided, scope contained, proof selected, continuation preserved, handoff made cheaper, repeated friction converted into a durable improvement, or bypass/lower-trust work made visible.
+### 13. Improve the deterministic owner before compensating elsewhere
 
-### 22. Documentation should form an abstraction ladder
+Repeated human steering, wrong-owner work, stale context, repeated rediscovery, proof confusion, or late reconciliation repair should create pressure to improve the actual owner or control path.
 
-Each page should be complete at its own level, expose a narrow interface, link deeper instead of copying internals, and have one clear owner.
+A permanent warning in another subsystem is a poor substitute for fixing deterministic behavior.
 
-Treat documentation like a small object model:
+### 14. Preserve graceful partial compliance
 
-- one doc, one primary job
-- public entrypoints describe what adopters need before maintainer internals
-- higher-level pages hide lower-level detail until a reader chooses to follow it
-- links compose docs; copied truth creates drift
-- role, owner, and refresh expectations belong in the documentation-status index
+AW must work with mixed agents and cannot assume perfect adherence, hidden reasoning, or one vendor.
 
-The README, `docs/index.md`, package docs, generated reference docs, maintainer docs, and historical reviews should remain distinct rungs. A reader should not need maintainer workflow docs to understand the shipped package, and a maintainer should be able to tell when a page leaks detail from the wrong rung.
+Make the intended path progressively discoverable and cheaper than bypass. When an agent ignores a routed contract, lower trust explicitly rather than allowing silent authority expansion.
 
-## Design Tests
+### 15. Extensibility must stay bounded
 
-A change is moving in the right direction when it helps answer yes to questions like:
+Prefer declarative capability identity, relevance, ownership, typed operations, effects, lifecycle, and bounded results over arbitrary callbacks and workflow hooks.
 
-- Does this reduce startup or restart friction?
-- Does this reduce rediscovery and unnecessary rereading?
-- Does this preserve or sharpen ownership boundaries?
-- Does this keep visible product shape smaller than the internal machinery behind it?
-- Does this lower total operating cost rather than shifting cost onto humans?
-- Does this strengthen checked-in leverage without trying to out-orchestrate the runtime?
-- Can it remain quiet in normal use?
-- Can it be adopted selectively and removed cleanly?
+Do not turn extensibility into:
+
+- a generic plugin runtime;
+- an event bus;
+- a module marketplace;
+- an adapter registry;
+- a credential store;
+- or a new user-visible command/phase for every capability.
+
+### 16. Repo customization is different from a module
+
+Host-specific rules belong in repo-owned config, obligations, skills, canonical guidance, ownership, or deterministic repo operations when that is the smallest owner.
+
+A reusable domain capability with its own state/resources, operations, compatibility, and lifecycle may justify a module. Do not turn every repository rule into one.
+
+### 17. External adapters remain outside core
+
+An integration may know how to consume AW; AW should not need to know the integration package or vendor.
+
+Transport does not create semantic authority. Credentials and vendor lifecycle remain adapter concerns.
+
+### 18. Keep package ownership quiet and removable
+
+Package-owned machinery should stay under `.agentic-workspace/` as far as practical. Local caches and diagnostics do not become shared authority by existence alone. Promoted output should become normal repo-owned output.
+
+The package should remain plausibly removable.
+
+### 19. Collaboration safety matters
+
+Normal git pressure should not make AW brittle.
+
+- keep shared hot state compact;
+- prefer bounded owner-scoped files over giant mutable dashboards;
+- archive/compact completed active state when future value is low;
+- make derived surfaces reproducible when they must exist.
+
+### 20. Compatibility layers must have a beneficiary and an exit
+
+Do not preserve old and new models in parallel by default.
+
+A compatibility layer should protect a named consumer, exist for a concrete transition reason, and have a credible removal/demotion path. Otherwise it is likely permanent ambiguity.
+
+### 21. Generated surfaces derive; they do not own
+
+Generated docs, clients, adapters, or prose are useful when they derive from one authoritative contract and remove more cost than they create.
+
+Do not keep generated mirrors of changing truth simply because generation is possible.
+
+### 22. Documentation should demonstrate progressive disclosure
+
+Public docs should be simpler than the implementation.
+
+Use an abstraction ladder:
+
+1. core product model;
+2. specialized capability concepts only when relevant;
+3. generated exact references;
+4. maintainer procedure;
+5. historical evidence.
+
+Links compose docs; copied truth creates drift.
+
+### 23. Portability beats dogfooding cleverness
+
+Do not generalize this repository's language, structure, environment manager, provider, or current modules into universal requirements without evidence.
+
+Prefer narrow contracts and plain ownership boundaries that still make sense in another repository and with another agent.
+
+### 24. Proof should beat preference
+
+Features that claim to reduce restart cost, context cost, handoff burden, or agent failure should earn their place through deterministic proof and representative ordinary work.
+
+Keep weak, negative, and unavailable evidence visible rather than averaging it into a broad success claim.
+
+## Design tests
+
+A change is moving in the right direction when it helps answer yes to questions such as:
+
+- Does this preserve or route operating context that materially changes behavior?
+- Does the right information arrive later and more selectively than before?
+- Does the current agent get one coherent, constructible next action?
+- Does source ownership remain explicit?
+- Does this reduce total successful-completion cost rather than shifting it elsewhere?
+- Can direct work ignore the capability entirely?
+- Can another module provide a different domain capability without changing the core mental model?
+- Does the change remove, derive, merge, or background an older concept instead of merely adding one?
 - Would it still make sense outside this monorepo?
-- Does it replace, merge, demote, or remove an older surface rather than merely adding another one?
-- If it is a compatibility layer, does it name the consumer, transition reason, and likely removal path?
-- If it is a routing surface, is it clearly just routing rather than a second source of changing truth?
-- If it is documentation, does the page have one primary audience, one authority role, and links to deeper detail instead of copying it?
 
 A change is suspicious when it tends to:
 
-- create new shared hot files
-- duplicate source-of-truth surfaces
-- require broad reading
-- hide ownership
-- add ceremony to simple work
-- save tokens mainly by shifting work onto humans
-- add a new contract surface without naming what older path it replaces, merges, or demotes
-- preserve both an old and new model without a named beneficiary
-- leave behind generated helper artefacts because removal feels riskier than commitment
-- turn temporary compatibility into a durable product layer
-- mix adopter, maintainer, reference, and historical evidence in one page without a clear owner
+- create a general repository knowledge store in core;
+- create another packet/phase authority beside the compiled operating decision;
+- expose irrelevant context at first contact;
+- hard-code a first-party module identity in generic composition;
+- add a new policy/identity/lifecycle concept without naming what it replaces;
+- persist history with no clear future decision value;
+- save agent work mainly by creating maintainer ceremony;
+- make generated projections compete with their source authority;
+- preserve old and new models indefinitely.
 
-## Tactical Policy Lives Elsewhere
+## Tactical policy lives elsewhere
 
-Use narrower owner docs for tactical maintainer policy instead of growing this page:
+Use narrower owner docs for maintainer procedure and implementation details:
 
-- `docs/maintainer/contributor-playbook.md` for maintainer routing, ownership, and validation lanes
-- `docs/maintainer/dogfooding-feedback.md` for dogfooding, product-friction routing, and new-work admission policy
-- `.agentic-workspace/docs/lifecycle-and-config-contract.md` and `.agentic-workspace/docs/reporting-contract.md` for tactical contract details
+- `docs/maintainer/contributor-playbook.md` for maintainer routing and validation;
+- `docs/maintainer/dogfooding-feedback.md` for dogfooding/product-friction routing;
+- `.agentic-workspace/docs/` contracts for installed/source-checkout tactical details;
+- generated references for exact machine contract fields.
 
-## Short Version
+## Short version
 
-Agentic Workspace should make repositories quietly well-run for agents and humans:
-
-- durable state over chat residue
-- smaller startup and restart burden
-- one owner per concern
-- explicit seams
-- selective adoption
-- documentation as an abstraction ladder
-- quiet leverage over visible ceremony
-- direct convergence over compatibility sprawl
-- static routing help only when it clearly earns its keep
-
-That is the bar.
+Preserve the context that governs agent work.
+Surface only what matters now.
+Act through the supported route.
+Reconcile what changed.
+Let modules specialize the loop without enlarging it.
+Stay quiet.
