@@ -84,6 +84,10 @@
       "type": "object",
       "description": "Applicable host, local-runtime, module, and task-derived inputs reduced to their material effects on the current contract."
     },
+    "assurance": {
+      "type": "object",
+      "description": "Admission of a repository-owned assurance classification, quiet when no external classifier is configured."
+    },
     "current_work": {"type": "object", "description": "Current-work identity admitted into the composed decision."},
     "selected_owner": {"type": "object", "description": "Selected owner identity admitted into the composed decision."},
     "terminal_state": {"type": "string", "description": "Terminal outcome state used for continuation or finalization claims."},

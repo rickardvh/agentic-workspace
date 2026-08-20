@@ -460,6 +460,7 @@ class AssuranceProofProfile:
 class AssuranceRequirementDisposition:
     reason: str
     owner: str
+    applicability: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -545,6 +546,8 @@ class AssuranceCloseoutPosture:
 class AssuranceConfig:
     default_level: str
     default_level_source: str
+    classification_owner: str
+    classification_source: str | None
     agent_may_escalate: bool
     agent_may_deescalate: bool
     strict_closeout: bool
@@ -1030,15 +1033,40 @@ def _require_disposition(
     value = payload[key]
     if not isinstance(value, dict):
         raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be a table with reason and owner.")
-    unknown = sorted(set(value) - {"reason", "owner"})
+    unknown = sorted(set(value) - {"reason", "owner", "applicability"})
     if unknown:
-        allowed = ", ".join(("reason", "owner"))
+        allowed = ", ".join(("reason", "owner", "applicability"))
         raise WorkspaceUsageError(f"{config_path.as_posix()} {key} contains unsupported field(s): {', '.join(unknown)}; use {allowed}.")
     reason = require_optional_string(payload=value, key="reason", config_path=Path(f"{config_path.as_posix()} {key}"))
     owner = require_optional_string(payload=value, key="owner", config_path=Path(f"{config_path.as_posix()} {key}"))
     if reason is None or owner is None:
         raise WorkspaceUsageError(f"{config_path.as_posix()} {key} requires non-empty reason and owner.")
-    return AssuranceRequirementDisposition(reason=reason, owner=owner)
+    applicability = value.get("applicability", {})
+    if not isinstance(applicability, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key}.applicability must be a table.")
+    supported_applicability = {
+        "application_id",
+        "source_revision",
+        "current_work_id",
+        "proof_subject_fingerprint",
+        "expires_at",
+        "review_after",
+    }
+    unknown_applicability = sorted(set(applicability) - supported_applicability)
+    if unknown_applicability:
+        raise WorkspaceUsageError(
+            f"{config_path.as_posix()} {key}.applicability contains unsupported field(s): {', '.join(unknown_applicability)}."
+        )
+    normalized_applicability: dict[str, Any] = {}
+    for field in supported_applicability:
+        field_value = require_optional_string(
+            payload=applicability,
+            key=field,
+            config_path=Path(f"{config_path.as_posix()} {key}.applicability"),
+        )
+        if field_value is not None:
+            normalized_applicability[field] = field_value
+    return AssuranceRequirementDisposition(reason=reason, owner=owner, applicability=normalized_applicability)
 
 
 def _load_assurance_requirements(
@@ -1359,6 +1387,8 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         "agent_may_escalate",
         "agent_may_deescalate",
         "strict_closeout",
+        "classification_owner",
+        "classification_source",
         "proof_profiles",
         "requirements",
         "subsystem_profiles",
@@ -1377,6 +1407,18 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         warnings.append(f"{config_path.as_posix()} [assurance] contains unsupported field(s): {', '.join(unknown)}.")
     default_level_source = "repo-config" if "default_level" in raw_assurance else "product-default"
     default_level = validate_assurance_level(str(raw_assurance.get("default_level", DEFAULT_ASSURANCE_LEVEL)))
+    classification_owner = str(raw_assurance.get("classification_owner", "config-native")).strip()
+    if classification_owner not in {"config-native", "repository-owned"}:
+        raise WorkspaceUsageError(f"{config_path.as_posix()} assurance.classification_owner must be config-native or repository-owned.")
+    classification_source = require_optional_string(payload=raw_assurance, key="classification_source", config_path=config_path)
+    if classification_owner == "repository-owned" and classification_source is None:
+        raise WorkspaceUsageError(
+            f"{config_path.as_posix()} assurance.classification_source is required for repository-owned classification."
+        )
+    if classification_owner == "config-native" and classification_source is not None:
+        raise WorkspaceUsageError(
+            f"{config_path.as_posix()} assurance.classification_source conflicts with config-native classification ownership."
+        )
     raw_profiles = raw_assurance.get("proof_profiles", {})
     if raw_profiles is None:
         raw_profiles = {}
@@ -1436,6 +1478,8 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         AssuranceConfig(
             default_level=default_level,
             default_level_source=default_level_source,
+            classification_owner=classification_owner,
+            classification_source=classification_source,
             agent_may_escalate=_require_bool(payload=raw_assurance, key="agent_may_escalate", default=True, config_path=config_path),
             agent_may_deescalate=_require_bool(payload=raw_assurance, key="agent_may_deescalate", default=False, config_path=config_path),
             strict_closeout=_require_bool(payload=raw_assurance, key="strict_closeout", default=False, config_path=config_path),
