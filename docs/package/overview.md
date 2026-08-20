@@ -1,105 +1,108 @@
 # Package Overview
 
-`agentic-workspace` is the root package and CLI. It installs a small, repo-native operating layer for repositories where agent work must survive time: multiple sessions, tools, branches, contributors, or non-trivial proof expectations.
+`agentic-workspace` is the root package and CLI for a small repo-native operating substrate. It exists for repositories where agent work must survive time, tool changes, branches, model changes, handoff, or non-trivial proof expectations without forcing each new agent to reconstruct the task from chat history.
 
-The package is deliberately not a project-management system, runtime orchestrator, database, or plugin platform. It provides file-based contracts and compact command outputs that let agents preserve intent, recover context, verify changes, and hand off safely through repository state instead of chat history.
+AW is an amortized coordination layer: it adds bounded structure when that structure costs less than future rediscovery, repair, proof ambiguity, or handoff loss. For short-lived work in a repo that is already cheap to understand, the right AW footprint may be minimal or none.
 
-Agentic Workspace is an amortized coordination layer. It adds small, intentional overhead now so long-running agent work avoids larger future costs: rediscovery, stale context, weak proof, duplicated work, unsafe handoff, and unreviewable output. For small or short-lived repos, that overhead may not pay back.
+## Product model
 
-## What Ships
+Workspace is the kernel. It owns the cross-cutting mechanics needed for safe composition and continuity:
 
-The root package ships:
+- compact startup and current-work routing;
+- compatibility and lifecycle admission;
+- ownership and authority composition;
+- effect, mutation, proof, and claim boundaries;
+- conflict visibility and bounded recovery;
+- stable operation contracts for modules and external consumers.
 
-- the `agentic-workspace` CLI;
-- lifecycle commands for installing, adopting, upgrading, checking, and removing managed surfaces;
-- compact context commands such as `start`, `summary`, `preflight`, `report`, `proof`, `ownership`, and `config`;
-- first-party module composition for Planning, Memory, and Verification;
-- package-managed workspace skills for first-contact startup, routing, proof, closeout, and module-boundary orientation;
-- machine-readable contracts under `src/agentic_workspace/contracts/`;
-- JSON schemata and generated reference docs for those contracts;
-- a thin startup adapter such as `AGENTS.md` when installed into a host repository.
+Domain semantics should stay outside that kernel.
 
-The root package currently depends on the first-party Planning, Memory, and Verification packages so one command can orchestrate ordinary lifecycle work. Module selection controls the checked-in repository footprint, not the Python dependency graph.
+Capabilities extend AW through three different boundaries:
 
-Exact profile and footprint metadata is defined in the generated [Module registry](../reference/module-registry.md). Exact command metadata is defined in [CLI commands](../reference/cli-commands.md). The reviewed ordinary operating model and surface classification live in [Ordinary continuity loop and surface classification](ordinary-continuity-loop.md). Knowledge routing, source authority, and pre-work gates are defined in [Knowledge routing and source authority](knowledge-routing.md) and [Pre-work knowledge gates](knowledge-gates.md).
+| Boundary | Owner | Purpose |
+| --- | --- | --- |
+| Modules | module package/domain owner | add domain capabilities, owned state/resources, operations, and bounded effects on the ordinary loop |
+| Repo customization | host repository | declare repo-owned config, workflow obligations, skills, and canonical guidance |
+| External adapters | independent integration package/tool | translate vendor/tool transport to AW's stable public operations without becoming AW authority |
 
-Generated command behavior test ownership is accounted for in [Generated behavior test inventory](generated-behavior-test-inventory.md). That inventory distinguishes operation conformance cases, shared command-generation ownership, AW wrapper/proof/lifecycle tests, and intentionally rejected regression-test bulk. Shell-facing wrapper coverage is defined separately in [CLI boundary tests](cli-boundary-tests.md). Final parent-level generated-behavior accounting and bypass guardrails are summarized in [Generated behavior closure inventory](generated-behavior-closure-inventory.md).
+Planning, Memory, and Verification are the bundled first-party modules and the current proving grounds for the module model. They should not require permanent semantic privilege in Workspace merely because they ship with the root distribution.
 
-## Runtime Model
+See [Modules](modules.md), [Architecture](../architecture.md), and [Extensibility and public boundary](../extension-boundary.md).
 
-Installed repositories get a `.agentic-workspace/` directory plus small adapter files. The adapters route agents to compact CLI answers instead of becoming a second handbook.
+## What ships
 
-Startup and report outputs should make the investment visible. They are useful when they show what cost was avoided or contained: rediscovery avoided by Memory, scope contained by Planning, proof selected by repo state, continuation routed to a checked-in owner, or repeated friction converted into a durable improvement target.
+The coordinated distribution currently includes:
 
-Ordinary operation is organized around phase questions, not command discovery:
+- the `agentic-workspace` root CLI and shared lifecycle/routing behavior;
+- first-party Planning, Memory, and Verification packages;
+- package-managed workspace skills and compact routing adapters;
+- machine-readable command, operation, module, proof, report, selector, ownership, and lifecycle contracts;
+- JSON schemata and generated reference projections;
+- installable payload used to create the small `.agentic-workspace/` host-repo enclave.
 
-| Phase question | Ordinary affordance |
+The current root Python distribution bundles all three first-party module distributions for lifecycle convenience. That packaging decision is not the intended architectural definition of the module boundary. Host-repo module selection controls which module state is installed and active in the repository.
+
+## Ordinary operation
+
+The ordinary product is phase-question first. Commands are affordances, not a workflow the agent should memorize.
+
+| Question | Ordinary affordance |
 | --- | --- |
 | What is the smallest safe context before acting? | `agentic-workspace start --target ./repo --task "<task>" --format json` |
-| Is this direct, bounded, lane, epic, takeover, or continuation work? | `start`, `summary`, or routed Planning mutation |
-| Which source can change interpretation, edits, proof, or closeout? | knowledge routes and gates in compact output |
-| What narrow working set is safe to touch now? | `agentic-workspace implement --changed <paths> --task "<task>" --format json` |
-| What evidence is required for the claim? | `agentic-workspace proof --target ./repo --changed <paths> --format json` |
-| What must survive after this agent stops? | Planning closeout/archive, Memory capture, proof receipts, or follow-up issues |
-| How can a future agent resume without replaying chat? | `agentic-workspace summary --target ./repo --format json` |
+| What work currently owns continuation? | `agentic-workspace summary --target ./repo --format json` |
+| What changed surfaces and obligations matter now? | `agentic-workspace implement --target ./repo --changed <paths> --task "<task>" --format json` |
+| What evidence is required for the intended claim? | `agentic-workspace proof --target ./repo --changed <paths> --format json` |
+| What may be claimed and what must survive? | the compact current-owner/closeout projection routed by the ordinary decision path |
 
-The commands are affordances for the current question. Diagnostic and
-maintainer surfaces such as `preflight`, `report`, `config`, `defaults`,
-`ownership`, `modules`, `status`, `doctor`, generated references, and module
-CLIs stay behind routing unless the compact packet or the user's request names
-that need.
+Diagnostics such as `report`, `doctor`, `ownership`, `modules`, `defaults`, and verbose/raw state should stay behind routing unless the current question needs them.
 
-For broad ordinary-path lanes, the same report packet carries a compact lane
-completion model. It records surface visibility disposition, artifact lifecycle
-compression, restart/continuation scenarios, and affordance-first output rules
-without turning those concerns into another first-contact manual. Use it to
-check whether a lane reduced visible machinery, preserved enough residue for
-restart, and moved prose-first guidance toward typed routes, selectors, proof
-commands, and claim boundaries.
+A module should normally enrich one of these existing questions. Installing more capabilities should not require agents to learn a proportionally larger first-contact framework.
 
-When no prior state is known, start with:
+## Ownership model
 
-```bash
-agentic-workspace start --target ./repo --format json
-```
+Keep one primary owner per concern:
 
-If active work state is the question, use:
+- **Planning** owns active execution continuity and bounded intent when Planning is selected.
+- **Memory** owns durable anti-rediscovery repo knowledge.
+- **Verification** owns reusable soft-verification protocols, bounded evidence records, and known verification gaps.
+- **Workspace** owns cross-cutting composition, compatibility, routing, lifecycle coordination, and final kernel-level claim/effect boundaries.
+- **The host repository** owns its canonical docs, policies, ordinary source, and promoted output.
+- **Local state** may support diagnostics, integrations, or machine-specific preferences but is not shared authority by existence alone.
 
-```bash
-agentic-workspace summary --target ./repo --format json
-```
+External trackers and services normally provide evidence rather than automatically owning Planning completion or repo intent.
 
-If takeover, recovery, config, and active state should be bundled in one answer, use:
+## Trust model
 
-```bash
-agentic-workspace preflight --target ./repo --format json
-```
+AW is not a sandbox. A repository can configure proof or executor commands that inherit the caller's filesystem and credential authority. Treat the repository and those commands as trusted before execution. See [Threat model and supply-chain boundary](../security/threat-model.md).
 
-For exact startup and report payload shapes, see [Startup context](../reference/startup-context.md) and [Workspace report](../reference/workspace-report.md).
+## Module selection
 
-## Module Selection
+The bundled first-party capabilities are independently useful:
 
-| Selection | Selected modules | Use when |
-| --- | --- | --- |
-| routing-only | none | the repo only needs compact entrypoint, config, workspace skills, module-map, and report routing surfaces |
-| memory | Memory | durable repo knowledge should prevent repeated rediscovery |
-| planning | Planning | active execution state, proof expectations, handoff, or lane closeout must be recoverable |
-| verification | Verification | soft verification protocols, proof-route hints, and bounded evidence records should be repo-visible |
-| planning,memory | Planning and Memory | both active execution state and durable repo knowledge are worth the shared footprint |
+| Selection | Use when |
+| --- | --- |
+| routing-only / no modules | compact startup, config, ownership, skills, and shared routing are enough |
+| Memory | agents repeatedly rediscover repo invariants, runbooks, traps, or subsystem boundaries |
+| Planning | active work must survive interruption, task switching, proof obligations, or handoff |
+| Verification | reusable manual/semi-automated verification protocols and bounded evidence need a repo-visible owner |
+| combinations | more than one of those problems is independently expensive enough to justify its owner |
 
-`memory` is the usual smallest starting point when the problem is repeated rediscovery. `planning` is the right starting point when active work continuity is the fragile part. `verification` fits repos that need reusable evidence protocols without a Planning or Memory install. Combine modules only when each owner solves a real problem in the host repo.
+The threshold is expected future value, not team size. Solo work can benefit when the handoff is to a future session, branch, or model.
 
-The threshold is not team size. A solo maintainer and one agent can still benefit when the handoff is to a future session, future branch, or future agent and the missing context would be expensive to reconstruct.
+## Documentation layers
 
-## Read Next
+Use the documentation at the level of the question:
 
-- [Lifecycle and context commands](lifecycle.md)
-- [Command map](commands.md)
-- [Ordinary continuity loop and surface classification](ordinary-continuity-loop.md)
-- [Installed surfaces](installed-surfaces.md)
+1. **Conceptual package docs** explain stable product roles and boundaries.
+2. **Generated/current-value references** should answer exact command, schema, module, and footprint questions from machine-readable authority.
+3. **Maintainer docs** own source-checkout generation, validation, release, and dogfooding procedure.
+4. **Reviews and Planning** retain dated evidence and active implementation shaping; they are not current public product explanation.
+
+Read next:
+
 - [Modules](modules.md)
-- [Knowledge routing and source authority](knowledge-routing.md)
-- [Pre-work knowledge gates](knowledge-gates.md)
-- [CLI boundary tests](cli-boundary-tests.md)
-- [Generated behavior closure inventory](generated-behavior-closure-inventory.md)
+- [Lifecycle and context commands](lifecycle.md)
+- [Installed surfaces](installed-surfaces.md)
 - [Contracts and references](contracts.md)
+- [Architecture](../architecture.md)
+- [Documentation index](../index.md)
