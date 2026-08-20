@@ -2,15 +2,24 @@
   "kind": "planning-lane/v1",
   "id": "open-issues-lifecycle",
   "title": "Generic reconciliation and lifecycle authority",
-  "status": "ready",
+  "status": "active",
   "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/open-issues-2026-08-20-stack.decomposition.json",
   "lane_outcome": "Close #2605 #2611 #2612 and #2613 by making effect-scoped work, stale external state, reconciliation, config, and posture compose generically.",
   "purpose_for_parent": "Remove fixed lifecycle/control assumptions before assurance composition.",
   "subsystems": [],
   "technical_strategy": "Tighten the lane strategy before the first slice starts.",
   "technology_choices": [],
-  "slice_sequence": [],
-  "current_slice": "",
+  "slice_sequence": [
+    {
+      "id": "open-issues-lifecycle-implementation",
+      "title": "Implement lifecycle and reconciliation lane",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/open-issues-lifecycle-implementation.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Remove fixed lifecycle/control assumptions before assurance composition."
+    }
+  ],
+  "current_slice": "open-issues-lifecycle-implementation",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Focused Planning, operating-decision, lifecycle, config, cleanup, stale-state, and reconciliation fixtures plus package checks.",
   "proof_aggregation": {

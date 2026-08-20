@@ -408,6 +408,14 @@ queued_items = []
     assert by_id["SYN-6"]["admission"]["state"] == "contradicted"
     assert by_id["SYN-7"]["admission"]["state"] == "unavailable"
     assert by_id["SYN-8"]["admission"]["state"] == "contradicted"
+    assert by_id["GH-1"]["planning_reconciliation"]["state"] == "external-state-changed"
+    assert [choice["id"] for choice in by_id["GH-1"]["planning_reconciliation"]["choices"]] == [
+        "local-intent-satisfied",
+        "local-intent-remains",
+    ]
+    assert by_id["SYN-3"]["planning_reconciliation"]["state"] == "external-evidence-stale"
+    assert by_id["SYN-7"]["planning_reconciliation"]["state"] == "external-evidence-unavailable"
+    assert "limit-work-selection" in by_id["SYN-3"]["planning_reconciliation"]["claim_effect"]
     assert loaded["relevant_observation_count"] == 7
     reconcile = planning_reconcile(target=tmp_path)
     inputs = reconcile["external_observation_inputs"]

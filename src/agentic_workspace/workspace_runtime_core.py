@@ -40425,7 +40425,9 @@ def _acceptance_reconciliation_prompt_payload(*, task_text: str | None, acceptan
     }
 
 
-def _planning_safety_path_classification(changed_paths: list[str]) -> dict[str, Any]:
+def _planning_safety_path_classification(
+    changed_paths: list[str], *, target_root: Path | None = None, task_text: str | None = None
+) -> dict[str, Any]:
     planning_paths = [
         path for path in changed_paths if path == ".agentic-workspace/planning" or path.startswith(".agentic-workspace/planning/")
     ]
@@ -40451,6 +40453,88 @@ def _planning_safety_path_classification(changed_paths: list[str]) -> dict[str, 
         dirty_shape = "planning-only"
     else:
         dirty_shape = "implementation-only"
+    effect_scope: dict[str, Any] = {"status": "not-proven", "effect_class": "repository-or-unknown"}
+    normalized_task = " ".join(str(task_text or "").lower().split())
+    cleanup_requested = any(token in normalized_task for token in ("cleanup", "clean up", "delete", "remove", "prune"))
+    preservation_declared = (
+        "preserve" in normalized_task and "tracked" in normalized_task and ".venv" in normalized_task and "config.local" in normalized_task
+    )
+    protected_prefixes = (".venv", ".agentic-workspace/config.local.toml")
+    transient_markers = (
+        ".agentic-workspace/local/",
+        "__pycache__/",
+        ".pytest_cache/",
+        ".ruff_cache/",
+        ".mypy_cache/",
+        "htmlcov/",
+        "build/",
+        "dist/",
+    )
+    transient_names = {".coverage", "coverage.xml"}
+    candidate_paths = [path.replace("\\", "/").strip("/") for path in changed_paths if path.strip()]
+    protected_paths = [path for path in candidate_paths if path == protected_prefixes[1] or path.startswith(f"{protected_prefixes[0]}/")]
+    transient_shape = [
+        path
+        for path in candidate_paths
+        if path in transient_names
+        or path.endswith((".pyc", ".pyo"))
+        or any(path == marker.rstrip("/") or marker in f"{path}/" for marker in transient_markers)
+    ]
+    ignored_paths: list[str] = []
+    tracked_paths: list[str] = []
+    if target_root is not None and candidate_paths:
+        for path in candidate_paths:
+            tracked = subprocess.run(
+                ["git", "ls-files", "--", path],
+                cwd=target_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if tracked.returncode == 0 and tracked.stdout.strip():
+                tracked_paths.append(path)
+            ignored = subprocess.run(
+                ["git", "check-ignore", "--quiet", "--", path],
+                cwd=target_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if ignored.returncode == 0:
+                ignored_paths.append(path)
+    safe_transient = (
+        bool(candidate_paths)
+        and cleanup_requested
+        and preservation_declared
+        and not protected_paths
+        and not tracked_paths
+        and sorted(candidate_paths) == sorted(transient_shape)
+        and sorted(candidate_paths) == sorted(ignored_paths)
+    )
+    if safe_transient:
+        effect_scope = {
+            "status": "proven-local-transient",
+            "effect_class": "local-transient-cleanup",
+            "allowed_paths": candidate_paths,
+            "preserved": ["tracked files", "meaningful untracked work", ".venv", ".agentic-workspace/config.local.toml"],
+            "claim_authority": "none-for-active-planning",
+            "rule": "This bounded deletion may mutate only recognized ignored transient residue and cannot advance or complete the selected Planning owner.",
+        }
+    elif candidate_paths and cleanup_requested:
+        effect_scope = {
+            **effect_scope,
+            "reason": "cleanup scope is not entirely recognized, ignored, explicitly preservation-bounded transient residue",
+            "candidate_paths": candidate_paths,
+            "protected_paths": protected_paths,
+            "tracked_paths": tracked_paths,
+            "not_ignored_paths": sorted(set(candidate_paths) - set(ignored_paths)),
+            "recognized_transient_paths": transient_shape,
+            "constructible_next_action": {
+                "action": "inspect-current-task-scope",
+                "command": "git status --short --ignored",
+                "required_decision": "remove ambiguous paths or explicitly authorize a separately owned mutation scope",
+            },
+        }
     return {
         "dirty_shape": dirty_shape,
         "planning_paths": planning_paths,
@@ -40459,6 +40543,7 @@ def _planning_safety_path_classification(changed_paths: list[str]) -> dict[str, 
         "surface_root_count": len(surface_roots),
         "scope_growth_detected": bool(implementation_paths and scope_growth_reasons),
         "scope_growth_reasons": scope_growth_reasons,
+        "effect_scope": effect_scope,
     }
 
 
@@ -49210,6 +49295,8 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 admitted_input=admitted_input,
             )
             if reused is not None:
+                for diagnostic_key in ("context", "projection_reuse", "owner_reconciliation"):
+                    reused.pop(diagnostic_key, None)
                 print(format_summary_json(reused))
                 return 0
         summary_started_at = time.perf_counter()
@@ -49310,6 +49397,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         summary, operating_decision = finalize_projection_surface_operating_decision(
             payload=summary, admitted_input=admitted_input, consumer="summary"
         )
+        if summary_profile == "tiny":
+            for diagnostic_key in ("context", "projection_reuse", "owner_reconciliation"):
+                summary.pop(diagnostic_key, None)
         if reuse_context is not None:
             reuse_result = record_projection_reuse(
                 root=target_root,
