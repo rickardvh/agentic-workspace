@@ -1,88 +1,65 @@
-# Installed Module Map
+# Installed Capability / Module Map
 
-Use this file as the compact abstraction ladder for an installed Agentic Workspace repo. It is a router, not a manual.
+Use this file only when the current AW route asks for installed-capability orientation. It is a fallback/reference surface, not ordinary first contact.
 
-## Workspace
+Start with the configured `workspace-startup` route and current operating decision. A module should become visible because it is relevant, not because it is installed.
 
-Workspace owns cross-module orchestration:
+## Core rule
 
-- startup adapters and compact first-contact commands
-- lifecycle install, upgrade, status, doctor, and uninstall routing
-- config, local overrides, ownership, proof routing, and combined reports
-- module composition and installed-surface boundaries
+Workspace resolves one current operating contract from source-owned repository context, runtime facts, repo customization, and admitted capability contributions.
 
-Start with compact commands before reading raw files:
+Modules are peer extensions of that loop. They may contribute relevant context/procedures during **resolve**, typed operations during **act**, and bounded domain results/state/evidence during **reconcile**.
 
-```bash
-agentic-workspace start --target . --format json
-agentic-workspace preflight --target . --format json
-agentic-workspace summary --target . --format json
-agentic-workspace report --target . --format json
-```
+Workspace should not need a fixed module slot map to compose them.
 
-## Planning
+## When a module is routed
 
-Planning owns active execution state:
+When the current packet names a module/capability owner:
 
-- `.agentic-workspace/planning/state.toml`
-- `.agentic-workspace/planning/execplans/*.plan.json`
-- decomposition records for epic-shaped work
-- active proof expectations, handoff, closeout, and continuation routing
+1. preserve the current action, effect, proof, and claim boundaries;
+2. use the named module operation, selector, or specialized skill before raw files;
+3. let the module interpret its own domain state;
+4. return only the bounded result needed by the current operating decision;
+5. do not infer that the module applies to unrelated work.
 
-Use Planning when work needs to survive a session, branch, handoff, or non-obvious validation path. Completed execplans should be distilled and removed from active Planning by default; only future-relevant residue should move to Memory, docs, checks, contracts, config, Planning, or an issue.
+If a module is missing or incompatible, use the bounded recovery named by the current decision. Do not guess from package layout.
 
-Preferred command:
+## Current first-party examples
 
-```bash
-agentic-planning summary --target . --format json
-```
+The coordinated distribution currently includes these first-party modules:
 
-Compatibility alias:
+| Module | Domain it owns when relevant |
+| --- | --- |
+| Planning | active execution continuity, bounded intent, handoff, continuation, and Planning-domain transitions |
+| Memory | learned anti-rediscovery repository knowledge and its capture/retrieval lifecycle |
+| Verification | reusable soft-verification protocols, bounded evidence, known gaps, and proof-route hints |
 
-```bash
-agentic-planning summary --target . --format json
-```
+These are examples, not fixed architectural slots. Future modules may add other functions through the same generic contribution model.
 
-## Memory
+Do not read their raw state merely because their names appear here.
 
-Memory owns durable anti-rediscovery knowledge:
+## Module-owned state
 
-- invariants and authority boundaries
-- subsystem orientation that is expensive to rederive
-- recurring traps and operator runbooks
-- routing hints that help agents read less
+Module-owned state remains under the module owner. Workspace should consume only the compact current contribution required for routing/control.
 
-Use Memory when future work should not rediscover a stable fact, constraint, or procedure. Do not store active task state, backlog, milestone history, or broad product documentation in Memory.
+Examples of current first-party roots may include:
 
-Preferred command:
+- `.agentic-workspace/planning/`
+- `.agentic-workspace/memory/` or Memory-owned configured surfaces
+- `.agentic-workspace/verification/`
 
-```bash
-agentic-memory report --target . --format json
-```
+Exact installed surfaces and availability depend on the selected module/profile and should come from current generated/contract references rather than this conceptual map.
 
-Compatibility alias:
+## Repo customization is separate
 
-```bash
-agentic-memory report --target . --format json
-```
+Repository-owned config, obligations, skills, canonical guidance, ownership, proof declarations, and repo operations are host control inputs. They are not modules merely because they affect the operating contract.
 
-## Verification
+## External adapters are separate
 
-Verification owns durable proof strategy and evidence interpretation when that optional module is installed:
+External adapters project/transport stable AW operations into other tools. They own transport/vendor lifecycle and do not become AW semantic authority merely by invoking an operation.
 
-- `.agentic-workspace/verification/manifest.toml`
-- `.agentic-workspace/verification/proof-strategy.toml`
-- scenario, protocol, proof-route, and evidence-bundle policy
+## Deeper references
 
-When the CLI is unavailable, inspect only those installed files needed by the current proof boundary and do not mutate managed state by hand.
+Use generated references only after the relevant capability/owner is known. Do not read them end to end for orientation.
 
-## Generated References
-
-Generated reference docs explain exact fields and structured outputs. Use them after the conceptual owner is clear:
-
-- `docs/reference/workspace-config.md`
-- `docs/reference/startup-context.md`
-- `docs/reference/workspace-report.md`
-- `docs/reference/cli-commands.md`
-
-Do not start broad work by reading generated references end to end.
+For public conceptual detail, use package documentation. In an installed host repo, prefer the exact selector or detail route emitted by the current AW decision over hard-coded paths in this file.
