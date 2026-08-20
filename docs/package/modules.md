@@ -1,186 +1,130 @@
 # Modules
 
-`agentic-workspace` is the package. It composes first-party modules behind one root lifecycle and context CLI. Modules own domain behavior; the package root owns orchestration, shared config, compact routing, and lifecycle coordination.
+Modules add independently owned domain capabilities to the Agentic Workspace operating kernel. They should enrich the ordinary operating loop without forcing Workspace to absorb their domain semantics or requiring agents to learn a separate first-contact framework for each capability.
 
-## Open Participation Model
+Planning, Memory, and Verification are the current first-party modules. They are bundled batteries and examples of the module model, not fixed architectural slots.
 
-Agentic Workspace is an operating substrate, not a fixed bundle of slots. It
-ships a recommended skill-guided loop for ordinary agents, but repos can add
-workflow obligations and modules can contribute capabilities to that loop when
-the contribution is explicit, queryable, safe, and cheap to route.
+## Module ownership
 
-The recommended loop is:
+One concern should have one primary owner:
 
-| Step | Default owner | What modules may add |
+| Module | Primary concern | Must not become |
 | --- | --- | --- |
-| startup | Workspace | startup routing hints, prompts, reports, or gates surfaced through compact routing |
-| active work | Workspace and Planning | state owners, lifecycle hooks, workflow phases, owned roots, and stop conditions |
-| durable knowledge | Memory | routeable durable context resources and prompts without owning active sequencing |
-| proof | Workspace proof and Verification | proof routes, protocols, evidence bundles, result schemas, and safety metadata |
-| closeout | Planning closeout | closeout obligations, residue routes, and claim gates without over-closing parent intent |
+| Planning | active execution continuity, bounded intent, handoff, domain closeout state | ticket tracker, backlog mirror, durable knowledge base |
+| Memory | durable anti-rediscovery repository knowledge | active task state, execution log, broad canonical docs mirror |
+| Verification | reusable soft-verification protocols, bounded evidence, known gaps, proof-route hints | generic CI/test runner, universal proof or completion authority |
 
-Modules may contribute resources, tools, prompts or skills, schemas, roots,
-reports, gates, proof routes, lifecycle hooks, workflow phases, startup routing
-hints, state owners, and safety metadata. Those declarations live in the module
-registry or module-owned manifests and can be projected into generated docs,
-plugin/catalogue entries, or MCP-style adapters. Generated projections are not
-the source of truth.
+Workspace owns the cross-cutting kernel concerns around those domains: compatibility admission, compact routing, lifecycle coordination, conflict visibility, effect/mutation boundaries, and the final composition of proof/claim/continuation state.
 
-Repo-configured `workflow_obligations` compose with the same loop by stage and
-scope tag. A matched obligation raises the force of an existing step or closeout
-gate; an unmatched obligation stays quiet. Obligations do not replace module
-ownership and do not make every repo rule a new module.
+## Extensibility model
 
-Conflicts should be surfaced, not resolved silently. Examples include
-overlapping owned roots, incompatible module selections, contradictory workflow
-obligations, proof-route collisions, lifecycle-hook collisions, and startup
-burden growth. The agent chooses a safe route from compact evidence; policy
-conflicts that change accepted workflow remain repo-owner or human decisions.
+Modules are intended to participate through declared capabilities rather than Workspace branches keyed to module identity.
 
-Planning, Memory, and Verification are first-party examples of this model:
+The stable public module boundary should remain deliberately smaller than AW's full internal participation vocabulary. An independent module should eventually need only the contract required for safe composition, such as:
 
-| Module | Example role |
+- module identity and compatibility;
+- declared capabilities and activation/relevance;
+- owned state/resources and writable roots;
+- stable operations with input/result/effect contracts;
+- lifecycle, dependencies, and conflicts;
+- bounded proof/authority effects;
+- generated discovery/reference metadata.
+
+Internal implementation metadata may be broader. A lifecycle hook, workflow phase, posture fragment, renderer packet, or first-party callback is not automatically a public extension primitive merely because it exists in the registry today.
+
+See [Extensibility and public boundary](../extension-boundary.md) for the distinction between the core extensibility goal and the current support-bearing public contract.
+
+## Ordinary participation
+
+Modules contribute to existing operating questions rather than defining independent workflows wherever possible:
+
+| Ordinary question | Example module contribution |
 | --- | --- |
-| Planning | active execution state, lane/slice decomposition, continuation ownership, and honest closeout |
-| Memory | durable anti-rediscovery knowledge and residue routing that reduces repeated context work |
-| Verification | soft verification protocols, bounded evidence, proof route hints, and known gaps |
+| What context matters before acting? | compact routed domain facts or state references |
+| What currently owns continuation? | Planning owner/current-work contribution when applicable |
+| What work or effects are safe now? | domain capability, authority, or blocker facts |
+| What proof is required? | Verification protocol or module-specific proof route |
+| What may be claimed and what survives? | bounded closeout obligations, residue route, or continuation owner |
 
-This model is deliberately open-ended. It should keep ordinary startup small
-while allowing any number of modules to participate through declared roots,
-tools, state, reports, gates, proof routes, and lifecycle behavior.
+An irrelevant installed module should stay out of first-line output. A relevant module should contribute through compact structured state or operations, with deeper module detail available by selector or module-owned reference.
 
-The ordinary agent loop and current visible-surface classification are reviewed
-in [Ordinary continuity loop and surface classification](ordinary-continuity-loop.md).
-That page treats Planning, Memory, and Verification as first-party participants
-in this open model, not as the architecture's fixed outer boundary.
+Modules must not silently widen repo mutation, Planning, proof, or completion authority outside their declared domain.
 
-## Task Posture And Dynamic Instructions
+## Repo customization is not a module
 
-The same participation model covers task posture. Agentic Workspace acts like a
-richer configurable `AGENTS.md`: the static adapter points to the workspace
-entrypoint, while startup and changed-path commands emit the task-specific
-posture that is relevant now.
+Host repositories can configure workflow obligations, skills, canonical guidance, ownership, proof policy, and local/shared settings without creating a new package capability.
 
-A task posture packet can include task intent, operating posture, workflow
-obligations, skill routes, allowed and forbidden actions, proof and closeout
-boundaries, read budget, authority boundaries, output-shape requirements,
-review rubrics, and matched module contributions. It is composed from repo
-config, task facts, changed paths, active planning state, and module
-participation declarations.
+Use repo customization for host-specific operating rules. Use a module when there is an independently owned reusable domain capability with its own lifecycle, resources/state, operations, and compatibility boundary.
 
-Config posture participates in that composition:
+Keeping those mechanisms separate avoids turning every repo rule into a package extension.
 
-| Input | Effect |
+## External adapters are not modules
+
+External adapters integrate AW into other agents, CLIs, IDEs, or vendor services through stable AW operations. They own transport and vendor/tool lifecycle; AW remains unaware of the adapter package.
+
+An adapter should not become a module merely because it invokes AW, and AW should not gain an adapter registry or credential store to manage it.
+
+## Current first-party selections
+
+A repo can select the capabilities that pay back for its workflow:
+
+| Selection | Use when |
 | --- | --- |
-| `optimization_bias` | changes density, routing emphasis, and residue style without overriding hard obligations |
-| artifact posture | constrains generated, persisted, or user-facing outputs |
-| initiative posture | limits unsolicited cleanup and broader action |
-| assurance posture | raises proof, review, and delegation requirements |
-| read budget | controls whether startup emits compact selectors or deeper raw context |
-| `workflow_obligations` | adds stage- and scope-specific requirements to the current loop step |
+| none / routing-only | compact root routing, config, ownership, and workspace skills are enough |
+| `memory` | agents repeatedly rediscover repo invariants, runbooks, traps, or subsystem boundaries |
+| `planning` | active intent, proof expectations, handoff, or continuation must survive interruption |
+| `verification` | reusable manual/semi-automated verification protocols and bounded evidence need a repo-visible owner |
+| combinations | more than one capability independently saves enough future work to justify its state |
 
-Modules declare their posture contributions instead of relying on bespoke core
-logic. A declaration names the loop steps it can affect, contribution classes,
-posture triggers, startup/report/closeout projections, authority boundaries, and
-conflict provenance. Startup includes only matching fragments so ordinary first
-contact does not grow into a full module manual.
-
-Reports and closeout keep the model auditable. They expose applied workflow
-obligations, selected module contributions, posture conflicts, and provenance
-when posture changed the allowed next action, proof burden, output shape, review
-rubric, authority boundary, or closeout permission.
-
-Knowledge routing is one cross-cutting posture input. It selects governing
-source references by task text, changed paths, active state, module
-declarations, and workflow obligations without turning startup into a broad
-reading list. The source kind, authority class, owner, freshness state, and
-closeout capture rule are defined in [Knowledge routing and source
-authority](knowledge-routing.md).
-
-## Core Module Selection
-
-| Selection | Modules | Checked-in footprint |
-| --- | --- | --- |
-| `none` or `[]` in `modules.enabled` | none | root config, startup, ownership, workspace skills, module map, and report routing surfaces |
-| `memory` | Memory | durable repo knowledge surfaces |
-| `planning` | Planning | active execution state and execplan surfaces |
-| `verification` | Verification | soft verification protocols and bounded evidence projections |
-| `planning,memory` | Planning and Memory | both active work state and durable repo knowledge |
-
-The AW package currently bundles first-party modules for simple `uvx` and `pipx` lifecycle use. That may change later, but the installed repository footprint is selected by explicit `--modules` input or repo-owned `[modules].enabled`. The exact module and component metadata is defined by the generated [Module registry](../reference/module-registry.md) and [Module capability](../reference/module-capability.md) references. Knowledge routing and source authority are defined in [Knowledge routing and source authority](knowledge-routing.md).
+Module selection controls checked-in host-repo footprint. The current root Python distribution still bundles all first-party module packages for lifecycle convenience; that packaging choice should not define the semantic extension architecture.
 
 ## Planning
 
-Planning owns active execution state. Use it when work needs to stay bounded, resumable, and finishable across sessions.
+Planning owns active execution continuity. Use it when work must remain bounded, resumable, and honestly closeable across sessions or agents.
 
-Planning is good for:
+Typical Planning concerns:
 
-- active queue state;
-- bounded execution plans;
-- handoff and restart contracts;
-- proof expectations for active work;
-- honest closeout and required continuation routing.
-
-Planning is not a ticketing system, backlog manager, durable knowledge base, or broad documentation system.
+- current bounded work and continuation owner;
+- execution plans or lane/slice relationships that are expensive to reconstruct;
+- handoff and restart state;
+- proof expectations tied to active work;
+- domain closeout/archive transitions.
 
 Module implementation: [Planning README](../../packages/planning/README.md).
 
-Command: `agentic-planning`.
-
 ## Memory
 
-Memory owns durable repo knowledge that is expensive to rediscover. Use it when agents repeatedly relearn the same boundaries, runbooks, invariants, or subsystem orientation.
+Memory owns durable repository knowledge that is expensive to rediscover.
 
-Memory is good for:
+Typical Memory concerns:
 
-- durable technical facts;
+- invariants and authority boundaries;
 - subsystem orientation;
-- recurring failure lessons;
-- authority boundaries;
+- recurring traps and verified failure lessons;
 - operator runbooks;
-- routing hints that help agents read less.
-
-Memory is not active task state, execution history, issue triage, or a replacement for canonical docs.
+- compact routing facts that let agents read less.
 
 Module implementation: [Memory README](../../packages/memory/README.md).
 
-Command: `agentic-memory`.
-
 ## Verification
 
-Verification owns repo-native soft verification protocols, bounded evidence
-records, known gaps, and proof route hints. Use it when executable tests are not
-enough and the repo needs shared, reviewable verification expectations.
+Verification owns reusable soft-verification protocols, bounded evidence summaries, known verification gaps, and proof-route hints.
 
-Verification is good for:
+Typical Verification concerns:
 
-- declaring protocol activation by changed path, task marker, assurance
-  requirement, proof profile, or planning ref;
-- routing proof selection toward manual or semi-automated verification;
-- recording bounded evidence summaries, transcript refs, residual risk, and
-  stale conditions;
-- keeping verification context repo-visible without turning AW into a browser
-  automation platform.
-
-Verification is not a generic test runner, compliance engine, UI automation
-host, or global evidence store.
+- activation of manual or semi-automated verification protocols;
+- bounded evidence and residual-risk summaries;
+- known gaps and stale conditions;
+- proof-route information consumed by the broader Workspace proof/claim boundary.
 
 Module implementation: [Verification README](../../packages/verification/README.md).
 
-Command: `agentic-verification`.
+## Contract authority
 
-## Command Generation Dependency
+The machine-readable module registry and related schemas own exact current module/component metadata. Conceptual docs should explain roles and boundaries rather than duplicate every registry field.
 
-Command generation is a released, hash-pinned maintainer dependency consumed by
-this repository for generated CLI package rendering and proof. It is not an
-in-repo package, host-repo module, or ordinary installed runtime surface.
+Use:
 
-AW-owned command facts live in `src/agentic_workspace/contracts/`, generation
-and proof adapters live in `scripts/generate/workspace_command_generation.py`
-and `scripts/check/check_generated_command_packages.py`, and user-visible
-runtime behavior remains in the hand-written workspace and module primitives
-unless a generated target explicitly owns the projection.
-
-## Module Contracts
-
-The module registry declares available modules, default enablement, component metadata, and repository footprint policy. See [Module registry](../reference/module-registry.md) for the generated field reference. The lower-level command and component generation path is documented by [Command package IR](../reference/command-package-ir.md), [Command adapter generation](../reference/command-adapter-generation.md), and [Lifecycle generation readiness](../reference/lifecycle-generation-readiness.md).
+- [Module registry reference](../reference/module-registry.md) for generated field-level contract information;
+- [Contracts and references](contracts.md) for how source contracts and generated projections relate;
+- [Architecture](../architecture.md) for kernel/module/repo/adapter composition.
