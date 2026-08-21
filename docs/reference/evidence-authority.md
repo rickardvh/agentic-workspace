@@ -14,6 +14,7 @@ Repository proof-policy declaration authorizing one producer for a bounded exter
 | `kind` | const `"agentic-workspace/evidence-authority/v1"` | yes |  | Contract discriminator. |  |  |
 | `id` | string | yes |  | Repository-owned authority identity. |  |  |
 | `producer_id` | string | yes |  | Authorized evidence producer; transport is deliberately separate. |  |  |
+| `issuer_id` | string | no |  | Optional host-authenticated issuer required for this producer. |  |  |
 | `proof_route` | string | yes |  | Proof route within which authority applies. |  |  |
 | `evidence_class` | string | yes |  | Authorized class of evidence. |  |  |
 | `result_contract` | string | yes |  | Producer result contract. |  |  |

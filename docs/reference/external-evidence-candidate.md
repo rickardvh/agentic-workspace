@@ -12,11 +12,11 @@ Provider-neutral candidate reference that remains untrusted until repository pro
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Provider-neutral candidate reference that remains untrusted until repository proof policy admits it. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `kind` | const `"agentic-workspace/external-evidence-candidate/v1"` | yes |  | Contract discriminator. |  |  |
-| `producer_id` | string | yes |  | Identity of the evidence producer. |  |  |
+| `producer_id` | string | no |  | Untrusted producer assertion retained only for mismatch diagnostics; host custody supplies admitted identity. |  |  |
 | `transport_id` | string | no |  | Transport identity, which grants no producer authority. |  |  |
 | `proof_route` | string | yes |  | Claimed proof route. |  |  |
 | `evidence_class` | string | yes |  | Claimed evidence class. |  |  |
-| `result_contract` | string | yes |  | Contract under which the result was issued. |  |  |
-| `result` | string | yes |  | Producer result, distinct from admission status. |  |  |
-| `evidence_ref` | string | yes |  | Bounded external reference; logs are not embedded. |  |  |
+| `result_contract` | string | no |  | Untrusted result-contract assertion used only for mismatch diagnostics. |  |  |
+| `result` | string | no |  | Untrusted result assertion used only for mismatch diagnostics. |  |  |
+| `evidence_ref` | string | no |  | Untrusted reference assertion used only for mismatch diagnostics. |  |  |
 | `proof_subject` | object | yes |  | Existing dependency-scoped proof subject. |  |  |

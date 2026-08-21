@@ -17,6 +17,7 @@ from agentic_workspace.proof_subject import compare_proof_subjects
 APPLICATION_KIND = "agentic-workspace/assurance-application/v1"
 DECISION_KIND = "agentic-workspace/repository-assurance-decision/v1"
 EVIDENCE_KIND = "agentic-workspace/external-evidence-candidate/v1"
+RESOLVED_PRODUCER_KIND = "agentic-workspace/resolved-evidence-producer/v1"
 AUTHORITY_KIND = "agentic-workspace/evidence-authority/v1"
 
 
@@ -184,32 +185,46 @@ def evaluate_assurance_disposition(
 def admit_external_evidence(
     *,
     candidate: dict[str, Any] | None,
+    resolved_producer: dict[str, Any] | None,
     authorities: list[dict[str, Any]],
     current_proof_subject: dict[str, Any],
     application_id: str = "",
 ) -> dict[str, Any]:
-    """Admit an external reference only when repository proof policy authorizes its producer."""
+    """Admit evidence only from host-resolved producer custody authorized by repository policy."""
 
     value = _as_dict(candidate)
+    resolved = _as_dict(resolved_producer)
     reasons: list[str] = []
     if not value:
         reasons.append("candidate-unavailable")
     elif value.get("kind") != EVIDENCE_KIND:
         reasons.append("candidate-kind-incompatible")
-    required = ("producer_id", "proof_route", "evidence_class", "result_contract", "result", "evidence_ref", "proof_subject")
+    required = ("proof_route", "evidence_class", "proof_subject")
     if value and any(not value.get(field) for field in required):
         reasons.append("candidate-incomplete")
-    if value and str(value.get("producer_id") or "") == str(value.get("transport_id") or "") and value.get("transport_id"):
-        reasons.append("transport-self-authorization-denied")
+    resolved_required = ("producer_id", "issuer_id", "result_contract", "result", "evidence_ref")
+    if resolved.get("kind") != RESOLVED_PRODUCER_KIND or resolved.get("authenticated") is not True:
+        reasons.append("producer-custody-unresolved")
+    elif any(not resolved.get(field) for field in resolved_required):
+        reasons.append("resolved-producer-incomplete")
+    if value.get("producer_id") and str(value.get("producer_id")) != str(resolved.get("producer_id") or ""):
+        reasons.append("candidate-producer-mismatch")
+    for field in ("result_contract", "result", "evidence_ref"):
+        if value.get(field) and str(value.get(field)) != str(resolved.get(field) or ""):
+            reasons.append(f"candidate-{field.replace('_', '-')}-mismatch")
     matching = []
     for authority in authorities:
         authority = _as_dict(authority)
         if authority.get("kind") != AUTHORITY_KIND:
             continue
-        if all(
-            str(authority.get(field) or "") == str(value.get(field) or "")
-            for field in ("producer_id", "proof_route", "evidence_class", "result_contract")
-        ):
+        identity_matches = (
+            str(authority.get("producer_id") or "") == str(resolved.get("producer_id") or "")
+            and str(authority.get("proof_route") or "") == str(value.get("proof_route") or "")
+            and str(authority.get("evidence_class") or "") == str(value.get("evidence_class") or "")
+            and str(authority.get("result_contract") or "") == str(resolved.get("result_contract") or "")
+        )
+        issuer_matches = not authority.get("issuer_id") or str(authority.get("issuer_id")) == str(resolved.get("issuer_id") or "")
+        if identity_matches and issuer_matches:
             matching.append(authority)
     if value and not matching:
         reasons.append("producer-unauthorized")
@@ -217,7 +232,7 @@ def admit_external_evidence(
         reasons.append("evidence-authority-ambiguous")
     authority = matching[0] if len(matching) == 1 else {}
     allowed_results = _strings(authority.get("allowed_results"))
-    if authority and allowed_results and str(value.get("result") or "") not in allowed_results:
+    if authority and allowed_results and str(resolved.get("result") or "") not in allowed_results:
         reasons.append("result-contract-violated")
     required_application = str(authority.get("application_id") or "")
     if required_application and required_application != str(application_id):
@@ -227,12 +242,13 @@ def admit_external_evidence(
         reasons.append(f"proof-subject-{subject['status']}")
     status = "admitted" if not reasons else "rejected"
     identity = {
-        "producer_id": value.get("producer_id"),
+        "producer_id": resolved.get("producer_id"),
+        "issuer_id": resolved.get("issuer_id"),
         "proof_route": value.get("proof_route"),
         "evidence_class": value.get("evidence_class"),
-        "result_contract": value.get("result_contract"),
-        "result": value.get("result"),
-        "evidence_ref": value.get("evidence_ref"),
+        "result_contract": resolved.get("result_contract"),
+        "result": resolved.get("result"),
+        "evidence_ref": resolved.get("evidence_ref"),
         "proof_subject_fingerprint": _as_dict(value.get("proof_subject")).get("fingerprint"),
     }
     return {
@@ -241,10 +257,11 @@ def admit_external_evidence(
         "admission_id": f"external-evidence:{_digest(identity)[:20]}",
         "reason_codes": sorted(set(reasons)),
         "proof_subject_status": subject,
-        "producer_result": value.get("result"),
-        "evidence_ref": value.get("evidence_ref", "") if status == "admitted" else "",
+        "producer_result": resolved.get("result"),
+        "evidence_ref": resolved.get("evidence_ref", "") if status == "admitted" else "",
         "authority_id": authority.get("id", "") if status == "admitted" else "",
         "claim_authority": "none",
-        "transport_id": value.get("transport_id", ""),
-        "rule": "External evidence remains a bounded reference; transport is not producer authority and admission does not certify the claim.",
+        "transport_id": resolved.get("transport_id", ""),
+        "producer_custody": "host-authenticated" if resolved.get("authenticated") is True else "unresolved",
+        "rule": "External evidence remains a bounded reference; host-resolved producer custody is distinct from candidate and transport assertions, and admission does not certify the claim.",
     }

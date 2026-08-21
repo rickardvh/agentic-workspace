@@ -1665,6 +1665,7 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
             raise VerificationUsageError(f"{surface} must be a table.")
         supported = {
             "producer_id",
+            "issuer_id",
             "proof_route",
             "evidence_class",
             "result_contract",
@@ -1685,6 +1686,7 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
                 "kind": "agentic-workspace/evidence-authority/v1",
                 "id": str(authority_id).strip(),
                 "producer_id": _required_string(payload=raw_authority, key="producer_id", surface=surface),
+                "issuer_id": _optional_string(payload=raw_authority, key="issuer_id", surface=surface),
                 "proof_route": proof_route,
                 "evidence_class": _required_string(payload=raw_authority, key="evidence_class", surface=surface),
                 "result_contract": _required_string(payload=raw_authority, key="result_contract", surface=surface),

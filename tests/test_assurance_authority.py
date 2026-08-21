@@ -11,6 +11,7 @@ from agentic_workspace.assurance_authority import (
     AUTHORITY_KIND,
     DECISION_KIND,
     EVIDENCE_KIND,
+    RESOLVED_PRODUCER_KIND,
     admit_external_evidence,
     admit_repository_assurance_decision,
     build_assurance_application,
@@ -34,15 +35,26 @@ def _subject(*, fingerprint: str = "a" * 64, paths: tuple[str, ...] = ("src/a.py
 def _candidate(subject: dict[str, object]) -> dict[str, object]:
     return {
         "kind": EVIDENCE_KIND,
-        "producer_id": "ci/acme",
         "transport_id": "github-api",
         "proof_route": "unit",
         "evidence_class": "test-result",
+        "proof_subject": subject,
+    }
+
+
+def _resolved(**overrides: object) -> dict[str, object]:
+    value: dict[str, object] = {
+        "kind": RESOLVED_PRODUCER_KIND,
+        "authenticated": True,
+        "producer_id": "ci/acme",
+        "issuer_id": "github-actions",
+        "transport_id": "github-api",
         "result_contract": "pytest/v1",
         "result": "passed",
         "evidence_ref": "https://ci.example/runs/42",
-        "proof_subject": subject,
     }
+    value.update(overrides)
+    return value
 
 
 def _authority(**overrides: object) -> dict[str, object]:
@@ -50,6 +62,7 @@ def _authority(**overrides: object) -> dict[str, object]:
         "kind": AUTHORITY_KIND,
         "id": "acme-unit",
         "producer_id": "ci/acme",
+        "issuer_id": "github-actions",
         "proof_route": "unit",
         "evidence_class": "test-result",
         "result_contract": "pytest/v1",
@@ -191,8 +204,12 @@ def test_disposition_reactivates_when_application_changes_or_review_is_due() -> 
 
 def test_external_evidence_admission_is_idempotent_and_keeps_result_separate() -> None:
     subject = _subject()
-    first = admit_external_evidence(candidate=_candidate(subject), authorities=[_authority()], current_proof_subject=subject)
-    second = admit_external_evidence(candidate=_candidate(subject), authorities=[_authority()], current_proof_subject=subject)
+    first = admit_external_evidence(
+        candidate=_candidate(subject), resolved_producer=_resolved(), authorities=[_authority()], current_proof_subject=subject
+    )
+    second = admit_external_evidence(
+        candidate=_candidate(subject), resolved_producer=_resolved(), authorities=[_authority()], current_proof_subject=subject
+    )
     assert first["status"] == "admitted"
     assert first["admission_id"] == second["admission_id"]
     assert first["producer_result"] == "passed"
@@ -201,21 +218,61 @@ def test_external_evidence_admission_is_idempotent_and_keeps_result_separate() -
 
 def test_external_evidence_fails_closed_for_unauthorized_or_stale_subject() -> None:
     subject = _subject()
-    unauthorized = admit_external_evidence(candidate=_candidate(subject), authorities=[], current_proof_subject=subject)
+    unauthorized = admit_external_evidence(
+        candidate=_candidate(subject), resolved_producer=_resolved(), authorities=[], current_proof_subject=subject
+    )
     assert "producer-unauthorized" in unauthorized["reason_codes"]
     stale = admit_external_evidence(
         candidate=_candidate(subject),
+        resolved_producer=_resolved(),
         authorities=[_authority()],
         current_proof_subject=_subject(fingerprint="c" * 64),
     )
     assert "proof-subject-stale" in stale["reason_codes"]
 
 
-def test_transport_cannot_self_authorize() -> None:
+def test_candidate_cannot_forge_an_authorized_producer() -> None:
     subject = _subject()
-    candidate = {**_candidate(subject), "transport_id": "ci/acme"}
-    result = admit_external_evidence(candidate=candidate, authorities=[_authority()], current_proof_subject=subject)
-    assert "transport-self-authorization-denied" in result["reason_codes"]
+    candidate = {**_candidate(subject), "producer_id": "ci/acme", "result": "passed"}
+    result = admit_external_evidence(
+        candidate=candidate,
+        resolved_producer=_resolved(producer_id="ci/attacker", issuer_id="untrusted"),
+        authorities=[_authority()],
+        current_proof_subject=subject,
+    )
+    assert result["status"] == "rejected"
+    assert {"candidate-producer-mismatch", "producer-unauthorized"} <= set(result["reason_codes"])
+
+
+@pytest.mark.parametrize(
+    ("resolved", "reason"),
+    [
+        ({}, "producer-custody-unresolved"),
+        (_resolved(authenticated=False), "producer-custody-unresolved"),
+        (_resolved(issuer_id="wrong-issuer"), "producer-unauthorized"),
+        (_resolved(result_contract="other/v2"), "producer-unauthorized"),
+    ],
+)
+def test_external_evidence_rejects_unresolved_or_wrong_producer_custody(resolved: dict[str, object], reason: str) -> None:
+    subject = _subject()
+    result = admit_external_evidence(
+        candidate=_candidate(subject), resolved_producer=resolved, authorities=[_authority()], current_proof_subject=subject
+    )
+    assert result["status"] == "rejected"
+    assert reason in result["reason_codes"]
+
+
+def test_authenticated_failed_result_is_admitted_without_becoming_success() -> None:
+    subject = _subject()
+    result = admit_external_evidence(
+        candidate=_candidate(subject),
+        resolved_producer=_resolved(result="failed"),
+        authorities=[_authority()],
+        current_proof_subject=subject,
+    )
+    assert result["status"] == "admitted"
+    assert result["producer_result"] == "failed"
+    assert result["claim_authority"] == "none"
 
 
 def test_workspace_config_loads_bounded_disposition_applicability(tmp_path: Path) -> None:
@@ -275,6 +332,7 @@ protocol_refs = ["unit"]
 commands = ["pytest"]
 [evidence_authorities.acme]
 producer_id = "ci/acme"
+issuer_id = "github-actions"
 proof_route = "unit"
 evidence_class = "test-result"
 result_contract = "pytest/v1"
@@ -285,3 +343,4 @@ allowed_results = ["passed", "failed"]
     report = verification_report_payload(target_root=tmp_path)
     assert report["evidence_authority_count"] == 1
     assert report["evidence_authorities"][0]["producer_id"] == "ci/acme"
+    assert report["evidence_authorities"][0]["issuer_id"] == "github-actions"

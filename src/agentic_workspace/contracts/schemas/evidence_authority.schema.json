@@ -9,6 +9,7 @@
     "kind": {"const": "agentic-workspace/evidence-authority/v1", "description": "Contract discriminator."},
     "id": {"type": "string", "minLength": 1, "description": "Repository-owned authority identity."},
     "producer_id": {"type": "string", "minLength": 1, "description": "Authorized evidence producer; transport is deliberately separate."},
+    "issuer_id": {"type": "string", "minLength": 1, "description": "Optional host-authenticated issuer required for this producer."},
     "proof_route": {"type": "string", "minLength": 1, "description": "Proof route within which authority applies."},
     "evidence_class": {"type": "string", "minLength": 1, "description": "Authorized class of evidence."},
     "result_contract": {"type": "string", "minLength": 1, "description": "Producer result contract."},
