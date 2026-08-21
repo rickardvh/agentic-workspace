@@ -28599,20 +28599,6 @@ def _next_safe_action_packet(
             if isinstance(route, dict) and route.get("skill"):
                 skill = str(route.get("skill"))
                 break
-    if action == "archive-or-retire-completed-plan":
-        module_slot = "planning"
-    elif action.startswith(("create", "promote", "checkpoint", "update", "validate-planning", "continue-active-planning")):
-        module_slot = "planning"
-    elif "closeout" in action:
-        module_slot = "planning.closeout"
-    elif "proof" in action or "validation" in proof_hint:
-        module_slot = "workspace.proof"
-    elif "intent-discovery" in action:
-        module_slot = "workspace.intent"
-    elif "memory" in action:
-        module_slot = "memory"
-    else:
-        module_slot = "workspace"
     forbidden_actions: list[str] = []
     if action in {"create-prep-only-planning-state", "promote-or-create-active-execplan", "create-or-promote-active-execplan"}:
         forbidden_actions.extend(["edit product source", "claim implementation complete"])
@@ -28699,7 +28685,6 @@ def _next_safe_action_packet(
         ],
         observed_by_aw=[
             f"preferred_cli_effect={command_effect}",
-            f"module_slot={module_slot}",
             f"memory_consultation_status={memory_status}",
             f"read_only_allowed={read_only_allowance['read_only_allowed']}",
         ],
@@ -28728,7 +28713,6 @@ def _next_safe_action_packet(
         "preferred_cli": preferred_cli,
         "preferred_cli_effect": command_effect,
         "cli_availability": "unknown" if preferred_cli else "not-needed",
-        "module_slot": module_slot,
         "allowed_next_actions": allowed_next_actions,
         "forbidden_actions": sorted(set(forbidden_actions)),
         "implementation_allowed": implementation_allowed,
@@ -28742,7 +28726,7 @@ def _next_safe_action_packet(
         "continuation_owner_required": continuation_owner_required,
         "memory_consultation_status": memory_status,
         "authority_boundary": authority_boundary,
-        "fallback_if_cli_unavailable": "Use generated or documented workflow fallback for the same module slot; preserve forbidden actions and do not mutate managed state by hand.",
+        "fallback_if_cli_unavailable": "Use the exact routed skill or operation fallback; preserve forbidden actions and do not mutate managed state by hand.",
         "source_fields": ["immediate_next_allowed_action", "workflow_sufficiency", "skill_routing", "memory_consult"],
     }
 

@@ -23,7 +23,6 @@ Read the smallest current decision frame that is already available, for example:
 - `continuation_capsule`;
 - `evidence_bundle`;
 - proof/claim limits;
-- compatibility projections such as `module_slot` when emitted by the current runtime.
 
 If that frame is sufficient, do not broaden into raw state. If it is insufficient, use the smallest routed selector, evidence bundle, owner query, or safe probe that can change the decision.
 

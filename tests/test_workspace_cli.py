@@ -373,6 +373,7 @@ def test_completed_child_reconciliation_is_cross_consumer_idempotent_and_fails_c
     started = json.loads(capsys.readouterr().out)
     assert started["next_safe_action"]["next_safe_action"] == "choose-smallest-workflow-shape"
     assert started["next_safe_action"]["implementation_allowed"] is True
+    assert "module_slot" not in started["next_safe_action"]
     assert "merged-child" not in json.dumps(started.get("context", {}).get("route_decision", {}))
 
     assert (

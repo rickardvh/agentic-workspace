@@ -97,7 +97,7 @@ When the configured runtime is unavailable:
 
 ## Compatibility Note
 
-Current packets may still expose names such as `planning_safety_gate`, `module_slot`, `planning.closeout`, `workspace.proof`, or phase-specific transition fields.
+Current packets may still expose names such as `planning_safety_gate`, `planning.closeout`, `workspace.proof`, or phase-specific transition fields.
 
 Honor them when they carry current authority, but interpret them through generic owner/action/reconciliation semantics. Do not teach those names as the permanent architecture.
 

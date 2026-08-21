@@ -5437,6 +5437,7 @@ def test_start_uses_retrofit_repair_command_for_missing_implementation_owner(tmp
     action = payload["next_safe_action"]
     repair_route = payload["context"]["planning"]["planning_safety_gate"]["repair_route"]
     assert action["next_safe_action"] == "checkpoint-planning-before-implementation"
+    assert "module_slot" not in action
     assert "planning owner-select" in action["preferred_cli"]
     assert "planning new-plan" not in action["preferred_cli"]
     assert "--dry-run" in action["preferred_cli"]

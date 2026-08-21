@@ -4,7 +4,7 @@
   "title": "Capability-first modules and extension proof",
   "status": "active",
   "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/open-issues-2026-08-20-stack.decomposition.json",
-  "lane_outcome": "Close #2606 #2607 #2608 #2609 #2610 and #2624 with a small public module contract, independent fixture, fail-closed lifecycle, ordinary-loop evaluation, and module-neutral routing.",
+  "lane_outcome": "Close #2606 #2607 #2608 #2609 #2610 #2624 and the #2629 migration remainder with a small public module contract, independent fixture, fail-closed lifecycle, module-neutral routing, and removal of fixed SkillSpec/module-slot topology.",
   "purpose_for_parent": "Make peer modules practical before downstream runtime composition relies on them.",
   "subsystems": [],
   "technical_strategy": "Tighten the lane strategy before the first slice starts.",
@@ -21,7 +21,7 @@
   ],
   "current_slice": "open-issues-modules-implementation",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
-  "proof_strategy": "Schema and conformance tests, independent/out-of-tree fixture, removal and incompatibility cases, operating-skill parity, and focused package checks.",
+  "proof_strategy": "Schema and conformance tests, independent/out-of-tree fixture, removal and incompatibility cases, clause-effect no-divergence, fixed-topology absence, operating-skill parity, and focused package checks.",
   "proof_aggregation": {
     "status": "not-started",
     "evidence": [],

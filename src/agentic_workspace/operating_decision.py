@@ -1599,12 +1599,53 @@ def _projection_instruction_mechanisms(payload: dict[str, Any], posture: dict[st
         }
         for claim in blocked_claims
     ]
+    workflow_obligations = _as_dict(payload.get("workflow_obligations"))
+    workflow_revision = "sha256:" + _digest(workflow_obligations) if workflow_obligations else ""
+    bounded_controls: list[dict[str, Any]] = []
+    for obligation in [_as_dict(item) for item in _as_list(workflow_obligations.get("relevant_to_current_work"))]:
+        obligation_id = str(obligation.get("id") or "workflow-obligation")
+        force = str(obligation.get("force") or "recommended")
+        if force in {"blocking", "required-before-closeout"}:
+            satisfier = f"human:workflow-obligation-disposition:{obligation_id}"
+            bounded_controls.append(
+                {
+                    "id": obligation_id,
+                    "owner": "workspace-config-workflow-obligations",
+                    "revision": workflow_revision,
+                    "effect": "require",
+                    "target": "claim:claim-work-complete",
+                    "satisfier": satisfier,
+                }
+            )
+            capabilities.append(
+                {
+                    "id": satisfier,
+                    "kind": "human",
+                    "current": False,
+                    "source": {
+                        "owner": "workspace-config-workflow-obligations",
+                        "revision": workflow_revision,
+                        "current": True,
+                    },
+                }
+            )
+        else:
+            bounded_controls.append(
+                {
+                    "id": obligation_id,
+                    "owner": "workspace-config-workflow-obligations",
+                    "revision": workflow_revision,
+                    "effect": "surface",
+                    "target": f"surface:workflow-obligation:{obligation_id}",
+                }
+            )
     return (
         {
             "scoped_instructions": scoped,
             "skill_routing": skills,
             "assurance_requirements": requirements,
             "claim_restrictions": restrictions,
+            "bounded_controls": bounded_controls,
         },
         capabilities,
     )

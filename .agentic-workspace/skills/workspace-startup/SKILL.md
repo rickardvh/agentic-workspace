@@ -25,7 +25,7 @@ Do not replace a configured invocation with a guessed bare command.
    - allowed and forbidden actions/effects;
    - proof or claim boundaries;
    - routed owner, skill, operation, selector, or preferred invocation;
-   - compatibility projections such as `planning_route_decision`, `planning_safety_gate`, or `module_slot` when the current runtime emits them.
+   - compatibility projections such as `planning_route_decision` or `planning_safety_gate` when the current runtime emits them.
 4. Treat module- or phase-specific fields as projections of the current operating decision, not as a fixed architecture to generalize from. Follow the route they name. **Do not reclassify the task** from prose, legacy task-switch fields, or another capability after a current authoritative route decision exists.
 5. If the compact result is insufficient, use only the smallest selector, skill, operation, or safe probe it routes to before broadening context.
 
@@ -81,7 +81,7 @@ Follow its forbidden actions and next safe action. A degraded route should stay 
 
 ## Compatibility Note
 
-Current runtime packets may still expose first-party or historical projection names such as `planning_safety_gate`, `planning_route_decision`, `module_slot`, or closeout-specific fields.
+Current runtime packets may still expose first-party or historical projection names such as `planning_safety_gate`, `planning_route_decision`, or closeout-specific fields.
 
 Use them when present because they carry current authority, but interpret them through the generic rule: **which owner/capability is relevant now, what action is allowed, and what claim/reconciliation effect follows?** Do not teach those projection names as permanent core concepts.
 

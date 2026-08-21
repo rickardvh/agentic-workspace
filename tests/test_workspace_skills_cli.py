@@ -26,14 +26,10 @@ def test_routed_skill_surfaces_preserve_mandatory_aw_boundary() -> None:
 
     assert "mandatory enabled-AW workflow" in spec["rule"]
     assert "module_slots" not in spec
-    assert [gate["id"] for gate in spec["transition_gates"]] == [
-        "resolve-current-contract",
-        "act-through-route",
-        "reconcile-result",
-    ]
-    startup_gate = spec["transition_gates"][0]
-    assert "next_safe_action" in startup_gate["interpreted_fields"]
-    assert any("raw state" in action for action in startup_gate["forbidden_actions"])
+    assert "transition_gates" not in spec
+    startup_spec = next(item for item in spec["specs"] if item["id"] == "startup-router")
+    assert any(field["path"] == "next_safe_action.implementation_allowed" for field in startup_spec["interpreted_output_fields"])
+    assert any("raw planning" in action for action in startup_spec["forbidden_actions"])
 
     skill_paths = [
         root / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md",

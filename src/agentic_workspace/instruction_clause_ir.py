@@ -227,9 +227,10 @@ def compile_instruction_program(program: dict[str, Any], *, current_targets: lis
         "unauthorized-effect",
         "missing-effect-target",
         "missing-satisfier",
+        "invalid-bounded-control",
     }
     for diagnostic in source_diagnostics:
-        if diagnostic.get("code") == "missing-effect-target":
+        if diagnostic.get("code") in {"missing-effect-target", "invalid-bounded-control"}:
             blockers.append(
                 {
                     "reason_code": "missing-authority",
@@ -395,6 +396,37 @@ def instruction_program_from_existing_mechanisms(inputs: dict[str, Any]) -> dict
                     "authority": {"effects": [effect_kind], "target_patterns": [target]},
                 }
             )
+    for index, item in enumerate([_as_dict(value) for value in _as_list(mechanisms.get("bounded_controls"))]):
+        item_id = str(item.get("id") or f"bounded-control-{index + 1}")
+        owner = str(item.get("owner") or "bounded-controls")
+        revision = str(item.get("revision") or "")
+        effect_kind = str(item.get("effect") or "")
+        target = str(item.get("target") or "")
+        if effect_kind not in EFFECT_KINDS or not target:
+            source_diagnostics.append(
+                {
+                    "code": "invalid-bounded-control",
+                    "ref": f"adapter:bounded_controls:{item_id}",
+                    "owner": owner,
+                    "repair": "provide one surface/prefer/require/restrict effect with an explicit bounded target",
+                }
+            )
+            continue
+        fact_id = f"mechanism:{item_id}:applicable"
+        effect: dict[str, Any] = {"kind": effect_kind, "target": target}
+        if effect_kind == "require":
+            effect["satisfier"] = str(item.get("satisfier") or "")
+        source = {"owner": owner, "revision": revision, "current": bool(revision)}
+        facts.append({"id": fact_id, "type": "boolean", "value": item.get("applicable", True), "source": source})
+        clauses.append(
+            {
+                "id": f"adapter:bounded_controls:{item_id}",
+                "source": source,
+                "when": {"fact": fact_id, "operator": "is", "value": True},
+                "effects": [effect],
+                "authority": {"effects": [effect_kind], "target_patterns": [target]},
+            }
+        )
     return {
         "kind": "agentic-workspace/instruction-program/v1",
         "facts": facts,

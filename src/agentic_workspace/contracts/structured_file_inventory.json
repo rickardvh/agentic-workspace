@@ -1020,6 +1020,18 @@
       "storage_class": "diagnostic-fixture"
     },
     {
+      "checked_in_justification": "The out-of-tree module fixture needs package metadata so tests can install and discover it without adding its identity to the core runtime.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "Independent extension fixture metadata is validated by module contract and installation tests.",
+      "owner": "workspace-tests",
+      "pattern": "tests/fixtures/*/pyproject.toml",
+      "schema_or_validator": "pytest module fixture installation and conformance assertions",
+      "status": "source-checkout-diagnostic",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority.",
       "editable_by_agents": true,
       "format": "json",
