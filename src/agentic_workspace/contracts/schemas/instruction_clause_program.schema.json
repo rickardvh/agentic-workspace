@@ -61,6 +61,21 @@
         },
         "additionalProperties": false
       }
+    },
+    "source_diagnostics": {
+      "type": "array",
+      "description": "Typed adapter diagnostics emitted when a source owner cannot provide an unambiguous bounded clause input.",
+      "items": {
+        "type": "object",
+        "required": ["code", "ref", "owner", "repair"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "ref": {"type": "string", "minLength": 1},
+          "owner": {"type": "string", "minLength": 1},
+          "repair": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
     }
   },
   "$defs": {

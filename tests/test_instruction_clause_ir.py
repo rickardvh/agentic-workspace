@@ -42,12 +42,13 @@ def _clause(
     }
 
 
-def _program(*, facts=None, clauses=None, capabilities=None) -> dict[str, object]:
+def _program(*, facts=None, clauses=None, capabilities=None, source_diagnostics=None) -> dict[str, object]:
     return {
         "kind": "agentic-workspace/instruction-program/v1",
         "facts": facts if facts is not None else [_fact()],
         "clauses": clauses if clauses is not None else [],
         "capabilities": capabilities if capabilities is not None else [],
+        "source_diagnostics": source_diagnostics if source_diagnostics is not None else [],
     }
 
 
@@ -206,6 +207,81 @@ def test_existing_mechanism_adapters_cover_each_effect() -> None:
     }
 
 
+def test_assurance_adapter_requires_an_explicit_bounded_target() -> None:
+    program = instruction_program_from_existing_mechanisms(
+        {
+            "instruction_mechanisms": {
+                "assurance_requirements": [{"id": "tests", "owner": "assurance", "revision": "a1", "satisfier": "evidence:tests"}]
+            }
+        }
+    )
+
+    assert program["clauses"] == []
+    assert program["source_diagnostics"] == [
+        {
+            "code": "missing-effect-target",
+            "ref": "adapter:assurance_requirements:tests",
+            "owner": "assurance",
+            "repair": "derive the affected action, effect, operation, or claim target from assurance",
+        }
+    ]
+    projection = compile_instruction_program(program)
+    assert projection["status"] == "invalid"
+    assert projection["blockers"][0]["reason_code"] == "missing-authority"
+    assert projection["effects"]["require"] == []
+
+
+def test_assurance_adapter_accepts_explicit_claim_and_action_targets() -> None:
+    mechanisms = {
+        "assurance_requirements": [
+            {
+                "id": "claim-tests",
+                "owner": "assurance",
+                "revision": "a1",
+                "target": "claim:complete",
+                "satisfier": "evidence:tests",
+            },
+            {
+                "id": "publish-approval",
+                "owner": "assurance",
+                "revision": "a1",
+                "target": "action:publish",
+                "satisfier": "evidence:approval",
+            },
+        ]
+    }
+    capabilities = [
+        {"id": "evidence:tests", "kind": "evidence", "current": True, "source": _source("verification")},
+        {"id": "evidence:approval", "kind": "evidence", "current": True, "source": _source("review")},
+    ]
+
+    projection = compile_instruction_program(
+        instruction_program_from_existing_mechanisms({"instruction_mechanisms": mechanisms, "instruction_capabilities": capabilities})
+    )
+
+    assert projection["status"] == "compiled"
+    assert {item["target"] for item in projection["effects"]["require"]} == {"claim:complete", "action:publish"}
+
+
+def test_requirement_without_satisfier_is_invalid_and_has_typed_recovery() -> None:
+    projection = compile_instruction_program(
+        _program(clauses=[_clause("proof-gate", "require", "claim:complete")]),
+        current_targets=["claim:complete"],
+    )
+
+    assert projection["status"] == "invalid"
+    assert any(item["code"] == "missing-satisfier" for item in projection["diagnostics"])
+    assert projection["blockers"] == [
+        {
+            "reason_code": "missing-capability",
+            "owner": "repo",
+            "repair": "name the source-owned satisfier required before claim:complete",
+            "clause_id": "proof-gate",
+            "target": "claim:complete",
+        }
+    ]
+
+
 def test_operating_decision_is_the_only_action_blocker_compiler() -> None:
     clause = _clause("proof-gate", "require", "claim:complete", satisfier="evidence:tests")
     decision = compile_operating_decision(
@@ -229,6 +305,16 @@ def test_claim_restriction_compatibility_projection_is_derived_from_ir() -> None
     assert decision["status"] == "terminal"
     assert decision["blocked_claim_classes"] == ["publish"]
     assert decision["instruction_clause_projection"]["effects"]["restrict"][0]["target"] == "claim:publish"
+
+
+def test_ir_claim_restriction_preserves_pre_ir_claim_gate_semantics() -> None:
+    legacy = compile_operating_decision(inputs={"blocked_claim_classes": ["publish"]})
+    compiled = compile_operating_decision(
+        inputs={"instruction_program": _program(clauses=[_clause("publish-ceiling", "restrict", "claim:publish")])}
+    )
+
+    assert compiled["status"] == legacy["status"]
+    assert compiled["blocked_claim_classes"] == legacy["blocked_claim_classes"] == ["publish"]
 
 
 def test_empty_program_preserves_existing_decision_identity_and_semantics() -> None:

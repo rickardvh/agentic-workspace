@@ -108,7 +108,11 @@ def validate_instruction_program(program: dict[str, Any]) -> list[dict[str, str]
     fact_ids = {str(item.get("id") or "") for item in facts}
     fact_types = {str(item.get("id") or ""): str(item.get("type") or "") for item in facts}
     capability_ids = {str(item.get("id") or "") for item in capabilities}
-    diagnostics: list[dict[str, str]] = []
+    diagnostics: list[dict[str, str]] = [
+        {str(key): str(value) for key, value in _as_dict(item).items() if str(key)}
+        for item in _as_list(program.get("source_diagnostics"))
+        if isinstance(item, dict) and str(item.get("code") or "")
+    ]
     for fact in facts:
         if not str(fact.get("id") or "") or not _source_valid(_as_dict(fact.get("source"))):
             diagnostics.append({"code": "invalid-fact-identity", "ref": str(fact.get("id") or "")})
@@ -162,6 +166,8 @@ def validate_instruction_program(program: dict[str, Any]) -> list[dict[str, str]
             if kind not in allowed_effects or not any(fnmatch.fnmatch(target, pattern) for pattern in allowed_targets):
                 diagnostics.append({"code": "unauthorized-effect", "ref": f"{clause_id}:{kind}:{target}"})
             satisfier = str(effect.get("satisfier") or "")
+            if kind == "require" and not satisfier:
+                diagnostics.append({"code": "missing-satisfier", "ref": f"{clause_id}:{target}"})
             if kind == "require" and satisfier and satisfier not in capability_ids and satisfier not in fact_ids:
                 diagnostics.append({"code": "unknown-satisfier", "ref": f"{clause_id}:{satisfier}"})
     required_targets = {
@@ -191,7 +197,8 @@ def compile_instruction_program(program: dict[str, Any], *, current_targets: lis
     facts = [_as_dict(item) for item in _as_list(program.get("facts"))]
     clauses = [_as_dict(item) for item in _as_list(program.get("clauses"))]
     capabilities = [_as_dict(item) for item in _as_list(program.get("capabilities"))]
-    if not facts and not clauses and not capabilities:
+    source_diagnostics = [_as_dict(item) for item in _as_list(program.get("source_diagnostics"))]
+    if not facts and not clauses and not capabilities and not source_diagnostics:
         return {
             "kind": "agentic-workspace/instruction-clause-projection/v1",
             "status": "not-requested",
@@ -218,9 +225,36 @@ def compile_instruction_program(program: dict[str, Any], *, current_targets: lis
         "invalid-predicate-type",
         "incompatible-effect-target",
         "unauthorized-effect",
+        "missing-effect-target",
+        "missing-satisfier",
     }
+    for diagnostic in source_diagnostics:
+        if diagnostic.get("code") == "missing-effect-target":
+            blockers.append(
+                {
+                    "reason_code": "missing-authority",
+                    "owner": str(diagnostic.get("owner") or "instruction-source"),
+                    "repair": str(diagnostic.get("repair") or "resolve the affected instruction target through its source owner"),
+                    "clause_id": str(diagnostic.get("ref") or "source-adapter"),
+                    "target": "unknown",
+                }
+            )
     for clause in clauses:
         clause_id = str(clause.get("id") or "")
+        for diagnostic in diagnostics:
+            if diagnostic.get("code") != "missing-satisfier" or not str(diagnostic.get("ref") or "").startswith(f"{clause_id}:"):
+                continue
+            target = str(diagnostic.get("ref") or "").removeprefix(f"{clause_id}:")
+            if _target_relevant(target, relevant_targets):
+                blockers.append(
+                    {
+                        "reason_code": "missing-capability",
+                        "owner": str(_as_dict(clause.get("source")).get("owner") or "instruction-source"),
+                        "repair": f"name the source-owned satisfier required before {target}",
+                        "clause_id": clause_id,
+                        "target": target,
+                    }
+                )
         clause_invalid = any(
             item["code"] in fatal_codes and (item["ref"] == clause_id or item["ref"].startswith(f"{clause_id}:")) for item in diagnostics
         )
@@ -294,6 +328,7 @@ def compile_instruction_program(program: dict[str, Any], *, current_targets: lis
         "facts": [{"id": item.get("id"), "source": item.get("source")} for item in facts],
         "clauses": [{"id": item.get("id"), "source": item.get("source")} for item in clauses],
         "capabilities": [{"id": item.get("id"), "current": item.get("current"), "source": item.get("source")} for item in capabilities],
+        "source_diagnostics": source_diagnostics,
     }
     return {
         "kind": "agentic-workspace/instruction-clause-projection/v1",
@@ -321,11 +356,12 @@ def instruction_program_from_existing_mechanisms(inputs: dict[str, Any]) -> dict
         return _as_dict(inputs.get("instruction_program"))
     facts: list[dict[str, Any]] = []
     clauses: list[dict[str, Any]] = []
+    source_diagnostics: list[dict[str, str]] = []
     capabilities = [_as_dict(item) for item in _as_list(inputs.get("instruction_capabilities"))]
     adapters = [
         ("scoped_instructions", "surface", "surface"),
         ("skill_routing", "prefer", "skill"),
-        ("assurance_requirements", "require", "evidence"),
+        ("assurance_requirements", "require", ""),
         ("claim_restrictions", "restrict", "claim"),
     ]
     for mechanism, effect_kind, default_target_class in adapters:
@@ -334,10 +370,20 @@ def instruction_program_from_existing_mechanisms(inputs: dict[str, Any]) -> dict
             owner = str(item.get("owner") or mechanism)
             revision = str(item.get("revision") or "")
             fact_id = f"mechanism:{item_id}:applicable"
-            target = str(item.get("target") or f"{default_target_class}:{item_id}")
+            target = str(item.get("target") or (f"{default_target_class}:{item_id}" if default_target_class else ""))
+            if effect_kind == "require" and not target:
+                source_diagnostics.append(
+                    {
+                        "code": "missing-effect-target",
+                        "ref": f"adapter:{mechanism}:{item_id}",
+                        "owner": owner,
+                        "repair": f"derive the affected action, effect, operation, or claim target from {owner}",
+                    }
+                )
+                continue
             effect: dict[str, Any] = {"kind": effect_kind, "target": target}
             if effect_kind == "require":
-                effect["satisfier"] = str(item.get("satisfier") or target)
+                effect["satisfier"] = str(item.get("satisfier") or "")
             source = {"owner": owner, "revision": revision, "current": bool(revision)}
             facts.append({"id": fact_id, "type": "boolean", "value": item.get("applicable", True), "source": source})
             clauses.append(
@@ -349,4 +395,10 @@ def instruction_program_from_existing_mechanisms(inputs: dict[str, Any]) -> dict
                     "authority": {"effects": [effect_kind], "target_patterns": [target]},
                 }
             )
-    return {"kind": "agentic-workspace/instruction-program/v1", "facts": facts, "clauses": clauses, "capabilities": capabilities}
+    return {
+        "kind": "agentic-workspace/instruction-program/v1",
+        "facts": facts,
+        "clauses": clauses,
+        "capabilities": capabilities,
+        "source_diagnostics": source_diagnostics,
+    }
