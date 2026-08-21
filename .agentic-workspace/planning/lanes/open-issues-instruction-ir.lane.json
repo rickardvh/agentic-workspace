@@ -17,7 +17,7 @@
     {
       "id": "open-issues-instruction-ir-implementation",
       "title": "Implement bounded instruction clause IR",
-      "status": "validation",
+      "status": "active",
       "execplan_ref": ".agentic-workspace/planning/execplans/open-issues-instruction-ir-implementation.plan.json",
       "depends_on": [],
       "purpose_for_lane": "Unify cross-cutting programmable instruction semantics without creating a peer authority or general workflow engine."
@@ -27,7 +27,7 @@
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Schema, authority, predicate, composition, conflict, no-divergence, simulation, progressive-disclosure, and direct-work fixtures.",
   "proof_aggregation": {
-    "status": "in-progress",
+    "status": "partial",
     "evidence": [
       "IR/schema/selector and operating-decision focused proof passed",
       "workspace CLI suite: 396 passed",
@@ -41,7 +41,7 @@
   },
   "residual_lane_work": "Complete blocking-review proof, then review and ordered stack merge.",
   "lane_to_epic_contribution": "Supplies the shared programmable instruction semantics used by later module and assurance lanes.",
-  "parent_close_permission": "not-owned-by-this-lane",
+  "parent_close_permission": "do-not-close-parent",
   "closeout_state": {
     "status": "open",
     "summary": "Implementation is under blocking-review follow-up; draft PR published.",
