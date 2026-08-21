@@ -1,0 +1,60 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "open-issues-instruction-ir",
+  "title": "Bounded instruction clause IR",
+  "status": "active",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/open-issues-2026-08-20-stack.decomposition.json",
+  "lane_outcome": "Close #2629 with one source-bound fact and clause IR feeding the existing operating-decision compiler.",
+  "purpose_for_parent": "Unify cross-cutting programmable instruction semantics without creating a peer authority or general workflow engine.",
+  "subsystems": ["operating decision", "context and skill routing", "assurance and claim boundaries"],
+  "technical_strategy": "Normalize only cross-cutting condition/effect semantics into a pure internal evaluator, retain source-owned domain judgment, and feed the projection into the existing compiler.",
+  "technology_choices": [
+    "JSON Schema-backed internal program contract",
+    "pure Python three-valued evaluator and deterministic composer",
+    "existing start/implement selector surface for explanation and simulation"
+  ],
+  "slice_sequence": [
+    {
+      "id": "open-issues-instruction-ir-implementation",
+      "title": "Implement bounded instruction clause IR",
+      "status": "validation",
+      "execplan_ref": ".agentic-workspace/planning/execplans/open-issues-instruction-ir-implementation.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Unify cross-cutting programmable instruction semantics without creating a peer authority or general workflow engine."
+    }
+  ],
+  "current_slice": "open-issues-instruction-ir-implementation",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Schema, authority, predicate, composition, conflict, no-divergence, simulation, progressive-disclosure, and direct-work fixtures.",
+  "proof_aggregation": {
+    "status": "satisfied",
+    "evidence": [
+      "IR/schema/selector and operating-decision focused proof passed",
+      "workspace CLI suite: 396 passed",
+      "lint, all package typechecks, schema freshness, contract tooling, structured inventory, and source/payload closure passed",
+      "draft stacked PR #2631 published"
+    ],
+    "known_gaps": [
+      "Host agentic-planning and agentic-memory executables are unavailable in this environment; direct package/source checks passed.",
+      "Inherited summary projection-reuse expectation remains outside this lane's changed paths."
+    ]
+  },
+  "residual_lane_work": "Review and ordered stack merge only.",
+  "lane_to_epic_contribution": "Supplies the shared programmable instruction semantics required for honest #2623 closure.",
+  "parent_close_permission": "after PR #2631 merges on the ordered stack",
+  "closeout_state": {
+    "status": "open",
+    "summary": "Implementation and local proof complete; draft PR published.",
+    "residual_work": "Review and merge the stack in order.",
+    "next_owner": "stack reviewers"
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/open-issues-2026-08-20-stack.decomposition.json",
+      "label": ".agentic-workspace/planning/decompositions/open-issues-2026-08-20-stack.decomposition.json",
+      "role": "parent"
+    }
+  ],
+  "notes": ""
+}

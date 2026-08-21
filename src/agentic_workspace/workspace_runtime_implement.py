@@ -420,6 +420,11 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     if _selector_requests(selected_fields, "source_guidance"):
         payload.setdefault("values", {})["source_guidance"] = _as_dict(operating_decision.get("source_guidance"))
         payload["missing"] = [item for item in payload.get("missing", []) if item != "source_guidance"]
+    if _selector_requests(selected_fields, "instruction_clause_projection"):
+        payload.setdefault("values", {})["instruction_clause_projection"] = _as_dict(
+            operating_decision.get("instruction_clause_projection")
+        )
+        payload["missing"] = [item for item in payload.get("missing", []) if item != "instruction_clause_projection"]
     if reuse_context is not None:
         reuse_result = record_projection_reuse(
             root=target_root,

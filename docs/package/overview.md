@@ -111,6 +111,8 @@ The long-term goal is a **smaller programming surface**, not a larger policy fra
 
 Keep hard repo authority distinct from machine-local capability/preferences and from module-owned policy. A growing `posture` vocabulary is not itself a product goal; the useful output is the resulting current constraint or action.
 
+Cross-cutting instruction semantics normalize internally to source-owned facts and bounded clauses. Clauses can only surface or prefer existing capabilities, require a source-owned satisfier, or restrict an action/effect/claim. They cannot grant authority, execute code, or become a general rule or obligation store. `start` and `implement` expose the explanation on demand through `--select instruction_clause_projection`.
+
 ## External adapters
 
 External adapters project or transport stable AW operations into agents, IDEs, CLIs, MCP-style clients, or vendor workflows.
