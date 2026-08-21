@@ -19,6 +19,7 @@ from agentic_workspace.module_contract import (
 
 MATRIX_PATH = Path("tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-matrix.json")
 FIXTURE_PATH = Path("tests/fixtures/external_signals_module/src/external_signals/__init__.py")
+MEASUREMENT_RUNNER_PATH = Path("scripts/model_cli_harness/module_extension_scenarios.py")
 
 
 def _matrix() -> dict:
@@ -27,6 +28,14 @@ def _matrix() -> dict:
 
 def _fixture_module():
     spec = importlib.util.spec_from_file_location("aw_external_signals_matrix_fixture", FIXTURE_PATH)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _measurement_module():
+    spec = importlib.util.spec_from_file_location("aw_module_extension_measurements", MEASUREMENT_RUNNER_PATH)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -59,8 +68,8 @@ def test_module_extension_matrix_is_complete_ordinary_and_measurement_bearing() 
         "irrelevant",
     }
     metric_fields = set(matrix["ordinary_use_metrics"])
-    assert all(set(scenario["metrics"]) == metric_fields for scenario in matrix["scenarios"])
-    assert all(value >= 0 for scenario in matrix["scenarios"] for value in scenario["metrics"].values())
+    assert all({key.removeprefix("max_") for key in scenario["budgets"]} == metric_fields for scenario in matrix["scenarios"])
+    assert all(value >= 0 for scenario in matrix["scenarios"] for value in scenario["budgets"].values())
     forbidden_prompt_fragments = (
         "agentic_workspace.modules",
         "module slot",
@@ -79,6 +88,24 @@ def test_module_extension_matrix_is_complete_ordinary_and_measurement_bearing() 
     }
     assert matrix["selective_live_evidence"]["status"] == "unavailable"
     assert matrix["selective_live_evidence"]["leaderboard"] is False
+
+
+def test_module_extension_metrics_are_derived_from_executed_ordinary_routes() -> None:
+    matrix = _matrix()
+    result_path = Path(matrix["measurement"]["result_ref"])
+    committed = json.loads(result_path.read_text(encoding="utf-8"))
+    measured = _measurement_module().collect_measurements(matrix=matrix)
+    assert measured == committed
+    assert measured["provider_mode"] == "deterministic-ordinary-route"
+    assert measured["live_provider_status"] == "unavailable"
+
+    scenarios = {scenario["id"]: scenario for scenario in matrix["scenarios"]}
+    for result in measured["results"]:
+        assert result["trace"]
+        assert len(result["first_line_sha256"]) == 64
+        budgets = scenarios[result["id"]]["budgets"]
+        for metric, value in result["metrics"].items():
+            assert value <= budgets[f"max_{metric}"], f"{result['id']} exceeded {metric} budget"
 
 
 def test_module_matrix_deterministic_probes_cover_progressive_disclosure_failure_and_restart() -> None:

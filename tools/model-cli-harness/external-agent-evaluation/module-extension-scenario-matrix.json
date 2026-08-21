@@ -20,7 +20,21 @@
     "residue_items",
     "requests_to_completion"
   ],
-  "metric_rule": "Counts are maintained deterministic expectations for the smallest ordinary route. Selective live runs may add observations but cannot silently replace or widen these fields.",
+  "metric_rule": "Counts are derived from executed deterministic ordinary-route traces and checked against the committed measurement artifact; scenario authors maintain budgets, not observed values. Selective live runs may add observations but cannot silently replace deterministic evidence.",
+  "measurement": {
+    "runner": "scripts/model_cli_harness/module_extension_scenarios.py",
+    "result_ref": "tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-measurements.json",
+    "check_command": "uv run python scripts/model_cli_harness/module_extension_scenarios.py --check tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-measurements.json",
+    "trace_rule": "Each result is recomputed through discovery, ownership/compatibility admission, the ordinary startup posture packet, and any routed operation; first-line bytes and all counts come from those emitted events."
+  },
+  "exact_base_disposition": {
+    "base_pr": "#2635",
+    "base_head": "94fa83083e1fceb9a291fa024c06876fd7aca221",
+    "status": "pre-existing-outside-module-lane",
+    "command": "uv run --active pytest tests/test_workspace_skills_cli.py::test_workspace_skill_hierarchy_activation_matrix tests/test_workspace_skills_cli.py::test_implement_open_issues_keeps_startup_authoritative_and_recommendations_bounded -q",
+    "observed": "The same two ranking failures reproduce on the exact #2635 base: planning-autopilot and github-issue-creation rank ahead of workspace-startup.",
+    "boundary": "Neither failure exercises module discovery, relevance, contribution, operation, measurement, or extension-author topology; they remain foundation routing residue and are not introduced or widened by #2626."
+  },
   "weak_non_compliant_cases": [
     {"id": "raw-module-probing", "forbidden_behavior": "open module source or a fixed module map before the current contract routes it", "expected_recovery": "return to the compact current operating decision"},
     {"id": "routed-contribution-ignored", "forbidden_behavior": "ignore a relevant admitted contribution", "expected_recovery": "surface the bounded contribution and its owner"},
@@ -47,56 +61,56 @@
       "state_class": "base",
       "ordinary_prompt": "Fix one README typo and run the narrow proof.",
       "expected": {"contribution_count": 0, "recovery": "none", "restart": "not-applicable"},
-      "metrics": {"aw_command_count": 2, "first_line_context_units": 0, "first_line_output_bytes": 15000, "raw_workspace_or_module_reads": 0, "route_reversals": 0, "wrong_owner_actions": 0, "proof_or_claim_errors": 0, "residue_items": 0, "requests_to_completion": 1}
+      "budgets": {"max_aw_command_count": 2, "max_first_line_context_units": 0, "max_first_line_output_bytes": 20000, "max_raw_workspace_or_module_reads": 0, "max_route_reversals": 0, "max_wrong_owner_actions": 0, "max_proof_or_claim_errors": 0, "max_residue_items": 0, "max_requests_to_completion": 1}
     },
     {
       "id": "first-party-relevant",
       "state_class": "first-party",
       "ordinary_prompt": "Resume the current execution plan and report its next proof boundary.",
       "expected": {"contribution_count": 1, "recovery": "none", "restart": "not-applicable"},
-      "metrics": {"aw_command_count": 2, "first_line_context_units": 1, "first_line_output_bytes": 18000, "raw_workspace_or_module_reads": 0, "route_reversals": 0, "wrong_owner_actions": 0, "proof_or_claim_errors": 0, "residue_items": 0, "requests_to_completion": 1}
+      "budgets": {"max_aw_command_count": 2, "max_first_line_context_units": 1, "max_first_line_output_bytes": 20000, "max_raw_workspace_or_module_reads": 0, "max_route_reversals": 0, "max_wrong_owner_actions": 0, "max_proof_or_claim_errors": 0, "max_residue_items": 0, "max_requests_to_completion": 1}
     },
     {
       "id": "independent-relevant",
       "state_class": "independent",
       "ordinary_prompt": "Inspect the external build signal and refresh the selected revision if needed.",
       "expected": {"contribution_count": 1, "recovery": "none", "restart": "available-after-install"},
-      "metrics": {"aw_command_count": 2, "first_line_context_units": 1, "first_line_output_bytes": 18000, "raw_workspace_or_module_reads": 0, "route_reversals": 0, "wrong_owner_actions": 0, "proof_or_claim_errors": 0, "residue_items": 0, "requests_to_completion": 1}
+      "budgets": {"max_aw_command_count": 2, "max_first_line_context_units": 1, "max_first_line_output_bytes": 20000, "max_raw_workspace_or_module_reads": 0, "max_route_reversals": 0, "max_wrong_owner_actions": 0, "max_proof_or_claim_errors": 0, "max_residue_items": 0, "max_requests_to_completion": 1}
     },
     {
       "id": "partial-read-only",
       "state_class": "partial-capability",
       "ordinary_prompt": "Read the latest external build signal without changing repository state.",
       "expected": {"contribution_count": 1, "operation_count": 0, "recovery": "none", "restart": "available-after-install"},
-      "metrics": {"aw_command_count": 1, "first_line_context_units": 1, "first_line_output_bytes": 16000, "raw_workspace_or_module_reads": 0, "route_reversals": 0, "wrong_owner_actions": 0, "proof_or_claim_errors": 0, "residue_items": 0, "requests_to_completion": 1}
+      "budgets": {"max_aw_command_count": 1, "max_first_line_context_units": 1, "max_first_line_output_bytes": 20000, "max_raw_workspace_or_module_reads": 0, "max_route_reversals": 0, "max_wrong_owner_actions": 0, "max_proof_or_claim_errors": 0, "max_residue_items": 0, "max_requests_to_completion": 1}
     },
     {
       "id": "ownership-conflict",
       "state_class": "conflicting",
       "ordinary_prompt": "Inspect the available external build signal sources.",
       "expected": {"contribution_count": 0, "recovery": "kernel-owned-conflict", "restart": "blocked-until-selection-is-unambiguous"},
-      "metrics": {"aw_command_count": 1, "first_line_context_units": 0, "first_line_output_bytes": 16000, "raw_workspace_or_module_reads": 0, "route_reversals": 0, "wrong_owner_actions": 0, "proof_or_claim_errors": 0, "residue_items": 1, "requests_to_completion": 1}
+      "budgets": {"max_aw_command_count": 1, "max_first_line_context_units": 0, "max_first_line_output_bytes": 20000, "max_raw_workspace_or_module_reads": 0, "max_route_reversals": 0, "max_wrong_owner_actions": 0, "max_proof_or_claim_errors": 0, "max_residue_items": 1, "max_requests_to_completion": 1}
     },
     {
       "id": "incompatible-reader-epoch",
       "state_class": "incompatible",
       "ordinary_prompt": "Inspect the external build signal after the workspace upgrade.",
       "expected": {"contribution_count": 0, "recovery": "kernel-owned-incompatibility", "restart": "blocked-until-compatible"},
-      "metrics": {"aw_command_count": 1, "first_line_context_units": 0, "first_line_output_bytes": 16000, "raw_workspace_or_module_reads": 0, "route_reversals": 0, "wrong_owner_actions": 0, "proof_or_claim_errors": 0, "residue_items": 1, "requests_to_completion": 1}
+      "budgets": {"max_aw_command_count": 1, "max_first_line_context_units": 0, "max_first_line_output_bytes": 20000, "max_raw_workspace_or_module_reads": 0, "max_route_reversals": 0, "max_wrong_owner_actions": 0, "max_proof_or_claim_errors": 0, "max_residue_items": 1, "max_requests_to_completion": 1}
     },
     {
       "id": "removed-and-restarted",
       "state_class": "removed",
       "ordinary_prompt": "Continue after the build-signal integration was uninstalled.",
       "expected": {"contribution_count": 0, "recovery": "explicit-missing-owner-disposition", "restart": "clean-with-no-discovered-fixture"},
-      "metrics": {"aw_command_count": 1, "first_line_context_units": 0, "first_line_output_bytes": 16000, "raw_workspace_or_module_reads": 0, "route_reversals": 0, "wrong_owner_actions": 0, "proof_or_claim_errors": 0, "residue_items": 1, "requests_to_completion": 1}
+      "budgets": {"max_aw_command_count": 1, "max_first_line_context_units": 0, "max_first_line_output_bytes": 20000, "max_raw_workspace_or_module_reads": 0, "max_route_reversals": 0, "max_wrong_owner_actions": 0, "max_proof_or_claim_errors": 0, "max_residue_items": 1, "max_requests_to_completion": 1}
     },
     {
       "id": "independent-irrelevant",
       "state_class": "irrelevant",
       "ordinary_prompt": "Fix one README typo and run the narrow proof.",
       "expected": {"contribution_count": 0, "recovery": "none", "restart": "available-after-install"},
-      "metrics": {"aw_command_count": 2, "first_line_context_units": 0, "first_line_output_bytes": 15000, "raw_workspace_or_module_reads": 0, "route_reversals": 0, "wrong_owner_actions": 0, "proof_or_claim_errors": 0, "residue_items": 0, "requests_to_completion": 1}
+      "budgets": {"max_aw_command_count": 1, "max_first_line_context_units": 0, "max_first_line_output_bytes": 20000, "max_raw_workspace_or_module_reads": 0, "max_route_reversals": 0, "max_wrong_owner_actions": 0, "max_proof_or_claim_errors": 0, "max_residue_items": 0, "max_requests_to_completion": 1}
     }
   ],
   "final_review": {

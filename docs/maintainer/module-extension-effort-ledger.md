@@ -31,6 +31,23 @@ The installed fixture is discovered from distribution metadata after its tempora
 
 The maintained scenario matrix is
 `tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-matrix.json`.
+Its checked-in measurements are produced by
+`scripts/model_cli_harness/module_extension_scenarios.py`. The collector runs
+module discovery, compatibility/ownership admission, the ordinary startup
+posture projection, and any routed operation, then derives cost values from the
+resulting trace. Tests recompute that artifact and enforce scenario-owned
+budgets, so maintainers cannot satisfy the evidence contract by typing expected
+metric values into the matrix. Credentialed live-provider evidence remains an
+explicitly optional supplement.
+
+The two broader skill-ranking failures were reproduced unchanged on exact base
+PR #2635 head `94fa83083e1fceb9a291fa024c06876fd7aca221` with their two focused
+`tests/test_workspace_skills_cli.py` cases. They rank `planning-autopilot` and
+`github-issue-creation` ahead of `workspace-startup`; neither path exercises or
+depends on module discovery, relevance, contributions, operations, scenario
+measurements, or the external-author seam. The matrix records this as bounded
+foundation routing residue rather than silently treating it as #2626 proof.
+
 For agent use, a relevant module adds one bounded contribution through the
 ordinary decision while an irrelevant module adds none; conflicts,
 incompatibility, and removal retain one kernel-owned recovery boundary. For an
