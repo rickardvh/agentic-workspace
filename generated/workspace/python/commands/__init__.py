@@ -56,6 +56,8 @@ from . import evaluation_report_preview as _command_evaluation_report_preview
 from . import evaluation_retry as _command_evaluation_retry
 from . import evaluation_status as _command_evaluation_status
 from . import evaluation_transition as _command_evaluation_transition
+from . import external_evidence_query as _command_external_evidence_query
+from . import external_evidence_submit as _command_external_evidence_submit
 from . import external_intent_refresh_github as _command_external_intent_refresh_github
 from . import final_response_admit as _command_final_response_admit
 from . import implement_context as _command_implement_context
@@ -139,6 +141,8 @@ GENERATED_COMMAND_HANDLERS = {
     'evaluation.retry': _command_evaluation_retry.run,
     'evaluation.status': _command_evaluation_status.run,
     'evaluation.transition': _command_evaluation_transition.run,
+    'external-evidence.query': _command_external_evidence_query.run,
+    'external-evidence.submit': _command_external_evidence_submit.run,
     'external-intent.refresh-github': _command_external_intent_refresh_github.run,
     'final-response.admit': _command_final_response_admit.run,
     'implement.context': _command_implement_context.run,

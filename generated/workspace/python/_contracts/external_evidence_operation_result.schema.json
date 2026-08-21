@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/external-evidence-operation-result.schema.json",
+  "title": "External Evidence Operation Result",
+  "type": "object",
+  "required": ["kind", "operation", "status", "admission", "stored"],
+  "properties": {
+    "kind": {"const": "agentic-workspace/external-evidence-operation-result/v1"},
+    "operation": {"type": "string", "enum": ["submit", "query"]},
+    "status": {"type": "string", "enum": ["admitted", "rejected"]},
+    "admission": {"type": "object"},
+    "stored": {"type": "boolean"}
+  },
+  "additionalProperties": true,
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

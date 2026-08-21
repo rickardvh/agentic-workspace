@@ -4620,6 +4620,98 @@
     "operation_path": "operations/defaults.report.json"
   },
   {
+    "adapter_id": "external-evidence.submit.cli",
+    "interface": {
+      "help": "Submit an external proof candidate by opaque signed host-result reference.",
+      "name": "external-evidence-submit",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Repository path.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--candidate-json"
+          ],
+          "help": "Provider-neutral external evidence candidate JSON.",
+          "name": "candidate_json",
+          "required": true
+        },
+        {
+          "flags": [
+            "--host-result-ref"
+          ],
+          "help": "Opaque package-trusted host result reference.",
+          "name": "host_result_ref",
+          "required": true
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "external-evidence.submit",
+    "operation_path": "operations/external-evidence.submit.json"
+  },
+  {
+    "adapter_id": "external-evidence.query.cli",
+    "interface": {
+      "help": "Query and revalidate one admitted external proof result.",
+      "name": "external-evidence-query",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Repository path.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--candidate-json"
+          ],
+          "help": "Provider-neutral external evidence candidate JSON.",
+          "name": "candidate_json",
+          "required": true
+        },
+        {
+          "flags": [
+            "--host-result-ref"
+          ],
+          "help": "Opaque package-trusted host result reference.",
+          "name": "host_result_ref",
+          "required": true
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "external-evidence.query",
+    "operation_path": "operations/external-evidence.query.json"
+  },
+  {
     "adapter_id": "proof.report.cli",
     "interface": {
       "help": "Show the canonical proof routes and current workspace proof summary.",

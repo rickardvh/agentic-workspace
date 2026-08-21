@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,11 +14,14 @@ from agentic_workspace.assurance_authority import (
     AUTHORITY_KIND,
     DECISION_KIND,
     EVIDENCE_KIND,
+    EXTERNAL_EVIDENCE_HOST_RESULT_DIR,
     RESOLVED_PRODUCER_KIND,
     admit_external_evidence,
     admit_repository_assurance_decision,
     build_assurance_application,
     evaluate_assurance_disposition,
+    query_external_evidence_operation,
+    submit_external_evidence_operation,
 )
 from agentic_workspace.config import WorkspaceUsageError, load_workspace_config
 from agentic_workspace.operating_decision import compile_operating_decision
@@ -344,3 +350,122 @@ allowed_results = ["passed", "failed"]
     assert report["evidence_authority_count"] == 1
     assert report["evidence_authorities"][0]["producer_id"] == "ci/acme"
     assert report["evidence_authorities"][0]["issuer_id"] == "github-actions"
+
+
+def _write_public_operation_fixture(tmp_path: Path) -> tuple[dict[str, object], str]:
+    source = tmp_path / "src" / "a.py"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"print('ok')\n")
+    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    (tmp_path / ".agentic-workspace" / "config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    manifest.write_text(
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+[protocols.unit]
+title = "Unit"
+purpose = "Run unit proof"
+applies_to_paths = ["src/**"]
+review_owner = "maintainers"
+[proof_routes.unit]
+protocol_refs = ["unit"]
+commands = ["pytest"]
+[evidence_authorities.acme]
+producer_id = "ci/acme"
+issuer_id = "synthetic-evidence-host"
+proof_route = "unit"
+evidence_class = "test-result"
+result_contract = "pytest/v1"
+allowed_results = ["passed", "failed"]
+""".strip(),
+        encoding="utf-8",
+    )
+    subject: dict[str, object] = {
+        "kind": PROOF_SUBJECT_KIND,
+        "fingerprint": "a" * 64,
+        "identity_complete": True,
+        "claim_classes": ["executable-validation"],
+        "source_inputs": [{"path": "src/a.py", "sha256": "ad64355106bb158b020ecf9702be48f7730fc091dd4bb6a2f092b40393495b3d"}],
+    }
+    candidate = _candidate(subject)
+    host_result = {
+        "kind": "agentic-workspace/external-evidence-host-result/v1",
+        "status": "current",
+        "result_id": "fixture-pass-v1",
+        "result_ref": "external-evidence-host-result:fixture-pass-v1",
+        "audience": "agentic-workspace.external-evidence",
+        "producer_id": "ci/acme",
+        "issuer_id": "synthetic-evidence-host",
+        "transport_id": "independent-fixture-client",
+        "proof_route": "unit",
+        "evidence_class": "test-result",
+        "result_contract": "pytest/v1",
+        "result": "passed",
+        "evidence_ref": "urn:synthetic-ci:run:42",
+        "proof_subject_digest": "4daf1df1a430782d4bfd407d544d4eb46998615eaa64992ecefbbffded5ea6dc",
+        "issued_at": "2026-01-01T00:00:00Z",
+        "expires_at": "2099-01-01T00:00:00Z",
+        "nonce": "fixture-pass-v1",
+        "host_admission": {
+            "kind": "agentic-workspace/external-evidence-host-admission/v1",
+            "algorithm": "RS256",
+            "key_id": "external-evidence-host:fixture-v1",
+            "signature": "AkW583pguSR8oQ97WA2D76w-rOjpE_WdIdr9FqdNu3UvOQpiwnQOWJ3XFwaKIafB8j7kX-Mvx9wxpBpp2qwbimnqMdw5AEacIk135wDAWGmxyN5dS76onXAwHJLKcUNg9TR0gTKnRVBBEQUtqhfi4jsxvmavQo12-rE-O8U0ZUs",
+        },
+    }
+    host_path = tmp_path / EXTERNAL_EVIDENCE_HOST_RESULT_DIR / "fixture-pass-v1.json"
+    host_path.parent.mkdir(parents=True)
+    host_path.write_text(json.dumps(host_result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return candidate, str(host_result["result_ref"])
+
+
+def test_public_operation_resolves_signed_custody_and_revalidates_query(tmp_path: Path) -> None:
+    candidate, host_ref = _write_public_operation_fixture(tmp_path)
+    submitted = submit_external_evidence_operation(target_root=tmp_path, candidate_json=json.dumps(candidate), host_result_ref=host_ref)
+    assert submitted["status"] == "admitted"
+    assert submitted["admission"]["producer_custody"] == "package-trusted-host-result"
+    queried = query_external_evidence_operation(target_root=tmp_path, candidate_json=json.dumps(candidate), host_result_ref=host_ref)
+    assert queried["status"] == "admitted"
+    (tmp_path / "src" / "a.py").write_bytes(b"print('changed')\n")
+    stale = query_external_evidence_operation(target_root=tmp_path, candidate_json=json.dumps(candidate), host_result_ref=host_ref)
+    assert stale["status"] == "rejected"
+    assert "proof-subject-stale" in stale["admission"]["reason_codes"]
+
+
+def test_public_operation_rejects_forged_authenticated_payload(tmp_path: Path) -> None:
+    candidate, host_ref = _write_public_operation_fixture(tmp_path)
+    forged = {**candidate, "authenticated": True, "producer_id": "ci/acme"}
+    result = submit_external_evidence_operation(
+        target_root=tmp_path,
+        candidate_json=json.dumps(forged),
+        host_result_ref=host_ref,
+    )
+    assert result["status"] == "rejected"
+    assert "candidate-custody-assertion-denied" in result["admission"]["reason_codes"]
+
+
+def test_independent_external_consumer_submits_and_queries_public_operations(tmp_path: Path) -> None:
+    candidate, host_ref = _write_public_operation_fixture(tmp_path)
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+    script = Path(__file__).resolve().parents[1] / "tools" / "external-consumer-fixtures" / "external_evidence_consumer.py"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--target",
+            str(tmp_path),
+            "--candidate",
+            str(candidate_path),
+            "--host-result-ref",
+            host_ref,
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["submitted"]["status"] == "admitted"
+    assert payload["queried"]["status"] == "admitted"

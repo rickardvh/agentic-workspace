@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/external-evidence-operation-input.schema.json",
+  "title": "External Evidence Operation Input",
+  "type": "object",
+  "properties": {
+    "target": {"type": "string"},
+    "format": {"type": "string", "enum": ["text", "json"]},
+    "candidate_json": {"type": "string", "minLength": 2},
+    "host_result_ref": {"type": "string", "pattern": "^external-evidence-host-result:[A-Za-z0-9._-]+$"}
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

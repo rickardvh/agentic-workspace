@@ -1708,6 +1708,18 @@
         "generic_behavior_audit": "Not counted as portable codegen completion; provider custody and host admission verification remain AW workspace runtime policy."
       },
       {
+        "id": "assurance.external-evidence.apply",
+        "summary": "Resolve signed producer custody, repository evidence authority, and dependency-scoped proof admission.",
+        "kind": "workspace-runtime",
+        "portability": "domain-runtime",
+        "taxonomy_tier": "tier-2-package-domain",
+        "tier_owner": "workspace assurance runtime boundary",
+        "tier_reason": "Admission combines package-trusted host provenance, repository Verification policy, and current proof-subject state.",
+        "conformance_ref": "external-evidence public operation and independent-client proof",
+        "migration_path": "Keep signature verification and repository policy resolution host-owned; extract only stable record projection primitives if they become reusable.",
+        "generic_behavior_audit": "Not portable target-executor behavior because callers must not control the trust resolver or proof-policy owner."
+      },
+      {
         "id": "evaluation.delivery.adapter-receipt.record",
         "summary": "Record a provider-owned external adapter attempt/result receipt in the local producer index.",
         "kind": "workspace-runtime",

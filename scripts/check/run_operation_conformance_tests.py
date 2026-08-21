@@ -1413,6 +1413,8 @@ def _external_readiness_results(
             {str(key): str(value) for key, value in raw_exceptions.items()} if isinstance(raw_exceptions, Mapping) else {}
         )
         valid_input = dict(raw_spec.get("valid_input", {})) if isinstance(raw_spec.get("valid_input"), Mapping) else {}
+        fixture_files = raw_spec.get("fixture_files", {})
+        fixture_files = dict(fixture_files) if isinstance(fixture_files, Mapping) else {}
         mutation_path = str(raw_spec.get("mutation_path") or "")
         for footprint in READINESS_FOOTPRINTS:
             if footprint in footprint_failures:
@@ -1445,6 +1447,14 @@ def _external_readiness_results(
                 (absent_root / ".git").mkdir()
                 (absent_root / ".git" / ".keep").write_text("", encoding="utf-8")
                 _write_local_invoke_config(base_root)
+                for relative, contents in fixture_files.items():
+                    destination = (base_root / str(relative)).resolve()
+                    try:
+                        destination.relative_to(base_root.resolve())
+                    except ValueError as exc:
+                        raise ValueError(f"external readiness fixture path escapes enabled root: {relative}") from exc
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_text(str(contents), encoding="utf-8", newline="\n")
                 _write_local_invoke_config(stub_root)
                 disabled_config = disabled_root / ".agentic-workspace/config.toml"
                 disabled_config.parent.mkdir(parents=True, exist_ok=True)

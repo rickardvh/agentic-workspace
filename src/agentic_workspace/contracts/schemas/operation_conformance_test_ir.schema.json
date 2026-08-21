@@ -248,6 +248,11 @@
               "operation_id": {"type": "string", "minLength": 1},
               "valid_input": {"type": "object"},
               "runtime_exception_revision": {"type": "string", "minLength": 1},
+              "fixture_files": {
+                "type": "object",
+                "description": "Operation-specific enabled-workspace files required by external readiness without widening absent, disabled, or stub fixtures.",
+                "additionalProperties": {"type": "string"}
+              },
               "mutation_path": {"type": "string", "minLength": 1},
               "case_exceptions": {
                 "type": "object",

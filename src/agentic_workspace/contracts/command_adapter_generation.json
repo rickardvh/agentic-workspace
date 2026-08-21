@@ -5425,6 +5425,44 @@
       "status": "generated"
     },
     {
+      "command": {"command_manifest": "cli_commands.json", "name": "external-evidence-submit", "option_group_manifest": "cli_option_groups.json", "program": "agentic-workspace"},
+      "conformance_refs": ["external-evidence.submit.process"],
+      "effect_hints": {"destructive": false, "idempotent": true, "read_only": true, "requires_preflight_gate": false, "writes_repo_state": false},
+      "generation_boundary": {
+        "contract_owns": ["visible command name", "argument and option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
+        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
+        "runtime_owns": ["package-trusted host result verification", "repository evidence-authority resolution", "current proof-subject classification", "output emission"]
+      },
+      "id": "external-evidence.submit.cli",
+      "operation_ref": {"id": "external-evidence.submit", "path": "operations/external-evidence.submit.json", "registry": "operation_contracts.json"},
+      "projection_hints": {
+        "adapter_specific_fields": [{"fields": ["program", "argument rendering", "help rendering", "exit-code rendering"], "kind": "process-cli"}],
+        "universal_fields": ["command.name", "command.options", "operation_ref.id", "runtime_binding.primitive_refs", "effect_hints", "conformance_refs"]
+      },
+      "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["workspace.target-root.resolve", "assurance.external-evidence.apply", "output.emit"]},
+      "schemas": {"input": ["external_evidence_operation_input.schema.json"], "output": ["external_evidence_operation_result.schema.json"]},
+      "status": "generated"
+    },
+    {
+      "command": {"command_manifest": "cli_commands.json", "name": "external-evidence-query", "option_group_manifest": "cli_option_groups.json", "program": "agentic-workspace"},
+      "conformance_refs": ["external-evidence.query.process"],
+      "effect_hints": {"destructive": false, "idempotent": true, "read_only": true, "requires_preflight_gate": false, "writes_repo_state": false},
+      "generation_boundary": {
+        "contract_owns": ["visible command name", "argument and option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
+        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
+        "runtime_owns": ["package-trusted host result revalidation", "repository evidence-authority resolution", "current proof-subject classification", "output emission"]
+      },
+      "id": "external-evidence.query.cli",
+      "operation_ref": {"id": "external-evidence.query", "path": "operations/external-evidence.query.json", "registry": "operation_contracts.json"},
+      "projection_hints": {
+        "adapter_specific_fields": [{"fields": ["program", "argument rendering", "help rendering", "exit-code rendering"], "kind": "process-cli"}],
+        "universal_fields": ["command.name", "command.options", "operation_ref.id", "runtime_binding.primitive_refs", "effect_hints", "conformance_refs"]
+      },
+      "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["workspace.target-root.resolve", "assurance.external-evidence.apply", "output.emit"]},
+      "schemas": {"input": ["external_evidence_operation_input.schema.json"], "output": ["external_evidence_operation_result.schema.json"]},
+      "status": "generated"
+    },
+    {
       "command": {
         "command_manifest": "cli_commands.json",
         "name": "proof",

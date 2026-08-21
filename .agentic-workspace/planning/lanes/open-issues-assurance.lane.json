@@ -7,10 +7,11 @@
   "lane_outcome": "Close #2618 #2619 #2620 #2621 and #2622 with repo-owned classifiers, evidence authorities, external evidence admission, bounded dispositions, and source-bound requirement applications.",
   "purpose_for_parent": "Compose assurance and proof through the generic operating decision without provider-specific authority.",
   "subsystems": [],
-  "technical_strategy": "Reuse proof-subject freshness and the ordinary operating decision; add one pure assurance admission module plus Verification-owned producer authority declarations.",
+  "technical_strategy": "Reuse proof-subject freshness and the ordinary operating decision; add one assurance admission module, Verification-owned producer authority declarations, and generated submit/query operations backed by package-trusted signed host custody.",
   "technology_choices": [
     "Config-native and repo-owned classifiers share one application identity.",
     "Verification manifest owns evidence-producer authority; transport stays non-authoritative.",
+    "External consumers pass opaque host-result references; authenticated producer facts cannot be submitted as JSON.",
     "Strict closeout is the compatibility switch for legacy unbounded dispositions."
   ],
   "slice_sequence": [

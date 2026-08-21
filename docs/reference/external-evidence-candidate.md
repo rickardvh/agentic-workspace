@@ -19,4 +19,5 @@ Provider-neutral candidate reference that remains untrusted until repository pro
 | `result_contract` | string | no |  | Untrusted result-contract assertion used only for mismatch diagnostics. |  |  |
 | `result` | string | no |  | Untrusted result assertion used only for mismatch diagnostics. |  |  |
 | `evidence_ref` | string | no |  | Untrusted reference assertion used only for mismatch diagnostics. |  |  |
+| `application_id` | string | no |  | Optional source-bound assurance application identity required by repository evidence policy. |  |  |
 | `proof_subject` | object | yes |  | Existing dependency-scoped proof subject. |  |  |

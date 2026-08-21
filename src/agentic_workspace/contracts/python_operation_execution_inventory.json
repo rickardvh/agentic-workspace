@@ -2937,6 +2937,38 @@
       "runtime_boundary_reason": "The operation uses generated IR transport but rewrites local-only correction-event storage and compaction lineage through a workspace-specific retention boundary.",
       "status": "domain-runtime-primitive-via-ir",
       "what_would_make_portable_later": "Split bounded JSON store IO, receipt emission, and target identity matching into schema-backed portable primitives after correction-event lifecycle semantics stabilize."
+    },
+    {
+      "command": "external-evidence-submit",
+      "conformance_ref": "external-evidence.submit.process",
+      "domain_runtime_primitive_refs": ["workspace.target-root.resolve", "assurance.external-evidence.apply", "output.emit"],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation contract resources, client negotiation, and JSON emission own the transport; package-trusted signature verification, repository Verification authority lookup, and current proof-subject admission remain one assurance domain boundary.",
+      "hand_owned_runtime_code": ["package-trusted external evidence host verification", "repository evidence authority and proof-subject admission"],
+      "operation_contract": "operations/external-evidence.submit.json",
+      "operation_id": "external-evidence.submit",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "The stateless operation returns admitted evidence only after producer custody, repository proof policy, and current subject state independently agree.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Keep trust-root and repository-policy resolution host-owned; only compact immutable record IO may become a portable primitive after the admission contract stabilizes."
+    },
+    {
+      "command": "external-evidence-query",
+      "conformance_ref": "external-evidence.query.process",
+      "domain_runtime_primitive_refs": ["workspace.target-root.resolve", "assurance.external-evidence.apply", "output.emit"],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation contract resources, client negotiation, and JSON emission own the transport; query re-verifies package-trusted custody, current repository authority, and source-bound subject state in the assurance runtime.",
+      "hand_owned_runtime_code": ["package-trusted external evidence host revalidation", "repository evidence authority and proof-subject query"],
+      "operation_contract": "operations/external-evidence.query.json",
+      "operation_id": "external-evidence.query",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "A stored admission is not authoritative by itself; current host provenance, proof policy, and dependency inputs must be re-resolved.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Keep trust-root and repository-policy resolution host-owned; only immutable record loading may become a portable primitive after the query contract stabilizes."
     }
   ],
   "completion_rule": "Python completion can be claimed only when every generated Python operation is inventoried as portable-codegen-primitive-executed, generated-runtime-handler, domain-runtime-primitive-via-ir, or accepted-hand-owned-runtime-primitive; domain-runtime-primitive-via-ir and accepted-hand-owned-runtime-primitive entries are transitional unless their audit proves they do not hide generic deterministic runtime debt."

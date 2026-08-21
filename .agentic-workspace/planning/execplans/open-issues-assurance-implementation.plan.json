@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 2,
+  "revision": 3,
   "intent": {
     "outcome": "Close GitHub issues #2618 through #2622 in a draft PR stacked on #2627.",
     "non_goals": [
@@ -22,7 +22,7 @@
     "owned": [
       "src/agentic_workspace/assurance_authority.py and proof_subject.py",
       "workspace config, assurance runtime, operating decision, and Verification manifest loader",
-      "assurance/evidence contract schemas, generated references, tests, and public contract documentation"
+      "assurance/evidence contract schemas, generated Python and TypeScript external operations, independent-consumer tests, and public contract documentation"
     ],
     "effects": [
       "Generated schema references change with their source schemas.",
@@ -57,15 +57,26 @@
   "proof": {
     "claims": [
       "Repository assurance classification is revision-bound and fails closed without widening authority.",
-      "External evidence is admitted only through repository proof policy and existing proof-subject semantics.",
+      "External evidence is admitted only through package-trusted signed host custody, repository proof policy, and existing proof-subject semantics.",
       "Waivers and dismissals reactivate when their applicability bounds no longer hold."
     ],
     "requirements": [
       "Focused assurance and affected runtime tests pass.",
       "Schema references and contract tooling are current.",
+      "Generated Python, TypeScript, parity, and vendor-neutral operation conformance passes.",
       "Lint and package typechecks pass."
     ],
-    "refs": []
+    "refs": [
+      "GitHub issues #2618 #2619 #2620 #2621 #2622",
+      "PR #2628 blocking review comment 5368607579",
+      ".agentic-workspace/OWNERSHIP.toml#subsystems.verification",
+      ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
+      "docs/maintainer/testing-strategy.md",
+      "docs/maintainer/test-knowledge-inventory.md",
+      ".agentic-workspace/verification/manifest.toml#proof_routes.test_evidence_decision",
+      "generated/workspace/python/external_operation_conformance_receipts.json",
+      "generated/workspace/typescript/external_operation_conformance_receipts.json"
+    ]
   },
   "continuation": {
     "owner": "open-issues-product-closure",

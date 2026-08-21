@@ -1924,6 +1924,8 @@
           "instructions.explain",
           "instructions.list",
           "instructions.migrate",
+          "external-evidence.query",
+          "external-evidence.submit",
           "prompt.init",
           "prompt.uninstall",
           "prompt.upgrade",

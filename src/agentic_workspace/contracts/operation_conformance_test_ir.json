@@ -175,6 +175,34 @@
         "runtime_exception_revision": "github-2044-closure:delegation-outcome.append@pr-2256",
         "mutation_path": ".agentic-workspace/delegation-outcomes.json",
         "case_exceptions": {}
+      },
+      {
+        "operation_id": "external-evidence.submit",
+        "valid_input": {
+          "candidate_json": "{\"kind\":\"agentic-workspace/external-evidence-candidate/v1\",\"transport_id\":\"independent-fixture-client\",\"proof_route\":\"unit\",\"evidence_class\":\"test-result\",\"proof_subject\":{\"kind\":\"agentic-workspace/proof-subject/v1\",\"fingerprint\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"identity_complete\":true,\"claim_classes\":[\"executable-validation\"],\"source_inputs\":[{\"path\":\"src/a.py\",\"sha256\":\"ad64355106bb158b020ecf9702be48f7730fc091dd4bb6a2f092b40393495b3d\"}]}}",
+          "host_result_ref": "external-evidence-host-result:fixture-pass-v1"
+        },
+        "runtime_exception_revision": "github-2619-external-evidence-host-operation:v1",
+        "fixture_files": {
+          "src/a.py": "print('ok')\n",
+          ".agentic-workspace/verification/manifest.toml": "schema_version = \"agentic-workspace/verification-manifest/v1\"\n[protocols.unit]\ntitle = \"Unit\"\npurpose = \"Run unit proof\"\napplies_to_paths = [\"src/**\"]\nreview_owner = \"maintainers\"\n[proof_routes.unit]\nprotocol_refs = [\"unit\"]\ncommands = [\"pytest\"]\n[evidence_authorities.acme]\nproducer_id = \"ci/acme\"\nissuer_id = \"synthetic-evidence-host\"\nproof_route = \"unit\"\nevidence_class = \"test-result\"\nresult_contract = \"pytest/v1\"\nallowed_results = [\"passed\", \"failed\"]\n",
+          ".agentic-workspace/local/proof/external-evidence-host-results/inbox/fixture-pass-v1.json": "{\"kind\":\"agentic-workspace/external-evidence-host-result/v1\",\"status\":\"current\",\"result_id\":\"fixture-pass-v1\",\"result_ref\":\"external-evidence-host-result:fixture-pass-v1\",\"audience\":\"agentic-workspace.external-evidence\",\"producer_id\":\"ci/acme\",\"issuer_id\":\"synthetic-evidence-host\",\"transport_id\":\"independent-fixture-client\",\"proof_route\":\"unit\",\"evidence_class\":\"test-result\",\"result_contract\":\"pytest/v1\",\"result\":\"passed\",\"evidence_ref\":\"urn:synthetic-ci:run:42\",\"proof_subject_digest\":\"4daf1df1a430782d4bfd407d544d4eb46998615eaa64992ecefbbffded5ea6dc\",\"issued_at\":\"2026-01-01T00:00:00Z\",\"expires_at\":\"2099-01-01T00:00:00Z\",\"nonce\":\"fixture-pass-v1\",\"host_admission\":{\"kind\":\"agentic-workspace/external-evidence-host-admission/v1\",\"algorithm\":\"RS256\",\"key_id\":\"external-evidence-host:fixture-v1\",\"signature\":\"AkW583pguSR8oQ97WA2D76w-rOjpE_WdIdr9FqdNu3UvOQpiwnQOWJ3XFwaKIafB8j7kX-Mvx9wxpBpp2qwbimnqMdw5AEacIk135wDAWGmxyN5dS76onXAwHJLKcUNg9TR0gTKnRVBBEQUtqhfi4jsxvmavQo12-rE-O8U0ZUs\"}}\n"
+        },
+        "case_exceptions": {}
+      },
+      {
+        "operation_id": "external-evidence.query",
+        "valid_input": {
+          "candidate_json": "{\"kind\":\"agentic-workspace/external-evidence-candidate/v1\",\"transport_id\":\"independent-fixture-client\",\"proof_route\":\"unit\",\"evidence_class\":\"test-result\",\"proof_subject\":{\"kind\":\"agentic-workspace/proof-subject/v1\",\"fingerprint\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"identity_complete\":true,\"claim_classes\":[\"executable-validation\"],\"source_inputs\":[{\"path\":\"src/a.py\",\"sha256\":\"ad64355106bb158b020ecf9702be48f7730fc091dd4bb6a2f092b40393495b3d\"}]}}",
+          "host_result_ref": "external-evidence-host-result:fixture-pass-v1"
+        },
+        "runtime_exception_revision": "github-2619-external-evidence-host-operation:v1",
+        "fixture_files": {
+          "src/a.py": "print('ok')\n",
+          ".agentic-workspace/verification/manifest.toml": "schema_version = \"agentic-workspace/verification-manifest/v1\"\n[protocols.unit]\ntitle = \"Unit\"\npurpose = \"Run unit proof\"\napplies_to_paths = [\"src/**\"]\nreview_owner = \"maintainers\"\n[proof_routes.unit]\nprotocol_refs = [\"unit\"]\ncommands = [\"pytest\"]\n[evidence_authorities.acme]\nproducer_id = \"ci/acme\"\nissuer_id = \"synthetic-evidence-host\"\nproof_route = \"unit\"\nevidence_class = \"test-result\"\nresult_contract = \"pytest/v1\"\nallowed_results = [\"passed\", \"failed\"]\n",
+          ".agentic-workspace/local/proof/external-evidence-host-results/inbox/fixture-pass-v1.json": "{\"kind\":\"agentic-workspace/external-evidence-host-result/v1\",\"status\":\"current\",\"result_id\":\"fixture-pass-v1\",\"result_ref\":\"external-evidence-host-result:fixture-pass-v1\",\"audience\":\"agentic-workspace.external-evidence\",\"producer_id\":\"ci/acme\",\"issuer_id\":\"synthetic-evidence-host\",\"transport_id\":\"independent-fixture-client\",\"proof_route\":\"unit\",\"evidence_class\":\"test-result\",\"result_contract\":\"pytest/v1\",\"result\":\"passed\",\"evidence_ref\":\"urn:synthetic-ci:run:42\",\"proof_subject_digest\":\"4daf1df1a430782d4bfd407d544d4eb46998615eaa64992ecefbbffded5ea6dc\",\"issued_at\":\"2026-01-01T00:00:00Z\",\"expires_at\":\"2099-01-01T00:00:00Z\",\"nonce\":\"fixture-pass-v1\",\"host_admission\":{\"kind\":\"agentic-workspace/external-evidence-host-admission/v1\",\"algorithm\":\"RS256\",\"key_id\":\"external-evidence-host:fixture-v1\",\"signature\":\"AkW583pguSR8oQ97WA2D76w-rOjpE_WdIdr9FqdNu3UvOQpiwnQOWJ3XFwaKIafB8j7kX-Mvx9wxpBpp2qwbimnqMdw5AEacIk135wDAWGmxyN5dS76onXAwHJLKcUNg9TR0gTKnRVBBEQUtqhfi4jsxvmavQo12-rE-O8U0ZUs\"}}\n"
+        },
+        "case_exceptions": {}
       }
     ],
     "rule": "The operation conformance runner derives external-client scenarios from this existing authority and requires every applicable case across CLI JSON, generated Python, generated TypeScript, and the independently packaged client on necessary-surface and full-mirror installations."

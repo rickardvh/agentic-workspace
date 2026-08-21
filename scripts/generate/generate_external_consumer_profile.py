@@ -82,6 +82,10 @@ EVALUATION_OPERATION_IDS = (
     "evaluation.delivery-status",
     "evaluation.retry",
 )
+ASSURANCE_OPERATION_IDS = (
+    "external-evidence.submit",
+    "external-evidence.query",
+)
 GUIDANCE_OPERATION_IDS = (
     "agent-guidance.delete",
     "agent-guidance.edit",
@@ -99,6 +103,7 @@ OPERATION_RESOURCE_OUTPUTS = {
     / f"src/agentic_workspace/contracts/operations/{operation_id}.json"
     for operation_id in (
         *ASSIGNMENT_OPERATION_IDS,
+        *ASSURANCE_OPERATION_IDS,
         *CORRECTION_OPERATION_IDS,
         *EVALUATION_OPERATION_IDS,
         *GUIDANCE_OPERATION_IDS,
@@ -113,6 +118,18 @@ SCHEMA_RESOURCE_OUTPUTS = {
     / "src/agentic_workspace/contracts/schemas/scoped_instruction_operation_input.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/scoped_instruction_operation_result.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/scoped_instruction_operation_result.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/external_evidence_operation_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/external_evidence_operation_input.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/external_evidence_operation_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/external_evidence_operation_result.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/external_evidence_host_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/external_evidence_host_result.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/external_evidence_operation_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/external_evidence_operation_input.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/external_evidence_operation_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/external_evidence_operation_result.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/external_evidence_host_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/external_evidence_host_result.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/evaluation_authority_refresh_input.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/evaluation_authority_refresh_input.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/evaluation_authority_refresh_result.schema.json": REPO_ROOT

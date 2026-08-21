@@ -242,6 +242,16 @@
           "type": "boolean",
           "default": false
         },
+        "classification_owner": {
+          "description": "Exclusive owner of assurance applicability classification: native workspace config or one repository-owned classifier.",
+          "enum": ["config-native", "repository-owned"],
+          "default": "config-native"
+        },
+        "classification_source": {
+          "description": "Repo-relative source or operation ref for the repository-owned classifier; forbidden for config-native ownership.",
+          "type": "string",
+          "minLength": 1
+        },
         "decision_record_target": {
           "description": "Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset.",
           "type": "string",
@@ -1217,6 +1227,19 @@
           "description": "Repo-local owner or role accountable for the waiver or dismissal.",
           "type": "string",
           "minLength": 1
+        },
+        "applicability": {
+          "description": "Optional bounds that keep the disposition active only for the classified application, proof subject, work identity, source revision, and review window.",
+          "type": "object",
+          "properties": {
+            "application_id": {"type": "string", "minLength": 1, "description": "Exact assurance application for which this disposition is valid."},
+            "source_revision": {"type": "string", "minLength": 1, "description": "Classification-source revision for which this disposition is valid."},
+            "current_work_id": {"type": "string", "minLength": 1, "description": "Current-work identity for which this disposition is valid."},
+            "proof_subject_fingerprint": {"type": "string", "minLength": 1, "description": "Optional proof subject to which this disposition is bound."},
+            "expires_at": {"type": "string", "format": "date-time", "description": "Time after which the disposition is inactive."},
+            "review_after": {"type": "string", "format": "date-time", "description": "Time at which owner review is required and the disposition becomes inactive."}
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

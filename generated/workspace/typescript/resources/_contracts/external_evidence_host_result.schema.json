@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/external-evidence-host-result.schema.json",
+  "title": "External Evidence Host Result",
+  "description": "Producer custody resolved by a package-trusted host signature and referenced opaquely by callers.",
+  "type": "object",
+  "required": ["kind", "status", "result_id", "result_ref", "audience", "producer_id", "issuer_id", "transport_id", "proof_route", "evidence_class", "result_contract", "result", "evidence_ref", "proof_subject_digest", "issued_at", "expires_at", "nonce", "host_admission"],
+  "properties": {
+    "kind": {"const": "agentic-workspace/external-evidence-host-result/v1"},
+    "status": {"const": "current"},
+    "result_id": {"type": "string", "minLength": 1},
+    "result_ref": {"type": "string", "pattern": "^external-evidence-host-result:"},
+    "audience": {"const": "agentic-workspace.external-evidence"},
+    "producer_id": {"type": "string", "minLength": 1},
+    "issuer_id": {"type": "string", "minLength": 1},
+    "transport_id": {"type": "string", "minLength": 1},
+    "proof_route": {"type": "string", "minLength": 1},
+    "evidence_class": {"type": "string", "minLength": 1},
+    "result_contract": {"type": "string", "minLength": 1},
+    "result": {"type": "string", "minLength": 1},
+    "evidence_ref": {"type": "string", "minLength": 1},
+    "proof_subject_digest": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "nonce": {"type": "string", "minLength": 1},
+    "revoked_at": {"type": "string", "format": "date-time"},
+    "superseded_by": {"type": "string"},
+    "host_admission": {
+      "type": "object",
+      "required": ["kind", "algorithm", "key_id", "signature"],
+      "properties": {
+        "kind": {"const": "agentic-workspace/external-evidence-host-admission/v1"},
+        "algorithm": {"const": "RS256"},
+        "key_id": {"type": "string", "minLength": 1},
+        "signature": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

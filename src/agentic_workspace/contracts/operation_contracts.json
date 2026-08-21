@@ -257,6 +257,18 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "external-evidence.submit",
+      "path": "operations/external-evidence.submit.json",
+      "command": "external-evidence-submit",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "external-evidence.query",
+      "path": "operations/external-evidence.query.json",
+      "command": "external-evidence-query",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "command": "config",
       "id": "config.report",
       "migration_status": "runtime-consumed",

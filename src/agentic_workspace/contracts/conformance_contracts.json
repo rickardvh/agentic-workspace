@@ -572,6 +572,18 @@
     },
     {
       "adapter_kind": "process",
+      "id": "external-evidence.submit.process",
+      "operation_id": "external-evidence.submit",
+      "path": "conformance/external-evidence.submit.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "external-evidence.query.process",
+      "operation_id": "external-evidence.query",
+      "path": "conformance/external-evidence.query.process.json"
+    },
+    {
+      "adapter_kind": "process",
       "id": "report.combined.process",
       "operation_id": "report.combined",
       "path": "conformance/report.combined.process.json"

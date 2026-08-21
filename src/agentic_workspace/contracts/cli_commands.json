@@ -4263,6 +4263,34 @@
     },
     {
       "audience": "advanced_host_repo",
+      "classification_note": "provider-neutral external proof submission through package-trusted host custody",
+      "help": "Submit an external proof candidate by opaque signed host-result reference.",
+      "mutates_state": false,
+      "name": "external-evidence-submit",
+      "options": [
+        {"flags": ["--target"], "help": "Repository path.", "name": "target"},
+        {"flags": ["--candidate-json"], "help": "Provider-neutral external evidence candidate JSON.", "name": "candidate_json", "required": true},
+        {"flags": ["--host-result-ref"], "help": "Opaque package-trusted host result reference.", "name": "host_result_ref", "required": true}
+      ],
+      "role": "reusable_host_repo_diagnostics",
+      "uses_option_groups": ["format"]
+    },
+    {
+      "audience": "advanced_host_repo",
+      "classification_note": "provider-neutral current external proof query",
+      "help": "Query and revalidate one admitted external proof result.",
+      "mutates_state": false,
+      "name": "external-evidence-query",
+      "options": [
+        {"flags": ["--target"], "help": "Repository path.", "name": "target"},
+        {"flags": ["--candidate-json"], "help": "Provider-neutral external evidence candidate JSON.", "name": "candidate_json", "required": true},
+        {"flags": ["--host-result-ref"], "help": "Opaque package-trusted host result reference.", "name": "host_result_ref", "required": true}
+      ],
+      "role": "reusable_host_repo_diagnostics",
+      "uses_option_groups": ["format"]
+    },
+    {
+      "audience": "advanced_host_repo",
       "classification_note": "optional external evidence adapter front door",
       "help": "Refresh optional provider-agnostic external intent evidence through adapter subcommands.",
       "mutates_state": false,
