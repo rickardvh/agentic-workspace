@@ -3,9 +3,9 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:bea03246a499a0afa335422b5bd4be0faa7c465a35b9577dd73c19e6b0be479b`
+- Contract digest: `sha256:bdf355d92fdedfc108bc21432e1e6c1e8a7dcb317b099394dca067a81b697795`
 - Program: `agentic-workspace`
-- Command/subcommand count: 116
+- Command/subcommand count: 122
 
 Shared-state mutability and ignored local diagnostics are separate. A `no` below means the command contract does not mutate shared workspace state. When local session logging is enabled, any command may still write ignored machine-local diagnostics:
 
@@ -18,6 +18,12 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | Command | Role | Audience | Shared mutation | Options | Description |
 | --- | --- | --- | --- | ---: | --- |
 | `agentic-workspace modules` | `module_delegation_front_door` | `advanced_host_repo` | no | 3 | Show module inventory as explicit drill-down; ordinary agents should start from start/report routing. |
+| `agentic-workspace instructions` | `core_context_router` | `ordinary_host_repo` | yes | 0 | Create, validate, and explain scoped Markdown instructions through generated operations. |
+| `agentic-workspace instructions list` | `core_context_router` | `ordinary_host_repo` | no | 2 | List scoped instructions without loading irrelevant bodies. |
+| `agentic-workspace instructions new` | `core_context_router` | `ordinary_host_repo` | yes | 4 | Scaffold one global or path-scoped Markdown instruction. |
+| `agentic-workspace instructions check` | `core_context_router` | `ordinary_host_repo` | no | 2 | Validate instruction syntax and references without executing checks. |
+| `agentic-workspace instructions explain` | `core_context_router` | `ordinary_host_repo` | no | 5 | Explain task-specific applicability in repository vocabulary. |
+| `agentic-workspace instructions migrate` | `core_context_router` | `ordinary_host_repo` | no | 3 | Give non-destructive incremental migration guidance. |
 | `agentic-workspace summary` | `core_context_router` | `ordinary_host_repo` | no | 6 | Show the active execution summary from the planning module. |
 | `agentic-workspace planning` | `core_context_router` | `ordinary_host_repo` | no | 2 | Show planning workflow help or run Planning operations through the workspace front door. |
 | `agentic-workspace planning new-plan` | `core_context_router` | `ordinary_host_repo` | yes | 12 | Create a schema-valid execplan scaffold and optionally register it. |
@@ -143,6 +149,65 @@ module inventory drill-down for explicit module inspection; not required for ord
 | `--format` | no | `text` | text, json | `value` | Output format. |
 | `--target` | no | `—` | — | `value` | Optional repository path used to report installed modules. |
 | `--verbose` | no | `—` | — | `store_true` | Emit full module registry and component detail. Prefer the default output for ordinary routing. |
+
+## `agentic-workspace instructions`
+
+target-neutral scoped Markdown instruction authoring and inspection
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| — | — | — | — | — | No declared options. |
+
+## `agentic-workspace instructions list`
+
+progressive-disclosure instruction inventory
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--target` | no | `—` | — | `value` | Target repository path. Defaults to current directory. |
+
+## `agentic-workspace instructions new`
+
+no-overwrite instruction scaffold creation
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--name` | yes | `—` | — | `value` | Lowercase instruction identity used as the filename stem. |
+| `--paths` | no | `—` | — | `append` | Repository-relative applicability pattern. Repeat for multiple patterns. |
+| `--target` | no | `—` | — | `value` | Target repository path. Defaults to current directory. |
+
+## `agentic-workspace instructions check`
+
+static instruction validation
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--target` | no | `—` | — | `value` | Target repository path. Defaults to current directory. |
+
+## `agentic-workspace instructions explain`
+
+task-scoped instruction applicability explanation
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--task` | no | `—` | — | `value` | Optional task text used during applicability explanation. |
+| `--changed` | no | `—` | — | `append` | Changed or target path. Repeat for multiple paths. |
+| `--verbose` | no | `—` | — | `store_true` | Include the compiled instruction program. |
+| `--target` | no | `—` | — | `value` | Target repository path. Defaults to current directory. |
+
+## `agentic-workspace instructions migrate`
+
+non-destructive static-instruction migration advice
+
+| Flags | Required | Default | Choices | Action / nargs | Description |
+| --- | --- | --- | --- | --- | --- |
+| `--format` | no | `text` | text, json | `value` | Output format. |
+| `--from` | yes | `—` | — | `value` | Repository-relative instruction source to inspect. |
+| `--target` | no | `—` | — | `value` | Target repository path. Defaults to current directory. |
 
 ## `agentic-workspace summary`
 
