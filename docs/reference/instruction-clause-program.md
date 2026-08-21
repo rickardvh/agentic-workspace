@@ -13,5 +13,6 @@ Internal source-owned facts and bounded clauses compiled into the existing opera
 | (root) | object | yes |  | Internal source-owned facts and bounded clauses compiled into the existing operating decision. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `kind` | const `"agentic-workspace/instruction-program/v1"` | yes |  | Schema discriminator for one internal instruction program. |  |  |
 | `facts` | array of object | yes |  | Typed source-owned projections evaluated by clauses without creating a central fact store. |  |  |
+| `source_diagnostics` | array of object | no |  | Typed adapter diagnostics emitted when a source owner cannot provide an unambiguous bounded clause input. |  |  |
 | `clauses` | array of object | yes |  | Source-bound bounded condition-to-effect relationships. |  |  |
 | `capabilities` | array of object | yes |  | Current source-owned satisfiers and affordances referenced by clauses. |  |  |
