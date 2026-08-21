@@ -263,6 +263,15 @@
       "authority": "The table recognizes lane-title wording for Planning custody guidance; it does not decide issue grouping or implementation order.",
       "decision_authority": "advisory-only",
       "agent_judgment_boundary": "The table may surface lane hints; the agent still owns semantic grouping, priority, provider state, and action."
+    },
+    {
+      "path": "src/agentic_workspace/workspace_runtime_core.py",
+      "function": "_planning_safety_path_classification",
+      "variable": "transient_markers",
+      "classification": "structured-field-projection",
+      "authority": "The path vocabulary can admit cleanup only when every exact candidate is also Git-ignored, untracked, outside protected configuration, and accompanied by an explicit preservation boundary; otherwise the route fails closed.",
+      "decision_authority": "structured-owned",
+      "agent_judgment_boundary": "The classifier supplies a bounded local-transient effect fact; the user or agent still owns the requested deletion, preservation declaration, semantic scope, and any separately authorized durable mutation."
     }
   ]
 }

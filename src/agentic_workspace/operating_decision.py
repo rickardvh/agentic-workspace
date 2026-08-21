@@ -16,8 +16,10 @@ from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_receipt_status,
     registered_context_owner_result_status,
 )
+from agentic_workspace.control_inputs import compile_control_inputs
 from agentic_workspace.intent_feedback import compile_intent_feedback, intent_evidence_from_observed_behavior
 from agentic_workspace.memory_effectiveness import compile_memory_effectiveness
+from agentic_workspace.reconciliation import compile_reconciliation
 
 BLOCKER_PRECEDENCE = [
     "missing-authority",
@@ -2014,6 +2016,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         contributions=[item for item in _as_list(inputs.get("memory_contributions")) if isinstance(item, dict)],
         outcomes=[item for item in _as_list(inputs.get("memory_outcomes")) if isinstance(item, dict)],
     )
+    reconciliation = compile_reconciliation(_as_dict(inputs.get("reconciliation")))
+    control_inputs = compile_control_inputs([item for item in _as_list(inputs.get("control_inputs")) if isinstance(item, dict)])
     requested_consumer = str(inputs.get("consumer") or "operating-decision")
     context_authority_projection = resolve_context_authority_projection(
         consumer=requested_consumer,
@@ -2030,6 +2034,10 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         revisions = {**revisions, "memory_effectiveness_revision": memory_effectiveness["input_revision"]}
     if source_guidance["contributions"]:
         revisions = {**revisions, "source_guidance_revision": source_guidance["revision"]}
+    if reconciliation["status"] != "not-requested":
+        revisions = {**revisions, "reconciliation_revision": reconciliation["input_revision"]}
+    if control_inputs["effects"] or control_inputs["conflicts"]:
+        revisions = {**revisions, "control_inputs_revision": control_inputs["input_revision"]}
     authorities = _as_dict(inputs.get("authorities"))
     actionability = _as_dict(inputs.get("actionability"))
     action = _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
@@ -2043,6 +2051,16 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         else embedded_invocation_revision
     )
     blockers = [item for item in _as_list(inputs.get("blockers")) if isinstance(item, dict)]
+    blockers.extend(_as_dict(item) for item in _as_list(reconciliation.get("blockers")))
+    for conflict in _as_list(control_inputs.get("conflicts")):
+        conflict = _as_dict(conflict)
+        blockers.append(
+            {
+                "reason_code": "conflicting-input",
+                "owner": str(conflict.get("resolution_owner") or "repository"),
+                "repair": f"resolve competing owners for {conflict.get('decision_dimension', 'control')} before action",
+            }
+        )
     authority_blockers = derive_operating_blockers_from_authorities(authorities=authorities)
     blockers.extend(authority_blockers)
     if (
@@ -2174,7 +2192,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "owner": "context-authority-registry",
             "repair": "run the typed context-authority repair operation before retrying the decision",
         }
-    terminal_state = str(inputs.get("terminal_state") or "CONTINUE")
+    terminal_state = str(inputs.get("terminal_state") or ("COMPLETE" if reconciliation.get("status") == "terminal" else "CONTINUE"))
     blocked_claim_classes = list(
         dict.fromkeys(
             [
@@ -2210,6 +2228,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "intent_feedback": intent_feedback,
         "memory_effectiveness": memory_effectiveness,
         "source_guidance": source_guidance,
+        "reconciliation": reconciliation,
+        "control_inputs": control_inputs,
         "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),
@@ -2232,6 +2252,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "next_action.command": "display rendering only; operation_invocation owns executable identity",
             "actionability.progress_check.proposed_operation": "derived from operation_invocation.operation_id",
             "startup/implement/proof claim gates": "consume operating decision status and blocker reason codes",
+            "closeout/terminal/residue projections": "derived from operating_decision.reconciliation; domain owners retain their source facts",
         },
         "rule": "This compiler composes admitted specialist outputs and preserves their ownership; it does not infer authority from rendered text.",
     }

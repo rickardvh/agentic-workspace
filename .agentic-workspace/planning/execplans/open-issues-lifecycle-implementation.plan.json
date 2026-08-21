@@ -1,0 +1,80 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "open-issues-lifecycle-implementation",
+  "title": "Implement lifecycle and reconciliation lane",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 2,
+  "intent": {
+    "outcome": "Make Planning mutation authority effect-scoped, expose stale external state with local-owner reconciliation choices, compose result/claim/residue/continuation through the operating decision, and reduce posture/config to applicable material control effects.",
+    "non_goals": [
+      "Do not grant external trackers Planning authority or infer semantic satisfaction from proof.",
+      "Do not add a peer closeout compiler, universal policy language, or module-defined global claim dimensions.",
+      "Leave assurance evidence admission and final public-product closure to their declared downstream lanes."
+    ]
+  },
+  "parent": {
+    "owner_id": "open-issues-lifecycle",
+    "contribution": "Close GitHub issues #2605 #2611 #2612 and #2613 on top of PR #2626.",
+    "closure_boundary": "this lifecycle slice only; assurance and product-closure lanes remain open"
+  },
+  "scope": {
+    "owned": [
+      "Planning route classification for mechanically proven ignored transient cleanup.",
+      "Provider-neutral external observation reconciliation and ordinary claim limits.",
+      "Generic operating-decision reconciliation and material control-input compilation.",
+      "Focused schemas, documentation, tests, and release metadata."
+    ],
+    "effects": [
+      "bounded local mutation authority without active-plan progress authority",
+      "post-action claim and continuation composition",
+      "external evidence freshness and local-intent choices",
+      "first-line config/posture subtraction"
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub issues #2605 #2611 #2612 #2613; stacked on PR #2626",
+      "label": "GitHub issues #2605 #2611 #2612 #2613; stacked on PR #2626",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Run the final focused and package proof, reconcile generated references, and publish the lifecycle draft PR on #2626.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Implement lifecycle and reconciliation lane is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Run reconciliation/control-input and operating-decision schema tests.",
+      "Run positive and negative local-transient Planning route fixtures.",
+      "Run Planning external-observation and workspace route regression tests.",
+      "Run lint, typecheck, schema-reference freshness, structured inventory, and diff checks."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": ".agentic-workspace/planning/lanes/open-issues-assurance.lane.json",
+    "residual_intent": "After this lane PR is published, activate the assurance lane and stack it on this branch."
+  },
+  "specialist_contracts": []
+}
