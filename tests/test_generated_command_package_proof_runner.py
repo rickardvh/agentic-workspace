@@ -2939,6 +2939,7 @@ def test_static_generated_package_proof_accepts_inventory_backed_cli_evaluation_
 
     assert not [error for error in errors if "src/agentic_workspace/cli.py" in error]
     assert checker.PYTHON_SHIPPED_SOURCE_EXECUTABLE_RETIREMENT_EXCEPTIONS["src/agentic_workspace/cli.py"] == {
+        "parser construction": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
         "command parsing": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
         "subparser ownership": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
     }

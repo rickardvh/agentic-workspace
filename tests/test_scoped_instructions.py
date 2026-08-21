@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from agentic_workspace.cli import _run_instructions_cli as run_cli
 from agentic_workspace.operating_decision import CONTEXT_AUTHORITY_REGISTRY, _resolve_context_authority_source, compile_operating_decision
 from agentic_workspace.scoped_instructions import (
     INSTRUCTION_DIR,
     _write_scaffold,
     inspect_instructions,
     instruction_program_for_operating_decision,
-    run_cli,
 )
 from agentic_workspace.workspace_runtime_proof import _proof_selection_for_changed_paths
 
