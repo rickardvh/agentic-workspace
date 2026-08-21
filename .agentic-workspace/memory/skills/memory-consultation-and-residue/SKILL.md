@@ -9,10 +9,9 @@ This is a bootstrap-managed core skill shipped with the payload under `.agentic-
 
 Use this skill when a workflow needs an explicit Memory answer without turning Memory into a task tracker.
 
-It makes four decisions visible:
+It makes three decisions visible:
 
-- whether Memory candidates were discovered
-- whether a compact Memory fact was projected into the current decision
+- whether Memory was consulted
 - whether durable residue exists
 - where reusable learning or improvement pressure should route
 
@@ -27,18 +26,12 @@ It makes four decisions visible:
 2. Classify `memory_consultation_status`:
    - `not_checked`: no routing or Memory index was inspected
    - `checked_none`: routing was inspected and no relevant note was found
-   - `relevant_notes_found`: task-relevant candidates were discovered; this is not proof of consultation or application
+   - `relevant_notes_found`: existing notes informed the work
    - `capture_candidate`: a durable lesson may belong in Memory
    - `routed_elsewhere`: the residue belongs in Planning, docs, tests, contracts, config, review, or an issue
    - `dismissed`: the signal is one-off or too weak to keep
    - `follow_up_required`: the decision needs a later owner or proof
-3. Inspect `memory_decision_packet.use.status` when present:
-   - `no-match`: no applicable Memory contribution was selected
-   - `candidate-only`: applicability remains unresolved; use the one bounded resolver
-   - `projected`: the listed compact fact identities and guidance are already in the current decision
-   - `stale` or `unavailable`: do not rely on the contribution without refreshing its authority
-   - `dismissed`: an explicit disposition rejected the candidate
-4. Classify `durable_residue_decision`:
+3. Classify `durable_residue_decision`:
    - `memory`
    - `planning`
    - `docs`
@@ -49,15 +42,15 @@ It makes four decisions visible:
    - `issue`
    - `dismissed`
    - `none_found`
-5. Classify `improvement_signal_status` when a repeated correction, missing guardrail, or workflow friction appears:
+4. Classify `improvement_signal_status` when a repeated correction, missing guardrail, or workflow friction appears:
    - `passive`
    - `accumulating`
    - `routed`
    - `promoted`
    - `stale`
    - `resolved`
-6. Keep the proof separate from the write decision. Passing tests can prove behavior, but they do not prove a candidate reached the decision, that Memory caused success, or that a memory write is appropriate.
-7. If the answer is `memory`, use `memory-capture` for the actual write. If the answer is `routed_elsewhere`, name the owning surface and do not create a memory note just to show activity.
+5. Keep the proof separate from the write decision. Passing tests can prove behavior, but it does not prove Memory residue exists or that a memory write is appropriate.
+6. If the answer is `memory`, use `memory-capture` for the actual write. If the answer is `routed_elsewhere`, name the owning surface and do not create a memory note just to show activity.
 
 ## Guardrails
 
@@ -66,7 +59,6 @@ It makes four decisions visible:
 - Do not bulk-read Memory to prove diligence.
 - Do not capture every chat correction, task step, validation transcript, backlog item, or plan history.
 - Do not call `checked_none` unless the index, manifest route, or structured memory route was actually inspected.
-- Do not call candidate discovery `consulted`, `pulled`, or `applied`; only a listed decision contribution is projected use.
 - Do not call `dismissed` when the same issue has repeated or an explicit invariant/runbook/check would prevent rediscovery.
 - Do not overwrite Planning closeout. Planning owns active intent, sequencing, issue linkage, and completion claims.
 - Do not overwrite canonical docs, tests, contracts, or config when the durable fix belongs there.
