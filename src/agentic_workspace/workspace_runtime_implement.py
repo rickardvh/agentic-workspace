@@ -43,7 +43,6 @@ from agentic_workspace.reporting_support import (
     evidence_bundle_payload,
     message_economy_payload,
     state_delta_core_payload,
-    visible_state_delta_response_payload,
 )
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.runtime_source_review import (
@@ -134,7 +133,6 @@ from agentic_workspace.workspace_runtime_core import (
     _test_strategy_check_payload,
     _tiny_acceptance_payload,
     _tiny_acceptance_reconciliation,
-    _tiny_action_effect,
     _tiny_adaptive_routing_payload,
     _tiny_generated_surface_trust,
     _tiny_objective_drift,
@@ -2113,12 +2111,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "current_decision": current_decision,
         "message_economy": state_delta_economy,
         "evidence_bundle": state_delta_evidence,
-        "visible_state_delta_response": visible_state_delta_response_payload(
-            surface="implementation",
-            current_decision=current_decision,
-            message_economy=state_delta_economy,
-            evidence_bundle=state_delta_evidence,
-        ),
         "proof": {
             "kind": payload.get("proof", {}).get("kind", "proof-selection/v1")
             if isinstance(payload.get("proof"), dict)
@@ -2215,19 +2207,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "inspect_files": payload.get("inspect_files", []),
                 "warnings": path_warnings,
             },
-            "context_authority_projection": {
-                key: payload.get("context_authority_projection", {}).get(key)
-                for key in (
-                    "kind",
-                    "status",
-                    "consumer",
-                    "registry_revision",
-                    "changed_path_count",
-                    "missing_required_surfaces",
-                )
-                if isinstance(payload.get("context_authority_projection"), dict) and key in payload.get("context_authority_projection", {})
-            }
-            | {"detail_selector": "context_authority_projection"},
             "task_intent": {
                 "status": payload.get("task_intent", {}).get("status", "absent")
                 if isinstance(payload.get("task_intent"), dict)
@@ -2286,20 +2265,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     if optimization_posture.get("source_routed_path_count", 0)
                     else {}
                 ),
-            },
-            "generated_surface_trust": {
-                "status": payload.get("generated_surface_trust", {}).get("status", "not-applicable")
-                if isinstance(payload.get("generated_surface_trust"), dict)
-                else "not-applicable",
-                "changed_path_count": payload.get("generated_surface_trust", {}).get("changed_path_count", 0)
-                if isinstance(payload.get("generated_surface_trust"), dict)
-                else 0,
-                "action_effect": _tiny_action_effect(
-                    payload.get("generated_surface_trust", {}).get("action_effect", {}), include_allowed=False
-                )
-                if isinstance(payload.get("generated_surface_trust"), dict)
-                else {},
-                "detail_selector": "generated_surface_trust",
             },
             "architecture_principles": _architecture_principles_payload(
                 target_root=target_root,
@@ -2592,11 +2557,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         ):
             compact_gate.pop("candidate_pressure", None)
             compact_gate.pop("issue_scope_evidence", None)
-        if not (
-            isinstance(generated_surface_trust, dict)
-            and generated_surface_trust.get("status") == "present"
-            and compact_gate.get("status") in {"clear", "satisfied"}
-        ):
+        if compact_gate.get("status") not in {"clear", "satisfied"}:
             projected["context"]["planning_safety_gate"] = compact_gate
     if stale_startup_route:
         projected["startup_route_rebind"] = startup_route_rebind

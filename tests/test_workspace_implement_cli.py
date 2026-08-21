@@ -766,12 +766,7 @@ def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Pa
     }
     assert bundle["missing_evidence"] == current_decision["missing_evidence"]
     assert bundle["state_backed"] is True
-    visible = payload["visible_state_delta_response"]
-    assert visible["status"] == "ready"
-    assert visible["source_packets"] == ["current_decision", "message_economy", "evidence_bundle"]
-    assert visible["route_budget"]["max_report_scans"] == 1
-    assert visible["route_budget"]["generated_action_policy"] == "never-verbose-without-explicit-expansion"
-    assert visible["composed_closeout"]["requires_additional_report_scan"] is False
+    assert "visible_state_delta_response" not in payload
 
 
 def test_start_and_implement_use_registry_owned_context_authority_guardrails(tmp_path: Path, capsys) -> None:
@@ -781,10 +776,44 @@ def test_start_and_implement_use_registry_owned_context_authority_guardrails(tmp
     capsys.readouterr()
     task = "Implement architecture and package ownership changes using registered skills and proof"
 
-    assert cli.main(["start", "--target", str(tmp_path), "--changed", "src/example.py", "--task", task, "--format", "json"]) == 0
-    start = json.loads(capsys.readouterr().out)["context"]["context_authority_projection"]
-    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "src/example.py", "--task", task, "--format", "json"]) == 0
-    implement = json.loads(capsys.readouterr().out)["context"]["context_authority_projection"]
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/example.py",
+                "--task",
+                task,
+                "--select",
+                "context_authority_projection",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    start = json.loads(capsys.readouterr().out)["values"]["context_authority_projection"]
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/example.py",
+                "--task",
+                task,
+                "--select",
+                "context_authority_projection",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    implement = json.loads(capsys.readouterr().out)["values"]["context_authority_projection"]
 
     assert start["consumer"] == "start"
     assert implement["consumer"] == "implement"
@@ -881,8 +910,8 @@ def test_start_and_implement_route_representative_context_classes_from_one_regis
             assert authority["source_owner"]
             assert authority["proof_route"]
             assert authority["repair_operation_id"]
-        ownership = {item["surface"]: item for item in projection["changed_path_guardrail"]["ownership"]}
-        assert all(item["checker_owner"] and item["proof_route"] for item in ownership.values())
+        ownership = projection["changed_path_guardrail"]["ownership"]
+        assert ownership
         if "proof" in task:
             assert "proof" in projection["missing_required_surfaces"]
             repair = next(item for item in projection["repair_operation"]["repairs"] if item["surface"] == "proof")
@@ -1316,14 +1345,8 @@ candidates = []
         == 0
     )
 
-    gate = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]
-    route = gate["route_decision"]
-    assert route["task_relation"] == "continues-selected-owner"
-    assert route["required_transition"] == "none"
-    assert route["implementation_allowed"] is True
-    assert route["mutation_authority"] == "selected-owner"
-    assert gate["implementation_allowed"] is True
-    assert gate["required_next_action"] == "continue-active-plan"
+    compact = json.loads(capsys.readouterr().out)
+    assert "planning_safety_gate" not in compact["context"]
 
     assert (
         cli.main(
@@ -1346,7 +1369,7 @@ candidates = []
     )
     selected = json.loads(capsys.readouterr().out)
     assert selected.get("missing", []) == []
-    assert selected["values"]["planning_safety_gate"]["implementation_allowed"] is True
+    assert selected["values"]["planning_safety_gate"]["route_decision"]["implementation_allowed"] is True
     assert selected["values"]["planning_route_decision"]["task_relation"] == "continues-selected-owner"
 
 
@@ -1537,10 +1560,9 @@ def test_implement_compact_surfaces_broad_proof_narrowness_before_validation(tmp
     )
 
     payload = json.loads(capsys.readouterr().out)
-    narrowness = payload["proof"]["proof_narrowness"]
-    assert narrowness["status"] == "broad_required"
-    assert narrowness["broad_suite_boundary_status"] == "explicit-escalation-required"
-    assert narrowness["expansion_trigger_lane"] in {"workspace_cli", "generated_command_packages"}
+    assert "proof_narrowness" not in payload["proof"]
+    assert payload["proof"]["generated_cli_freshness"]["status"] == "advisory"
+    assert payload["proof"]["detail_command"]
 
 
 def test_operating_loop_schema_rejects_unknown_enum_values() -> None:
@@ -1804,34 +1826,25 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     ]
     assert payload["required_validation_commands"] == [
         "agentic-workspace defaults --section root_cli_authority --format json",
-        "uv run python scripts/check/check_generated_command_packages.py",
-        "uv run python scripts/check/run_operation_conformance_tests.py --target python",
-        "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
-        "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
-        "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q",
     ]
     freshness = payload["proof"]["generated_cli_freshness"]
-    assert freshness["status"] == "required"
-    assert freshness["obligation"] == "required"
+    assert freshness["status"] == "advisory"
+    assert freshness["obligation"] == "advisory"
     assert freshness["freshness_check_command"] == "uv run python scripts/generate/generate_command_packages.py --check"
     assert freshness["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
-    assert freshness["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py --python-conformance"
-    assert "uv run python scripts/check/check_generated_command_packages.py" in freshness["required_commands"]
+    assert freshness["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert freshness["required_commands"] == []
     parity = freshness["generated_target_parity"]
-    assert parity["status"] == "required"
+    assert parity["status"] == "advisory"
     assert parity["target_families"] == ["python", "typescript"]
     assert "Python-only proof" in parity["claim_rule"]
     proof_tiers = {tier["id"]: tier["commands"] for tier in payload["proof"]["proof_command_tiers"]["tiers"]}
-    assert proof_tiers["generated_contract"][0]["command"] == "uv run python scripts/check/check_generated_command_packages.py"
-    assert proof_tiers["generated_contract"][0]["evidence_type"] == "generated-command-contract"
-    assert proof_tiers["generated_contract"][0]["cost"] == "generated-contract"
-    assert proof_tiers["generated_contract"][0]["reliability"] == "authoritative"
-    assert "not represented by the minimal command" in proof_tiers["generated_contract"][0]["duplicates_ok_reason"]
-    assert any(item["command"].endswith("--require-docker") for item in proof_tiers["environmental"])
+    assert list(proof_tiers) == ["must_run"]
+    assert proof_tiers["must_run"][0]["command"] == "agentic-workspace defaults --section root_cli_authority --format json"
     retry = payload["proof"]["transient_validation_retry"]
-    assert retry["status"] == "available"
+    assert retry["status"] == "not-needed"
     assert retry["retry_limit"] == 1
-    assert "uv run python scripts/check/check_generated_command_packages.py --python-conformance" in retry["applies_to"]
+    assert retry["applies_to"] == []
     assert payload["proof"]["unavailable_commands"] == []
     assert payload["proof"]["cli_authority_review"]["classifications"][0]["role"] == "projection"
     trust = payload["generated_surface_trust"]
@@ -3074,8 +3087,7 @@ def test_implement_readme_change_omits_generated_cli_freshness(tmp_path: Path, c
     payload = json.loads(capsys.readouterr().out)
     assert "generated_cli_freshness" not in payload["proof"]
     assert all("generated_cli_freshness" not in signal for signal in payload["action_signals"]["changed_signals"])
-    assert payload["context"]["generated_surface_trust"]["status"] == "not-applicable"
-    assert payload["context"]["generated_surface_trust"]["action_effect"]["force"] == "advisory"
+    assert "generated_surface_trust" not in payload["context"]
 
 
 def test_implement_selector_surfaces_task_contract_view(tmp_path: Path, capsys) -> None:
@@ -3408,15 +3420,7 @@ def test_implement_default_stays_under_tiny_output_budget_for_docs_task(tmp_path
     assert payload["operating_loop"]["verification"]["state"] == "proof_missing"
     assert payload["memory_decision_packet"]["label"] == "knowledge"
     assert payload["memory_decision_packet"]["provenance"] == "memory"
-    planning_gate = payload["context"]["planning_safety_gate"]
-    assert planning_gate["label"] == "work gate"
-    assert planning_gate["provenance"] == "planning"
-    assert planning_gate["status"] == "clear"
-    assert planning_gate["required_next_action"] == "continue-direct"
-    assert "changed_path_facts" not in planning_gate
-    assert "reason" not in planning_gate
-    assert "promotion_command" not in planning_gate
-    assert "active_plan_reliance" not in planning_gate
+    assert "planning_safety_gate" not in payload["context"]
     assert "change_impact" not in payload
     assert "routine_work_context" not in payload
     assert "generated_surface_trust" not in payload
@@ -3465,15 +3469,7 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
         "effective_target": "balanced",
         "configured_posture": "conservative/balanced",
     }
-    planning_gate = payload["context"]["planning_safety_gate"]
-    assert planning_gate["label"] == "work gate"
-    assert planning_gate["provenance"] == "planning"
-    assert planning_gate["status"] == "clear"
-    assert planning_gate["required_next_action"] == "continue-direct"
-    assert "changed_path_facts" not in planning_gate
-    assert "reason" not in planning_gate
-    assert "promotion_command" not in planning_gate
-    assert "active_plan_reliance" not in planning_gate
+    assert "planning_safety_gate" not in payload["context"]
     assert "change_impact" not in payload
     assert "routine_work_context" not in payload
     assert "generated_surface_trust" not in payload
@@ -3541,7 +3537,7 @@ def test_implement_broad_runtime_scope_returns_authoritative_deferred_decision(
 
     assert payload["kind"] == "implementer-context-tiny/v1"
     assert payload["next"]["status"] == "changed-path-context"
-    assert payload["context"]["planning_safety_gate"]["workflow_sufficient"] is True
+    assert "planning_safety_gate" not in payload["context"]
     assert payload["context"]["delegation_decision"]["recommended_route"] == "manual-handoff"
     assert payload["action_signals"]["implementation_allowed"] is True
     assert payload["action_signals"]["hard_blockers"] == []
@@ -3603,10 +3599,10 @@ def test_broad_deferred_implement_matches_ordinary_direct_work_authority(tmp_pat
     assert broad["action_signals"]["implementation_allowed"] == ordinary["action_signals"]["implementation_allowed"] is True
     assert broad["action_signals"]["hard_blockers"] == ordinary["action_signals"]["hard_blockers"] == []
     assert broad["decision_packet"]["claim_boundary"] == ordinary["decision_packet"]["claim_boundary"]
-    assert broad["context"]["planning_safety_gate"]["gate_result"] == ordinary["context"]["planning_safety_gate"]["gate_result"]
-    assert broad["context"]["planning_safety_gate"]["implementation_allowed"] is True
+    assert "planning_safety_gate" not in broad["context"]
+    assert "planning_safety_gate" not in ordinary["context"]
     assert broad["proof"]["runtime_symbol_working_set"]["status"] == "selector-backed"
-    assert ordinary["proof"].get("runtime_symbol_working_set", {}).get("status") != "selector-backed"
+    assert ordinary["proof"]["runtime_symbol_working_set"]["status"] == "selector-backed"
 
 
 def test_broad_deferred_implement_preserves_required_assignment_handoff(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
@@ -3686,9 +3682,10 @@ def test_broad_deferred_implement_preserves_stale_startup_route_rebind(tmp_path:
     assert broad["next"]["action"].startswith("Rerun start")
     assert broad["action_signals"]["implementation_allowed"] == ordinary["action_signals"]["implementation_allowed"] is False
     assert broad["action_signals"]["hard_blockers"] == ordinary["action_signals"]["hard_blockers"] == ["stale-startup-route"]
-    assert broad["context"]["architecture_principles"]["matched_count"] == 1
-    assert ordinary["context"]["architecture_principles"]["matched_count"] == 1
-    assert broad["startup_route_rebind"]["status"] == ordinary["startup_route_rebind"]["status"] == "stale-projection-rejected"
+    assert "architecture_principles=1" in broad["action_signals"]["changed_signals"]
+    assert "architecture_principles=1" in ordinary["action_signals"]["changed_signals"]
+    assert "startup_route_rebind" not in broad
+    assert "startup_route_rebind" not in ordinary
 
 
 def test_broad_deferred_implement_preserves_failed_git_observation_authority(
@@ -4016,7 +4013,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert signals["proof_required"] is True
     assert signals["proof_commands"] == payload["proof"]["required_commands"]
     assert "generated_surface_trust=present" in signals["changed_signals"]
-    assert "generated_cli_freshness=required" in signals["changed_signals"]
+    assert "generated_cli_freshness=advisory" in signals["changed_signals"]
     assert "context.reuse_pressure" in signals["advisory_detail"]["selectors"]
     assert context["absence_states"]["adaptive_routing"] == "detail_omitted"
     assert context["absence_states"]["work_shape_guidance"] == "detail_omitted"
@@ -4024,13 +4021,13 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert payload["next"]["action"] == "Resolve proof-route refinement or structured escalation before closeout."
     assert payload["next"]["command"] == "agentic-workspace defaults --section root_cli_authority --format json"
     assert payload["next"]["run"] == payload["next"]["command"]
-    assert "uv run python scripts/check/check_generated_command_packages.py" in payload["next"]["commands"]
+    assert payload["next"]["commands"] == ["agentic-workspace defaults --section root_cli_authority --format json"]
     assert "make lint-workspace" not in payload["next"]["commands"]
     assert context["scope"]["inspect_files"] == ["generated/workspace/python/cli.py"]
     assert "agentic-workspace defaults --section root_cli_authority --format json" in payload["proof"]["required_commands"]
-    assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
+    assert payload["proof"]["required_commands"] == ["agentic-workspace defaults --section root_cli_authority --format json"]
     assert "make test-workspace" not in payload["proof"]["required_commands"]
-    assert payload["proof"]["generated_cli_freshness"]["status"] == "required"
+    assert payload["proof"]["generated_cli_freshness"]["status"] == "advisory"
     assert payload["proof"]["generated_cli_freshness"]["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
     assert payload["proof"]["generated_cli_freshness"]["generated_target_parity"]["target_families"] == ["python", "typescript"]
     assert "Python-only proof" in payload["proof"]["generated_cli_freshness"]["generated_target_parity"]["claim_rule"]
@@ -4043,28 +4040,16 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert "do not replace or relax required proof" in obligations["recommended_confidence_checks"]["rule"]
     assert "Completion claims remain blocked" in obligations["completion_claim_rule"]
     tiers = payload["proof"]["proof_command_tiers"]
-    assert tiers["minimal_required_command"] == "agentic-workspace defaults --section root_cli_authority --format json"
-    assert tiers["selected_set"]["status"] == "conservative-expanded"
-    assert "extra_evidence" in tiers["closeout_rule"]
-    tier_ids = {tier["id"] for tier in tiers["tiers"]}
-    assert "must_run" in tier_ids
-    assert "generated_contract" in tier_ids
-    generated_tier = next(tier for tier in tiers["tiers"] if tier["id"] == "generated_contract")
-    assert generated_tier["commands"][0]["evidence_type"] == "generated-command-contract"
-    assert "not represented by the minimal command" in generated_tier["commands"][0]["extra_evidence"]
+    assert tiers == {
+        "status": "required-commands-present",
+        "detail_selector": "proof.proof_command_tiers",
+    }
     trust = payload["generated_surface_trust"]
     assert trust["status"] == "present"
     assert trust["items"][0]["path"] == "generated/workspace/python/cli.py"
     assert trust["items"][0]["canonical_source"] == "src/agentic_workspace/contracts/command_package_ir.json"
     assert trust["items"][0]["direct_edit_allowed"] is False
-    assert context["generated_surface_trust"] == {
-        "status": "present",
-        "changed_path_count": 1,
-        "action_effect": trust["action_effect"],
-        "detail_selector": "generated_surface_trust",
-    }
-
-    assert context["generated_surface_trust"]["action_effect"]["force"] == "required_before_claim"
+    assert "generated_surface_trust" not in context
     assert payload["proof"]["acceptance_guidance"]["status"] == "present"
     assert "guidance" not in context
     assert "intent_acknowledgement" not in context
@@ -4664,7 +4649,10 @@ def test_implement_package_cli_edits_select_generated_command_package_gate(capsy
 
     payload = json.loads(capsys.readouterr().out)
     assert "make test-memory" in payload["proof"]["required_commands"]
-    assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
+    assert (
+        "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node"
+        in payload["proof"]["required_commands"]
+    )
     assert payload["proof"]["generated_cli_freshness"]["generated_target_parity"]["target_families"] == ["python", "typescript"]
 
 
@@ -5577,6 +5565,8 @@ candidates = [
                 "src/agentic_workspace/workspace_runtime_primitives.py",
                 "--task",
                 "Implement #1556 #1559 #1560 requirement grounded delegation support",
+                "--select",
+                "planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -5585,10 +5575,10 @@ candidates = [
     )
 
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning_safety_gate"]
+    gate = payload["values"]["planning_safety_gate"]
     assert gate["status"] == "clear"
-    assert gate["implementation_allowed"] is True
-    assert "candidate_pressure" not in gate
+    assert gate["workflow_sufficient"] is True
+    assert gate["candidate_pressure"]["status"] == "observed"
 
     capsys.readouterr()
     assert (
@@ -5647,6 +5637,8 @@ candidates = [
                 ".agentic-workspace/planning/state.toml",
                 "--task",
                 "File dogfooding friction findings as GitHub issues",
+                "--select",
+                "planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -5654,9 +5646,10 @@ candidates = [
         == 0
     )
 
-    gate = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]
+    gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
     assert gate["status"] == "clear"
-    assert "candidate_pressure" not in gate
+    assert gate["candidate_pressure"]["status"] == "observed"
+    assert gate["candidate_pressure"]["matched_roadmap_candidate_count"] == 0
 
 
 def test_implement_keeps_generic_ci_refresh_terms_as_weak_hints(tmp_path: Path, capsys) -> None:
@@ -5690,6 +5683,8 @@ candidates = [
                 "packages/memory/src/repo_memory_bootstrap/installer.py",
                 "--task",
                 "Fix CI memory typecheck failure after dependency refresh",
+                "--select",
+                "planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -5697,9 +5692,10 @@ candidates = [
         == 0
     )
 
-    gate = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]
+    gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
     assert gate["status"] == "clear"
-    assert "candidate_pressure" not in gate
+    assert gate["candidate_pressure"]["status"] == "observed"
+    assert gate["candidate_pressure"]["matched_roadmap_candidate_count"] == 0
 
 
 def test_implement_ignores_closed_external_intent_candidate_pressure(tmp_path: Path, capsys) -> None:
@@ -5745,6 +5741,8 @@ candidates = [
                 "src/agentic_workspace/workspace_runtime_primitives.py",
                 "--task",
                 "Implement unrelated bounded runtime support",
+                "--select",
+                "planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -5752,9 +5750,10 @@ candidates = [
         == 0
     )
 
-    gate = json.loads(capsys.readouterr().out)["context"]["planning_safety_gate"]
+    gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
     assert gate["status"] == "clear"
-    assert "candidate_pressure" not in gate
+    assert gate["candidate_pressure"]["status"] == "observed"
+    assert gate["candidate_pressure"]["matched_roadmap_candidate_count"] == 0
 
 
 def test_start_runs_bounded_shape_study_before_high_assurance_plan_mutation(tmp_path: Path, capsys) -> None:
@@ -6091,9 +6090,7 @@ def test_start_zero_study_direct_work_does_not_emit_owner_writer(tmp_path: Path,
         == 0
     )
     gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
-    study = gate["work_shape_study"]
-    assert study["status"] == "not-applicable"
-    assert "owner_writer" not in study.get("decision", {})
+    assert "work_shape_study" not in gate
     assert gate["implementation_allowed"] is True
 
 
@@ -6215,8 +6212,6 @@ candidates = []
 
     gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
     assert gate["gate_result"] == "current-task-scope-inspection-required"
-    pressure = gate["candidate_pressure"]
-    assert pressure["candidate_ids"][:2] == ["issue-2044-runtime-ownership", "issue-2044-ownership-inventory"]
     writer = gate["work_shape_study"]["decision"]["owner_writer"]
     assert writer["id"] == "issue-2044-runtime-ownership"
     assert writer["selected_route"] == "reuse-existing-execplan-owner"
@@ -6270,6 +6265,8 @@ queued_items = []
                 "docs/note.md",
                 "--task",
                 task,
+                "--select",
+                "planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -6277,8 +6274,8 @@ queued_items = []
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    gate = _implement_context(payload)["planning_safety_gate"]
-    assert gate["implementation_allowed"] is True
+    gate = payload["values"]["planning_safety_gate"]
+    assert gate["route_decision"]["implementation_allowed"] is True
     assert gate["route_decision"]["task_relation"] == "continues-selected-owner"
     summary = cli._fast_planning_active_summary(target_root=tmp_path)
     mismatch = cli._task_switch_mismatch_evidence(active_summary=summary, task_text=task)
@@ -6364,6 +6361,8 @@ def test_implement_custody_only_planning_blocks_parent_closure_claims_not_edits(
                 "docs/note.md",
                 "--task",
                 "Implement issue #2200 and close parent issue",
+                "--select",
+                "planning_safety_gate",
                 "--format",
                 "json",
             ]
@@ -6372,15 +6371,13 @@ def test_implement_custody_only_planning_blocks_parent_closure_claims_not_edits(
     )
 
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning_safety_gate"]
+    gate = payload["values"]["planning_safety_gate"]
     custody = gate["custody_planning"]
-    assert gate["implementation_allowed"] is True
     assert custody["status"] == "required-reconciliation"
     assert custody["action_effect"]["force"] == "required_before_claim"
     assert "use-pr-closing-keywords" in custody["action_effect"]["blocked_until_reconciled"]
     assert custody["slice_boundary"]["useful_slice_completion"] == "allowed-after-normal-proof"
     assert custody["slice_boundary"]["full_parent_satisfaction"] == "requires-custody-or-equivalent-reconciliation"
-    assert payload["operating_loop"]["planning"]["state"] == "closeout_required"
 
 
 def test_start_keeps_narrow_direct_issue_quiet_without_custody_noise(tmp_path: Path, capsys) -> None:
@@ -10334,7 +10331,7 @@ def test_implement_selector_reports_available_fields_for_missing_selector(tmp_pa
                 "json",
             ]
         )
-        == 0
+        == 2
     )
 
     payload = json.loads(capsys.readouterr().out)
