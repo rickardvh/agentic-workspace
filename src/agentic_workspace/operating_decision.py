@@ -1705,6 +1705,12 @@ def compile_projection_surface_operating_decision(
     ]
     material_inputs = _as_dict(admitted_input.get("material_inputs"))
     instruction_mechanisms, instruction_capabilities = _projection_instruction_mechanisms(payload, posture)
+    task_posture_packet = _as_dict(payload.get("task_posture_packet")) or _as_dict(payload_context.get("task_posture_packet"))
+    instruction_program = (
+        _as_dict(payload.get("instruction_program"))
+        or _as_dict(payload_context.get("instruction_program"))
+        or _as_dict(task_posture_packet.get("instruction_program"))
+    )
     decision = compile_operating_decision(
         inputs={
             "consumer": consumer,
@@ -1730,6 +1736,7 @@ def compile_projection_surface_operating_decision(
             "memory_outcomes": [item for item in _as_list(payload.get("memory_outcomes")) if isinstance(item, dict)],
             "instruction_mechanisms": instruction_mechanisms,
             "instruction_capabilities": instruction_capabilities,
+            "instruction_program": instruction_program,
         }
     )
     surface_input_revision = str(decision.get("admitted_input_revision") or "")

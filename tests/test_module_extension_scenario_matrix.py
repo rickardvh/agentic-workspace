@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 
 from agentic_workspace import workspace_runtime_core as runtime
-from agentic_workspace.instruction_clause_ir import compile_instruction_program, instruction_program_from_existing_mechanisms
 from agentic_workspace.module_contract import (
     DiscoveredModule,
     ModuleContractError,
@@ -17,7 +16,7 @@ from agentic_workspace.module_contract import (
     module_contribution,
     validate_module_contract,
 )
-from agentic_workspace.operating_decision import _projection_instruction_mechanisms
+from agentic_workspace.operating_decision import compile_projection_surface_operating_decision
 
 MATRIX_PATH = Path("tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-matrix.json")
 FIXTURE_PATH = Path("tests/fixtures/external_signals_module/src/external_signals/__init__.py")
@@ -214,17 +213,54 @@ def test_independent_module_reaches_the_ordinary_posture_packet_only_when_releva
     assert irrelevant["module_contributions"] == []
     assert {"source": "module_registry", "matched_module_count": 0} in irrelevant["provenance"]
 
-    mechanisms, capabilities = _projection_instruction_mechanisms({"task_posture_packet": relevant}, {})
-    program = instruction_program_from_existing_mechanisms({"instruction_mechanisms": mechanisms, "instruction_capabilities": capabilities})
-    assert [fact["id"] for fact in program["facts"]] == ["external-signals.build-risk"]
-    program["clauses"] = [
-        {
-            "id": "repo:surface-external-risk",
-            "source": {"owner": "repo-scoped-instructions", "revision": "policy-r1", "current": True},
-            "when": {"fact": "external-signals.build-risk", "operator": "is", "value": "elevated"},
-            "effects": [{"kind": "surface", "target": "surface:external-build-risk"}],
-            "authority": {"effects": ["surface"], "target_patterns": ["surface:external-build-risk"]},
-        }
-    ]
-    compiled = compile_instruction_program(program)
-    assert compiled["effects"]["surface"][0]["target"] == "surface:external-build-risk"
+    repo_program = {
+        "kind": "agentic-workspace/instruction-program/v1",
+        "facts": [],
+        "clauses": [
+            {
+                "id": "repo:restrict-completion-on-external-risk",
+                "source": {"owner": "repo-instruction-owner", "revision": "policy-r1", "current": True},
+                "when": {"fact": "external-signals.build-risk", "operator": "is", "value": "elevated"},
+                "effects": [{"kind": "restrict", "target": "claim:claim-work-complete"}],
+                "authority": {"effects": ["restrict"], "target_patterns": ["claim:claim-work-complete"]},
+            }
+        ],
+        "capabilities": [],
+        "source_diagnostics": [],
+    }
+
+    def decision(*, consumer: str, posture: dict) -> dict:
+        return compile_projection_surface_operating_decision(
+            payload={"task_posture_packet": posture, "instruction_program": repo_program},
+            admitted_input={
+                "status": "admitted",
+                "consumer": consumer,
+                "input_id": f"{consumer}:module-fact-scenario",
+                "admitted_input_revision": f"sha256:{consumer}",
+                "input_revisions": {"task": "task-r1"},
+                "material_inputs": {
+                    "task": "Inspect the external build signal and refresh the selected revision if needed.",
+                    "changed": [],
+                },
+            },
+            consumer=consumer,
+        )
+
+    for consumer in ("start", "implement"):
+        relevant_decision = decision(consumer=consumer, posture=relevant)
+        assert relevant_decision["blocked_claim_classes"] == ["claim-work-complete"]
+        assert relevant_decision["instruction_clause_projection"]["evaluations"][0]["condition"]["result"] == "true"
+
+        irrelevant_decision = decision(consumer=consumer, posture=irrelevant)
+        assert irrelevant_decision["blocked_claim_classes"] == []
+        assert irrelevant_decision["instruction_clause_projection"]["effects"]["restrict"] == []
+
+        stale = json.loads(json.dumps(relevant))
+        stale["module_contributions"][0]["facts"][0]["source"]["current"] = False
+        stale_decision = decision(consumer=consumer, posture=stale)
+        assert stale_decision["blocked_claim_classes"] == []
+
+        removed = json.loads(json.dumps(relevant))
+        removed["module_contributions"][0].pop("facts")
+        removed_decision = decision(consumer=consumer, posture=removed)
+        assert removed_decision["blocked_claim_classes"] == []

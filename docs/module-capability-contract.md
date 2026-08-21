@@ -83,7 +83,9 @@ Workspace validates identity and compatibility before using a contribution. Sele
 
 Only enabled, installed, compatible, and relevant modules contribute to the current operating decision. Irrelevant modules and their facts remain absent from first-line context. A contribution may provide facts or route resources, skills, or operations, but its authority remains bounded by `ownership.authority_exclusions`.
 
-Fact ids and types are stable contract declarations. Each value names the module owner plus a non-empty revision and explicit currentness bit. Workspace admits these values directly into the existing instruction IR; it does not persist them in a central fact store. A repo-owned bounded clause may consume a current fact, while stale revisions evaluate as unknown. Module operations may return refreshed values only for declared fact ids and types, preserving reconciliation through the module owner.
+Fact ids and types are stable contract declarations. Each value names the module owner plus a non-empty revision and explicit currentness bit. Workspace admits these values directly into the existing instruction IR; it does not persist them in a central fact store. A repo-owned bounded clause may consume a current fact, while stale revisions evaluate as unknown. The ordinary start and implement compilers merge that existing source-owned program with relevant module facts before compiling the operating decision.
+
+When a module operation includes `facts`, the list is the module owner's reconciled current snapshot: values may refresh declared ids and types, and an empty list removes the facts from the next contribution. An operation result that omits `facts` leaves the current module contribution unchanged. This reconciliation updates the discovered module owner's contract in memory; durable refresh across discovery or process boundaries remains the module owner's responsibility.
 
 Typed operations are invoked through the generic module-operation boundary. Results must contain their guaranteed fields and may report only declared effect classes. Module-local success cannot set unrelated mutation, proof, parent-intent, or completion authority.
 

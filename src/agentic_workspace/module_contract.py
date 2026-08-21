@@ -316,6 +316,7 @@ def invoke_module_operation(discovered: DiscoveredModule, *, operation_id: str, 
     if widened:
         raise ModuleContractError(f"operation {operation_id} reported undeclared effects: {', '.join(widened)}")
     declared_facts = {str(item.get("id")): dict(item) for item in discovered.contract.get("facts", [])}
+    facts_reported = "facts" in payload
     reported_facts = payload.get("facts", [])
     if not isinstance(reported_facts, list) or any(not isinstance(item, Mapping) for item in reported_facts):
         raise ModuleContractError(f"operation {operation_id} facts must be a list of objects")
@@ -329,8 +330,9 @@ def invoke_module_operation(discovered: DiscoveredModule, *, operation_id: str, 
         if normalized["type"] != declared_facts[fact_id].get("type"):
             raise ModuleContractError(f"operation {operation_id} changed declared fact type: {fact_id}")
         normalized_facts.append(normalized)
-    if reported_facts:
+    if facts_reported:
         payload["facts"] = normalized_facts
+        discovered.contract["facts"] = [dict(item) for item in normalized_facts]
     return {
         "kind": "agentic-workspace/module-operation-result/v1",
         "module": discovered.name,

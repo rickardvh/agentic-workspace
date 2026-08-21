@@ -254,6 +254,24 @@ def test_module_operation_can_refresh_only_declared_fact_identity_and_type() -> 
     )
     result = invoke_module_operation(discovered, operation_id="signals.refresh", arguments={})
     assert result["result"]["facts"][0]["source"]["revision"] == "r2"
+    refreshed = module_contribution(discovered.contract, task="inspect build signal", changed_paths=[])
+    assert refreshed is not None
+    assert refreshed["facts"][0]["value"] == "clear"
+    assert refreshed["facts"][0]["source"]["revision"] == "r2"
+
+    discovered.operations["signals.refresh"] = lambda _arguments: {"status": "ok"}
+    invoke_module_operation(discovered, operation_id="signals.refresh", arguments={})
+    unchanged = module_contribution(discovered.contract, task="inspect build signal", changed_paths=[])
+    assert unchanged is not None
+    assert unchanged["facts"][0]["source"]["revision"] == "r2"
+
+    discovered.operations["signals.refresh"] = lambda _arguments: {"status": "ok", "facts": []}
+    invoke_module_operation(discovered, operation_id="signals.refresh", arguments={})
+    removed = module_contribution(discovered.contract, task="inspect build signal", changed_paths=[])
+    assert removed is not None
+    assert "facts" not in removed
+
+    discovered.contract["facts"] = contract["facts"]
     discovered.operations["signals.refresh"] = lambda _arguments: {
         "status": "ok",
         "facts": [
@@ -390,6 +408,14 @@ def test_separately_installed_out_of_tree_module_uses_only_the_public_entry_poin
             }
         ],
     }
+    refreshed_contribution = module_contribution(
+        installed["external-signals"].contract,
+        task="inspect external build signal",
+        changed_paths=[],
+    )
+    assert refreshed_contribution is not None
+    assert refreshed_contribution["facts"][0]["value"] == "clear"
+    assert refreshed_contribution["facts"][0]["source"]["revision"] == "r7"
 
     descriptors = {
         name: runtime._external_module_descriptor(discovered) for name, discovered in installed.items() if discovered.status == "available"
