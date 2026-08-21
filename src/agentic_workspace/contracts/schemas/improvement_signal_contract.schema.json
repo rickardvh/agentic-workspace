@@ -21,6 +21,7 @@
     "lifecycle_states",
     "lifecycle_rule",
     "retirement_criteria_fields",
+    "bounded_adaptation",
     "immediate_actions",
     "retention",
     "destinations",
@@ -251,6 +252,29 @@
         "description": "One entry in the retirement criteria fields list."
       },
       "description": "Fields that explain what retires or promotes an improvement pressure record."
+    },
+    "bounded_adaptation": {
+      "type": "object",
+      "required": [
+        "kind",
+        "required_fields",
+        "automatic_promotion_requires",
+        "owner_admission_required_for",
+        "simulation_rejects",
+        "persistence_rule",
+        "quiet_rule"
+      ],
+      "properties": {
+        "kind": {"const": "agentic-workspace/bounded-adaptation-candidate/v1"},
+        "required_fields": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "automatic_promotion_requires": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "owner_admission_required_for": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "simulation_rejects": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "persistence_rule": {"type": "string", "minLength": 1},
+        "quiet_rule": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false,
+      "description": "Contract for deriving safe source-owned adaptations from admitted improvement signals."
     },
     "immediate_actions": {
       "type": "array",

@@ -119,15 +119,15 @@
       ],
       "revision": 1,
       "selectors": {
-        "issue_refs": [
-          "#1969"
-        ],
         "commands": [
           "start",
           "implement",
           "summary",
           "handoff",
           "closeout_claim_boundary"
+        ],
+        "issue_refs": [
+          "#1969"
         ],
         "profiles": [
           "tiny",
@@ -142,75 +142,285 @@
       "updated_at": "2026-07-25T22:02:41Z"
     },
     {
-      "id": "target-guidance-effectiveness-2217",
-      "revision": 1,
-      "lifecycle": "collecting",
-      "question": "Does promoted target guidance reduce repeated correction and repair cost without leaking into unrelated agents, tasks, repositories, or phases?",
-      "subject": {
-        "type": "agent-guidance-capability",
-        "ref": "#2217"
-      },
-      "criteria": [
-        {
-          "id": "selective-routing",
-          "type": "coverage",
-          "question": "Is guidance surfaced only for the matching target and structured applicability context?",
-          "success_condition": "Admitted observations cover matching and unrelated target/task/scope/repository/phase routes with no broad dump.",
-          "required": true
-        },
-        {
-          "id": "compliance-effect",
-          "type": "qualitative",
-          "question": "Does appropriate post-surfacing evidence show the desired behavior or correct escalation?",
-          "success_condition": "At least two authority-ranked observations show surfaced-followed or correct-escalation without relying on agent promise alone.",
-          "required": true
-        },
-        {
-          "id": "recovery-and-cost",
-          "type": "qualitative",
-          "question": "Do repeated violations, recovery, and retirement produce lower total repair cost with honest contextual consequences?",
-          "success_condition": "The owner reviews violation and recovery evidence, consequence transitions, unrelated-class exclusion, and ordinary no-guidance overhead.",
-          "required": true
-        }
-      ],
-      "selectors": {
-        "issue_refs": ["#2217", "#2221", "#2222", "#2223", "#2224"],
-        "operation_ids": ["correction-event.submit", "agent-guidance.promote"],
-        "skill_ids": ["workspace-operating-loop"],
-        "phases": ["planning", "implementation", "proof", "review", "closeout"]
-      },
-      "collection_policy": {
-        "mode": "local-first",
-        "minimum_observations": 5,
-        "retention": "latest-current-per-target-context-and-criterion"
-      },
-      "decision_owner": {
-        "class": "maintainer",
-        "id": "workspace-maintainer"
-      },
-      "evidence_sources": [
-        {"class": "local-guidance-observations", "id": ".agentic-workspace/local/guidance-observations.json"},
-        {"class": "review-or-human", "id": "admitted-correction-and-compliance-evidence"},
-        {"class": "aw-proof", "id": "guidance-routing-and-consequence-proof"}
-      ],
-      "report_sinks": [
-        {"class": "issue-or-report", "id": "#2217"},
-        {"class": "issue-or-report", "id": "#2224"}
-      ],
-      "conclusion_policy": {
-        "rule": "maintainer reviews all required current target/context-bound results",
-        "terminal_states": ["satisfied", "contradicted", "inconclusive", "superseded"]
-      },
       "action_policy": {
         "material_negative_finding": "create-or-reopen-bounded-guidance-or-orchestration-follow-up",
         "positive_conclusion": "retain or weaken guidance using revision-guarded lifecycle operations"
       },
       "admission_contract": {
-        "status": "fail-closed-for-bound-results",
-        "reject_when": ["target-revision-mismatch", "guidance-not-surfaced", "unrelated-context", "self-report-only", "stale-or-superseded-guidance"]
+        "reject_when": [
+          "target-revision-mismatch",
+          "guidance-not-surfaced",
+          "unrelated-context",
+          "self-report-only",
+          "stale-or-superseded-guidance"
+        ],
+        "status": "fail-closed-for-bound-results"
+      },
+      "collection_policy": {
+        "minimum_observations": 5,
+        "mode": "local-first",
+        "retention": "latest-current-per-target-context-and-criterion"
+      },
+      "conclusion_policy": {
+        "rule": "maintainer reviews all required current target/context-bound results",
+        "terminal_states": [
+          "satisfied",
+          "contradicted",
+          "inconclusive",
+          "superseded"
+        ]
       },
       "created_at": "2026-08-14T00:00:00Z",
+      "criteria": [
+        {
+          "id": "selective-routing",
+          "question": "Is guidance surfaced only for the matching target and structured applicability context?",
+          "required": true,
+          "success_condition": "Admitted observations cover matching and unrelated target/task/scope/repository/phase routes with no broad dump.",
+          "type": "coverage"
+        },
+        {
+          "id": "compliance-effect",
+          "question": "Does appropriate post-surfacing evidence show the desired behavior or correct escalation?",
+          "required": true,
+          "success_condition": "At least two authority-ranked observations show surfaced-followed or correct-escalation without relying on agent promise alone.",
+          "type": "qualitative"
+        },
+        {
+          "id": "recovery-and-cost",
+          "question": "Do repeated violations, recovery, and retirement produce lower total repair cost with honest contextual consequences?",
+          "required": true,
+          "success_condition": "The owner reviews violation and recovery evidence, consequence transitions, unrelated-class exclusion, and ordinary no-guidance overhead.",
+          "type": "qualitative"
+        }
+      ],
+      "decision_owner": {
+        "class": "maintainer",
+        "id": "workspace-maintainer"
+      },
+      "evidence_sources": [
+        {
+          "class": "local-guidance-observations",
+          "id": ".agentic-workspace/local/guidance-observations.json"
+        },
+        {
+          "class": "review-or-human",
+          "id": "admitted-correction-and-compliance-evidence"
+        },
+        {
+          "class": "aw-proof",
+          "id": "guidance-routing-and-consequence-proof"
+        }
+      ],
+      "id": "target-guidance-effectiveness-2217",
+      "lifecycle": "collecting",
+      "question": "Does promoted target guidance reduce repeated correction and repair cost without leaking into unrelated agents, tasks, repositories, or phases?",
+      "report_sinks": [
+        {
+          "class": "issue-or-report",
+          "id": "#2217"
+        },
+        {
+          "class": "issue-or-report",
+          "id": "#2224"
+        }
+      ],
+      "revision": 1,
+      "selectors": {
+        "issue_refs": [
+          "#2217",
+          "#2221",
+          "#2222",
+          "#2223",
+          "#2224"
+        ],
+        "operation_ids": [
+          "correction-event.submit",
+          "agent-guidance.promote"
+        ],
+        "phases": [
+          "planning",
+          "implementation",
+          "proof",
+          "review",
+          "closeout"
+        ],
+        "skill_ids": [
+          "workspace-operating-loop"
+        ]
+      },
+      "subject": {
+        "ref": "#2217",
+        "type": "agent-guidance-capability"
+      },
       "updated_at": "2026-08-14T00:00:00Z"
+    },
+    {
+      "action_policy": {
+        "adaptation_owner": "#2647",
+        "material_negative_finding": "route-to-existing-source-owner-or-create-bounded-follow-up",
+        "positive_conclusion": "close-2646-only-after-current-convergence-observation"
+      },
+      "admission_contract": {
+        "consumers": [
+          "status",
+          "doctor",
+          "operating-decision",
+          "proof-selection",
+          "closure"
+        ],
+        "kind": "agentic-workspace/evaluation-admission-contract/v1",
+        "reject_when": [
+          "assignment-target-mismatch",
+          "baseline-head-changed",
+          "scope-expanded",
+          "stale-worktree",
+          "failed-proof",
+          "missing-bound-context",
+          "superseded-result"
+        ],
+        "repair_route": "rerun or supersede the evaluation result after refreshing assignment, authority, baseline, and proof context",
+        "required_context": [
+          "assignment.target_identity_ref",
+          "assignment.context_key",
+          "assignment.assignment_revision",
+          "authority_envelope.mutation_baseline.baseline_id",
+          "authority_envelope.mutation_baseline.head",
+          "authority_envelope.mutation_baseline.scope.allowed_paths",
+          "proof.provenance",
+          "proof.verified_by=aw"
+        ],
+        "status": "fail-closed-for-bound-results"
+      },
+      "collection_policy": {
+        "admitted_archive": "2026-08-21 implementation-round is limited validation-cost evidence and does not prove orientation or convergence",
+        "minimum_observations": 6,
+        "mode": "local-first",
+        "privacy": "compact structured observations only; raw prompts and full transcripts remain local or externally referenced",
+        "representative_session_minimum": 4,
+        "retention": "latest-current-per-criterion"
+      },
+      "conclusion_policy": {
+        "no_indefinite_collection": true,
+        "rule": "decision-owner-reviews-all-required-current-results",
+        "terminal_states": [
+          "satisfied",
+          "contradicted",
+          "inconclusive",
+          "superseded",
+          "archived"
+        ]
+      },
+      "created_at": "2026-08-21T22:31:02Z",
+      "criteria": [
+        {
+          "id": "scoped-instruction-quality",
+          "question": "Does scoped instruction context appear only when relevant and reduce later correction or reread cost?",
+          "required": true,
+          "success_condition": "A current scoped-instruction observation shows relevant guidance or records that startup made authoring unnecessary.",
+          "type": "qualitative"
+        },
+        {
+          "id": "adaptation-convergence",
+          "question": "Does a canonical source-owner adaptation prevent the same friction on a later equivalent task?",
+          "required": true,
+          "success_condition": "A matched before/adaptation/after sequence records lower work, no repeated correction, and human_steering_avoided_next_time.",
+          "type": "qualitative"
+        },
+        {
+          "id": "direct-default-quality",
+          "question": "Does direct work start from useful general context without irrelevant owner, instruction, or module pressure?",
+          "required": true,
+          "success_condition": "A current direct-work observation reaches productive action without avoidable broad rereads or human correction.",
+          "type": "qualitative"
+        },
+        {
+          "id": "cross-session-resumption",
+          "question": "Can review or closeout resume from durable state without reconstructing chat?",
+          "required": true,
+          "success_condition": "A current cross-session observation identifies next action, proof, and residue from durable owners.",
+          "type": "qualitative"
+        },
+        {
+          "id": "module-context-quality",
+          "question": "Does module-relevant first-line context reduce downstream rereads or corrections rather than only changing byte count?",
+          "required": true,
+          "success_condition": "A current module observation records routed context and downstream correction/reread outcome.",
+          "type": "qualitative"
+        },
+        {
+          "id": "planning-routing-quality",
+          "question": "Do continuation and independent work route correctly while unrelated active ownership remains bounded?",
+          "required": true,
+          "success_condition": "Current observations cover Planning continuation and independent work with irrelevant owner pressure absent.",
+          "type": "coverage"
+        }
+      ],
+      "decision_owner": {
+        "class": "maintainer",
+        "id": "workspace-maintainer"
+      },
+      "evidence_sources": [
+        {
+          "class": "external-ref",
+          "id": "implementation-round-2026-08-21"
+        },
+        {
+          "class": "external-ref",
+          "id": "current-stack-session-observations"
+        },
+        {
+          "class": "external-ref",
+          "id": "evaluation-local-observations"
+        },
+        {
+          "class": "external-ref",
+          "id": "proof-receipts"
+        }
+      ],
+      "id": "operating-context-cost-convergence-2646",
+      "lifecycle": "collecting",
+      "question": "Is AW acceptably efficient from a cold/default state and measurably cheaper on equivalent work after bounded canonical adaptation?",
+      "report_sinks": [
+        {
+          "class": "issue-or-report",
+          "id": "#2646"
+        },
+        {
+          "class": "issue-or-report",
+          "id": "#2647"
+        }
+      ],
+      "revision": 1,
+      "selectors": {
+        "commands": [
+          "start",
+          "implement",
+          "proof",
+          "summary",
+          "instructions explain",
+          "reconcile"
+        ],
+        "issue_refs": [
+          "#2646",
+          "#2647"
+        ],
+        "workflow_class": [
+          "direct",
+          "scoped-instruction",
+          "module",
+          "planning-continuation",
+          "planning-independent",
+          "cross-session"
+        ]
+      },
+      "subject": {
+        "comparison_boundary": "Pre-v0.42 evidence is contextual only unless task shape and runtime are matched.",
+        "ref": "#2646",
+        "type": "workspace-operating-context",
+        "version_range": "v0.42-current through stacked PRs #2653-#2655"
+      },
+      "updated_at": "2026-08-21T22:31:02Z"
     }
   ],
   "kind": "agentic-workspace/evaluations/v1"

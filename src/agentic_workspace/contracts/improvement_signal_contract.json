@@ -150,6 +150,39 @@
     "posture_obligation_ref",
     "evidence_ref"
   ],
+  "bounded_adaptation": {
+    "kind": "agentic-workspace/bounded-adaptation-candidate/v1",
+    "required_fields": [
+      "owner_class",
+      "source_owner",
+      "proposed_delta",
+      "authority_requirement",
+      "expected_effect",
+      "validation_route",
+      "rollback"
+    ],
+    "automatic_promotion_requires": [
+      "risk_class=low",
+      "authority_requirement.mode=existing-typed-operation",
+      "current owner revision matches",
+      "simulation passed"
+    ],
+    "owner_admission_required_for": [
+      "ownership or trust changes",
+      "security or hard restrictions",
+      "consequential proof or claim requirements",
+      "instruction policy changes without an exact existing authority"
+    ],
+    "simulation_rejects": [
+      "required behavior removed",
+      "authority widened",
+      "source owner outside admitted scope",
+      "cost boundary worsened",
+      "precision boundary worsened"
+    ],
+    "persistence_rule": "Derive candidates from existing improvement evidence and dispositions; mutate only the canonical owner through its existing operation and never persist a learned override layer.",
+    "quiet_rule": "No evidence yields no candidates or first-line cost; fixed, superseded, dismissed, obsolete, and not-applicable candidates stay quiet."
+  },
   "immediate_actions": [
     "fix_now",
     "route",
