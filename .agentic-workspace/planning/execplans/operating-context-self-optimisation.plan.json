@@ -1,0 +1,88 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "operating-context-self-optimisation",
+  "title": "Implement bounded operating-context self-optimisation",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Close #2641 through #2647 in three stacked PRs that make independent routing and closeout compact, make review/validation writes recoverable and identity-safe, and prove bounded source-owned adaptation with real-session evaluation.",
+    "non_goals": [
+      "Do not add a second workflow, proof cache, PR tracker, event store, optimiser, or learned override layer.",
+      "Do not weaken active-owner overlap protection, proof admission, authority, or closeout claim boundaries to reduce cost.",
+      "Do not retain raw prompts, full transcripts, or provider-specific review state as checked-in operating context."
+    ]
+  },
+  "parent": {
+    "owner_id": "issue-2647",
+    "contribution": "Deliver the concrete routing, lifecycle, validation, adaptation, and evaluation slices required for bounded self-optimisation.",
+    "closure_boundary": "The three-PR stack may close #2641-#2647 only after integrated proof and a current evaluation conclusion; each lower PR claims only its owned issue slice."
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/workspace_runtime_planning.py, workspace_runtime_startup.py, workspace_runtime_core.py, reporting_support.py, review_stack_transitions.py, and review_stack_topology.py",
+      "Validation manifest publication/reconciliation and proof selection/reuse owners under src/, packages/verification/, scripts/, and their focused tests",
+      "Existing improvement/reconciliation and Evaluation owners, compact observation/report artifacts, docs, release changes, and focused scenario tests",
+      ".agentic-workspace/planning/state.toml and this execplan"
+    ],
+    "effects": [
+      "Independent tasks receive a stable non-interference contract and compact closeout answers avoid optional recursive hydration.",
+      "Review lifecycle writes fail closed unless current topology identity is admitted; validation manifests self-heal and proof reuse follows causal dependencies.",
+      "Recurring material friction converges into deduplicated source-owner adaptation candidates and real-session evaluation proves later-task benefit."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected",
+      "owner": "issue-2647"
+    },
+    "proof_posture": {
+      "state": "active",
+      "refs": [
+        "Focused pytest per stack layer, routed implement/proof selection, package checks where owning contracts change, and integrated stack proof"
+      ]
+    },
+    "external_posture": {
+      "state": "current",
+      "refs": [
+        "GitHub issues #2641 #2642 #2643 #2644 #2645 #2646 #2647"
+      ]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub issues #2641 #2642 #2643 #2644 #2645 #2646 #2647",
+      "label": "Bounded operating-context self-optimisation lane",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Publish the first stacked PR for #2641 #2642 #2643, then implement #2644 #2645 on its exact head.",
+  "blockers": [],
+  "proof": {
+    "claims": [
+      "Independent task routing is stable, bounded, and non-interfering while real owner overlap still fails closed.",
+      "Review lifecycle and validation manifest mutation are identity-safe, transactional, and self-healing.",
+      "Proof follow-through is delta-shaped and source-owned adaptation converges across at least two owner classes.",
+      "A current Evaluation result covers representative real sessions and one later equivalent-task convergence sequence."
+    ],
+    "requirements": [
+      "Run focused runtime and review-stack tests for #2641-#2643 plus compact output byte/hydration assertions.",
+      "Run validation manifest and proof selection/reuse tests for #2644-#2645 including interruption and release replay fixtures.",
+      "Run improvement/adaptation and Evaluation lifecycle tests for #2646-#2647, then routed integrated stack proof and repository checks."
+    ],
+    "refs": [
+      "411 tests passed: tests/test_review_stack_transitions.py and tests/test_workspace_cli.py",
+      "make lint-workspace passed",
+      "make typecheck passed",
+      "Default closeout_trust measured at 15,150 answer bytes before the final compact projection update"
+    ]
+  },
+  "continuation": {
+    "owner": "issue-2647",
+    "residual_intent": "Do not close the parent until all three stack layers, integrated proof, and the real-session evaluation conclusion are present."
+  },
+  "specialist_contracts": []
+}

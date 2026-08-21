@@ -17422,6 +17422,7 @@ def _run_lazy_report_section_command(
             cli_invoke=config.cli_invoke,
             task_text=task_text,
             changed_paths=changed_paths,
+            compact=True,
         )
         payload["closeout_trust"] = closeout_trust
         return _select_report_payload(payload, profile="router", section=normalized)
@@ -22711,6 +22712,7 @@ def _terminal_outcome_contract_payload(
     completion_options: list[Any] | None = None,
     recommended_next_action: str = "",
     source_surface: str = "completion_gate",
+    compact: bool = False,
 ) -> dict[str, Any]:
     completion_gate = _as_dict(completion_gate)
     claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
@@ -22843,6 +22845,35 @@ def _terminal_outcome_contract_payload(
         custody_owner = "agent"
         reason = "The terminal outcome is not delivered, blocked, or user-paused, so execution custody remains with the agent."
 
+    final_response_enforcement: dict[str, Any] = {
+        "status": "authorized" if final_response_authorized else "rejected_auto_resume",
+        "terminal_final_rejected": not final_response_authorized,
+        "auto_resume_action": required_next_action or ("continue-current-work" if state == "CONTINUE" else ""),
+        "progress_without_yield": state == "CONTINUE",
+        "compaction_resume_safe": state == "CONTINUE",
+        "enforcement_maturity": "host-integrated" if not final_response_authorized else "not_required",
+        "ordinary_host_path_unavoidable": any(bool(item.get("ordinary_path_unavoidable")) for item in FINAL_RESPONSE_HOST_BOUNDARIES),
+        "host_boundary_integrated": bool(FINAL_RESPONSE_HOST_BOUNDARIES),
+        "issue_2239_closure_ready": ISSUE_2239_CLOSURE_EVIDENCE["status"] == "complete",
+        "issue_2239_closure_gap": "",
+        "multi_slice_continuation": {
+            "status": "preserved" if state == "CONTINUE" else "not_required",
+            "resume_fields": ["state", "required_next_action", "safe_continuation_option_ids", "blocker_qualification"],
+        },
+        "weak_model_regression": "terminal-final-rejected-while-continuation-remains"
+        if not final_response_authorized
+        else "terminal-final-authorized",
+    }
+    if compact:
+        final_response_enforcement["detail"] = {
+            "status": "omitted",
+            "selectors": ["closeout_trust --verbose", "closeout_report"],
+            "omitted_fields": ["issue_2239_closure_evidence", "integrated_host_boundaries"],
+        }
+    else:
+        final_response_enforcement["issue_2239_closure_evidence"] = copy.deepcopy(ISSUE_2239_CLOSURE_EVIDENCE)
+        final_response_enforcement["integrated_host_boundaries"] = FINAL_RESPONSE_HOST_BOUNDARIES
+
     return {
         "kind": "agentic-workspace/terminal-outcome-contract/v1",
         "state": state,
@@ -22855,27 +22886,7 @@ def _terminal_outcome_contract_payload(
         "blocked_option_ids": blocked_options,
         "required_next_action": required_next_action or ("continue-current-work" if state == "CONTINUE" else ""),
         "blocker_qualification": blocker_qualification if blocked_like_status else {"status": "not_required"},
-        "final_response_enforcement": {
-            "status": "authorized" if final_response_authorized else "rejected_auto_resume",
-            "terminal_final_rejected": not final_response_authorized,
-            "auto_resume_action": required_next_action or ("continue-current-work" if state == "CONTINUE" else ""),
-            "progress_without_yield": state == "CONTINUE",
-            "compaction_resume_safe": state == "CONTINUE",
-            "enforcement_maturity": "host-integrated" if not final_response_authorized else "not_required",
-            "ordinary_host_path_unavoidable": any(bool(item.get("ordinary_path_unavoidable")) for item in FINAL_RESPONSE_HOST_BOUNDARIES),
-            "host_boundary_integrated": bool(FINAL_RESPONSE_HOST_BOUNDARIES),
-            "issue_2239_closure_ready": ISSUE_2239_CLOSURE_EVIDENCE["status"] == "complete",
-            "issue_2239_closure_gap": "",
-            "issue_2239_closure_evidence": copy.deepcopy(ISSUE_2239_CLOSURE_EVIDENCE),
-            "integrated_host_boundaries": FINAL_RESPONSE_HOST_BOUNDARIES,
-            "multi_slice_continuation": {
-                "status": "preserved" if state == "CONTINUE" else "not_required",
-                "resume_fields": ["state", "required_next_action", "safe_continuation_option_ids", "blocker_qualification"],
-            },
-            "weak_model_regression": "terminal-final-rejected-while-continuation-remains"
-            if not final_response_authorized
-            else "terminal-final-authorized",
-        },
+        "final_response_enforcement": final_response_enforcement,
         "allowed_terminal_states": ["DELIVERED", "BLOCKED", "USER_PAUSED", "CONTINUE"],
         "allowed_claim_classes": sorted(allowed_claim_classes),
         "bounded_claim_authorizations": bounded_claim_authorizations,
@@ -23924,16 +23935,26 @@ def _report_closeout_trust_payload(
     cli_invoke: str = DEFAULT_CLI_INVOKE,
     task_text: str | None = None,
     changed_paths: list[str] | None = None,
+    compact: bool = False,
 ) -> dict[str, Any]:
     strict_closeout = bool(config.assurance.strict_closeout) if config is not None else False
     normalized_changed_paths = _normalize_changed_paths(changed_paths or [])
-    knowledge_authority_review = _knowledge_authority_review_payload(
-        target_root=target_root,
-        source_payload={"module_reports": module_reports},
-        changed_paths=[],
-        task_text=None,
-        cli_invoke=cli_invoke,
-        compact=True,
+    omitted_detail = {
+        "status": "omitted",
+        "selectors": ["closeout_trust --verbose", "closeout_report"],
+        "rule": "Optional closeout evidence is hydrated only through an explicit detail selector.",
+    }
+    knowledge_authority_review = (
+        copy.deepcopy(omitted_detail)
+        if compact
+        else _knowledge_authority_review_payload(
+            target_root=target_root,
+            source_payload={"module_reports": module_reports},
+            changed_paths=[],
+            task_text=None,
+            cli_invoke=cli_invoke,
+            compact=True,
+        )
     )
 
     def current_task_switch_scope() -> dict[str, Any]:
@@ -24353,7 +24374,11 @@ def _report_closeout_trust_payload(
             parent_intent_status={},
         )
         intent_proof_check = _intent_proof_check_payload(planning_report={}, target_root=target_root)
-        architecture_decision_closeout = _architecture_decision_closeout_payload(planning_report={}, target_root=target_root, config=config)
+        architecture_decision_closeout = (
+            copy.deepcopy(omitted_detail)
+            if compact
+            else _architecture_decision_closeout_payload(planning_report={}, target_root=target_root, config=config)
+        )
         assurance_requirements = _assurance_requirements_report_payload(config=config, target_root=target_root)
         verification = _verification_report_payload(
             target_root=target_root,
@@ -24443,8 +24468,10 @@ def _report_closeout_trust_payload(
             parent_intent_status={},
         )
         intent_proof_check = _intent_proof_check_payload(planning_report=planning_report, target_root=target_root)
-        architecture_decision_closeout = _architecture_decision_closeout_payload(
-            planning_report=planning_report, target_root=target_root, config=config
+        architecture_decision_closeout = (
+            copy.deepcopy(omitted_detail)
+            if compact
+            else _architecture_decision_closeout_payload(planning_report=planning_report, target_root=target_root, config=config)
         )
         assurance_requirements = _assurance_requirements_report_payload(config=config, target_root=target_root)
         verification = _verification_report_payload(
@@ -24552,8 +24579,10 @@ def _report_closeout_trust_payload(
             intent_satisfaction_check["closure_scope"] = closure_scope
     acceptance_reconciliation = _acceptance_criteria_reconciliation_payload(planning_report=planning_report)
     intent_proof_check = _intent_proof_check_payload(planning_report=planning_report, target_root=target_root)
-    architecture_decision_closeout = _architecture_decision_closeout_payload(
-        planning_report=planning_report, target_root=target_root, config=config
+    architecture_decision_closeout = (
+        copy.deepcopy(omitted_detail)
+        if compact
+        else _architecture_decision_closeout_payload(planning_report=planning_report, target_root=target_root, config=config)
     )
     raw_active_planning_record = _raw_active_planning_record_for_closeout(
         planning_record=planning_report.get("active", {}).get("planning_record", {})
@@ -24720,29 +24749,40 @@ def _report_closeout_trust_payload(
         completion_options=completion_options,
         recommended_next_action=recommended_next_action,
         source_surface="closeout_trust",
+        compact=compact,
     )
-    final_response_rendering = _closeout_report_final_response_rendering_payload(
-        status="present",
-        profile_policy={"selected_profile": "compact", "reason": "closeout_trust terminal outcome projection"},
-        trust=trust,
-        work_completed="",
-        requested_outcome="",
-        changed_surfaces="",
-        validation_proof=str(proof_confidence.get("summary") or proof_confidence.get("confidence") or ""),
-        completion_decision="",
-        completion_boundary=_as_dict(intent_satisfaction_check.get("completion_boundary")),
-        completion_options=completion_options,
-        completeness={"status": "complete" if completion_gate.get("active_intent_satisfied") else "incomplete"},
-        residual_risk=str(completion_gate.get("residual_intent") or ""),
-        blockers=[],
-        next_action=recommended_next_action,
-        decision_review={},
-        behavior_preservation={},
-        parent_intent_status=parent_intent_status,
-        applicable_intent_status=applicable_intent_status,
-        workflow_obligation_contract={},
-        completion_gate=completion_gate,
-        review_mode="small-direct-edit",
+    final_response_rendering = (
+        {
+            "status": "finalizable" if terminal_outcome_contract.get("final_response_authorized") is True else "continue-not-finalizable",
+            "terminal_state": terminal_outcome_contract.get("state", "CONTINUE"),
+            "final_response_authorized": terminal_outcome_contract.get("final_response_authorized", False),
+            "selectors": ["closeout_trust --verbose", "closeout_report"],
+            "rule": "Compact closeout keeps the terminal rendering decision visible and defers prose detail.",
+        }
+        if compact
+        else _closeout_report_final_response_rendering_payload(
+            status="present",
+            profile_policy={"selected_profile": "compact", "reason": "closeout_trust terminal outcome projection"},
+            trust=trust,
+            work_completed="",
+            requested_outcome="",
+            changed_surfaces="",
+            validation_proof=str(proof_confidence.get("summary") or proof_confidence.get("confidence") or ""),
+            completion_decision="",
+            completion_boundary=_as_dict(intent_satisfaction_check.get("completion_boundary")),
+            completion_options=completion_options,
+            completeness={"status": "complete" if completion_gate.get("active_intent_satisfied") else "incomplete"},
+            residual_risk=str(completion_gate.get("residual_intent") or ""),
+            blockers=[],
+            next_action=recommended_next_action,
+            decision_review={},
+            behavior_preservation={},
+            parent_intent_status=parent_intent_status,
+            applicable_intent_status=applicable_intent_status,
+            workflow_obligation_contract={},
+            completion_gate=completion_gate,
+            review_mode="small-direct-edit",
+        )
     )
     current_task_closeout: dict[str, Any] = {"status": "not-applicable"}
     if current_bounded_scope.get("status") == "active":
@@ -24861,32 +24901,44 @@ def _report_closeout_trust_payload(
             ),
         }
     memory_consult = (
-        _memory_consult_payload(target_root=target_root, compact=True, cli_invoke=cli_invoke)
-        if target_root is not None
-        else {"status": "unavailable", "consultation_state": "not-checked", "read_first": [], "do_not_bulk_read": True}
+        copy.deepcopy(omitted_detail)
+        if compact
+        else (
+            _memory_consult_payload(target_root=target_root, compact=True, cli_invoke=cli_invoke)
+            if target_root is not None
+            else {"status": "unavailable", "consultation_state": "not-checked", "read_first": [], "do_not_bulk_read": True}
+        )
     )
-    memory_decision_packet = _memory_decision_packet_payload(
-        stage="closeout",
-        cli_invoke=cli_invoke,
-        memory_consult=memory_consult,
-        closeout_trust={
-            "trust": trust,
-            "lower_trust_closeout_count": effective_lower_trust_count,
-            "durable_residue_action": residue_action,
-            "promotion_candidate_count": _as_int(knowledge_authority_review.get("promotion_candidate_count")),
-            "memory_decision_required": effective_lower_trust_count > 0,
-        },
+    memory_decision_packet = (
+        copy.deepcopy(omitted_detail)
+        if compact
+        else _memory_decision_packet_payload(
+            stage="closeout",
+            cli_invoke=cli_invoke,
+            memory_consult=memory_consult,
+            closeout_trust={
+                "trust": trust,
+                "lower_trust_closeout_count": effective_lower_trust_count,
+                "durable_residue_action": residue_action,
+                "promotion_candidate_count": _as_int(knowledge_authority_review.get("promotion_candidate_count")),
+                "memory_decision_required": effective_lower_trust_count > 0,
+            },
+        )
     )
-    operating_loop = _operating_loop_decision_payload(
-        claim_context="closeout",
-        memory_decision_packet=memory_decision_packet,
-        closeout_trust={
-            "trust": trust,
-            "lower_trust_closeout_count": effective_lower_trust_count,
-            "completion_gate": completion_gate,
-            "proof_confidence": proof_confidence,
-        },
-        active_planning_record=raw_active_planning_record,
+    operating_loop = (
+        copy.deepcopy(omitted_detail)
+        if compact
+        else _operating_loop_decision_payload(
+            claim_context="closeout",
+            memory_decision_packet=memory_decision_packet,
+            closeout_trust={
+                "trust": trust,
+                "lower_trust_closeout_count": effective_lower_trust_count,
+                "completion_gate": completion_gate,
+                "proof_confidence": proof_confidence,
+            },
+            active_planning_record=raw_active_planning_record,
+        )
     )
     return {
         "status": "present",
@@ -24918,7 +24970,9 @@ def _report_closeout_trust_payload(
         "current_task_closeout": current_task_closeout,
         "knowledge_authority_review": knowledge_authority_review,
         "architecture_decision_closeout": architecture_decision_closeout,
-        "historical_review_artifacts": _historical_review_artifacts_policy(
+        "historical_review_artifacts": copy.deepcopy(omitted_detail)
+        if compact
+        else _historical_review_artifacts_policy(
             planning_report=planning_report, intent_validation=intent_validation, target_root=target_root
         ),
         "durable_residue_action": residue_action,
@@ -24928,7 +24982,9 @@ def _report_closeout_trust_payload(
         "completion_options": completion_options,
         "terminal_outcome_contract": terminal_outcome_contract,
         "final_response_rendering": final_response_rendering,
-        "closeout_protocol": _closeout_protocol_payload(
+        "closeout_protocol": copy.deepcopy(omitted_detail)
+        if compact
+        else _closeout_protocol_payload(
             status="present",
             trust=trust,
             strict_gate=gate,
@@ -24943,6 +24999,19 @@ def _report_closeout_trust_payload(
             cli_invoke=cli_invoke,
         ),
         "recommended_next_action": recommended_next_action,
+        "computation": {
+            "profile": "compact" if compact else "full",
+            "optional_builders_avoided": compact,
+            "hydrated_dependencies": [
+                "planning_report",
+                "completion_gate",
+                "terminal_outcome_contract",
+                "assurance_requirements",
+                "verification",
+                "current_task_closeout",
+            ],
+            "detail_selectors": ["closeout_trust --verbose", "closeout_report"] if compact else [],
+        },
     }
 
 
@@ -28636,7 +28705,7 @@ def _next_safe_action_packet(
         skill = "workspace-intent-discovery"
     elif action == "present-lane-shaping-prompt":
         skill = "planning-decompose"
-    elif action in {"produce-bounded-reflection-report", "archive-or-retire-completed-plan"}:
+    elif action in {"produce-bounded-reflection-report", "archive-or-retire-completed-plan", "inspect-current-task"}:
         skill = ""
     elif action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
         for route in preferred_routes:
@@ -30629,6 +30698,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "required_transition",
                 "selected_owner",
                 "selected_owner_identity",
+                "non_interference_boundary",
                 "reason_codes",
                 "input_provenance",
                 "allowed_claims",

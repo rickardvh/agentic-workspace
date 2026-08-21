@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shlex
@@ -7,6 +8,8 @@ import subprocess
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
+
+from agentic_workspace.review_stack_topology import TOPOLOGY_OBSERVATION_KIND, validate_admitted_pr_topology
 
 STACK_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "pr-comment-stack.json"
 
@@ -178,10 +181,54 @@ def record_review_stack_transition(
         return {"status": "skipped", "reason": "review stack cache unavailable"}
     normalized_paths = _dedupe(_string_list(list(changed_paths)))
     branch = _current_branch(target_root)
-    selected_member = _select_member(stack, pr_number=pr_number, branch=branch, changed_paths=normalized_paths)
-    selected_pr = str(pr_number or selected_member.get("pr_number") or _stack_current_pr(stack)).strip()
-    if not selected_pr:
-        return {"status": "skipped", "reason": "review stack PR unavailable"}
+    observation = stack.get("topology_observation")
+    if not isinstance(observation, dict) or observation.get("kind") != TOPOLOGY_OBSERVATION_KIND:
+        return {
+            "status": "skipped",
+            "reason": "admitted review topology required before lifecycle mutation",
+            "recovery": "refresh-current-pr-topology",
+        }
+    repository = str(stack.get("repository") or observation.get("repository") or "").strip()
+    if not repository or not branch:
+        return {
+            "status": "skipped",
+            "reason": "review topology repository or branch unavailable",
+            "recovery": "refresh-current-pr-topology",
+        }
+    topology_current, topology_reason, admitted = validate_admitted_pr_topology(
+        target_root=target_root,
+        cache=stack,
+        expected_repository=repository,
+        expected_branch=branch,
+    )
+    if not topology_current:
+        return {
+            "status": "skipped",
+            "reason": topology_reason,
+            "recovery": "refresh-current-pr-topology",
+            "topology_status": "diagnostic-only",
+        }
+    selected_pr = str(admitted.get("current_pr_number") or "").strip()
+    selected_head = str(admitted.get("current_head_sha") or "").strip()
+    if pr_number and str(pr_number).strip() != selected_pr:
+        return {
+            "status": "skipped",
+            "reason": "requested PR does not match the admitted current branch PR",
+            "pr_number": selected_pr,
+            "recovery": "refresh-current-pr-topology",
+        }
+    selected_member = next(
+        (
+            member
+            for member in members
+            if str(member.get("pr_number") or "").strip() == selected_pr
+            and str(member.get("branch") or "").strip() == branch
+            and str(member.get("head_sha") or "").strip() == selected_head
+        ),
+        {},
+    )
+    if not selected_member:
+        return {"status": "skipped", "reason": "admitted current PR member unavailable", "recovery": "refresh-current-pr-topology"}
     member_paths = _member_paths(selected_member)
     if (
         normalized_paths
@@ -189,6 +236,77 @@ def record_review_stack_transition(
         and not (set(normalized_paths).issubset(set(member_paths)) or set(member_paths).intersection(normalized_paths))
     ):
         return {"status": "skipped", "reason": "changed paths do not match review stack member", "pr_number": selected_pr}
+    identity = {
+        "repository": repository,
+        "branch": branch,
+        "pr_number": selected_pr,
+        "pr_state": "open",
+        "head_sha": selected_head,
+        "topology_observation_digest": str(admitted.get("observation_digest") or ""),
+    }
+    slug = _safe_slug(f"review-stack-{selected_pr}-lifecycle")
+    record_path = _review_record_path(target_root, slug)
+    record: dict[str, Any] = {}
+    existing_lifecycle: dict[str, Any] = {}
+    if record_path.exists():
+        try:
+            loaded = json.loads(record_path.read_text(encoding="utf-8-sig"))
+            record = loaded if isinstance(loaded, dict) else {}
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            return {
+                "status": "skipped",
+                "reason": "review lifecycle record is unreadable",
+                "path": record_path.relative_to(target_root).as_posix(),
+            }
+        for raw_scope in _string_list(record.get("scope")):
+            try:
+                parsed = json.loads(raw_scope)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(parsed, dict):
+                existing_lifecycle = parsed
+                break
+        existing_identity = existing_lifecycle.get("review_owner_identity")
+        if isinstance(existing_identity, dict):
+            mismatched = [
+                field
+                for field in ("repository", "branch", "pr_number")
+                if str(existing_identity.get(field) or "").strip() != identity[field]
+            ]
+            if mismatched:
+                return {
+                    "status": "skipped",
+                    "reason": "review lifecycle owner identity mismatch",
+                    "mismatched_fields": mismatched,
+                    "path": record_path.relative_to(target_root).as_posix(),
+                    "recovery": "create-or-refresh-current-review-owner",
+                }
+    owner_revision_before = (
+        "sha256:" + hashlib.sha256(json.dumps(record, sort_keys=True, separators=(",", ":")).encode()).hexdigest() if record else "new"
+    )
+    idempotency_basis = {
+        "identity": identity,
+        "phase": phase,
+        "phase_after": phase_after,
+        "command": command,
+        "outcome": outcome,
+        "next_action_id": next_action_id,
+        "changed_paths": normalized_paths or member_paths,
+        "command_exit_code": command_exit_code,
+        "proof_receipt_path": proof_receipt_path,
+        "proof_receipt_result": proof_receipt_result,
+    }
+    idempotency_key = "sha256:" + hashlib.sha256(json.dumps(idempotency_basis, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    existing_transitions = [item for item in existing_lifecycle.get("transitions", []) if isinstance(item, dict)]
+    if any(str(item.get("idempotency_key") or "") == idempotency_key for item in existing_transitions):
+        return {
+            "status": "already-recorded",
+            "path": record_path.relative_to(target_root).as_posix(),
+            "pr_number": selected_pr,
+            "head_sha": selected_head,
+            "owner_revision": str(existing_lifecycle.get("review_owner_revision") or owner_revision_before),
+            "idempotency_key": idempotency_key,
+        }
     transition_payload = {
         "pr_number": selected_pr,
         "phase": phase,
@@ -202,10 +320,18 @@ def record_review_stack_transition(
         "proof_receipt_result": proof_receipt_result,
         "recorded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "source": "ordinary-command",
+        "identity": identity,
+        "owner_revision_before": owner_revision_before,
+        "idempotency_key": idempotency_key,
     }
-    slug = _safe_slug(f"review-stack-{selected_pr}-lifecycle")
-    record_path = _review_record_path(target_root, slug)
     title = f"Review Stack {selected_pr} Lifecycle".replace("-", " ").title()
+    updated_transitions = [*existing_transitions, transition_payload]
+    owner_revision = (
+        "sha256:"
+        + hashlib.sha256(
+            json.dumps({"identity": identity, "transitions": updated_transitions}, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+    )
     lifecycle_payload: dict[str, Any] = {
         "record_kind": "review-stack-lifecycle",
         "pr_number": selected_pr,
@@ -214,7 +340,9 @@ def record_review_stack_transition(
         "changed_paths": normalized_paths or member_paths,
         "updated_at": transition_payload["recorded_at"],
         "source": "ordinary-command",
-        "transitions": [transition_payload],
+        "review_owner_identity": identity,
+        "review_owner_revision": owner_revision,
+        "transitions": updated_transitions,
     }
     if dry_run:
         return {
@@ -223,43 +351,16 @@ def record_review_stack_transition(
             "scope": lifecycle_payload,
         }
     record_path.parent.mkdir(parents=True, exist_ok=True)
-    if record_path.exists():
-        try:
-            record = json.loads(record_path.read_text(encoding="utf-8-sig"))
-        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-            record = {}
-        if not isinstance(record, dict):
-            record = {}
-        if not record:
-            record = _default_review_record(
-                title=title,
-                classification="review-stack-transition",
-                lifecycle_payload=lifecycle_payload,
-                command=command,
-            )
-        else:
-            existing_lifecycle: dict[str, Any] = {}
-            for raw_scope in _string_list(record.get("scope")):
-                try:
-                    parsed = json.loads(raw_scope)
-                except json.JSONDecodeError:
-                    continue
-                if isinstance(parsed, dict):
-                    existing_lifecycle = parsed
-                    break
-            existing_transitions = [item for item in existing_lifecycle.get("transitions", []) if isinstance(item, dict)]
-            transitions_by_phase = {str(item.get("phase_after") or item.get("phase") or ""): item for item in existing_transitions}
-            transitions_by_phase[phase_after or phase] = transition_payload
-            lifecycle_payload["transitions"] = list(transitions_by_phase.values())
-            record["title"] = title
-            record["classification"] = "review-stack-transition"
-            record["scope"] = [json.dumps(lifecycle_payload, separators=(",", ":"), sort_keys=True)]
-            record.setdefault("validation_commands", [])
-            if isinstance(record["validation_commands"], list) and command not in record["validation_commands"]:
-                record["validation_commands"].append(command)
-            record.setdefault("drift_log", [])
-            if isinstance(record["drift_log"], list):
-                record["drift_log"].append(f"{date.today().isoformat()}: Review-stack lifecycle updated by ordinary command.")
+    if record:
+        record["title"] = title
+        record["classification"] = "review-stack-transition"
+        record["scope"] = [json.dumps(lifecycle_payload, separators=(",", ":"), sort_keys=True)]
+        record.setdefault("validation_commands", [])
+        if isinstance(record["validation_commands"], list) and command not in record["validation_commands"]:
+            record["validation_commands"].append(command)
+        record.setdefault("drift_log", [])
+        if isinstance(record["drift_log"], list):
+            record["drift_log"].append(f"{date.today().isoformat()}: Review-stack lifecycle updated by ordinary command.")
         status = "updated"
     else:
         record = _default_review_record(
@@ -269,11 +370,16 @@ def record_review_stack_transition(
             command=command,
         )
         status = "written"
-    record_path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temporary_path = record_path.with_name(record_path.name + ".tmp")
+    temporary_path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temporary_path.replace(record_path)
     return {
         "status": status,
         "path": record_path.relative_to(target_root).as_posix(),
         "pr_number": selected_pr,
+        "head_sha": selected_head,
+        "owner_revision": owner_revision,
+        "idempotency_key": idempotency_key,
         "phase": phase,
         "phase_after": phase_after,
         "outcome": outcome,

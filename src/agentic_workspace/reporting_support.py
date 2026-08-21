@@ -1857,7 +1857,9 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             "memory_decision_packet": memory_decision_packet,
             "operating_loop": operating_loop,
             "current_task_closeout": compact_current_task_closeout(current_task_closeout),
-            "closeout_protocol": {
+            "closeout_protocol": closeout_protocol
+            if closeout_protocol.get("status") == "omitted"
+            else {
                 key: closeout_protocol.get(key)
                 for key in (
                     "kind",
@@ -1890,7 +1892,9 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                 "active_protocols": verification.get("active_protocols", []),
                 "evidence_status": verification.get("evidence_status", []),
             },
-            "knowledge_authority_review": {
+            "knowledge_authority_review": knowledge_authority_review
+            if knowledge_authority_review.get("status") == "omitted"
+            else {
                 key: knowledge_authority_review.get(key)
                 for key in (
                     "kind",
@@ -1935,6 +1939,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "detail": detail_command,
                 }
             },
+            "computation": answer.get("computation", {}),
             "detail": detail_command,
         }
         if architecture_candidate.get("status") == "candidate":

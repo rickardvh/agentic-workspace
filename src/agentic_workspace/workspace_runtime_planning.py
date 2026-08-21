@@ -1324,6 +1324,12 @@ def _planning_route_decision_payload(
     owner_admission = _as_dict(route_evidence.get("owner_admission"))
     route_inputs = _as_dict(route_evidence.get("route_inputs"))
     task_binding = _as_dict(route_inputs.get("task_binding"))
+    if (
+        bounded
+        and str(task_binding.get("basis") or "") == "structured-intent-non-overlap"
+        and transition in {"closeout-or-archive", "complete-proof"}
+    ):
+        transition = "none"
     owner_facts = _as_dict(route_inputs.get("owner"))
     selected_owner_ref = str(route_evidence.get("active_execplan") or owner_facts.get("ref") or "")
     task_mode = str(task_binding.get("mode") or "")
@@ -1398,6 +1404,11 @@ def _planning_route_decision_payload(
             "required_transition": "route-decision policy; detailed reconciliation remains owned by planning reconcile",
         },
         "structured_inputs": route_inputs,
+        **(
+            {"non_interference_boundary": copy.deepcopy(_as_dict(route_inputs.get("non_interference_boundary")))}
+            if _as_dict(route_inputs.get("non_interference_boundary")).get("status") in {"protected", "overlap-blocked"}
+            else {}
+        ),
         "claim_effect_boundary": claim_effect_boundary,
         "mutation_baseline_admission": mutation_baseline_admission,
         "reason_codes": [
@@ -1558,10 +1569,10 @@ def _planning_route_decision_payload(
 def _route_decision_blocked_claims(*, task_relation: str, owner_posture: str, transition: str) -> list[str]:
     if task_relation == "independent-pending-scope":
         return ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"]
-    if owner_posture == "completed-residue":
-        return ["claim-lane-complete", "claim-parent-complete", "silently-close-planning-state"]
     if task_relation == "continues-selected-owner" and transition == "none":
         return ["claim-unrelated-task-complete", "silently-close-active-plan"]
+    if owner_posture == "completed-residue" and transition != "none":
+        return ["claim-lane-complete", "claim-parent-complete", "silently-close-planning-state"]
     if task_relation == "bounded-independent":
         claims = ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"]
         if transition != "none":
@@ -1661,7 +1672,7 @@ def _route_decision_next_action_packet(
         proof = "supply changed paths to implement/proof before a mutation claim; do not claim active-plan progress"
         required_inputs = ["current task", "changed paths or structured owner reference", "active plan boundary"]
         risk = "current-task-scope-unresolved"
-    elif owner_posture == "completed-residue":
+    elif owner_posture == "completed-residue" and required_transition != "none":
         completed_plan = _as_dict(route_evidence.get("completed_active_plan"))
         action = "archive-or-retire-completed-plan"
         summary = "Archive or retire completed active-plan residue through the Planning transition route."
@@ -1682,6 +1693,12 @@ def _route_decision_next_action_packet(
             proof = "no file proof unless the task later becomes an edit"
             required_inputs = ["current task", "active plan claim boundary"]
             risk = "bounded-reflection-active-plan-protected"
+        elif str(task_binding.get("mode") or "") == "read-only" and str(task_binding.get("basis") or "") == "structured-intent-non-overlap":
+            action = "inspect-current-task"
+            summary = "Inspect the independent current task under the selected owner's non-interference boundary."
+            proof = "no file proof unless the task later requests mutation"
+            required_inputs = ["current task", "selected owner identity", "non-interference boundary"]
+            risk = "read-only-independent-active-plan-protected"
         else:
             action = "prove-current-task"
             summary = "Continue current-task proof without claiming active-plan progress."
@@ -2875,6 +2892,29 @@ def _structured_route_inputs(
     acknowledged = route_evidence.get("status") == "current-task-route-acknowledged"
     bounded_read_only = current_task_class.startswith("bounded-") and not acknowledged
     bounded_mutation = acknowledged and bool(changed_paths)
+    owner_scope_values: list[str] = []
+    owner_scope = _as_dict(owner_record.get("scope"))
+    canonical_core = _as_dict(owner_record.get("canonical_core"))
+    for raw_values in (
+        owner_scope.get("owned"),
+        owner_record.get("touched_scope"),
+        canonical_core.get("touched_scope"),
+    ):
+        owner_scope_values.extend(str(value).strip() for value in _as_list(raw_values) if str(value).strip())
+    owner_scope_values = list(dict.fromkeys(owner_scope_values))
+    concrete_owner_paths = [
+        value.replace("\\", "/").strip("/") for value in owner_scope_values if " " not in value and ("/" in value or Path(value).suffix)
+    ]
+    normalized_changed = [path.replace("\\", "/").strip("/") for path in changed_paths]
+    owner_scope_overlap = sorted(
+        {
+            changed
+            for changed in normalized_changed
+            for protected in concrete_owner_paths
+            if changed == protected or changed.startswith(f"{protected}/") or protected.startswith(f"{changed}/")
+        }
+    )
+    established_independent = bool(str(task_text or "").strip()) and mismatch.get("overlap_signal") == "low-overlap-explicit-task"
     effect_scope = _as_dict(_as_dict(path_classification).get("effect_scope"))
     local_transient_cleanup = effect_scope.get("status") == "proven-local-transient"
     mutation_baseline = _as_dict(route_evidence.get("mutation_baseline"))
@@ -2893,16 +2933,22 @@ def _structured_route_inputs(
             "changed_path_count": len(changed_paths),
         }
     exact_task_identity_match = mismatch.get("exact_task_identity_match") is True
-    if shared_refs or exact_task_identity_match:
+    owner_title = str(owner_record.get("title") or "").strip().casefold()
+    task_title_match = bool(owner_title and str(task_text or "").strip().casefold() == owner_title)
+    if shared_refs or exact_task_identity_match or task_title_match:
         task_relation, task_basis = "continues-selected-owner", "shared-structured-reference"
-        if exact_task_identity_match:
+        if exact_task_identity_match or task_title_match:
             task_basis = "exact-current-task-owner-intent"
+    elif changed_paths and owner_scope_overlap:
+        task_relation, task_basis = "ambiguous", "active-owner-scope-overlap"
     elif bounded_read_only:
         task_relation, task_basis = "bounded-independent", "bounded-read-only-current-work-binding"
     elif bounded_mutation:
         task_relation, task_basis = "bounded-independent", "bounded-mutation-current-work-binding"
     elif not active_owner:
         task_relation, task_basis = "not-applicable", "no-selected-owner"
+    elif established_independent:
+        task_relation, task_basis = "bounded-independent", "structured-intent-non-overlap"
     elif route_evidence.get("status") == "not-applicable":
         task_relation, task_basis = "continues-selected-owner", "selected-owner-current-task-reliance"
     else:
@@ -2950,7 +2996,7 @@ def _structured_route_inputs(
                     "local-transient-cleanup"
                     if local_transient_cleanup
                     else "read-only"
-                    if bounded_read_only
+                    if bounded_read_only or (active_owner and established_independent and not changed_paths)
                     else "mutation"
                     if bounded_mutation
                     else "unresolved"
@@ -2964,6 +3010,28 @@ def _structured_route_inputs(
                 "projection_status": revision_status or "unknown",
                 "proof_present": bool(proof),
                 "closure_status": str(closure.get("slice status") or ""),
+            },
+            "non_interference_boundary": {
+                "status": "protected"
+                if active_owner and task_relation == "bounded-independent"
+                else "overlap-blocked"
+                if owner_scope_overlap
+                else "not-applicable",
+                "owner_ref": active_owner,
+                "owner_revision": str(planning_revision.get("revision_id") or ""),
+                "protected_scope": {
+                    "digest": _stable_revision(owner_scope_values) if owner_scope_values else "",
+                    "declared_item_count": len(owner_scope_values),
+                    "concrete_path_count": len(concrete_owner_paths),
+                },
+                "overlap_paths": owner_scope_overlap,
+                "restriction": (
+                    "Do not mutate or claim the selected owner's protected scope from this independent task."
+                    if task_relation == "bounded-independent"
+                    else "Resolve the active-owner overlap before mutation."
+                    if owner_scope_overlap
+                    else ""
+                ),
             },
             "admitted_external_observation": _as_dict(route_evidence.get("admitted_external_observation")),
             "reconciliation_proposal": {

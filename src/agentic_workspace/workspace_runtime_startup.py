@@ -271,6 +271,7 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
             "required_transition",
             "selected_owner",
             "selected_owner_identity",
+            "non_interference_boundary",
             "allowed_claims",
             "blocked_claims",
             "implementation_allowed",
@@ -2154,10 +2155,25 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     primary_action = _compact_start_route_action(payload["immediate_next_allowed_action"])
     primary_action.setdefault("command", None)
     primary_action.setdefault("read_first", [])
+    route_decision = _as_dict(payload.get("route_decision"))
+    active_state = _as_dict(payload.get("active_state_summary"))
+    if route_decision.get("task_relation") == "bounded-independent":
+        owner_identity = _as_dict(route_decision.get("selected_owner_identity"))
+        boundary = _as_dict(route_decision.get("non_interference_boundary"))
+        active_state = {
+            "status": "protected-non-interference",
+            "active_execplan": str(owner_identity.get("ref") or active_state.get("active_execplan") or ""),
+            "planning_status": str(active_state.get("planning_status") or "present"),
+            "owner_identity": owner_identity,
+            "protected_scope": _as_dict(boundary.get("protected_scope")),
+            "restriction": str(boundary.get("restriction") or ""),
+            "detail_selector": "active_state_summary",
+            "rule": "Independent startup exposes only the selected-owner identity and non-interference boundary; owner intent and proof detail stay behind selectors.",
+        }
     context: dict[str, Any] = {
         "primary_action": primary_action,
         **({"route_decision": _compact_start_route_decision(payload.get("route_decision"))} if payload.get("route_decision") else {}),
-        "active_state": _active_state_with_orientation_delta(payload.get("active_state_summary", {}), cli_invoke=cli_invoke),
+        "active_state": _active_state_with_orientation_delta(active_state, cli_invoke=cli_invoke),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
             "detail_selector": "skill_routing",
@@ -2618,7 +2634,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         advisory_selectors.append("proof.local_overlay")
     if isinstance(startup_high_risk_overlay, dict) and startup_high_risk_overlay.get("status") == "active":
         advisory_selectors.append("proof.high_risk_overlay")
-    selector_sample = list(dict.fromkeys([*advisory_selectors, *available_selectors[:4]]))[:8]
+    selector_sample = list(dict.fromkeys([*advisory_selectors, *available_selectors[:4]]))[:5]
     selected: dict[str, Any] = {
         "kind": payload["kind"],
         "target": ".",
@@ -2696,7 +2712,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         ),
         "context": context,
         "drill_down": {
-            "ordinary_profile": "primary=next;skills=proj;detail=select",
             "rule": "Compact default omits selector inventory/schemas; use --select or --verbose for detail.",
             "selector_inventory": {
                 "status": "omitted-from-compact-default",
@@ -2755,7 +2770,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if isinstance(task_posture_packet, dict) and task_posture_packet:
         selected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
     show_state_delta_packets = (
-        str(next_safe_action.get("next_safe_action", "")) not in {"choose-task-switch-route", "inspect-current-task-scope"}
+        str(next_safe_action.get("next_safe_action", ""))
+        not in {"choose-task-switch-route", "inspect-current-task-scope", "inspect-current-task"}
         and not isinstance(payload.get("installed_state_compatibility"), dict)
         and not read_only_compact_default
     )
