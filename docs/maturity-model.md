@@ -2,8 +2,6 @@
 
 This page defines the public maturity vocabulary. Package/distribution metadata and public documentation should use the same label unless a deliberately separate dimension is introduced and mechanically kept in sync.
 
-Manual role review: 2026-08-20.
-
 ## Labels
 
 ### Alpha
@@ -24,12 +22,12 @@ The coordinated Python distributions currently advertise `Development Status :: 
 
 | Surface | Public maturity | Current interpretation |
 | --- | --- | --- |
-| `agentic-workspace` root distribution | alpha | substantial dogfooding and contract coverage exist, but the operating kernel, extensibility boundary, closeout composition, and public documentation/support contract are still being simplified |
-| Agentic Planning distribution | alpha | active continuity and closeout behavior are substantial, but Planning ownership/reconciliation and stale-state behavior are still changing materially |
-| Agentic Memory distribution | alpha | durable anti-rediscovery capability is substantial, but routing/guidance boundaries and integration with the ordinary decision continue to evolve |
-| Agentic Verification distribution | alpha | protocols, evidence, and proof-route behavior are real but the module remains less mature than the older first-party capabilities |
+| `agentic-workspace` root distribution | alpha | substantial deterministic and live-agent evidence exists; public compatibility may still change materially |
+| Agentic Planning distribution | alpha | active continuity and reconciliation are substantial; the coordinated distribution retains the alpha compatibility contract |
+| Agentic Memory distribution | alpha | durable anti-rediscovery routing is substantial; the coordinated distribution retains the alpha compatibility contract |
+| Agentic Verification distribution | alpha | protocols, evidence, proof routes, and producer authority are real; the coordinated distribution retains the alpha compatibility contract |
 | Generated/runtime targets | alpha unless a release explicitly states otherwise | conformance and packaging are substantial but target parity/support claims remain tied to current release evidence |
-| Public independent-module contract | not yet support-bearing | extensibility is a core product direction, but the deliberately small third-party module compatibility profile is still being stabilized |
+| Public independent-module compatibility profile | alpha | the v2 descriptor and out-of-tree conformance fixture are public, while incompatible evolution remains possible under the alpha release contract |
 
 This table describes public support maturity, not feature count. A capability can have strong deterministic or dogfooding evidence and still remain alpha while its compatibility or ownership boundary is changing materially.
 
@@ -50,4 +48,4 @@ Do not create a separate informal "capability beta" label merely to describe tha
 
 Live-agent results are behavioral evidence, not deterministic compatibility proof. Deterministic contracts/tests are not proof that real agents use the product cheaply or correctly. Public maturity decisions should consider both and preserve weak or unavailable evidence rather than reporting only successful runs.
 
-See [Documentation status](documentation-status.md), [Threat model](security/threat-model.md), and the maintainer evaluation documentation for the evidence sources behind future promotion decisions.
+See [Evidence and support](evidence-and-support.md), [Documentation status](documentation-status.md), and [Threat model](security/threat-model.md). Exact current maturity is also mechanically checked against `.github/release-ownership.json` and coordinated package classifiers.

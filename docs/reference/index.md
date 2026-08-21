@@ -1,6 +1,6 @@
 # Generated Reference
 
-These pages, except this index, are generated from JSON schemata under `src/agentic_workspace/contracts/schemas/`. Use them for exact field names, required fields, defaults, enum values, and structured-result shapes after the conceptual package docs have explained the behavior.
+Most pages are generated from JSON schemata under `src/agentic_workspace/contracts/schemas/`. Current-value catalogues are generated from their named contract data. Use schema pages for shapes and catalogue pages for actual current values after conceptual docs explain the behavior.
 
 Do not hand-edit generated pages. Update the source schema and regenerate the reference docs instead.
 
@@ -23,8 +23,11 @@ Do not hand-edit generated pages. Update the source schema and regenerate the re
 
 ## CLI, Modules, And Lifecycle
 
-- [CLI commands](cli-commands.md): declared root CLI command surface.
-- [CLI option groups](cli-option-groups.md): shared option group contract.
+- [Current CLI catalogue](cli-catalogue.md): every current root/nested command and option value from authoritative command data.
+- [Current installed-surface catalogue](installed-surface-catalogue.md): exact footprint/module cells, ownership, and degraded references.
+- [Current support-bearing install](support-bearing-install.md): immutable receipt-bound install projection.
+- [CLI commands schema](cli-commands.md): command-manifest shape.
+- [CLI option groups schema](cli-option-groups.md): shared option-group shape.
 - [SkillSpec contract](skill-spec.md): package-owned skill semantics for CLI-assisted agent behavior.
 - [Module registry](module-registry.md): module profiles, components, and package footprint metadata.
 - [Module capability](module-capability.md): module capability descriptor shape.

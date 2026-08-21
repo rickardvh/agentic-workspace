@@ -1523,6 +1523,29 @@ def test_context_authority_rejects_unknown_planning_and_mutation_statuses(tmp_pa
     assert mutation["reason"] == "mutation-baseline-admission-superseded"
 
 
+def test_context_authority_admits_dirty_scoped_mutation_baseline(tmp_path: Path) -> None:
+    _write_context_authority_sources(tmp_path)
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
+    readme = tmp_path / "README.md"
+    readme.write_text("before\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "fixture"], cwd=tmp_path, check=True, capture_output=True)
+    readme.write_text("after\n", encoding="utf-8")
+
+    projection = resolve_context_authority_projection(
+        consumer="implement",
+        task="implement direct scoped change",
+        changed_paths=["README.md"],
+        target_root=tmp_path,
+    )
+
+    mutation = next(item for item in projection["authorities"] if item["surface"] == "mutation-baseline")
+    assert mutation["source"]["admission"]["owner_result"]["status"] == "current"
+    assert projection["status"] == "admitted"
+
+
 def test_context_authority_owner_results_are_semantic_adapter_dispatched() -> None:
     source = Path("src/agentic_workspace/operating_decision.py").read_text(encoding="utf-8")
 

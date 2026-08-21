@@ -8,6 +8,8 @@ Use the smallest documentation layer that answers the question. Public conceptua
 - [Architecture](architecture.md) — source ownership, compiled control, modules, repo customization, and adapters.
 - [Modules](package/modules.md) — peer capability contributions and current first-party examples.
 - [Installation and adoption](agentic-workspace-install.md) — support-bearing installation and lifecycle entrypoint.
+- [Public glossary](glossary.md) — the small stable vocabulary for operating context, dynamic control, modules, authority, and support.
+- [Evidence and support](evidence-and-support.md) — deterministic proof, live-agent evidence, weak cases, provider limits, and current support claims.
 - [Threat model](security/threat-model.md) — trust, shell execution, credentials, repository, and supply-chain boundaries.
 - [Installed surfaces](package/installed-surfaces.md) — host-repo ownership and footprint model.
 - [Contracts and references](package/contracts.md) — source contracts, runtime outputs, schemas, and generated references.
@@ -24,8 +26,8 @@ Use the smallest documentation layer that answers the question. Public conceptua
 | How does repo customization differ from modules/adapters? | [Architecture](architecture.md) |
 | How do I install/adopt AW? | [Installation and adoption](agentic-workspace-install.md) |
 | What is the security/trust boundary? | [Threat model](security/threat-model.md) |
-| What files/state exist in a host repo and who owns them? | [Installed surfaces](package/installed-surfaces.md) |
-| How do commands relate to the operating loop? | [Lifecycle and context commands](package/lifecycle.md) and [Command map](package/commands.md) |
+| What files/state exist in a host repo and who owns them? | [Installed surfaces](package/installed-surfaces.md) and generated [surface catalogue](reference/installed-surface-catalogue.md) |
+| How do commands relate to the operating loop? | [Command map](package/commands.md) and generated [CLI catalogue](reference/cli-catalogue.md) |
 | How do contracts and generated references relate? | [Contracts and references](package/contracts.md) |
 | What is current maturity/support status? | [Maturity model](maturity-model.md) and [Documentation status](documentation-status.md) |
 | How do maintainers build, validate, dogfood, and release AW? | [Maintainer index](maintainer/index.md) |
@@ -50,6 +52,9 @@ Generated references are for exact contract shapes and values after the conceptu
 - [Startup context](reference/startup-context.md)
 - [Workspace report](reference/workspace-report.md)
 - [Operation contracts](reference/operation-contracts.md)
+- [Current CLI catalogue](reference/cli-catalogue.md) — exact current command/subcommand/option values.
+- [Current installed-surface catalogue](reference/installed-surface-catalogue.md) — exact profile/module footprints and degraded references.
+- [Current support-bearing install](reference/support-bearing-install.md) — receipt-bound immutable installation command.
 
 Conceptual docs should not duplicate exhaustive command, option, footprint, module, or schema data.
 
@@ -77,13 +82,7 @@ Start with:
 - [Contributor playbook](maintainer/contributor-playbook.md)
 - [Maintainer commands](maintainer/maintainer-commands.md)
 
-The following existing package-path documents function primarily as design/maintainer evidence and should not be used as current product doctrine:
-
-- `package/ordinary-continuity-loop.md`
-- `package/operating-loop-substeps.md`
-- `package/cli-boundary-tests.md`
-- `package/generated-behavior-test-inventory.md`
-- `package/generated-behavior-closure-inventory.md`
+Two generated-behavior proof owners remain at package compatibility paths but are explicitly maintainer-only: `package/cli-boundary-tests.md` and `package/generated-behavior-test-inventory.md`. The older ordinary-loop/substep/closure inventories were removed after their stable conclusions moved to the overview, generated catalogues, and maintainer closure report.
 
 ## Historical evidence
 

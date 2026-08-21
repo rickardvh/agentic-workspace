@@ -131,11 +131,15 @@ Start with:
 - [`docs/architecture.md`](docs/architecture.md) — operating context, dynamic control, module, repo-customization, and adapter boundaries.
 - [`docs/package/modules.md`](docs/package/modules.md) — peer module contribution model and first-party examples.
 - [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md) — installation and adoption.
+- [`docs/glossary.md`](docs/glossary.md) — stable public vocabulary.
+- [`docs/evidence-and-support.md`](docs/evidence-and-support.md) — deterministic/live evidence and support limits.
 - [`docs/security/threat-model.md`](docs/security/threat-model.md) — trust and supply-chain boundary.
 - [`docs/package/contracts.md`](docs/package/contracts.md) — machine-readable contracts and generated references.
 - [`docs/index.md`](docs/index.md) — documentation map.
 
 Exact fields and contract values belong in generated/reference material rather than duplicated conceptual prose.
+
+Current-value references: [CLI catalogue](docs/reference/cli-catalogue.md), [installed-surface catalogue](docs/reference/installed-surface-catalogue.md), and [support-bearing install](docs/reference/support-bearing-install.md).
 
 ## Source checkout
 

@@ -1,79 +1,24 @@
 # Command Map
 
-This page is a human navigation map for the shipped `agentic-workspace` command surface. For exact option shapes, see the generated [CLI commands reference](../reference/cli-commands.md) and [CLI option groups](../reference/cli-option-groups.md).
+Commands are affordances for the current `resolve -> act -> reconcile` question, not a workflow agents must memorize.
 
-For machine-readable agent use, prefer the default answer plus exact `--select` drill-down when available. Use `--verbose` for broad diagnostics. See [CLI output selection](output-profiles.md).
+For every current root command, nested subcommand, flag, default, choice, audience, role, and shared-state effect, use the generated [current CLI catalogue](../reference/cli-catalogue.md). The separate [CLI commands schema](../reference/cli-commands.md) and [option-group schema](../reference/cli-option-groups.md) explain data shape; they are not current-value catalogues.
 
-This page maps commands; it is not the ordinary agent workflow. For the reviewed
-loop and visibility classification, see [Ordinary continuity loop and surface
-classification](ordinary-continuity-loop.md).
+## Ordinary routes
 
-## Ordinary Host-Repo Commands
-
-| Command | Use when |
+| Need | Route |
 | --- | --- |
-| `agentic-workspace init --target ./repo --modules memory` | bootstrap the smallest common durable-knowledge install |
-| `agentic-workspace start --target ./repo --task "<task>" --format json` | begin ordinary work from the smallest startup decision card |
-| `agentic-workspace summary --target ./repo --format json` | inspect active planning, handoff, and continuation state |
-| `agentic-workspace preflight --target ./repo --format json` | bundle startup defaults, config, and active state for takeover |
-| `agentic-workspace implement --target ./repo --changed <paths> --format json` | inspect the next implementation decision, path warnings, and required proof commands |
-| `agentic-workspace proof --target ./repo --changed <paths> --format json` | choose the next validation action and proof commands for changed paths |
-| `agentic-workspace report --target ./repo --format json` | inspect combined module health, warnings, and next actions |
-| `agentic-workspace planning --target ./repo --format json` | inspect planning lifecycle guidance before creating or mutating checked-in planning state |
-| `agentic-workspace doctor --target ./repo --format json` | diagnose missing, stale, or conflicting installed surfaces |
+| Resolve first contact | `agentic-workspace start --target . --task "<task>" --format json` |
+| Resolve known changed paths | `agentic-workspace implement --target . --changed <paths> --format json` |
+| Inspect selected continuity | `agentic-workspace summary --target . --format json` |
+| Select proof for changed paths | `agentic-workspace proof --target . --changed <paths> --format json` |
+| Inspect a routed subsystem or contract | use the exact selector/operation named by the current decision |
+| Diagnose installed state | `agentic-workspace doctor --target . --format json` |
 
-## Planning Lifecycle Commands
+Lifecycle mutation, Planning operations, module commands, and source-checkout diagnostics remain progressively disclosed in the generated catalogue. Package-level module CLIs are for explicit domain maintenance/debugging; the root Workspace CLI is the ordinary host-repo front door.
 
-| Command | Use when |
-| --- | --- |
-| `agentic-planning new-plan --id <id> --title <title> --target ./repo --activate --format json` | create and register a schema-backed execplan scaffold for active planned work |
-| `agentic-planning promote-to-plan <item-id> --target ./repo --format json` | promote one selected planning item or lane into active checked-in execution state |
-| `agentic-planning archive-plan <plan> --target ./repo --format json` | close a completed plan after proof, intent satisfaction, closeout, and residue routing are explicit |
+## Effect boundary
 
-`new-plan` creates a valid scaffold, not a finished implementation contract. Tighten goal, non-goals, intent continuity, execution bounds, touched paths, validation commands, completion criteria, and assurance before implementation.
+The command contract distinguishes shared workspace mutation from possible ignored local diagnostics. A command classified as shared-nonmutating may still append a machine-local session/log/cache record when the local runtime enables that feature. Those local effects do not become Planning, proof, configuration, or claim authority merely because they exist.
 
-For ordered roadmap lanes, promote and complete one lane at a time. A lane may need multiple execplans, but one execplan should not span unrelated lanes.
-
-Use `agentic-workspace` in ordinary host-repo workflow guidance. Use `agentic-planning` for package-local Planning maintenance, advanced debugging, or explicit module-level lifecycle control.
-
-## Workspace Lifecycle Mutation Commands
-
-| Command | Use when |
-| --- | --- |
-| `init` | set up a repo from selected core modules, choosing conservative install or adopt behavior |
-| `install` | add selected modules explicitly |
-| `upgrade --dry-run` | preview managed-surface refreshes |
-| `upgrade` | apply managed-surface refreshes |
-| `uninstall --dry-run` | preview conservative removal |
-| `uninstall` | remove managed surfaces when ownership is clear |
-
-## Routing And Inspection Commands
-
-| Command | Use when |
-| --- | --- |
-| `defaults` | inspect policy, startup, validation, and module defaults |
-| `config` | inspect resolved repo and local workspace posture |
-| `ownership` | answer which surface owns a path or concern |
-| `modules` | list available or installed modules |
-| `skills` | list registered workspace, package, or repo skills |
-| `status` | summarize installed module state |
-
-## Advanced Diagnostics
-
-| Command | Use when |
-| --- | --- |
-| `setup` | inspect bounded post-bootstrap setup findings and lived-in repo jumpstart candidates; see [Jumpstart contract](../jumpstart-contract.md) |
-| `reconcile` | compare planning state with optional external work evidence |
-| `external-intent refresh-github` | refresh optional GitHub issue evidence through the adapter |
-| `note-delegation-outcome` | record local-only delegation calibration data |
-
-The deeper model for these groups is described in [Lifecycle and context commands](lifecycle.md).
-
-## Exact Result Shapes
-
-- `start --format json`: [Startup context](../reference/startup-context.md).
-- `preflight --format json`: [Preflight policy](../reference/preflight-policy.md) plus startup, config, and planning state projections.
-- `report --format json`: [Workspace report](../reference/workspace-report.md).
-- `proof --format json`: [Proof selection rules](../reference/proof-selection-rules.md) and [Proof routes manifest](../reference/proof-routes-manifest.md).
-- `config --format json`: [Workspace config](../reference/workspace-config.md) and [Workspace local override](../reference/workspace-local-override.md).
-- generated adapter and operation contracts: [Operation contracts](../reference/operation-contracts.md), [Operation primitives](../reference/operation-primitives.md), and [Command adapter generation](../reference/command-adapter-generation.md).
+For exact output shapes, follow the generated catalogue into the relevant runtime/schema reference. Prefer compact default output and exact `--select` drill-down; use `--verbose` only when broad diagnostics are material.

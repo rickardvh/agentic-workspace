@@ -1,6 +1,8 @@
 # Generated Behavior Test Inventory
 
-This inventory closes the generated-behavior migration question for #1445. It accounts for the AW tests that mention generated command behavior and classifies each group by the owner that should keep proving it.
+> Maintainer inventory at a compatibility path. It is excluded from first-contact navigation and retained only because generated-behavior contracts name it as a proof owner.
+
+This retained maintainer inventory accounts for AW tests that mention generated command behavior and classifies each group by the owner that should keep proving it.
 
 The rule is behavioral, not filename based. Tests stay in AW when they prove AW-specific operation contracts, proof routing, packaging, lifecycle behavior, wrapper boundaries, or runtime primitives. Generic generated-artifact conformance machinery belongs to `command-generation`.
 

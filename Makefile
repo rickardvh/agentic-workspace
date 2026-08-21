@@ -374,12 +374,14 @@ render-agent-docs:
 
 render-schema-reference:
 	@$(COMPACT_RUN) --label "render schema reference" -- uv run python scripts/generate/generate_schema_reference.py
+	@$(COMPACT_RUN) --label "render contract catalogues" -- uv run python scripts/generate/generate_contract_catalogues.py
 
 render-command-packages:
 	@$(COMPACT_RUN) --label "render command packages" -- uv run python scripts/generate/generate_command_packages.py
 
 schema-reference-docs:
 	@$(COMPACT_RUN) --label "schema reference docs" -- uv run python scripts/generate/generate_schema_reference.py --check --check-annotations
+	@$(COMPACT_RUN) --label "contract catalogues" -- uv run python scripts/generate/generate_contract_catalogues.py --check
 
 absolute-paths:
 	@$(COMPACT_RUN) --label "absolute paths" -- uv run python scripts/check/check_no_absolute_paths.py

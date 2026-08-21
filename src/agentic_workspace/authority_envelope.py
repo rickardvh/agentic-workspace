@@ -1348,7 +1348,14 @@ def mutation_baseline_context_authority_owner_operation(**kwargs: Any) -> dict[s
     changed_paths = list(kwargs.get("paths") or []) or list(selection.get("matched_paths") or [])
     baseline = mutation_baseline_payload(target_root=kwargs["root"], changed_paths=changed_paths)
     baseline_status = str(baseline.get("status") or "")
-    accepted = {"clean", "clean-scope", "dirty-accounted", "scoped-status-current", "current"}
+    accepted = {
+        "clean",
+        "clean-scope",
+        "dirty-accounted",
+        "dirty-scope-advisory-baseline",
+        "scoped-status-current",
+        "current",
+    }
     current = baseline_status in accepted
     status = "current" if current else "stale"
     reason = "" if current else f"mutation-baseline-admission-{baseline_status or 'missing'}"

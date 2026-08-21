@@ -60,3 +60,5 @@ Treat exact commands/options as current contract/reference facts rather than the
 Verification is not a generic test runner, compliance engine, evidence warehouse, or global claim authority. It is a reusable module for verification context and evidence that can enrich AW's existing operating decision when relevant.
 
 A repository can omit Verification entirely, use it alone with the root Workspace layer, or combine it with other modules without changing the ordinary AW mental model.
+
+Public maturity: **alpha**, matching coordinated package metadata. Strong capability evidence does not independently promote the distribution support contract.
