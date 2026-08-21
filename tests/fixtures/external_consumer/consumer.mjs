@@ -1,4 +1,3 @@
-import { writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -56,4 +55,9 @@ try {
     throw error;
   }
 }
-writeFileSync(process.stdout.fd, `${JSON.stringify(payload)}\n`);
+await new Promise((resolve, reject) => {
+  process.stdout.write(`${JSON.stringify(payload)}\n`, (error) => {
+    if (error) reject(error);
+    else resolve();
+  });
+});
