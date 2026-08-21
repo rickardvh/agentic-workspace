@@ -234,18 +234,6 @@
       "storage_class": "source-of-truth"
     },
     {
-      "checked_in_justification": "The repository-level hook contract is shared platform configuration required to record review handoffs consistently.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Repository-local Stop hook invokes the deterministic external-review handoff transport.",
-      "owner": "developer-integration",
-      "pattern": ".codex/hooks.json",
-      "schema_or_validator": "tools/chatgpt_review_loop.py hook-input parser plus tests/test_chatgpt_review_loop.py",
-      "status": "typed-validator-backed",
-      "storage_class": "platform-tooling"
-    },
-    {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
       "editable_by_agents": true,
       "format": "toml",
@@ -2003,18 +1991,6 @@
     {
       "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools.",
       "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Project-local Codex lifecycle automation is host-repo tooling and is not shipped package runtime state.",
-      "owner": "developer-tooling",
-      "pattern": ".codex/hooks.json",
-      "schema_or_validator": "Codex lifecycle hook loader plus tests/test_chatgpt_review_loop.py",
-      "status": "source-checkout-diagnostic",
-      "storage_class": "platform-tooling"
-    },
-    {
-      "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools.",
-      "editable_by_agents": true,
       "format": "yml",
       "generated": false,
       "notes": "Host-repo issue templates are platform metadata, not package contracts.",
@@ -2045,18 +2021,6 @@
       "owner": "github-integration",
       "pattern": ".github/dependabot.yml",
       "schema_or_validator": "GitHub Dependabot configuration syntax and scripts/check/check_security_supply_chain.py",
-      "status": "source-checkout-diagnostic",
-      "storage_class": "platform-tooling"
-    },
-    {
-      "checked_in_justification": "Host repository tooling metadata consumed by the Codex runtime.",
-      "editable_by_agents": true,
-      "format": "json",
-      "generated": false,
-      "notes": "Codex Stop-hook configuration records the external-review handoff command.",
-      "owner": "developer-tooling",
-      "pattern": ".codex/hooks.json",
-      "schema_or_validator": "Codex hooks configuration",
       "status": "source-checkout-diagnostic",
       "storage_class": "platform-tooling"
     },

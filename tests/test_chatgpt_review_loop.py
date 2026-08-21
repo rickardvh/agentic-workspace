@@ -1271,7 +1271,7 @@ def test_fresh_global_dispatch_records_per_pr_resume_state_when_no_head_is_pushe
     assert saved["status"] == "awaiting-review"
 
 
-def test_detached_fresh_stop_hook_binds_precreated_owner_state(tmp_path: Path, monkeypatch) -> None:
+def test_detached_fresh_existing_handoff_binds_precreated_owner_state(tmp_path: Path, monkeypatch) -> None:
     runner = FakeRunner(tmp_path)
     state(tmp_path, session_id="", status="fresh-session-in-progress")
     monkeypatch.setenv(loop.OWNER_ROOT_ENV, tmp_path.as_posix())
@@ -1639,7 +1639,7 @@ def test_fresh_post_exit_head_convergence_waits_for_delayed_push(tmp_path: Path,
     assert sum(command[:3] == ["gh", "pr", "view"] for command in runner.commands) == 2
 
 
-def test_stop_handoff_preserves_explicitly_configured_limits(tmp_path: Path) -> None:
+def test_existing_only_handoff_preserves_explicitly_configured_limits(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
     existing = state(
         tmp_path,
@@ -2201,16 +2201,16 @@ def test_global_watch_waits_after_empty_scan_then_dispatches(tmp_path: Path, mon
     assert output.count('"poll-complete"') == 2
 
 
-def test_watch_started_during_resume_waits_for_stop_handoff(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_watch_started_during_resume_waits_for_explicit_handoff(tmp_path: Path, monkeypatch, capsys) -> None:
     runner = FakeRunner(tmp_path)
     state(tmp_path, status="resume-in-progress", last_event="resume-attempt-recorded")
 
-    def record_stop_handoff(_seconds: int) -> None:
+    def record_explicit_handoff(_seconds: int) -> None:
         current = loop._load_state(tmp_path, 12)
         current.update(status="awaiting-review", last_event="handoff-recorded")
         loop._save_state(tmp_path, current)
 
-    monkeypatch.setattr(loop.time, "sleep", record_stop_handoff)
+    monkeypatch.setattr(loop.time, "sleep", record_explicit_handoff)
 
     assert (
         loop.main(
@@ -2266,14 +2266,19 @@ def test_watch_loop_resumes_head_a_then_reviews_head_b_without_restart(tmp_path:
     assert '"status": "merge-ready"' in output
 
 
-def test_project_stop_hook_uses_repo_runtime_and_has_no_machine_local_path() -> None:
-    hooks = json.loads((_SCRIPT.parents[1] / ".codex" / "hooks.json").read_text(encoding="utf-8"))
-    handler = hooks["hooks"]["Stop"][0]["hooks"][0]
+def test_review_prompt_records_explicit_existing_loop_handoff() -> None:
+    prompt = loop._review_prompt(
+        loop.Review(
+            comment_id="comment-12",
+            pr=12,
+            head=HEAD_A,
+            decision="blocked",
+            findings="repair the blocker",
+            url="https://example.invalid/review/12",
+        ),
+        branch="codex/example",
+    )
 
-    assert handler["timeout"] == 30
-    assert "uv run python" in handler["command"]
-    assert "git rev-parse --show-toplevel" in handler["command"]
-    assert "uv run python" in handler["commandWindows"]
-    assert handler["commandWindows"] == "uv run python tools/chatgpt_review_loop.py handoff --hook"
-    assert "powershell" not in handler["commandWindows"].lower()
-    assert "ricka" not in json.dumps(handler)
+    assert "git push origin codex/example" in prompt
+    assert "tools/chatgpt_review_loop.py handoff --pr 12 --existing-only" in prompt
+    assert "repo Stop hook" not in prompt
