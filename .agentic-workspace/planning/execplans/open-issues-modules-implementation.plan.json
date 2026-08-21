@@ -16,7 +16,7 @@
   },
   "parent": {
     "owner_id": "open-issues-modules",
-    "contribution": "Close GitHub issues #2606 #2607 #2608 #2609 #2610 and #2624 on top of PR #2625.",
+    "contribution": "Close GitHub issues #2606 #2607 #2608 #2609 #2610 and #2624 on top of instruction IR PR #2631.",
     "closure_boundary": "this slice and its six linked issues only; the parent decomposition remains open"
   },
   "scope": {
@@ -57,8 +57,8 @@
   "references": [
     {
       "kind": "source",
-      "target": "GitHub issues #2606 #2607 #2608 #2609 #2610 #2624; base PR #2625",
-      "label": "GitHub issues #2606 #2607 #2608 #2609 #2610 #2624; base PR #2625",
+      "target": "GitHub issues #2606 #2607 #2608 #2609 #2610 #2624; base PR #2631",
+      "label": "GitHub issues #2606 #2607 #2608 #2609 #2610 #2624; base PR #2631",
       "role": "intake",
       "locator": ""
     }
@@ -76,7 +76,7 @@
       "Run focused module schema, registry, CLI, operating-decision, skill-spec, and conformance tests.",
       "Run independent relevant/irrelevant, incompatible, removal/restart, and partial-capability scenarios.",
       "Run generated/payload freshness checks and the repository package validation selected by AW.",
-      "Verify the branch diff is based only on PR #2625 and the pre-existing .codex/hooks.json deletion is unstaged from every commit."
+      "Verify the branch diff is based only on PR #2631 and the pre-existing .codex/hooks.json deletion is unstaged from every commit."
     ],
     "refs": []
   },

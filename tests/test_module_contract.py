@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +16,7 @@ from agentic_workspace.module_contract import (
     discover_module_contracts,
     invoke_module_operation,
     module_contribution,
+    module_relevance,
     validate_module_contract,
 )
 
@@ -180,3 +183,51 @@ def test_public_contract_schema_allows_additive_optional_metadata() -> None:
     contract = _contract()
     contract["vendor_extension"] = {"safe_optional_hint": True}
     assert validate_module_contract(contract)["vendor_extension"] == {"safe_optional_hint": True}
+
+
+def test_separately_installed_out_of_tree_module_uses_only_the_public_entry_point(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    fixture_source = Path("tests/fixtures/external_signals_module").resolve()
+    external_source = tmp_path / "external-source"
+    install_root = tmp_path / "external-install"
+    shutil.copytree(fixture_source, external_source)
+    uv = shutil.which("uv")
+    assert uv is not None
+    subprocess.run(
+        [uv, "pip", "install", "--target", str(install_root), "--no-deps", str(external_source)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    monkeypatch.syspath_prepend(str(install_root))
+    installed = {item.name: item for item in discover_module_contracts() if item.name.startswith("external-signals")}
+
+    assert set(installed) == {"external-signals", "external-signals-conflict", "external-signals-future"}
+    assert installed["external-signals"].entry_point == "external_signals:provider"
+    assert installed["external-signals-future"].status == "incompatible"
+
+    contract = installed["external-signals"].contract
+    assert module_relevance(contract, task="edit README", changed_paths=[])["status"] == "irrelevant"
+    assert module_relevance(contract, task="inspect external build signal", changed_paths=[])["status"] == "relevant"
+    contribution = module_contribution(contract, task="inspect external build signal", changed_paths=[])
+    assert contribution is not None
+    assert contribution["resources"] == [{"id": "external-signals.latest", "ref": "signals://latest", "read_only": True}]
+
+    result = invoke_module_operation(installed["external-signals"], operation_id="external-signals.refresh", arguments={"revision": "r7"})
+    assert result["result"] == {
+        "status": "refreshed",
+        "effects": ["external-signals-cache"],
+        "requested_revision": "r7",
+    }
+
+    descriptors = {
+        name: runtime._external_module_descriptor(discovered) for name, discovered in installed.items() if discovered.status == "available"
+    }
+    with pytest.raises(runtime.ModuleSelectionError, match="external-signals.*external-signals-conflict.*external-signals/cache"):
+        runtime._validate_selected_module_contract(
+            selected_modules=["external-signals", "external-signals-conflict"], descriptors=descriptors
+        )
+
+    monkeypatch.undo()
+    restarted = {item.name for item in discover_module_contracts() if item.name.startswith("external-signals")}
+    assert restarted == set()
