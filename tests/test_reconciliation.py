@@ -56,7 +56,8 @@ def test_stale_proof_and_external_evidence_lower_claim_with_recovery_owner() -> 
 
     assert result["claim"]["permission"] == "blocked"
     assert [item["reason_code"] for item in result["blockers"]] == ["proof-stale", "external-unavailable"]
-    assert result["next_action"]["operation_id"] == "workspace.reconcile.refresh"
+    assert result["next_action"]["human_decision"] == "select a supported recovery route from the named owner"
+    assert "operation_id" not in result["next_action"]
 
 
 def test_residue_requires_exactly_one_owner() -> None:
@@ -84,6 +85,75 @@ def test_explicit_human_decision_is_constructible_continuation() -> None:
     )
 
     assert result["next_action"]["human_decision"] == "choose retain or archive"
+
+
+def test_registered_typed_operation_is_preserved_as_constructible_continuation() -> None:
+    next_action = {
+        "kind": "agentic-workspace/reconciliation-action/v1",
+        "operation_invocation": {
+            "operation_id": "planning.front-door",
+            "operation_path": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.front-door.json",
+            "authority": "agentic-planning/route-decision/v1",
+        },
+    }
+    result = compile_reconciliation(
+        {
+            "result": {"status": "partial"},
+            "intent": {"status": "partial", "owner": "planning"},
+            "continuation": {"owner": "planning", "next_action": next_action},
+        }
+    )
+
+    assert result["next_action"] == next_action
+
+
+def test_command_or_unregistered_operation_cannot_become_a_reconciliation_action() -> None:
+    for supplied in (
+        {"command": "agentic-workspace start --target ."},
+        {"operation_id": "workspace.reconcile.refresh"},
+        {"operation_invocation": {"operation_id": "planning.front-door"}},
+    ):
+        result = compile_reconciliation(
+            {
+                "result": {"status": "partial"},
+                "intent": {"status": "partial", "owner": "planning"},
+                "continuation": {"owner": "planning", "next_action": supplied},
+            }
+        )
+        assert result["next_action"]["kind"] == "agentic-workspace/reconciliation-human-decision/v1"
+        assert "operation_id" not in result["next_action"]
+
+
+def test_each_generic_blocker_has_an_explicit_human_owned_fallback() -> None:
+    cases = [
+        {"result": {"status": "failed", "owner": "action"}, "intent": {"status": "satisfied"}},
+        {
+            "result": {"status": "succeeded"},
+            "intent": {"status": "satisfied"},
+            "proof": {"status": "failed", "owner": "verification"},
+        },
+        {
+            "result": {"status": "succeeded"},
+            "intent": {"status": "satisfied"},
+            "external_evidence": {"status": "stale", "owner": "planning"},
+        },
+        {"result": {"status": "succeeded"}, "intent": {"status": "partial", "owner": "intent"}},
+        {
+            "result": {"status": "succeeded"},
+            "intent": {"status": "satisfied", "parent_status": "active", "parent_owner": "lane"},
+        },
+        {
+            "result": {"status": "succeeded"},
+            "intent": {"status": "satisfied"},
+            "residue": {"status": "capture"},
+        },
+    ]
+
+    for inputs in cases:
+        result = compile_reconciliation(inputs)
+        assert result["status"] == "continue"
+        assert result["next_action"]["kind"] == "agentic-workspace/reconciliation-human-decision/v1"
+        assert result["next_action"]["owner"] == result["blockers"][0]["owner"]
 
 
 def test_operating_decision_is_the_reconciliation_composition_owner() -> None:

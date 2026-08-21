@@ -20,6 +20,14 @@ def _revision(value: Any) -> str:
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
+def _registered_operation_action(action: dict[str, Any]) -> bool:
+    invocation = _as_dict(action.get("operation_invocation"))
+    operation_id = str(invocation.get("operation_id") or "")
+    operation_path = str(invocation.get("operation_path") or "")
+    authority = str(invocation.get("authority") or "")
+    return bool(operation_id and operation_path.endswith(f"/{operation_id}.json") and authority)
+
+
 def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
     """Compose owner facts into one claim, residue, continuation, and next action.
 
@@ -126,16 +134,16 @@ def compile_reconciliation(inputs: dict[str, Any] | None) -> dict[str, Any]:
     next_action: dict[str, Any] = {}
     if not terminal:
         supplied = _as_dict(continuation_input.get("next_action"))
-        if supplied.get("operation_id") or supplied.get("command") or supplied.get("human_decision"):
+        if supplied.get("human_decision") or _registered_operation_action(supplied):
             next_action = supplied
         else:
             first = blockers[0]
             next_action = {
-                "kind": "agentic-workspace/reconciliation-action/v1",
-                "operation_id": "workspace.reconcile.refresh",
+                "kind": "agentic-workspace/reconciliation-human-decision/v1",
+                "human_decision": "select a supported recovery route from the named owner",
                 "owner": first["owner"],
                 "reason_code": first["reason_code"],
-                "command": str(inputs.get("refresh_command") or "agentic-workspace start --target . --format json"),
+                "required_facts": [first["repair"]],
             }
 
     identity = {

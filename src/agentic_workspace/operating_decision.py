@@ -2357,7 +2357,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             "owner": "context-authority-registry",
             "repair": "run the typed context-authority repair operation before retrying the decision",
         }
-    terminal_state = str(inputs.get("terminal_state") or "CONTINUE")
+    terminal_state = str(inputs.get("terminal_state") or ("COMPLETE" if reconciliation.get("status") == "terminal" else "CONTINUE"))
     blocked_claim_classes = list(
         dict.fromkeys(
             [
