@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Add effect-scoped transient cleanup, generic reconciliation, and scoped Markdown instruction authoring through the existing operating decision."

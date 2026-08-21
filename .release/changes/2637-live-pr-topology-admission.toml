@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Admit bounded live pull-request topology into review-stack continuity without conflating it with thread-level review evidence."
