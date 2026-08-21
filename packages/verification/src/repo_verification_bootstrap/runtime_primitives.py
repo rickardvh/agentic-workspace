@@ -1437,6 +1437,7 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
             "scenarios": [],
             "evidence_bundles": [],
             "proof_routes": [],
+            "evidence_authorities": [],
             "known_gaps": [],
             "evidence_concepts": _load_evidence_concepts(payload={}),
         }
@@ -1444,7 +1445,17 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
     if schema_version != SCHEMA_VERSION:
         raise VerificationUsageError(f'{VERIFICATION_MANIFEST_PATH.as_posix()} schema_version must be "{SCHEMA_VERSION}".')
     unknown_top = sorted(
-        set(payload) - {"schema_version", "protocols", "scenarios", "evidence_bundles", "proof_routes", "known_gaps", "evidence_concepts"}
+        set(payload)
+        - {
+            "schema_version",
+            "protocols",
+            "scenarios",
+            "evidence_bundles",
+            "proof_routes",
+            "evidence_authorities",
+            "known_gaps",
+            "evidence_concepts",
+        }
     )
     if unknown_top:
         raise VerificationUsageError(
@@ -1646,6 +1657,41 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
 
     evidence_concepts = _load_evidence_concepts(payload=payload)
     proof_routes = _load_proof_routes(payload=payload, protocol_ids=protocol_ids, scenarios_by_id=scenarios_by_id)
+    evidence_authorities: list[dict[str, Any]] = []
+    raw_authorities = _table(payload, "evidence_authorities", surface=VERIFICATION_MANIFEST_PATH.as_posix())
+    for authority_id, raw_authority in sorted(raw_authorities.items()):
+        surface = f"{VERIFICATION_MANIFEST_PATH.as_posix()} evidence_authorities.{authority_id}"
+        if not isinstance(raw_authority, dict):
+            raise VerificationUsageError(f"{surface} must be a table.")
+        supported = {
+            "producer_id",
+            "proof_route",
+            "evidence_class",
+            "result_contract",
+            "allowed_results",
+            "application_id",
+        }
+        unknown = sorted(set(raw_authority) - supported)
+        if unknown:
+            raise VerificationUsageError(f"{surface} contains unsupported field(s): {', '.join(unknown)}.")
+        proof_route = _required_string(payload=raw_authority, key="proof_route", surface=surface)
+        if proof_route not in {str(item.get("id")) for item in proof_routes}:
+            raise VerificationUsageError(f"{surface} references unknown proof_route {proof_route}.")
+        allowed_results = _string_list(payload=raw_authority, key="allowed_results", surface=surface)
+        if not allowed_results:
+            raise VerificationUsageError(f"{surface} requires allowed_results.")
+        evidence_authorities.append(
+            {
+                "kind": "agentic-workspace/evidence-authority/v1",
+                "id": str(authority_id).strip(),
+                "producer_id": _required_string(payload=raw_authority, key="producer_id", surface=surface),
+                "proof_route": proof_route,
+                "evidence_class": _required_string(payload=raw_authority, key="evidence_class", surface=surface),
+                "result_contract": _required_string(payload=raw_authority, key="result_contract", surface=surface),
+                "allowed_results": allowed_results,
+                "application_id": _optional_string(payload=raw_authority, key="application_id", surface=surface),
+            }
+        )
     known_gaps = _load_known_gaps(payload=payload, protocol_ids=protocol_ids, scenarios_by_id=scenarios_by_id)
     return {
         "configured": True,
@@ -1654,6 +1700,7 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
         "scenarios": list(scenarios_by_id.values()),
         "evidence_bundles": evidence_bundles,
         "proof_routes": proof_routes,
+        "evidence_authorities": evidence_authorities,
         "known_gaps": known_gaps,
         "evidence_concepts": evidence_concepts,
     }
@@ -2522,6 +2569,7 @@ def verification_report_payload(
             break
     evidence_bundles = [*manifest["evidence_bundles"], *admitted_validation_bundles]
     proof_routes = manifest["proof_routes"]
+    evidence_authorities = manifest["evidence_authorities"]
     known_gaps = manifest["known_gaps"]
     evidence_concepts = manifest["evidence_concepts"]
     evidence_by_protocol: dict[str, list[dict[str, Any]]] = {}
@@ -2723,6 +2771,7 @@ def verification_report_payload(
         "scenario_count": len(configured_scenarios),
         "evidence_bundle_count": len(evidence_bundles),
         "proof_route_count": len(proof_routes),
+        "evidence_authority_count": len(evidence_authorities),
         "known_gap_count": len(known_gaps),
         "evidence_concepts": {
             **evidence_concepts,
@@ -2742,6 +2791,7 @@ def verification_report_payload(
         "configured_protocols": configured_protocols,
         "configured_scenarios": configured_scenarios,
         "proof_routes": proof_routes,
+        "evidence_authorities": evidence_authorities,
         "known_gaps": known_gaps,
         "evidence_bundles": evidence_bundles,
         "validation_evidence_admission_summary": {

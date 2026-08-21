@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from agentic_workspace.actionability import invocation_decision_input_revision, operation_invocation
+from agentic_workspace.assurance_authority import admit_repository_assurance_decision
 from agentic_workspace.context_authority_owner_operations import (
     registered_context_owner_operation_runner,
     registered_context_owner_receipt_status,
@@ -2018,6 +2019,17 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     )
     reconciliation = compile_reconciliation(_as_dict(inputs.get("reconciliation")))
     control_inputs = compile_control_inputs([item for item in _as_list(inputs.get("control_inputs")) if isinstance(item, dict)])
+    assurance_requested = "assurance_decision" in inputs
+    assurance = (
+        admit_repository_assurance_decision(
+            candidate=_as_dict(inputs.get("assurance_decision")),
+            configured_owner=str(inputs.get("assurance_classification_owner") or "repository"),
+            expected_source_revision=str(inputs.get("assurance_source_revision") or ""),
+            expected_input_revision=str(inputs.get("assurance_input_revision") or ""),
+        )
+        if assurance_requested
+        else {"kind": "agentic-workspace/assurance-decision-admission/v1", "status": "not-requested", "reason_codes": []}
+    )
     requested_consumer = str(inputs.get("consumer") or "operating-decision")
     context_authority_projection = resolve_context_authority_projection(
         consumer=requested_consumer,
@@ -2038,6 +2050,12 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         revisions = {**revisions, "reconciliation_revision": reconciliation["input_revision"]}
     if control_inputs["effects"] or control_inputs["conflicts"]:
         revisions = {**revisions, "control_inputs_revision": control_inputs["input_revision"]}
+    if assurance_requested:
+        revisions = {
+            **revisions,
+            "assurance_source_revision": str(inputs.get("assurance_source_revision") or ""),
+            "assurance_input_revision": str(inputs.get("assurance_input_revision") or ""),
+        }
     authorities = _as_dict(inputs.get("authorities"))
     actionability = _as_dict(inputs.get("actionability"))
     action = _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
@@ -2052,6 +2070,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     )
     blockers = [item for item in _as_list(inputs.get("blockers")) if isinstance(item, dict)]
     blockers.extend(_as_dict(item) for item in _as_list(reconciliation.get("blockers")))
+    if assurance_requested and assurance["status"] != "admitted":
+        blockers.append(
+            {
+                "reason_code": "conflicting-input" if "classification-owner-conflict" in assurance["reason_codes"] else "missing-authority",
+                "owner": str(inputs.get("assurance_classification_owner") or "repository"),
+                "repair": str(_as_dict(assurance.get("next_action")).get("why") or "refresh repository assurance classification"),
+            }
+        )
     for conflict in _as_list(control_inputs.get("conflicts")):
         conflict = _as_dict(conflict)
         blockers.append(
@@ -2230,6 +2256,7 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "source_guidance": source_guidance,
         "reconciliation": reconciliation,
         "control_inputs": control_inputs,
+        "assurance": assurance,
         "highest_impact_context_consequence": context_consequences[0] if context_consequences else {},
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),

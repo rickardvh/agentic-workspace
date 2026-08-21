@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add repository-owned assurance classification, source-bound application identity, bounded dispositions, and external evidence authority admission."
