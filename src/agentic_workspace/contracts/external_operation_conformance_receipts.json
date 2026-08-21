@@ -1,14 +1,14 @@
 {
-  "executed_at": "2026-08-21T14:35:51Z",
+  "executed_at": "2026-08-21T14:40:16Z",
   "freshness": {
-    "client_semantics_revision": "sha256:630e955877cc613aa6df1bc6304e879831d0dee7e3a9cefda87e4c9c89022402",
+    "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
     "rule": "Publication currentness is tied to runner/client-semantics and profile/operation revisions plus explicit stale/revoked/superseded markers.",
-    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:88249390847ffbaf7de3fec9a332a8a53416a93a8cea261f49ff1113bcf088cd",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
     "strategy": "runner-client-operation-profile-revision-bound"
   },
   "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
   "mirror_publication": {
-    "generation_id": "external-conformance-publication:d0d31ae328a5e8d35bb558c3",
+    "generation_id": "external-conformance-publication:3833ba8a4d7f82b6f7da6531",
     "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
     "path_count": 3,
     "paths": [
@@ -16,9 +16,9 @@
       "generated/workspace/python/external_operation_conformance_receipts.json",
       "generated/workspace/typescript/external_operation_conformance_receipts.json"
     ],
-    "payload_digest": "sha256:d0d31ae328a5e8d35bb558c32d473fd332e0b0512c91e18414891135eabf8655",
-    "previous_digest": "e857f70fc5d69fff1a5620dabf55183d2766a62758f111f1c19ca28c380bd3f7",
-    "publisher_pid": 25936,
+    "payload_digest": "sha256:3833ba8a4d7f82b6f7da6531084ccd58e6377ea8c8984c5bfa516a2eb006db18",
+    "previous_digest": "a88299763021229ba2a374c7f054b837b4109d818df66229ee35f5c5e9654468",
+    "publisher_pid": 21360,
     "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
     "status": "published"
   },
@@ -397,7 +397,7 @@
         "config.report.process",
         "config.selected-text.process"
       ],
-      "conformance_result_digest": "775efb3c51c72446d3b443df0bfe062d6cc833d98d8fb20f2020f4409240fe8f",
+      "conformance_result_digest": "a0b335d395b86be24b9cc2e299a04ffc39709753abce95e777056650c7859e92",
       "custody": {
         "operation_id": "external-operation-conformance.run",
         "producer": "agentic-workspace.operation-conformance-runner",
@@ -405,7 +405,7 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-21T14:35:51Z",
+      "executed_at": "2026-08-21T14:40:16Z",
       "executors": {
         "cli-json": {
           "evidence": [
@@ -457,9 +457,9 @@
         }
       },
       "freshness": {
-        "client_semantics_revision": "sha256:630e955877cc613aa6df1bc6304e879831d0dee7e3a9cefda87e4c9c89022402",
+        "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
         "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:88249390847ffbaf7de3fec9a332a8a53416a93a8cea261f49ff1113bcf088cd",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "strategy": "runner-client-operation-profile-revision-bound"
       },
       "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
@@ -469,15 +469,15 @@
       "operation_result_evidence": [
         "operation-results:count=54@sha256:8845f2fecae3613825209d52"
       ],
-      "profile_fingerprint": "sha256:3f205b9a4902af13602b0a29820c8cb88bebba3d36dbe1099cc07f91e0eeb02d",
-      "receipt_ref": "external-conformance:config.report:038d4c6f1275454434dc3ce0",
+      "profile_fingerprint": "sha256:ad5e38b332e1d3ca1db231ac89bf960bf3a2a60a16b43be149d152eeeb30cd3a",
+      "receipt_ref": "external-conformance:config.report:69580459677d48bc4ab4d6be",
       "result_identity": {
-        "client_semantics_revision": "sha256:630e955877cc613aa6df1bc6304e879831d0dee7e3a9cefda87e4c9c89022402",
-        "executed_at": "2026-08-21T14:35:51Z",
-        "invocation_id": "operation-conformance:scripts/chec:775efb3c51c72446d3b443df:2026-08-21T14:35:51Z",
+        "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
+        "executed_at": "2026-08-21T14:40:16Z",
+        "invocation_id": "operation-conformance:scripts/chec:a0b335d395b86be24b9cc2e2:2026-08-21T14:40:16Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
-        "result_digest": "775efb3c51c72446d3b443df0bfe062d6cc833d98d8fb20f2020f4409240fe8f",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:88249390847ffbaf7de3fec9a332a8a53416a93a8cea261f49ff1113bcf088cd",
+        "result_digest": "a0b335d395b86be24b9cc2e299a04ffc39709753abce95e777056650c7859e92",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "status": "current"
       },
       "runtime_exception_admission": {
@@ -884,7 +884,7 @@
         "delegation-outcome.append.process",
         "delegation-outcome.append-text.process"
       ],
-      "conformance_result_digest": "775efb3c51c72446d3b443df0bfe062d6cc833d98d8fb20f2020f4409240fe8f",
+      "conformance_result_digest": "a0b335d395b86be24b9cc2e299a04ffc39709753abce95e777056650c7859e92",
       "custody": {
         "operation_id": "external-operation-conformance.run",
         "producer": "agentic-workspace.operation-conformance-runner",
@@ -892,7 +892,7 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-21T14:35:51Z",
+      "executed_at": "2026-08-21T14:40:16Z",
       "executors": {
         "cli-json": {
           "evidence": [
@@ -944,9 +944,9 @@
         }
       },
       "freshness": {
-        "client_semantics_revision": "sha256:630e955877cc613aa6df1bc6304e879831d0dee7e3a9cefda87e4c9c89022402",
+        "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
         "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:88249390847ffbaf7de3fec9a332a8a53416a93a8cea261f49ff1113bcf088cd",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "strategy": "runner-client-operation-profile-revision-bound"
       },
       "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
@@ -956,15 +956,15 @@
       "operation_result_evidence": [
         "operation-results:count=85@sha256:10f42970cbf548b8c62b2911"
       ],
-      "profile_fingerprint": "sha256:3f205b9a4902af13602b0a29820c8cb88bebba3d36dbe1099cc07f91e0eeb02d",
-      "receipt_ref": "external-conformance:delegation-outcome.append:d600d299f58f90048793ce40",
+      "profile_fingerprint": "sha256:ad5e38b332e1d3ca1db231ac89bf960bf3a2a60a16b43be149d152eeeb30cd3a",
+      "receipt_ref": "external-conformance:delegation-outcome.append:de23a388afbbbd61f20ffa25",
       "result_identity": {
-        "client_semantics_revision": "sha256:630e955877cc613aa6df1bc6304e879831d0dee7e3a9cefda87e4c9c89022402",
-        "executed_at": "2026-08-21T14:35:51Z",
-        "invocation_id": "operation-conformance:scripts/chec:775efb3c51c72446d3b443df:2026-08-21T14:35:51Z",
+        "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
+        "executed_at": "2026-08-21T14:40:16Z",
+        "invocation_id": "operation-conformance:scripts/chec:a0b335d395b86be24b9cc2e2:2026-08-21T14:40:16Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
-        "result_digest": "775efb3c51c72446d3b443df0bfe062d6cc833d98d8fb20f2020f4409240fe8f",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:88249390847ffbaf7de3fec9a332a8a53416a93a8cea261f49ff1113bcf088cd",
+        "result_digest": "a0b335d395b86be24b9cc2e299a04ffc39709753abce95e777056650c7859e92",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "status": "current"
       },
       "runtime_exception_admission": {
@@ -997,6 +997,986 @@
         "vendor-neutral": {
           "evidence": [
             "transport-results:count=20@sha256:862e1e3351fd4224ec2a2f9c"
+          ],
+          "status": "passed"
+        }
+      }
+    },
+    {
+      "case_transport_matrix": {
+        "absent": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.cli-json.absent:cli-json:cli.process@sha256:b5567ed0e19086a7",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.cli-json.absent:cli-json:cli.process@sha256:3ae224d17a3a5950"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.python.absent:python:python.external-client@sha256:1a0e93c7a212ecd9",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.python.absent:python:python.external-client@sha256:2a35796c58cf3892"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.typescript.absent:typescript:typescript.external-client@sha256:3b3d3066f0a99114",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.typescript.absent:typescript:typescript.external-client@sha256:6ce119d2442646fd"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.vendor-neutral.absent:vendor-neutral:vendor-neutral.external-client@sha256:e78ab6e581159686",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.vendor-neutral.absent:vendor-neutral:vendor-neutral.external-client@sha256:9d1c65d5f433b91e"
+            ],
+            "status": "passed"
+          }
+        },
+        "additive-field": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.cli-json.additive-field:cli-json:cli.process@sha256:e245e40f6d20ccf8",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.cli-json.additive-field:cli-json:cli.process@sha256:4d5fd4bc6ba01b27"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.python.additive-field:python:python.external-client@sha256:9aa8de10c03cad47",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.python.additive-field:python:python.external-client@sha256:dde6ceb013ad5da7"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.typescript.additive-field:typescript:typescript.external-client@sha256:58b356f072305e95",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.typescript.additive-field:typescript:typescript.external-client@sha256:3beb51e4b1549330"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.vendor-neutral.additive-field:vendor-neutral:vendor-neutral.external-client@sha256:62cd46b2e1e00cb2",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.vendor-neutral.additive-field:vendor-neutral:vendor-neutral.external-client@sha256:1e1aa7225be17361"
+            ],
+            "status": "passed"
+          }
+        },
+        "disabled": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.cli-json.disabled:cli-json:cli.process@sha256:67e3a58e3aff7080",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.cli-json.disabled:cli-json:cli.process@sha256:5195891ec5d08e8d"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.python.disabled:python:python.external-client@sha256:c3708d2fdb1bfe7f",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.python.disabled:python:python.external-client@sha256:f75bd43f0a81b094"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.typescript.disabled:typescript:typescript.external-client@sha256:ab1f1671f7f377d4",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.typescript.disabled:typescript:typescript.external-client@sha256:1124d63fa61af15c"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.vendor-neutral.disabled:vendor-neutral:vendor-neutral.external-client@sha256:33db4370000b4b6e",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.vendor-neutral.disabled:vendor-neutral:vendor-neutral.external-client@sha256:050f6ff4e09a01aa"
+            ],
+            "status": "passed"
+          }
+        },
+        "incompatible": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.cli-json.incompatible:cli-json:cli.process@sha256:222c85847c4c7f70",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.cli-json.incompatible:cli-json:cli.process@sha256:291e372e0c9e88e7"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.python.incompatible:python:python.external-client@sha256:3545dde19074dd35",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.python.incompatible:python:python.external-client@sha256:9bd007d344f51f98"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.typescript.incompatible:typescript:typescript.external-client@sha256:c29972aa49fa3820",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.typescript.incompatible:typescript:typescript.external-client@sha256:b83d5baebdd7feba"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.vendor-neutral.incompatible:vendor-neutral:vendor-neutral.external-client@sha256:0330b9a2a3169c3a",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.vendor-neutral.incompatible:vendor-neutral:vendor-neutral.external-client@sha256:7629b2381d9e794e"
+            ],
+            "status": "passed"
+          }
+        },
+        "malformed": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.cli-json.malformed:cli-json:cli.process@sha256:9964e123c8a1fdec",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.cli-json.malformed:cli-json:cli.process@sha256:da23ed539e362a59"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.python.malformed:python:python.external-client@sha256:521768c19dee2b04",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.python.malformed:python:python.external-client@sha256:900bf715f56a9c93"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.typescript.malformed:typescript:typescript.external-client@sha256:20d5f7cea8832159",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.typescript.malformed:typescript:typescript.external-client@sha256:f887f8b769d8ce83"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.vendor-neutral.malformed:vendor-neutral:vendor-neutral.external-client@sha256:c4d0d57fc9966bde",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.vendor-neutral.malformed:vendor-neutral:vendor-neutral.external-client@sha256:7af89e8bd3340a76"
+            ],
+            "status": "passed"
+          }
+        },
+        "mutation-applied": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "mutation-failed": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "mutation-noop": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "mutation-rejected": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "retryable": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.cli-json.retryable:cli-json:cli.process@sha256:b4a29774178d1755",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.cli-json.retryable:cli-json:cli.process@sha256:73c3b4535f2ca4f6"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.python.retryable:python:python.external-client@sha256:3f111b7c57983585",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.python.retryable:python:python.external-client@sha256:67192d35d7592cbe"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.typescript.retryable:typescript:typescript.external-client@sha256:3cab4549fc3ee1ee",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.typescript.retryable:typescript:typescript.external-client@sha256:4450817f18e02596"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.query:external-evidence.query.external-readiness.full-mirror.vendor-neutral.retryable:vendor-neutral:vendor-neutral.external-client@sha256:6599643cd1ddf251",
+              "external-evidence.query:external-evidence.query.external-readiness.necessary-surfaces.vendor-neutral.retryable:vendor-neutral:vendor-neutral.external-client@sha256:18f5b113a9691d49"
+            ],
+            "status": "passed"
+          }
+        }
+      },
+      "cases": {
+        "absent": {
+          "evidence": [
+            "case-absent:count=8@sha256:d97e98aa738c02c3a43adf29"
+          ],
+          "status": "passed"
+        },
+        "additive-field": {
+          "evidence": [
+            "case-additive-field:count=8@sha256:cd37425339863b54ad4b381c"
+          ],
+          "status": "passed"
+        },
+        "disabled": {
+          "evidence": [
+            "case-disabled:count=8@sha256:0a9cbd20d70c551e02ddf629"
+          ],
+          "status": "passed"
+        },
+        "incompatible": {
+          "evidence": [
+            "case-incompatible:count=8@sha256:a4eeea8d2388722606ab8a8e"
+          ],
+          "status": "passed"
+        },
+        "malformed": {
+          "evidence": [
+            "case-malformed:count=8@sha256:1f08ca67e9859c7dfa254a97"
+          ],
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/external-evidence.query.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "retryable": {
+          "evidence": [
+            "case-retryable:count=8@sha256:c681c437b59393f3bf36fff9"
+          ],
+          "status": "passed"
+        }
+      },
+      "conformance_refs": [
+        "external-evidence.query.process"
+      ],
+      "conformance_result_digest": "a0b335d395b86be24b9cc2e299a04ffc39709753abce95e777056650c7859e92",
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "result_kind": "operation-conformance-proof/v1",
+        "source": "scripts/check/run_operation_conformance_tests.py",
+        "trusted_channel": "packaged-conformance-receipt"
+      },
+      "executed_at": "2026-08-21T14:40:16Z",
+      "executors": {
+        "cli-json": {
+          "evidence": [
+            "executor-direct-cli-json:count=12@sha256:f35f65b151fa86a995c18c71"
+          ],
+          "executor_id": "direct-cli-json",
+          "status": "passed"
+        },
+        "python": {
+          "evidence": [
+            "executor-generated-python-client:count=12@sha256:1f4885ead8f2e0afa888e389"
+          ],
+          "executor_id": "generated-python-client",
+          "status": "passed"
+        },
+        "typescript": {
+          "evidence": [
+            "executor-generated-typescript-client:count=12@sha256:1dc4a5b727f32e611d99950d"
+          ],
+          "executor_id": "generated-typescript-client",
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "evidence": [
+            "executor-packed-typescript-client:count=12@sha256:f0615756a3b5298744ea9d80"
+          ],
+          "executor_id": "packed-typescript-client",
+          "status": "passed"
+        }
+      },
+      "footprints": {
+        "full-mirror": {
+          "evidence": [
+            "footprint-full-mirror:count=24@sha256:19b4b4b5c70915bd48f65a4e"
+          ],
+          "status": "passed"
+        },
+        "necessary-surfaces": {
+          "evidence": [
+            "footprint-necessary-surfaces:count=24@sha256:b4c04df6ddba785a50996118"
+          ],
+          "status": "passed"
+        },
+        "semantic-parity": {
+          "evidence": [
+            "footprint-semantic-parity:count=48@sha256:661f343d998f1166fa80f0b5"
+          ],
+          "status": "passed"
+        }
+      },
+      "freshness": {
+        "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
+        "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
+        "strategy": "runner-client-operation-profile-revision-bound"
+      },
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "operation_fingerprint": "sha256:5b6a18458e33cfd6320430a0067454ef8621b9ae4a59c9a6920f3bd8009956cd",
+      "operation_id": "external-evidence.query",
+      "operation_result_count": 48,
+      "operation_result_evidence": [
+        "operation-results:count=48@sha256:661f343d998f1166fa80f0b5"
+      ],
+      "profile_fingerprint": "sha256:ad5e38b332e1d3ca1db231ac89bf960bf3a2a60a16b43be149d152eeeb30cd3a",
+      "receipt_ref": "external-conformance:external-evidence.query:674f6564af6cd9359a1d7b35",
+      "result_identity": {
+        "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
+        "executed_at": "2026-08-21T14:40:16Z",
+        "invocation_id": "operation-conformance:scripts/chec:a0b335d395b86be24b9cc2e2:2026-08-21T14:40:16Z",
+        "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
+        "result_digest": "a0b335d395b86be24b9cc2e299a04ffc39709753abce95e777056650c7859e92",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
+        "status": "current"
+      },
+      "runtime_exception_admission": {
+        "operation_id": "external-evidence.query",
+        "revision": "github-2619-external-evidence-host-operation:v1",
+        "rule": "Runtime exception evidence is operation-specific and supplied by a separate authoritative owner.",
+        "status": "admitted"
+      },
+      "runtime_exception_revision": "github-2619-external-evidence-host-operation:v1",
+      "status": "passed",
+      "transports": {
+        "cli-json": {
+          "evidence": [
+            "transport-results:count=12@sha256:f35f65b151fa86a995c18c71"
+          ],
+          "status": "passed"
+        },
+        "python": {
+          "evidence": [
+            "transport-results:count=12@sha256:1f4885ead8f2e0afa888e389"
+          ],
+          "status": "passed"
+        },
+        "typescript": {
+          "evidence": [
+            "transport-results:count=12@sha256:1dc4a5b727f32e611d99950d"
+          ],
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "evidence": [
+            "transport-results:count=12@sha256:f0615756a3b5298744ea9d80"
+          ],
+          "status": "passed"
+        }
+      }
+    },
+    {
+      "case_transport_matrix": {
+        "absent": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.cli-json.absent:cli-json:cli.process@sha256:8d40559fbcf071a1",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.cli-json.absent:cli-json:cli.process@sha256:6f1bb1f84bb7fac8"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.python.absent:python:python.external-client@sha256:d2d52a92b710c4f7",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.python.absent:python:python.external-client@sha256:8fab41ee742caf51"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.typescript.absent:typescript:typescript.external-client@sha256:90356feaf0e276b0",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.typescript.absent:typescript:typescript.external-client@sha256:d6cb20fc663d3089"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.vendor-neutral.absent:vendor-neutral:vendor-neutral.external-client@sha256:d2eb1c6b995b543b",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.vendor-neutral.absent:vendor-neutral:vendor-neutral.external-client@sha256:f0a72b176acea429"
+            ],
+            "status": "passed"
+          }
+        },
+        "additive-field": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.cli-json.additive-field:cli-json:cli.process@sha256:7c64ff0524bc33eb",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.cli-json.additive-field:cli-json:cli.process@sha256:88105c9bffdea30d"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.python.additive-field:python:python.external-client@sha256:127a485a911c6f6b",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.python.additive-field:python:python.external-client@sha256:4cc1f164d93a92b4"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.typescript.additive-field:typescript:typescript.external-client@sha256:2997c79aa90a4448",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.typescript.additive-field:typescript:typescript.external-client@sha256:47dc066264192869"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.vendor-neutral.additive-field:vendor-neutral:vendor-neutral.external-client@sha256:354c076e9976b0fd",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.vendor-neutral.additive-field:vendor-neutral:vendor-neutral.external-client@sha256:5d2895b5bf309b09"
+            ],
+            "status": "passed"
+          }
+        },
+        "disabled": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.cli-json.disabled:cli-json:cli.process@sha256:02a3350d6f6d6a34",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.cli-json.disabled:cli-json:cli.process@sha256:4e952e719f083857"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.python.disabled:python:python.external-client@sha256:a83199f6d1038fac",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.python.disabled:python:python.external-client@sha256:90c0569b173bfac2"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.typescript.disabled:typescript:typescript.external-client@sha256:d88e3dd13af4a087",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.typescript.disabled:typescript:typescript.external-client@sha256:7d65188f6c6ba47b"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.vendor-neutral.disabled:vendor-neutral:vendor-neutral.external-client@sha256:b8df7eee20265731",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.vendor-neutral.disabled:vendor-neutral:vendor-neutral.external-client@sha256:0e5a0f346972209a"
+            ],
+            "status": "passed"
+          }
+        },
+        "incompatible": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.cli-json.incompatible:cli-json:cli.process@sha256:de84c33323a2c663",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.cli-json.incompatible:cli-json:cli.process@sha256:a9a34e4548a23f9a"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.python.incompatible:python:python.external-client@sha256:9cdebb75e255ccad",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.python.incompatible:python:python.external-client@sha256:dc545b34a9a515c4"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.typescript.incompatible:typescript:typescript.external-client@sha256:5a002cef68251b4d",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.typescript.incompatible:typescript:typescript.external-client@sha256:05fd217bce1214cd"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.vendor-neutral.incompatible:vendor-neutral:vendor-neutral.external-client@sha256:a11aba74140d867a",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.vendor-neutral.incompatible:vendor-neutral:vendor-neutral.external-client@sha256:ec9c523d2911db85"
+            ],
+            "status": "passed"
+          }
+        },
+        "malformed": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.cli-json.malformed:cli-json:cli.process@sha256:da61f7bc063a1ee1",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.cli-json.malformed:cli-json:cli.process@sha256:ba25721cd1e4dfc5"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.python.malformed:python:python.external-client@sha256:2c333f781b063c08",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.python.malformed:python:python.external-client@sha256:4b9e3710eb817486"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.typescript.malformed:typescript:typescript.external-client@sha256:30e657f3c1089553",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.typescript.malformed:typescript:typescript.external-client@sha256:158f73487baf6289"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.vendor-neutral.malformed:vendor-neutral:vendor-neutral.external-client@sha256:52306d59e508cb29",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.vendor-neutral.malformed:vendor-neutral:vendor-neutral.external-client@sha256:bbe6358a0846911e"
+            ],
+            "status": "passed"
+          }
+        },
+        "mutation-applied": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "mutation-failed": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "mutation-noop": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "mutation-rejected": {
+          "cli-json": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+            ],
+            "reason": "not applicable: operation contract is read-only and declares no writes",
+            "status": "passed"
+          }
+        },
+        "retryable": {
+          "cli-json": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.cli-json.retryable:cli-json:cli.process@sha256:6ce3af1b5bdcd214",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.cli-json.retryable:cli-json:cli.process@sha256:edcf5fd100a0bdb6"
+            ],
+            "status": "passed"
+          },
+          "python": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.python.retryable:python:python.external-client@sha256:8930957783502719",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.python.retryable:python:python.external-client@sha256:b2c5a2766b3b05c5"
+            ],
+            "status": "passed"
+          },
+          "typescript": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.typescript.retryable:typescript:typescript.external-client@sha256:8489f7061f5364a1",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.typescript.retryable:typescript:typescript.external-client@sha256:05e380fde4e134e4"
+            ],
+            "status": "passed"
+          },
+          "vendor-neutral": {
+            "evidence": [
+              "external-evidence.submit:external-evidence.submit.external-readiness.full-mirror.vendor-neutral.retryable:vendor-neutral:vendor-neutral.external-client@sha256:6a3cdde41e0c8e63",
+              "external-evidence.submit:external-evidence.submit.external-readiness.necessary-surfaces.vendor-neutral.retryable:vendor-neutral:vendor-neutral.external-client@sha256:4d20021082674f9c"
+            ],
+            "status": "passed"
+          }
+        }
+      },
+      "cases": {
+        "absent": {
+          "evidence": [
+            "case-absent:count=8@sha256:b6fb3b654ecb9c2520d63da6"
+          ],
+          "status": "passed"
+        },
+        "additive-field": {
+          "evidence": [
+            "case-additive-field:count=8@sha256:21516c6f2d5aabbe30be709b"
+          ],
+          "status": "passed"
+        },
+        "disabled": {
+          "evidence": [
+            "case-disabled:count=8@sha256:2a034654e5fca5a264586072"
+          ],
+          "status": "passed"
+        },
+        "incompatible": {
+          "evidence": [
+            "case-incompatible:count=8@sha256:2571d1bd607a9fceb6d688a9"
+          ],
+          "status": "passed"
+        },
+        "malformed": {
+          "evidence": [
+            "case-malformed:count=8@sha256:b683c59af60f41ff478e5752"
+          ],
+          "status": "passed"
+        },
+        "mutation-applied": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "mutation-failed": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "mutation-noop": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "mutation-rejected": {
+          "evidence": [
+            "src/agentic_workspace/contracts/operations/external-evidence.submit.json"
+          ],
+          "reason": "not applicable: operation contract is read-only and declares no writes",
+          "status": "passed"
+        },
+        "retryable": {
+          "evidence": [
+            "case-retryable:count=8@sha256:6faedf8c402652b74640d571"
+          ],
+          "status": "passed"
+        }
+      },
+      "conformance_refs": [
+        "external-evidence.submit.process"
+      ],
+      "conformance_result_digest": "a0b335d395b86be24b9cc2e299a04ffc39709753abce95e777056650c7859e92",
+      "custody": {
+        "operation_id": "external-operation-conformance.run",
+        "producer": "agentic-workspace.operation-conformance-runner",
+        "result_kind": "operation-conformance-proof/v1",
+        "source": "scripts/check/run_operation_conformance_tests.py",
+        "trusted_channel": "packaged-conformance-receipt"
+      },
+      "executed_at": "2026-08-21T14:40:16Z",
+      "executors": {
+        "cli-json": {
+          "evidence": [
+            "executor-direct-cli-json:count=12@sha256:62e30223db12be4258c324bf"
+          ],
+          "executor_id": "direct-cli-json",
+          "status": "passed"
+        },
+        "python": {
+          "evidence": [
+            "executor-generated-python-client:count=12@sha256:8e2b945631417da06d709420"
+          ],
+          "executor_id": "generated-python-client",
+          "status": "passed"
+        },
+        "typescript": {
+          "evidence": [
+            "executor-generated-typescript-client:count=12@sha256:2922cb85d05abd87ceef4ae8"
+          ],
+          "executor_id": "generated-typescript-client",
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "evidence": [
+            "executor-packed-typescript-client:count=12@sha256:6fbbc392e706741297c5d58b"
+          ],
+          "executor_id": "packed-typescript-client",
+          "status": "passed"
+        }
+      },
+      "footprints": {
+        "full-mirror": {
+          "evidence": [
+            "footprint-full-mirror:count=24@sha256:ba51e5f69781369c67ce9f1d"
+          ],
+          "status": "passed"
+        },
+        "necessary-surfaces": {
+          "evidence": [
+            "footprint-necessary-surfaces:count=24@sha256:fd70cbda5bc17dd1abf7d2c5"
+          ],
+          "status": "passed"
+        },
+        "semantic-parity": {
+          "evidence": [
+            "footprint-semantic-parity:count=48@sha256:fa5905b83f178afe9b2ad2eb"
+          ],
+          "status": "passed"
+        }
+      },
+      "freshness": {
+        "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
+        "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
+        "strategy": "runner-client-operation-profile-revision-bound"
+      },
+      "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
+      "operation_fingerprint": "sha256:4a5a21965a3d986e5be13482c00295445c7e8a6d3eb9fc670c6cc2bd4a5ad001",
+      "operation_id": "external-evidence.submit",
+      "operation_result_count": 48,
+      "operation_result_evidence": [
+        "operation-results:count=48@sha256:fa5905b83f178afe9b2ad2eb"
+      ],
+      "profile_fingerprint": "sha256:ad5e38b332e1d3ca1db231ac89bf960bf3a2a60a16b43be149d152eeeb30cd3a",
+      "receipt_ref": "external-conformance:external-evidence.submit:ee842463033d92132de0058b",
+      "result_identity": {
+        "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
+        "executed_at": "2026-08-21T14:40:16Z",
+        "invocation_id": "operation-conformance:scripts/chec:a0b335d395b86be24b9cc2e2:2026-08-21T14:40:16Z",
+        "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
+        "result_digest": "a0b335d395b86be24b9cc2e299a04ffc39709753abce95e777056650c7859e92",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
+        "status": "current"
+      },
+      "runtime_exception_admission": {
+        "operation_id": "external-evidence.submit",
+        "revision": "github-2619-external-evidence-host-operation:v1",
+        "rule": "Runtime exception evidence is operation-specific and supplied by a separate authoritative owner.",
+        "status": "admitted"
+      },
+      "runtime_exception_revision": "github-2619-external-evidence-host-operation:v1",
+      "status": "passed",
+      "transports": {
+        "cli-json": {
+          "evidence": [
+            "transport-results:count=12@sha256:62e30223db12be4258c324bf"
+          ],
+          "status": "passed"
+        },
+        "python": {
+          "evidence": [
+            "transport-results:count=12@sha256:8e2b945631417da06d709420"
+          ],
+          "status": "passed"
+        },
+        "typescript": {
+          "evidence": [
+            "transport-results:count=12@sha256:2922cb85d05abd87ceef4ae8"
+          ],
+          "status": "passed"
+        },
+        "vendor-neutral": {
+          "evidence": [
+            "transport-results:count=12@sha256:6fbbc392e706741297c5d58b"
           ],
           "status": "passed"
         }
@@ -1374,7 +2354,7 @@
       "conformance_refs": [
         "instructions.explain.process"
       ],
-      "conformance_result_digest": "775efb3c51c72446d3b443df0bfe062d6cc833d98d8fb20f2020f4409240fe8f",
+      "conformance_result_digest": "a0b335d395b86be24b9cc2e299a04ffc39709753abce95e777056650c7859e92",
       "custody": {
         "operation_id": "external-operation-conformance.run",
         "producer": "agentic-workspace.operation-conformance-runner",
@@ -1382,7 +2362,7 @@
         "source": "scripts/check/run_operation_conformance_tests.py",
         "trusted_channel": "packaged-conformance-receipt"
       },
-      "executed_at": "2026-08-21T14:35:51Z",
+      "executed_at": "2026-08-21T14:40:16Z",
       "executors": {
         "cli-json": {
           "evidence": [
@@ -1434,9 +2414,9 @@
         }
       },
       "freshness": {
-        "client_semantics_revision": "sha256:630e955877cc613aa6df1bc6304e879831d0dee7e3a9cefda87e4c9c89022402",
+        "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
         "rule": "Receipts remain current only while runner/client-semantics and operation/profile revisions match and no stale, revoked, or superseded marker is present.",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:88249390847ffbaf7de3fec9a332a8a53416a93a8cea261f49ff1113bcf088cd",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "strategy": "runner-client-operation-profile-revision-bound"
       },
       "kind": "agentic-workspace/external-operation-conformance-receipt/v1",
@@ -1446,15 +2426,15 @@
       "operation_result_evidence": [
         "operation-results:count=51@sha256:58a2f8839cbb66b66adc6e2c"
       ],
-      "profile_fingerprint": "sha256:3f205b9a4902af13602b0a29820c8cb88bebba3d36dbe1099cc07f91e0eeb02d",
-      "receipt_ref": "external-conformance:instructions.explain:767e3280c3f8c39dba43cba6",
+      "profile_fingerprint": "sha256:ad5e38b332e1d3ca1db231ac89bf960bf3a2a60a16b43be149d152eeeb30cd3a",
+      "receipt_ref": "external-conformance:instructions.explain:865cb367bbda391310e5caf0",
       "result_identity": {
-        "client_semantics_revision": "sha256:630e955877cc613aa6df1bc6304e879831d0dee7e3a9cefda87e4c9c89022402",
-        "executed_at": "2026-08-21T14:35:51Z",
-        "invocation_id": "operation-conformance:scripts/chec:775efb3c51c72446d3b443df:2026-08-21T14:35:51Z",
+        "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
+        "executed_at": "2026-08-21T14:40:16Z",
+        "invocation_id": "operation-conformance:scripts/chec:a0b335d395b86be24b9cc2e2:2026-08-21T14:40:16Z",
         "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
-        "result_digest": "775efb3c51c72446d3b443df0bfe062d6cc833d98d8fb20f2020f4409240fe8f",
-        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:88249390847ffbaf7de3fec9a332a8a53416a93a8cea261f49ff1113bcf088cd",
+        "result_digest": "a0b335d395b86be24b9cc2e299a04ffc39709753abce95e777056650c7859e92",
+        "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "status": "current"
       },
       "runtime_exception_admission": {
@@ -1494,12 +2474,12 @@
     }
   ],
   "result_identity": {
-    "client_semantics_revision": "sha256:630e955877cc613aa6df1bc6304e879831d0dee7e3a9cefda87e4c9c89022402",
-    "executed_at": "2026-08-21T14:35:51Z",
-    "invocation_id": "operation-conformance:scripts/chec:775efb3c51c72446d3b443df:2026-08-21T14:35:51Z",
+    "client_semantics_revision": "sha256:2612b08f6a4639bd5b85ce2943cb354471d8004dcfc0933448e1f4ba46ff64bf",
+    "executed_at": "2026-08-21T14:40:16Z",
+    "invocation_id": "operation-conformance:scripts/chec:a0b335d395b86be24b9cc2e2:2026-08-21T14:40:16Z",
     "kind": "agentic-workspace/external-operation-conformance-result-identity/v1",
-    "result_digest": "775efb3c51c72446d3b443df0bfe062d6cc833d98d8fb20f2020f4409240fe8f",
-    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:88249390847ffbaf7de3fec9a332a8a53416a93a8cea261f49ff1113bcf088cd",
+    "result_digest": "a0b335d395b86be24b9cc2e299a04ffc39709753abce95e777056650c7859e92",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
     "status": "current"
   },
   "rule": "Readiness consumes producer-owned executed conformance receipts from this store; profile-authored inline evidence is ignored.",
