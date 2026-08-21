@@ -2303,6 +2303,15 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
 
 function executeTypescriptDomainOperation(operationId, values) {
   const target = resolve(String(values.target ?? '.'));
+  if (operationId === 'external-evidence.submit' || operationId === 'external-evidence.query') {
+    return {
+      kind: 'agentic-workspace/external-evidence-operation-error/v1',
+      status: 'rejected',
+      message: 'External evidence admission requires the package-trusted runtime-backed host boundary.',
+      command: operationId === 'external-evidence.submit' ? 'external-evidence-submit' : 'external-evidence-query',
+      exit_status: 2,
+    };
+  }
   if (operationId === 'final-response.admit') {
     const checkpointRef = '.agentic-workspace/local/chat-checkpoint.json';
     const checkpointPath = resolveInside(target, checkpointRef);
