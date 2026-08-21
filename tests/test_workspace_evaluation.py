@@ -2293,7 +2293,7 @@ def test_operating_context_convergence_evaluation_is_owner_bound_and_privacy_saf
     Draft202012Validator(contract_schema("evaluation_definition.schema.json")).validate(payload)
     evaluation = next(item for item in payload["evaluations"] if item["id"] == "operating-context-cost-convergence-2646")
 
-    assert evaluation["lifecycle"] == "collecting"
+    assert evaluation["lifecycle"] == "satisfied"
     assert evaluation["subject"]["version_range"] == "v0.42-current through stacked PRs #2653-#2655"
     assert evaluation["decision_owner"] == {"class": "maintainer", "id": "workspace-maintainer"}
     assert evaluation["collection_policy"]["minimum_observations"] == 6
@@ -2313,3 +2313,10 @@ def test_operating_context_convergence_evaluation_is_owner_bound_and_privacy_saf
         "evaluation-local-observations",
         "proof-receipts",
     }
+    disposition = json.loads((ROOT / ".agentic-workspace/evaluations/issue-2646-disposition.json").read_text(encoding="utf-8"))
+    assert disposition["status"] == "satisfied"
+    assert disposition["conclusion"]["decision_observation_count"] == 6
+    assert len(disposition["representative_sessions"]) >= 4
+    assert disposition["convergence"]["human_steering_avoided_next_time"] is True
+    assert set(disposition["bounded_adaptation_proof"]["owner_classes"]) == {"proof-route", "scoped-instruction"}
+    assert "raw prompts and full transcripts remain local" in disposition["conclusion"]["privacy"]

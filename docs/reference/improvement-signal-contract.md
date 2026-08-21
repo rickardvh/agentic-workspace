@@ -33,6 +33,14 @@ Contract for classifying improvement signals and routing them to the right owner
 | `lifecycle_states` | array of enum `"active"`, `"mitigated"`, `"accepted-risk"`, `"promoted-to-issue"`, `"obsolete"` | yes |  | Ordered lifecycle states entries used by this contract. |  |  |
 | `lifecycle_rule` | string | yes |  | Policy rule that explains how improvement pressure lifecycle state affects routing. |  |  |
 | `retirement_criteria_fields` | array of string | yes |  | Fields that explain what retires or promotes an improvement pressure record. |  |  |
+| `bounded_adaptation` | object | yes |  | Contract for deriving safe source-owned adaptations from admitted improvement signals. |  |  |
+| `bounded_adaptation.kind` | const `"agentic-workspace/bounded-adaptation-candidate/v1"` | yes |  | Discriminator for a source-owned bounded adaptation candidate. |  |  |
+| `bounded_adaptation.required_fields` | array of string | yes |  | Fields that make the source owner, proposed delta, authority, effect, proof, and rollback explicit. |  |  |
+| `bounded_adaptation.automatic_promotion_requires` | array of string | yes |  | All conditions required before an existing typed operation may apply a low-risk candidate. |  |  |
+| `bounded_adaptation.owner_admission_required_for` | array of string | yes |  | Consequential changes that remain review-only until their canonical owner admits them. |  |  |
+| `bounded_adaptation.simulation_rejects` | array of string | yes |  | Simulation outcomes that reject a candidate before any owner mutation is attempted. |  |  |
+| `bounded_adaptation.persistence_rule` | string | yes |  | Rule keeping adaptations in canonical source owners instead of a learned override store. |  |  |
+| `bounded_adaptation.quiet_rule` | string | yes |  | Rule keeping absent and retired adaptation evidence out of the ordinary first-line path. |  |  |
 | `immediate_actions` | array of enum `"fix_now"`, `"route"`, `"review"`, `"remember"`, `"dismiss"` | yes |  | Ordered immediate actions entries used by this contract. |  |  |
 | `retention` | array of enum `"shrink_after_fix"`, `"delete_after_fix"`, `"keep_with_justification"` | yes |  | Ordered retention entries used by this contract. |  |  |
 | `destinations` | array of string | yes |  | Ordered destinations entries used by this contract. |  |  |

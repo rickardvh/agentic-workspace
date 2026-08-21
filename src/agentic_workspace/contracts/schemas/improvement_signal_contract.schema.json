@@ -265,13 +265,44 @@
         "quiet_rule"
       ],
       "properties": {
-        "kind": {"const": "agentic-workspace/bounded-adaptation-candidate/v1"},
-        "required_fields": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
-        "automatic_promotion_requires": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
-        "owner_admission_required_for": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
-        "simulation_rejects": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
-        "persistence_rule": {"type": "string", "minLength": 1},
-        "quiet_rule": {"type": "string", "minLength": 1}
+        "kind": {
+          "const": "agentic-workspace/bounded-adaptation-candidate/v1",
+          "description": "Discriminator for a source-owned bounded adaptation candidate."
+        },
+        "required_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1, "description": "One field required on every adaptation candidate."},
+          "description": "Fields that make the source owner, proposed delta, authority, effect, proof, and rollback explicit."
+        },
+        "automatic_promotion_requires": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1, "description": "One precondition for low-risk automatic promotion."},
+          "description": "All conditions required before an existing typed operation may apply a low-risk candidate."
+        },
+        "owner_admission_required_for": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1, "description": "One consequential change class requiring owner admission."},
+          "description": "Consequential changes that remain review-only until their canonical owner admits them."
+        },
+        "simulation_rejects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1, "description": "One unsafe or regressive simulation outcome."},
+          "description": "Simulation outcomes that reject a candidate before any owner mutation is attempted."
+        },
+        "persistence_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Rule keeping adaptations in canonical source owners instead of a learned override store."
+        },
+        "quiet_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Rule keeping absent and retired adaptation evidence out of the ordinary first-line path."
+        }
       },
       "additionalProperties": false,
       "description": "Contract for deriving safe source-owned adaptations from admitted improvement signals."

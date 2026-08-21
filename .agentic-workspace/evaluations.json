@@ -379,7 +379,13 @@
         }
       ],
       "id": "operating-context-cost-convergence-2646",
-      "lifecycle": "collecting",
+      "last_transition": {
+        "from": "collecting",
+        "reason": "Six current admitted observations cover direct, scoped-instruction, module, Planning, cross-session, and later equivalent-task convergence with no contradictions; the 2026-08-21 archive remains limited context.",
+        "recorded_at": "2026-08-21T22:46:00Z",
+        "to": "satisfied"
+      },
+      "lifecycle": "satisfied",
       "question": "Is AW acceptably efficient from a cold/default state and measurably cheaper on equivalent work after bounded canonical adaptation?",
       "report_sinks": [
         {
@@ -420,7 +426,7 @@
         "type": "workspace-operating-context",
         "version_range": "v0.42-current through stacked PRs #2653-#2655"
       },
-      "updated_at": "2026-08-21T22:31:02Z"
+      "updated_at": "2026-08-21T22:46:00Z"
     }
   ],
   "kind": "agentic-workspace/evaluations/v1"

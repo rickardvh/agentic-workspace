@@ -59,7 +59,7 @@
       "locator": ""
     }
   ],
-  "next_action": "Publish the second stacked PR for #2644 #2645, then implement #2646 #2647 on its exact head.",
+  "next_action": "Publish the third stacked PR for #2646 #2647, then review and merge #2653, #2654, and #2655 in dependency order.",
   "blockers": [],
   "proof": {
     "claims": [
@@ -79,11 +79,15 @@
       "make typecheck passed",
       "Default closeout_trust measured at 15,150 answer bytes before the final compact projection update",
       "PR #2653 is the published draft base for #2641 #2642 #2643",
+      "PR #2654 is the published draft middle layer for #2644 #2645",
       "66 focused manifest, Verification, proof reuse, and release-selection tests passed; all 51 Verification package tests passed",
       "38 changed-selector proof scenarios, contract tooling, structured inventory, workspace lint, and all package type checks passed",
       "Full proof-selector suite initially reported 209 passed and 10 failed; exact repaired-base replay reproduced nine failures with identical assertions, while the attributable docs-only tiny budget failure was fixed and now passes",
       "Validation-plan catalogue replay produced the same two missing compact labels on repaired base dbf011637 and this head: contract catalogues and render contract catalogues",
-      "Durable #2645 replay maps reused, rerun-required, and excluded-unrelated subjects and removes 171.6 seconds of attributable Planning work at .agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json"
+      "Durable #2645 replay maps reused, rerun-required, and excluded-unrelated subjects and removes 171.6 seconds of attributable Planning work at .agentic-workspace/planning/closeout-evidence/issue-2645-proof-route-cost-replay.replay.json",
+      "57 focused adaptation and Evaluation tests passed; one inherited #1969 lane-artifact assertion remains excluded because its parent lane file is absent",
+      "make maintainer-surfaces passed after adding the generated bounded-adaptation schema reference",
+      "Evaluation operating-context-cost-convergence-2646 concluded satisfied with six current admitted observations, all six criteria covered, and no contradictions"
     ]
   },
   "continuation": {
