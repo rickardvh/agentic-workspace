@@ -20,28 +20,27 @@ For a task like that, the answer can point the agent to only the things that mat
 
 Command-line interfaces are one way to access this behavior, not a workflow the agent has to memorize.
 
-## What Agentic Workspace helps with
+## First-party modules
 
-- **Task-shaped repository guidance** — apply scoped instructions, ownership, policy, and procedures only when they matter to the current work.
-- **Continuation across sessions and agents** — preserve useful active context so work can be resumed without reconstructing the task from chat history.
-- **Reusable procedures and actions** — route agents to maintained skills and supported operations instead of relying on remembered command sequences.
-- **Verification and completion** — make relevant checks and completion requirements visible before an agent says the work is done.
-- **Durable anti-rediscovery context** — retain repository knowledge that is expensive to rederive and useful to later agents.
-- **Repository-specific control** — let repo-owned configuration and instructions affect agent behavior while keeping the acting agent focused on what applies now.
+Most of Agentic Workspace's current higher-level functionality is provided by three first-party modules. They are independently selectable capabilities rather than prerequisites: a repository can use the Workspace routing/control layer on its own or add the modules that solve recurring problems.
 
-## Optional capabilities
+- **Memory** preserves repository knowledge that is costly to rediscover, so later agents can recover useful lessons, constraints, and orientation without repeating the same investigation.
+- **Planning** preserves active work and execution continuity across sessions and agents: what is being worked on, the intent and boundaries that matter, what remains, and where continuation belongs.
+- **Verification** preserves reusable verification procedures, evidence, and known gaps so agents can apply the right checks and keep completion claims aligned with what has actually been established.
 
-Agentic Workspace can be used as a small routing/control layer on its own or with additional modules.
-
-The current first-party modules are:
-
-- **Memory** — preserves durable repository knowledge that is expensive to rediscover.
-- **Planning** — preserves active work, intent, handoff, and continuation across sessions.
-- **Verification** — preserves reusable verification procedures, evidence, and known gaps.
-
-Select only the capabilities that solve a recurring problem in the repository. Installing a capability should not make every task carry its terminology or procedure.
+Workspace connects these capabilities with task-shaped routing, repository instructions, ownership, and the current action and completion boundaries. A module should become visible when its capability matters without making unrelated tasks carry its terminology or procedure.
 
 See [`docs/package/modules.md`](docs/package/modules.md) for module roles and ownership.
+
+## What Workspace provides
+
+The Workspace layer provides the common operating path around those capabilities:
+
+- **Task-shaped repository guidance** — apply scoped instructions, ownership, policy, and procedures only when they matter to the current work.
+- **Compact routing** — start from one current answer instead of reconciling several instruction and state surfaces manually.
+- **Reusable procedures and actions** — route agents to maintained skills and supported operations instead of relying on remembered command sequences.
+- **Repository-specific control** — let repo-owned configuration and instructions affect agent behavior while keeping the acting agent focused on what applies now.
+- **Progressive detail** — keep unrelated module state, diagnostics, and deeper procedures out of first contact until the task needs them.
 
 ## How it works
 
@@ -91,7 +90,7 @@ See [`docs/security/threat-model.md`](docs/security/threat-model.md) for the ful
 
 - [`docs/package/overview.md`](docs/package/overview.md) — product model and ordinary operating loop.
 - [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md) — installation and adoption.
-- [`docs/package/modules.md`](docs/package/modules.md) — optional modules and ownership.
+- [`docs/package/modules.md`](docs/package/modules.md) — first-party modules and ownership.
 - [`docs/architecture.md`](docs/architecture.md) — operating context, dynamic control, programmable instructions, and extension boundaries.
 - [`docs/extension-boundary.md`](docs/extension-boundary.md) — module and external-extension architecture.
 - [`docs/security/threat-model.md`](docs/security/threat-model.md) — trust and supply-chain boundary.
