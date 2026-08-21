@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from jsonschema import Draft202012Validator, ValidationError
 
 from agentic_workspace import workspace_runtime_core as runtime
 from agentic_workspace.instruction_clause_ir import compile_instruction_program
@@ -180,6 +181,26 @@ def test_module_facts_are_optional_and_absent_from_factless_contributions() -> N
     contribution = module_contribution(validated, task="inspect build signal", changed_paths=[])
     assert contribution is not None
     assert "facts" not in contribution
+
+
+def test_fact_bearing_contract_requires_module_facts_capability() -> None:
+    contract = _contract()
+    contract["facts"] = [
+        {
+            "id": "signals.build-risk",
+            "type": "string",
+            "value": "elevated",
+            "source": {"owner": "signals", "revision": "r1", "current": True},
+        }
+    ]
+
+    with pytest.raises(ModuleContractError, match="module-facts-v1"):
+        validate_module_contract(contract)
+
+    schema_path = Path("src/agentic_workspace/contracts/schemas/module_capability.schema.json")
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    with pytest.raises(ValidationError):
+        Draft202012Validator(schema).validate(contract)
 
 
 @pytest.mark.parametrize(
@@ -356,6 +377,7 @@ def test_selected_module_fact_collisions_fail_closed() -> None:
     first_contract = _contract(name="signals-a")
     second_contract = _contract(name="signals-b")
     for contract in (first_contract, second_contract):
+        contract["compatibility"]["required_capabilities"] = ["module-facts-v1"]
         contract["facts"] = [
             {
                 "id": "shared.build-risk",

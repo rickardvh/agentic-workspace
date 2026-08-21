@@ -126,6 +126,8 @@ def validate_module_contract(payload: Mapping[str, Any]) -> dict[str, Any]:
     fact_ids = [str(item["id"]) for item in facts]
     if len(fact_ids) != len(set(fact_ids)):
         raise ModuleContractError("facts must have unique ids")
+    if facts and "module-facts-v1" not in required_capabilities:
+        raise ModuleContractError("compatibility.required_capabilities must include module-facts-v1 when facts are declared")
 
     capabilities = _mapping(contract.get("capabilities"), field="capabilities")
     normalized_capabilities: dict[str, list[dict[str, Any]]] = {}

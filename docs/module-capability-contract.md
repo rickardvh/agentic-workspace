@@ -26,7 +26,7 @@ def module_provider():
             "description": "Read bounded build signals.",
             "compatibility": {
                 "reader_epoch": 1,
-                "required_capabilities": ["module-resources-v1"],
+                "required_capabilities": ["module-resources-v1", "module-facts-v1"],
             },
             "ownership": {
                 "roots": [],
@@ -84,6 +84,8 @@ Workspace validates identity and compatibility before using a contribution. Sele
 Only enabled, installed, compatible, and relevant modules contribute to the current operating decision. Irrelevant modules and their facts remain absent from first-line context. A contribution may provide facts or route resources, skills, or operations, but its authority remains bounded by `ownership.authority_exclusions`.
 
 Fact ids and types are stable contract declarations. Each value names the module owner plus a non-empty revision and explicit currentness bit. Workspace admits these values directly into the existing instruction IR; it does not persist them in a central fact store. A repo-owned bounded clause may consume a current fact, while stale revisions evaluate as unknown. The ordinary start and implement compilers merge that existing source-owned program with relevant module facts before compiling the operating decision.
+
+A contract with one or more facts must include `module-facts-v1` in `compatibility.required_capabilities`. This makes readers that do not support facts reject the module instead of accepting it while silently ignoring source-owned facts.
 
 When a module operation includes `facts`, the list is the module owner's reconciled current snapshot: values may refresh declared ids and types, and an empty list removes the facts from the next contribution. Before accepting that result, Workspace reloads the module's public contract provider and requires its facts to match the reported snapshot. The previously discovered contract remains immutable; a fresh discovery therefore observes the new revision, stale marker, or removal without relying on process-local Workspace mutation. An operation result that omits `facts` leaves the module owner's current snapshot unchanged.
 

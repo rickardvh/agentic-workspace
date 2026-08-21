@@ -223,6 +223,27 @@
       "description": "Contract field for module.selection_rank."
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "required": ["facts"],
+        "properties": {
+          "facts": {"minItems": 1}
+        }
+      },
+      "then": {
+        "properties": {
+          "compatibility": {
+            "properties": {
+              "required_capabilities": {
+                "contains": {"const": "module-facts-v1"}
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "fact": {
       "type": "object",
