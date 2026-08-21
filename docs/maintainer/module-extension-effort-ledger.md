@@ -26,3 +26,15 @@ This ledger records the non-module repository files touched while proving the `a
 ## External-consumer result
 
 The installed fixture is discovered from distribution metadata after its temporary install directory is added to the interpreter path. Removing that path and resolving again removes every fixture contribution. No core name list, enum, phase, slot, posture fragment, skill, proof branch, closeout branch, or registry entry names `external-signals`.
+
+## Cost and trust review
+
+The maintained scenario matrix is
+`tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-matrix.json`.
+For agent use, a relevant module adds one bounded contribution through the
+ordinary decision while an irrelevant module adds none; conflicts,
+incompatibility, and removal retain one kernel-owned recovery boundary. For an
+independent author, the required concepts stop at compatibility, ownership,
+relevance, capabilities, and result semantics. The fixture needed no
+identity-specific Workspace runtime, registry, canonical-skill, phase, proof,
+or closeout edit.

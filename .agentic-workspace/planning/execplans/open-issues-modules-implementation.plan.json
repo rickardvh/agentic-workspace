@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 3,
+  "revision": 4,
   "intent": {
     "outcome": "Deliver a minimal capability-first public module contract, prove it with an independently shaped module, make admission/removal fail closed, and complete #2624/#2629 by removing fixed SkillSpec/module-slot topology while compiling retained hard controls through the bounded clause IR.",
     "non_goals": [
@@ -63,22 +63,28 @@
       "locator": ""
     }
   ],
-  "next_action": "Validate fixed-topology removal, workflow-obligation clause compilation, generated/payload parity, and the independent module boundary; then update the stacked PR and downstream branches.",
+  "next_action": "Validate the maintained #2610 ordinary-loop matrix and external authoring ledger, then restack lifecycle PR #2627 on this corrected head.",
   "blockers": [
     "None."
   ],
   "proof": {
     "claims": [
-      "Implement capability-first module lane is implemented, validated, and closed out honestly."
+      "Capability-first module contracts remain progressively disclosed, fail closed, and identity-agnostic.",
+      "The maintained #2610 matrix covers base, first-party, independent, partial, conflict, incompatibility, removal, and irrelevant states with ordinary-use metrics.",
+      "The external fixture requires no module-specific Workspace semantic integration."
     ],
     "requirements": [
       "Run AW implement/proof selection for the final changed-path set.",
       "Run focused module schema, registry, CLI, operating-decision, skill-spec, and conformance tests.",
-      "Run independent relevant/irrelevant, incompatible, removal/restart, and partial-capability scenarios.",
+      "Run the maintained module-extension scenario/measurement matrix and deterministic weak/non-compliant probes.",
       "Run generated/payload freshness checks and the repository package validation selected by AW.",
-      "Verify the branch diff is based only on PR #2631 and the pre-existing .codex/hooks.json deletion is unstaged from every commit."
+      "Verify the branch is based on PR #2635 and all Planning references name the current stack."
     ],
-    "refs": []
+    "refs": [
+      "tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-matrix.json",
+      "docs/maintainer/module-extension-effort-ledger.md",
+      "PR #2635"
+    ]
   },
   "continuation": {
     "owner": ".agentic-workspace/planning/lanes/open-issues-lifecycle.lane.json",
