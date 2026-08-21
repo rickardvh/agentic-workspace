@@ -135,9 +135,7 @@ def _tag_declares_coordinated_release_version(ownership: dict[str, Any], *, tag:
         return False
     expected = str(version)
     owned_python_packages = {
-        str(package.get("name") or "").strip()
-        for package in ownership["packages"]
-        if str(package.get("name") or "").strip()
+        str(package.get("name") or "").strip() for package in ownership["packages"] if str(package.get("name") or "").strip()
     }
     for path in version_file_paths(ownership):
         result = _run(["git", "show", f"{commit}:{_repo_path(path)}"], check=False)
@@ -206,8 +204,7 @@ def plan_release(ownership: dict[str, Any], *, include_git_tags: bool = True) ->
         "package_versions": sorted({str(version) for version in package_versions}),
         "existing_release_floor": str(max(tag_versions)) if tag_versions else "",
         "changesets": [
-            {"path": _repo_path(changeset.path), "bump": changeset.bump, "summary": changeset.summary}
-            for changeset in changesets
+            {"path": _repo_path(changeset.path), "bump": changeset.bump, "summary": changeset.summary} for changeset in changesets
         ],
     }
 
@@ -224,6 +221,29 @@ def set_workspace_version(ownership: dict[str, Any], version: str) -> None:
         payload = json.loads(path.read_text(encoding="utf-8"))
         payload["version"] = version
         path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+
+
+def set_workspace_payload_release_identity(ownership: dict[str, Any], version: str) -> None:
+    Version.parse(version)
+    workspace_package = next(
+        (package for package in ownership["packages"] if package.get("name") == "agentic-workspace"),
+        None,
+    )
+    if workspace_package is None:
+        raise SystemExit("Release ownership must declare the agentic-workspace package")
+    provenance_ref = str(workspace_package.get("payload_provenance") or "").strip()
+    if not provenance_ref:
+        raise SystemExit("Release ownership must declare the agentic-workspace payload_provenance path")
+    provenance_path = ROOT / provenance_ref
+    payload = json.loads(provenance_path.read_text(encoding="utf-8"))
+    installed_by = payload.get("installed_by")
+    release_identity = payload.get("release_identity")
+    if not isinstance(installed_by, dict) or not isinstance(release_identity, dict):
+        raise SystemExit(f"{_repo_path(provenance_path)} must declare installed_by and release_identity objects")
+    installed_by["version"] = version
+    release_identity["version"] = version
+    release_identity["tag"] = f"v{version}"
+    provenance_path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
 
 
 def write_release_note(ownership: dict[str, Any], *, version: str, changesets: list[Changeset]) -> Path:
@@ -244,6 +264,7 @@ def prepare_release(ownership: dict[str, Any]) -> dict[str, Any]:
     version = str(plan["version"])
     changesets = parse_changesets(ownership)
     set_workspace_version(ownership, version)
+    set_workspace_payload_release_identity(ownership, version)
     note_path = write_release_note(ownership, version=version, changesets=changesets)
     for changeset in changesets:
         changeset.path.unlink()
@@ -297,11 +318,7 @@ def _release_commit_for_version(ownership: dict[str, Any], version: str) -> str:
     commit = result.stdout.strip()
     if not commit:
         raise SystemExit("Could not find a release commit that touched coordinated version files")
-    mismatches = [
-        _repo_path(path)
-        for path in version_file_paths(ownership)
-        if _version_text_from_commit(commit, path) != version
-    ]
+    mismatches = [_repo_path(path) for path in version_file_paths(ownership) if _version_text_from_commit(commit, path) != version]
     if mismatches:
         raise SystemExit(f"Release commit {commit} does not declare {version} in {mismatches}")
     note_path = release_note_path(ownership, version)
@@ -347,10 +364,14 @@ def pending_tag_plan(ownership: dict[str, Any]) -> dict[str, Any]:
             "release_commit": release_commit,
             "release_note": _repo_path(release_note_path(ownership, version)),
         }
-    if _commit_exists("origin/master") and _run(
-        ["git", "merge-base", "--is-ancestor", release_commit, "origin/master"],
-        check=False,
-    ).returncode != 0:
+    if (
+        _commit_exists("origin/master")
+        and _run(
+            ["git", "merge-base", "--is-ancestor", release_commit, "origin/master"],
+            check=False,
+        ).returncode
+        != 0
+    ):
         raise SystemExit(f"Release commit {release_commit} is not reachable from origin/master")
     return {
         "kind": "agentic-workspace/coordinated-release-tag-plan/v1",
