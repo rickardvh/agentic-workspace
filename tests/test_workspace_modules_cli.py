@@ -52,13 +52,11 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert footprint["bounded_by"] == ["#490", "#510"]
     participation_model = payload["participation_model"]
     assert participation_model["schema_version"] == "agentic-workspace/module-participation/v1"
-    assert "repo-native operating substrate" in participation_model["product_model"]
+    assert "operating" in participation_model["product_model"]
     assert [step["id"] for step in participation_model["recommended_loop"]] == [
-        "startup",
-        "active-work",
-        "durable-knowledge",
-        "proof",
-        "closeout",
+        "resolve",
+        "act",
+        "reconcile",
     ]
     assert "workflow_phases" in participation_model["module_can_contribute"]
     assert "task_posture_fragments" in participation_model["module_can_contribute"]
@@ -82,11 +80,11 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
         "verification",
     }
     module_participation = {module["name"]: module["participation"] for module in payload["modules"]}
-    assert "task_posture_fragments" in module_participation["planning"]["declares"]
-    assert "review_rubrics" in module_participation["memory"]["declares"]
+    assert set(module_participation["planning"]["declares"]) == {"resources", "skills", "operations"}
+    assert set(module_participation["memory"]["declares"]) == {"resources", "skills", "operations"}
     verification_participation = cli._MODULE_REGISTRY_ENTRIES["verification"]["participation"]
-    assert "proof_routes" in verification_participation["declares"]
-    assert "authority_boundaries" in verification_participation["declares"]
+    assert verification_participation["declares"] == ["resources"]
+    assert "cannot set semantic completion" in verification_participation["authority_boundaries"]
     component_model = payload["component_model"]
     assert component_model["schema_version"] == "agentic-workspace/module-components/v1"
     assert component_model["runtime_dependency"] == "none"

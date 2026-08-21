@@ -12,7 +12,7 @@
       "summary": "canonical AW resolve-act-reconcile loop: consume one compact current contract, follow its routed action, reconcile the result, and discover specialized capability detail only when relevant",
       "activation_hints": {
         "verbs": ["start", "orient", "route", "resume", "implement", "reconcile"],
-        "nouns": ["workspace", "startup", "operating contract", "current decision", "next action", "AW repo"],
+        "nouns": ["workspace", "startup", "operating contract", "current decision", "next action", "AW repo", "issue"],
         "phrases": [
           "workspace startup",
           "main aw operating loop",
@@ -20,7 +20,9 @@
           "start work on this aw repo",
           "orient in the workspace",
           "route this task",
-          "what should I do first"
+          "what should I do first",
+          "implement issue",
+          "implement all open GitHub issues"
         ],
         "when": [
           "first contact with an installed workspace",

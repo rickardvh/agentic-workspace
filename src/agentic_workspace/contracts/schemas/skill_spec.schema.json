@@ -1,15 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/skill-spec.schema.json",
-  "title": "SkillSpec Contract",
-  "description": "Package-owned semantic contract for skills that steer agent behavior while the CLI performs robust state inspection, mutation, validation, and reporting.",
+  "title": "Module-neutral SkillSpec Contract",
+  "description": "Package-owned skill behavior projected from one compiled operating decision through resolve, act, and reconcile.",
   "type": "object",
   "required": [
     "schema_version",
     "rule",
     "specs",
     "transition_gates",
-    "module_slots",
     "generated_plugin_targets",
     "generated_target_behavior_fixtures"
   ],
@@ -38,14 +37,6 @@
         "$ref": "#/$defs/transition_gate"
       },
       "description": "Structured SkillSpec-compatible transition gates that can be consumed without scraping skill prose."
-    },
-    "module_slots": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "$ref": "#/$defs/module_slot"
-      },
-      "description": "Structured SkillSpec-compatible module ownership slots used by next-safe-action packets and operating-loop skills."
     },
     "generated_plugin_targets": {
       "type": "array",
@@ -386,7 +377,6 @@
         "id",
         "title",
         "trigger",
-        "module_slot",
         "preferred_cli_or_report",
         "interpreted_fields",
         "allowed_actions",
@@ -408,10 +398,6 @@
         "trigger": {
           "$ref": "#/$defs/non_empty_strings",
           "description": "Conditions that activate this transition gate."
-        },
-        "module_slot": {
-          "$ref": "#/$defs/non_empty_string",
-          "description": "Module slot that owns the transition decision."
         },
         "preferred_cli_or_report": {
           "$ref": "#/$defs/non_empty_strings",
@@ -447,71 +433,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "A structured workflow transition gate carried by the SkillSpec contract."
-    },
-    "module_slot": {
-      "type": "object",
-      "required": [
-        "id",
-        "title",
-        "owns",
-        "preferred_cli_or_report",
-        "interpreted_fields",
-        "allowed_actions",
-        "forbidden_actions",
-        "proof_obligations",
-        "closeout_obligations",
-        "fallback_when_cli_unavailable",
-        "generated_target_requirements"
-      ],
-      "properties": {
-        "id": {
-          "$ref": "#/$defs/non_empty_string",
-          "description": "Stable module slot identifier."
-        },
-        "title": {
-          "$ref": "#/$defs/non_empty_string",
-          "description": "Human-readable module slot title."
-        },
-        "owns": {
-          "$ref": "#/$defs/non_empty_strings",
-          "description": "Responsibilities owned by this module slot."
-        },
-        "preferred_cli_or_report": {
-          "$ref": "#/$defs/non_empty_strings",
-          "description": "Preferred CLI command or report surface for this slot."
-        },
-        "interpreted_fields": {
-          "$ref": "#/$defs/non_empty_strings",
-          "description": "Output fields this slot is expected to preserve or inspect."
-        },
-        "allowed_actions": {
-          "$ref": "#/$defs/non_empty_strings",
-          "description": "Actions permitted inside this module slot."
-        },
-        "forbidden_actions": {
-          "$ref": "#/$defs/non_empty_strings",
-          "description": "Actions this module slot must not absorb from another owner."
-        },
-        "proof_obligations": {
-          "$ref": "#/$defs/non_empty_strings",
-          "description": "Proof obligations owned or preserved by this module slot."
-        },
-        "closeout_obligations": {
-          "$ref": "#/$defs/non_empty_strings",
-          "description": "Closeout obligations owned or preserved by this module slot."
-        },
-        "fallback_when_cli_unavailable": {
-          "$ref": "#/$defs/non_empty_strings",
-          "description": "No-CLI fallback that preserves this slot's ownership boundary."
-        },
-        "generated_target_requirements": {
-          "$ref": "#/$defs/generated_target_requirements",
-          "description": "Requirements future generated skills or adapters must preserve for this module slot."
-        }
-      },
-      "additionalProperties": false,
-      "description": "A structured ownership slot carried by the SkillSpec contract."
+      "description": "A generic resolve, act, or reconcile transition projected from the compiled operating decision."
     },
     "spec": {
       "type": "object",
