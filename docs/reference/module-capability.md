@@ -25,7 +25,7 @@ Small capability-first contract for peer modules. Workspace owns resolve, act, a
 | `relevance.task_terms` | array of string | yes |  | Contract field for module.relevance.task_terms. |  |  |
 | `relevance.path_prefixes` | array of string | yes |  | Contract field for module.relevance.path_prefixes. |  |  |
 | `relevance.always` | boolean | no | `false` | Contract field for module.relevance.always. |  |  |
-| `facts` | array of ref `#/$defs/fact` | no | `[]` | Optional typed source-owned facts contributed to the existing instruction and operating-decision path. Facts remain owned and refreshed by the module; this is not a central fact store. |  |  |
+| `facts` | array of ref `#/$defs/fact` | no | `[]` | Optional typed source-owned facts contributed to the existing instruction and operating-decision path. Facts remain owned and refreshed by the module's public contract provider; after an operation reports facts, fresh discovery must expose the matching snapshot. This is not a central fact store. |  |  |
 | `capabilities` | object | yes |  | Contract field for module.capabilities. |  |  |
 | `capabilities.resources` | ref `#/$defs/capability_list` | no |  | Contract field for module.capabilities.resources. |  |  |
 | `capabilities.skills` | ref `#/$defs/capability_list` | no |  | Contract field for module.capabilities.skills. |  |  |

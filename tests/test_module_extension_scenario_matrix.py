@@ -255,12 +255,54 @@ def test_independent_module_reaches_the_ordinary_posture_packet_only_when_releva
         assert irrelevant_decision["blocked_claim_classes"] == []
         assert irrelevant_decision["instruction_clause_projection"]["effects"]["restrict"] == []
 
-        stale = json.loads(json.dumps(relevant))
-        stale["module_contributions"][0]["facts"][0]["source"]["current"] = False
+    refresh_result = invoke_module_operation(
+        discovered,
+        operation_id="external-signals.refresh",
+        arguments={"revision": "signal-r2"},
+    )
+    assert refresh_result["owner_reconciliation"]["status"] == "current"
+    assert discovered.contract["facts"][0]["source"]["revision"] == "signal-r1"
+
+    def fresh_posture() -> dict:
+        fresh = discover_module_contracts(entry_points=[_EntryPoint("external-signals", fixture.provider)])[0]
+        monkeypatch.setattr(runtime, "_module_operations", lambda: {"external-signals": runtime._external_module_descriptor(fresh)})
+        return runtime._task_posture_packet_payload(
+            config=config,
+            surface="startup",
+            task_text="Inspect the external build signal and refresh the selected revision if needed.",
+            changed_paths=[],
+            compact=True,
+        )
+
+    clear = fresh_posture()
+    assert clear["module_contributions"][0]["facts"][0]["value"] == "clear"
+    assert clear["module_contributions"][0]["facts"][0]["source"]["revision"] == "signal-r2"
+    for consumer in ("start", "implement"):
+        clear_decision = decision(consumer=consumer, posture=clear)
+        assert clear_decision["blocked_claim_classes"] == []
+        assert clear_decision["instruction_clause_projection"]["evaluations"][0]["condition"]["result"] == "false"
+
+    stale_owner = discover_module_contracts(entry_points=[_EntryPoint("external-signals", fixture.provider)])[0]
+    invoke_module_operation(
+        stale_owner,
+        operation_id="external-signals.refresh",
+        arguments={"revision": "signal-r3", "current": False},
+    )
+    stale = fresh_posture()
+    for consumer in ("start", "implement"):
         stale_decision = decision(consumer=consumer, posture=stale)
         assert stale_decision["blocked_claim_classes"] == []
+        assert stale_decision["instruction_clause_projection"]["evaluations"][0]["condition"]["reason"] == "stale-fact"
 
-        removed = json.loads(json.dumps(relevant))
-        removed["module_contributions"][0].pop("facts")
+    removal_owner = discover_module_contracts(entry_points=[_EntryPoint("external-signals", fixture.provider)])[0]
+    invoke_module_operation(
+        removal_owner,
+        operation_id="external-signals.refresh",
+        arguments={"revision": "signal-r4", "remove": True},
+    )
+    removed = fresh_posture()
+    assert "facts" not in removed["module_contributions"][0]
+    for consumer in ("start", "implement"):
         removed_decision = decision(consumer=consumer, posture=removed)
         assert removed_decision["blocked_claim_classes"] == []
+        assert removed_decision["instruction_clause_projection"]["evaluations"][0]["condition"]["reason"] == "missing-fact"

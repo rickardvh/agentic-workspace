@@ -2,14 +2,14 @@
   "kind": "agentic-workspace/verification-proof-decision/v1",
   "proof_decision": {
     "selected_decision": "add",
-    "trust_question": "Does strict source-checkout validation reject every committed source-current state whose declared workspace payload, module-managed skills, or release provenance is stale?",
+    "trust_question": "After a module operation refreshes facts, does a discarded runtime snapshot and fresh public-provider discovery expose exactly the owner-backed revision, stale state, or removal while committed payload mirrors remain source-aligned?",
     "host_strategy_source": ".agentic-workspace/verification/manifest.toml#scenarios.test_evidence_decision_review",
     "proof_owner": "root-orchestration",
     "proof_intent": "workflow-routing",
     "evidence_durability": "permanent",
-    "narrowest_evidence": "Two focused checker tests prove that a matching source-current fixture passes and that stale provenance plus stale workspace and module skill payloads fail; the strict checker run proves the real repository is currently aligned.",
-    "prune_or_replacement_condition": "Replace only when a narrower authoritative committed-state validator proves the same source-current version, declared workspace payload, and module-managed skill alignment and remains in the strict maintainer validation lane.",
+    "narrowest_evidence": "The module contract and scenario matrices execute elevated@r1 through refresh, discard the prior discovered/runtime packet, and freshly resolve clear@r2, stale@r3, and removal@r4 for both start and implement; focused negatives retain omission, undeclared-fact, irrelevant-module, collision, and non-reconciling-owner coverage. Strict payload validation separately proves the committed source/payload/root-install boundary is current.",
+    "prune_or_replacement_condition": "Replace only when contract-owned conformance proves the same operation-to-owner-to-fresh-discovery transition and all negative states through both ordinary consumers, while the strict committed-payload alignment guard remains authoritative.",
     "confidence": "high",
-    "residual_risk": "The guard intentionally excludes root-owned Planning and Memory state and module payload categories not declared as workspace payload files or managed skills; newly managed categories must be added to the alignment contract."
+    "residual_risk": "A module owner remains responsible for making its provider snapshot durable enough for its own process and storage model; Workspace now rejects a reported fact snapshot unless an immediate fresh provider read agrees, but cannot supply module-domain persistence itself."
   }
 }

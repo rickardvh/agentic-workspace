@@ -28,6 +28,7 @@ class DiscoveredModule:
     operations: Mapping[str, Callable[..., Any]]
     status: str = "available"
     reason: str = ""
+    contract_provider: Callable[[], Any] | None = None
 
 
 class ModuleContractError(ValueError):
@@ -229,6 +230,7 @@ def discover_module_contracts(*, entry_points: list[Any] | None = None) -> list[
                     entry_point=entry_identity,
                     contract=contract,
                     operations=operations,
+                    contract_provider=loaded if callable(loaded) else None,
                     status=status,
                     reason=reason,
                 )
@@ -290,6 +292,18 @@ def target_has_install_signal(target_root: Path, signals: list[str]) -> bool:
     return True if not signals else any((target_root / signal).exists() for signal in signals)
 
 
+def _fresh_owner_contract(discovered: DiscoveredModule, *, operation_id: str) -> dict[str, Any]:
+    if discovered.contract_provider is None:
+        raise ModuleContractError(f"operation {operation_id} reported facts without a reloadable module owner contract")
+    provided = discovered.contract_provider()
+    provider = _mapping(provided, field=f"operation {operation_id}.owner")
+    raw_contract = provider.get("contract", provider)
+    contract = validate_module_contract(_mapping(raw_contract, field=f"operation {operation_id}.owner.contract"))
+    if contract["name"] != discovered.name:
+        raise ModuleContractError(f"operation {operation_id} owner contract changed module identity")
+    return contract
+
+
 def invoke_module_operation(discovered: DiscoveredModule, *, operation_id: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
     if discovered.status != "available":
         raise ModuleContractError(f"module {discovered.name} is {discovered.status}: {discovered.reason}")
@@ -330,10 +344,19 @@ def invoke_module_operation(discovered: DiscoveredModule, *, operation_id: str, 
         if normalized["type"] != declared_facts[fact_id].get("type"):
             raise ModuleContractError(f"operation {operation_id} changed declared fact type: {fact_id}")
         normalized_facts.append(normalized)
+    owner_reconciliation: dict[str, Any] | None = None
     if facts_reported:
         payload["facts"] = normalized_facts
-        discovered.contract["facts"] = [dict(item) for item in normalized_facts]
-    return {
+        owner_contract = _fresh_owner_contract(discovered, operation_id=operation_id)
+        owner_facts = [dict(item) for item in owner_contract.get("facts", [])]
+        if owner_facts != normalized_facts:
+            raise ModuleContractError(f"operation {operation_id} fact result was not reconciled by the module owner")
+        owner_reconciliation = {
+            "status": "current",
+            "source": "fresh module owner contract",
+            "fact_count": len(owner_facts),
+        }
+    result_payload = {
         "kind": "agentic-workspace/module-operation-result/v1",
         "module": discovered.name,
         "operation": operation_id,
@@ -341,3 +364,6 @@ def invoke_module_operation(discovered: DiscoveredModule, *, operation_id: str, 
         "result": payload,
         "authority_exclusions": list(_mapping(discovered.contract.get("ownership"), field="ownership").get("authority_exclusions", [])),
     }
+    if owner_reconciliation is not None:
+        result_payload["owner_reconciliation"] = owner_reconciliation
+    return result_payload

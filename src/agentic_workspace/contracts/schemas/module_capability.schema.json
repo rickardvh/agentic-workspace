@@ -131,7 +131,7 @@
     "facts": {
       "type": "array",
       "default": [],
-      "description": "Optional typed source-owned facts contributed to the existing instruction and operating-decision path. Facts remain owned and refreshed by the module; this is not a central fact store.",
+      "description": "Optional typed source-owned facts contributed to the existing instruction and operating-decision path. Facts remain owned and refreshed by the module's public contract provider; after an operation reports facts, fresh discovery must expose the matching snapshot. This is not a central fact store.",
       "items": {
         "$ref": "#/$defs/fact"
       }

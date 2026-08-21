@@ -2,6 +2,24 @@ from __future__ import annotations
 
 from typing import Any
 
+_CURRENT_FACTS: dict[str, list[dict[str, Any]]] = {}
+
+
+def _default_facts(name: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "external-signals.build-risk",
+            "type": "string",
+            "value": "elevated",
+            "subject": "external-build",
+            "source": {"owner": name, "revision": "signal-r1", "current": True},
+        }
+    ]
+
+
+def _current_facts(name: str) -> list[dict[str, Any]]:
+    return [dict(item) for item in _CURRENT_FACTS.get(name, _default_facts(name))]
+
 
 def _contract(*, name: str, reader_epoch: int = 1, roots: list[str] | None = None) -> dict[str, Any]:
     return {
@@ -21,15 +39,7 @@ def _contract(*, name: str, reader_epoch: int = 1, roots: list[str] | None = Non
             "task_terms": ["external build signal"],
             "path_prefixes": ["external-signals/"],
         },
-        "facts": [
-            {
-                "id": "external-signals.build-risk",
-                "type": "string",
-                "value": "elevated",
-                "subject": "external-build",
-                "source": {"owner": name, "revision": "signal-r1", "current": True},
-            }
-        ],
+        "facts": _current_facts(name),
         "capabilities": {
             "resources": [{"id": "external-signals.latest", "ref": "signals://latest", "read_only": True}],
             "skills": [],
@@ -46,40 +56,49 @@ def _contract(*, name: str, reader_epoch: int = 1, roots: list[str] | None = Non
     }
 
 
-def _refresh(arguments: dict[str, Any]) -> dict[str, Any]:
+def _refresh(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     revision = str(arguments.get("revision") or "latest")
-    return {
+    result: dict[str, Any] = {
         "status": "refreshed",
         "effects": ["external-signals-cache"],
         "requested_revision": revision,
-        "facts": [
+    }
+    if arguments.get("omit_facts"):
+        return result
+    facts = (
+        []
+        if arguments.get("remove")
+        else [
             {
                 "id": "external-signals.build-risk",
                 "type": "string",
-                "value": "clear",
+                "value": str(arguments.get("value") or "clear"),
                 "subject": "external-build",
-                "source": {"owner": "external-signals", "revision": revision, "current": True},
+                "source": {"owner": name, "revision": revision, "current": bool(arguments.get("current", True))},
             }
-        ],
-    }
+        ]
+    )
+    _CURRENT_FACTS[name] = facts
+    result["facts"] = facts
+    return result
 
 
 def provider() -> dict[str, Any]:
     return {
         "contract": _contract(name="external-signals"),
-        "operations": {"external-signals.refresh": _refresh},
+        "operations": {"external-signals.refresh": lambda arguments: _refresh("external-signals", arguments)},
     }
 
 
 def conflicting_provider() -> dict[str, Any]:
     return {
         "contract": _contract(name="external-signals-conflict", roots=["external-signals/cache"]),
-        "operations": {"external-signals.refresh": _refresh},
+        "operations": {"external-signals.refresh": lambda arguments: _refresh("external-signals-conflict", arguments)},
     }
 
 
 def future_provider() -> dict[str, Any]:
     return {
         "contract": _contract(name="external-signals-future", reader_epoch=99, roots=["external-signals/future"]),
-        "operations": {"external-signals.refresh": _refresh},
+        "operations": {"external-signals.refresh": lambda arguments: _refresh("external-signals-future", arguments)},
     }

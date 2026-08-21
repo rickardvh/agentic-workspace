@@ -234,7 +234,63 @@ def test_module_operation_can_refresh_only_declared_fact_identity_and_type() -> 
             "source": {"owner": "signals", "revision": "r1", "current": True},
         }
     ]
-    discovered = DiscoveredModule(
+    owner_facts = [dict(item) for item in contract["facts"]]
+
+    def refresh(arguments: dict[str, Any]) -> dict[str, Any]:
+        nonlocal owner_facts
+        if arguments.get("omit_facts"):
+            return {"status": "ok"}
+        owner_facts = (
+            []
+            if arguments.get("remove")
+            else [
+                {
+                    "id": "signals.build-risk",
+                    "type": "string",
+                    "value": "clear",
+                    "source": {"owner": "signals", "revision": "r2", "current": bool(arguments.get("current", True))},
+                }
+            ]
+        )
+        return {"status": "ok", "facts": owner_facts}
+
+    def provider() -> dict[str, Any]:
+        current = json.loads(json.dumps(contract))
+        current["facts"] = owner_facts
+        return {"contract": current, "operations": {"signals.refresh": refresh}}
+
+    entry_point = _EntryPoint("signals", provider)
+    discovered = discover_module_contracts(entry_points=[entry_point])[0]
+    result = invoke_module_operation(discovered, operation_id="signals.refresh", arguments={})
+    assert result["result"]["facts"][0]["source"]["revision"] == "r2"
+    assert result["owner_reconciliation"] == {
+        "status": "current",
+        "source": "fresh module owner contract",
+        "fact_count": 1,
+    }
+    assert discovered.contract["facts"][0]["source"]["revision"] == "r1"
+
+    refreshed = discover_module_contracts(entry_points=[entry_point])[0]
+    contribution = module_contribution(refreshed.contract, task="inspect build signal", changed_paths=[])
+    assert contribution is not None
+    assert contribution["facts"][0]["value"] == "clear"
+    assert contribution["facts"][0]["source"]["revision"] == "r2"
+
+    invoke_module_operation(refreshed, operation_id="signals.refresh", arguments={"omit_facts": True})
+    unchanged = discover_module_contracts(entry_points=[entry_point])[0]
+    assert unchanged.contract["facts"][0]["source"]["revision"] == "r2"
+
+    invoke_module_operation(unchanged, operation_id="signals.refresh", arguments={"current": False})
+    stale = discover_module_contracts(entry_points=[entry_point])[0]
+    assert stale.contract["facts"][0]["source"]["current"] is False
+
+    invoke_module_operation(stale, operation_id="signals.refresh", arguments={"remove": True})
+    removed = discover_module_contracts(entry_points=[entry_point])[0]
+    removed_contribution = module_contribution(removed.contract, task="inspect build signal", changed_paths=[])
+    assert removed_contribution is not None
+    assert "facts" not in removed_contribution
+
+    static = DiscoveredModule(
         name="signals",
         entry_point="independent_signals:provider",
         contract=validate_module_contract(contract),
@@ -249,30 +305,14 @@ def test_module_operation_can_refresh_only_declared_fact_identity_and_type() -> 
                         "source": {"owner": "signals", "revision": "r2", "current": True},
                     }
                 ],
-            }
+            },
         },
+        contract_provider=lambda: {"contract": contract, "operations": {}},
     )
-    result = invoke_module_operation(discovered, operation_id="signals.refresh", arguments={})
-    assert result["result"]["facts"][0]["source"]["revision"] == "r2"
-    refreshed = module_contribution(discovered.contract, task="inspect build signal", changed_paths=[])
-    assert refreshed is not None
-    assert refreshed["facts"][0]["value"] == "clear"
-    assert refreshed["facts"][0]["source"]["revision"] == "r2"
+    with pytest.raises(ModuleContractError, match="not reconciled by the module owner"):
+        invoke_module_operation(static, operation_id="signals.refresh", arguments={})
 
-    discovered.operations["signals.refresh"] = lambda _arguments: {"status": "ok"}
-    invoke_module_operation(discovered, operation_id="signals.refresh", arguments={})
-    unchanged = module_contribution(discovered.contract, task="inspect build signal", changed_paths=[])
-    assert unchanged is not None
-    assert unchanged["facts"][0]["source"]["revision"] == "r2"
-
-    discovered.operations["signals.refresh"] = lambda _arguments: {"status": "ok", "facts": []}
-    invoke_module_operation(discovered, operation_id="signals.refresh", arguments={})
-    removed = module_contribution(discovered.contract, task="inspect build signal", changed_paths=[])
-    assert removed is not None
-    assert "facts" not in removed
-
-    discovered.contract["facts"] = contract["facts"]
-    discovered.operations["signals.refresh"] = lambda _arguments: {
+    static.operations["signals.refresh"] = lambda _arguments: {
         "status": "ok",
         "facts": [
             {
@@ -284,7 +324,7 @@ def test_module_operation_can_refresh_only_declared_fact_identity_and_type() -> 
         ],
     }
     with pytest.raises(ModuleContractError, match="undeclared fact"):
-        invoke_module_operation(discovered, operation_id="signals.refresh", arguments={})
+        invoke_module_operation(static, operation_id="signals.refresh", arguments={})
 
 
 def test_selected_module_ownership_collisions_name_both_owners() -> None:
@@ -408,10 +448,10 @@ def test_separately_installed_out_of_tree_module_uses_only_the_public_entry_poin
             }
         ],
     }
+    installed.clear()
+    installed = {item.name: item for item in discover_module_contracts() if item.name.startswith("external-signals")}
     refreshed_contribution = module_contribution(
-        installed["external-signals"].contract,
-        task="inspect external build signal",
-        changed_paths=[],
+        installed["external-signals"].contract, task="inspect external build signal", changed_paths=[]
     )
     assert refreshed_contribution is not None
     assert refreshed_contribution["facts"][0]["value"] == "clear"
