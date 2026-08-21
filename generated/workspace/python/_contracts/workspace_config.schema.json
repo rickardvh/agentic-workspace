@@ -162,7 +162,7 @@
       "additionalProperties": true
     },
     "workflow_obligations": {
-      "description": "Repo-local workflow obligations that reports can surface for matching work scopes.",
+      "description": "Specialized compatibility-only stage-bound workflow obligations. Ordinary repo guidance belongs in .agentic-workspace/instructions/*.md.",
       "type": "object",
       "default": {},
       "x-agentic-workspace-doc-role": "maintainer",
@@ -1135,7 +1135,7 @@
       "additionalProperties": true
     },
     "workflow_obligation": {
-      "description": "Repo-local workflow obligation that can be surfaced when stage and scope match current work.",
+      "description": "Specialized compatibility obligation surfaced only for a concrete stage-bound lifecycle consumer; not a generic repo-guidance format.",
       "type": "object",
       "required": [
         "summary",

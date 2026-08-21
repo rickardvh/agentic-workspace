@@ -2,13 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workflow-definition-format.schema.json",
   "title": "Workflow Definition Format",
-  "description": "Format contract for repo-custom workflow obligation declarations.",
+  "description": "Compatibility contract for specialized stage-bound workflow obligations. Ordinary repo guidance belongs in scoped Markdown.",
   "type": "object",
   "required": [
     "schema_version",
     "canonical_doc",
     "rule",
-    "primary_component_family",
+    "ordinary_authoring_surface",
+    "specialized_compatibility_family",
     "composition",
     "flexibility_boundary",
     "migration_posture"
@@ -28,7 +29,11 @@
       "minLength": 1,
       "description": "Policy rule that explains this contract behavior."
     },
-    "primary_component_family": {
+    "ordinary_authoring_surface": {
+      "$ref": "#/$defs/string_map",
+      "description": "Canonical ordinary repo-guidance authoring surface and migration rule."
+    },
+    "specialized_compatibility_family": {
       "type": "object",
       "required": [
         "id",
@@ -90,7 +95,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Primary component family details used by this contract."
+      "description": "Specialized compatibility family retained only for stage-bound lifecycle consumers."
     },
     "composition": {
       "$ref": "#/$defs/string_map",

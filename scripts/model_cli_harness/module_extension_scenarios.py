@@ -47,11 +47,13 @@ def _provider_with(*, provider: Any, name: str | None = None, read_only: bool = 
     contract = payload["contract"]
     if name:
         contract["name"] = name
+        for fact in contract.get("facts", []):
+            fact["source"]["owner"] = name
         if name == "planning-scenario":
             contract["relevance"]["task_terms"] = ["current execution plan"]
     if read_only:
         contract["capabilities"]["operations"] = []
-        contract["compatibility"]["required_capabilities"] = ["module-resources-v1"]
+        contract["compatibility"]["required_capabilities"] = ["module-facts-v1", "module-resources-v1"]
         payload["operations"] = {}
     return payload
 
@@ -61,10 +63,16 @@ def _entry_points_for(scenario: dict[str, Any], fixture: Any) -> tuple[list[_Ent
     if state_class == "base":
         return [], False
     if state_class == "first-party":
-        provider = lambda: _provider_with(provider=fixture.provider, name="planning-scenario")
+
+        def provider() -> dict[str, Any]:
+            return _provider_with(provider=fixture.provider, name="planning-scenario")
+
         return [_EntryPoint("planning-scenario", provider)], False
     if state_class == "partial-capability":
-        provider = lambda: _provider_with(provider=fixture.provider, name="external-signals-read-only", read_only=True)
+
+        def provider() -> dict[str, Any]:
+            return _provider_with(provider=fixture.provider, name="external-signals-read-only", read_only=True)
+
         return [_EntryPoint("external-signals-read-only", provider)], False
     if state_class == "conflicting":
         return [
@@ -151,8 +159,7 @@ def _measure_scenario(*, scenario: dict[str, Any], fixture: Any, repo_root: Path
 
 
 def collect_measurements(*, matrix: dict[str, Any], repo_root: Path = REPO_ROOT) -> dict[str, Any]:
-    fixture = _fixture_module()
-    results = [_measure_scenario(scenario=scenario, fixture=fixture, repo_root=repo_root) for scenario in matrix["scenarios"]]
+    results = [_measure_scenario(scenario=scenario, fixture=_fixture_module(), repo_root=repo_root) for scenario in matrix["scenarios"]]
     return {
         "kind": "agentic-workspace/module-extension-scenario-measurements/v1",
         "matrix_kind": matrix["kind"],

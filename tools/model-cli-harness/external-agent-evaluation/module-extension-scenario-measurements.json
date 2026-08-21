@@ -14,23 +14,23 @@
       "trace": [{"event": "discover", "observed": []}, {"class": "aw-command", "event": "start-task-posture", "observed": 0}]
     },
     {
-      "first_line_sha256": "2ee1b34c23adfd3ad5998598516315a1dad958b0d6cbeac64e160724edd49512",
+      "first_line_sha256": "13fd903be4900645fd2f40e211447a494b86f716a046c4254e12fbf6b942a667",
       "id": "first-party-relevant",
-      "metrics": {"aw_command_count": 1, "first_line_context_units": 1, "first_line_output_bytes": 891, "proof_or_claim_errors": 0, "raw_workspace_or_module_reads": 0, "requests_to_completion": 1, "residue_items": 0, "route_reversals": 0, "wrong_owner_actions": 0},
+      "metrics": {"aw_command_count": 1, "first_line_context_units": 1, "first_line_output_bytes": 1077, "proof_or_claim_errors": 0, "raw_workspace_or_module_reads": 0, "requests_to_completion": 1, "residue_items": 0, "route_reversals": 0, "wrong_owner_actions": 0},
       "state_class": "first-party",
       "trace": [{"event": "discover", "observed": ["available"]}, {"class": "aw-command", "event": "start-task-posture", "observed": 1}]
     },
     {
-      "first_line_sha256": "5343b237a37b294b7ab897b22bd5e0e9f9cd99b35b7e290acf1b2cdedf18a835",
+      "first_line_sha256": "6b2eb66f1f2c0dc90ef8cc3585ea39737ea9eb44cf7c62ffcecf352f2f47619e",
       "id": "independent-relevant",
-      "metrics": {"aw_command_count": 2, "first_line_context_units": 1, "first_line_output_bytes": 888, "proof_or_claim_errors": 0, "raw_workspace_or_module_reads": 0, "requests_to_completion": 1, "residue_items": 0, "route_reversals": 0, "wrong_owner_actions": 0},
+      "metrics": {"aw_command_count": 2, "first_line_context_units": 1, "first_line_output_bytes": 1073, "proof_or_claim_errors": 0, "raw_workspace_or_module_reads": 0, "requests_to_completion": 1, "residue_items": 0, "route_reversals": 0, "wrong_owner_actions": 0},
       "state_class": "independent",
       "trace": [{"event": "discover", "observed": ["available"]}, {"class": "aw-command", "event": "start-task-posture", "observed": 1}, {"class": "aw-command", "event": "invoke-module-operation", "observed": "refreshed"}]
     },
     {
-      "first_line_sha256": "16af655bb35e69a55987ffc8d70fe82e46583ab6a5d9bbe0bb97dc0f635ae1e8",
+      "first_line_sha256": "0edb7e102e7549b1b4aaee17618f64b39e6c1cd17c19e92db417819f0f2bc6e1",
       "id": "partial-read-only",
-      "metrics": {"aw_command_count": 1, "first_line_context_units": 1, "first_line_output_bytes": 827, "proof_or_claim_errors": 0, "raw_workspace_or_module_reads": 0, "requests_to_completion": 1, "residue_items": 0, "route_reversals": 0, "wrong_owner_actions": 0},
+      "metrics": {"aw_command_count": 1, "first_line_context_units": 1, "first_line_output_bytes": 1022, "proof_or_claim_errors": 0, "raw_workspace_or_module_reads": 0, "requests_to_completion": 1, "residue_items": 0, "route_reversals": 0, "wrong_owner_actions": 0},
       "state_class": "partial-capability",
       "trace": [{"event": "discover", "observed": ["available"]}, {"class": "aw-command", "event": "start-task-posture", "observed": 1}]
     },

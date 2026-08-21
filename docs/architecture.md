@@ -171,7 +171,7 @@ See [Modules](package/modules.md) and [Extensibility and public boundary](extens
 
 A host repository can affect dynamic control without creating a reusable module.
 
-Repo-owned config, workflow obligations, skills, canonical guidance, ownership, proof declarations, and deterministic repository operations can all contribute to the current operating contract.
+Scoped Markdown owns ordinary repo guidance. Repo-owned config, specialized stage-bound compatibility obligations, skills, canonical guidance, ownership, proof declarations, and deterministic repository operations can contribute through narrower source-owned roles.
 
 This is the repository's programming surface for agent behavior. Its direction should be **small and effect-oriented**: new bounded condition-to-control relationships should not require Python changes, but the surface must not become a general prompt-personality language, arbitrary scripting host, scheduler, or workflow engine.
 

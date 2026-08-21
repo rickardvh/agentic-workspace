@@ -16,6 +16,7 @@ from agentic_workspace.module_contract import (
     module_contribution,
     validate_module_contract,
 )
+from agentic_workspace.operating_decision import compile_projection_surface_operating_decision
 
 MATRIX_PATH = Path("tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-matrix.json")
 FIXTURE_PATH = Path("tests/fixtures/external_signals_module/src/external_signals/__init__.py")
@@ -128,13 +129,15 @@ def test_module_matrix_deterministic_probes_cover_progressive_disclosure_failure
     )
     assert relevant is not None
     assert relevant["module"] == "external-signals"
+    assert relevant["facts"][0]["source"] == {"owner": "external-signals", "revision": "signal-r1", "current": True}
     assert relevant["operations"] == [{"id": "external-signals.refresh", "result_schema": "external-signals/result/v1"}]
     assert "proof" not in relevant and "closeout" not in relevant
 
     partial = json.loads(json.dumps(contract))
     partial["name"] = "external-signals-read-only"
+    partial["facts"][0]["source"]["owner"] = "external-signals-read-only"
     partial["capabilities"]["operations"] = []
-    partial["compatibility"]["required_capabilities"] = ["module-resources-v1"]
+    partial["compatibility"]["required_capabilities"] = ["module-facts-v1", "module-resources-v1"]
     partial_contract = validate_module_contract(partial)
     partial_contribution = module_contribution(partial_contract, task="Read the latest external build signal", changed_paths=[])
     assert partial_contribution is not None
@@ -144,7 +147,7 @@ def test_module_matrix_deterministic_probes_cover_progressive_disclosure_failure
     descriptors = {
         name: runtime._external_module_descriptor(discovered) for name, discovered in by_name.items() if discovered.status == "available"
     }
-    with pytest.raises(runtime.ModuleSelectionError, match="ownership collision"):
+    with pytest.raises(runtime.ModuleSelectionError, match="(fact|ownership) collision"):
         runtime._validate_selected_module_contract(
             selected_modules=["external-signals", "external-signals-conflict"],
             descriptors=descriptors,
@@ -209,3 +212,97 @@ def test_independent_module_reaches_the_ordinary_posture_packet_only_when_releva
     assert relevant["dynamic_instruction_projection"]["provenance_preserved"] is True
     assert irrelevant["module_contributions"] == []
     assert {"source": "module_registry", "matched_module_count": 0} in irrelevant["provenance"]
+
+    repo_program = {
+        "kind": "agentic-workspace/instruction-program/v1",
+        "facts": [],
+        "clauses": [
+            {
+                "id": "repo:restrict-completion-on-external-risk",
+                "source": {"owner": "repo-instruction-owner", "revision": "policy-r1", "current": True},
+                "when": {"fact": "external-signals.build-risk", "operator": "is", "value": "elevated"},
+                "effects": [{"kind": "restrict", "target": "claim:claim-work-complete"}],
+                "authority": {"effects": ["restrict"], "target_patterns": ["claim:claim-work-complete"]},
+            }
+        ],
+        "capabilities": [],
+        "source_diagnostics": [],
+    }
+
+    def decision(*, consumer: str, posture: dict) -> dict:
+        return compile_projection_surface_operating_decision(
+            payload={"task_posture_packet": posture, "instruction_program": repo_program},
+            admitted_input={
+                "status": "admitted",
+                "consumer": consumer,
+                "input_id": f"{consumer}:module-fact-scenario",
+                "admitted_input_revision": f"sha256:{consumer}",
+                "input_revisions": {"task": "task-r1"},
+                "material_inputs": {
+                    "task": "Inspect the external build signal and refresh the selected revision if needed.",
+                    "changed": [],
+                },
+            },
+            consumer=consumer,
+        )
+
+    for consumer in ("start", "implement"):
+        relevant_decision = decision(consumer=consumer, posture=relevant)
+        assert relevant_decision["blocked_claim_classes"] == ["claim-work-complete"]
+        assert relevant_decision["instruction_clause_projection"]["evaluations"][0]["condition"]["result"] == "true"
+
+        irrelevant_decision = decision(consumer=consumer, posture=irrelevant)
+        assert irrelevant_decision["blocked_claim_classes"] == []
+        assert irrelevant_decision["instruction_clause_projection"]["effects"]["restrict"] == []
+
+    refresh_result = invoke_module_operation(
+        discovered,
+        operation_id="external-signals.refresh",
+        arguments={"revision": "signal-r2"},
+    )
+    assert refresh_result["owner_reconciliation"]["status"] == "current"
+    assert discovered.contract["facts"][0]["source"]["revision"] == "signal-r1"
+
+    def fresh_posture() -> dict:
+        fresh = discover_module_contracts(entry_points=[_EntryPoint("external-signals", fixture.provider)])[0]
+        monkeypatch.setattr(runtime, "_module_operations", lambda: {"external-signals": runtime._external_module_descriptor(fresh)})
+        return runtime._task_posture_packet_payload(
+            config=config,
+            surface="startup",
+            task_text="Inspect the external build signal and refresh the selected revision if needed.",
+            changed_paths=[],
+            compact=True,
+        )
+
+    clear = fresh_posture()
+    assert clear["module_contributions"][0]["facts"][0]["value"] == "clear"
+    assert clear["module_contributions"][0]["facts"][0]["source"]["revision"] == "signal-r2"
+    for consumer in ("start", "implement"):
+        clear_decision = decision(consumer=consumer, posture=clear)
+        assert clear_decision["blocked_claim_classes"] == []
+        assert clear_decision["instruction_clause_projection"]["evaluations"][0]["condition"]["result"] == "false"
+
+    stale_owner = discover_module_contracts(entry_points=[_EntryPoint("external-signals", fixture.provider)])[0]
+    invoke_module_operation(
+        stale_owner,
+        operation_id="external-signals.refresh",
+        arguments={"revision": "signal-r3", "current": False},
+    )
+    stale = fresh_posture()
+    for consumer in ("start", "implement"):
+        stale_decision = decision(consumer=consumer, posture=stale)
+        assert stale_decision["blocked_claim_classes"] == []
+        assert stale_decision["instruction_clause_projection"]["evaluations"][0]["condition"]["reason"] == "stale-fact"
+
+    removal_owner = discover_module_contracts(entry_points=[_EntryPoint("external-signals", fixture.provider)])[0]
+    invoke_module_operation(
+        removal_owner,
+        operation_id="external-signals.refresh",
+        arguments={"revision": "signal-r4", "remove": True},
+    )
+    removed = fresh_posture()
+    assert "facts" not in removed["module_contributions"][0]
+    for consumer in ("start", "implement"):
+        removed_decision = decision(consumer=consumer, posture=removed)
+        assert removed_decision["blocked_claim_classes"] == []
+        assert removed_decision["instruction_clause_projection"]["evaluations"][0]["condition"]["reason"] == "missing-fact"

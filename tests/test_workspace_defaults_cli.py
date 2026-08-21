@@ -1153,14 +1153,16 @@ def test_defaults_section_selector_returns_agent_configuration_workflow_extensio
     assert payload["selector"] == {"section": "agent_configuration_workflow_extensions"}
     assert payload["matched"] is True
     assert payload["answer"]["owner_surface"] == ".agentic-workspace/config.toml [workflow_obligations]"
+    assert payload["answer"]["ordinary_authoring_surface"] == ".agentic-workspace/instructions/*.md"
+    assert payload["answer"]["status"] == "specialized-compatibility-only"
     assert payload["answer"]["definition_format"]["schema_version"] == "agentic-workspace/workflow-definition-format/v1"
-    assert payload["answer"]["definition_format"]["primary_component_family"]["id"] == "workflow_obligation"
+    assert payload["answer"]["definition_format"]["specialized_compatibility_family"]["id"] == "workflow_obligation"
     assert (
         payload["answer"]["definition_format"]["flexibility_boundary"]["leave_flexible"][0]
         == "local implementation steps inside the bounded component"
     )
     assert payload["answer"]["supported_stages"][0] == "pre-work"
-    assert payload["answer"]["consumption_rule"][0].startswith("workspace owns declaration")
+    assert payload["answer"]["consumption_rule"][0].startswith("scoped Markdown owns ordinary")
 
 
 def test_defaults_setup_findings_promotion_section_selector_returns_compact_contract_answer(capsys) -> None:

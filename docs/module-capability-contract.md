@@ -11,8 +11,9 @@ A module declares five things:
 1. `name`, `description`, and `compatibility`: stable identity plus the reader epoch and required generic capabilities.
 2. `ownership`: module-owned roots and effect classes, plus explicit authority the module cannot acquire.
 3. `relevance`: bounded task terms and path prefixes that decide whether the contribution belongs in the current contract.
-4. `capabilities`: optional `resources`, `skills`, and typed `operations`. Omit dimensions the module does not use.
-5. `result_semantics`: the result schema, guaranteed fields, effect fields, and warning fields the kernel may reconcile.
+4. `facts`: optional typed, source-owned, revision/currentness-bound values that existing instruction clauses may reference. Modules define values, not predicate or effect operators.
+5. `capabilities`: optional `resources`, `skills`, and typed `operations`. Omit dimensions the module does not use.
+6. `result_semantics`: the result schema, guaranteed fields, effect fields, and warning fields the kernel may reconcile.
 
 Dependencies, conflicts, and selection rank are optional. Unknown additive metadata is allowed. Unknown required capabilities and newer reader epochs fail closed.
 
@@ -25,7 +26,7 @@ def module_provider():
             "description": "Read bounded build signals.",
             "compatibility": {
                 "reader_epoch": 1,
-                "required_capabilities": ["module-resources-v1"],
+                "required_capabilities": ["module-resources-v1", "module-facts-v1"],
             },
             "ownership": {
                 "roots": [],
@@ -38,6 +39,18 @@ def module_provider():
                 "task_terms": ["build signal"],
                 "path_prefixes": ["build/signals/"],
             },
+            "facts": [
+                {
+                    "id": "signals.build-risk",
+                    "type": "string",
+                    "value": "elevated",
+                    "source": {
+                        "owner": "signals",
+                        "revision": "signal-r1",
+                        "current": True,
+                    },
+                }
+            ],
             "capabilities": {
                 "resources": [
                     {
@@ -68,7 +81,13 @@ This read-only module declares no operations, workflow phases, posture fragments
 
 Workspace validates identity and compatibility before using a contribution. Selected modules with malformed contracts, unsupported required capabilities, missing dependencies, explicit conflicts, overlapping owned roots, or colliding effect classes fail with the competing owners and a repository-configuration recovery owner.
 
-Only enabled, installed, compatible, and relevant modules contribute to the current operating decision. Irrelevant modules remain absent from first-line context. A contribution may route resources, skills, or operations, but its authority remains bounded by `ownership.authority_exclusions`.
+Only enabled, installed, compatible, and relevant modules contribute to the current operating decision. Irrelevant modules and their facts remain absent from first-line context. A contribution may provide facts or route resources, skills, or operations, but its authority remains bounded by `ownership.authority_exclusions`.
+
+Fact ids and types are stable contract declarations. Each value names the module owner plus a non-empty revision and explicit currentness bit. Workspace admits these values directly into the existing instruction IR; it does not persist them in a central fact store. A repo-owned bounded clause may consume a current fact, while stale revisions evaluate as unknown. The ordinary start and implement compilers merge that existing source-owned program with relevant module facts before compiling the operating decision.
+
+A contract with one or more facts must include `module-facts-v1` in `compatibility.required_capabilities`. This makes readers that do not support facts reject the module instead of accepting it while silently ignoring source-owned facts.
+
+When a module operation includes `facts`, the list is the module owner's reconciled current snapshot: values may refresh declared ids and types, and an empty list removes the facts from the next contribution. Before accepting that result, Workspace reloads the module's public contract provider and requires its facts to match the reported snapshot. The previously discovered contract remains immutable; a fresh discovery therefore observes the new revision, stale marker, or removal without relying on process-local Workspace mutation. An operation result that omits `facts` leaves the module owner's current snapshot unchanged.
 
 Typed operations are invoked through the generic module-operation boundary. Results must contain their guaranteed fields and may report only declared effect classes. Module-local success cannot set unrelated mutation, proof, parent-intent, or completion authority.
 

@@ -106,6 +106,8 @@ Then follow the target repository's thin agent adapter, normally `AGENTS.md`, an
 
 Temporary finishing briefs or diagnostics under `.agentic-workspace/local/` are local-only and should not be checked in. Mirrored-payload profiles may have additional explicit managed artifacts; their ownership should remain visible in the installed-surface contract.
 
+A repository configured with `payload.target_release = "source-current"` and `payload.dogfood_latest = true` has a stronger committed-state obligation: every commit must carry the workspace payload declared by `workspace_surfaces.json`, module-managed skills from each package's `bootstrap/` source, and release provenance matching the source package version and tag. The upgrade-source records and `.agentic-workspace/payload-provenance.json` are part of that installed-state projection, not local scratch. `check_source_payload_operational_install.py --strict` treats drift in this source-current profile as fatal; refresh through the owning install or upgrade operation rather than editing a mirror or weakening the check.
+
 ## Worked adoption example
 
 1. Install with the exact command from [current support-bearing install](reference/support-bearing-install.md).

@@ -355,10 +355,19 @@ def instruction_program_from_existing_mechanisms(inputs: dict[str, Any]) -> dict
     mechanisms = _as_dict(inputs.get("instruction_mechanisms"))
     if not mechanisms:
         return _as_dict(inputs.get("instruction_program"))
-    facts: list[dict[str, Any]] = []
-    clauses: list[dict[str, Any]] = []
-    source_diagnostics: list[dict[str, str]] = []
-    capabilities = [_as_dict(item) for item in _as_list(inputs.get("instruction_capabilities"))]
+    source_program = _as_dict(inputs.get("instruction_program"))
+    facts = [
+        *[_as_dict(item) for item in _as_list(source_program.get("facts"))],
+        *[_as_dict(item) for item in _as_list(mechanisms.get("source_facts"))],
+    ]
+    clauses = [_as_dict(item) for item in _as_list(source_program.get("clauses"))]
+    source_diagnostics = [
+        {str(key): str(value) for key, value in _as_dict(item).items()} for item in _as_list(source_program.get("source_diagnostics"))
+    ]
+    capabilities = [
+        *[_as_dict(item) for item in _as_list(source_program.get("capabilities"))],
+        *[_as_dict(item) for item in _as_list(inputs.get("instruction_capabilities"))],
+    ]
     adapters = [
         ("scoped_instructions", "surface", "surface"),
         ("skill_routing", "prefer", "skill"),

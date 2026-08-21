@@ -392,16 +392,16 @@
     "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
     "command": "agentic-workspace defaults --section agent_configuration_workflow_extensions --format json",
     "consumption_rule": [
-      "workspace owns declaration and reporting of repo-custom workflow obligations",
-      "planning consumes only the obligations relevant to the current touched scope",
-      "adapter surfaces may mention the mechanism but should not become the primary declaration home"
+      "scoped Markdown owns ordinary repo guidance, checks, procedures, and protections",
+      "workspace reports surviving stage-bound compatibility obligations to their specialized lifecycle consumers",
+      "planning consumes only relevant compatibility obligations and does not treat them as a generic instruction language"
     ],
     "definition_format": {
       "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
       "composition": {
         "conflict_rule": "Do not merge ownership; workspace reports applicable components and the owning module keeps domain behavior.",
         "module_attachment_rule": "Components may mention planning, memory, workspace, startup, routing, adapter-surfaces, or system-intent tags, but they must not move module-owned state into workspace config.",
-        "selector": "stage plus intersection of scope_tags with current work tags"
+        "selector": "compatibility-only stage plus intersection of scope_tags with current work tags"
       },
       "flexibility_boundary": {
         "formalize": [
@@ -420,25 +420,31 @@
         "must_not": [
           "become a scheduler",
           "replace active planning state",
-          "turn every repo preference into a durable component",
+          "serve as a peer generic repo-guidance language",
+          "turn ordinary guidance, checks, or procedures into a durable component",
           "move planning or memory domain ownership into workspace config"
         ]
       },
       "migration_posture": {
-        "compatibility_rule": "Keep prose fallback for nuance, but prefer the formal component for startup, report, and defaults answers.",
-        "markdown_role": "Markdown workflow files remain adapters and explanatory runbooks when the contract is not yet expressible in the formal component shape.",
-        "promotion_rule": "Promote repeated, stable, stage-bound workflow expectations into workflow components when they need selective query, reporting, or review hooks."
+        "compatibility_rule": "Existing obligations remain readable and reportable while specialized consumers exist; defaults and public docs must identify this format as compatibility-only.",
+        "markdown_role": "Scoped Markdown is the primary ordinary authoring surface for repo guidance, procedures, checks, and protections.",
+        "promotion_rule": "Do not promote generic guidance into this format. Retain an obligation only when a concrete stage-bound lifecycle gate cannot be represented by scoped Markdown or typed proof/evidence authority."
       },
-      "primary_component_family": {
+      "ordinary_authoring_surface": {
+        "fields": "paths plus optional read, use, checks, and protect",
+        "migration_rule": "Move generic guidance, checks, and procedures to scoped Markdown; do not promote them into workflow obligations.",
+        "owner": ".agentic-workspace/instructions/*.md"
+      },
+      "specialized_compatibility_family": {
         "attachment_points": [
-          "repo-custom workflow additions",
+          "legacy stage-bound lifecycle compatibility",
           "module-relevant proof or review hooks",
           "startup, config, planning, memory, or adapter-surface scope tags"
         ],
         "fields": [
           {
             "field": "summary",
-            "purpose": "bounded repo-local expectation worth surfacing into active work",
+            "purpose": "specialized lifecycle expectation that cannot be expressed as ordinary scoped guidance",
             "required": true
           },
           {
@@ -465,7 +471,7 @@
         "id": "workflow_obligation",
         "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]"
       },
-      "rule": "Workflow structure is formal and queryable; component-step internals stay flexible unless a stronger contract is explicitly needed.",
+      "rule": "Scoped Markdown is the ordinary repo-guidance surface. This contract is compatibility-only metadata for genuinely stage-bound lifecycle obligations that still need selective reporting or closeout gates.",
       "schema_version": "agentic-workspace/workflow-definition-format/v1"
     },
     "fields": [
@@ -496,11 +502,14 @@
     ],
     "must_not": [
       "turn workflow obligations into a general scheduler",
+      "present stage plus scope_tags plus commands as a peer ordinary authoring model",
       "move planning ownership into workspace config",
       "encode every minor preference as a workflow obligation"
     ],
     "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]",
-    "rule": "Declare small repo-custom workflow obligations in `.agentic-workspace/config.toml` so workspace owns the extension mechanism and planning only consumes relevant obligations.",
+    "ordinary_authoring_surface": ".agentic-workspace/instructions/*.md",
+    "rule": "Author ordinary repo guidance in `.agentic-workspace/instructions/*.md`. Use workflow obligations only as compatibility metadata for a concrete stage-bound lifecycle consumer.",
+    "status": "specialized-compatibility-only",
     "supported_forces": [
       "informational",
       "recommended",

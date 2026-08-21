@@ -67,5 +67,5 @@ Do not hand-edit generated pages. Update the source schema and regenerate the re
 - [Python extraction map](python-extraction-map.md): Python-owned extraction map.
 - [Python runtime boundary](python-runtime-boundary.md): Python runtime boundary.
 - [Workflow artifact profiles](workflow-artifact-profiles.md): workflow artifact profiles.
-- [Workflow definition format](workflow-definition-format.md): workflow definition format.
+- [Specialized workflow-obligation compatibility](workflow-definition-format.md): stage-bound compatibility metadata; ordinary repo guidance uses scoped Markdown.
 - [Context templates](context-templates.md): context template contract.

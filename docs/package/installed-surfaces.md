@@ -10,7 +10,7 @@ For the exact package-managed file set in every supported footprint/module cell,
 | --- | --- | --- |
 | `AGENTS.md` | repo-owned adapter with managed fences | first file an agent can read; routes to compact workspace commands |
 | `.agentic-workspace/` | product-managed enclave | shared workspace configuration, contracts, module roots, and local boundaries |
-| `.agentic-workspace/config.toml` | repo-owned config | selected modules, posture, workflow obligations, and repo-specific settings |
+| `.agentic-workspace/config.toml` | repo-owned config | selected modules, posture, specialized stage-bound compatibility obligations, and repo-specific settings |
 | `.agentic-workspace/instructions/*.md` | repo-owned scoped guidance | Markdown guidance plus optional `paths`, `read`, `use`, `checks`, and `protect` |
 | `.agentic-workspace/OWNERSHIP.toml` | repo-owned ledger | managed paths, fences, and authority metadata |
 | `.agentic-workspace/WORKFLOW.md` | product-managed workflow adapter | CLI-first bootstrap router and Markdown fallback for installed workspaces |

@@ -297,7 +297,7 @@
         "generated/workspace/python/cli.py:_agent_configuration_workflow_extensions_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
-      "notes": "Workflow component structure, composition, attachment, and migration posture are schema-backed so workflow docs can stay adapters over a machine-usable format."
+      "notes": "Compatibility-only structure for surviving specialized stage-bound obligations. Scoped Markdown is the ordinary repo-guidance surface; this contract remains consumed only while lifecycle reporting and closeout gates require it."
     },
     {
       "area": "improvement_latitude_policy",
